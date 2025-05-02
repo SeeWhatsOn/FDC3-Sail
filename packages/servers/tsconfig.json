@@ -13,14 +13,14 @@
     ],
     "outDir": "./dist",
     "rootDirs": [
-      "src"
+      "socket/src"
     ],
   },
   "include": [
-    "src/**/*.tsx",
-    "src/**/*.ts",
+    "socket/src/**/*.tsx",
+    "socket/src/**/*.ts",
     "types.d.ts",
-    "src/**/*.css"
+    "socket/src/**/*.css"
   ],
   "references": [
     {

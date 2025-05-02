@@ -29,7 +29,7 @@ import {
 import { Socket, Server } from "socket.io"
 import { SailFDC3Server } from "./SailFDC3Server"
 import { SailData, SailServerContext } from "./SailServerContext"
-import { SailDirectory } from "../appd/SailDirectory"
+import { SailDirectory } from "./SailDirectory"
 import { v4 as uuid } from "uuid"
 import { State, WebAppDetails } from "@finos/fdc3-web-impl"
 import { BrowserTypes } from "@finos/fdc3"

@@ -11,7 +11,7 @@ import {
   State,
 } from "@finos/fdc3-web-impl"
 import { AppIdentifier } from "@finos/fdc3"
-import { getIcon, SailDirectory } from "../appd/SailDirectory"
+import { getIcon, SailDirectory } from "./SailDirectory"
 import { AppIntent, Context, OpenError } from "@finos/fdc3"
 import {
   FDC3_DA_EVENT,

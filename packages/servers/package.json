@@ -23,8 +23,8 @@
     "vite": "^5.0.2"
   },
   "dependencies": {
-    "@finos/fdc3-sail-common": "0.0.0",
     "@finos/fdc3-web-impl": "2.2.0-beta.4",
+    "cors": "^2.8.5",
     "express": "^4.18.3",
     "pretty-print-json": "^3.0.4",
     "socket.io": "^4.7.5",
