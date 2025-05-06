@@ -62,6 +62,10 @@ export class SailServerContext implements ServerContext<SailData> {
     this.socket = socket
   }
 
+  public getPrimarySocket(): Socket {
+    return this.socket
+  }
+
   setFDC3Server(server: FDC3Server): void {
     this.fdc3Server = server
   }
