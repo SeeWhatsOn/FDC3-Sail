@@ -16,141 +16,181 @@ import { SocketType, getOrAwaitFdc3Server, emitCurrentAppState } from "../utils"
 import { State } from "@finos/fdc3-web-impl"
 import { v4 as uuid } from "uuid"
 
-export async function handleDesktopAgentConnect(
-  state: ConnectionState,
-  props: DesktopAgentConnectionArgs,
-  callback: (success: boolean, err?: string) => void,
-): Promise<void> {
-  console.log("SAIL DA HELLO handled:" + JSON.stringify(props))
+function handleDesktopAgentConnect(
+  socket: Socket,
+  connectionState: ConnectionState,
+): void {
+  socket.on(
+    DA_HELLO,
+    (
+      data: DesktopAgentConnectionArgs,
+      callback: (success: boolean, err?: string) => void,
+    ) => {
+      console.log("SAIL DA HELLO handled:" + JSON.stringify(data))
 
-  state.type = SocketType.DESKTOP_AGENT
-  state.userSessionId = props.userSessionId
-  console.log("SAIL Desktop Agent Connecting", state.userSessionId)
-  let fdc3Server = state.sessions.get(state.userSessionId)
-
-  if (fdc3Server) {
-    // Reconfiguring current session
-    console.log(`Reconfiguring existing DA session: ${state.userSessionId}`)
-    // Update the existing server context with new props rather than creating a new server instance
-    // This assumes SailFDC3Server or SailServerContext has methods to update channels/directories
-    try {
-      // Example: Update context directly if possible
-      // fdc3Server.serverContext.updateConfiguration(props);
-      // Or, if recreating is the only way:
-      console.warn(
-        "Recreating SailFDC3Server instance on DA_HELLO reconfig. Ensure context is preserved if needed.",
-      )
-      const existingContext = fdc3Server.serverContext
-      fdc3Server = new SailFDC3Server(existingContext, props)
-      existingContext.setFDC3Server(fdc3Server) // Ensure context links back to the new server instance
-      state.sessions.set(state.userSessionId, fdc3Server)
+      connectionState.type = SocketType.DESKTOP_AGENT
+      connectionState.userSessionId = data.userSessionId
       console.log(
-        "SAIL updated desktop agent channels and directories",
-        state.sessions.size,
-        props.userSessionId,
+        "SAIL Desktop Agent Connecting",
+        connectionState.userSessionId,
       )
-    } catch (error) {
-      console.error(
-        `Error reconfiguring DA session ${state.userSessionId}:`,
-        error,
+      let fdc3Server = connectionState.sessions.get(
+        connectionState.userSessionId,
       )
-      return callback(
-        false,
-        `Error reconfiguring session: ${(error as Error).message}`,
-      )
-    }
-  } else {
-    // Starting new session
-    console.log(`Starting new DA session: ${state.userSessionId}`)
-    try {
-      const serverContext = new SailServerContext(
-        new SailDirectory(),
-        state.socket,
-      )
-      fdc3Server = new SailFDC3Server(serverContext, props)
-      serverContext.setFDC3Server(fdc3Server)
-      state.sessions.set(state.userSessionId, fdc3Server)
-      console.log(
-        "SAIL created agent session. Running sessions:",
-        state.sessions.size,
-        props.userSessionId,
-      )
-    } catch (error) {
-      console.error(
-        `Error starting new DA session ${state.userSessionId}:`,
-        error,
-      )
-      return callback(
-        false,
-        `Error starting session: ${(error as Error).message}`,
-      )
-    }
-  }
 
-  state.fdc3ServerInstance = fdc3Server // Update connection state
-  callback(true)
+      if (fdc3Server) {
+        // Reconfiguring current session
+        console.log(
+          `Reconfiguring existing DA session: ${connectionState.userSessionId}`,
+        )
+        // Update the existing server context with new props rather than creating a new server instance
+        // This assumes SailFDC3Server or SailServerContext has methods to update channels/directories
+        try {
+          // Example: Update context directly if possible
+          // fdc3Server.serverContext.updateConfiguration(props);
+          // Or, if recreating is the only way:
+          console.warn(
+            "Recreating SailFDC3Server instance on DA_HELLO reconfig. Ensure context is preserved if needed.",
+          )
+          const existingContext = fdc3Server.serverContext
+          fdc3Server = new SailFDC3Server(existingContext, data)
+          existingContext.setFDC3Server(fdc3Server) // Ensure context links back to the new server instance
+          connectionState.sessions.set(
+            connectionState.userSessionId,
+            fdc3Server,
+          )
+          console.log(
+            "SAIL updated desktop agent channels and directories",
+            connectionState.sessions.size,
+            data.userSessionId,
+          )
+        } catch (error) {
+          console.error(
+            `Error reconfiguring DA session ${connectionState.userSessionId}:`,
+            error,
+          )
+          return callback(
+            false,
+            `Error reconfiguring session: ${(error as Error).message}`,
+          )
+        }
+      } else {
+        // Starting new session
+        console.log(`Starting new DA session: ${connectionState.userSessionId}`)
+        try {
+          const serverContext = new SailServerContext(
+            new SailDirectory(),
+            connectionState.socket,
+          )
+          fdc3Server = new SailFDC3Server(serverContext, data)
+          serverContext.setFDC3Server(fdc3Server)
+          connectionState.sessions.set(
+            connectionState.userSessionId,
+            fdc3Server,
+          )
+          console.log(
+            "SAIL created agent session. Running sessions:",
+            connectionState.sessions.size,
+            data.userSessionId,
+          )
+        } catch (error) {
+          console.error(
+            `Error starting new DA session ${connectionState.userSessionId}:`,
+            error,
+          )
+          return callback(
+            false,
+            `Error starting session: ${(error as Error).message}`,
+          )
+        }
+      }
+
+      connectionState.fdc3ServerInstance = fdc3Server // Update connection state
+      callback(true)
+    },
+  )
 }
 
-export async function handleDesktopAgentDirectoryListing(
-  state: ConnectionState,
-  props: DesktopAgentDirectoryListingArgs,
-  callback: (success: unknown, err?: string) => void,
-): Promise<void> {
-  console.log(
-    `Handling DA_DIRECTORY_LISTING for session: ${props.userSessionId}`,
+export function handleDesktopAgentDirectoryListing(
+  socket: Socket,
+  connectionState: ConnectionState,
+): void {
+  socket.on(
+    DA_DIRECTORY_LISTING,
+    async (
+      data: DesktopAgentDirectoryListingArgs,
+      callback: (data: unknown, err?: string) => void,
+    ) => {
+      console.log(
+        `DA_DIRECTORY_LISTING received for session: ${data.userSessionId} on socket ${socket.id}`,
+      )
+      const userSessionId = data.userSessionId
+      try {
+        const session = await getOrAwaitFdc3Server(
+          connectionState.sessions,
+          userSessionId,
+        )
+        callback(session.getAppDirectory().allApps, undefined)
+      } catch (error) {
+        const errMsg =
+          (error as Error).message || "Session not found for Directory Listing"
+        console.error(
+          `Error in DA_DIRECTORY_LISTING for session ${userSessionId}:`,
+          error,
+        )
+        callback(null, errMsg)
+      }
+    },
   )
-  const userSessionId = props.userSessionId
-  try {
-    // Use getOrAwaitFdc3Server from utils which checks periodically
-    const session = await getOrAwaitFdc3Server(state.sessions, userSessionId)
-    callback(session.getAppDirectory().allApps)
-  } catch (error) {
-    console.error(
-      `Session not found for Directory Listing ${userSessionId}:`,
-      error,
-    )
-    callback(null, (error as Error).message || "Session not found")
-  }
 }
 
-export async function handleDesktopAgentAppRegistration(
-  state: ConnectionState,
-  registrationRequest: DesktopAgentRegisterAppLaunchArgs,
-): Promise<string | null> {
-  console.log(
-    "Handling DA_REGISTER_APP_LAUNCH: " + JSON.stringify(registrationRequest),
+export function handleDesktopAgentAppRegistration(
+  socket: Socket,
+  connectionState: ConnectionState,
+): void {
+  socket.on(
+    DA_REGISTER_APP_LAUNCH,
+    async (
+      registrationRequest: DesktopAgentRegisterAppLaunchArgs,
+      callback: (instanceId: string | null, errorMessage?: string) => void,
+    ) => {
+      console.log(
+        `DA_REGISTER_APP_LAUNCH received for ${registrationRequest.appId} on socket ${socket.id}`,
+      )
+      try {
+        const { appId, userSessionId } = registrationRequest
+        const session = await getOrAwaitFdc3Server(
+          connectionState.sessions,
+          userSessionId,
+        )
+        const instanceId = "sail-app-" + uuid()
+        session.serverContext.setAppInstanceDetails(instanceId, {
+          instanceId: instanceId,
+          state: State.Pending,
+          appId,
+          hosting: registrationRequest.hosting ?? AppHosting.Frame,
+          channel: registrationRequest.channel ?? null,
+          instanceTitle: registrationRequest.instanceTitle ?? appId,
+          channelSockets: [],
+          // Note: Socket and URL are set during APP_HELLO
+        })
+        console.log(
+          `SAIL Registered app ${appId} with instanceId ${instanceId} for session ${userSessionId}`,
+        )
+
+        await emitCurrentAppState(session)
+        callback(instanceId, undefined)
+      } catch (error) {
+        const errMsg =
+          (error as Error).message || "Failed to register app launch"
+        console.error(
+          `Error in DA_REGISTER_APP_LAUNCH for ${registrationRequest.appId}, session ${registrationRequest.userSessionId}:`,
+          error,
+        )
+        callback(null, errMsg)
+      }
+    },
   )
-
-  const { appId, userSessionId } = registrationRequest
-  try {
-    const session = await getOrAwaitFdc3Server(state.sessions, userSessionId)
-    const instanceId = "sail-app-" + uuid()
-    // Ensure hosting, channel, instanceTitle are handled correctly
-    session.serverContext.setAppInstanceDetails(instanceId, {
-      instanceId: instanceId,
-      state: State.Pending,
-      appId,
-      hosting: registrationRequest.hosting ?? AppHosting.Frame, // Provide default if necessary
-      channel: registrationRequest.channel ?? null, // Provide default if necessary
-      instanceTitle: registrationRequest.instanceTitle ?? appId, // Provide default if necessary
-      channelSockets: [],
-      // Note: Socket and URL are set during APP_HELLO
-    })
-    console.log(
-      `SAIL Registered app ${appId} with instanceId ${instanceId} for session ${userSessionId}`,
-    )
-
-    // Emit the current app state after successful registration
-    await emitCurrentAppState(session)
-    return instanceId
-  } catch (error) {
-    console.error(
-      `SAIL Session not found for App Launch Registration ${userSessionId}:`,
-      error,
-    )
-
-    return (error as Error).message || "Session not found"
-  }
 }
 
 /**
@@ -160,58 +200,7 @@ export function registerDesktopAgentHandlers(
   socket: Socket,
   connectionState: ConnectionState,
 ): void {
-  socket.on(DA_HELLO, (props: DesktopAgentConnectionArgs, callback) => {
-    handleDesktopAgentConnect(connectionState, props, callback).catch(
-      (err: Error) => {
-        console.error(`Error handling DA_HELLO for socket ${socket.id}:`, err)
-        callback(false, err.message || "Internal server error during DA_HELLO")
-      },
-    )
-  })
-
-  socket.on(
-    DA_DIRECTORY_LISTING,
-    (props: DesktopAgentDirectoryListingArgs, callback) => {
-      try {
-        handleDesktopAgentDirectoryListing(connectionState, props, callback)
-      } catch (err: Error | unknown) {
-        console.error(
-          `Error handling DA_DIRECTORY_LISTING for socket ${socket.id}:`,
-          err,
-        )
-        callback(
-          null,
-          (err as Error).message ||
-            "Internal server error during DA_DIRECTORY_LISTING",
-        )
-      }
-    },
-  )
-
-  // DA_REGISTER_APP_LAUNCH Listener
-  socket.on(
-    DA_REGISTER_APP_LAUNCH,
-    async (
-      registrationRequest: DesktopAgentRegisterAppLaunchArgs,
-      callback,
-    ) => {
-      try {
-        const instanceId = await handleDesktopAgentAppRegistration(
-          connectionState,
-          registrationRequest,
-        )
-        callback(instanceId)
-      } catch (err: Error | unknown) {
-        console.error(
-          `Error handling DA_REGISTER_APP_LAUNCH for socket ${socket.id}:`,
-          err,
-        )
-        callback(
-          null,
-          (err as Error).message ||
-            "Internal server error during DA_REGISTER_APP_LAUNCH",
-        )
-      }
-    },
-  )
+  handleDesktopAgentConnect(socket, connectionState)
+  handleDesktopAgentDirectoryListing(socket, connectionState)
+  handleDesktopAgentAppRegistration(socket, connectionState)
 }

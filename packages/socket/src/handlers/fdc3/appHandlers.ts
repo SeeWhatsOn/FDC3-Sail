@@ -3,21 +3,17 @@ import {
   AppHosting,
   SailHostManifest,
 } from "@finos/fdc3-sail-common"
-import { SailData } from "./desktop-agent/SailServerContext"
-import { ConnectionState } from "./types"
+import { ConnectionState } from "../..//types"
 import {
   SocketType,
   DEBUG_MODE,
   getOrAwaitFdc3Server,
   getNextDebugReconnectionId,
   emitCurrentAppState,
-} from "./utils"
+} from "../utils"
 import { State, WebAppDetails } from "@finos/fdc3-web-impl"
 import { Socket } from "socket.io"
 import { APP_HELLO } from "@finos/fdc3-sail-common"
-
-// Import and manage debugReconnectionNumber if needed within this file or pass via state
-// import { debugReconnectionNumber as globalDebugReconnectionNumber } from "./utils"
 
 export async function handleApplicationConnect(
   state: ConnectionState,
@@ -145,6 +141,3 @@ export function registerAppHandlers(
   // TODO: Register listener for FDC3_APP_EVENT if moving processAppMessage registration here later
   // socket.on(FDC3_APP_EVENT, (data: any, from: string) => { ... });
 }
-
-// Placeholder for processAppMessage if you move it here later
-// export function processAppMessage(state: ConnectionState, data: any, from: string): void { ... }
