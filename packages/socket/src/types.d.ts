@@ -11,3 +11,7 @@ export interface ConnectionState {
   type?: SocketType
   // Add other state relevant to a single connection if needed
 }
+
+export interface BaseMessageData {
+  type: string
+}
