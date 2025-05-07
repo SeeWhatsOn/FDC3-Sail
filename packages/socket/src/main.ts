@@ -1,8 +1,8 @@
 import { Server, Socket } from "socket.io"
-import { SailFDC3Server } from "./handlers/desktop-agent/SailFDC3Server"
+import { SailFDC3Server } from "./model/fdc3/SailFDC3Server"
 import dotenv from "dotenv"
 import { ConnectionState } from "./handlers/types"
-import { setupAllHandlers } from "./setupHandlers"
+import { registerAllSocketHandlers } from "./setupHandlers"
 
 // Load environment variables from .env file
 dotenv.config()
@@ -25,10 +25,10 @@ io.on("connection", (socket: Socket) => {
   }
 
   // --- Setup All Handlers ---
-  setupAllHandlers(socket, connectionState)
+  registerAllSocketHandlers(socket, connectionState)
 })
 
-const shutdown = () => {
+const performGracefulShutdown = () => {
   console.log("Initiating graceful shutdown...")
   io.close(() => {
     console.log("Socket.IO server connections closed.")
@@ -45,5 +45,5 @@ const shutdown = () => {
   }, 5000)
 }
 
-process.on("SIGTERM", shutdown)
-process.on("SIGINT", shutdown)
+process.on("SIGTERM", performGracefulShutdown)
+process.on("SIGINT", performGracefulShutdown)

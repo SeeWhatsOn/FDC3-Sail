@@ -1,5 +1,5 @@
 import {
-  ElectronHelloArgs as ElectronConnection,
+  ElectronHelloArgs,
   ElectronAppResponse,
   ElectronDAResponse,
   AppHosting as SailAppHosting,
@@ -14,7 +14,7 @@ import { ELECTRON_HELLO } from "@finos/fdc3-sail-common"
 
 export async function handleElectronConnection(
   state: ConnectionState,
-  electronConnectionArgs: ElectronConnection,
+  electronConnectionArgs: ElectronHelloArgs,
   callback: (
     success: ElectronAppResponse | ElectronDAResponse | null,
     err?: string,
@@ -30,7 +30,7 @@ export async function handleElectronConnection(
     state.fdc3ServerInstance = fdc3Server // Associate existing server instance
 
     const allApps = fdc3Server
-      .getDirectory()
+      .getAppDirectory()
       .retrieveAppsByUrl(electronConnectionArgs.url)
     if (allApps.length > 0) {
       const app = allApps[0]
@@ -46,7 +46,7 @@ export async function handleElectronConnection(
       // Optional: Pre-register the app instance in the server context
       // This ensures the server is aware of the instance before it might send further messages.
       // Adjust payload as needed for a pending Electron app.
-      fdc3Server.serverContext.setInstanceDetails(instanceId, {
+      fdc3Server.serverContext.setAppInstanceDetails(instanceId, {
         instanceId: instanceId,
         appId: app.appId,
         state: Fdc3State.Pending,
@@ -101,7 +101,7 @@ export function registerElectronHandlers(
   socket: Socket,
   connectionState: ConnectionState,
 ): void {
-  socket.on(ELECTRON_HELLO, (props: ElectronConnection, callback) => {
+  socket.on(ELECTRON_HELLO, (props: ElectronHelloArgs, callback) => {
     console.log(
       `[ElectronHandler Register] Received ELECTRON_HELLO from ${props.url} for session ${props.userSessionId}`,
     )

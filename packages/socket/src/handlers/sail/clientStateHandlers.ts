@@ -4,7 +4,7 @@ import {
   CHANNEL_RECEIVER_UPDATE,
   SAIL_CLIENT_STATE,
 } from "@finos/fdc3-sail-common"
-import { ConnectionState } from "./types"
+import { ConnectionState } from "../types"
 import { Socket } from "socket.io"
 // Potentially needed imports if not already via ConnectionState or props
 // import { SailFDC3Server } from "./da/SailFDC3Server";
@@ -43,7 +43,7 @@ export async function handleSailClientState(
 
     // Handle panel changes (potential channel/title updates)
     for (const panel of props.panels) {
-      const appDetailState = serverContext.getInstanceDetails(panel.panelId)
+      const appDetailState = serverContext.getAppInstanceDetails(panel.panelId)
       if (appDetailState) {
         let updated = false
         if (panel.tabId !== appDetailState.channel) {
@@ -69,7 +69,7 @@ export async function handleSailClientState(
         }
 
         if (updated) {
-          serverContext.setInstanceDetails(panel.panelId, appDetailState)
+          serverContext.setAppInstanceDetails(panel.panelId, appDetailState)
         }
       } else {
         console.warn(
@@ -79,9 +79,9 @@ export async function handleSailClientState(
     }
 
     // Notify connected channel selectors about the updated list of channels
-    const connectedApps = await serverContext.getConnectedApps()
+    const connectedApps = await serverContext.getActiveAppInstances()
     for (const app of connectedApps) {
-      const appDetailState = serverContext.getInstanceDetails(app.instanceId)
+      const appDetailState = serverContext.getAppInstanceDetails(app.instanceId)
       if (
         appDetailState &&
         appDetailState.channelSockets &&
@@ -106,7 +106,7 @@ export async function handleSailClientState(
         )
         // If sockets were removed, update the instance details
         if (appDetailState.channelSockets.length < originalSocketCount) {
-          serverContext.setInstanceDetails(app.instanceId, appDetailState)
+          serverContext.setAppInstanceDetails(app.instanceId, appDetailState)
         }
       }
     }

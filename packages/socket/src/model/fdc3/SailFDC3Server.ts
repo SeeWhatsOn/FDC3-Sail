@@ -41,7 +41,7 @@ export class SailFDC3Server extends DefaultFDC3Server {
     this.serverContext = sailServerContext
   }
 
-  getDirectory() {
+  getAppDirectory() {
     return this.serverContext.directory
   }
 

@@ -8,15 +8,15 @@ import {
   DA_DIRECTORY_LISTING,
   DA_REGISTER_APP_LAUNCH,
 } from "@finos/fdc3-sail-common"
-import { SailFDC3Server } from "./desktop-agent/SailFDC3Server"
-import { SailDirectory } from "./desktop-agent/SailDirectory"
-import { SailServerContext } from "./desktop-agent/SailServerContext"
-import { ConnectionState } from "./types"
-import { SocketType, getFdc3ServerInstance, emitCurrentAppState } from "./utils"
+import { SailFDC3Server } from "../../model/fdc3/SailFDC3Server"
+import { SailDirectory } from "../../model/fdc3/SailDirectory"
+import { SailServerContext } from "../../model/fdc3/SailServerContext"
+import { ConnectionState } from "../types"
+import { SocketType, getOrAwaitFdc3Server, emitCurrentAppState } from "../utils"
 import { State } from "@finos/fdc3-web-impl"
 import { v4 as uuid } from "uuid"
 
-export async function handleDaHello(
+export async function handleDesktopAgentConnect(
   state: ConnectionState,
   props: DesktopAgentConnectionArgs,
   callback: (success: boolean, err?: string) => void,
@@ -91,7 +91,7 @@ export async function handleDaHello(
   callback(true)
 }
 
-export async function handleDaDirectoryListing(
+export async function handleDesktopAgentDirectoryListing(
   state: ConnectionState,
   props: DesktopAgentDirectoryListingArgs,
   callback: (success: unknown, err?: string) => void,
@@ -101,9 +101,9 @@ export async function handleDaDirectoryListing(
   )
   const userSessionId = props.userSessionId
   try {
-    // Use getFdc3ServerInstance from utils which checks periodically
-    const session = await getFdc3ServerInstance(state.sessions, userSessionId)
-    callback(session.getDirectory().allApps)
+    // Use getOrAwaitFdc3Server from utils which checks periodically
+    const session = await getOrAwaitFdc3Server(state.sessions, userSessionId)
+    callback(session.getAppDirectory().allApps)
   } catch (error) {
     console.error(
       `Session not found for Directory Listing ${userSessionId}:`,
@@ -113,19 +113,19 @@ export async function handleDaDirectoryListing(
   }
 }
 
-export async function handleDaRegisterAppLaunch(
+export async function handleDesktopAgentAppRegistration(
   state: ConnectionState,
   props: DesktopAgentRegisterAppLaunchArgs,
-  callback: (success: string | null, err?: string) => void, // Correct callback type
+  callback: (success: string | null, err?: string) => void,
 ): Promise<void> {
   console.log("Handling DA_REGISTER_APP_LAUNCH: " + JSON.stringify(props))
 
   const { appId, userSessionId } = props
   try {
-    const session = await getFdc3ServerInstance(state.sessions, userSessionId)
+    const session = await getOrAwaitFdc3Server(state.sessions, userSessionId)
     const instanceId = "sail-app-" + uuid()
     // Ensure hosting, channel, instanceTitle are handled correctly
-    session.serverContext.setInstanceDetails(instanceId, {
+    session.serverContext.setAppInstanceDetails(instanceId, {
       instanceId: instanceId,
       state: State.Pending,
       appId,
@@ -153,34 +153,36 @@ export async function handleDaRegisterAppLaunch(
 /**
  * Registers event listeners related to Desktop Agent interactions.
  */
-export function registerDaHandlers(
+export function registerDesktopAgentHandlers(
   socket: Socket,
   connectionState: ConnectionState,
 ): void {
-  // DA_HELLO Listener
   socket.on(DA_HELLO, (props: DesktopAgentConnectionArgs, callback) => {
-    handleDaHello(connectionState, props, callback).catch((err: Error) => {
-      console.error(`Error handling DA_HELLO for socket ${socket.id}:`, err)
-      callback(false, err.message || "Internal server error during DA_HELLO")
-    })
+    handleDesktopAgentConnect(connectionState, props, callback).catch(
+      (err: Error) => {
+        console.error(`Error handling DA_HELLO for socket ${socket.id}:`, err)
+        callback(false, err.message || "Internal server error during DA_HELLO")
+      },
+    )
   })
 
-  // DA_DIRECTORY_LISTING Listener
   socket.on(
     DA_DIRECTORY_LISTING,
     (props: DesktopAgentDirectoryListingArgs, callback) => {
-      handleDaDirectoryListing(connectionState, props, callback).catch(
-        (err: Error) => {
-          console.error(
-            `Error handling DA_DIRECTORY_LISTING for socket ${socket.id}:`,
-            err,
-          )
-          callback(
-            null,
-            err.message || "Internal server error during DA_DIRECTORY_LISTING",
-          )
-        },
-      )
+      handleDesktopAgentDirectoryListing(
+        connectionState,
+        props,
+        callback,
+      ).catch((err: Error) => {
+        console.error(
+          `Error handling DA_DIRECTORY_LISTING for socket ${socket.id}:`,
+          err,
+        )
+        callback(
+          null,
+          err.message || "Internal server error during DA_DIRECTORY_LISTING",
+        )
+      })
     },
   )
 
@@ -188,7 +190,7 @@ export function registerDaHandlers(
   socket.on(
     DA_REGISTER_APP_LAUNCH,
     (props: DesktopAgentRegisterAppLaunchArgs, callback) => {
-      handleDaRegisterAppLaunch(connectionState, props, callback).catch(
+      handleDesktopAgentAppRegistration(connectionState, props, callback).catch(
         (err: Error) => {
           console.error(
             `Error handling DA_REGISTER_APP_LAUNCH for socket ${socket.id}:`,

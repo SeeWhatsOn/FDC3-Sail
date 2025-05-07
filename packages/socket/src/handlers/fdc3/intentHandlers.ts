@@ -16,7 +16,7 @@ import { ConnectionState } from "./types"
  * @param props The arguments containing appId and channelId.
  * @param callback The callback function to acknowledge completion or report errors.
  */
-export function handleIntentResolveOnChannel(
+export function resolveIntentOnChannel(
   state: ConnectionState,
   props: SailIntentResolveOpenChannelArgs,
   callback: (success?: void, err?: string) => void,
@@ -68,7 +68,7 @@ export function registerIntentHandlers(
         `[IntentHandler Register] Received SAIL_INTENT_RESOLVE_ON_CHANNEL for app ${props.appId} on channel ${props.channel}`,
       )
       try {
-        handleIntentResolveOnChannel(connectionState, props, callback)
+        resolveIntentOnChannel(connectionState, props, callback)
       } catch (err) {
         console.error(
           `Unexpected error calling handleIntentResolveOnChannel for socket ${socket.id}:`,

@@ -6,8 +6,8 @@ import {
   SAIL_CHANNEL_CHANGE,
   CHANNEL_RECEIVER_HELLO,
 } from "@finos/fdc3-sail-common"
-import { ConnectionState } from "./types"
-import { SocketType, getFdc3ServerInstance } from "./utils"
+import { ConnectionState } from "../types"
+import { SocketType, getOrAwaitFdc3Server } from "../utils"
 import { v4 as uuid } from "uuid"
 import { BrowserTypes } from "@finos/fdc3"
 import { Socket } from "socket.io"
@@ -55,7 +55,7 @@ export async function handleSailChannelChange(
       `  JOIN USER CHANNEL RESPONSE for ${instanceId}: ${JSON.stringify(response)}`,
     )
 
-    const appState = session.serverContext.getInstanceDetails(instanceId)
+    const appState = session.serverContext.getAppInstanceDetails(instanceId)
     if (appState && appState.channel === props.channel) {
       console.log(
         `  Verified channel for ${instanceId} is now ${appState.channel}`,
@@ -90,20 +90,23 @@ export async function handleChannelReceiverHello(
 
   try {
     // Ensure we have the correct FDC3 server instance for the session
-    const fdc3Server = await getFdc3ServerInstance(
+    const fdc3Server = await getOrAwaitFdc3Server(
       state.sessions,
       props.userSessionId,
     )
     state.fdc3ServerInstance = fdc3Server
 
-    const appInst = fdc3Server.serverContext.getInstanceDetails(
+    const appInst = fdc3Server.serverContext.getAppInstanceDetails(
       props.instanceId,
     )
     if (appInst) {
       appInst.channelSockets = appInst.channelSockets || []
       if (!appInst.channelSockets.some((s) => s.id === state.socket.id)) {
         appInst.channelSockets.push(state.socket)
-        fdc3Server.serverContext.setInstanceDetails(props.instanceId, appInst)
+        fdc3Server.serverContext.setAppInstanceDetails(
+          props.instanceId,
+          appInst,
+        )
         console.log(
           `  Added channel socket ${state.socket.id} to ${props.instanceId}. Total: ${appInst.channelSockets.length}`,
         )

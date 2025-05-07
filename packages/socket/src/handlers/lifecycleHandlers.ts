@@ -28,16 +28,16 @@ export async function handleDisconnect(
     try {
       if (connType === SocketType.APP && connAppInstanceId) {
         console.log(`  App disconnect detected: ${connAppInstanceId}`)
-        await fdcInstance.serverContext.setAppState(
+        await fdcInstance.serverContext.updateAppInstanceState(
           connAppInstanceId,
           State.Terminated,
         )
-        // Assuming cleanupAppInstance is handled by setAppState(Terminated) or not required
+        // Assuming cleanupAppInstance is handled by updateAppInstanceState(Terminated) or not required
         console.log(`  App ${connAppInstanceId} marked as terminated.`)
         await emitCurrentAppState(fdcInstance)
       } else if (connType === SocketType.ELECTRON_APP && connAppInstanceId) {
         console.log(`  Electron App disconnect detected: ${connAppInstanceId}`)
-        await fdcInstance.serverContext.setAppState(
+        await fdcInstance.serverContext.updateAppInstanceState(
           connAppInstanceId,
           State.Terminated,
         )
@@ -48,14 +48,14 @@ export async function handleDisconnect(
           `  Channel Selector disconnect detected for app ${connAppInstanceId} on socket ${socketId}`,
         )
         const details =
-          fdcInstance.serverContext.getInstanceDetails(connAppInstanceId)
+          fdcInstance.serverContext.getAppInstanceDetails(connAppInstanceId)
         if (details && details.channelSockets) {
           const initialLength = details.channelSockets.length
           details.channelSockets = details.channelSockets.filter(
             (s) => s.id !== socketId,
           )
           if (details.channelSockets.length < initialLength) {
-            fdcInstance.serverContext.setInstanceDetails(
+            fdcInstance.serverContext.setAppInstanceDetails(
               connAppInstanceId,
               details,
             )
@@ -78,8 +78,8 @@ export async function handleDisconnect(
         )
         // Check if the disconnecting socket is the primary socket for this FDC3 server instance.
         if (
-          fdcInstance.serverContext.getPrimarySocket() &&
-          fdcInstance.serverContext.getPrimarySocket().id === socketId
+          fdcInstance.serverContext.getDesktopAgentSocket() &&
+          fdcInstance.serverContext.getDesktopAgentSocket().id === socketId
         ) {
           console.log(
             `  Disconnecting socket ${socketId} is the primary DA socket for session ${connUserSessionId}. Shutting down session.`,
@@ -91,7 +91,7 @@ export async function handleDisconnect(
           )
         } else if (
           connType === SocketType.ELECTRON_DA &&
-          !fdcInstance.serverContext.getPrimarySocket()
+          !fdcInstance.serverContext.getDesktopAgentSocket()
         ) {
           // Case where Electron DA connected, maybe set up an FDC instance placeholder,
           // but then it disconnects before DA_HELLO fully established the primary socket link.

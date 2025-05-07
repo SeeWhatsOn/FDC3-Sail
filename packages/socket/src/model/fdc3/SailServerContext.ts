@@ -62,7 +62,7 @@ export class SailServerContext implements ServerContext<SailData> {
     this.socket = socket
   }
 
-  public getPrimarySocket(): Socket {
+  public getDesktopAgentSocket(): Socket {
     return this.socket
   }
 
@@ -126,7 +126,7 @@ export class SailServerContext implements ServerContext<SailData> {
         } as SailAppOpenArgs,
       )
 
-      this.setInstanceDetails(details.instanceId, {
+      this.setAppInstanceDetails(details.instanceId, {
         appId,
         instanceId: details.instanceId,
         url,
@@ -147,7 +147,7 @@ export class SailServerContext implements ServerContext<SailData> {
     throw new Error(OpenError.AppNotFound)
   }
 
-  setInstanceDetails(uuid: InstanceID, details: SailData): void {
+  setAppInstanceDetails(uuid: InstanceID, details: SailData): void {
     if (uuid != details.instanceId) {
       console.error("UUID mismatch", uuid, details.instanceId)
     }
@@ -156,7 +156,7 @@ export class SailServerContext implements ServerContext<SailData> {
     this.instances.push(details)
   }
 
-  getInstanceDetails(uuid: InstanceID): SailData | undefined {
+  getAppInstanceDetails(uuid: InstanceID): SailData | undefined {
     return this.instances.find((ca) => ca.instanceId === uuid)
   }
 
@@ -164,18 +164,20 @@ export class SailServerContext implements ServerContext<SailData> {
     this.socket.emit(SAIL_CHANNEL_SETUP, app.instanceId)
   }
 
-  async getConnectedApps(): Promise<AppRegistration[]> {
-    return (await this.getAllApps()).filter((ca) => ca.state == State.Connected)
+  async getActiveAppInstances(): Promise<AppRegistration[]> {
+    return (await this.getAllAppInstances()).filter(
+      (ca) => ca.state == State.Connected,
+    )
   }
 
   async isAppConnected(app: InstanceID): Promise<boolean> {
-    const found = (await this.getAllApps()).find(
+    const found = (await this.getAllAppInstances()).find(
       (a) => a.instanceId == app && a.state == State.Connected,
     )
     return found != null
   }
 
-  async setAppState(app: InstanceID, state: State): Promise<void> {
+  async updateAppInstanceState(app: InstanceID, state: State): Promise<void> {
     const found = this.instances.find((a) => a.instanceId == app)
     if (found) {
       const needsInitialChannelSetup =
@@ -192,7 +194,7 @@ export class SailServerContext implements ServerContext<SailData> {
     }
   }
 
-  async getAllApps(): Promise<AppRegistration[]> {
+  async getAllAppInstances(): Promise<AppRegistration[]> {
     return this.instances.map((x) => {
       return {
         appId: x.appId,
@@ -239,7 +241,7 @@ export class SailServerContext implements ServerContext<SailData> {
         const title = dir.length > 0 ? dir[0]?.title : "Unknown App"
 
         if (a.instanceId) {
-          const instance = this.getInstanceDetails(a.instanceId)
+          const instance = this.getAppInstanceDetails(a.instanceId)
           const channel = this.getChannelDetails().find(
             (c) => c.id == instance?.channel,
           )
@@ -289,12 +291,12 @@ export class SailServerContext implements ServerContext<SailData> {
     }
 
     function isRunningInTab(arg0: AppIdentifier): boolean {
-      const details = sc.getInstanceDetails(arg0.instanceId!)
+      const details = sc.getAppInstanceDetails(arg0.instanceId!)
       return details?.hosting == AppHosting.Tab
     }
 
     function raiserChannel(arg0: AppIdentifier): string | null {
-      const details = sc.getInstanceDetails(arg0.instanceId!)
+      const details = sc.getAppInstanceDetails(arg0.instanceId!)
       return details?.channel ?? null
     }
 
@@ -360,7 +362,7 @@ export class SailServerContext implements ServerContext<SailData> {
     channelId: string | null,
   ): Promise<void> {
     console.log("SAIL User channels changed", instanceId, channelId)
-    const instance = this.getInstanceDetails(instanceId!)
+    const instance = this.getAppInstanceDetails(instanceId!)
     if (instance) {
       instance.channel = channelId
       const channelChangeEvent: ChannelChangedEvent = {

@@ -1,5 +1,5 @@
 import { Socket } from "socket.io"
-import { SailFDC3Server } from "./desktop-agent/SailFDC3Server" // Adjust import path if necessary
+import { SailFDC3Server } from "../model/fdc3/SailFDC3Server" // Adjust import path if necessary
 import { SocketType } from "./utils" // Import the enum
 
 export interface ConnectionState {

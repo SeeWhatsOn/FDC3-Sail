@@ -8,8 +8,8 @@ import { ConnectionState } from "./types"
 import {
   SocketType,
   DEBUG_MODE,
-  getFdc3ServerInstance,
-  getIncrementedDebugReconnectionNumber,
+  getOrAwaitFdc3Server,
+  getNextDebugReconnectionId,
   emitCurrentAppState,
 } from "./utils"
 import { State, WebAppDetails } from "@finos/fdc3-web-impl"
@@ -19,7 +19,7 @@ import { APP_HELLO } from "@finos/fdc3-sail-common"
 // Import and manage debugReconnectionNumber if needed within this file or pass via state
 // import { debugReconnectionNumber as globalDebugReconnectionNumber } from "./utils"
 
-export async function handleAppHello(
+export async function handleApplicationConnect(
   state: ConnectionState,
   props: AppHelloArgs,
   callback: (success: AppHosting | null, err?: string) => void, // Correct callback type
@@ -31,7 +31,7 @@ export async function handleAppHello(
   state.type = SocketType.APP
 
   try {
-    const fdc3Server = await getFdc3ServerInstance(
+    const fdc3Server = await getOrAwaitFdc3Server(
       state.sessions,
       state.userSessionId,
     )
@@ -41,7 +41,7 @@ export async function handleAppHello(
     )
     const appInstance = fdc3Server
       .getServerContext()
-      .getInstanceDetails(state.appInstanceId)
+      .getAppInstanceDetails(state.appInstanceId)
     const directoryItems = fdc3Server
       .getServerContext()
       .directory.retrieveAppsById(props.appId)
@@ -58,7 +58,7 @@ export async function handleAppHello(
       state.fdc3ServerInstance = fdc3Server // Associate server instance with this socket connection
       // Update state to Connected
       appInstance.state = State.Connected
-      fdc3Server.serverContext.setInstanceDetails(
+      fdc3Server.serverContext.setAppInstanceDetails(
         state.appInstanceId,
         appInstance,
       )
@@ -77,7 +77,7 @@ export async function handleAppHello(
         ?.sail as any
 
       // Use local variable for incrementing debug number
-      let currentDebugNumber = getIncrementedDebugReconnectionNumber()
+      const currentDebugNumber = getNextDebugReconnectionId()
 
       const instanceDetails: SailData = {
         appId: props.appId,
@@ -91,7 +91,7 @@ export async function handleAppHello(
         channelSockets: [],
       }
 
-      fdc3Server.serverContext.setInstanceDetails(
+      fdc3Server.serverContext.setAppInstanceDetails(
         state.appInstanceId,
         instanceDetails,
       )
@@ -134,15 +134,17 @@ export function registerAppHandlers(
   connectionState: ConnectionState,
 ): void {
   socket.on(APP_HELLO, (props: AppHelloArgs, callback) => {
-    handleAppHello(connectionState, props, callback).catch((err: Error) => {
-      console.error(`Error handling APP_HELLO for socket ${socket.id}:`, err)
-      callback(null, err.message || "Internal server error during APP_HELLO")
-    })
+    handleApplicationConnect(connectionState, props, callback).catch(
+      (err: Error) => {
+        console.error(`Error handling APP_HELLO for socket ${socket.id}:`, err)
+        callback(null, err.message || "Internal server error during APP_HELLO")
+      },
+    )
   })
 
-  // TODO: Register listener for FDC3_APP_EVENT if moving handleFdc3AppEvent registration here later
+  // TODO: Register listener for FDC3_APP_EVENT if moving processAppMessage registration here later
   // socket.on(FDC3_APP_EVENT, (data: any, from: string) => { ... });
 }
 
-// Placeholder for handleFdc3AppEvent if you move it here later
-// export function handleFdc3AppEvent(state: ConnectionState, data: any, from: string): void { ... }
+// Placeholder for processAppMessage if you move it here later
+// export function processAppMessage(state: ConnectionState, data: any, from: string): void { ... }

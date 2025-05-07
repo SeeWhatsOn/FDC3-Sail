@@ -1,4 +1,4 @@
-import { SailFDC3Server } from "./desktop-agent/SailFDC3Server" // Adjust import path if necessary
+import { SailFDC3Server } from "../model/fdc3/SailFDC3Server" // Adjust import path if necessary
 import { SAIL_APP_STATE } from "@finos/fdc3-sail-common" // Import SAIL_APP_STATE
 import { AppRegistration } from "@finos/fdc3-web-impl" // Import AppRegistration from its source
 
@@ -6,15 +6,15 @@ export const DEBUG_MODE = true
 let _debugReconnectionNumber = 0 // Internal variable
 
 // Function to get and increment the number
-export function getIncrementedDebugReconnectionNumber(): number {
+export function getNextDebugReconnectionId(): number {
   return _debugReconnectionNumber++
 }
 
-export function getSailUrl(): string {
+export function getServerUrl(): string {
   return process.env.SAIL_URL || "http://localhost:8090"
 }
 
-export function getFdc3ServerInstance(
+export function getOrAwaitFdc3Server(
   sessions: Map<string, SailFDC3Server>,
   userSessionId: string,
 ): Promise<SailFDC3Server> {
@@ -29,7 +29,7 @@ export function getFdc3ServerInstance(
       } else if (attempts++ > maxAttempts) {
         clearInterval(interval)
         console.error(
-          `getFdc3ServerInstance timed out for session ${userSessionId}`,
+          `getOrAwaitFdc3Server timed out for session ${userSessionId}`,
         )
         reject(new Error(`Session ${userSessionId} not found after timeout.`))
       }
@@ -62,7 +62,8 @@ export async function emitCurrentAppState(
   }
 
   try {
-    const primaryDaSocket = fdc3ServerInstance.serverContext.getPrimarySocket()
+    const primaryDaSocket =
+      fdc3ServerInstance.serverContext.getDesktopAgentSocket()
     if (!primaryDaSocket || !primaryDaSocket.connected) {
       console.log(
         `[emitCurrentAppState] No connected primary DA socket found for session, skipping state emit.`,
@@ -74,7 +75,7 @@ export async function emitCurrentAppState(
       `[emitCurrentAppState] Fetching state for session via DA socket ${primaryDaSocket.id}`,
     )
     const allApps: AppRegistration[] =
-      await fdc3ServerInstance.serverContext.getAllApps()
+      await fdc3ServerInstance.serverContext.getAllAppInstances()
     console.log(
       `[emitCurrentAppState] Emitting SAIL_APP_STATE with ${allApps.length} apps to DA socket ${primaryDaSocket.id}.`,
     )

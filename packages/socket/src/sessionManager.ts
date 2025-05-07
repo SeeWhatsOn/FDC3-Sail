@@ -1,5 +1,5 @@
 // sessionManager.ts
-import { SailFDC3Server } from "./handlers/desktop-agent/SailFDC3Server"
+import { SailFDC3Server } from "./model/fdc3/SailFDC3Server"
 import { EventEmitter } from "events"
 
 export class SessionManager extends EventEmitter {

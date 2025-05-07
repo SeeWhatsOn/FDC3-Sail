@@ -9,9 +9,9 @@ import { FDC3_APP_EVENT } from "../events" // Import event constant
  * @param data The message data received.
  * @param from The instanceId of the sender.
  */
-export function handleFdc3AppEvent(
+export function processAppMessage(
   state: ConnectionState,
-  data: unknown,
+  data: any,
   from: string,
 ): void {
   if (!data?.type?.startsWith("heartbeat")) {
@@ -56,8 +56,8 @@ export function registerMessageHandlers(
   connectionState: ConnectionState,
 ): void {
   socket.on(FDC3_APP_EVENT, (data: any, from: string) => {
-    handleFdc3AppEvent(connectionState, data, from)
+    processAppMessage(connectionState, data, from)
     // Note: No explicit error handling here in the original main.ts,
-    // handleFdc3AppEvent handles internal errors.
+    // processAppMessage handles internal errors.
   })
 }
