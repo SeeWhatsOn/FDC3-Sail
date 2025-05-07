@@ -6,7 +6,7 @@ import {
   SAIL_CHANNEL_CHANGE,
   CHANNEL_RECEIVER_HELLO,
 } from "@finos/fdc3-sail-common"
-import { ConnectionState } from "./connectionState"
+import { ConnectionState } from "./types"
 import { SocketType, getFdc3ServerInstance } from "./utils"
 import { v4 as uuid } from "uuid"
 import { BrowserTypes } from "@finos/fdc3"

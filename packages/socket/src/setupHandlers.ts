@@ -1,5 +1,5 @@
 import { Socket } from "socket.io"
-import { ConnectionState } from "./handlers/connectionState"
+import { ConnectionState } from "./handlers/types"
 import { registerDaHandlers } from "./handlers/daHandlers"
 import { registerAppHandlers } from "./handlers/appHandlers"
 import { registerElectronHandlers } from "./handlers/electronHandlers"

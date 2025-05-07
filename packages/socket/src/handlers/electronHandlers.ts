@@ -1,35 +1,37 @@
 import {
-  ElectronHelloArgs,
+  ElectronHelloArgs as ElectronConnection,
   ElectronAppResponse,
   ElectronDAResponse,
   AppHosting as SailAppHosting,
   SailHostManifest,
 } from "@finos/fdc3-sail-common"
-import { ConnectionState } from "./connectionState"
+import { ConnectionState } from "./types"
 import { SocketType, getSailUrl } from "./utils"
 import { v4 as uuid } from "uuid"
 import { State as Fdc3State, WebAppDetails } from "@finos/fdc3-web-impl"
 import { Socket } from "socket.io"
 import { ELECTRON_HELLO } from "@finos/fdc3-sail-common"
 
-export async function handleElectronHello(
+export async function handleElectronConnection(
   state: ConnectionState,
-  props: ElectronHelloArgs,
+  electronConnectionArgs: ElectronConnection,
   callback: (
     success: ElectronAppResponse | ElectronDAResponse | null,
     err?: string,
   ) => void,
 ): Promise<void> {
   console.log(
-    `[ElectronHandler] Electron Hello: URL=${props.url}, SessionID=${props.userSessionId}, SocketID=${state.socket.id}`,
+    `[ElectronHandler] Electron Hello: URL=${electronConnectionArgs.url}, SessionID=${electronConnectionArgs.userSessionId}, SocketID=${state.socket.id}`,
   )
-  const fdc3Server = state.sessions.get(props.userSessionId)
+  const fdc3Server = state.sessions.get(electronConnectionArgs.userSessionId)
 
   if (fdc3Server) {
-    state.userSessionId = props.userSessionId // Ensure session ID is on the connection state
+    state.userSessionId = electronConnectionArgs.userSessionId // Ensure session ID is on the connection state
     state.fdc3ServerInstance = fdc3Server // Associate existing server instance
 
-    const allApps = fdc3Server.getDirectory().retrieveAppsByUrl(props.url)
+    const allApps = fdc3Server
+      .getDirectory()
+      .retrieveAppsByUrl(electronConnectionArgs.url)
     if (allApps.length > 0) {
       const app = allApps[0]
       const instanceId = "sail-electron-app-" + uuid()
@@ -71,22 +73,22 @@ export async function handleElectronHello(
       })
     } else {
       console.warn(
-        `  Electron connection for existing session ${props.userSessionId}, but no app found for URL: ${props.url}`,
+        `  Electron connection for existing session ${electronConnectionArgs.userSessionId}, but no app found for URL: ${electronConnectionArgs.url}`,
       )
       callback(null, "App not found for URL in existing session.")
     }
-  } else if (props.url === getSailUrl()) {
-    state.userSessionId = props.userSessionId
+  } else if (electronConnectionArgs.url === getSailUrl()) {
+    state.userSessionId = electronConnectionArgs.userSessionId
     state.type = SocketType.ELECTRON_DA
     console.log(
-      `  Electron DA: URL matches SAIL_URL. Session: ${props.userSessionId}. Waiting for DA_HELLO.`,
+      `  Electron DA: URL matches SAIL_URL. Session: ${electronConnectionArgs.userSessionId}. Waiting for DA_HELLO.`,
     )
     // DA_HELLO handler is responsible for creating and setting the SailFDC3Server instance in state.sessions
     // and then on state.fdc3ServerInstance.
     callback({ type: "da" })
   } else {
     console.error(
-      `  Electron Hello: No session ${props.userSessionId} & URL ${props.url} doesn't match SAIL_URL.`,
+      `  Electron Hello: No session ${electronConnectionArgs.userSessionId} & URL ${electronConnectionArgs.url} doesn't match SAIL_URL.`,
     )
     callback(null, "Session not found and URL is not for a new Desktop Agent.")
   }
@@ -99,11 +101,11 @@ export function registerElectronHandlers(
   socket: Socket,
   connectionState: ConnectionState,
 ): void {
-  socket.on(ELECTRON_HELLO, (props: ElectronHelloArgs, callback) => {
+  socket.on(ELECTRON_HELLO, (props: ElectronConnection, callback) => {
     console.log(
       `[ElectronHandler Register] Received ELECTRON_HELLO from ${props.url} for session ${props.userSessionId}`,
     )
-    handleElectronHello(connectionState, props, callback).catch((err) => {
+    handleElectronConnection(connectionState, props, callback).catch((err) => {
       console.error(
         `Error in ELECTRON_HELLO handler for socket ${socket.id}:`,
         err,

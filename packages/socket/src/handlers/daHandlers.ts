@@ -1,6 +1,6 @@
 import { Socket } from "socket.io"
 import {
-  DesktopAgentHelloArgs,
+  DesktopAgentConnectionArgs,
   DesktopAgentDirectoryListingArgs,
   DesktopAgentRegisterAppLaunchArgs,
   AppHosting,
@@ -11,14 +11,14 @@ import {
 import { SailFDC3Server } from "./desktop-agent/SailFDC3Server"
 import { SailDirectory } from "./desktop-agent/SailDirectory"
 import { SailServerContext } from "./desktop-agent/SailServerContext"
-import { ConnectionState } from "./connectionState"
+import { ConnectionState } from "./types"
 import { SocketType, getFdc3ServerInstance, emitCurrentAppState } from "./utils"
 import { State } from "@finos/fdc3-web-impl"
 import { v4 as uuid } from "uuid"
 
 export async function handleDaHello(
   state: ConnectionState,
-  props: DesktopAgentHelloArgs,
+  props: DesktopAgentConnectionArgs,
   callback: (success: boolean, err?: string) => void,
 ): Promise<void> {
   console.log("SAIL DA HELLO handled:" + JSON.stringify(props))
@@ -158,7 +158,7 @@ export function registerDaHandlers(
   connectionState: ConnectionState,
 ): void {
   // DA_HELLO Listener
-  socket.on(DA_HELLO, (props: DesktopAgentHelloArgs, callback) => {
+  socket.on(DA_HELLO, (props: DesktopAgentConnectionArgs, callback) => {
     handleDaHello(connectionState, props, callback).catch((err: Error) => {
       console.error(`Error handling DA_HELLO for socket ${socket.id}:`, err)
       callback(false, err.message || "Internal server error during DA_HELLO")

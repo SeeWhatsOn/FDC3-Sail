@@ -1,7 +1,7 @@
 import { Server, Socket } from "socket.io"
 import { SailFDC3Server } from "./handlers/desktop-agent/SailFDC3Server"
 import dotenv from "dotenv"
-import { ConnectionState } from "./handlers/connectionState"
+import { ConnectionState } from "./handlers/types"
 import { setupAllHandlers } from "./setupHandlers"
 
 // Load environment variables from .env file

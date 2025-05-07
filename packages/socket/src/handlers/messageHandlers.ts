@@ -1,6 +1,6 @@
 import { Socket } from "socket.io" // Import Socket
-import { ConnectionState } from "./connectionState"
-import { FDC3_APP_EVENT } from "@finos/fdc3-sail-common" // Import event constant
+import { ConnectionState } from "./types"
+import { FDC3_APP_EVENT } from "../events" // Import event constant
 
 /**
  * Handles general FDC3 messages received from connected apps.

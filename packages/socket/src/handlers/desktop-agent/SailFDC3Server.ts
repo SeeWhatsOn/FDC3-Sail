@@ -1,4 +1,4 @@
-import { DesktopAgentHelloArgs, TabDetail } from "@finos/fdc3-sail-common"
+import { DesktopAgentConnectionArgs, TabDetail } from "@finos/fdc3-sail-common"
 import {
   ChannelState,
   ChannelType,
@@ -27,7 +27,7 @@ export class SailFDC3Server extends DefaultFDC3Server {
 
   constructor(
     sailServerContext: SailServerContext,
-    helloArgs: DesktopAgentHelloArgs,
+    helloArgs: DesktopAgentConnectionArgs,
   ) {
     super(
       sailServerContext,

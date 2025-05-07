@@ -1,4 +1,4 @@
-import { ConnectionState } from "./connectionState"
+import { ConnectionState } from "./types"
 import { SocketType, emitCurrentAppState } from "./utils"
 import { State } from "@finos/fdc3-web-impl"
 import { Socket } from "socket.io"

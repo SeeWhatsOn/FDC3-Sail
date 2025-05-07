@@ -3,7 +3,7 @@ import {
   SailIntentResolveOpenChannelArgs,
   SAIL_INTENT_RESOLVE_ON_CHANNEL,
 } from "@finos/fdc3-sail-common"
-import { ConnectionState } from "./connectionState"
+import { ConnectionState } from "./types"
 // Potential imports if needed later
 // import { SailFDC3Server } from "./da/SailFDC3Server";
 // import { SailServerContext } from "./da/SailServerContext";

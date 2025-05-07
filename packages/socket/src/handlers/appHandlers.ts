@@ -4,7 +4,7 @@ import {
   SailHostManifest,
 } from "@finos/fdc3-sail-common"
 import { SailData } from "./desktop-agent/SailServerContext"
-import { ConnectionState } from "./connectionState"
+import { ConnectionState } from "./types"
 import {
   SocketType,
   DEBUG_MODE,

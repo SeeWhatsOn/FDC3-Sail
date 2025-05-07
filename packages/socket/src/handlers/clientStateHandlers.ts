@@ -4,7 +4,7 @@ import {
   CHANNEL_RECEIVER_UPDATE,
   SAIL_CLIENT_STATE,
 } from "@finos/fdc3-sail-common"
-import { ConnectionState } from "./connectionState"
+import { ConnectionState } from "./types"
 import { Socket } from "socket.io"
 // Potentially needed imports if not already via ConnectionState or props
 // import { SailFDC3Server } from "./da/SailFDC3Server";
