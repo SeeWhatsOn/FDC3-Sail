@@ -1,6 +1,6 @@
 import { Socket } from "socket.io"
 import { ConnectionState } from "./handlers/types"
-import { registerDesktopAgentHandlers } from "./handlers/fdc3/daHandlers"
+import { registerDesktopAgentHandlers } from "./handlers/fdc3/desktopAgentHandlers"
 import { registerAppHandlers } from "./handlers/appHandlers"
 import { registerElectronHandlers } from "./handlers/electronHandlers"
 import { registerClientStateHandlers } from "./handlers/sail/clientStateHandlers"

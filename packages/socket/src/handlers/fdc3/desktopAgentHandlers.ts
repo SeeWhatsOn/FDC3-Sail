@@ -11,7 +11,7 @@ import {
 import { SailFDC3Server } from "../../model/fdc3/SailFDC3Server"
 import { SailDirectory } from "../../model/fdc3/SailDirectory"
 import { SailServerContext } from "../../model/fdc3/SailServerContext"
-import { ConnectionState } from "../types"
+import { ConnectionState } from "../../types"
 import { SocketType, getOrAwaitFdc3Server, emitCurrentAppState } from "../utils"
 import { State } from "@finos/fdc3-web-impl"
 import { v4 as uuid } from "uuid"
@@ -115,12 +115,13 @@ export async function handleDesktopAgentDirectoryListing(
 
 export async function handleDesktopAgentAppRegistration(
   state: ConnectionState,
-  props: DesktopAgentRegisterAppLaunchArgs,
-  callback: (success: string | null, err?: string) => void,
-): Promise<void> {
-  console.log("Handling DA_REGISTER_APP_LAUNCH: " + JSON.stringify(props))
+  registrationRequest: DesktopAgentRegisterAppLaunchArgs,
+): Promise<string | null> {
+  console.log(
+    "Handling DA_REGISTER_APP_LAUNCH: " + JSON.stringify(registrationRequest),
+  )
 
-  const { appId, userSessionId } = props
+  const { appId, userSessionId } = registrationRequest
   try {
     const session = await getOrAwaitFdc3Server(state.sessions, userSessionId)
     const instanceId = "sail-app-" + uuid()
@@ -129,24 +130,26 @@ export async function handleDesktopAgentAppRegistration(
       instanceId: instanceId,
       state: State.Pending,
       appId,
-      hosting: props.hosting ?? AppHosting.Frame, // Provide default if necessary
-      channel: props.channel ?? null, // Provide default if necessary
-      instanceTitle: props.instanceTitle ?? appId, // Provide default if necessary
+      hosting: registrationRequest.hosting ?? AppHosting.Frame, // Provide default if necessary
+      channel: registrationRequest.channel ?? null, // Provide default if necessary
+      instanceTitle: registrationRequest.instanceTitle ?? appId, // Provide default if necessary
       channelSockets: [],
       // Note: Socket and URL are set during APP_HELLO
     })
     console.log(
       `SAIL Registered app ${appId} with instanceId ${instanceId} for session ${userSessionId}`,
     )
-    callback(instanceId)
+
     // Emit the current app state after successful registration
     await emitCurrentAppState(session)
+    return instanceId
   } catch (error) {
     console.error(
       `SAIL Session not found for App Launch Registration ${userSessionId}:`,
       error,
     )
-    callback(null, (error as Error).message || "Session not found")
+
+    return (error as Error).message || "Session not found"
   }
 }
 
@@ -169,40 +172,46 @@ export function registerDesktopAgentHandlers(
   socket.on(
     DA_DIRECTORY_LISTING,
     (props: DesktopAgentDirectoryListingArgs, callback) => {
-      handleDesktopAgentDirectoryListing(
-        connectionState,
-        props,
-        callback,
-      ).catch((err: Error) => {
+      try {
+        handleDesktopAgentDirectoryListing(connectionState, props, callback)
+      } catch (err: Error | unknown) {
         console.error(
           `Error handling DA_DIRECTORY_LISTING for socket ${socket.id}:`,
           err,
         )
         callback(
           null,
-          err.message || "Internal server error during DA_DIRECTORY_LISTING",
+          (err as Error).message ||
+            "Internal server error during DA_DIRECTORY_LISTING",
         )
-      })
+      }
     },
   )
 
   // DA_REGISTER_APP_LAUNCH Listener
   socket.on(
     DA_REGISTER_APP_LAUNCH,
-    (props: DesktopAgentRegisterAppLaunchArgs, callback) => {
-      handleDesktopAgentAppRegistration(connectionState, props, callback).catch(
-        (err: Error) => {
-          console.error(
-            `Error handling DA_REGISTER_APP_LAUNCH for socket ${socket.id}:`,
-            err,
-          )
-          callback(
-            null,
-            err.message ||
-              "Internal server error during DA_REGISTER_APP_LAUNCH",
-          )
-        },
-      )
+    async (
+      registrationRequest: DesktopAgentRegisterAppLaunchArgs,
+      callback,
+    ) => {
+      try {
+        const instanceId = await handleDesktopAgentAppRegistration(
+          connectionState,
+          registrationRequest,
+        )
+        callback(instanceId)
+      } catch (err: Error | unknown) {
+        console.error(
+          `Error handling DA_REGISTER_APP_LAUNCH for socket ${socket.id}:`,
+          err,
+        )
+        callback(
+          null,
+          (err as Error).message ||
+            "Internal server error during DA_REGISTER_APP_LAUNCH",
+        )
+      }
     },
   )
 }

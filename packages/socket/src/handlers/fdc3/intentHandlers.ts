@@ -3,10 +3,7 @@ import {
   SailIntentResolveOpenChannelArgs,
   SAIL_INTENT_RESOLVE_ON_CHANNEL,
 } from "@finos/fdc3-sail-common"
-import { ConnectionState } from "./types"
-// Potential imports if needed later
-// import { SailFDC3Server } from "./da/SailFDC3Server";
-// import { SailServerContext } from "./da/SailServerContext";
+import { ConnectionState } from "../../types"
 
 /**
  * Handles requests to resolve/open an app directly on a specific channel,
@@ -16,23 +13,21 @@ import { ConnectionState } from "./types"
  * @param props The arguments containing appId and channelId.
  * @param callback The callback function to acknowledge completion or report errors.
  */
-export function resolveIntentOnChannel(
+export async function resolveIntentOnChannel(
   state: ConnectionState,
   props: SailIntentResolveOpenChannelArgs,
-  callback: (success?: void, err?: string) => void,
-): void {
-  console.log(
-    `[IntentHandler] Intent Resolve on Channel: App ${props.appId} on channel ${props.channel} (Socket: ${state.socket.id})`,
-  )
-
-  if (!state.fdc3ServerInstance) {
-    console.error(
-      "  Cannot handle SAIL_INTENT_RESOLVE_ON_CHANNEL: Missing server instance on connection state.",
-    )
-    return callback(undefined, "Connection not properly initialized.")
-  }
-
+): Promise<string | void> {
   try {
+    console.log(
+      `[IntentHandler] Intent Resolve on Channel: App ${props.appId} on channel ${props.channel} (Socket: ${state.socket.id})`,
+    )
+
+    if (!state.fdc3ServerInstance) {
+      console.error(
+        "  Cannot handle SAIL_INTENT_RESOLVE_ON_CHANNEL: Missing server instance on connection state.",
+      )
+      throw new Error("Connection not properly initialized.")
+    }
     // Delegate the action to the server context associated with this connection
     console.log(
       `  Delegating openOnChannel for app ${props.appId} on channel ${props.channel}.`,
@@ -41,15 +36,14 @@ export function resolveIntentOnChannel(
       props.appId,
       props.channel,
     )
-    callback() // Indicate success (void)
+    return
   } catch (error) {
     console.error(
       `  Error handling SAIL_INTENT_RESOLVE_ON_CHANNEL for app ${props.appId}:`,
       error,
     )
-    callback(
-      undefined,
-      (error as Error).message || "Failed to open app on specified channel.",
+    return (
+      (error as Error).message || "Failed to open app on specified channel."
     )
   }
 }
@@ -63,12 +57,16 @@ export function registerIntentHandlers(
 ): void {
   socket.on(
     SAIL_INTENT_RESOLVE_ON_CHANNEL,
-    (props: SailIntentResolveOpenChannelArgs, callback) => {
+    async (
+      props: SailIntentResolveOpenChannelArgs,
+      callback: (success?: void, err?: string) => void,
+    ) => {
       console.log(
         `[IntentHandler Register] Received SAIL_INTENT_RESOLVE_ON_CHANNEL for app ${props.appId} on channel ${props.channel}`,
       )
       try {
-        resolveIntentOnChannel(connectionState, props, callback)
+        //! ideally should confirm that the app is open on the channel
+        await resolveIntentOnChannel(connectionState, props)
       } catch (err) {
         console.error(
           `Unexpected error calling handleIntentResolveOnChannel for socket ${socket.id}:`,
