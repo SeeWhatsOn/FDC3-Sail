@@ -37,7 +37,9 @@ export class SailFDC3Server extends DefaultFDC3Server {
       60000,
       20000,
     )
-    sailServerContext.directory.replace(helloArgs.directories)
+    sailServerContext.directory.replaceAppsFromAppDirectories(
+      helloArgs.directories,
+    )
     this.serverContext = sailServerContext
   }
 

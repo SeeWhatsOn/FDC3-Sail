@@ -1,6 +1,5 @@
 import { Socket } from "socket.io"
 import { randomUUID } from "crypto"
-import { v4 as uuidv4 } from "uuid"
 import {
   AppRegistration,
   ChannelState,
@@ -34,6 +33,15 @@ import {
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { mapChannels } from "./SailFDC3Server"
 
+// Define helper interfaces for better type safety with fdc3Server
+interface Fdc3ChannelHandler {
+  state: ChannelState[]
+}
+
+interface MinimalFDC3ServerInternal extends FDC3Server {
+  handlers: [Fdc3ChannelHandler, ...unknown[]]
+}
+
 /**
  * Represents the state of a Sail app.
  * Pending: App has a window, but isn't connected to FDC3
@@ -52,7 +60,7 @@ export type SailData = AppRegistration & {
 
 export class SailServerContext implements ServerContext<SailData> {
   readonly directory: SailDirectory
-  private instances: SailData[] = []
+  private instances: Map<InstanceID, SailData> = new Map()
   private fdc3Server: FDC3Server | undefined
   private readonly socket: Socket
   private readonly appStartDestinations: Map<string, string | null> = new Map()
@@ -71,7 +79,7 @@ export class SailServerContext implements ServerContext<SailData> {
   }
 
   post(message: object, instanceId: InstanceID): Promise<void> {
-    const instance = this.instances.find((i) => i.instanceId == instanceId)
+    const instance = this.instances.get(instanceId)
     if (instance) {
       if (!(message as { type?: string })?.type?.startsWith("heartbeat")) {
         this.log("Posting message to app: " + JSON.stringify(message))
@@ -149,15 +157,17 @@ export class SailServerContext implements ServerContext<SailData> {
 
   setAppInstanceDetails(uuid: InstanceID, details: SailData): void {
     if (uuid != details.instanceId) {
-      console.error("UUID mismatch", uuid, details.instanceId)
+      console.error(
+        "UUID mismatch in setAppInstanceDetails. Instance may not be tracked correctly.",
+        uuid,
+        details.instanceId,
+      )
     }
-
-    this.instances = this.instances.filter((ca) => ca.instanceId !== uuid)
-    this.instances.push(details)
+    this.instances.set(details.instanceId, details)
   }
 
   getAppInstanceDetails(uuid: InstanceID): SailData | undefined {
-    return this.instances.find((ca) => ca.instanceId === uuid)
+    return this.instances.get(uuid)
   }
 
   async setInitialChannel(app: AppIdentifier): Promise<void> {
@@ -165,20 +175,22 @@ export class SailServerContext implements ServerContext<SailData> {
   }
 
   async getActiveAppInstances(): Promise<AppRegistration[]> {
-    return (await this.getAllAppInstances()).filter(
-      (ca) => ca.state == State.Connected,
-    )
+    return Array.from(this.instances.values())
+      .filter((ca) => ca.state == State.Connected)
+      .map((x) => ({
+        appId: x.appId,
+        instanceId: x.instanceId,
+        state: x.state,
+      }))
   }
 
   async isAppConnected(app: InstanceID): Promise<boolean> {
-    const found = (await this.getAllAppInstances()).find(
-      (a) => a.instanceId == app && a.state == State.Connected,
-    )
-    return found != null
+    const foundInstance = this.instances.get(app)
+    return foundInstance != null && foundInstance.state == State.Connected
   }
 
   async updateAppInstanceState(app: InstanceID, state: State): Promise<void> {
-    const found = this.instances.find((a) => a.instanceId == app)
+    const found = this.instances.get(app)
     if (found) {
       const needsInitialChannelSetup =
         found.state == State.Pending && state == State.Connected
@@ -188,14 +200,14 @@ export class SailServerContext implements ServerContext<SailData> {
       }
 
       if (state == State.Terminated) {
-        this.instances = this.instances.filter((a) => a.instanceId !== app)
+        this.instances.delete(app)
         this.fdc3Server?.cleanup(found.instanceId)
       }
     }
   }
 
   async getAllAppInstances(): Promise<AppRegistration[]> {
-    return this.instances.map((x) => {
+    return Array.from(this.instances.values()).map((x) => {
       return {
         appId: x.appId,
         instanceId: x.instanceId,
@@ -205,7 +217,7 @@ export class SailServerContext implements ServerContext<SailData> {
   }
 
   createUUID(): string {
-    return uuidv4()
+    return randomUUID()
   }
 
   log(message: string): void {
@@ -276,17 +288,17 @@ export class SailServerContext implements ServerContext<SailData> {
     const sc = this
 
     function runningAppsInChannel(
-      arg0: AugmentedAppIntent,
+      appIntent: AugmentedAppIntent,
       channel: string | null,
     ): number {
-      return arg0.apps.filter(
-        (a) => a.instanceId && a.channelData?.id == channel,
+      return appIntent.apps.filter(
+        (app) => app.instanceId && app.channelData?.id == channel,
       ).length
     }
 
-    function uniqueApps(arg0: AppIntent): number {
-      return arg0.apps
-        .map((a) => a.appId)
+    function uniqueApps(appIntent: AppIntent): number {
+      return appIntent.apps
+        .map((app) => app.appId)
         .filter((value, index, self) => self.indexOf(value) === index).length
     }
 
@@ -343,10 +355,18 @@ export class SailServerContext implements ServerContext<SailData> {
           } else {
             console.log("SAIL Narrowed intents", response)
 
+            function appNeedsStarting(appIntents: AppIntent[]) {
+              return (
+                appIntents.length == 1 &&
+                appIntents[0].apps.length == 1 &&
+                appIntents[0].apps[0].instanceId == null
+              )
+            }
+
             if (appNeedsStarting(response.appIntents)) {
               // tell sail where to open the app
-              const theAppIntent = getSingleAppIntent(response.appIntents)
-              const theApp = theAppIntent.apps[0]
+              const theAppIntent = response.appIntents[0] // get the first intent
+              const theApp = theAppIntent.apps[0] // get the first app
               this.appStartDestinations.set(theApp.appId, response.channel)
             }
 
@@ -371,7 +391,7 @@ export class SailServerContext implements ServerContext<SailData> {
           newChannelId: channelId,
         },
         meta: {
-          eventUuid: uuidv4(),
+          eventUuid: randomUUID(),
           timestamp: new Date(),
         },
       }
@@ -380,13 +400,22 @@ export class SailServerContext implements ServerContext<SailData> {
   }
 
   async reloadAppDirectories(urls: string[], customApps: DirectoryApp[]) {
-    await this.directory.replace(urls)
-    customApps.forEach((a) => this.directory.add(a))
+    await this.directory.replaceAppsFromAppDirectories(urls)
+    customApps.forEach((a) => this.directory.addApp(a))
   }
 
   private getChannelDetails(): ChannelState[] {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (this.fdc3Server as any).handlers[0].state as ChannelState[]
+    const internalServer = this.fdc3Server as
+      | MinimalFDC3ServerInternal
+      | undefined
+    if (
+      internalServer &&
+      internalServer.handlers &&
+      internalServer.handlers.length > 0
+    ) {
+      return internalServer.handlers[0].state
+    }
+    return []
   }
 
   getTabs(): TabDetail[] {
@@ -409,32 +438,33 @@ export class SailServerContext implements ServerContext<SailData> {
       return undefined
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const channelState = (this.fdc3Server as any).handlers[0]
-      .state as ChannelState[]
-    channelState.length = 0
+    const internalServer = this.fdc3Server as
+      | MinimalFDC3ServerInternal
+      | undefined
+
+    if (
+      !internalServer ||
+      !internalServer.handlers ||
+      internalServer.handlers.length === 0
+    ) {
+      console.warn(
+        "SAIL: FDC3Server or its handlers are not initialized for updateChannelData.",
+      )
+      return
+    }
+
+    const channelHandler = internalServer.handlers[0]
+    channelHandler.state.length = 0 // Clear existing state
     const newState = mapChannels(channelData).map((c) => {
       return {
         ...c,
         context:
           relevantHistory(c.id, history) ??
-          channelState.find((cs) => cs.id == c.id)?.context ??
+          channelHandler.state.find((cs) => cs.id == c.id)?.context ??
           [],
       }
     })
-    channelState.push(...newState)
-    console.log("SAIL Updated channel data", channelState)
+    channelHandler.state.push(...newState)
+    console.log("SAIL Updated channel data", channelHandler.state)
   }
-}
-
-function appNeedsStarting(appIntents: AppIntent[]) {
-  return (
-    appIntents.length == 1 &&
-    appIntents[0].apps.length == 1 &&
-    appIntents[0].apps[0].instanceId == null
-  )
-}
-
-function getSingleAppIntent(appIntents: AppIntent[]) {
-  return appIntents[0]
 }

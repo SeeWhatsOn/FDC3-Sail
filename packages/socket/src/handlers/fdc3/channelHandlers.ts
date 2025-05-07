@@ -19,20 +19,20 @@ function handleSailChannelChange(
   socket.on(
     SAIL_CHANNEL_CHANGE,
     async (
-      props: SailChannelChangeArgs,
+      data: SailChannelChangeArgs,
       callback: (success: boolean, err?: string) => void,
     ) => {
       console.log(
-        `[ChannelHandler Register] Received SAIL_CHANNEL_CHANGE for instance ${props.instanceId} to channel ${props.channel}`,
+        `[ChannelHandler Register] Received SAIL_CHANNEL_CHANGE for instance ${data.instanceId} to channel ${data.channel}`,
       )
       console.log(
-        `[ChannelHandler] Sail Channel Change: Instance ${props.instanceId} to channel ${props.channel} (Socket: ${connectionState.socket.id})`,
+        `[ChannelHandler] Sail Channel Change: Instance ${data.instanceId} to channel ${data.channel} (Socket: ${connectionState.socket.id})`,
       )
 
       if (
         !connectionState.fdc3ServerInstance ||
-        !props.instanceId ||
-        connectionState.userSessionId !== props.userSessionId
+        !data.instanceId ||
+        connectionState.userSessionId !== data.userSessionId
       ) {
         console.error(
           "  Cannot handle SAIL_CHANNEL_CHANGE: Invalid state or mismatched session.",
@@ -43,17 +43,15 @@ function handleSailChannelChange(
         )
       }
 
-      const instanceId = props.instanceId // The app instance making the request
-      const session = connectionState.fdc3ServerInstance
-
       try {
-        console.log(
-          `  App ${instanceId} requesting to join channel ${props.channel}`,
-        )
+        const { instanceId, channel } = data // The app instance making the request
+        const session = connectionState.fdc3ServerInstance
+
+        console.log(`  App ${instanceId} requesting to join channel ${channel}`)
         const response = await session.receive(
           {
             type: "joinUserChannelRequest",
-            payload: { channelId: props.channel },
+            payload: { channelId: channel },
             meta: { requestUuid: uuid(), timestamp: new Date() },
           } as BrowserTypes.JoinUserChannelRequest,
           instanceId,
@@ -64,20 +62,20 @@ function handleSailChannelChange(
         )
 
         const appState = session.serverContext.getAppInstanceDetails(instanceId)
-        if (appState && appState.channel === props.channel) {
+        if (appState && appState.channel === channel) {
           console.log(
             `  Verified channel for ${instanceId} is now ${appState.channel}`,
           )
         } else {
           console.warn(
-            `  Channel state for ${instanceId} might not be updated correctly after join request. Expected: ${props.channel}, Actual: ${appState?.channel}`,
+            `  Channel state for ${instanceId} might not be updated correctly after join request. Expected: ${channel}, Actual: ${appState?.channel}`,
           )
         }
 
         callback(true) // Assume success if receive didn't throw
       } catch (error) {
         console.error(
-          `  Error handling SAIL_CHANNEL_CHANGE for instance ${instanceId}:`,
+          `  Error handling SAIL_CHANNEL_CHANGE for instance ${data.instanceId}:`,
           error,
         )
         callback(false, (error as Error).message || "Failed to change channel.")
@@ -124,7 +122,7 @@ function handleChannelReceiverHello(
           appInst.channelSockets = appInst.channelSockets || []
           if (
             !appInst.channelSockets.some(
-              (s) => s.id === connectionState.socket.id,
+              (socket) => socket.id === connectionState.socket.id,
             )
           ) {
             appInst.channelSockets.push(connectionState.socket)

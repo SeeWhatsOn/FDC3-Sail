@@ -1,41 +1,33 @@
 import fs from "node:fs/promises"
 import { BasicDirectory, DirectoryApp } from "@finos/fdc3-web-impl"
 
-/* eslint-disable  @typescript-eslint/no-explicit-any */
+export type AppDirectory = {
+  applications: DirectoryApp[]
+  message?: string
+}
 
+// TODO: move to a shared location and get correct path
 export const DEFAULT_ICON = "/icons/control/choose-app.svg"
 
-export function getIcon(a: DirectoryApp | undefined) {
-  if (a) {
-    const icons = a.icons ?? []
-    if (icons.length > 0) {
-      return icons[0].src
-    }
-  }
-
-  return DEFAULT_ICON
-}
-
-async function loadRemotely(u: string): Promise<any> {
-  const response = await fetch(u)
-  return await response.json()
-}
-
-async function loadFile(u: string): Promise<any> {
-  const data = await fs.readFile(u, { encoding: "utf8" })
-  return JSON.parse(data)
-}
-
-async function load(url: string): Promise<DirectoryApp[]> {
-  if (url.startsWith("http")) {
-    return await loadRemotely(url).then(convertToDirectoryList)
+export function getIcon(app: DirectoryApp | undefined) {
+  if (app && app?.icons?.length) {
+    return app.icons[0].src
   } else {
-    return await loadFile(url).then(convertToDirectoryList)
+    return DEFAULT_ICON
   }
 }
 
-const convertToDirectoryList = (data: any) => {
-  return data.applications as DirectoryApp[]
+// load an app directory from a remote URL or local file
+async function loadAppDirectory(url: string): Promise<AppDirectory> {
+  if (url.startsWith("http")) {
+    // load an app directory from a remote URL
+    const response = await fetch(url)
+    return (await response.json()) as AppDirectory
+  } else {
+    // load an app directory from a local file
+    const data = await fs.readFile(url, { encoding: "utf8" })
+    return (await JSON.parse(data)) as AppDirectory
+  }
 }
 
 export class SailDirectory extends BasicDirectory {
@@ -43,38 +35,68 @@ export class SailDirectory extends BasicDirectory {
     super([])
   }
 
-  async load(url: string): Promise<void> {
+  async addAppsFromAppDirectory(url: string): Promise<void> {
     try {
-      const apps = await load(url)
-      apps.forEach((a) => {
-        // ensure we don't have two apps with same appId
-        if (!this.allApps.find((a2) => a2.appId == a.appId)) {
-          this.allApps.push(a)
+      const { applications } = await loadAppDirectory(url)
+      // Create a Set of appIds from the current this.allApps for efficient lookup.
+      // This also helps in de-duplicating apps from the incoming 'applications' list itself
+      // with respect to what gets added to this.allApps.
+      const existingAppIds = new Set(
+        this.allApps.map((existingApp) => existingApp.appId),
+      )
+
+      const appsToAdd = applications.filter((app) => {
+        if (!existingAppIds.has(app.appId)) {
+          // If the app is not already known (either from previous allApps or earlier in this 'applications' list),
+          // mark its ID as now known and include it for addition.
+          existingAppIds.add(app.appId)
+          return true
         }
+        return false
       })
+
+      if (appsToAdd.length > 0) {
+        this.allApps.push(...appsToAdd)
+      }
     } catch (e) {
-      console.error(`Error loading`, e)
+      console.error(`Error loading app directory from ${url}:`, e)
     }
   }
 
-  /**
-   * Replaces the loaded apps with new ones
-   */
-  async replace(url: string[]) {
+  clearApps() {
     this.allApps = []
-    for (const u of url) {
-      await this.load(u)
+  }
+
+  /**
+   * Replaces all currently loaded apps with apps loaded from the specified app directory URLs.
+   * This method will:
+   * 1. Clear all existing apps from the directory
+   * 2. Load and parse each app directory URL in sequence
+   * 3. Add all unique apps from each directory to the internal app collection
+   *
+   * @param urls - Array of URLs pointing to app directory JSON files. Can be HTTP(S) URLs or local file paths
+   * @throws Will log but not throw errors if individual app directory loads fail
+   * @example
+   * await directory.replaceAppsFromAppDirectories([
+   *   'https://example.com/app-directory.json',
+   *   '/local/path/to/directory.json'
+   * ]);
+   */
+  async replaceAppsFromAppDirectories(urls: string[]) {
+    this.clearApps()
+    for (const url of urls) {
+      await this.addAppsFromAppDirectory(url)
     }
     console.log("Loaded " + this.allApps.length + " apps")
   }
 
-  add(d: DirectoryApp) {
-    this.allApps.push(d)
+  addApp(app: DirectoryApp) {
+    this.allApps.push(app)
   }
 
   retrieveAppsByUrl(url: string): DirectoryApp[] {
     return this.retrieveAllApps().filter(
-      (a) => a.type == "web" && (a.details as any).url == url,
+      (app) => app.type == "web" && (app.details as { url: string }).url == url,
     )
   }
 }
