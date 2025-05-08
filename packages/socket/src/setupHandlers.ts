@@ -1,12 +1,12 @@
 import { Socket } from "socket.io"
-import { ConnectionState } from "./handlers/types"
+import { ConnectionState } from "./types"
 import { registerDesktopAgentHandlers } from "./handlers/fdc3/desktopAgentHandlers"
-import { registerAppHandlers } from "./handlers/appHandlers"
-import { registerElectronHandlers } from "./handlers/electronHandlers"
+import { registerAppHandlers } from "./handlers/fdc3/appHandlers"
+import { registerElectronHandlers } from "./handlers/sail/electronHandlers"
 import { registerClientStateHandlers } from "./handlers/sail/clientStateHandlers"
 import { registerChannelHandlers } from "./handlers/fdc3/channelHandlers"
-import { registerMessageHandlers } from "./handlers/messageHandlers"
-import { registerIntentHandlers } from "./handlers/intentHandlers"
+import { registerMessageHandlers } from "./handlers/fdc3/messageHandlers"
+import { registerIntentHandlers } from "./handlers/fdc3/intentHandlers"
 import { registerLifecycleHandlers } from "./handlers/lifecycleHandlers"
 
 /**
@@ -23,6 +23,7 @@ export function registerAllSocketHandlers(
   console.log(`Setting up all handlers for socket ${socket.id}`)
 
   // Call registration functions from each handler module
+  //TODO: Should these become promises and then use promises.all?
   registerDesktopAgentHandlers(socket, connectionState)
   registerAppHandlers(socket, connectionState)
   registerElectronHandlers(socket, connectionState)
