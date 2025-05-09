@@ -20,7 +20,7 @@ import {
 } from "@finos/fdc3-web-impl"
 import { Socket } from "socket.io"
 import { APP_HELLO } from "@finos/fdc3-sail-common"
-import { SailData } from "../../model/fdc3/SailServerContext"
+import { SailData } from "../../types"
 
 // Helper function for valid pending connections
 /**
@@ -155,7 +155,7 @@ function handleApplicationConnect(
         connectionState.type = SocketType.APP
 
         const fdc3Server = await getOrAwaitFdc3Server(
-          connectionState.sessions,
+          connectionState.sessionManager,
           connectionState.userSessionId,
         )
 
@@ -221,6 +221,4 @@ export function registerAppHandlers(
   connectionState: ConnectionState,
 ): void {
   handleApplicationConnect(connectionState, socket)
-  // TODO: Register listener for FDC3_APP_EVENT if moving processAppMessage registration here later
-  // socket.on(FDC3_APP_EVENT, (data: any, from: string) => { ... });
 }

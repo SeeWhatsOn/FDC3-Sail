@@ -35,7 +35,7 @@ export function registerElectronHandlers(
         console.log(
           `[ElectronHandler] Electron Hello: URL=${data.url}, SessionID=${data.userSessionId}, SocketID=${connectionState.socket.id}`,
         )
-        const fdc3Server = connectionState.sessions.get(data.userSessionId)
+        const fdc3Server = connectionState.sessionManager.getSession(data.userSessionId)
 
         if (fdc3Server) {
           connectionState.userSessionId = data.userSessionId // Ensure session ID is on the connection state

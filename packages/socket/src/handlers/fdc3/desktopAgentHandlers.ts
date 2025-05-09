@@ -34,7 +34,7 @@ function handleDesktopAgentConnect(
         "SAIL Desktop Agent Connecting",
         connectionState.userSessionId,
       )
-      let fdc3Server = connectionState.sessions.get(
+      let fdc3Server = connectionState.sessionManager.getSession(
         connectionState.userSessionId,
       )
 
@@ -55,13 +55,13 @@ function handleDesktopAgentConnect(
           const existingContext = fdc3Server.serverContext
           fdc3Server = new SailFDC3Server(existingContext, data)
           existingContext.setFDC3Server(fdc3Server) // Ensure context links back to the new server instance
-          connectionState.sessions.set(
+          connectionState.sessionManager.createSession(
             connectionState.userSessionId,
             fdc3Server,
           )
           console.log(
             "SAIL updated desktop agent channels and directories",
-            connectionState.sessions.size,
+            connectionState.sessionManager.getSessionCount(),
             data.userSessionId,
           )
         } catch (error) {
@@ -84,13 +84,13 @@ function handleDesktopAgentConnect(
           )
           fdc3Server = new SailFDC3Server(serverContext, data)
           serverContext.setFDC3Server(fdc3Server)
-          connectionState.sessions.set(
+          connectionState.sessionManager.createSession(
             connectionState.userSessionId,
             fdc3Server,
           )
           console.log(
             "SAIL created agent session. Running sessions:",
-            connectionState.sessions.size,
+            connectionState.sessionManager.getSessionCount(),
             data.userSessionId,
           )
         } catch (error) {
@@ -127,7 +127,7 @@ export function handleDesktopAgentDirectoryListing(
       const userSessionId = data.userSessionId
       try {
         const session = await getOrAwaitFdc3Server(
-          connectionState.sessions,
+          connectionState.sessionManager,
           userSessionId,
         )
         callback(session.getAppDirectory().allApps, undefined)
@@ -160,7 +160,7 @@ export function handleDesktopAgentAppRegistration(
       try {
         const { appId, userSessionId } = registrationRequest
         const session = await getOrAwaitFdc3Server(
-          connectionState.sessions,
+          connectionState.sessionManager,
           userSessionId,
         )
         const instanceId = "sail-app-" + uuid()

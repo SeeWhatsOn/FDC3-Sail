@@ -9,16 +9,16 @@ import { Socket } from "socket.io"
 
 export async function handleSailClientState(
   state: ConnectionState,
-  props: SailClientStateArgs,
+  data: SailClientStateArgs,
   callback: (success: boolean, err?: string) => void,
 ): Promise<void> {
   console.log(
-    `[ClientStateHandler] Sail Client State for session ${props.userSessionId} (Socket: ${state.socket.id})`,
+    `[ClientStateHandler] Sail Client State for session ${data.userSessionId} (Socket: ${state.socket.id})`,
   )
 
   if (
     !state.fdc3ServerInstance ||
-    state.userSessionId !== props.userSessionId
+    state.userSessionId !== data.userSessionId
   ) {
     console.error(
       "  Cannot handle SAIL_CLIENT_STATE: Mismatched session or missing server instance.",
@@ -33,13 +33,13 @@ export async function handleSailClientState(
 
   try {
     console.log(
-      `  Updating state for session ${props.userSessionId}: ${props.directories.length} dirs, ${props.customApps.length} custom, ${props.channels.length} chans, ${props.panels.length} panels.`,
+      `  Updating state for session ${data.userSessionId}: ${data.directories.length} dirs, ${data.customApps.length} custom, ${data.channels.length} chans, ${data.panels.length} panels.`,
     )
-    serverContext.reloadAppDirectories(props.directories, props.customApps)
-    serverContext.updateChannelData(props.channels, props.contextHistory)
+    serverContext.reloadAppDirectories(data.directories, data.customApps)
+    serverContext.updateChannelData(data.channels, data.contextHistory)
 
     // Handle panel changes (potential channel/title updates)
-    for (const panel of props.panels) {
+    for (const panel of data.panels) {
       const appDetailState = serverContext.getAppInstanceDetails(panel.panelId)
       if (appDetailState) {
         let updated = false
@@ -84,19 +84,19 @@ export async function handleSailClientState(
         appDetailState.channelSockets &&
         appDetailState.channelSockets.length > 0
       ) {
-        const updateMsg: ChannelReceiverUpdate = { tabs: props.channels }
+        const updateMsg: ChannelReceiverUpdate = { tabs: data.channels }
         console.log(
           `  Sending CHANNEL_RECEIVER_UPDATE to ${app.instanceId} (${appDetailState.channelSockets.length} sockets)`,
         )
         const originalSocketCount = appDetailState.channelSockets.length
         appDetailState.channelSockets = appDetailState.channelSockets.filter(
-          (chanSocket) => {
-            if (chanSocket.connected) {
-              chanSocket.emit(CHANNEL_RECEIVER_UPDATE, updateMsg)
+          (channelSocket: Socket) => {
+            if (channelSocket.connected) {
+              channelSocket.emit(CHANNEL_RECEIVER_UPDATE, updateMsg)
               return true // Keep connected socket
             }
             console.warn(
-              `  Channel socket ${chanSocket.id} for ${app.instanceId} disconnected, removing.`,
+              `  Channel socket ${channelSocket.id} for ${app.instanceId} disconnected, removing.`,
             )
             return false // Remove disconnected socket
           },
@@ -111,7 +111,7 @@ export async function handleSailClientState(
     callback(true)
   } catch (error) {
     console.error(
-      `  Error in SAIL_CLIENT_STATE for session ${props.userSessionId}:`,
+      `  Error in SAIL_CLIENT_STATE for session ${data.userSessionId}:`,
       error,
     )
     callback(

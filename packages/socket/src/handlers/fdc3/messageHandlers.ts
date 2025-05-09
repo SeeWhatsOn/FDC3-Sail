@@ -1,5 +1,5 @@
 import { Socket } from "socket.io" // Import Socket
-import { FDC3_APP_EVENT } from "../../events" // Import event constant
+import { FDC3_APP_EVENT } from "@finos/fdc3-sail-common" // Import event constant
 import { ConnectionState, BaseMessageData } from "../../types"
 
 /**

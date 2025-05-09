@@ -1,6 +1,7 @@
 import { SailFDC3Server } from "../model/fdc3/SailFDC3Server" // Adjust import path if necessary
 import { SAIL_APP_STATE } from "@finos/fdc3-sail-common" // Import SAIL_APP_STATE
 import { AppRegistration } from "@finos/fdc3-web-impl" // Import AppRegistration from its source
+import { SessionManager } from "../sessionManager"
 
 export const DEBUG_MODE = true
 let _debugReconnectionNumber = 0 // Internal variable
@@ -14,27 +15,16 @@ export function getServerUrl(): string {
   return process.env.SAIL_URL || "http://localhost:8090"
 }
 
-export function getOrAwaitFdc3Server(
-  sessions: Map<string, SailFDC3Server>,
+export async function getOrAwaitFdc3Server(
+  sessionManager: SessionManager,
   userSessionId: string,
 ): Promise<SailFDC3Server> {
-  return new Promise((resolve, reject) => {
-    let attempts = 0
-    const maxAttempts = 300 // e.g., 30 seconds with 100ms interval
-    const interval = setInterval(() => {
-      const fdc3Server = sessions.get(userSessionId)
-      if (fdc3Server) {
-        clearInterval(interval)
-        resolve(fdc3Server)
-      } else if (attempts++ > maxAttempts) {
-        clearInterval(interval)
-        console.error(
-          `getOrAwaitFdc3Server timed out for session ${userSessionId}`,
-        )
-        reject(new Error(`Session ${userSessionId} not found after timeout.`))
-      }
-    }, 100) // Check every 100ms
-  })
+  try {
+    return await sessionManager.getSession(userSessionId)
+  } catch (error) {
+    console.error(`Failed to get session ${userSessionId}:`, error)
+    throw error
+  }
 }
 
 export enum SocketType {

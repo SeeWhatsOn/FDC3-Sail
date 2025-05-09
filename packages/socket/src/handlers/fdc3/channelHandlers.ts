@@ -110,7 +110,7 @@ function handleChannelReceiverHello(
       try {
         // Ensure we have the correct FDC3 server instance for the session
         const fdc3Server = await getOrAwaitFdc3Server(
-          connectionState.sessions,
+          connectionState.sessionManager,
           props.userSessionId,
         )
         connectionState.fdc3ServerInstance = fdc3Server
@@ -122,7 +122,7 @@ function handleChannelReceiverHello(
           appInst.channelSockets = appInst.channelSockets || []
           if (
             !appInst.channelSockets.some(
-              (socket) => socket.id === connectionState.socket.id,
+              (socket: Socket) => socket.id === connectionState.socket.id,
             )
           ) {
             appInst.channelSockets.push(connectionState.socket)

@@ -1,4 +1,4 @@
-import { ConnectionState } from "./types"
+import { ConnectionState } from "../types"
 import { SocketType, emitCurrentAppState } from "./utils"
 import { State } from "@finos/fdc3-web-impl"
 import { Socket } from "socket.io"
@@ -13,7 +13,7 @@ export async function handleDisconnect(
   state: ConnectionState,
   reason: string,
 ): Promise<void> {
-  const { sessions } = state // Destructure sessions for use
+  const { sessionManager } = state // Destructure sessions for use
   const fdcInstance = state.fdc3ServerInstance
   const connType = state.type
   const connAppInstanceId = state.appInstanceId
@@ -52,7 +52,7 @@ export async function handleDisconnect(
         if (details && details.channelSockets) {
           const initialLength = details.channelSockets.length
           details.channelSockets = details.channelSockets.filter(
-            (s) => s.id !== socketId,
+            (socket: Socket) => socket.id !== socketId,
           )
           if (details.channelSockets.length < initialLength) {
             fdcInstance.serverContext.setAppInstanceDetails(
@@ -85,7 +85,7 @@ export async function handleDisconnect(
             `  Disconnecting socket ${socketId} is the primary DA socket for session ${connUserSessionId}. Shutting down session.`,
           )
           fdcInstance.shutdown()
-          sessions.delete(connUserSessionId)
+          sessionManager.deleteSession(connUserSessionId)
           console.log(
             `  Session ${connUserSessionId} shut down and removed from active sessions.`,
           )
@@ -99,7 +99,7 @@ export async function handleDisconnect(
             `  Electron DA Session ${connUserSessionId} disconnecting (socket ${socketId}), but primary socket was not set. Attempting shutdown.`,
           )
           fdcInstance.shutdown() // Attempt shutdown of the instance
-          sessions.delete(connUserSessionId) // Remove session if it exists
+          sessionManager.deleteSession(connUserSessionId) // Remove session if it exists
           console.log(
             `  Electron DA Session ${connUserSessionId} (no primary socket assigned) attempted shutdown and removal.`,
           )
@@ -131,12 +131,12 @@ export async function handleDisconnect(
       (connType === SocketType.DESKTOP_AGENT ||
         connType === SocketType.ELECTRON_DA) &&
       connUserSessionId &&
-      sessions.has(connUserSessionId)
+      sessionManager.hasSession(connUserSessionId)
     ) {
       console.warn(
         `  Found lingering session ${connUserSessionId} for disconnected DA socket ${socketId} without associated server instance in connectionState. Removing.`,
       )
-      sessions.delete(connUserSessionId) // Cleanup potentially orphaned session map entry
+      sessionManager.deleteSession(connUserSessionId) // Cleanup potentially orphaned session map entry
     }
   }
 

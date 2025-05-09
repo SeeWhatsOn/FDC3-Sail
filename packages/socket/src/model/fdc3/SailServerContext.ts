@@ -32,31 +32,7 @@ import {
   ChannelChangedEvent,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { mapChannels } from "./SailFDC3Server"
-
-// Define helper interfaces for better type safety with fdc3Server
-interface Fdc3ChannelHandler {
-  state: ChannelState[]
-}
-
-interface MinimalFDC3ServerInternal extends FDC3Server {
-  handlers: [Fdc3ChannelHandler, ...unknown[]]
-}
-
-/**
- * Represents the state of a Sail app.
- * Pending: App has a window, but isn't connected to FDC3
- * Open: App is connected to FDC3
- * NotResponding: App is not responding to heartbeats
- * Terminated: App Window has been closed
- */
-export type SailData = AppRegistration & {
-  socket?: Socket
-  channelSockets: Socket[]
-  url?: string
-  hosting: AppHosting
-  channel: string | null
-  instanceTitle: string
-}
+import { MinimalFDC3ServerInternal, SailData } from "../../types"
 
 export class SailServerContext implements ServerContext<SailData> {
   readonly directory: SailDirectory
@@ -119,12 +95,17 @@ export class SailServerContext implements ServerContext<SailData> {
 
     const url = (app[0].details as { url?: string })?.url ?? undefined
     if (url) {
+      // Determine if the app should be forced into a new window/tab,
+      // based on its manifest configuration.
       const forceNewWindow = (
         app[0].hostManifests as { sail?: { forceNewWindow?: boolean } }
       )?.sail?.forceNewWindow
+      // If forcing a new window or no channel is specified, host in a new Tab. Otherwise, host in an IFrame.
       const approach =
         forceNewWindow || channel === null ? AppHosting.Tab : AppHosting.Frame
 
+      // Notify the client (Desktop Agent) to open the app and wait for acknowledgement.
+      // The client will handle the actual instantiation of the app view (tab or iframe).
       const details: SailAppOpenResponse = await this.socket.emitWithAck(
         SAIL_APP_OPEN,
         {
@@ -176,11 +157,11 @@ export class SailServerContext implements ServerContext<SailData> {
 
   async getActiveAppInstances(): Promise<AppRegistration[]> {
     return Array.from(this.instances.values())
-      .filter((ca) => ca.state == State.Connected)
-      .map((x) => ({
-        appId: x.appId,
-        instanceId: x.instanceId,
-        state: x.state,
+      .filter((instanceData) => instanceData.state == State.Connected)
+      .map((instanceData) => ({
+        appId: instanceData.appId,
+        instanceId: instanceData.instanceId,
+        state: instanceData.state,
       }))
   }
 
@@ -196,10 +177,12 @@ export class SailServerContext implements ServerContext<SailData> {
         found.state == State.Pending && state == State.Connected
       found.state = state
       if (needsInitialChannelSetup) {
+        // If the app has just connected, perform initial channel setup.
         this.setInitialChannel(found)
       }
 
       if (state == State.Terminated) {
+        // If the app instance is terminated, remove it from tracking and clean up server-side resources.
         this.instances.delete(app)
         this.fdc3Server?.cleanup(found.instanceId)
       }
@@ -207,11 +190,11 @@ export class SailServerContext implements ServerContext<SailData> {
   }
 
   async getAllAppInstances(): Promise<AppRegistration[]> {
-    return Array.from(this.instances.values()).map((x) => {
+    return Array.from(this.instances.values()).map((instanceData) => {
       return {
-        appId: x.appId,
-        instanceId: x.instanceId,
-        state: x.state,
+        appId: instanceData.appId,
+        instanceId: instanceData.instanceId,
+        state: instanceData.state,
       }
     })
   }
@@ -245,28 +228,31 @@ export class SailServerContext implements ServerContext<SailData> {
   }
 
   augmentIntents(appIntents: AppIntent[]): AugmentedAppIntent[] {
-    return appIntents.map((a) => ({
-      intent: a.intent,
-      apps: a.apps.map((a) => {
-        const dir = this.directory.retrieveAppsById(a.appId)
+    return appIntents.map(({ intent, apps }) => ({
+      intent,
+      apps: apps.map((app) => {
+        const dir = this.directory.retrieveAppsById(app.appId)
         const iconSrc = getIcon(dir[0])
         const title = dir.length > 0 ? dir[0]?.title : "Unknown App"
 
-        if (a.instanceId) {
-          const instance = this.getAppInstanceDetails(a.instanceId)
+        // If the app has a running instance, augment with instance-specific details
+        // like its current channel and instance title.
+        if (app.instanceId) {
+          const instance = this.getAppInstanceDetails(app.instanceId)
           const channel = this.getChannelDetails().find(
-            (c) => c.id == instance?.channel,
+            (channel) => channel.id == instance?.channel,
           )
           return {
-            ...a,
+            ...app,
             channelData: channel ? this.convertToTabDetail(channel) : null,
             instanceTitle: instance?.instanceTitle ?? undefined,
             icons: [{ src: iconSrc }],
             title,
           } as AugmentedAppMetadata
         } else {
+          // If no running instance, just provide general app metadata.
           return {
-            ...a,
+            ...app,
             icons: [{ src: iconSrc }],
             title,
           } as AugmentedAppMetadata
@@ -276,105 +262,152 @@ export class SailServerContext implements ServerContext<SailData> {
   }
 
   /**
-   * This is used when the intent resolver is managed by the desktop agent as opposed
-   * to running inside an iframe in the client app.
+   * Attempts to automatically resolve an intent if specific conditions are met.
+   * This is a helper for the narrowIntents method.
+   *
+   * @param raiser The application instance that raised the intent.
+   * @param augmentedIntent The single augmented intent to potentially auto-resolve.
+   * @param runningAppsInChannelFn A function to count running apps in a channel for the intent.
+   * @param raiserChannelFn A function to get the raiser's current channel.
+   * @returns The AppIntent array if auto-resolved, otherwise null.
    */
-  async narrowIntents(
+  private _tryAutoResolveIntent(
     raiser: AppIdentifier,
-    incomingIntents: AppIntent[],
-    context: Context,
-  ): Promise<AppIntent[]> {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const sc = this
-
-    function runningAppsInChannel(
+    augmentedIntent: AugmentedAppIntent,
+    runningAppsInChannelFn: (
       appIntent: AugmentedAppIntent,
       channel: string | null,
-    ): number {
-      return appIntent.apps.filter(
-        (app) => app.instanceId && app.channelData?.id == channel,
-      ).length
+    ) => number,
+    raiserChannelFn: (raiser: AppIdentifier) => string | null,
+  ): AppIntent[] | null {
+    const channel = raiserChannelFn(raiser)
+    const runners = runningAppsInChannelFn(augmentedIntent, channel)
+
+    if (runners === 0) {
+      // Case 1: No instances of the target app are running in the raiser's channel.
+      // Set the app to be started in the raiser's channel.
+      this.appStartDestinations.set(augmentedIntent.apps[0].appId, channel)
+      return [augmentedIntent] // Return the single intent for automatic dispatch.
+    } else if (runners === 1) {
+      // Case 2: Exactly one instance of the target app is running in the raiser's channel.
+      // The intent can be directly raised in this existing app instance.
+      return [augmentedIntent] // Return the single intent for automatic dispatch.
     }
+    return null // Not auto-resolved
+  }
 
-    function uniqueApps(appIntent: AppIntent): number {
-      return appIntent.apps
-        .map((app) => app.appId)
-        .filter((value, index, self) => self.indexOf(value) === index).length
-    }
-
-    function isRunningInTab(arg0: AppIdentifier): boolean {
-      const details = sc.getAppInstanceDetails(arg0.instanceId!)
-      return details?.hosting == AppHosting.Tab
-    }
-
-    function raiserChannel(arg0: AppIdentifier): string | null {
-      const details = sc.getAppInstanceDetails(arg0.instanceId!)
-      return details?.channel ?? null
-    }
-
-    const augmentedIntents = this.augmentIntents(incomingIntents)
-
-    if (isRunningInTab(raiser)) {
-      // in this case, the tab needs the intent resolver
-      return augmentedIntents
-    }
-
-    if (augmentedIntents.length == 0) {
-      return augmentedIntents
-    }
-
-    if (augmentedIntents.length == 1 && uniqueApps(augmentedIntents[0]) == 1) {
-      const channel = raiserChannel(raiser)
-      const runners = runningAppsInChannel(augmentedIntents[0], channel)
-      if (runners == 0) {
-        // we start a new app
-        this.appStartDestinations.set(
-          augmentedIntents[0].apps[0].appId,
-          channel,
-        )
-        return augmentedIntents
-      } else if (runners == 1) {
-        // we raise in the existing app
-        return augmentedIntents
-      }
-    }
-
+  /**
+   * Delegates intent resolution to the Desktop Agent UI when auto-resolution is not possible.
+   *
+   * @param augmentedIntents The list of augmented intents to present to the user.
+   * @param context The context object passed with the intent.
+   * @returns A promise that resolves with the AppIntent array selected by the user.
+   */
+  private _resolveIntentViaDesktopAgent(
+    augmentedIntents: AppIntent[],
+    context: Context,
+  ): Promise<AppIntent[]> {
     return new Promise<AppIntent[]>((resolve) => {
-      console.log("SAIL Narrowing intents", augmentedIntents, context)
+      console.log(
+        "SAIL Narrowing intents for DA resolver",
+        augmentedIntents,
+        context,
+      )
 
       this.socket.emit(
-        SAIL_INTENT_RESOLVE,
+        SAIL_INTENT_RESOLVE, // Event to trigger the DA's resolver UI
         {
           appIntents: augmentedIntents,
           context,
         },
         async (response: SailIntentResolveResponse, err: string) => {
           if (err) {
-            console.error(err)
-            resolve([])
+            console.error("Error from DA intent resolver:", err)
+            resolve([]) // Resolve with empty if there's an error from the DA resolver
           } else {
-            console.log("SAIL Narrowed intents", response)
+            console.log("SAIL Narrowed intents from DA resolver", response)
 
+            // Helper to check if the resolved intent means a new app instance needs to be started.
             function appNeedsStarting(appIntents: AppIntent[]) {
               return (
-                appIntents.length == 1 &&
-                appIntents[0].apps.length == 1 &&
-                appIntents[0].apps[0].instanceId == null
+                appIntents.length == 1 && // Only one intent selected/resolved
+                appIntents[0].apps.length == 1 && // That intent points to a single app
+                appIntents[0].apps[0].instanceId == null // And that app doesn't have an instanceId (i.e., not yet running)
               )
             }
 
             if (appNeedsStarting(response.appIntents)) {
-              // tell sail where to open the app
-              const theAppIntent = response.appIntents[0] // get the first intent
-              const theApp = theAppIntent.apps[0] // get the first app
+              // If the user selected an app that isn't running,
+              // set its starting channel based on the resolver's response.
+              const theAppIntent = response.appIntents[0]
+              const theApp = theAppIntent.apps[0]
               this.appStartDestinations.set(theApp.appId, response.channel)
             }
 
-            resolve(response.appIntents)
+            resolve(response.appIntents) // Return the intents selected/confirmed by the user.
           }
         },
       )
     })
+  }
+
+  /**
+   * This method refines a list of intents to present to the user or to auto-resolve
+   * based on the current context, raising app, and running instances.
+   * It's used when the intent resolver UI is managed by the desktop agent.
+   */
+  async narrowIntents(
+    raiser: AppIdentifier, // The application instance that raised the intent
+    incomingIntents: AppIntent[], // The initial list of intents matching the criteria
+    context: Context, // The context object passed with the intent
+  ): Promise<AppIntent[]> {
+    // Helper to count how many apps for a given intent are running in a specific channel
+    const runningAppsInChannel = (
+      appIntent: AugmentedAppIntent,
+      channel: string | null,
+    ): number => {
+      return appIntent.apps.filter(
+        (app) => app.instanceId && app.channelData?.id == channel,
+      ).length
+    }
+
+    const uniqueApps = (appIntent: AppIntent): number =>
+      appIntent.apps
+        .map((app) => app.appId)
+        .filter((value, index, self) => self.indexOf(value) === index).length
+
+    const isRunningInTab = (arg0: AppIdentifier): boolean => {
+      const details = this.getAppInstanceDetails(arg0.instanceId!)
+      return details?.hosting == AppHosting.Tab
+    }
+
+    const raiserChannel = (arg0: AppIdentifier): string | null =>
+      this.getAppInstanceDetails(arg0.instanceId!)?.channel ?? null
+
+    const augmentedIntents = this.augmentIntents(incomingIntents)
+
+    // in this case, the tab needs the intent resolver
+    if (isRunningInTab(raiser)) return augmentedIntents
+
+    if (augmentedIntents.length == 0) return augmentedIntents
+
+    // Auto-resolution logic:
+    // If there's only one intent and that intent points to a single unique app.
+    if (augmentedIntents.length == 1 && uniqueApps(augmentedIntents[0]) == 1) {
+      const autoResolvedIntent = this._tryAutoResolveIntent(
+        raiser,
+        augmentedIntents[0],
+        runningAppsInChannel,
+        raiserChannel,
+      )
+      if (autoResolvedIntent) {
+        return autoResolvedIntent
+      }
+      // If runners > 1, or other complex scenarios, proceed to manual resolution via Desktop Agent UI.
+    }
+
+    // If auto-resolution isn't possible, delegate to the Desktop Agent's intent resolver UI.
+    return this._resolveIntentViaDesktopAgent(augmentedIntents, context)
   }
 
   async notifyUserChannelsChanged(
@@ -385,6 +418,7 @@ export class SailServerContext implements ServerContext<SailData> {
     const instance = this.getAppInstanceDetails(instanceId!)
     if (instance) {
       instance.channel = channelId
+      // Create a standard FDC3 event to notify the specific app instance about the channel change.
       const channelChangeEvent: ChannelChangedEvent = {
         type: "channelChangedEvent",
         payload: {
@@ -401,7 +435,7 @@ export class SailServerContext implements ServerContext<SailData> {
 
   async reloadAppDirectories(urls: string[], customApps: DirectoryApp[]) {
     await this.directory.replaceAppsFromAppDirectories(urls)
-    customApps.forEach((a) => this.directory.addApp(a))
+    customApps.forEach((app) => this.directory.addApp(app))
   }
 
   private getChannelDetails(): ChannelState[] {
@@ -413,13 +447,17 @@ export class SailServerContext implements ServerContext<SailData> {
       internalServer.handlers &&
       internalServer.handlers.length > 0
     ) {
+      // Assumes the first handler in the FDC3Server is the primary one managing channel state.
+      // This might need refinement if multiple channel handlers exist or if the structure changes.
       return internalServer.handlers[0].state
     }
     return []
   }
 
   getTabs(): TabDetail[] {
-    return this.getChannelDetails().map((c) => this.convertToTabDetail(c))
+    return this.getChannelDetails().map((channelState) =>
+      this.convertToTabDetail(channelState),
+    )
   }
 
   updateChannelData(channelData: TabDetail[], history?: ContextHistory): void {
@@ -453,18 +491,30 @@ export class SailServerContext implements ServerContext<SailData> {
       return
     }
 
+    // Assumes the first handler is the one responsible for managing channel states.
     const channelHandler = internalServer.handlers[0]
-    channelHandler.state.length = 0 // Clear existing state
+    // Preserve the current channel states before clearing, to allow retaining context if no new history is provided.
+    const previousChannelStates: ChannelState[] = [...channelHandler.state]
+
+    channelHandler.state.length = 0 // Clear existing state to replace it entirely.
     const newState = mapChannels(channelData).map((c) => {
+      // Determine the context for the channel:
+      // 1. Use relevant context from the provided history, if any.
+      // 2. Else, use the context from the channel's previous state (before clearing), if any.
+      // 3. Else, default to an empty context array.
+      const historicalContext = relevantHistory(c.id, history)
+      const previousChannel = previousChannelStates.find(
+        (pcs) => pcs.id === c.id,
+      )
+      const preservedContext = previousChannel?.context
+      const finalContext = historicalContext ?? preservedContext ?? []
+
       return {
         ...c,
-        context:
-          relevantHistory(c.id, history) ??
-          channelHandler.state.find((cs) => cs.id == c.id)?.context ??
-          [],
+        context: finalContext,
       }
     })
-    channelHandler.state.push(...newState)
+    channelHandler.state.push(...newState) // Apply the new state.
     console.log("SAIL Updated channel data", channelHandler.state)
   }
 }

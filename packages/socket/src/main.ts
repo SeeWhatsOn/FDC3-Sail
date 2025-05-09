@@ -1,16 +1,17 @@
 import { Server, Socket } from "socket.io"
-import { SailFDC3Server } from "./model/fdc3/SailFDC3Server"
 import dotenv from "dotenv"
 import { ConnectionState } from "./types"
 import { registerAllSocketHandlers } from "./setupHandlers"
+import { SessionManager } from "./sessionManager"
 
 // Load environment variables from .env file
 dotenv.config()
 
 const PORT = parseInt(process.env.PORT ?? "8090")
+const SHUTDOWN_TIMEOUT = parseInt(process.env.SHUTDOWN_TIMEOUT ?? "5000")
 
 // Running sessions - the server state
-const sessions = new Map<string, SailFDC3Server>()
+const sessionManager = new SessionManager()
 
 const io = new Server(PORT, {
   cors: { origin: "*", methods: ["GET", "POST"] }, // Example CORS config
@@ -21,7 +22,7 @@ io.on("connection", (socket: Socket) => {
 
   const connectionState: ConnectionState = {
     socket,
-    sessions,
+    sessionManager,
   }
 
   // --- Setup All Handlers ---
@@ -32,17 +33,14 @@ const performGracefulShutdown = () => {
   console.log("Initiating graceful shutdown...")
   io.close(() => {
     console.log("Socket.IO server connections closed.")
-    sessions.forEach((server, sessionId) => {
-      console.log(`Shutting down FDC3 session: ${sessionId}`)
-      server.shutdown()
+    sessionManager.shutdownAllSessions().then(() => {
+      console.log("All active FDC3 sessions shut down and cleared.")
     })
-    sessions.clear()
-    console.log("All active FDC3 sessions shut down and cleared.")
   })
   setTimeout(() => {
     console.error("Shutdown timeout. Forcing exit.")
     process.exit(1)
-  }, 5000)
+  }, SHUTDOWN_TIMEOUT)
 }
 
 process.on("SIGTERM", performGracefulShutdown)

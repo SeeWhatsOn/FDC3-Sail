@@ -23,7 +23,6 @@ export function registerAllSocketHandlers(
   console.log(`Setting up all handlers for socket ${socket.id}`)
 
   // Call registration functions from each handler module
-  //TODO: Should these become promises and then use promises.all?
   registerDesktopAgentHandlers(socket, connectionState)
   registerAppHandlers(socket, connectionState)
   registerElectronHandlers(socket, connectionState)
