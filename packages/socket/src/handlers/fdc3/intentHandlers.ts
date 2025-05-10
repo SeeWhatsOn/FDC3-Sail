@@ -4,6 +4,8 @@ import {
   SAIL_INTENT_RESOLVE_ON_CHANNEL,
 } from "@finos/fdc3-sail-common"
 import { ConnectionState } from "../../types"
+import { LogCategory, logHandlerEvent } from "../../utils/logs"
+import { handleOperationError } from "../../utils"
 
 /**
  * Registers event listeners related to Intent resolution actions.
@@ -14,28 +16,33 @@ export function registerIntentHandlers(
 ): void {
   socket.on(
     SAIL_INTENT_RESOLVE_ON_CHANNEL,
-    (
-      data: SailIntentResolveOpenChannelArgs,
-      callback: (success?: void, err?: string) => void,
-    ) => {
+    (data: SailIntentResolveOpenChannelArgs, callback) => {
       try {
-        console.log(
-          `[IntentHandler] Intent Resolve on Channel: App ${data.appId} on channel ${data.channel} (Socket: ${socket.id})`,
-        )
+        logHandlerEvent({
+          category: LogCategory.INTENT,
+          event: `Intent Resolve on Channel: App ${data.appId} on channel ${data.channel} (Socket: ${socket.id})`,
+          context: { appId: data.appId, channel: data.channel },
+          subCategory: "Resolve",
+        })
 
         if (!connectionState.fdc3ServerInstance) {
-          const errorMsg = "Connection not properly initialized."
-          console.error(
-            `  Cannot handle SAIL_INTENT_RESOLVE_ON_CHANNEL: Missing server instance on connection state.`,
-          )
-          callback(undefined, errorMsg)
+          handleOperationError({
+            operation: "SAIL_INTENT_RESOLVE_ON_CHANNEL",
+            contextData: { appId: data.appId, channel: data.channel },
+            fallbackMessage: "Connection not properly initialized.",
+            callback,
+            error: new Error("Connection not properly initialized."),
+          })
           return
         }
 
         // Delegate the action to the server context associated with this connection
-        console.log(
-          `  Delegating openOnChannel for app ${data.appId} on channel ${data.channel}.`,
-        )
+        logHandlerEvent({
+          category: LogCategory.INTENT,
+          event: `Delegating openOnChannel for app ${data.appId} on channel ${data.channel}.`,
+          context: { appId: data.appId, channel: data.channel },
+          subCategory: "Resolve",
+        })
 
         connectionState.fdc3ServerInstance.serverContext.openOnChannel(
           data.appId,
@@ -45,15 +52,13 @@ export function registerIntentHandlers(
         // Call callback with success (no parameters means success)
         callback()
       } catch (error) {
-        console.error(
-          `  Error handling SAIL_INTENT_RESOLVE_ON_CHANNEL for app ${data.appId}:`,
+        handleOperationError({
+          operation: "SAIL_INTENT_RESOLVE_ON_CHANNEL",
+          contextData: { appId: data.appId, channel: data.channel },
+          fallbackMessage: "Failed to delegate openOnChannel.",
+          callback,
           error,
-        )
-        callback(
-          undefined,
-          (error as Error).message ||
-            "Failed to open app on specified channel.",
-        )
+        })
       }
     },
   )

@@ -6,11 +6,14 @@ import {
   SailHostManifest,
 } from "@finos/fdc3-sail-common"
 import { ConnectionState } from "../../types"
-import { SocketType, getServerUrl } from "../utils"
 import { v4 as uuid } from "uuid"
 import { State as Fdc3State, WebAppDetails } from "@finos/fdc3-web-impl"
 import { Socket } from "socket.io"
 import { ELECTRON_HELLO } from "@finos/fdc3-sail-common"
+import { LogCategory } from "../../utils/logs"
+import { logHandlerEvent } from "../../utils/logs"
+import { handleOperationError } from "../../utils/errorHandling"
+import { SocketType, getServerUrl } from "../../utils"
 
 /**
  * Registers event listeners related to Electron interactions.
@@ -28,14 +31,24 @@ export function registerElectronHandlers(
         err?: string,
       ) => void,
     ) => {
-      console.log(
-        `[ElectronHandler Register] Received ELECTRON_HELLO from ${data.url} for session ${data.userSessionId}`,
-      )
+      logHandlerEvent({
+        category: LogCategory.ELECTRON,
+        event: `Received ELECTRON_HELLO from ${data.url} for session ${data.userSessionId}`,
+        context: { url: data.url, userSessionId: data.userSessionId },
+      })
       try {
-        console.log(
-          `[ElectronHandler] Electron Hello: URL=${data.url}, SessionID=${data.userSessionId}, SocketID=${connectionState.socket.id}`,
+        logHandlerEvent({
+          category: LogCategory.ELECTRON,
+          event: `Electron Hello: URL=${data.url}, SessionID=${data.userSessionId}, SocketID=${connectionState.socket.id}`,
+          context: {
+            url: data.url,
+            userSessionId: data.userSessionId,
+            socketId: connectionState.socket.id,
+          },
+        })
+        const fdc3Server = connectionState.sessionManager.getSession(
+          data.userSessionId,
         )
-        const fdc3Server = connectionState.sessionManager.getSession(data.userSessionId)
 
         if (fdc3Server) {
           connectionState.userSessionId = data.userSessionId // Ensure session ID is on the connection state
@@ -73,9 +86,12 @@ export function registerElectronHandlers(
               socket: connectionState.socket, // Associate this socket
             })
 
-            console.log(
-              `  Electron App: ${app.appId} (URL: ${appDetails.url}), new instanceId: ${instanceId}. State set to Pending.`,
-            )
+            logHandlerEvent({
+              category: LogCategory.ELECTRON,
+              event: `Electron App: ${app.appId} (URL: ${appDetails.url}), new instanceId: ${instanceId}. State set to Pending.`,
+              context: { appId: app.appId, url: appDetails.url, instanceId },
+            })
+
             callback({
               type: "app",
               userSessionId: connectionState.userSessionId,
@@ -93,27 +109,27 @@ export function registerElectronHandlers(
         } else if (data.url === getServerUrl()) {
           connectionState.userSessionId = data.userSessionId
           connectionState.type = SocketType.ELECTRON_DA
-          console.log(
-            `  Electron DA: URL matches SAIL_URL. Session: ${data.userSessionId}. Waiting for DA_HELLO.`,
-          )
+          logHandlerEvent({
+            category: LogCategory.ELECTRON,
+            event: `Electron DA: URL matches SAIL_URL. Session: ${data.userSessionId}. Waiting for DA_HELLO.`,
+            context: { userSessionId: data.userSessionId },
+          })
           // DA_HELLO handler is responsible for creating and setting the SailFDC3Server instance in state.sessions
           // and then on state.fdc3ServerInstance.
           callback({ type: "da" })
         } else {
-          console.error(
-            `  Electron Hello: No session ${data.userSessionId} & URL ${data.url} doesn't match SAIL_URL.`,
-          )
-          callback(
-            null,
+          throw new Error(
             "Session not found and URL is not for a new Desktop Agent.",
           )
         }
       } catch (err) {
-        console.error(
-          `Error in ELECTRON_HELLO handler for socket ${socket.id}:`,
-          err,
-        )
-        callback(null, "Internal server error handling ELECTRON_HELLO")
+        handleOperationError({
+          operation: "ELECTRON_HELLO",
+          contextData: { userSessionId: data.userSessionId, url: data.url },
+          fallbackMessage: "Internal server error handling ELECTRON_HELLO",
+          callback,
+          error: err,
+        })
       }
     },
   )

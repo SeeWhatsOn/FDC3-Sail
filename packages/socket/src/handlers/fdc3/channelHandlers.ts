@@ -1,16 +1,17 @@
 import {
   SailChannelChangeArgs,
   ChannelReceiverHelloRequest,
-  ChannelReceiverUpdate,
   TabDetail, // Needed for getTabs()
   SAIL_CHANNEL_CHANGE,
   CHANNEL_RECEIVER_HELLO,
 } from "@finos/fdc3-sail-common"
 import { ConnectionState } from "../../types"
-import { SocketType, getOrAwaitFdc3Server } from "../utils"
 import { v4 as uuid } from "uuid"
 import { BrowserTypes } from "@finos/fdc3"
 import { Socket } from "socket.io"
+import { handleOperationError } from "../../utils/errorHandling"
+import { LogCategory, logHandlerEvent } from "../../utils/logs"
+import { SocketType, getOrAwaitFdc3Server } from "../../utils"
 
 function handleSailChannelChange(
   socket: Socket,
@@ -18,36 +19,59 @@ function handleSailChannelChange(
 ): void {
   socket.on(
     SAIL_CHANNEL_CHANGE,
-    async (
-      data: SailChannelChangeArgs,
-      callback: (success: boolean, err?: string) => void,
-    ) => {
+    async (data: SailChannelChangeArgs, callback) => {
+      logHandlerEvent({
+        category: LogCategory.CHANNEL,
+        event: `SAIL_CHANNEL_CHANGE`,
+        context: { instanceId: data.instanceId, channel: data.channel },
+        subCategory: "Register",
+      })
       console.log(
         `[ChannelHandler Register] Received SAIL_CHANNEL_CHANGE for instance ${data.instanceId} to channel ${data.channel}`,
       )
-      console.log(
-        `[ChannelHandler] Sail Channel Change: Instance ${data.instanceId} to channel ${data.channel} (Socket: ${connectionState.socket.id})`,
-      )
+
+      logHandlerEvent({
+        category: LogCategory.CHANNEL,
+        event: `Sail Channel Change`,
+        context: {
+          instanceId: data.instanceId,
+          channel: data.channel,
+          socketId: connectionState.socket.id,
+        },
+        subCategory: "Change",
+      })
 
       if (
         !connectionState.fdc3ServerInstance ||
         !data.instanceId ||
         connectionState.userSessionId !== data.userSessionId
       ) {
-        console.error(
-          "  Cannot handle SAIL_CHANNEL_CHANGE: Invalid state or mismatched session.",
-        )
-        return callback(
-          false,
-          "Connection or instance ID invalid for channel change.",
-        )
+        handleOperationError({
+          operation: "SAIL_CHANNEL_CHANGE",
+          contextData: {
+            instanceId: data.instanceId,
+            channel: data.channel,
+          },
+          fallbackMessage:
+            "Cannot handle SAIL_CHANNEL_CHANGE: Invalid state or mismatched session.",
+          callback,
+          error: new Error(
+            "Cannot handle SAIL_CHANNEL_CHANGE: Invalid state or mismatched session. Connection or instance ID invalid for channel change.",
+          ),
+        })
       }
 
       try {
         const { instanceId, channel } = data // The app instance making the request
         const session = connectionState.fdc3ServerInstance
 
-        console.log(`  App ${instanceId} requesting to join channel ${channel}`)
+        logHandlerEvent({
+          category: LogCategory.CHANNEL,
+          event: `App ${instanceId} requesting to join channel ${channel}`,
+          context: { instanceId, channel },
+          subCategory: "Change",
+        })
+
         const response = await session.receive(
           {
             type: "joinUserChannelRequest",
@@ -57,9 +81,12 @@ function handleSailChannelChange(
           instanceId,
         )
 
-        console.log(
-          `  JOIN USER CHANNEL RESPONSE for ${instanceId}: ${JSON.stringify(response)}`,
-        )
+        logHandlerEvent({
+          category: LogCategory.CHANNEL,
+          event: `JOIN USER CHANNEL RESPONSE for ${instanceId}: ${JSON.stringify(response)}`,
+          context: { instanceId, channel },
+          subCategory: "Change",
+        })
 
         const appState = session.serverContext.getAppInstanceDetails(instanceId)
         if (appState && appState.channel === channel) {
@@ -74,11 +101,16 @@ function handleSailChannelChange(
 
         callback(true) // Assume success if receive didn't throw
       } catch (error) {
-        console.error(
-          `  Error handling SAIL_CHANNEL_CHANGE for instance ${data.instanceId}:`,
+        handleOperationError({
+          operation: "SAIL_CHANNEL_CHANGE",
+          contextData: {
+            instanceId: data.instanceId,
+            channel: data.channel,
+          },
+          fallbackMessage: "Failed to change channel.",
+          callback,
           error,
-        )
-        callback(false, (error as Error).message || "Failed to change channel.")
+        })
       }
     },
   )
@@ -90,33 +122,40 @@ function handleChannelReceiverHello(
 ): void {
   socket.on(
     CHANNEL_RECEIVER_HELLO,
-    async (
-      props: ChannelReceiverHelloRequest,
-      callback: (
-        success: ChannelReceiverUpdate | undefined,
-        err?: string,
-      ) => void,
-    ) => {
-      console.log(
-        `[ChannelHandler Register] Received CHANNEL_RECEIVER_HELLO for instance ${props.instanceId}`,
-      )
-      console.log(
-        `[ChannelHandler] Channel Receiver Hello: Instance ${props.instanceId}, Session ${props.userSessionId} (Socket: ${connectionState.socket.id})`,
-      )
-      connectionState.userSessionId = props.userSessionId
-      connectionState.appInstanceId = props.instanceId
+    async (data: ChannelReceiverHelloRequest, callback) => {
+      //log event registration
+      logHandlerEvent({
+        category: LogCategory.CHANNEL,
+        event: `Received ${CHANNEL_RECEIVER_HELLO}`,
+        context: { instanceId: data.instanceId },
+        subCategory: "Register",
+      })
+
+      // Log the detailed handler message
+      logHandlerEvent({
+        category: LogCategory.CHANNEL,
+        event: "Channel Receiver Hello",
+        context: {
+          instanceId: data.instanceId,
+          sessionId: data.userSessionId,
+          socketId: connectionState.socket.id,
+        },
+      })
+
+      connectionState.userSessionId = data.userSessionId
+      connectionState.appInstanceId = data.instanceId
       connectionState.type = SocketType.CHANNEL
 
       try {
         // Ensure we have the correct FDC3 server instance for the session
         const fdc3Server = await getOrAwaitFdc3Server(
           connectionState.sessionManager,
-          props.userSessionId,
+          data.userSessionId,
         )
         connectionState.fdc3ServerInstance = fdc3Server
 
         const appInst = fdc3Server.serverContext.getAppInstanceDetails(
-          props.instanceId,
+          data.instanceId,
         )
         if (appInst) {
           appInst.channelSockets = appInst.channelSockets || []
@@ -127,35 +166,40 @@ function handleChannelReceiverHello(
           ) {
             appInst.channelSockets.push(connectionState.socket)
             fdc3Server.serverContext.setAppInstanceDetails(
-              props.instanceId,
+              data.instanceId,
               appInst,
             )
-            console.log(
-              `  Added channel socket ${connectionState.socket.id} to ${props.instanceId}. Total: ${appInst.channelSockets.length}`,
-            )
+            logHandlerEvent({
+              category: LogCategory.CHANNEL,
+              event: `Added channel socket ${connectionState.socket.id} to ${data.instanceId}. Total: ${appInst.channelSockets.length}`,
+              context: { instanceId: data.instanceId },
+              subCategory: "Change",
+            })
           } else {
-            console.log(
-              `  Socket ${connectionState.socket.id} already present in channelSockets for ${props.instanceId}.`,
-            )
+            logHandlerEvent({
+              category: LogCategory.CHANNEL,
+              event: `Socket ${connectionState.socket.id} already present in channelSockets for ${data.instanceId}.`,
+              context: { instanceId: data.instanceId },
+              subCategory: "Change",
+            })
           }
           // Send current channel list back
           const tabs: TabDetail[] = fdc3Server.serverContext.getTabs()
           callback({ tabs: tabs })
         } else {
-          console.error(
-            `  Channel receiver hello failed: App instance ${props.instanceId} not found in session ${props.userSessionId}.`,
-          )
-          callback(undefined, "App instance not found.")
+          throw new Error("App instance not found.")
         }
       } catch (error) {
-        console.error(
-          `  Error handling CHANNEL_RECEIVER_HELLO for instance ${props.instanceId}:`,
+        handleOperationError({
+          operation: "CHANNEL_RECEIVER_HELLO",
+          contextData: {
+            instanceId: data.instanceId,
+            sessionId: data.userSessionId,
+          },
+          fallbackMessage: "Failed to initialize channel receiver.",
+          callback,
           error,
-        )
-        callback(
-          undefined,
-          (error as Error).message || "Failed to initialize channel receiver.",
-        )
+        })
       }
     },
   )

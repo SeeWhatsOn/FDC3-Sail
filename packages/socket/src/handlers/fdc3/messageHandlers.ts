@@ -1,6 +1,8 @@
 import { Socket } from "socket.io" // Import Socket
 import { FDC3_APP_EVENT } from "@finos/fdc3-sail-common" // Import event constant
 import { ConnectionState, BaseMessageData } from "../../types"
+import { LogCategory } from "../../utils/logs"
+import { logHandlerEvent } from "../../utils/logs"
 
 /**
  * Registers event listeners related to FDC3 App messages.
@@ -17,9 +19,11 @@ export function registerMessageHandlers(
    */
   socket.on(FDC3_APP_EVENT, (data: BaseMessageData, from: string) => {
     if (!data?.type?.startsWith("heartbeat")) {
-      console.log(
-        `[MessageHandler] FDC3 App Event: Type=${data?.type}, From=${from}, Socket=${socket.id}`,
-      )
+      logHandlerEvent({
+        category: LogCategory.MESSAGE,
+        event: `FDC3 App Event: Type=${data?.type}, From=${from}, Socket=${socket.id}`,
+        context: { type: data?.type, from, socketId: socket.id },
+      })
     }
 
     if (!connectionState.fdc3ServerInstance) {
@@ -37,7 +41,11 @@ export function registerMessageHandlers(
       // If the receive method doesn't handle broadcast notifications as a side effect,
       // you might need to explicitly call notifyBroadcastContext here.
       if (data?.type === "broadcastRequest") {
-        console.log(`  Broadcast detected from ${from}.`)
+        logHandlerEvent({
+          category: LogCategory.MESSAGE,
+          event: `Broadcast detected from ${from}.`,
+          context: { from, socketId: socket.id },
+        })
         // Example: Uncomment if receive() doesn't handle this notification
         // connectionState.fdc3ServerInstance.serverContext.notifyBroadcastContext(data as BroadcastRequest);
       }

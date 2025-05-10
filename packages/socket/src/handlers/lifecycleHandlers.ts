@@ -1,5 +1,7 @@
 import { ConnectionState } from "../types"
-import { SocketType, emitCurrentAppState } from "./utils"
+import { SocketType, emitCurrentAppState } from "../utils"
+import { LogCategory } from "../utils/logs"
+import { logHandlerEvent } from "../utils/logs"
 import { State } from "@finos/fdc3-web-impl"
 import { Socket } from "socket.io"
 
@@ -20,33 +22,59 @@ export async function handleDisconnect(
   const connUserSessionId = state.userSessionId
   const socketId = state.socket.id
 
-  console.log(
-    `[LifecycleHandler] Disconnect: SocketID=${socketId}, Type=${connType}, AppInstance=${connAppInstanceId}, UserSession=${connUserSessionId}, Reason=${reason}`,
-  )
+  logHandlerEvent({
+    category: LogCategory.LIFECYCLE,
+    event: `Disconnect: SocketID=${socketId}, Type=${connType}, AppInstance=${connAppInstanceId}, UserSession=${connUserSessionId}, Reason=${reason}`,
+    context: {
+      socketId,
+      connType,
+      connAppInstanceId,
+      connUserSessionId,
+      reason,
+    },
+  })
 
   if (fdcInstance) {
     try {
       if (connType === SocketType.APP && connAppInstanceId) {
-        console.log(`  App disconnect detected: ${connAppInstanceId}`)
+        logHandlerEvent({
+          category: LogCategory.LIFECYCLE,
+          event: `App disconnect detected: ${connAppInstanceId}`,
+          context: { connAppInstanceId },
+        })
         await fdcInstance.serverContext.updateAppInstanceState(
           connAppInstanceId,
           State.Terminated,
         )
         // Assuming cleanupAppInstance is handled by updateAppInstanceState(Terminated) or not required
-        console.log(`  App ${connAppInstanceId} marked as terminated.`)
+        logHandlerEvent({
+          category: LogCategory.LIFECYCLE,
+          event: `App ${connAppInstanceId} marked as terminated.`,
+          context: { connAppInstanceId },
+        })
         await emitCurrentAppState(fdcInstance)
       } else if (connType === SocketType.ELECTRON_APP && connAppInstanceId) {
-        console.log(`  Electron App disconnect detected: ${connAppInstanceId}`)
+        logHandlerEvent({
+          category: LogCategory.LIFECYCLE,
+          event: `Electron App disconnect detected: ${connAppInstanceId}`,
+          context: { connAppInstanceId },
+        })
         await fdcInstance.serverContext.updateAppInstanceState(
           connAppInstanceId,
           State.Terminated,
         )
-        console.log(`  Electron App ${connAppInstanceId} marked as terminated.`)
+        logHandlerEvent({
+          category: LogCategory.LIFECYCLE,
+          event: `Electron App ${connAppInstanceId} marked as terminated.`,
+          context: { connAppInstanceId },
+        })
         await emitCurrentAppState(fdcInstance)
       } else if (connType === SocketType.CHANNEL && connAppInstanceId) {
-        console.log(
-          `  Channel Selector disconnect detected for app ${connAppInstanceId} on socket ${socketId}`,
-        )
+        logHandlerEvent({
+          category: LogCategory.LIFECYCLE,
+          event: `Channel Selector disconnect detected for app ${connAppInstanceId} on socket ${socketId}`,
+          context: { connAppInstanceId, socketId },
+        })
         const details =
           fdcInstance.serverContext.getAppInstanceDetails(connAppInstanceId)
         if (details && details.channelSockets) {
@@ -59,9 +87,11 @@ export async function handleDisconnect(
               connAppInstanceId,
               details,
             )
-            console.log(
-              `  Removed channel socket ${socketId} from ${connAppInstanceId}.`,
-            )
+            logHandlerEvent({
+              category: LogCategory.LIFECYCLE,
+              event: `Removed channel socket ${socketId} from ${connAppInstanceId}.`,
+              context: { connAppInstanceId, socketId },
+            })
           }
         } else {
           console.warn(
@@ -73,22 +103,28 @@ export async function handleDisconnect(
           connType === SocketType.ELECTRON_DA) &&
         connUserSessionId
       ) {
-        console.log(
-          `  DA/ElectronDA for session ${connUserSessionId} on socket ${socketId} disconnected.`,
-        )
+        logHandlerEvent({
+          category: LogCategory.LIFECYCLE,
+          event: `DA/ElectronDA for session ${connUserSessionId} on socket ${socketId} disconnected.`,
+          context: { connUserSessionId, socketId },
+        })
         // Check if the disconnecting socket is the primary socket for this FDC3 server instance.
         if (
           fdcInstance.serverContext.getDesktopAgentSocket() &&
           fdcInstance.serverContext.getDesktopAgentSocket().id === socketId
         ) {
-          console.log(
-            `  Disconnecting socket ${socketId} is the primary DA socket for session ${connUserSessionId}. Shutting down session.`,
-          )
+          logHandlerEvent({
+            category: LogCategory.LIFECYCLE,
+            event: `Disconnecting socket ${socketId} is the primary DA socket for session ${connUserSessionId}. Shutting down session.`,
+            context: { connUserSessionId, socketId },
+          })
           fdcInstance.shutdown()
           sessionManager.deleteSession(connUserSessionId)
-          console.log(
-            `  Session ${connUserSessionId} shut down and removed from active sessions.`,
-          )
+          logHandlerEvent({
+            category: LogCategory.LIFECYCLE,
+            event: `Session ${connUserSessionId} shut down and removed from active sessions.`,
+            context: { connUserSessionId },
+          })
         } else if (
           connType === SocketType.ELECTRON_DA &&
           !fdcInstance.serverContext.getDesktopAgentSocket()
@@ -100,20 +136,26 @@ export async function handleDisconnect(
           )
           fdcInstance.shutdown() // Attempt shutdown of the instance
           sessionManager.deleteSession(connUserSessionId) // Remove session if it exists
-          console.log(
-            `  Electron DA Session ${connUserSessionId} (no primary socket assigned) attempted shutdown and removal.`,
-          )
+          logHandlerEvent({
+            category: LogCategory.LIFECYCLE,
+            event: `Electron DA Session ${connUserSessionId} (no primary socket assigned) attempted shutdown and removal.`,
+            context: { connUserSessionId },
+          })
         } else {
           // This socket is DA-typed but not the primary one controlling the session instance.
-          console.log(
-            `  Socket ${socketId} (DA type) disconnected for session ${connUserSessionId}, but it was not the primary controlling socket. No session shutdown initiated by this disconnect.`,
-          )
+          logHandlerEvent({
+            category: LogCategory.LIFECYCLE,
+            event: `Socket ${socketId} (DA type) disconnected for session ${connUserSessionId}, but it was not the primary controlling socket. No session shutdown initiated by this disconnect.`,
+            context: { connUserSessionId },
+          })
         }
       } else {
         // Includes cases like SocketType undefined, or types without specific instance IDs needed for cleanup
-        console.log(
-          `  Disconnect for socket ${socketId} with type ${connType ?? "unknown"}. No specific app/DA action taken based on type/id combination.`,
-        )
+        logHandlerEvent({
+          category: LogCategory.LIFECYCLE,
+          event: `Disconnect for socket ${socketId} with type ${connType ?? "unknown"}. No specific app/DA action taken based on type/id combination.`,
+          context: { socketId, connType },
+        })
       }
     } catch (err) {
       console.error(
@@ -123,9 +165,11 @@ export async function handleDisconnect(
     }
   } else {
     // No fdc3Instance was associated with this connection state.
-    console.log(
-      `  No FDC3 server instance associated with disconnecting socket ${socketId} (UserSession: ${connUserSessionId}). Session might have already been cleaned up.`,
-    )
+    logHandlerEvent({
+      category: LogCategory.LIFECYCLE,
+      event: `No FDC3 server instance associated with disconnecting socket ${socketId} (UserSession: ${connUserSessionId}). Session might have already been cleaned up.`,
+      context: { socketId, connUserSessionId },
+    })
     // Check if there's a lingering session entry for a DA that never fully connected
     if (
       (connType === SocketType.DESKTOP_AGENT ||
@@ -143,7 +187,11 @@ export async function handleDisconnect(
   // Final cleanup: remove all listeners added to this specific socket instance
   // Note: This uses the socket reference from the state object passed in.
   state.socket.removeAllListeners()
-  console.log(`  Removed all listeners for socket ${socketId}.`)
+  logHandlerEvent({
+    category: LogCategory.LIFECYCLE,
+    event: `Removed all listeners for socket ${socketId}.`,
+    context: { socketId },
+  })
 }
 
 /**
@@ -154,9 +202,12 @@ export function registerLifecycleHandlers(
   connectionState: ConnectionState,
 ): void {
   socket.on("disconnect", (reason: string) => {
-    console.log(
-      `[LifecycleHandler Register] Socket ${socket.id} disconnected. Reason: ${reason}`,
-    )
+    logHandlerEvent({
+      category: LogCategory.LIFECYCLE,
+      event: `[LifecycleHandler Register] Socket ${socket.id} disconnected. Reason: ${reason}`,
+      context: { socketId: socket.id, reason },
+      subCategory: "Register",
+    })
     handleDisconnect(connectionState, reason).catch((err: Error) => {
       // Log error during disconnect handling, but typically cannot respond to client
       console.error(

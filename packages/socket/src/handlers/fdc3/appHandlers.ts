@@ -5,13 +5,7 @@ import {
 } from "@finos/fdc3-sail-common"
 import { ConnectionState } from "../../types"
 import { SailFDC3Server } from "../../model/fdc3/SailFDC3Server"
-import {
-  SocketType,
-  DEBUG_MODE,
-  getOrAwaitFdc3Server,
-  getNextDebugReconnectionId,
-  emitCurrentAppState,
-} from "../utils"
+
 import {
   State,
   WebAppDetails,
@@ -21,6 +15,8 @@ import {
 import { Socket } from "socket.io"
 import { APP_HELLO } from "@finos/fdc3-sail-common"
 import { SailData } from "../../types"
+import { handleOperationError } from "../../utils/errorHandling"
+import { DEBUG_MODE, emitCurrentAppState, getNextDebugReconnectionId, getOrAwaitFdc3Server, LogCategory, logHandlerEvent, SocketType } from "../../utils"
 
 // Helper function for valid pending connections
 /**
@@ -51,9 +47,14 @@ function handleValidPendingConnection(
     connectionState.appInstanceId!,
     appInstance,
   )
-  console.log(
-    `SAIL App ${appInstance.appId} (${connectionState.appInstanceId}) connected successfully and set to Connected.`,
-  )
+  logHandlerEvent({
+    category: LogCategory.APP,
+    event: `SAIL App ${appInstance.appId} (${connectionState.appInstanceId}) connected successfully and set to Connected.`,
+    context: {
+      appId: appInstance.appId,
+      instanceId: connectionState.appInstanceId,
+    },
+  })
   return appInstance.hosting
 }
 
@@ -131,9 +132,14 @@ function handleDebugModeConnection(
     instanceDetails,
   )
   connectionState.fdc3ServerInstance = fdc3Server // Associate server instance
-  console.log(
-    `SAIL App ${helloArgs.appId} (${connectionState.appInstanceId!}) connected in DEBUG_MODE.`,
-  )
+  logHandlerEvent({
+    category: LogCategory.APP,
+    event: `SAIL App ${helloArgs.appId} (${connectionState.appInstanceId!}) connected in DEBUG_MODE.`,
+    context: {
+      appId: helloArgs.appId,
+      instanceId: connectionState.appInstanceId!,
+    },
+  })
   return instanceDetails.hosting
 }
 
@@ -148,7 +154,15 @@ function handleApplicationConnect(
       callback: (success: AppHosting | null, err?: string) => void,
     ) => {
       try {
-        console.log("Handling APP_HELLO: " + JSON.stringify(helloArgs))
+        logHandlerEvent({
+          category: LogCategory.APP,
+          event: "Handling APP_HELLO:",
+          context: {
+            instanceId: helloArgs.instanceId,
+            sessionId: helloArgs.userSessionId,
+            socketId: connectionState.socket.id,
+          },
+        })
 
         connectionState.appInstanceId = helloArgs.instanceId
         connectionState.userSessionId = helloArgs.userSessionId
@@ -159,9 +173,14 @@ function handleApplicationConnect(
           connectionState.userSessionId,
         )
 
-        console.log(
-          `SAIL App attempting connection: AppID=${helloArgs.appId}, InstanceID=${connectionState.appInstanceId!}, SessionID=${connectionState.userSessionId!}`,
-        )
+        logHandlerEvent({
+          category: LogCategory.APP,
+          subCategory: "SAIL",
+          event: "App attempting connection:",
+          context: {
+            appId: helloArgs.appId,
+          },
+        })
         const appInstance = fdc3Server
           .getServerContext()
           .getAppInstanceDetails(connectionState.appInstanceId!) as SailData // Cast here for type safety
@@ -202,12 +221,17 @@ function handleApplicationConnect(
         await emitCurrentAppState(fdc3Server)
         callback(appHostingToReturn)
       } catch (error) {
-        // Error finding DA session or other unexpected error
-        console.error(
-          `SAIL App ${helloArgs.appId} (${connectionState.appInstanceId!}) connection failed: ${(error as Error).message}`,
+        handleOperationError({
+          operation: "APP_HELLO",
+          contextData: {
+            appId: helloArgs.appId,
+            instanceId: connectionState.appInstanceId!,
+            sessionId: connectionState.userSessionId!,
+          },
+          fallbackMessage: "Failed to connect app.",
+          callback,
           error,
-        )
-        callback(null, (error as Error).message || "Failed to connect app.")
+        })
       }
     },
   )

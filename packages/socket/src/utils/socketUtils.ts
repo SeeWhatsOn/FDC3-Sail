@@ -1,31 +1,6 @@
-import { SailFDC3Server } from "../model/fdc3/SailFDC3Server" // Adjust import path if necessary
-import { SAIL_APP_STATE } from "@finos/fdc3-sail-common" // Import SAIL_APP_STATE
-import { AppRegistration } from "@finos/fdc3-web-impl" // Import AppRegistration from its source
-import { SessionManager } from "../sessionManager"
-
-export const DEBUG_MODE = true
-let _debugReconnectionNumber = 0 // Internal variable
-
-// Function to get and increment the number
-export function getNextDebugReconnectionId(): number {
-  return _debugReconnectionNumber++
-}
-
-export function getServerUrl(): string {
-  return process.env.SAIL_URL || "http://localhost:8090"
-}
-
-export async function getOrAwaitFdc3Server(
-  sessionManager: SessionManager,
-  userSessionId: string,
-): Promise<SailFDC3Server> {
-  try {
-    return await sessionManager.getSession(userSessionId)
-  } catch (error) {
-    console.error(`Failed to get session ${userSessionId}:`, error)
-    throw error
-  }
-}
+import { SAIL_APP_STATE } from "@finos/fdc3-sail-common"
+import { AppRegistration } from "@finos/fdc3-web-impl"
+import { SailFDC3Server } from "../model/fdc3/SailFDC3Server"
 
 export enum SocketType {
   DESKTOP_AGENT,
