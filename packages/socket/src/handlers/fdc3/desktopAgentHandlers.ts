@@ -249,11 +249,16 @@ export function handleDesktopAgentAppRegistration(
 /**
  * Registers event listeners related to Desktop Agent interactions.
  */
-export function registerDesktopAgentHandlers(
+export async function registerDesktopAgentHandlers(
   socket: Socket,
   connectionState: ConnectionState,
-): void {
-  handleDesktopAgentConnect(socket, connectionState)
-  handleDesktopAgentDirectoryListing(socket, connectionState)
-  handleDesktopAgentAppRegistration(socket, connectionState)
+): Promise<void> {
+  try {
+    handleDesktopAgentConnect(socket, connectionState)
+    handleDesktopAgentDirectoryListing(socket, connectionState)
+    handleDesktopAgentAppRegistration(socket, connectionState)
+  } catch (error) {
+    console.error("Error registering desktop agent handlers:", error)
+    throw error
+  }
 }

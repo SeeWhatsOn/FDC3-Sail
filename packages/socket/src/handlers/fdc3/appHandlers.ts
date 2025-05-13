@@ -16,7 +16,15 @@ import { Socket } from "socket.io"
 import { APP_HELLO } from "@finos/fdc3-sail-common"
 import { SailData } from "../../types"
 import { handleOperationError } from "../../utils/errorHandling"
-import { DEBUG_MODE, emitCurrentAppState, getNextDebugReconnectionId, getOrAwaitFdc3Server, LogCategory, logHandlerEvent, SocketType } from "../../utils"
+import {
+  DEBUG_MODE,
+  emitCurrentAppState,
+  getNextDebugReconnectionId,
+  getOrAwaitFdc3Server,
+  LogCategory,
+  logHandlerEvent,
+  SocketType,
+} from "../../utils"
 
 // Helper function for valid pending connections
 /**
@@ -240,9 +248,14 @@ function handleApplicationConnect(
 /**
  * Registers event listeners related to App interactions.
  */
-export function registerAppHandlers(
+export async function registerAppHandlers(
   socket: Socket,
   connectionState: ConnectionState,
-): void {
-  handleApplicationConnect(connectionState, socket)
+): Promise<void> {
+  try {
+    handleApplicationConnect(connectionState, socket)
+  } catch (error) {
+    console.error("Error registering app handlers:", error)
+    throw error
+  }
 }

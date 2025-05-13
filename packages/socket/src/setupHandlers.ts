@@ -16,19 +16,29 @@ import { registerLifecycleHandlers } from "./handlers/lifecycleHandlers"
  * @param socket The newly connected socket instance.
  * @param connectionState The state object associated with this connection.
  */
-export function registerAllSocketHandlers(
+export async function registerAllSocketHandlers(
   socket: Socket,
   connectionState: ConnectionState,
-): void {
+): Promise<void> {
   console.log(`Setting up all handlers for socket ${socket.id}`)
 
-  // Call registration functions from each handler module
-  registerDesktopAgentHandlers(socket, connectionState)
-  registerAppHandlers(socket, connectionState)
-  registerElectronHandlers(socket, connectionState)
-  registerClientStateHandlers(socket, connectionState)
-  registerChannelHandlers(socket, connectionState)
-  registerMessageHandlers(socket, connectionState)
-  registerIntentHandlers(socket, connectionState)
-  registerLifecycleHandlers(socket, connectionState)
+  Promise.all([
+    registerDesktopAgentHandlers(socket, connectionState),
+    registerAppHandlers(socket, connectionState),
+    registerElectronHandlers(socket, connectionState),
+    registerClientStateHandlers(socket, connectionState),
+    registerChannelHandlers(socket, connectionState),
+    registerMessageHandlers(socket, connectionState),
+    registerIntentHandlers(socket, connectionState),
+    registerLifecycleHandlers(socket, connectionState),
+  ])
+    .then(() => {
+      console.log(`All handlers registered for socket ${socket.id}`)
+    })
+    .catch((error) => {
+      console.error(
+        `Error registering handlers for socket ${socket.id}:`,
+        error,
+      )
+    })
 }

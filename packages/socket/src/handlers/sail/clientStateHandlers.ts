@@ -166,27 +166,38 @@ export async function handleSailClientState(
 /**
  * Registers event listeners related to client state synchronization.
  */
-export function registerClientStateHandlers(
+export async function registerClientStateHandlers(
   socket: Socket,
   connectionState: ConnectionState,
-): void {
-  socket.on(SAIL_CLIENT_STATE, async (data: SailClientStateArgs, callback) => {
-    logHandlerEvent({
-      category: LogCategory.CLIENT_STATE,
-      event: `Received SAIL_CLIENT_STATE for session ${data.userSessionId}`,
-      context: { userSessionId: data.userSessionId },
-    })
-    try {
-      await handleSailClientState(connectionState, data, callback)
-    } catch (error) {
-      handleOperationError({
-        operation: "SAIL_CLIENT_STATE",
-        contextData: { userSessionId: data.userSessionId, socketId: socket.id },
-        fallbackMessage:
-          "Failed to process client state. Internal server error handling SAIL_CLIENT_STATE",
-        callback,
-        error,
-      })
-    }
-  })
+): Promise<void> {
+  try {
+    socket.on(
+      SAIL_CLIENT_STATE,
+      async (data: SailClientStateArgs, callback) => {
+        logHandlerEvent({
+          category: LogCategory.CLIENT_STATE,
+          event: `Received SAIL_CLIENT_STATE for session ${data.userSessionId}`,
+          context: { userSessionId: data.userSessionId },
+        })
+        try {
+          await handleSailClientState(connectionState, data, callback)
+        } catch (error) {
+          handleOperationError({
+            operation: "SAIL_CLIENT_STATE",
+            contextData: {
+              userSessionId: data.userSessionId,
+              socketId: socket.id,
+            },
+            fallbackMessage:
+              "Failed to process client state. Internal server error handling SAIL_CLIENT_STATE",
+            callback,
+            error,
+          })
+        }
+      },
+    )
+  } catch (error) {
+    console.error("Error registering client state handlers:", error)
+    throw error
+  }
 }

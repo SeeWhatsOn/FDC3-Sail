@@ -197,25 +197,28 @@ export async function handleDisconnect(
 /**
  * Registers event listeners related to socket lifecycle events (e.g., disconnect).
  */
-export function registerLifecycleHandlers(
+export async function registerLifecycleHandlers(
   socket: Socket,
   connectionState: ConnectionState,
-): void {
-  socket.on("disconnect", (reason: string) => {
-    logHandlerEvent({
-      category: LogCategory.LIFECYCLE,
-      event: `[LifecycleHandler Register] Socket ${socket.id} disconnected. Reason: ${reason}`,
-      context: { socketId: socket.id, reason },
-      subCategory: "Register",
+): Promise<void> {
+  try {
+    socket.on("disconnect", (reason: string) => {
+      logHandlerEvent({
+        category: LogCategory.LIFECYCLE,
+        event: `[LifecycleHandler Register] Socket ${socket.id} disconnected. Reason: ${reason}`,
+        context: { socketId: socket.id, reason },
+        subCategory: "Register",
+      })
+      handleDisconnect(connectionState, reason).catch((err: Error) => {
+        // Log error during disconnect handling, but typically cannot respond to client
+        console.error(
+          `Error during disconnect handling for socket ${socket.id}:`,
+          err,
+        )
+      })
     })
-    handleDisconnect(connectionState, reason).catch((err: Error) => {
-      // Log error during disconnect handling, but typically cannot respond to client
-      console.error(
-        `Error during disconnect handling for socket ${socket.id}:`,
-        err,
-      )
-    })
-  })
-
-  // Add other lifecycle listeners here if needed (e.g., 'connect_error')
+  } catch (error) {
+    console.error("Error registering lifecycle handlers:", error)
+    throw error
+  }
 }

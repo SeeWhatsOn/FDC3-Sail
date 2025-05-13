@@ -208,13 +208,18 @@ function handleChannelReceiverHello(
 /**
  * Registers event listeners related to channel interactions.
  */
-export function registerChannelHandlers(
+export async function registerChannelHandlers(
   socket: Socket,
   connectionState: ConnectionState,
-): void {
-  // SAIL_CHANNEL_CHANGE Listener
-  handleSailChannelChange(socket, connectionState)
+): Promise<void> {
+  try {
+    // SAIL_CHANNEL_CHANGE Listener
+    handleSailChannelChange(socket, connectionState)
 
-  // CHANNEL_RECEIVER_HELLO Listener
-  handleChannelReceiverHello(socket, connectionState)
+    // CHANNEL_RECEIVER_HELLO Listener
+    handleChannelReceiverHello(socket, connectionState)
+  } catch (error) {
+    console.error("Error registering channel handlers:", error)
+    throw error
+  }
 }
