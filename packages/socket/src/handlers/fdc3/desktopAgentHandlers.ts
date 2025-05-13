@@ -69,8 +69,22 @@ function handleDesktopAgentConnect(
           "Recreating SailFDC3Server instance on DA_HELLO reconfig. Ensure context is preserved if needed.",
         )
         const existingContext = fdc3Server.serverContext
-        fdc3Server = new SailFDC3Server(existingContext, data)
-        existingContext.setFDC3Server(fdc3Server) // Ensure context links back to the new server instance
+
+        // Check if existingContext has required properties before recreating
+        if (!existingContext || !existingContext.directory) {
+          // If missing required properties, create a new context
+          const newContext = new SailServerContext(
+            new SailDirectory(),
+            connectionState.socket,
+          )
+          fdc3Server = new SailFDC3Server(newContext, data)
+          newContext.setFDC3Server(fdc3Server)
+        } else {
+          // Use existing context if it has required properties
+          fdc3Server = new SailFDC3Server(existingContext, data)
+          existingContext.setFDC3Server(fdc3Server) // Ensure context links back to the new server instance
+        }
+
         connectionState.sessionManager.createSession(
           connectionState.userSessionId,
           fdc3Server,
