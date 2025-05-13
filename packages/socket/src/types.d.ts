@@ -1,6 +1,7 @@
 import { Socket } from "socket.io"
 import { SailFDC3Server } from "../model/fdc3/SailFDC3Server" // Adjust import path if necessary
 import { SocketType } from "./utils" // Import the enum
+import { SessionManager } from "./sessionManager"
 
 export interface ConnectionState {
   socket: Socket

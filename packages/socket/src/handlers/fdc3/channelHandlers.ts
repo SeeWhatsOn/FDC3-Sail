@@ -154,7 +154,7 @@ function handleChannelReceiverHello(
         )
         connectionState.fdc3ServerInstance = fdc3Server
 
-        const appInst = fdc3Server.serverContext.getAppInstanceDetails(
+        const appInst = fdc3Server.serverContext.getInstanceDetails(
           data.instanceId,
         )
         if (appInst) {
@@ -165,7 +165,7 @@ function handleChannelReceiverHello(
             )
           ) {
             appInst.channelSockets.push(connectionState.socket)
-            fdc3Server.serverContext.setAppInstanceDetails(
+            fdc3Server.serverContext.setInstanceDetails(
               data.instanceId,
               appInst,
             )

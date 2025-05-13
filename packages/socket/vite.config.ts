@@ -8,6 +8,11 @@ export default defineConfig({
     environment: "node",
     testTimeout: 10000,
     // setupFiles: [resolve(__dirname, "./__tests__/setup.ts")],
+    onConsoleLog(warning) {
+      if (warning.includes("Sourcemap")) {
+        return false
+      }
+    },
   },
   build: {
     target: "node18",

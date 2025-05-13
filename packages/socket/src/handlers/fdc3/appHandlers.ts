@@ -51,7 +51,7 @@ function handleValidPendingConnection(
   connectionState.fdc3ServerInstance = fdc3Server // Associate server instance with this socket connection
   // Update state to Connected
   appInstance.state = State.Connected
-  fdc3Server.serverContext.setAppInstanceDetails(
+  fdc3Server.serverContext.setInstanceDetails(
     connectionState.appInstanceId!,
     appInstance,
   )
@@ -135,7 +135,7 @@ function handleDebugModeConnection(
     channelSockets: [],
   }
 
-  fdc3Server.serverContext.setAppInstanceDetails(
+  fdc3Server.serverContext.setInstanceDetails(
     connectionState.appInstanceId!,
     instanceDetails,
   )
@@ -191,7 +191,7 @@ function handleApplicationConnect(
         })
         const appInstance = fdc3Server
           .getServerContext()
-          .getAppInstanceDetails(connectionState.appInstanceId!) as SailData // Cast here for type safety
+          .getInstanceDetails(connectionState.appInstanceId!) as SailData // Cast here for type safety
         const directoryItems = fdc3Server
           .getServerContext()
           .directory.retrieveAppsById(helloArgs.appId)

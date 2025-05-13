@@ -8,7 +8,8 @@
       }
     ],
     "outDir": "./dist",
-    "rootDirs": ["./src"]
+    "rootDirs": ["./src"],
+    "skipLibCheck": true
   },
   "include": ["src/**/*.tsx", "src/**/*.ts", "types.d.ts", "src/**/*.css"],
   "references": [

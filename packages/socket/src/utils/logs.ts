@@ -1,3 +1,5 @@
+import chalk from "chalk"
+
 /**
  * Handler categories for logging
  */
@@ -12,48 +14,21 @@ export enum LogCategory {
   CLIENT_STATE = "ClientStateHandler",
 }
 
-/**
- * ANSI color codes for terminal coloring
- */
-export enum LogColor {
-  RESET = "\x1b[0m",
-  BRIGHT = "\x1b[1m",
-  DIM = "\x1b[2m",
-
-  // Foreground colors
-  FG_BLACK = "\x1b[30m",
-  FG_RED = "\x1b[31m",
-  FG_GREEN = "\x1b[32m",
-  FG_YELLOW = "\x1b[33m",
-  FG_BLUE = "\x1b[34m",
-  FG_MAGENTA = "\x1b[35m",
-  FG_CYAN = "\x1b[36m",
-  FG_WHITE = "\x1b[37m",
-  FG_GRAY = "\x1b[90m",
-
-  // Background colors
-  BG_BLACK = "\x1b[40m",
-  BG_RED = "\x1b[41m",
-  BG_GREEN = "\x1b[42m",
-  BG_YELLOW = "\x1b[43m",
-  BG_BLUE = "\x1b[44m",
-  BG_MAGENTA = "\x1b[45m",
-  BG_CYAN = "\x1b[46m",
-  BG_WHITE = "\x1b[47m",
-}
+// Define color functions for each category
+type ColorFunction = (text: string) => string
 
 /**
- * Map categories to colors for consistent coloring
+ * Map categories to chalk color functions
  */
-const CATEGORY_COLORS: Record<LogCategory, LogColor> = {
-  [LogCategory.CHANNEL]: LogColor.FG_CYAN,
-  [LogCategory.DESKTOP_AGENT]: LogColor.FG_GREEN,
-  [LogCategory.INTENT]: LogColor.FG_YELLOW,
-  [LogCategory.MESSAGE]: LogColor.FG_WHITE,
-  [LogCategory.APP]: LogColor.FG_BLUE,
-  [LogCategory.LIFECYCLE]: LogColor.FG_MAGENTA,
-  [LogCategory.ELECTRON]: LogColor.FG_GREEN,
-  [LogCategory.CLIENT_STATE]: LogColor.FG_CYAN,
+const CATEGORY_COLORS: Record<LogCategory, ColorFunction> = {
+  [LogCategory.CHANNEL]: chalk.cyan,
+  [LogCategory.DESKTOP_AGENT]: chalk.green,
+  [LogCategory.INTENT]: chalk.yellow,
+  [LogCategory.MESSAGE]: chalk.white,
+  [LogCategory.APP]: chalk.blue,
+  [LogCategory.LIFECYCLE]: chalk.magenta,
+  [LogCategory.ELECTRON]: chalk.green,
+  [LogCategory.CLIENT_STATE]: chalk.cyan,
 }
 
 /**
@@ -73,10 +48,28 @@ export interface HandlerLogOptions {
   subCategory?: string
 
   /** Optional override for the default category color */
-  color?: LogColor
+  color?: ColorFunction
 
   /** Whether to disable colors in output (useful for non-TTY output) */
   noColor?: boolean
+}
+
+/**
+ * Formats a value for logging, stringifying objects and arrays properly
+ */
+function formatValue(value: unknown): string {
+  if (value === null) return "null"
+  if (value === undefined) return "undefined"
+
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return String(value)
+    }
+  }
+
+  return String(value)
 }
 
 /**
@@ -92,31 +85,29 @@ export function logHandlerEvent(options: HandlerLogOptions): void {
     noColor = false,
   } = options
 
-  // Check if we should use colors (disable for non-TTY environments)
-  const useColors = !noColor && process.stdout.isTTY
+  // Identity function for when colors are disabled
+  const noColorFn = (text: string): string => text
 
-  // Color formatting functions
-  const colorize = (text: string, colorCode: LogColor): string => {
-    return useColors ? `${colorCode}${text}${LogColor.RESET}` : text
-  }
+  // Use either the color function or the identity function
+  const colorFn = noColor ? noColorFn : color
+  const boldFn = noColor ? noColorFn : chalk.bold
+  const whiteFn = noColor ? noColorFn : chalk.white
 
   // Format category with optional sub-category
   const categoryText = subCategory
     ? `[${category} ${subCategory}]`
     : `[${category}]`
 
-  const coloredCategory = colorize(categoryText, color)
+  const coloredCategory = colorFn(categoryText)
+  const coloredEvent = whiteFn(event)
 
   // Format context data
   const contextPairs = Object.entries(context)
     .map(([key, value]) => {
-      const coloredKey = colorize(key, LogColor.BRIGHT)
-      return useColors ? `${coloredKey}=${value}` : `${key}=${value}`
+      const coloredKey = boldFn(key)
+      return `${coloredKey}=${formatValue(value)}`
     })
     .join(", ")
-
-  // Format the event name
-  const coloredEvent = colorize(event, LogColor.FG_WHITE)
 
   console.log(`${coloredCategory} ${coloredEvent} (${contextPairs})`)
 }

@@ -47,7 +47,7 @@ export async function registerElectronHandlers(
               socketId: connectionState.socket.id,
             },
           })
-          const fdc3Server = connectionState.sessionManager.getSession(
+          const fdc3Server = await connectionState.sessionManager.getSession(
             data.userSessionId,
           )
 
@@ -72,7 +72,7 @@ export async function registerElectronHandlers(
               // Optional: Pre-register the app instance in the server context
               // This ensures the server is aware of the instance before it might send further messages.
               // Adjust payload as needed for a pending Electron app.
-              fdc3Server.serverContext.setAppInstanceDetails(instanceId, {
+              fdc3Server.serverContext.setInstanceDetails(instanceId, {
                 instanceId: instanceId,
                 appId: app.appId,
                 state: Fdc3State.Pending,

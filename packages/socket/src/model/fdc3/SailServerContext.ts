@@ -115,7 +115,7 @@ export class SailServerContext implements ServerContext<SailData> {
         } as SailAppOpenArgs,
       )
 
-      this.setAppInstanceDetails(details.instanceId, {
+      this.setInstanceDetails(details.instanceId, {
         appId,
         instanceId: details.instanceId,
         url,
@@ -136,10 +136,11 @@ export class SailServerContext implements ServerContext<SailData> {
     throw new Error(OpenError.AppNotFound)
   }
 
-  setAppInstanceDetails(uuid: InstanceID, details: SailData): void {
+  // set the instance details for the given instance ID of an app
+  setInstanceDetails(uuid: InstanceID, details: SailData): void {
     if (uuid != details.instanceId) {
       console.error(
-        "UUID mismatch in setAppInstanceDetails. Instance may not be tracked correctly.",
+        "UUID mismatch in setInstanceDetails. Instance may not be tracked correctly.",
         uuid,
         details.instanceId,
       )
@@ -147,7 +148,7 @@ export class SailServerContext implements ServerContext<SailData> {
     this.instances.set(details.instanceId, details)
   }
 
-  getAppInstanceDetails(uuid: InstanceID): SailData | undefined {
+  getInstanceDetails(uuid: InstanceID): SailData | undefined {
     return this.instances.get(uuid)
   }
 
@@ -155,7 +156,7 @@ export class SailServerContext implements ServerContext<SailData> {
     this.socket.emit(SAIL_CHANNEL_SETUP, app.instanceId)
   }
 
-  async getActiveAppInstances(): Promise<AppRegistration[]> {
+  async getConnectedApps(): Promise<AppRegistration[]> {
     return Array.from(this.instances.values())
       .filter((instanceData) => instanceData.state == State.Connected)
       .map((instanceData) => ({
@@ -170,7 +171,7 @@ export class SailServerContext implements ServerContext<SailData> {
     return foundInstance != null && foundInstance.state == State.Connected
   }
 
-  async updateAppInstanceState(app: InstanceID, state: State): Promise<void> {
+  async setAppState(app: InstanceID, state: State): Promise<void> {
     const found = this.instances.get(app)
     if (found) {
       const needsInitialChannelSetup =
@@ -189,7 +190,7 @@ export class SailServerContext implements ServerContext<SailData> {
     }
   }
 
-  async getAllAppInstances(): Promise<AppRegistration[]> {
+  async getAllApps(): Promise<AppRegistration[]> {
     return Array.from(this.instances.values()).map((instanceData) => {
       return {
         appId: instanceData.appId,
@@ -238,7 +239,7 @@ export class SailServerContext implements ServerContext<SailData> {
         // If the app has a running instance, augment with instance-specific details
         // like its current channel and instance title.
         if (app.instanceId) {
-          const instance = this.getAppInstanceDetails(app.instanceId)
+          const instance = this.getInstanceDetails(app.instanceId)
           const channel = this.getChannelDetails().find(
             (channel) => channel.id == instance?.channel,
           )
@@ -377,12 +378,12 @@ export class SailServerContext implements ServerContext<SailData> {
         .filter((value, index, self) => self.indexOf(value) === index).length
 
     const isRunningInTab = (arg0: AppIdentifier): boolean => {
-      const details = this.getAppInstanceDetails(arg0.instanceId!)
+      const details = this.getInstanceDetails(arg0.instanceId!)
       return details?.hosting == AppHosting.Tab
     }
 
     const raiserChannel = (arg0: AppIdentifier): string | null =>
-      this.getAppInstanceDetails(arg0.instanceId!)?.channel ?? null
+      this.getInstanceDetails(arg0.instanceId!)?.channel ?? null
 
     const augmentedIntents = this.augmentIntents(incomingIntents)
 
@@ -415,7 +416,7 @@ export class SailServerContext implements ServerContext<SailData> {
     channelId: string | null,
   ): Promise<void> {
     console.log("SAIL User channels changed", instanceId, channelId)
-    const instance = this.getAppInstanceDetails(instanceId!)
+    const instance = this.getInstanceDetails(instanceId!)
     if (instance) {
       instance.channel = channelId
       // Create a standard FDC3 event to notify the specific app instance about the channel change.

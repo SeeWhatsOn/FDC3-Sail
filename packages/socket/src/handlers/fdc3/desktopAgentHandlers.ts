@@ -28,7 +28,7 @@ function handleDesktopAgentConnect(
   socket: Socket,
   connectionState: ConnectionState,
 ): void {
-  socket.on(DA_HELLO, (data: DesktopAgentConnectionArgs, callback) => {
+  socket.on(DA_HELLO, async (data: DesktopAgentConnectionArgs, callback) => {
     logHandlerEvent({
       category: LogCategory.DESKTOP_AGENT,
       event: "SAIL DA HELLO handled",
@@ -46,7 +46,7 @@ function handleDesktopAgentConnect(
         sessionId: connectionState.userSessionId,
       },
     })
-    let fdc3Server = connectionState.sessionManager.getSession(
+    let fdc3Server = await connectionState.sessionManager.getSession(
       connectionState.userSessionId,
     )
 
@@ -95,7 +95,7 @@ function handleDesktopAgentConnect(
           event: "SAIL updated desktop agent channels and directories",
           context: {
             sessionId: connectionState.userSessionId,
-            connectionState: connectionState.sessionManager.getSessionCount(),
+            connectionState: connectionState.sessionManager.getAllSessions(),
             data: data.userSessionId,
           },
         })
@@ -135,7 +135,7 @@ function handleDesktopAgentConnect(
           event: "SAIL created agent session. Running sessions:",
           context: {
             sessionId: connectionState.userSessionId,
-            connectionState: connectionState.sessionManager.getSessionCount(),
+            connectionState: connectionState.sessionManager.getAllSessions(),
             data: data.userSessionId,
           },
         })
@@ -157,7 +157,7 @@ function handleDesktopAgentConnect(
   })
 }
 
-export function handleDesktopAgentDirectoryListing(
+function handleDesktopAgentDirectoryListing(
   socket: Socket,
   connectionState: ConnectionState,
 ): void {
@@ -197,7 +197,7 @@ export function handleDesktopAgentDirectoryListing(
   )
 }
 
-export function handleDesktopAgentAppRegistration(
+function handleDesktopAgentAppRegistration(
   socket: Socket,
   connectionState: ConnectionState,
 ): void {
@@ -222,7 +222,7 @@ export function handleDesktopAgentAppRegistration(
           userSessionId,
         )
         const instanceId = "sail-app-" + uuid()
-        session.serverContext.setAppInstanceDetails(instanceId, {
+        session.serverContext.setInstanceDetails(instanceId, {
           instanceId: instanceId,
           state: State.Pending,
           appId,

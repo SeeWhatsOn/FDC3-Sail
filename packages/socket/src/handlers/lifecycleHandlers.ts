@@ -119,7 +119,7 @@ export async function handleDisconnect(
             context: { connUserSessionId, socketId },
           })
           fdcInstance.shutdown()
-          sessionManager.deleteSession(connUserSessionId)
+          sessionManager.removeSession(connUserSessionId)
           logHandlerEvent({
             category: LogCategory.LIFECYCLE,
             event: `Session ${connUserSessionId} shut down and removed from active sessions.`,
@@ -135,7 +135,7 @@ export async function handleDisconnect(
             `  Electron DA Session ${connUserSessionId} disconnecting (socket ${socketId}), but primary socket was not set. Attempting shutdown.`,
           )
           fdcInstance.shutdown() // Attempt shutdown of the instance
-          sessionManager.deleteSession(connUserSessionId) // Remove session if it exists
+          sessionManager.removeSession(connUserSessionId) // Remove session if it exists
           logHandlerEvent({
             category: LogCategory.LIFECYCLE,
             event: `Electron DA Session ${connUserSessionId} (no primary socket assigned) attempted shutdown and removal.`,
@@ -175,12 +175,12 @@ export async function handleDisconnect(
       (connType === SocketType.DESKTOP_AGENT ||
         connType === SocketType.ELECTRON_DA) &&
       connUserSessionId &&
-      sessionManager.hasSession(connUserSessionId)
+      (await sessionManager.getSession(connUserSessionId))
     ) {
       console.warn(
         `  Found lingering session ${connUserSessionId} for disconnected DA socket ${socketId} without associated server instance in connectionState. Removing.`,
       )
-      sessionManager.deleteSession(connUserSessionId) // Cleanup potentially orphaned session map entry
+      sessionManager.removeSession(connUserSessionId) // Cleanup potentially orphaned session map entry
     }
   }
 
