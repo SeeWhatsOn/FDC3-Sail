@@ -14,7 +14,8 @@
   "workspaces": [
     "packages/common",
     "packages/web",
-    "packages/example-apps"
+    "packages/example-apps",
+    "packages/electron"
   ],
   "devDependencies": {
     "@eslint/js": "^9.22.0",
