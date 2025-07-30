@@ -41,6 +41,7 @@ export interface OnlineNativeAppDetails {
   url: string
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface OtherAppDetails {
   // Empty by definition
 }
@@ -53,7 +54,7 @@ export type LaunchDetails =
   | OtherAppDetails
 
 export interface HostManifest {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface HostManifests {
@@ -64,7 +65,7 @@ export interface Intent {
   displayName?: string
   contexts: string[]
   resultType?: string
-  customConfig?: Record<string, any>
+  customConfig?: Record<string, unknown>
 }
 
 export interface AppChannel {

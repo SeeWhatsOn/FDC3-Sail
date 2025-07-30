@@ -8,3 +8,4 @@ packages/preload/exposedInMainWorld.d.ts
 build
 .rollup.cache
 FDC3-Sail.pem
+docs/*

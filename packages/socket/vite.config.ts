@@ -15,7 +15,7 @@ export default defineConfig({
     },
   },
   build: {
-    target: "node18",
+    target: "node20",
     outDir: "dist",
     sourcemap: false,
     rollupOptions: {
