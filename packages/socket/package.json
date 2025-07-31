@@ -26,11 +26,11 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@finos/fdc3-agent-proxy": "2.2.0",
-    "@finos/fdc3-context": "2.2.0",
+    "@finos/fdc3-agent-proxy": "2.2.1-beta.3",
+    "@finos/fdc3-context": "2.2.1-beta.3",
     "@finos/fdc3-sail-common": "0.0.0",
-    "@finos/fdc3-schema": "2.2.0",
-    "@finos/fdc3-web-impl": "2.2.0",
+    "@finos/fdc3-schema": "2.2.1-beta.3",
+    "@finos/fdc3-web-impl": "2.2.1-beta.3",
     "@vitest/ui": "^3.2.4",
     "chalk": "^5.4.1",
     "socket.io": "^4.7.5",
