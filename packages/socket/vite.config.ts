@@ -1,4 +1,4 @@
-import { defineConfig } from "vite"
+import { defineConfig } from "vitest/config"
 import { resolve } from "path"
 
 export default defineConfig({
@@ -9,7 +9,6 @@ export default defineConfig({
     testTimeout: 10000,
     // setupFiles: [resolve(__dirname, "./__tests__/setup.ts")],
     reporters: ["html"],
-    sourcemap: false,
   },
   build: {
     target: "node20",

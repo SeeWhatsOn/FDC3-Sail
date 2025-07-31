@@ -41,27 +41,29 @@ describe("SailDirectory", () => {
       },
     ]
 
-    sailDirectory = new SailDirectory(mockDirectories)
+    sailDirectory = new SailDirectory()
+    sailDirectory.replaceAppsFromDirectoryObjects(mockDirectories)
     vi.clearAllMocks()
   })
 
   describe("Initialization", () => {
     it("should initialize with local directories", () => {
-      const allApps = sailDirectory.getAllApps()
+      const allApps = sailDirectory.retrieveAllApps()
       expect(allApps).toHaveLength(2)
       expect(allApps[0].appId).toBe("local-app-1")
       expect(allApps[1].appId).toBe("local-app-2")
     })
 
     it("should handle empty directories", () => {
-      const emptyDirectory = new SailDirectory([])
-      const allApps = emptyDirectory.getAllApps()
+      const emptyDirectory = new SailDirectory()
+      const allApps = emptyDirectory.retrieveAllApps()
       expect(allApps).toHaveLength(0)
     })
 
     it("should handle directories with empty apps array", () => {
-      const emptyAppsDirectory = new SailDirectory([{ apps: [] }])
-      const allApps = emptyAppsDirectory.getAllApps()
+      const emptyAppsDirectory = new SailDirectory()
+      emptyAppsDirectory.replaceAppsFromDirectoryObjects([{ apps: [] }])
+      const allApps = emptyAppsDirectory.retrieveAllApps()
       expect(allApps).toHaveLength(0)
     })
   })
@@ -91,7 +93,7 @@ describe("SailDirectory", () => {
     })
 
     it("should get all apps", () => {
-      const allApps = sailDirectory.getAllApps()
+      const allApps = sailDirectory.retrieveAllApps()
       expect(allApps).toHaveLength(2)
       expect(allApps.map(app => app.appId)).toEqual(["local-app-1", "local-app-2"])
     })
@@ -110,12 +112,12 @@ describe("SailDirectory", () => {
 
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ apps: remoteApps }),
+        json: () => Promise.resolve({ applications: remoteApps }),
       } as Response)
 
-      await sailDirectory.loadRemoteDirectory("https://remote.com/directory")
+      await sailDirectory.addAppsFromAppDirectory("https://remote.com/directory")
 
-      const allApps = sailDirectory.getAllApps()
+      const allApps = sailDirectory.retrieveAllApps()
       expect(allApps).toHaveLength(3) // 2 local + 1 remote
       expect(allApps.some(app => app.appId === "remote-app-1")).toBe(true)
     })
@@ -126,14 +128,14 @@ describe("SailDirectory", () => {
       // Should not throw, but should log error
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
       
-      await sailDirectory.loadRemoteDirectory("https://remote.com/directory")
+      await sailDirectory.addAppsFromAppDirectory("https://remote.com/directory")
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to load remote directory")
+        expect.stringContaining("Error loading app directory")
       )
 
       // Apps should remain unchanged
-      const allApps = sailDirectory.getAllApps()
+      const allApps = sailDirectory.retrieveAllApps()
       expect(allApps).toHaveLength(2)
 
       consoleSpy.mockRestore()
@@ -148,10 +150,10 @@ describe("SailDirectory", () => {
 
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
       
-      await sailDirectory.loadRemoteDirectory("https://remote.com/directory")
+      await sailDirectory.addAppsFromAppDirectory("https://remote.com/directory")
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to load remote directory")
+        expect.stringContaining("Error loading app directory")
       )
 
       consoleSpy.mockRestore()
@@ -165,10 +167,10 @@ describe("SailDirectory", () => {
 
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
       
-      await sailDirectory.loadRemoteDirectory("https://remote.com/directory")
+      await sailDirectory.addAppsFromAppDirectory("https://remote.com/directory")
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to load remote directory")
+        expect.stringContaining("Error loading app directory")
       )
 
       consoleSpy.mockRestore()
@@ -186,12 +188,12 @@ describe("SailDirectory", () => {
 
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ apps: [duplicateApp] }),
+        json: () => Promise.resolve({ applications: [duplicateApp] }),
       } as Response)
 
-      await sailDirectory.loadRemoteDirectory("https://remote.com/directory")
+      await sailDirectory.addAppsFromAppDirectory("https://remote.com/directory")
 
-      const allApps = sailDirectory.getAllApps()
+      const allApps = sailDirectory.retrieveAllApps()
       expect(allApps).toHaveLength(2) // Should still be 2, not 3
       
       // The remote app should override the local one
@@ -206,17 +208,17 @@ describe("SailDirectory", () => {
       vi.mocked(fetch)
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ apps: directory1Apps }),
+          json: () => Promise.resolve({ applications: directory1Apps }),
         } as Response)
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ apps: directory2Apps }),
+          json: () => Promise.resolve({ applications: directory2Apps }),
         } as Response)
 
-      await sailDirectory.loadRemoteDirectory("https://dir1.com/directory")
-      await sailDirectory.loadRemoteDirectory("https://dir2.com/directory")
+      await sailDirectory.addAppsFromAppDirectory("https://dir1.com/directory")
+      await sailDirectory.addAppsFromAppDirectory("https://dir2.com/directory")
 
-      const allApps = sailDirectory.getAllApps()
+      const allApps = sailDirectory.retrieveAllApps()
       const sharedApps = allApps.filter(app => app.appId === "shared-app")
       expect(sharedApps).toHaveLength(1)
       expect(sharedApps[0].name).toBe("Shared App v2") // Last loaded should win
@@ -239,8 +241,9 @@ describe("SailDirectory", () => {
         },
       ]
 
-      const multiDirectory = new SailDirectory(multiDirectories)
-      const allApps = multiDirectory.getAllApps()
+      const multiDirectory = new SailDirectory()
+      multiDirectory.replaceAppsFromDirectoryObjects(multiDirectories)
+      const allApps = multiDirectory.retrieveAllApps()
       
       expect(allApps).toHaveLength(3)
       expect(allApps.map(app => app.appId)).toEqual(["local-1", "local-2", "local-3"])
@@ -269,8 +272,9 @@ describe("SailDirectory", () => {
         },
       ]
 
-      const complexDirectory = new SailDirectory(complexApps)
-      const app = complexDirectory.getAppById("complex-app")
+      const complexDirectory = new SailDirectory()
+      complexDirectory.replaceAppsFromDirectoryObjects(complexApps)
+      const app = complexDirectory.retrieveAppsById("complex-app")[0]
       
       expect(app?.intents).toHaveLength(2)
       expect(app?.intents?.[0].contexts).toEqual(["fdc3.contact", "fdc3.contactList"])
@@ -279,7 +283,8 @@ describe("SailDirectory", () => {
 
   describe("Error Edge Cases", () => {
     it("should handle null/undefined apps in directory", () => {
-      const malformedDirectory = new SailDirectory([
+      const malformedDirectory = new SailDirectory()
+      malformedDirectory.replaceAppsFromDirectoryObjects([
         {
           apps: [
             null as any,
@@ -289,7 +294,7 @@ describe("SailDirectory", () => {
         },
       ])
 
-      const allApps = malformedDirectory.getAllApps()
+      const allApps = malformedDirectory.retrieveAllApps()
       expect(allApps).toHaveLength(1)
       expect(allApps[0].appId).toBe("valid-app")
     })
@@ -301,8 +306,9 @@ describe("SailDirectory", () => {
         { appId: "valid", name: "Valid", details: {}, intents: [] },
       ]
 
-      const incompleteDirectory = new SailDirectory([{ apps: incompleteApps }])
-      const allApps = incompleteDirectory.getAllApps()
+      const incompleteDirectory = new SailDirectory()
+      incompleteDirectory.replaceAppsFromDirectoryObjects([{ apps: incompleteApps }])
+      const allApps = incompleteDirectory.retrieveAllApps()
       
       // Should include all apps regardless of missing fields (filtering may happen elsewhere)
       expect(allApps).toHaveLength(3)
@@ -324,7 +330,7 @@ describe("getIcon utility", () => {
     expect(iconUrl).toBe("https://example.com/icon.png")
   })
 
-  it("should return undefined for app without icons", () => {
+  it("should return default icon for app without icons", () => {
     const app: DirectoryApp = {
       appId: "test-app",
       name: "Test App",
@@ -333,10 +339,10 @@ describe("getIcon utility", () => {
     }
 
     const iconUrl = getIcon(app)
-    expect(iconUrl).toBeUndefined()
+    expect(iconUrl).toBe("/icons/control/choose-app.svg")
   })
 
-  it("should return undefined for app with empty icons array", () => {
+  it("should return default icon for app with empty icons array", () => {
     const app: DirectoryApp = {
       appId: "test-app",
       name: "Test App",
@@ -346,7 +352,7 @@ describe("getIcon utility", () => {
     }
 
     const iconUrl = getIcon(app)
-    expect(iconUrl).toBeUndefined()
+    expect(iconUrl).toBe("/icons/control/choose-app.svg")
   })
 
   it("should return first icon when multiple icons exist", () => {

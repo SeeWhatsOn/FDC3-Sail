@@ -1,10 +1,10 @@
-// packages/socket/__tests__/handlers/fdc3/channelHandlers.test.ts
+// packages/socket/__tests__/handlers/channelHandlers.test.ts
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest"
 import { Socket } from "socket.io"
-import { ConnectionState } from "../../../src/types"
-import { SessionManager } from "../../../src/sessionManager"
-import { registerChannelHandlers } from "../../../src/handlers/fdc3/channelHandlers"
-import { SailFDC3Server } from "../../../src/model/fdc3/SailFDC3Server"
+import { ConnectionState } from "../../src/types"
+import { SessionManager } from "../../src/sessionManager"
+import { registerChannelHandlers } from "../../src/handlers/fdc3/channelHandlers"
+import { SailFDC3Server } from "../../src/model/fdc3/SailFDC3Server"
 
 // Interface for the mock FDC3 server that includes only the methods used in tests
 interface MockFDC3Server {
@@ -18,7 +18,7 @@ interface MockFDC3Server {
 }
 
 // Mock external dependencies
-vi.mock("../../../src/utils/socketUtils", () => ({
+vi.mock("../../src/utils/socketUtils", () => ({
   safeAcknowledgement: vi.fn((callback, data, error) => {
     if (callback) callback(data, error)
   }),
