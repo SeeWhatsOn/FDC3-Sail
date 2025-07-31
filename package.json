@@ -9,7 +9,7 @@
     "electron:start": "npm run dev -w packages/electron",
     "example-apps": "npm run dev --workspace=packages/example-apps",
     "lint": "eslint .",
-    "start": "concurrently -n \"SOCKET,WEB,ELECTRON\" -c \"red,blue,green\" \"npm run dev -w packages/socket\" \"npm run web:dev\" \"wait-on -l -i 1000 -t 60000 -w 1000 tcp:localhost:5173 && npm run electron:start\""
+    "start": "concurrently -n \"SOCKET,WEB,ELECTRON,APPDIR,EXAMPLES\" -c \"red,blue,green,yellow,magenta\" \"npm run dev -w packages/socket\" \"npm run dev -w packages/web\" \"npm run dev -w packages/app-directory\" \"npm run dev -w packages/example-apps\" \"wait-on -l -i 1000 -t 60000 -w 1000 tcp:localhost:5173 && npm run electron:start\""
   },
   "workspaces": [
     "packages/common",
