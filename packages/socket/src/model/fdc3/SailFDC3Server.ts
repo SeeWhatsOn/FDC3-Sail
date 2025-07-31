@@ -1,4 +1,4 @@
-import { DesktopAgentConnectionArgs, TabDetail } from "@finos/fdc3-sail-common"
+import { DesktopAgentHelloArgs, TabDetail } from "@finos/fdc3-sail-common"
 import {
   ChannelState,
   ChannelType,
@@ -27,7 +27,7 @@ export class SailFDC3Server extends DefaultFDC3Server {
 
   constructor(
     sailServerContext: SailServerContext,
-    helloArgs: DesktopAgentConnectionArgs,
+    helloArgs: DesktopAgentHelloArgs,
   ) {
     super(
       sailServerContext,
@@ -37,7 +37,7 @@ export class SailFDC3Server extends DefaultFDC3Server {
       60000,
       20000,
     )
-    sailServerContext.directory.replaceAppsFromAppDirectories(
+    sailServerContext.directory.replaceAppsFromDirectoryObjects(
       helloArgs.directories,
     )
     this.serverContext = sailServerContext

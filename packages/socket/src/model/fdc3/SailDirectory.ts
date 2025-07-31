@@ -90,6 +90,24 @@ export class SailDirectory extends BasicDirectory {
     console.log("Loaded " + this.allApps.length + " apps")
   }
 
+  /**
+   * Replace all apps in the directory with apps from the provided directory objects
+   * @param directories - Array of directory objects with apps property
+   */
+  replaceAppsFromDirectoryObjects(directories: { apps: DirectoryApp[] }[]) {
+    this.clearApps()
+    if (directories && Array.isArray(directories)) {
+      for (const directory of directories) {
+        if (directory && directory.apps && Array.isArray(directory.apps)) {
+          for (const app of directory.apps) {
+            this.addApp(app)
+          }
+        }
+      }
+    }
+    console.log("Loaded " + this.allApps.length + " apps")
+  }
+
   addApp(app: DirectoryApp) {
     this.allApps.push(app)
   }

@@ -1,6 +1,6 @@
 import { Socket } from "socket.io"
 import {
-  DesktopAgentConnectionArgs,
+  DesktopAgentHelloArgs,
   DesktopAgentDirectoryListingArgs,
   DesktopAgentRegisterAppLaunchArgs,
   AppHosting,
@@ -18,17 +18,14 @@ import { v4 as uuid } from "uuid"
 import { handleOperationError } from "../../utils/errorHandling"
 import { LogCategory } from "../../utils/logs"
 import { logHandlerEvent } from "../../utils/logs"
-import {
-  SocketType,
-  getOrAwaitFdc3Server,
-  emitCurrentAppState,
-} from "../../utils"
+import { getOrAwaitFdc3Server, emitCurrentAppState } from "../../utils"
+import { SocketType } from "../../utils/socketUtils"
 
 function handleDesktopAgentConnect(
   socket: Socket,
   connectionState: ConnectionState,
 ): void {
-  socket.on(DA_HELLO, async (data: DesktopAgentConnectionArgs, callback) => {
+  socket.on(DA_HELLO, async (data: DesktopAgentHelloArgs, callback) => {
     logHandlerEvent({
       category: LogCategory.DESKTOP_AGENT,
       event: "SAIL DA HELLO handled",
@@ -46,9 +43,16 @@ function handleDesktopAgentConnect(
         sessionId: connectionState.userSessionId,
       },
     })
-    let fdc3Server = await connectionState.sessionManager.getSession(
-      connectionState.userSessionId,
-    )
+    let fdc3Server: SailFDC3Server | null = null
+    try {
+      fdc3Server = await connectionState.sessionManager.getSession(
+        connectionState.userSessionId,
+      )
+    } catch (error) {
+      // Session doesn't exist yet, will create a new one
+      fdc3Server = null
+      console.error(error)
+    }
 
     if (fdc3Server) {
       // Reconfiguring current session
@@ -153,7 +157,7 @@ function handleDesktopAgentConnect(
     }
 
     connectionState.fdc3ServerInstance = fdc3Server // Update connection state
-    callback(true)
+    if (callback) callback(true, null)
   })
 }
 
@@ -180,7 +184,7 @@ function handleDesktopAgentDirectoryListing(
           connectionState.sessionManager,
           userSessionId,
         )
-        callback(session.getAppDirectory().allApps, undefined)
+        callback(session.getAppDirectory().allApps, null)
       } catch (error) {
         handleOperationError({
           operation: "DA_DIRECTORY_LISTING",
@@ -243,7 +247,7 @@ function handleDesktopAgentAppRegistration(
         })
 
         await emitCurrentAppState(session)
-        callback(instanceId, undefined)
+        callback(instanceId, null)
       } catch (error) {
         handleOperationError({
           operation: "DA_REGISTER_APP_LAUNCH",

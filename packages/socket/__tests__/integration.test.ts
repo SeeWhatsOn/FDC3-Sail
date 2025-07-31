@@ -1,56 +1,85 @@
-// __tests__/integration.test.ts
+// packages/socket/__tests__/integration/fdc3-workflow.test.ts
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { Server } from "socket.io"
 import { io as ioc, Socket as ClientSocket } from "socket.io-client"
 import { AddressInfo } from "net"
 import { createServer } from "http"
-import { SessionManager } from "../src/sessionManager"
-import { DA_HELLO, DA_DIRECTORY_LISTING } from "@finos/fdc3-sail-common"
-import { registerAllSocketHandlers } from "../src/setupHandlers"
-import { describe, expect, beforeAll, afterAll, test, vi } from "vitest"
-import { SailFDC3Server } from "../src/model/fdc3/SailFDC3Server"
+import { SessionManager } from "../../src/sessionManager"
+import { SailFDC3Server } from "../../src/model/fdc3/SailFDC3Server"
+import { SailServerContext } from "../../src/model/fdc3/SailServerContext"
+import { SailDirectory } from "../../src/model/fdc3/SailDirectory"
+import { registerAllSocketHandlers } from "../../src/setupHandlers"
+import {
+  DA_HELLO,
+  DA_DIRECTORY_LISTING,
+  DA_REGISTER_APP_LAUNCH,
+  APP_HELLO,
+  FDC3_APP_EVENT,
+  AppHosting,
+} from "@finos/fdc3-sail-common"
 
-// Increase test timeout to avoid flakiness
-const TEST_TIMEOUT = 30000
-
-// Create a consistent mock FDC3 server for testing
-const createMockFdc3Server = () =>
-  ({
-    getAppDirectory: () => ({
-      allApps: [],
-      getAppById: () => null,
-      getAllApps: () => [],
-    }),
-    getChannels: () => ({
-      system: [
-        { id: "system", type: "system", displayMetadata: { name: "System" } },
-      ],
-      user: [
-        { id: "user1", type: "user", displayMetadata: { name: "User 1" } },
-      ],
-    }),
-    getCurrentChannel: () => null,
-    setCurrentChannel: vi.fn().mockResolvedValue(true),
-    leaveCurrentChannel: vi.fn().mockResolvedValue(true),
-    broadcast: vi.fn().mockResolvedValue(true),
-    shutdown: vi.fn().mockResolvedValue(undefined),
-  }) as unknown as SailFDC3Server
-
-describe("FDC3 Session Integration Tests", () => {
+describe("FDC3 Workflow Integration Tests", () => {
   let server: Server
-  let clientSocket: ClientSocket
   let httpServer: any
   let sessionManager: SessionManager
+  let desktopAgentClient: ClientSocket
+  let appClient: ClientSocket
   let port: number
 
-  /**
-   * Setup a real Socket.IO server and client pair
-   */
-  beforeAll(async () => {
-    return new Promise<void>((resolve) => {
+  const TEST_TIMEOUT = 15000
+  const userSessionId = "integration-test-session"
+
+  const testDirectories = [
+    {
+      apps: [
+        {
+          appId: "test-chart-app",
+          name: "Test Chart App",
+          details: { url: "https://example.com/chart" },
+          intents: [
+            {
+              name: "ViewChart",
+              contexts: ["fdc3.instrument"],
+            },
+          ],
+        },
+        {
+          appId: "test-blotter-app",
+          name: "Test Blotter App",
+          details: { url: "https://example.com/blotter" },
+          intents: [
+            {
+              name: "ViewOrders",
+              contexts: ["fdc3.portfolio"],
+            },
+          ],
+        },
+      ],
+    },
+  ]
+
+  const testChannels = [
+    {
+      id: "red",
+      type: "user" as const,
+      displayMetadata: { name: "Red", color: "#ff0000" },
+    },
+    {
+      id: "blue",
+      type: "user" as const,
+      displayMetadata: { name: "Blue", color: "#0000ff" },
+    },
+    {
+      id: "system",
+      type: "system" as const,
+      displayMetadata: { name: "System", color: "#808080" },
+    },
+  ]
+
+  beforeEach(async () => {
+    return new Promise<void>((resolve, reject) => {
       // Create HTTP server
       httpServer = createServer()
-
-      // Create actual SessionManager instance
       sessionManager = new SessionManager()
 
       // Create Socket.IO server
@@ -58,225 +87,605 @@ describe("FDC3 Session Integration Tests", () => {
         cors: { origin: "*", methods: ["GET", "POST"] },
       })
 
-      // Start listening on an ephemeral port
+      // Start server on ephemeral port
       httpServer.listen(() => {
         port = (httpServer.address() as AddressInfo).port
 
         // Setup connection handler
         server.on("connection", (socket) => {
-          // Set up handlers with real connection state
           registerAllSocketHandlers(socket, {
             socket,
             sessionManager,
           })
         })
 
-        // Connect to the server after it's ready
-        clientSocket = ioc(`http://localhost:${port}`, {
+        // Connect clients
+        desktopAgentClient = ioc(`http://localhost:${port}`, {
           forceNew: true,
-          reconnection: true,
+          reconnection: false,
         })
 
-        // Ensure we connect successfully before proceeding
-        clientSocket.on("connect", () => {
-          console.log("Client socket connected")
-          // Add a small delay to ensure everything is set up
-          setTimeout(() => resolve(), 500)
+        appClient = ioc(`http://localhost:${port}`, {
+          forceNew: true,
+          reconnection: false,
         })
 
-        // Handle connection errors
-        clientSocket.on("connect_error", (err) => {
-          console.error("Connection error:", err)
-        })
+        // Wait for both clients to connect
+        let connectedCount = 0
+        const onConnect = () => {
+          connectedCount++
+          if (connectedCount === 2) {
+            setTimeout(() => resolve(), 100) // Small delay for stability
+          }
+        }
+
+        desktopAgentClient.on("connect", onConnect)
+        appClient.on("connect", onConnect)
+
+        desktopAgentClient.on("connect_error", reject)
+        appClient.on("connect_error", reject)
       })
     })
   })
 
-  /**
-   * Clean up resources after tests
-   */
-  afterAll(() => {
-    if (clientSocket && clientSocket.connected) {
-      clientSocket.disconnect()
-    }
+  afterEach(() => {
+    if (desktopAgentClient?.connected) desktopAgentClient.disconnect()
+    if (appClient?.connected) appClient.disconnect()
     if (server) server.close()
     if (httpServer) httpServer.close()
   })
 
-  /**
-   * Test the full desktop agent connection flow
-   */
-  test(
-    "Desktop agent can connect and establish a session",
-    { timeout: TEST_TIMEOUT },
-    () => {
-      return new Promise<void>((resolve) => {
-        // Pre-create the session to avoid waiting for it
-        const mockServer = createMockFdc3Server()
-        sessionManager.createSession("test-session-123", mockServer)
-
-        // Ensure we're listening for the success event
-        const successSpy = vi.fn().mockImplementation((success: any) => {
-          expect(success).toBe(true)
-          setTimeout(() => resolve(), 100) // Small delay to avoid race conditions
-        })
-
-        // Send a desktop agent hello message
-        clientSocket.emit(
+  describe("Desktop Agent Session Setup", () => {
+    it("should establish desktop agent session with channels and directories", { timeout: TEST_TIMEOUT }, async () => {
+      const response = await new Promise<boolean>((resolve) => {
+        desktopAgentClient.emit(
           DA_HELLO,
           {
-            userSessionId: "test-session-123",
-            channels: [
-              { id: "system", icon: "system-icon", background: "#ff0000" },
-              { id: "global", icon: "global-icon", background: "#00ff00" },
-            ],
-            directories: [],
+            userSessionId,
+            channels: testChannels.map(ch => ({
+              id: ch.id,
+              icon: `${ch.id}-icon`,
+              background: ch.displayMetadata.color,
+            })),
+            directories: testDirectories,
           },
-          successSpy,
+          (success: boolean) => {
+            resolve(success)
+          }
         )
       })
-    },
-  )
 
-  /**
-   * Test the directory listing flow with a real session
-   */
-  test(
-    "Client can request directory listing from an existing session",
-    { timeout: TEST_TIMEOUT },
-    () => {
-      return new Promise<void>((resolve) => {
-        // Mock the session being available with improved mock
-        const mockServer = createMockFdc3Server()
-        sessionManager.createSession("test-session-123", mockServer)
+      expect(response).toBe(true)
 
-        // Send a directory listing request
-        clientSocket.emit(
+      // Verify session was created
+      const session = await sessionManager.getSession(userSessionId)
+      expect(session).toBeDefined()
+      expect(session).toBeInstanceOf(SailFDC3Server)
+    })
+
+    it("should retrieve directory listing after session setup", { timeout: TEST_TIMEOUT }, async () => {
+      // First establish session
+      await new Promise<void>((resolve) => {
+        desktopAgentClient.emit(
+          DA_HELLO,
+          {
+            userSessionId,
+            channels: testChannels.map(ch => ({
+              id: ch.id,
+              icon: `${ch.id}-icon`,
+              background: ch.displayMetadata.color,
+            })),
+            directories: testDirectories,
+          },
+          () => resolve()
+        )
+      })
+
+      // Then get directory listing
+      const apps = await new Promise<any[]>((resolve) => {
+        desktopAgentClient.emit(
           DA_DIRECTORY_LISTING,
-          { userSessionId: "test-session-123" },
-          (apps: any, error: any) => {
-            // Should receive apps without error - note we check for falsy not undefined
-            expect(error).toBeFalsy()
-            expect(apps).toBeDefined()
-            expect(Array.isArray(apps)).toBe(true)
-            resolve()
-          },
+          { userSessionId },
+          (appList: any[], error: any) => {
+            expect(error).toBeNull()
+            resolve(appList)
+          }
         )
       })
-    },
-  )
 
-  /**
-   * Test error handling with real socket connections
-   */
-  test(
-    "Server handles invalid session ID appropriately",
-    { timeout: TEST_TIMEOUT },
-    () => {
-      return new Promise<void>((resolve) => {
-        // Send a directory listing request for a non-existent session
-        clientSocket.emit(
+      expect(apps).toHaveLength(2)
+      expect(apps.find(app => app.appId === "test-chart-app")).toBeDefined()
+      expect(apps.find(app => app.appId === "test-blotter-app")).toBeDefined()
+    })
+  })
+
+  describe("App Registration and Connection", () => {
+    let instanceId: string
+
+    beforeEach(async () => {
+      // Setup session
+      await new Promise<void>((resolve) => {
+        desktopAgentClient.emit(
+          DA_HELLO,
+          {
+            userSessionId,
+            channels: testChannels.map(ch => ({
+              id: ch.id,
+              icon: `${ch.id}-icon`,
+              background: ch.displayMetadata.color,
+            })),
+            directories: testDirectories,
+          },
+          () => resolve()
+        )
+      })
+    })
+
+    it("should register and connect app successfully", { timeout: TEST_TIMEOUT }, async () => {
+      // Register app launch
+      instanceId = await new Promise<string>((resolve) => {
+        desktopAgentClient.emit(
+          DA_REGISTER_APP_LAUNCH,
+          {
+            appId: "test-chart-app",
+            userSessionId,
+            hosting: AppHosting.Frame,
+            channel: "red",
+            instanceTitle: "Chart App Instance",
+          },
+          (id: string, error: any) => {
+            expect(error).toBeNull()
+            resolve(id)
+          }
+        )
+      })
+
+      expect(instanceId).toMatch(/^[0-9a-f-]{36}$/) // UUID format
+
+      // Connect app
+      const hostingPreference = await new Promise<AppHosting>((resolve) => {
+        appClient.emit(
+          APP_HELLO,
+          {
+            appId: "test-chart-app",
+            instanceId,
+            userSessionId,
+          },
+          (hosting: AppHosting, error: any) => {
+            expect(error).toBeNull()
+            resolve(hosting)
+          }
+        )
+      })
+
+      expect(hostingPreference).toBe(AppHosting.Frame)
+    })
+
+    it("should handle app connection without pre-registration", { timeout: TEST_TIMEOUT }, async () => {
+      const response = await new Promise<any>((resolve) => {
+        appClient.emit(
+          APP_HELLO,
+          {
+            appId: "test-chart-app",
+            instanceId: "non-registered-instance",
+            userSessionId,
+          },
+          (hosting: any, error: any) => {
+            resolve({ hosting, error })
+          }
+        )
+      })
+
+      // Should fail without pre-registration (unless debug mode)
+      expect(response.error).toBeDefined()
+    })
+  })
+
+  describe("FDC3 Channel Operations", () => {
+    let instanceId: string
+
+    beforeEach(async () => {
+      // Setup session and connect app
+      await new Promise<void>((resolve) => {
+        desktopAgentClient.emit(
+          DA_HELLO,
+          {
+            userSessionId,
+            channels: testChannels.map(ch => ({
+              id: ch.id,
+              icon: `${ch.id}-icon`,
+              background: ch.displayMetadata.color,
+            })),
+            directories: testDirectories,
+          },
+          () => resolve()
+        )
+      })
+
+      instanceId = await new Promise<string>((resolve) => {
+        desktopAgentClient.emit(
+          DA_REGISTER_APP_LAUNCH,
+          {
+            appId: "test-chart-app",
+            userSessionId,
+            hosting: AppHosting.Frame,
+          },
+          (id: string) => resolve(id)
+        )
+      })
+
+      await new Promise<void>((resolve) => {
+        appClient.emit(
+          APP_HELLO,
+          {
+            appId: "test-chart-app",
+            instanceId,
+            userSessionId,
+          },
+          () => resolve()
+        )
+      })
+    })
+
+    it("should join user channel successfully", { timeout: TEST_TIMEOUT }, async () => {
+      const joinResult = await new Promise<boolean>((resolve) => {
+        appClient.emit(
+          FDC3_APP_EVENT,
+          {
+            type: "joinUserChannelRequest",
+            payload: { channelId: "red" },
+            meta: {
+              requestUuid: "join-test-uuid",
+              timestamp: new Date(),
+            },
+          },
+          instanceId,
+          (response: any) => {
+            resolve(response?.result === true)
+          }
+        )
+      })
+
+      expect(joinResult).toBe(true)
+    })
+
+    it("should broadcast context on channel", { timeout: TEST_TIMEOUT }, async () => {
+      // First join a channel
+      await new Promise<void>((resolve) => {
+        appClient.emit(
+          FDC3_APP_EVENT,
+          {
+            type: "joinUserChannelRequest",
+            payload: { channelId: "red" },
+            meta: {
+              requestUuid: "join-uuid",
+              timestamp: new Date(),
+            },
+          },
+          instanceId,
+          () => resolve()
+        )
+      })
+
+      // Then broadcast context
+      const broadcastResult = await new Promise<boolean>((resolve) => {
+        appClient.emit(
+          FDC3_APP_EVENT,
+          {
+            type: "broadcastRequest",
+            payload: {
+              context: {
+                type: "fdc3.instrument",
+                id: { ticker: "AAPL" },
+              },
+            },
+            meta: {
+              requestUuid: "broadcast-uuid",
+              timestamp: new Date(),
+            },
+          },
+          instanceId,
+          (response: any) => {
+            resolve(response?.result === true)
+          }
+        )
+      })
+
+      expect(broadcastResult).toBe(true)
+    })
+
+    it("should get system channels", { timeout: TEST_TIMEOUT }, async () => {
+      const channels = await new Promise<any[]>((resolve) => {
+        appClient.emit(
+          FDC3_APP_EVENT,
+          {
+            type: "getSystemChannelsRequest",
+            payload: {},
+            meta: {
+              requestUuid: "channels-uuid",
+              timestamp: new Date(),
+            },
+          },
+          instanceId,
+          (response: any) => {
+            resolve(response?.channels || [])
+          }
+        )
+      })
+
+      expect(Array.isArray(channels)).toBe(true)
+      expect(channels.find(ch => ch.id === "system")).toBeDefined()
+    })
+  })
+
+  describe("Error Handling", () => {
+    it("should handle session not found errors", { timeout: TEST_TIMEOUT }, async () => {
+      const response = await new Promise<any>((resolve) => {
+        desktopAgentClient.emit(
           DA_DIRECTORY_LISTING,
           { userSessionId: "non-existent-session" },
           (apps: any, error: any) => {
-            // Should receive an error
-            expect(error).toBeDefined()
-            expect(apps).toBeNull()
-            // The error may come directly from the session manager
-            expect(error).toContain("Session not found")
-            resolve()
-          },
+            resolve({ apps, error })
+          }
         )
       })
-    },
-  )
 
-  /**
-   * Test a full FDC3 workflow
-   */
-  test("Full FDC3 workflow test", { timeout: TEST_TIMEOUT }, () => {
-    return new Promise<void>((resolve) => {
-      // Pre-create the session to avoid timing issues
-      const mockServer = createMockFdc3Server()
-      sessionManager.createSession("workflow-test-session", mockServer)
+      expect(response.error).toBeDefined()
+      expect(response.apps).toBeNull()
+      expect(response.error).toContain("Session not found")
+    })
 
-      // 1. Desktop agent connects
-      clientSocket.emit(
-        DA_HELLO,
-        {
-          userSessionId: "workflow-test-session",
-          channels: [
-            { id: "system", icon: "system-icon", background: "#ff0000" },
-            { id: "global", icon: "global-icon", background: "#00ff00" },
-          ],
-          directories: [],
-        },
-        (success: any) => {
-          expect(success).toBe(true)
+    it("should handle malformed FDC3 messages", { timeout: TEST_TIMEOUT }, async () => {
+      // First setup session and app
+      await new Promise<void>((resolve) => {
+        desktopAgentClient.emit(
+          DA_HELLO,
+          { userSessionId, channels: [], directories: [] },
+          () => resolve()
+        )
+      })
 
-          // 2. Get directory listing
-          clientSocket.emit(
-            DA_DIRECTORY_LISTING,
-            { userSessionId: "workflow-test-session" },
-            (apps: any) => {
-              expect(Array.isArray(apps)).toBe(true)
+      const instanceId = await new Promise<string>((resolve) => {
+        desktopAgentClient.emit(
+          DA_REGISTER_APP_LAUNCH,
+          { appId: "test-chart-app", userSessionId },
+          (id: string) => resolve(id)
+        )
+      })
 
-              // 3. Get system channels
-              clientSocket.emit(
-                "fdc3.getSystemChannels",
-                { userSessionId: "workflow-test-session" },
-                (channels: any) => {
-                  expect(Array.isArray(channels)).toBe(true)
+      await new Promise<void>((resolve) => {
+        appClient.emit(
+          APP_HELLO,
+          { appId: "test-chart-app", instanceId, userSessionId },
+          () => resolve()
+        )
+      })
 
-                  // 4. Join a channel
-                  clientSocket.emit(
-                    "fdc3.joinChannel",
-                    {
-                      userSessionId: "workflow-test-session",
-                      channelId: "system",
-                      instanceId: "test-app-1",
-                    },
-                    (joinSuccess: any) => {
-                      expect(joinSuccess).toBeTruthy()
+      // Send malformed message
+      const response = await new Promise<any>((resolve) => {
+        appClient.emit(
+          FDC3_APP_EVENT,
+          {
+            // Missing required fields
+            payload: {},
+          },
+          instanceId,
+          (response: any) => {
+            resolve(response)
+          }
+        )
+      })
 
-                      // 5. Broadcast to the channel
-                      clientSocket.emit(
-                        "fdc3.broadcast",
-                        {
-                          userSessionId: "workflow-test-session",
-                          instanceId: "test-app-1",
-                          context: {
-                            type: "fdc3.test",
-                            id: { value: "test-data" },
-                          },
-                        },
-                        (broadcastSuccess: any) => {
-                          expect(broadcastSuccess).toBeTruthy()
+      // Should handle gracefully
+      expect(response).toBeDefined()
+    })
+  })
 
-                          // 6. Leave the channel
-                          clientSocket.emit(
-                            "fdc3.leaveCurrentChannel",
-                            {
-                              userSessionId: "workflow-test-session",
-                              instanceId: "test-app-1",
-                            },
-                            (leaveSuccess: any) => {
-                              expect(leaveSuccess).toBeTruthy()
+  describe("Multi-App Scenarios", () => {
+    let chartInstanceId: string
+    let blotterInstanceId: string
+    let secondAppClient: ClientSocket
 
-                              // We've verified the full workflow
-                              resolve()
-                            },
-                          )
-                        },
-                      )
-                    },
-                  )
-                },
-              )
+    beforeEach(async () => {
+      // Setup session
+      await new Promise<void>((resolve) => {
+        desktopAgentClient.emit(
+          DA_HELLO,
+          {
+            userSessionId,
+            channels: testChannels.map(ch => ({
+              id: ch.id,
+              icon: `${ch.id}-icon`,
+              background: ch.displayMetadata.color,
+            })),
+            directories: testDirectories,
+          },
+          () => resolve()
+        )
+      })
+
+      // Register and connect first app
+      chartInstanceId = await new Promise<string>((resolve) => {
+        desktopAgentClient.emit(
+          DA_REGISTER_APP_LAUNCH,
+          { appId: "test-chart-app", userSessionId },
+          (id: string) => resolve(id)
+        )
+      })
+
+      await new Promise<void>((resolve) => {
+        appClient.emit(
+          APP_HELLO,
+          { appId: "test-chart-app", instanceId: chartInstanceId, userSessionId },
+          () => resolve()
+        )
+      })
+
+      // Setup second app client
+      secondAppClient = ioc(`http://localhost:${port}`, {
+        forceNew: true,
+        reconnection: false,
+      })
+
+      await new Promise<void>((resolve) => {
+        secondAppClient.on("connect", () => resolve())
+      })
+
+      // Register and connect second app
+      blotterInstanceId = await new Promise<string>((resolve) => {
+        desktopAgentClient.emit(
+          DA_REGISTER_APP_LAUNCH,
+          { appId: "test-blotter-app", userSessionId },
+          (id: string) => resolve(id)
+        )
+      })
+
+      await new Promise<void>((resolve) => {
+        secondAppClient.emit(
+          APP_HELLO,
+          { appId: "test-blotter-app", instanceId: blotterInstanceId, userSessionId },
+          () => resolve()
+        )
+      })
+    })
+
+    afterEach(() => {
+      if (secondAppClient?.connected) secondAppClient.disconnect()
+    })
+
+    it("should handle context sharing between apps on same channel", { timeout: TEST_TIMEOUT }, async () => {
+      // Both apps join the same channel
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          appClient.emit(
+            FDC3_APP_EVENT,
+            {
+              type: "joinUserChannelRequest",
+              payload: { channelId: "red" },
+              meta: { requestUuid: "chart-join", timestamp: new Date() },
             },
+            chartInstanceId,
+            () => resolve()
           )
-        },
-      )
+        }),
+        new Promise<void>((resolve) => {
+          secondAppClient.emit(
+            FDC3_APP_EVENT,
+            {
+              type: "joinUserChannelRequest", 
+              payload: { channelId: "red" },
+              meta: { requestUuid: "blotter-join", timestamp: new Date() },
+            },
+            blotterInstanceId,
+            () => resolve()
+          )
+        }),
+      ])
+
+      // Setup context listener on second app
+      let receivedContext = false
+      secondAppClient.on(FDC3_APP_EVENT, (message) => {
+        if (message.type === "contextBroadcast") {
+          receivedContext = true
+        }
+      })
+
+      // Broadcast from first app
+      await new Promise<void>((resolve) => {
+        appClient.emit(
+          FDC3_APP_EVENT,
+          {
+            type: "broadcastRequest",
+            payload: {
+              context: {
+                type: "fdc3.instrument",
+                id: { ticker: "MSFT" },
+              },
+            },
+            meta: { requestUuid: "broadcast-test", timestamp: new Date() },
+          },
+          chartInstanceId,
+          () => resolve()
+        )
+      })
+
+      // Wait for context to be received
+      await new Promise<void>((resolve) => {
+        const checkReceived = () => {
+          if (receivedContext) {
+            resolve()
+          } else {
+            setTimeout(checkReceived, 100)
+          }
+        }
+        checkReceived()
+      })
+
+      expect(receivedContext).toBe(true)
+    })
+
+    it("should isolate apps on different channels", { timeout: TEST_TIMEOUT }, async () => {
+      // Apps join different channels
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          appClient.emit(
+            FDC3_APP_EVENT,
+            {
+              type: "joinUserChannelRequest",
+              payload: { channelId: "red" },
+              meta: { requestUuid: "chart-red", timestamp: new Date() },
+            },
+            chartInstanceId,
+            () => resolve()
+          )
+        }),
+        new Promise<void>((resolve) => {
+          secondAppClient.emit(
+            FDC3_APP_EVENT,
+            {
+              type: "joinUserChannelRequest",
+              payload: { channelId: "blue" },
+              meta: { requestUuid: "blotter-blue", timestamp: new Date() },
+            },
+            blotterInstanceId,
+            () => resolve()
+          )
+        }),
+      ])
+
+      // Setup context listener on second app
+      let receivedContext = false
+      secondAppClient.on(FDC3_APP_EVENT, (message) => {
+        if (message.type === "contextBroadcast") {
+          receivedContext = true
+        }
+      })
+
+      // Broadcast from first app
+      await new Promise<void>((resolve) => {
+        appClient.emit(
+          FDC3_APP_EVENT,
+          {
+            type: "broadcastRequest",
+            payload: {
+              context: {
+                type: "fdc3.instrument",
+                id: { ticker: "GOOGL" },
+              },
+            },
+            meta: { requestUuid: "isolated-broadcast", timestamp: new Date() },
+          },
+          chartInstanceId,
+          () => resolve()
+        )
+      })
+
+      // Wait a bit to ensure no context is received
+      await new Promise<void>((resolve) => {
+        setTimeout(() => resolve(), 500)
+      })
+
+      expect(receivedContext).toBe(false)
     })
   })
 })
