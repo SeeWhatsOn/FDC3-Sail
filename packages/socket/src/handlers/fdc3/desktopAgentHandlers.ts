@@ -184,7 +184,7 @@ function handleDesktopAgentDirectoryListing(
           connectionState.sessionManager,
           userSessionId,
         )
-        callback(session.getAppDirectory().allApps, null)
+        callback(session.getAppDirectory().allApps, undefined)
       } catch (error) {
         handleOperationError({
           operation: "DA_DIRECTORY_LISTING",
@@ -247,7 +247,7 @@ function handleDesktopAgentAppRegistration(
         })
 
         await emitCurrentAppState(session)
-        callback(instanceId, null)
+        callback(instanceId, undefined)
       } catch (error) {
         handleOperationError({
           operation: "DA_REGISTER_APP_LAUNCH",
