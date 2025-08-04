@@ -461,11 +461,31 @@ export class SailServerContext implements ServerContext<SailData> {
     )
   }
 
+  /**
+   * Cleans up disconnected channel sockets across all app instances
+   * This prevents memory leaks from accumulating disconnected socket references
+   */
+  cleanupDisconnectedChannelSockets(): void {
+    this.instances.forEach((instance) => {
+      if (instance.channelSockets) {
+        const originalLength = instance.channelSockets.length
+        instance.channelSockets = instance.channelSockets.filter(
+          (socket: Socket) => socket.connected,
+        )
+        if (instance.channelSockets.length < originalLength) {
+          console.log(
+            `Cleaned up ${originalLength - instance.channelSockets.length} disconnected channel sockets for ${instance.instanceId}`,
+          )
+        }
+      }
+    })
+  }
+
   updateChannelData(channelData: TabDetail[], history?: ContextHistory): void {
-    function relevantHistory(
+    const relevantHistory = (
       id: string,
       history?: ContextHistory,
-    ): undefined | Context[] {
+    ): undefined | Context[] => {
       if (history) {
         const basicHistory = history[id]
         // just the first item of each unique type
@@ -481,41 +501,45 @@ export class SailServerContext implements ServerContext<SailData> {
       | MinimalFDC3ServerInternal
       | undefined
 
-    if (
-      !internalServer ||
-      !internalServer.handlers ||
-      internalServer.handlers.length === 0
-    ) {
+    if (!internalServer?.handlers?.[0]) {
       console.warn(
         "SAIL: FDC3Server or its handlers are not initialized for updateChannelData.",
       )
       return
     }
 
-    // Assumes the first handler is the one responsible for managing channel states.
     const channelHandler = internalServer.handlers[0]
-    // Preserve the current channel states before clearing, to allow retaining context if no new history is provided.
-    const previousChannelStates: ChannelState[] = [...channelHandler.state]
+    const existingChannels = new Map(
+      channelHandler.state.map((channel) => [channel.id, channel]),
+    )
+    const newChannels = mapChannels(channelData)
 
-    channelHandler.state.length = 0 // Clear existing state to replace it entirely.
-    const newState = mapChannels(channelData).map((c) => {
-      // Determine the context for the channel:
-      // 1. Use relevant context from the provided history, if any.
-      // 2. Else, use the context from the channel's previous state (before clearing), if any.
-      // 3. Else, default to an empty context array.
-      const historicalContext = relevantHistory(c.id, history)
-      const previousChannel = previousChannelStates.find(
-        (pcs) => pcs.id === c.id,
-      )
-      const preservedContext = previousChannel?.context
-      const finalContext = historicalContext ?? preservedContext ?? []
+    // Update existing channels and identify new ones
+    const updatedState: ChannelState[] = []
 
-      return {
-        ...c,
-        context: finalContext,
+    newChannels.forEach((newChannel) => {
+      const existing = existingChannels.get(newChannel.id)
+      const historicalContext = relevantHistory(newChannel.id, history)
+
+      if (existing) {
+        // Update existing channel, preserving context if no new history
+        const finalContext = historicalContext ?? existing.context ?? []
+        updatedState.push({
+          ...existing,
+          ...newChannel,
+          context: finalContext,
+        })
+      } else {
+        // New channel
+        updatedState.push({
+          ...newChannel,
+          context: historicalContext ?? [],
+        })
       }
     })
-    channelHandler.state.push(...newState) // Apply the new state.
+
+    // Replace state atomically
+    channelHandler.state = updatedState
     console.log("SAIL Updated channel data", channelHandler.state)
   }
 }

@@ -22,23 +22,23 @@ export async function registerAllSocketHandlers(
 ): Promise<void> {
   console.log(`Setting up all handlers for socket ${socket.id}`)
 
-  Promise.all([
-    registerDesktopAgentHandlers(socket, connectionState),
-    registerAppHandlers(socket, connectionState),
-    registerElectronHandlers(socket, connectionState),
-    registerClientStateHandlers(socket, connectionState),
-    registerChannelHandlers(socket, connectionState),
-    registerMessageHandlers(socket, connectionState),
-    registerIntentHandlers(socket, connectionState),
-    registerLifecycleHandlers(socket, connectionState),
-  ])
-    .then(() => {
-      console.log(`All handlers registered for socket ${socket.id}`)
-    })
-    .catch((error) => {
-      console.error(
-        `Error registering handlers for socket ${socket.id}:`,
-        error,
-      )
-    })
+  try {
+    await Promise.all([
+      registerDesktopAgentHandlers(socket, connectionState),
+      registerAppHandlers(socket, connectionState),
+      registerElectronHandlers(socket, connectionState),
+      registerClientStateHandlers(socket, connectionState),
+      registerChannelHandlers(socket, connectionState),
+      registerMessageHandlers(socket, connectionState),
+      registerIntentHandlers(socket, connectionState),
+      registerLifecycleHandlers(socket, connectionState),
+    ])
+    console.log(`All handlers registered for socket ${socket.id}`)
+  } catch (error) {
+    console.error(
+      `Error registering handlers for socket ${socket.id}:`,
+      error,
+    )
+    throw error // Re-throw to properly handle in main.ts
+  }
 }

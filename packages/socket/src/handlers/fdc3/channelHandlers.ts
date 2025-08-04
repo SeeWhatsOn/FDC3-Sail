@@ -5,7 +5,7 @@ import {
   SAIL_CHANNEL_CHANGE,
   CHANNEL_RECEIVER_HELLO,
 } from "@finos/fdc3-sail-common"
-import { ConnectionState } from "../../types"
+import { ConnectionState, SailData } from "../../types"
 import { v4 as uuid } from "uuid"
 import { BrowserTypes } from "@finos/fdc3"
 import { Socket } from "socket.io"
@@ -154,15 +154,32 @@ function handleChannelReceiverHello(
         )
         connectionState.fdc3ServerInstance = fdc3Server
 
-        const appInst = fdc3Server.serverContext.getInstanceDetails(
+        const appInst: SailData = fdc3Server.serverContext.getInstanceDetails(
           data.instanceId,
         )
         if (appInst) {
           appInst.channelSockets = appInst.channelSockets || []
+
+          // Clean up any disconnected sockets before adding new one
+          const originalLength = appInst.channelSockets.length
+          appInst.channelSockets = appInst.channelSockets.filter(
+            (socket: Socket) => socket.connected,
+          )
+          if (appInst.channelSockets.length < originalLength) {
+            logHandlerEvent({
+              category: LogCategory.CHANNEL,
+              event: `Cleaned up ${originalLength - appInst.channelSockets.length} disconnected sockets for ${data.instanceId}`,
+              context: { instanceId: data.instanceId },
+              subCategory: "Cleanup",
+            })
+          }
+
+          // Check if current socket is already in the list and is connected
           if (
             !appInst.channelSockets.some(
               (socket: Socket) => socket.id === connectionState.socket.id,
-            )
+            ) &&
+            connectionState.socket.connected
           ) {
             appInst.channelSockets.push(connectionState.socket)
             fdc3Server.serverContext.setInstanceDetails(
@@ -178,7 +195,7 @@ function handleChannelReceiverHello(
           } else {
             logHandlerEvent({
               category: LogCategory.CHANNEL,
-              event: `Socket ${connectionState.socket.id} already present in channelSockets for ${data.instanceId}.`,
+              event: `Socket ${connectionState.socket.id} already present or disconnected for ${data.instanceId}.`,
               context: { instanceId: data.instanceId },
               subCategory: "Change",
             })

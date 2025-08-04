@@ -21,6 +21,8 @@ import { EventEmitter } from "events"
 export class SessionManager extends EventEmitter {
   /** Map of active sessions by sessionId */
   private sessions = new Map<string, SailFDC3Server>()
+  /** Map to track session creation operations to prevent race conditions */
+  private sessionCreationLocks = new Map<string, Promise<void>>()
 
   /**
    * Creates a new session with the given ID
@@ -29,16 +31,40 @@ export class SessionManager extends EventEmitter {
    *
    * This is typically called when a new client connects and establishes a session.
    * The session is stored in the internal registry and an event is emitted to notify subscribers.
+   * This method is thread-safe and prevents race conditions during concurrent session creation.
    *
    * @param sessionId - Unique identifier for the session
    * @param server - The FDC3 server instance
    */
-  createSession(sessionId: string, server: SailFDC3Server): void {
-    console.log(`Creating session: ${sessionId}`)
+  async createSession(sessionId: string, server: SailFDC3Server): Promise<void> {
+    // Check if session creation is already in progress
+    if (this.sessionCreationLocks.has(sessionId)) {
+      await this.sessionCreationLocks.get(sessionId)
+      return
+    }
+
     if (this.sessions.has(sessionId)) {
       console.log(`Session already exists: ${sessionId}`)
       return
     }
+
+    // Create lock for this session creation
+    const creationPromise = this.doCreateSession(sessionId, server)
+    this.sessionCreationLocks.set(sessionId, creationPromise)
+    
+    try {
+      await creationPromise
+    } finally {
+      this.sessionCreationLocks.delete(sessionId)
+    }
+  }
+
+  /**
+   * Internal method to perform the actual session creation
+   * @private
+   */
+  private async doCreateSession(sessionId: string, server: SailFDC3Server): Promise<void> {
+    console.log(`Creating session: ${sessionId}`)
     this.sessions.set(sessionId, server)
     this.emit("session:created", { sessionId, server })
   }

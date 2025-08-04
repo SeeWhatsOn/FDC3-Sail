@@ -89,7 +89,7 @@ function handleDesktopAgentConnect(
           existingContext.setFDC3Server(fdc3Server) // Ensure context links back to the new server instance
         }
 
-        connectionState.sessionManager.createSession(
+        await connectionState.sessionManager.createSession(
           connectionState.userSessionId,
           fdc3Server,
         )
@@ -130,7 +130,7 @@ function handleDesktopAgentConnect(
         )
         fdc3Server = new SailFDC3Server(serverContext, data)
         serverContext.setFDC3Server(fdc3Server)
-        connectionState.sessionManager.createSession(
+        await connectionState.sessionManager.createSession(
           connectionState.userSessionId,
           fdc3Server,
         )

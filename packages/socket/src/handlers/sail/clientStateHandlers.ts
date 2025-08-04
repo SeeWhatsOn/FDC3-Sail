@@ -81,9 +81,17 @@ export async function handleSailClientState(
                 channel: panel.tabId,
               },
             })
-            appDetailState.socket.emit("channel-changed", {
-              channel: panel.tabId,
-            }) // Use appropriate event name/payload
+            try {
+              appDetailState.socket.emit("channel-changed", {
+                channel: panel.tabId,
+              }) // Use appropriate event name/payload
+            } catch (error) {
+              console.error(
+                `Error emitting channel-changed event to ${panel.panelId}:`,
+                error,
+              )
+              // Consider marking socket as problematic or removing it
+            }
           }
         }
         if (panel.title !== appDetailState.instanceTitle) {
@@ -132,8 +140,16 @@ export async function handleSailClientState(
         appDetailState.channelSockets = appDetailState.channelSockets.filter(
           (channelSocket: Socket) => {
             if (channelSocket.connected) {
-              channelSocket.emit(CHANNEL_RECEIVER_UPDATE, updateMsg)
-              return true // Keep connected socket
+              try {
+                channelSocket.emit(CHANNEL_RECEIVER_UPDATE, updateMsg)
+                return true // Keep connected socket
+              } catch (error) {
+                console.error(
+                  `Error emitting CHANNEL_RECEIVER_UPDATE to socket ${channelSocket.id} for ${app.instanceId}:`,
+                  error,
+                )
+                return false // Remove socket that failed to emit
+              }
             }
             console.warn(
               `  Channel socket ${channelSocket.id} for ${app.instanceId} disconnected, removing.`,
