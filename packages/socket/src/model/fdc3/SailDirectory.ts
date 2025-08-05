@@ -1,4 +1,4 @@
-import fs from "node:fs/promises"
+import { promises as fs } from "fs"
 import { BasicDirectory, DirectoryApp } from "@finos/fdc3-web-impl"
 
 export type AppDirectory = {

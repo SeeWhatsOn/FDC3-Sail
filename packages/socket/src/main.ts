@@ -1,63 +1,61 @@
-// src/main.ts
-import { Server, Socket } from "socket.io"
-import dotenv from "dotenv"
-import { ConnectionState } from "./types"
-import { registerAllSocketHandlers } from "./setupHandlers"
-import { SessionManager } from "./sessionManager"
-import { clearPendingSessionRequests } from "./utils/serverUtils"
+// Simplified main.ts - uses new architecture
+import { Server } from "socket.io"
+import { config as dotenv } from "dotenv"
+import { setupSocketHandlers } from "./handlers"
+import { getAllSessions, shutdownAllSessions } from "./sessions"
+import { logEvent } from "./utils"
 
 // Load environment variables
-dotenv.config()
+dotenv()
 
 const PORT = parseInt(process.env.PORT ?? "8090")
 const SHUTDOWN_TIMEOUT = parseInt(process.env.SHUTDOWN_TIMEOUT ?? "5000")
-
-// Running sessions - the server state
-export const sessionManager = new SessionManager()
 
 export const createServer = (port = PORT) => {
   const io = new Server(port, {
     cors: { origin: "*", methods: ["GET", "POST"] },
   })
 
-  io.on("connection", async (socket: Socket) => {
-    console.log(`Socket connected: ${socket.id}`)
+  io.on("connection", (socket) => {
+    logEvent("Server", "Socket connected", { socketId: socket.id })
 
-    const connectionState: ConnectionState = {
-      socket,
-      sessionManager,
-    }
-
-    // --- Setup All Handlers ---
     try {
-      await registerAllSocketHandlers(socket, connectionState)
+      // handlers are registered here
+      setupSocketHandlers(socket)
+      logEvent("Server", "Handlers registered", { socketId: socket.id })
     } catch (error) {
-      console.error(`Failed to register handlers for socket ${socket.id}, disconnecting:`, error)
+      logEvent("Server", "Failed to register handlers", {
+        socketId: socket.id,
+        error: error instanceof Error ? error.message : String(error),
+      })
       socket.disconnect(true)
     }
   })
 
+  // Simplified graceful shutdown
   const performGracefulShutdown = async () => {
-    console.log("Initiating graceful shutdown...")
-    
+    logEvent("Server", "Initiating graceful shutdown")
+
     const shutdownPromise = new Promise<void>((resolve, reject) => {
       io.close(async (err) => {
         if (err) {
-          console.error("Error closing Socket.IO server:", err)
+          logEvent("Server", "Error closing Socket.IO server", {
+            error: err.message,
+          })
           reject(err)
           return
         }
-        
-        console.log("Socket.IO server connections closed.")
-        
+
+        logEvent("Server", "Socket.IO server connections closed")
+
         try {
-          await sessionManager.shutdownAllSessions()
-          sessionManager.removeAllListeners() // Clean up event listeners
-          clearPendingSessionRequests() // Clear any pending session requests
-          console.log("All active FDC3 sessions shut down and cleared.")
+          await shutdownAllSessions()
+          logEvent("Server", "All FDC3 sessions shut down")
           resolve()
         } catch (error) {
-          console.error("Error during session shutdown:", error)
+          logEvent("Server", "Error during session shutdown", {
+            error: error instanceof Error ? error.message : String(error),
+          })
           reject(error)
         }
       })
@@ -73,38 +71,27 @@ export const createServer = (port = PORT) => {
       await Promise.race([shutdownPromise, timeoutPromise])
       process.exit(0)
     } catch (error) {
-      console.error("Graceful shutdown failed:", error)
+      logEvent("Server", "Graceful shutdown failed", {
+        error: error instanceof Error ? error.message : String(error),
+      })
       process.exit(1)
     }
   }
 
-  process.on("SIGTERM", performGracefulShutdown)
-  process.on("SIGINT", performGracefulShutdown)
-
-  // Add periodic connection monitoring and cleanup
+  // Add periodic cleanup monitoring
   const cleanupInterval = setInterval(() => {
-    const sessions = sessionManager.getAllSessions()
-    console.log(`Active sessions: ${sessions.size}`)
-    
-    // Clean up any orphaned sessions
-    const orphanedSessions: string[] = []
+    const sessions = getAllSessions()
+    logEvent("Server", "Periodic cleanup", { activeSessions: sessions.size })
+
+    // Clean up orphaned sessions
     sessions.forEach(async (server, sessionId) => {
       const socket = server.serverContext.getDesktopAgentSocket()
       if (!socket || !socket.connected) {
-        console.warn(`Cleaning up orphaned session: ${sessionId}`)
-        orphanedSessions.push(sessionId)
+        logEvent("Server", "Cleaning up orphaned session", { sessionId })
+        // Note: removeSession is handled by disconnect handlers
       } else {
-        // Clean up disconnected channel sockets within active sessions
+        // Clean up disconnected channel sockets
         server.serverContext.cleanupDisconnectedChannelSockets()
-      }
-    })
-    
-    // Remove orphaned sessions
-    orphanedSessions.forEach(async (sessionId) => {
-      try {
-        await sessionManager.removeSession(sessionId)
-      } catch (error) {
-        console.error(`Error removing orphaned session ${sessionId}:`, error)
       }
     })
   }, 30000) // Every 30 seconds
@@ -116,8 +103,10 @@ export const createServer = (port = PORT) => {
     return originalClose(callback)
   }
 
-  console.log(`FDC3 Socket Server started on port ${port}`)
+  process.on("SIGTERM", performGracefulShutdown)
+  process.on("SIGINT", performGracefulShutdown)
 
+  logEvent("Server", "FDC3 Socket Server started", { port })
   return io
 }
 
