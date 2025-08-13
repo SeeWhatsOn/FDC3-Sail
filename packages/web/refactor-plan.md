@@ -521,27 +521,30 @@ describe('App Launch Flow', () => {
 ## Migration Checklist
 
 ### Phase 1: Foundation ✅
-- [ ] Install Vitest and testing dependencies
-- [ ] Configure vitest.config.ts
-- [ ] Set up test utilities and mocks
+- [x] Install Vitest and testing dependencies
+- [x] Configure vitest.config.ts
+- [x] Set up test utilities and component test helpers
+- [x] Remove PM2 dependency and replace with vite preview
+- [x] Create initial component tests (Controls) - 8 tests passing
+- [ ] Fix socket server integration for full-stack tests
 - [ ] Add CI/CD test pipeline
-- [ ] Create initial test examples
 
-### Phase 2: State Migration ✅
-- [ ] Create Zustand stores (client, app, UI)
-- [ ] Set up React Query for server state
+### Phase 2: State Migration 🔄
+- [ ] Create Zustand stores (client, server, UI)
+- [ ] Set up WebSocket integration in Zustand stores
 - [ ] Add store tests
 - [ ] Create migration utilities
 - [ ] Gradual migration of singleton usage
 
-### Phase 3: Component Migration ✅
+### Phase 3: Component Migration 📋
 - [ ] Convert Frame class → hooks
 - [ ] Convert Grid class → hooks  
-- [ ] Add comprehensive component tests
+- [x] Add comprehensive component tests (started with Controls)
 - [ ] Remove manual re-render logic
 - [ ] Add proper TypeScript types
+- [ ] Add tests for remaining components (Frame, Grid, Tabs, etc.)
 
-### Phase 4: Performance & Polish ✅
+### Phase 4: Performance & Polish 📋
 - [ ] Add React.memo where needed
 - [ ] Implement custom hooks
 - [ ] Add error boundaries
@@ -563,11 +566,28 @@ describe('App Launch Flow', () => {
 
 ## Success Metrics
 
-- **Test Coverage**: >80% overall, >90% for critical paths
+- **Test Coverage**: >80% overall, >90% for critical paths *(Current: 8 component tests passing)*
 - **Performance**: <100ms for state updates, <1s for app launches
-- **Developer Experience**: Hot reload <200ms, test execution <5s
+- **Developer Experience**: Hot reload <200ms, test execution <5s *(Current: 2.28s)*
 - **Code Quality**: ESLint score >95%, zero TypeScript errors
 - **Bundle Size**: <10% increase from current build
+
+## Current Status (Phase 1 Complete)
+
+**✅ Completed:**
+- Vitest testing infrastructure with CSS modules support
+- Component testing utilities and helpers  
+- 8 passing tests for Controls components
+- PM2 removed, replaced with vite preview
+- Coverage reporting configured
+
+**🔄 In Progress:**
+- Socket server integration for full-stack tests
+- Additional component test coverage
+
+**📋 Next Steps:**
+- Phase 2: Zustand state management migration
+- Fix socket integration issues for WebSocket testing
 
 ## Post-Migration Benefits
 
