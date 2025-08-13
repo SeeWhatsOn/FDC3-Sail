@@ -219,9 +219,8 @@ async function handleClientState(
       clientStateArgs.customApps,
     )
     serverContext.updateChannelData(clientStateArgs.channels)
-
     // Update panel channels
-    updatePanelChannels(serverContext, clientStateArgs.panels)
+    updatePanelChannels(serverContext, clientStateArgs.panels as PanelData[])
 
     // Update channel data for connected apps
     await updateConnectedAppsChannels(serverContext, clientStateArgs.channels)

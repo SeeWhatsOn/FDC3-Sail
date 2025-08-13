@@ -31,6 +31,11 @@ export const HandshakeMessages = {
   APP_HELLO: "app-hello",
 } as const
 
+// Individual exports for backward compatibility
+export const DA_HELLO = HandshakeMessages.DA_HELLO
+export const SAIL_CLIENT_STATE = HandshakeMessages.SAIL_CLIENT_STATE
+export const APP_HELLO = HandshakeMessages.APP_HELLO
+
 export const AppManagementMessages = {
   DA_REGISTER_APP_LAUNCH: "da-launch",
   DA_DIRECTORY_LISTING: "da-directory-listing",
@@ -39,6 +44,14 @@ export const AppManagementMessages = {
   FDC3_APP_EVENT: "fdc3-app-event",
   FDC3_DA_EVENT: "fdc3-da-event",
 } as const
+
+// Individual exports for backward compatibility
+export const DA_REGISTER_APP_LAUNCH = AppManagementMessages.DA_REGISTER_APP_LAUNCH
+export const DA_DIRECTORY_LISTING = AppManagementMessages.DA_DIRECTORY_LISTING
+export const SAIL_APP_OPEN = AppManagementMessages.SAIL_APP_OPEN
+export const SAIL_APP_STATE = AppManagementMessages.SAIL_APP_STATE
+export const FDC3_APP_EVENT = AppManagementMessages.FDC3_APP_EVENT
+export const FDC3_DA_EVENT = AppManagementMessages.FDC3_DA_EVENT
 
 export const IntentMessages = {
   SAIL_INTENT_RESOLVE: "sail-intent-resolve",
@@ -51,6 +64,12 @@ export const ChannelMessages = {
   CHANNEL_RECEIVER_HELLO: "channel-receiver-hello",
   CHANNEL_RECEIVER_UPDATE: "channel-receiver-update",
 } as const
+
+// Individual exports for backward compatibility
+export const SAIL_CHANNEL_SETUP = ChannelMessages.SAIL_CHANNEL_SETUP
+export const SAIL_CHANNEL_CHANGE = ChannelMessages.SAIL_CHANNEL_CHANGE
+export const CHANNEL_RECEIVER_HELLO = ChannelMessages.CHANNEL_RECEIVER_HELLO
+export const CHANNEL_RECEIVER_UPDATE = ChannelMessages.CHANNEL_RECEIVER_UPDATE
 
 export const ContextMessages = {
   SAIL_BROADCAST_CONTEXT: "sail-broadcast-context",

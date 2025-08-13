@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    /* Basic Options */
     "esModuleInterop": true,
     "module": "es2022",
     "moduleResolution": "node",
@@ -8,14 +7,11 @@
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
-    /* output setting */
-    "lib": [
-      "es2021",
-      "DOM"
-    ],
+
+    "lib": ["es2021", "DOM"],
     "target": "ESNext",
     "composite": true,
-    /* Linting */
+
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strict": true,
@@ -23,9 +19,8 @@
     "noImplicitAny": true,
     "noImplicitThis": true,
     "noImplicitReturns": true,
-    /* From Coverage Work */
+
     "skipLibCheck": true,
-    /* From Distribution Work */
     "declaration": true,
     "declarationMap": true
   }

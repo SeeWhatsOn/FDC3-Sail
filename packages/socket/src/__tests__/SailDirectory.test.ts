@@ -3,6 +3,7 @@ import { DirectoryApp } from "@finos/fdc3-web-impl"
 import { AppDirectoryManager } from "../app-directory/appDirectoryManager"
 import path from "path"
 import { writeFileSync, unlinkSync } from "fs"
+import { AppMetadata, Intent, AppIntent } from "@finos/fdc3"
 
 // Test apps for direct testing
 const webApp1: DirectoryApp = {
@@ -142,14 +143,13 @@ describe("SailDirectory", () => {
       const marketTerminal = apps.find((app) => app.appId === "market-terminal")
 
       expect(marketTerminal).toBeDefined()
-      expect((marketTerminal as any)?.intents).toBeDefined()
-      expect((marketTerminal as any)?.intents?.length).toBeGreaterThan(0)
+      expect(marketTerminal?.interop?.intents).toBeDefined()
+      expect(marketTerminal?.interop?.intents).toBeGreaterThan(0)
 
-      const viewInstrumentIntent = (marketTerminal as any)?.intents?.find(
-        (intent: any) => intent.name === "ViewInstrument",
-      )
+      const viewInstrumentIntent =
+        marketTerminal?.interop?.intents?.listensFor?.["ViewInstrument"]
       expect(viewInstrumentIntent).toBeDefined()
-      expect((viewInstrumentIntent as any)?.contexts).toContain("fdc3.instrument")
+      expect(viewInstrumentIntent?.contexts).toContain("fdc3.instrument")
     })
 
     it("should handle URL filtering with realistic web apps", async () => {
@@ -172,55 +172,62 @@ describe("SailDirectory", () => {
       const excelAddin = apps.find((app) => app.appId === "excel-addin")
 
       expect(excelAddin).toBeDefined()
-      expect((excelAddin as any)?.type).toBe("native")
-      expect((excelAddin as any)?.details?.path).toContain(".exe")
-      expect((excelAddin as any)?.details?.arguments).toBeDefined()
-      expect(Array.isArray((excelAddin as any)?.details?.arguments)).toBe(true)
-    })
-  })
-
-  describe("Error Handling", () => {
-    it("should handle malformed JSON gracefully", async () => {
-      const directory = new AppDirectoryManager()
-      const malformedPath = path.resolve(__dirname, "testData/malformed.json")
-
-      // Create malformed JSON file
-      writeFileSync(malformedPath, '{"applications": [{"appId": "broken"')
-
-      try {
-        await expect(directory.replace([malformedPath])).rejects.toThrow()
-      } finally {
-        // Clean up
-        unlinkSync(malformedPath)
-      }
-    })
-
-    it("should handle missing files gracefully", async () => {
-      const directory = new AppDirectoryManager()
-      const nonExistentPath = path.resolve(
-        __dirname,
-        "testData/nonexistent.json",
+      expect(excelAddin?.type).toBe("native")
+      expect(excelAddin?.type).toBe("native")
+      expect((excelAddin?.details as { path: string })?.path).toContain(".exe")
+      expect(excelAddin?.details && "arguments" in excelAddin.details).toBe(
+        true,
       )
-
-      await expect(directory.replace([nonExistentPath])).rejects.toThrow()
+      expect(
+        Array.isArray(
+          (excelAddin?.details as { arguments?: string[] })?.arguments,
+        ),
+      ).toBe(true)
     })
 
-    it("should handle empty applications array", async () => {
-      const directory = new AppDirectoryManager()
-      const emptyPath = path.resolve(__dirname, "testData/empty.json")
+    describe("Error Handling", () => {
+      it("should handle malformed JSON gracefully", async () => {
+        const directory = new AppDirectoryManager()
+        const malformedPath = path.resolve(__dirname, "testData/malformed.json")
 
-      // Create empty applications file
-      writeFileSync(emptyPath, '{"applications": []}')
+        // Create malformed JSON file
+        writeFileSync(malformedPath, '{"applications": [{"appId": "broken"')
 
-      try {
-        await directory.replace([emptyPath])
+        try {
+          await expect(directory.replace([malformedPath])).rejects.toThrow()
+        } finally {
+          // Clean up
+          unlinkSync(malformedPath)
+        }
+      })
 
-        const apps = directory.retrieveAllApps()
-        expect(apps).toHaveLength(0)
-      } finally {
-        // Clean up
-        unlinkSync(emptyPath)
-      }
+      it("should handle missing files gracefully", async () => {
+        const directory = new AppDirectoryManager()
+        const nonExistentPath = path.resolve(
+          __dirname,
+          "testData/nonexistent.json",
+        )
+
+        await expect(directory.replace([nonExistentPath])).rejects.toThrow()
+      })
+
+      it("should handle empty applications array", async () => {
+        const directory = new AppDirectoryManager()
+        const emptyPath = path.resolve(__dirname, "testData/empty.json")
+
+        // Create empty applications file
+        writeFileSync(emptyPath, '{"applications": []}')
+
+        try {
+          await directory.replace([emptyPath])
+
+          const apps = directory.retrieveAllApps()
+          expect(apps).toHaveLength(0)
+        } finally {
+          // Clean up
+          unlinkSync(emptyPath)
+        }
+      })
     })
   })
 })

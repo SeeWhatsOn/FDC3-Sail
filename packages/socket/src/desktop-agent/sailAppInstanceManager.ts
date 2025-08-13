@@ -115,6 +115,8 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
         this.log(`Posting message to app: ${JSON.stringify(message)}`)
       }
       instance.socket?.emit(AppManagementMessages.FDC3_DA_EVENT, message)
+      //TODO:fix these return promises
+      return Promise.resolve()
     } else {
       this.log(`Cannot find app with instanceId: ${JSON.stringify(instanceId)}`)
     }
@@ -150,6 +152,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    */
   async openOnChannel(appId: string, channel: string): Promise<void> {
     this.appStartDestinations.set(appId, channel)
+    return Promise.resolve()
   }
 
   /**
@@ -182,14 +185,14 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
     const hosting =
       forceNewWindow || channel === null ? AppHosting.Tab : AppHosting.Frame
 
-    const openResponse: SailAppOpenResponse = await this.socket.emitWithAck(
+    const openResponse = (await this.socket.emitWithAck(
       AppManagementMessages.SAIL_APP_OPEN,
       {
         appDRecord: firstApp,
         approach: hosting,
         channel,
       } as SailAppOpenArgs,
-    )
+    )) as SailAppOpenResponse
 
     const sailData: SailData = {
       appId,
@@ -254,7 +257,10 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    * @param app - The app identifier containing instance ID
    */
   async setInitialChannel(app: AppIdentifier): Promise<void> {
-    this.socket.emit(ChannelMessages.SAIL_CHANNEL_SETUP, app.instanceId)
+    await this.socket.emitWithAck(
+      ChannelMessages.SAIL_CHANNEL_SETUP,
+      app.instanceId,
+    )
   }
 
   /**
@@ -315,11 +321,13 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    * @returns Array of all app registrations
    */
   async getAllApps(): Promise<AppRegistration[]> {
-    return this.instances.map((instance) => ({
-      appId: instance.appId,
-      instanceId: instance.instanceId,
-      state: instance.state,
-    }))
+    return Promise.resolve(
+      this.instances.map((instance) => ({
+        appId: instance.appId,
+        instanceId: instance.instanceId,
+        state: instance.state,
+      })),
+    )
   }
 
   /**
@@ -435,6 +443,11 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
     return details?.hosting === AppHosting.Tab
   }
 
+  /**
+   * Gets the channel of the raiser app
+   * @param appIdentifier - The app identifier containing instance ID
+   * @returns The channel of the raiser app or null if not found
+   */
   private getRaiserChannel(appIdentifier: AppIdentifier): string | null {
     if (!appIdentifier.instanceId) return null
     const details = this.getInstanceDetails(appIdentifier.instanceId)
@@ -454,7 +467,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
           appIntents: enrichedIntents,
           context,
         },
-        async (response: SailIntentResolveResponse, err: string) => {
+        (response: SailIntentResolveResponse, err: string) => {
           if (err) {
             console.error("Intent resolution error:", err)
             resolve([])

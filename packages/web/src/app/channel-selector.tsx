@@ -91,7 +91,7 @@ window.addEventListener("load", () => {
   }
 
   myPort.addEventListener("message", (e) => {
-    console.log(e.data.type)
+    console.log(e.data)
     if (isFdc3UserInterfaceHandshake(e.data)) {
       // ok, port is ready, send the iframe position details
       myPort.postMessage({

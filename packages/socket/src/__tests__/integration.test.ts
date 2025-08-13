@@ -17,8 +17,9 @@ import {
   AugmentedAppMetadata,
   ChannelReceiverUpdate,
 } from "@finos/fdc3-sail-shared"
-import { IntentMetadata } from "@finos/fdc3-standard"
+import { AppMetadata, IntentMetadata } from "@finos/fdc3-standard"
 import path from "path"
+import { DirectoryApp } from "@finos/fdc3-web-impl"
 
 describe("End-to-End Integration Tests", () => {
   let clientSocket: ClientSocket
@@ -132,12 +133,14 @@ describe("End-to-End Integration Tests", () => {
       const excelAddin = apps.find((app) => app.appId === "excel-addin")
 
       expect(marketTerminal).toBeDefined()
-      expect((marketTerminal as any)!.intents?.length).toBeGreaterThan(0)
-      expect((marketTerminal as any)!.intents![0].contexts).toContain("fdc3.instrument")
+      expect(
+        marketTerminal?.interop?.intents?.listensFor?.["ViewInstrument"]
+          ?.contexts,
+      ).toContain("fdc3.instrument")
 
       expect(excelAddin).toBeDefined()
-      expect((excelAddin as any).type).toBe("native")
-      expect((excelAddin as any).details?.path).toContain(".exe")
+      expect(excelAddin?.type).toBe("native")
+      expect((excelAddin?.details as { path: string })?.path).toContain(".exe")
 
       // Step 4: Register app launch for one of the realistic apps
       const registerArgs: DesktopAgentRegisterAppLaunchArgs = {
@@ -239,9 +242,9 @@ describe("End-to-End Integration Tests", () => {
       expect(citrixApp).toBeDefined()
 
       // Verify each has proper configuration
-      expect((webApp as any).details?.url).toBeDefined()
-      expect((nativeApp as any).details?.path).toBeDefined()
-      expect((citrixApp as any).details?.alias).toBeDefined()
+      expect((webApp as AppMetadata)?.details?.url).toBeDefined()
+      expect((nativeApp as AppMetadata)?.details?.path).toBeDefined()
+      expect((citrixApp as AppMetadata)?.details?.alias).toBeDefined()
     })
   })
 
@@ -272,11 +275,15 @@ describe("End-to-End Integration Tests", () => {
 
       // Verify intent distribution across apps
       const viewInstrumentApps = apps.filter((app) =>
-        (app as any).intents?.some((intent: IntentMetadata) => intent.name === "ViewInstrument"),
+        (app as AppMetadata)?.intents?.some(
+          (intent: IntentMetadata) => intent.name === "ViewInstrument",
+        ),
       )
 
       const viewPortfolioApps = apps.filter((app) =>
-        (app as any).intents?.some((intent: IntentMetadata) => intent.name === "ViewPortfolio"),
+        (app as AppMetadata)?.intents?.some(
+          (intent: IntentMetadata) => intent.name === "ViewPortfolio",
+        ),
       )
 
       expect(viewInstrumentApps.length).toBeGreaterThan(1)
@@ -284,8 +291,8 @@ describe("End-to-End Integration Tests", () => {
 
       // Verify context support
       const instrumentContextApps = apps.filter((app) =>
-        (app as any).intents?.some((intent: IntentMetadata) =>
-          (intent as any).contexts?.includes("fdc3.instrument"),
+        (app as AppMetadata)?.intents?.some((intent: IntentMetadata) =>
+          (intent as IntentMetadata).contexts?.includes("fdc3.instrument"),
         ),
       )
 
@@ -400,30 +407,37 @@ describe("End-to-End Integration Tests", () => {
       })
 
       const viewInstrumentApps = apps.filter((app) =>
-        (app as any).intents?.some(
+        (app as AppMetadata)?.intents?.some(
           (intent: IntentMetadata) =>
             intent.name === "ViewInstrument" &&
-            (intent as any).contexts?.includes("fdc3.instrument"),
+            (intent as IntentMetadata).contexts?.includes("fdc3.instrument"),
         ),
       )
 
       expect(viewInstrumentApps.length).toBeGreaterThan(1)
 
       // Verify different app types support the same intent
-      const webApp = viewInstrumentApps.find((app) => (app as any).type === "web")
-      const nativeApp = viewInstrumentApps.find((app) => (app as any).type === "native")
+      const webApp = viewInstrumentApps.find(
+        (app) => (app as AppMetadata).type === "web",
+      )
+      const nativeApp = viewInstrumentApps.find(
+        (app) => (app as AppMetadata).type === "native",
+      )
 
       expect(webApp).toBeDefined()
       expect(nativeApp).toBeDefined()
 
       // Both should support fdc3.instrument context
       expect(
-        (webApp as any).intents.find((i: IntentMetadata) => i.name === "ViewInstrument").contexts,
+        (webApp as AppMetadata).intents.find(
+          (i: IntentMetadata) => i.name === "ViewInstrument",
+        ).contexts,
       ).toContain("fdc3.instrument")
 
       expect(
-        (nativeApp as any).intents.find((i: IntentMetadata) => i.name === "ViewInstrument")
-          .contexts,
+        (nativeApp as AppMetadata).intents.find(
+          (i: IntentMetadata) => i.name === "ViewInstrument",
+        ).contexts,
       ).toContain("fdc3.instrument")
     })
   })
@@ -482,16 +496,12 @@ describe("End-to-End Integration Tests", () => {
       }
 
       await new Promise<void>((resolve) => {
-        clientSocket.emit(
-          DA_HELLO,
-          helloArgs,
-          (response: boolean) => {
-            // Should still create session even if directory loading fails
-            expect(response).toBe(true)
-            expect(sessions.has(sessionId)).toBe(true)
-            resolve()
-          },
-        )
+        clientSocket.emit(DA_HELLO, helloArgs, (response: boolean) => {
+          // Should still create session even if directory loading fails
+          expect(response).toBe(true)
+          expect(sessions.has(sessionId)).toBe(true)
+          resolve()
+        })
       })
 
       // Directory listing should return empty array

@@ -40,7 +40,7 @@ export async function setupTestServer(): Promise<TestServerContext> {
 
 export async function teardownTestServer(): Promise<void> {
   if (testServer) {
-    testServer.io.close()
+    await testServer.io.close()
     testServer.httpServer.close()
     testServer = null
   }

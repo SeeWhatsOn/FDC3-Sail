@@ -13,6 +13,8 @@ import {
   IntentHandler,
   Listener,
   PrivateChannel,
+  ContextHandler,
+  ContextType,
 } from "@finos/fdc3"
 import { getAgent as fdc3GetAgent } from "@finos/fdc3"
 
@@ -38,7 +40,7 @@ export const fdc3 = {
     appOrName: AppIdentifier | string,
     context?: Context,
   ): Promise<AppIdentifier> {
-    return (await this.getAgent()).open(appOrName as any, context)
+    return (await this.getAgent()).open(appOrName as AppIdentifier, context)
   },
 
   async findIntent(
@@ -67,16 +69,19 @@ export const fdc3 = {
   async raiseIntent(
     intent: Intent,
     context: Context,
-    name?: any,
+    name?: string,
   ): Promise<IntentResolution> {
-    return (await this.getAgent()).raiseIntent(intent, context, name)
+    return (await this.getAgent()).raiseIntent(intent, context, name as string)
   },
 
   async raiseIntentForContext(
-    context: any,
-    name?: any,
+    context: Context,
+    name?: string,
   ): Promise<IntentResolution> {
-    return (await this.getAgent()).raiseIntentForContext(context, name)
+    return (await this.getAgent()).raiseIntentForContext(
+      context,
+      name as string,
+    )
   },
 
   async addIntentListener(
@@ -86,8 +91,14 @@ export const fdc3 = {
     return (await this.getAgent()).addIntentListener(intent, handler)
   },
 
-  async addContextListener(contextType: any, handler?: any): Promise<Listener> {
-    return (await this.getAgent()).addContextListener(contextType, handler)
+  async addContextListener(
+    contextType: ContextType,
+    handler?: ContextHandler,
+  ): Promise<Listener> {
+    return (await this.getAgent()).addContextListener(
+      contextType,
+      handler as ContextHandler,
+    )
   },
 
   async addEventListener(

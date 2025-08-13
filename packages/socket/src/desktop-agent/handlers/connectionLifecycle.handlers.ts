@@ -138,12 +138,18 @@ async function handleDisconnect(
 function setupStateReporter(context: HandlerContext): NodeJS.Timeout {
   const { socket, connectionState } = context
 
-  return setInterval(async () => {
+  return setInterval(() => {
     const { fdc3ServerInstance } = connectionState
     if (fdc3ServerInstance) {
       try {
-        const appStates = await fdc3ServerInstance.serverContext.getAllApps()
-        socket.emit(AppManagementMessages.SAIL_APP_STATE, appStates)
+        fdc3ServerInstance.serverContext
+          .getAllApps()
+          .then((appStates) => {
+            socket.emit(AppManagementMessages.SAIL_APP_STATE, appStates)
+          })
+          .catch((error) => {
+            console.error("Error reporting app state:", error)
+          })
       } catch (error) {
         console.error("Error reporting app state:", error)
       }

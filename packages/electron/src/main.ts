@@ -193,7 +193,9 @@ async function createWindow() {
         win2.on("resize", updateNewViewBounds)
 
         // Load titlebar
-        newTitlebarView.webContents.loadFile(titlebarHtmlPath)
+        newTitlebarView.webContents.loadFile(titlebarHtmlPath).catch((e) => {
+          console.error("Error loading titlebar", e)
+        })
 
         return newContentView.webContents
       },

@@ -86,7 +86,7 @@ export class AppDirectoryManager extends BasicDirectory {
       const data = await fs.readFile(filePath, { encoding: "utf8" })
 
       // Parse JSON and validate structure
-      const parsed: DirectoryData = JSON.parse(data)
+      const parsed: DirectoryData = JSON.parse(data) as DirectoryData
       if (!parsed.applications || !Array.isArray(parsed.applications)) {
         throw new Error(
           `Invalid data format in ${filePath}: applications not found or not an array`,
@@ -208,7 +208,9 @@ export class AppDirectoryManager extends BasicDirectory {
     const errors = results
       .map((result, index) =>
         result.status === "rejected"
-          ? `Failed to load ${urls[index]}: ${result.reason?.message || result.reason}`
+          ? `Failed to load ${urls[index]}: ${
+              (result.reason as Error).message || result.reason
+            }`
           : null,
       )
       .filter((error): error is string => error !== null)

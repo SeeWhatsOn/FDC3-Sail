@@ -90,7 +90,7 @@ export class AppDPanel extends Component<AppPanelProps, AppPanelState> {
             disabled={this.state.chosen == null}
             onClick={async () => {
               if (this.state.chosen) {
-                getAppState().open(this.state.chosen, AppHosting.Frame)
+                await getAppState().open(this.state.chosen, AppHosting.Frame)
                 this.props.closeAction()
               }
             }}

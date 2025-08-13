@@ -25,15 +25,11 @@
           "listensFor": {
             "ViewQuote": {
               "displayName": "View Quote",
-              "contexts": [
-                "fdc3.instrument"
-              ]
+              "contexts": ["fdc3.instrument"]
             },
             "demo.GetPrices": {
               "displayName": "Get Prices",
-              "contexts": [
-                "fdc3.instrument"
-              ]
+              "contexts": ["fdc3.instrument"]
             }
           }
         }

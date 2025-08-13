@@ -144,11 +144,11 @@ async function handleChannelReceiverHello(
  * @param callback - Socket callback to confirm completion or return error
  * @param context - Handler context containing connection state
  */
-function handleIntentResolveOnChannel(
+async function handleIntentResolveOnChannel(
   intentResolveArgs: SailIntentResolveOpenChannelArgs,
   callback: SocketIOCallback<void>,
   { connectionState }: HandlerContext,
-): void {
+): Promise<void> {
   console.log(
     `SAIL INTENT RESOLVE ON CHANNEL: ${JSON.stringify(intentResolveArgs)}`,
   )
@@ -159,7 +159,7 @@ function handleIntentResolveOnChannel(
     return
   }
 
-  fdc3ServerInstance.serverContext.openOnChannel(
+  await fdc3ServerInstance.serverContext.openOnChannel(
     intentResolveArgs.appId,
     intentResolveArgs.channel,
   )
@@ -174,31 +174,31 @@ export function registerChannelHandlers(context: HandlerContext): void {
 
   socket.on(
     ChannelMessages.SAIL_CHANNEL_CHANGE,
-    (
+    async (
       channelChangeArgs: SailChannelChangeArgs,
       callback: SocketIOCallback<boolean>,
     ) => {
-      handleChannelChange(channelChangeArgs, callback, context)
+      await handleChannelChange(channelChangeArgs, callback, context)
     },
   )
 
   socket.on(
     ChannelMessages.CHANNEL_RECEIVER_HELLO,
-    (
+    async (
       receiverHelloRequest: ChannelReceiverHelloRequest,
       callback: SocketIOCallback<ChannelReceiverUpdate>,
     ) => {
-      handleChannelReceiverHello(receiverHelloRequest, callback, context)
+      await handleChannelReceiverHello(receiverHelloRequest, callback, context)
     },
   )
 
   socket.on(
     IntentMessages.SAIL_INTENT_RESOLVE_ON_CHANNEL,
-    (
+    async (
       intentResolveArgs: SailIntentResolveOpenChannelArgs,
       callback: SocketIOCallback<void>,
     ) => {
-      handleIntentResolveOnChannel(intentResolveArgs, callback, context)
+      await handleIntentResolveOnChannel(intentResolveArgs, callback, context)
     },
   )
 }

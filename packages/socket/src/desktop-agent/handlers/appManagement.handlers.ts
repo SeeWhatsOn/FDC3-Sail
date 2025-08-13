@@ -186,14 +186,14 @@ async function handleAppHello(
  * @param sourceId - Source identifier for the event
  * @param context - Handler context containing connection state
  */
-function handleFdc3AppEvent(
+async function handleFdc3AppEvent(
   eventData:
     | AppRequestMessage
     | WebConnectionProtocol4ValidateAppIdentity
     | WebConnectionProtocol6Goodbye,
   sourceId: string,
   { connectionState }: HandlerContext,
-): void {
+): Promise<void> {
   if (!eventData.type.startsWith("heartbeat")) {
     logger.debug("SAIL FDC3_APP_EVENT", { eventData, sourceId })
   }
@@ -203,9 +203,8 @@ function handleFdc3AppEvent(
     logger.error("No server instance available for FDC3 event")
     return
   }
-  fdc3ServerInstance.receive(eventData, sourceId)
   try {
-    fdc3ServerInstance.receive(eventData, sourceId)
+    await fdc3ServerInstance.receive(eventData, sourceId)
 
     if (eventData.type === "broadcastRequest") {
       fdc3ServerInstance.serverContext.notifyBroadcastContext(
@@ -225,21 +224,24 @@ export function registerAppHandlers(context: HandlerContext): void {
 
   socket.on(
     HandshakeMessages.APP_HELLO,
-    (appHelloArgs: AppHelloArgs, callback: SocketIOCallback<AppHosting>) => {
-      handleAppHello(appHelloArgs, callback, context)
+    async (
+      appHelloArgs: AppHelloArgs,
+      callback: SocketIOCallback<AppHosting>,
+    ) => {
+      await handleAppHello(appHelloArgs, callback, context)
     },
   )
 
   socket.on(
     AppManagementMessages.FDC3_APP_EVENT,
-    (
+    async (
       eventData:
         | AppRequestMessage
         | WebConnectionProtocol4ValidateAppIdentity
         | WebConnectionProtocol6Goodbye,
       sourceId: string,
     ) => {
-      handleFdc3AppEvent(eventData, sourceId, context)
+      await handleFdc3AppEvent(eventData, sourceId, context)
     },
   )
 }

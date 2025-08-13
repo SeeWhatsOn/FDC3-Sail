@@ -4,7 +4,7 @@ import {
   ElectronHelloArgs,
   ElectronAppResponse,
   ElectronDAResponse,
-} from "../types/sail-types"
+} from "@finos/fdc3-sail-shared/message-types"
 import { SailAppInstanceManager } from "../sailAppInstanceManager"
 import { AppDirectoryManager } from "../../app-directory/appDirectoryManager"
 import { SailFDC3Server } from "../sailFDC3Server"
@@ -28,11 +28,11 @@ function getSailUrl(): string {
  * @param callback - Socket callback to return app or DA response
  * @param context - Handler context with socket, connection state, and sessions
  */
-function handleElectronHello(
+async function handleElectronHello(
   electronHelloArgs: ElectronHelloArgs,
   callback: SocketIOCallback<ElectronAppResponse | ElectronDAResponse>,
   { socket, connectionState, sessions }: HandlerContext,
-): void {
+): Promise<void> {
   console.log(`SAIL ELECTRON HELLO: ${JSON.stringify(electronHelloArgs)}`)
   const existingServer = sessions.get(electronHelloArgs.userSessionId)
 
@@ -84,11 +84,11 @@ export function registerElectronHandlers(context: HandlerContext): void {
 
   socket.on(
     ELECTRON_HELLO,
-    (
+    async (
       electronHelloArgs: ElectronHelloArgs,
       callback: SocketIOCallback<ElectronAppResponse | ElectronDAResponse>,
     ) => {
-      handleElectronHello(electronHelloArgs, callback, context)
+      await handleElectronHello(electronHelloArgs, callback, context)
     },
   )
 }
