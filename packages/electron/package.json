@@ -1,6 +1,7 @@
 {
   "name": "@finos/fdc3-sail-electron",
   "version": "0.0.0",
+  "type": "module",
   "description": "",
   "main": "dist/main.js",
   "scripts": {
@@ -20,6 +21,6 @@
   },
   "dependencies": {
     "@finos/fdc3": "2.2.0-beta.4",
-    "electron": "^36.2.1"
+    "electron": "^37.2.6"
   }
 }

@@ -2,6 +2,7 @@
   "name": "@finos/fdc3-sail-web",
   "private": true,
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "clean": "rimraf dist",
     "build": "tsc && vite build",
@@ -42,8 +43,8 @@
     "color": "^5.0.0",
     "gridstack": "^10.1.2",
     "pretty-print-json": "^3.0.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "react-hooks": "^1.0.1",
     "react-widgets": "^5.8.6",
     "socket.io-client": "^4.7.5",

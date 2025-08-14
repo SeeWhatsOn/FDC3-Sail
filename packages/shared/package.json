@@ -1,6 +1,7 @@
 {
   "name": "@finos/fdc3-sail-shared",
   "version": "0.0.0",
+  "type": "module",
   "description": "Shared constants and message types for FDC3-Sail inter-package communication",
   "scripts": {
     "clean": "npx rimraf dist",
@@ -16,7 +17,7 @@
     "dist"
   ],
   "devDependencies": {
-    "electron": "^34.0.1",
+    "electron": "^37.2.6",
     "rimraf": "^6.0.1"
   },
   "dependencies": {
