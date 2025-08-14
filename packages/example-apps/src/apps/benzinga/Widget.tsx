@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react"
 
 export const Widget = () => {
   const [state, setState] = useState("")
-  const container: any = useRef()
+  const container: any = useRef(null)
 
   useEffect(() => {
     getAgent().then(fdc3 => {

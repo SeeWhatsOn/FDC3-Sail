@@ -20,7 +20,7 @@ const MODES: TradingViewMode[] = [
 ]
 
 export const TradingViewWidget = ({ mode }: { mode: string }) => {
-  const container: any = useRef()
+  const container: any = useRef(null)
   const modeProps = MODES.find(m => m.name === mode) ?? MODES[0]
 
   const [state, setState] = useState(modeProps.initialState)

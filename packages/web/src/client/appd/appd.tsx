@@ -74,7 +74,11 @@ export class AppDPanel extends Component<AppPanelProps, AppPanelState> {
                 <div className={styles.appDInfo}>
                   <h2>{app.title}</h2>
                   <p>{app.description}</p>
-                  <ul>{app.categories?.map((c: string) => <li key={c}>{c}</li>)}</ul>
+                  <ul>
+                    {app.categories?.map((c: string) => (
+                      <li key={c}>{c}</li>
+                    ))}
+                  </ul>
                   <div className={styles.appDScreenshots}>
                     {app.screenshots?.map((s: Image) => (
                       <img key={s.src} src={s.src} title={s.label} />
