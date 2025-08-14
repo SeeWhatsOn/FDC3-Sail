@@ -1,7 +1,9 @@
 import { Component } from "react"
-import styles from "./styles.module.css"
+
 import { ClientState } from "../../types"
 import { Popup } from "../popups/popup"
+
+import styles from "./styles.module.css"
 import { DirectoryList } from "./directories"
 import { TabList } from "./tabs"
 import { CustomAppList } from "./customApps"

@@ -1,17 +1,19 @@
-import { Bin, Controls, NewPanel } from "../controls/controls"
-import { ContextHistory, Logo, Settings } from "../top/top"
-import { Tabs } from "../tabs/tabs"
-import styles from "./styles.module.css"
+import { Component } from "react"
+
 import { AppState } from "../../types"
 import { getClientState, getServerState } from "../../state"
 import { WebClientState } from "../../types"
-import { Component } from "react"
+import { Tabs } from "../tabs/tabs"
+import { ContextHistory, Logo, Settings } from "../top/top"
+import { Bin, Controls, NewPanel } from "../controls/controls"
 import { AppDPanel } from "../appd/appd"
 import { Content, Grids } from "../grid/grid"
 import { GridsStateImpl, GridsState } from "../grid/gridstate"
 import { ConfigPanel } from "../config/config"
 import { ResolverPanel } from "../resolver/resolver"
 import { ContextHistoryPanel } from "../context/ContextHistory"
+
+import styles from "./styles.module.css"
 
 enum Popup {
   NONE,

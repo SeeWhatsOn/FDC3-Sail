@@ -1,8 +1,10 @@
 import { Component } from "react"
-import { Popup } from "../popups/popup"
-import styles from "./styles.module.css"
 import { prettyPrintJson } from "pretty-print-json"
 import { Context } from "@finos/fdc3-context"
+
+import { Popup } from "../popups/popup"
+
+import styles from "./styles.module.css"
 
 type ContextHistoryPanelProps = {
   history: Context[]

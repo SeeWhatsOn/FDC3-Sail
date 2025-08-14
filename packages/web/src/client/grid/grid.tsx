@@ -1,11 +1,13 @@
 import { Component } from "react"
+import { State } from "@finos/fdc3-web-impl"
+
+import { AppState, ClientState, AppPanel } from "../../types"
+import { getAppState } from "../../state"
+
 import styles from "./styles.module.css"
 import "gridstack/dist/gridstack.css"
 import { GridsState } from "./gridstate"
-import { AppState, ClientState } from "../../types"
-import { AppPanel } from "../../types"
-import { getAppState } from "../../state"
-import { State } from "@finos/fdc3-web-impl"
+
 //import { AppHosting } from "@finos/fdc3-sail-shared"
 
 type GridsProps = { cs: ClientState; gs: GridsState; as: AppState; id: string }
@@ -22,7 +24,7 @@ export class Grids extends Component<GridsProps> {
   render() {
     return (
       <div className={styles.grids} id={this.props.id}>
-        {this.props.cs.getPanels().map((p) => (
+        {this.props.cs.getPanels().map(p => (
           <AppFrame key={p.panelId} panel={p} />
         ))}
       </div>
@@ -38,7 +40,7 @@ const AppFrame = ({ panel }: { panel: AppPanel }) => {
       name={panel.panelId}
       slot={"slot_" + panel.panelId}
       className={styles.iframe}
-      ref={(ref) => {
+      ref={ref => {
         setTimeout(() => {
           // this is a bit hacky but we need to track the window objects
           // in the app state so we make sure we know who we're talking to
@@ -52,13 +54,7 @@ const AppFrame = ({ panel }: { panel: AppPanel }) => {
   )
 }
 
-const AppStateIcon = ({
-  instanceId,
-  as,
-}: {
-  instanceId: string
-  as: AppState
-}) => {
+const AppStateIcon = ({ instanceId, as }: { instanceId: string; as: AppState }) => {
   const D = "/icons/app-state/"
 
   function symbolForState(s: State | undefined): string[] {
@@ -80,9 +76,7 @@ const AppStateIcon = ({
 
   const state = symbolForState(as.getAppState(instanceId))
 
-  return (
-    <img src={state[0]} className={styles.contentTitleIcon} title={state[1]} />
-  )
+  return <img src={state[0]} className={styles.contentTitleIcon} title={state[1]} />
 }
 
 const CloseIcon = ({ action }: { action: () => void }) => {
@@ -140,9 +134,7 @@ export const Content = ({
           /> */}
         </div>
         <div className={styles.resizeBaffle} />
-        <div className={styles.contentBody}>
-          {panel.url ? <AppSlot panel={panel} /> : <div />}
-        </div>
+        <div className={styles.contentBody}>{panel.url ? <AppSlot panel={panel} /> : <div />}</div>
       </div>
     </div>
   )

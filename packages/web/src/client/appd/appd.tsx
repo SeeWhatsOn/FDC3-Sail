@@ -1,11 +1,13 @@
 import { Component } from "react"
-import { Icon } from "../icon/icon"
-import { getAppState, getClientState } from "../../state"
-import styles from "./styles.module.css"
-import { Popup, PopupButton } from "../popups/popup"
 import { DirectoryApp, WebAppDetails } from "@finos/fdc3-web-impl"
 import { AppHosting } from "@finos/fdc3-sail-shared"
 import { AppMetadata, Image } from "@finos/fdc3"
+
+import { Icon } from "../icon/icon"
+import { getAppState, getClientState } from "../../state"
+import { Popup, PopupButton } from "../popups/popup"
+
+import styles from "./styles.module.css"
 
 export const DEFAULT_ICON = "/icons/control/choose-app.svg"
 
@@ -34,7 +36,7 @@ export class AppDPanel extends Component<AppPanelProps, AppPanelState> {
       chosen: null,
       apps: getClientState()
         .getKnownApps()
-        .filter((d) => onlyRelevantApps(d)),
+        .filter(d => onlyRelevantApps(d)),
     }
   }
 
@@ -56,7 +58,7 @@ export class AppDPanel extends Component<AppPanelProps, AppPanelState> {
         area={
           <div className={styles.appDContent}>
             <div className={styles.appDApps}>
-              {this.state.apps.map((a) => (
+              {this.state.apps.map(a => (
                 <div
                   key={a.appId}
                   className={`${styles.appDApp} ${a == app ? styles.selected : ""}`}
@@ -72,7 +74,7 @@ export class AppDPanel extends Component<AppPanelProps, AppPanelState> {
                 <div className={styles.appDInfo}>
                   <h2>{app.title}</h2>
                   <p>{app.description}</p>
-                  <ul>{app.categories?.map((c: string) => <li>{c}</li>)}</ul>
+                  <ul>{app.categories?.map((c: string) => <li key={c}>{c}</li>)}</ul>
                   <div className={styles.appDScreenshots}>
                     {app.screenshots?.map((s: Image) => (
                       <img key={s.src} src={s.src} title={s.label} />

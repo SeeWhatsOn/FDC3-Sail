@@ -1,6 +1,8 @@
 import { Component, ReactNode } from "react"
-import styles from "./styles.module.css"
+
 import { Logo } from "../top/top"
+
+import styles from "./styles.module.css"
 
 type PopupProps = {
   buttons: ReactNode[]

@@ -1,5 +1,3 @@
-import styles from "./styles.module.css"
-import { Popup, PopupButton } from "../popups/popup"
 import { AppIdentifier, Context, Intent } from "@finos/fdc3"
 import { useState } from "react"
 import {
@@ -7,8 +5,12 @@ import {
   AugmentedAppMetadata,
   TabDetail,
 } from "@finos/fdc3-sail-shared"
+
+import { Popup, PopupButton } from "../popups/popup"
 import { selectHighestContrast } from "../../util/contrast"
 import { DEFAULT_ICON, getIcon } from "../appd/appd"
+
+import styles from "./styles.module.css"
 
 type State = {
   newApps: boolean

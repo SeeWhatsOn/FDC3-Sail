@@ -1,4 +1,5 @@
 import { DEFAULT_ICON } from "../appd/appd"
+
 import styles from "./styles.module.css"
 
 export const Icon = ({

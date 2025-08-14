@@ -1,4 +1,5 @@
 import { TabDetail } from "@finos/fdc3-sail-shared"
+
 import { Icon } from "./Icon"
 import styles from "./styles.module.css"
 

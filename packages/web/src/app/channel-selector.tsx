@@ -1,11 +1,12 @@
 import { BrowserTypes } from "@finos/fdc3"
 import { createRoot } from "react-dom/client"
-import { ChannelPicker } from "./channel"
 import { TabDetail } from "@finos/fdc3-sail-shared"
 import {
   isFdc3UserInterfaceChannels,
   isFdc3UserInterfaceHandshake,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
+
+import { ChannelPicker } from "./channel"
 import { handleChannelUpdates, channels } from "./util"
 type IframeHello = BrowserTypes.Fdc3UserInterfaceHello
 type IframeRestyle = BrowserTypes.Fdc3UserInterfaceRestyle

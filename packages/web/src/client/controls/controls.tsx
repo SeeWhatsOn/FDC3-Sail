@@ -1,4 +1,5 @@
 import { ReactNode } from "react"
+
 import styles from "./styles.module.css"
 
 export const Bin = () => {

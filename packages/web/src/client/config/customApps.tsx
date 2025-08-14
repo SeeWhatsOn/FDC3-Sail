@@ -1,37 +1,40 @@
-import { getClientState, getServerState } from "../../state"
-import styles from "./styles.module.css"
 import { DirectoryApp, WebAppDetails } from "@finos/fdc3-web-impl"
 import { v4 as uuid } from "uuid"
+import Combobox from "react-widgets/Combobox"
+import Multiselect from "react-widgets/Multiselect"
+import { useState } from "react"
+
+import { getClientState, getServerState } from "../../state"
+
+import styles from "./styles.module.css"
 import { InlineButton } from "./shared"
 import { intentTypes } from "./intentTypes"
 import { CONTEXT_TYPES } from "./contextTypes"
-import Combobox from "react-widgets/Combobox"
-import Multiselect from "react-widgets/Multiselect"
+
 import "react-widgets/styles.css"
-import { useState } from "react"
 
 function getAllContextTypes(): string[] {
   const allContexts = [...CONTEXT_TYPES]
   getClientState()
     .getKnownApps()
-    .forEach((a) => {
+    .forEach(a => {
       if (a.interop?.userChannels) {
         allContexts.concat(a.interop.userChannels.listensFor ?? [])
         allContexts.concat(a.interop.userChannels.broadcasts ?? [])
       }
       if (a.interop?.appChannels) {
-        a.interop.appChannels.forEach((ac) => {
+        a.interop.appChannels.forEach(ac => {
           allContexts.concat(ac.broadcasts ?? [])
           allContexts.concat(ac.listensFor ?? [])
         })
       }
       if (a.interop?.intents?.listensFor) {
-        Object.values(a.interop.intents.listensFor).forEach((v) => {
+        Object.values(a.interop.intents.listensFor).forEach(v => {
           allContexts.concat(v.contexts)
         })
       }
       if (a.interop?.intents?.raises) {
-        Object.values(a.interop.intents.raises).forEach((v) => {
+        Object.values(a.interop.intents.raises).forEach(v => {
           allContexts.concat(v)
         })
       }
@@ -42,11 +45,11 @@ function getAllContextTypes(): string[] {
 }
 
 function getAllIntentNames(): string[] {
-  const allIntents = intentTypes.map((i) => i.title)
+  const allIntents = intentTypes.map(i => i.title)
 
   getClientState()
     .getKnownApps()
-    .forEach((a) => {
+    .forEach(a => {
       if (a.interop?.intents?.listensFor) {
         allIntents.concat(Object.keys(a.interop.intents.listensFor) ?? [])
       }
@@ -90,14 +93,14 @@ function newApp(): EditableState {
 function createInitialState(): EditableState[] {
   return getClientState()
     .getCustomApps()
-    .map((a) => {
+    .map(a => {
       const lf = a.interop?.intents?.listensFor ?? {}
       return {
         id: a.appId,
         url: (a.details as WebAppDetails)?.url ?? "",
         title: a.title,
         description: a.description ?? "",
-        intents: Object.keys(lf).map((k) => {
+        intents: Object.keys(lf).map(k => {
           const val = lf[k] ?? { contexts: [] }
           return {
             name: k,
@@ -109,7 +112,7 @@ function createInitialState(): EditableState[] {
 }
 
 function convertToDirectoryApps(es: EditableState[]): DirectoryApp[] {
-  return es.map((s) => {
+  return es.map(s => {
     return {
       appId: s.id,
       title: s.title,
@@ -126,13 +129,13 @@ function convertToDirectoryApps(es: EditableState[]): DirectoryApp[] {
       interop: {
         intents: {
           listensFor: Object.fromEntries(
-            s.intents.map((i) => [
+            s.intents.map(i => [
               i.name,
               {
                 displayName: i.name,
                 contexts: i.contexts,
               },
-            ]),
+            ])
           ),
         },
       },
@@ -156,21 +159,10 @@ const AddIntentButton = ({ onClick }: { onClick: () => void }) => {
   )
 }
 
-const IntentPicker = ({
-  name,
-  update,
-}: {
-  name: string
-  update: (x: string) => void
-}) => {
+const IntentPicker = ({ name, update }: { name: string; update: (x: string) => void }) => {
   return (
     <div className={styles.picker}>
-      <Combobox
-        hideEmptyPopup
-        data={getAllIntentNames()}
-        value={name}
-        onChange={update}
-      />
+      <Combobox hideEmptyPopup data={getAllIntentNames()} value={name} onChange={update} />
     </div>
   )
 }
@@ -190,7 +182,7 @@ const ContextPicker = ({
         data={getAllContextTypes()}
         allowCreate="onFilter"
         onChange={update}
-        onCreate={(n) => {
+        onCreate={n => {
           update([...contextTypes, n])
         }}
       />
@@ -209,7 +201,7 @@ const IntentItem = ({
     <>
       <IntentPicker
         name={ei.name}
-        update={(x) => {
+        update={x => {
           const ei2 = { ...ei, name: x }
           update(ei2)
         }}
@@ -217,7 +209,7 @@ const IntentItem = ({
 
       <ContextPicker
         contextTypes={ei.contexts}
-        update={(x) => {
+        update={x => {
           const ei2 = { ...ei, contexts: x }
           update(ei2)
         }}
@@ -247,6 +239,7 @@ const InteropList = ({
       <div className={styles.addIntent}>Intents I Listen To:</div>
       {app.intents.map((e, i) => (
         <IntentItem
+          key={i}
           ei={e}
           update={(ei: EditableIntent | null) => {
             if (ei) {
@@ -290,7 +283,7 @@ const CustomAppItem = ({
         <div
           className={styles.name}
           contentEditable={true}
-          onBlur={(e) => {
+          onBlur={e => {
             d.title = e.currentTarget.textContent ?? ""
             update(d)
           }}
@@ -300,7 +293,7 @@ const CustomAppItem = ({
         <div
           className={styles.description}
           contentEditable={true}
-          onBlur={(e) => {
+          onBlur={e => {
             d.description = e.currentTarget.textContent ?? ""
             update(d)
           }}
@@ -310,7 +303,7 @@ const CustomAppItem = ({
         <div
           className={styles.url}
           contentEditable={true}
-          onBlur={(e) => {
+          onBlur={e => {
             d.url = e.currentTarget.textContent ?? ""
             update(d)
           }}
@@ -339,26 +332,24 @@ export const CustomAppList = () => {
     return getClientState()
       .setCustomApps(convertToDirectoryApps(newApps))
       .then(async () => {
-        void getClientState().setKnownApps(
-          await getServerState().getApplications(),
-        )
+        void getClientState().setKnownApps(await getServerState().getApplications())
       })
   }
 
   return (
     <div className={styles.list}>
-      {apps.map((d) => (
+      {apps.map(d => (
         <CustomAppItem
           key={d.id}
           d={d}
-          update={(app) => {
+          update={app => {
             if (app) {
-              const idx = apps.findIndex((a) => a.id == d.id)
+              const idx = apps.findIndex(a => a.id == d.id)
               const newApps = [...apps]
               newApps[idx] = app
               void updateApps(newApps)
             } else {
-              const idx = apps.findIndex((a) => a.id == d.id)
+              const idx = apps.findIndex(a => a.id == d.id)
               const newApps = [...apps]
               newApps.splice(idx, 1)
               void updateApps(newApps)

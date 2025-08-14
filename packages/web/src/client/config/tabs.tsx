@@ -1,8 +1,11 @@
-import { getClientState } from "../../state"
 import { TabDetail } from "@finos/fdc3-sail-shared"
+
+import { getClientState } from "../../state"
+import { Icon } from "../icon/icon"
+
 import styles from "./styles.module.css"
 import { InlineButton } from "./shared"
-import { Icon } from "../icon/icon"
+
 
 const ICON_PATH = "/icons/tabs/"
 
