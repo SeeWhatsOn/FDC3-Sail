@@ -12,8 +12,10 @@
     "start:all": "concurrently \"npm run web\" \"npm run example-apps\" \"npm run electron\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "type-check": "tsc --build --verbose",
     "format": "prettier --check .",
-    "format:fix": "prettier --write ."
+    "format:fix": "prettier --write .",
+    "check-all": "npm run lint && npm run type-check && npm run format"
   },
   "workspaces": [
     "packages/shared",

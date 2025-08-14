@@ -144,7 +144,7 @@ async function handleIntentResolveOnChannel(
     intentResolveArgs.appId,
     intentResolveArgs.channel
   )
-  callback(null)
+  callback(undefined as unknown as void)
 }
 
 /**
