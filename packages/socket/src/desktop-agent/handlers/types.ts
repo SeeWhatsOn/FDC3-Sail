@@ -64,10 +64,7 @@ export function getFdc3ServerInstance(
  * @param callback - The socket callback function
  * @param errorMessage - The error message to return
  */
-export function handleCallbackError<T>(
-  callback: SocketIOCallback<T>,
-  errorMessage: string
-): void {
+export function handleCallbackError<T>(callback: SocketIOCallback<T>, errorMessage: string): void {
   callback(null as unknown as T, errorMessage)
 }
 

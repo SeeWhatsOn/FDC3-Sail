@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest"
 
-import { Controls, NewPanel, Bin } from "./controls"
-
 import { render, screen } from "@/test/utils/component-test-utils"
+
+import { Controls, NewPanel, Bin } from "./controls"
 
 describe("Controls Component", () => {
   it("renders children correctly", () => {

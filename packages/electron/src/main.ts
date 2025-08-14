@@ -59,16 +59,16 @@ async function createWindow() {
   win.contentView.addChildView(contentView)
 
   // Add these functions to your main.ts file
-  function openTitlebarDevTools(win: Electron.BaseWindow, titlebarView: WebContentsView) {
+  function openTitlebarDevTools(_win: Electron.BaseWindow, titlebarView: WebContentsView) {
     titlebarView.webContents.openDevTools({ mode: "detach" })
   }
 
-  function openContentDevTools(win: Electron.BaseWindow, contentView: WebContentsView) {
+  function openContentDevTools(_win: Electron.BaseWindow, contentView: WebContentsView) {
     contentView.webContents.openDevTools()
   }
 
   // Register keyboard shortcuts for DevTools
-  contentView.webContents.on("before-input-event", (event, input) => {
+  contentView.webContents.on("before-input-event", (_event, input) => {
     // Ctrl+Shift+T for titlebar DevTools
     if (input.control && input.shift && input.key === "T") {
       openTitlebarDevTools(win, titlebarView)
