@@ -73,7 +73,7 @@ window.addEventListener("load", () => {
             void callback(intent, app, channel) //TODO: fix this
             renderIntentResolver(null)
           }}
-        />,
+        />
       )
     } else {
       myPort.postMessage({
@@ -86,7 +86,7 @@ window.addEventListener("load", () => {
   async function callback(
     intent: string | null,
     app: AppIdentifier | null,
-    channel: string | null,
+    channel: string | null
   ) {
     myPort.postMessage({
       type: "Fdc3UserInterfaceRestyle",
@@ -117,7 +117,7 @@ window.addEventListener("load", () => {
     }
   }
 
-  myPort.addEventListener("message", (e) => {
+  myPort.addEventListener("message", e => {
     if (isFdc3UserInterfaceHandshake(e.data)) {
       renderIntentResolver(null)
     } else if (isFdc3UserInterfaceResolve(e.data)) {

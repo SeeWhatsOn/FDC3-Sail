@@ -24,7 +24,7 @@ export interface ServerState {
     appId: string,
     hosting: AppHosting,
     channel: string | null,
-    instanceTitle: string,
+    instanceTitle: string
   ): Promise<string>
 
   /**
@@ -47,7 +47,7 @@ export interface ServerState {
     requestId: string,
     ai: AppIdentifier | null,
     intent: string | null,
-    channel: string | null,
+    channel: string | null
   ): void
 
   /**

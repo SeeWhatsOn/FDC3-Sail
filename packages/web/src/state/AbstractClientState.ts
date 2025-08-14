@@ -1,12 +1,7 @@
 import { DirectoryApp, WebAppDetails } from "@finos/fdc3-web-impl"
 // ClientState interface imported via WebClientState
 import { AppPanel, IntentResolution, WebClientState } from "../types"
-import {
-  ContextHistory,
-  Directory,
-  SailClientStateArgs,
-  TabDetail,
-} from "@finos/fdc3-sail-shared"
+import { ContextHistory, Directory, SailClientStateArgs, TabDetail } from "@finos/fdc3-sail-shared"
 import { Context } from "@finos/fdc3-context"
 
 export abstract class AbstractClientState implements WebClientState {
@@ -29,7 +24,7 @@ export abstract class AbstractClientState implements WebClientState {
     directories: Directory[],
     knownApps: DirectoryApp[],
     customApps: DirectoryApp[],
-    history: ContextHistory,
+    history: ContextHistory
   ) {
     this.tabs = tabs
     this.panels = panels
@@ -45,7 +40,7 @@ export abstract class AbstractClientState implements WebClientState {
 
   /** Tabs */
   getActiveTab(): TabDetail {
-    const out = this.tabs.find((t) => t.id == this.activeTabId)
+    const out = this.tabs.find(t => t.id == this.activeTabId)
     if (!out) {
       this.activeTabId = this.tabs[0].id
       this.saveState().catch(() => {
@@ -71,12 +66,12 @@ export abstract class AbstractClientState implements WebClientState {
   }
 
   async removeTab(id: string): Promise<void> {
-    this.tabs = this.tabs.filter((t) => t.id != id)
+    this.tabs = this.tabs.filter(t => t.id != id)
     await this.saveState()
   }
 
   async updateTab(td: TabDetail): Promise<void> {
-    const idx = this.tabs.findIndex((t) => t.id == td.id)
+    const idx = this.tabs.findIndex(t => t.id == td.id)
     if (idx != -1) {
       this.tabs[idx] = td
     }
@@ -84,7 +79,7 @@ export abstract class AbstractClientState implements WebClientState {
   }
 
   async moveTab(id: string, delta: "up" | "down"): Promise<void> {
-    const idx = this.tabs.findIndex((t) => t.id == id)
+    const idx = this.tabs.findIndex(t => t.id == id)
     if (idx != -1) {
       if (delta == "up" && idx > 0) {
         const temp = this.tabs[idx - 1]
@@ -103,7 +98,7 @@ export abstract class AbstractClientState implements WebClientState {
   /** Panels */
   updatePanel(ap: AppPanel): void {
     // console.log("Panels " + JSON.stringify(this.panels))
-    const idx = this.panels.findIndex((p) => p.panelId == ap.panelId)
+    const idx = this.panels.findIndex(p => p.panelId == ap.panelId)
     if (idx != -1) {
       this.panels[idx] = ap
     } else {
@@ -118,7 +113,7 @@ export abstract class AbstractClientState implements WebClientState {
   }
 
   removePanel(id: string): void {
-    this.panels = this.panels.filter((p) => p.panelId != id)
+    this.panels = this.panels.filter(p => p.panelId != id)
     this.saveState().catch(() => {
       console.error("Error saving state")
     })
@@ -179,7 +174,7 @@ export abstract class AbstractClientState implements WebClientState {
   }
 
   async updateDirectory(din: Directory) {
-    const idx = this.directories.findIndex((d) => d.url == din.url)
+    const idx = this.directories.findIndex(d => d.url == din.url)
     if (idx > -1) {
       this.directories[idx] = din
     } else {
@@ -192,7 +187,7 @@ export abstract class AbstractClientState implements WebClientState {
   createArgs(): SailClientStateArgs {
     return {
       userSessionId: this.userSessionId,
-      directories: this.directories.filter((d) => d.active).map((d) => d.url),
+      directories: this.directories.filter(d => d.active).map(d => d.url),
       channels: this.tabs,
       panels: this.panels,
       customApps: this.customApps,

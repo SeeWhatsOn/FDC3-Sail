@@ -14,12 +14,12 @@ export class DefaultAppState implements AppState {
   ss: ServerState | null = null
 
   getAppState(instanceId: string): State | undefined {
-    return this.states.find((x) => x.instanceId == instanceId)?.state
+    return this.states.find(x => x.instanceId == instanceId)?.state
   }
 
   setAppState(state: SailAppStateArgs): void {
     this.states = state
-    this.callbacks.forEach((x) => {
+    this.callbacks.forEach(x => {
       x()
     })
   }
@@ -45,7 +45,7 @@ export class DefaultAppState implements AppState {
   getDirectoryAppForUrl(identityUrl: string): DirectoryApp | undefined {
     const strippedIdentityUrl = identityUrl.replace(/\/$/, "")
     const applications: DirectoryApp[] = this.cs?.getKnownApps() ?? []
-    const firstMatchingApp = applications.find((x) => {
+    const firstMatchingApp = applications.find(x => {
       const d = x.details as WebAppDetails
       return (
         d.url == strippedIdentityUrl ||
@@ -75,7 +75,7 @@ export class DefaultAppState implements AppState {
           const appD = this.getDirectoryAppForUrl(data.payload.identityUrl)
           const appId = appD?.appId
           this.getInstanceIdForWindow(source)
-            .then((instanceId) => {
+            .then(instanceId => {
               if (appD && instanceId) {
                 source.postMessage(
                   {
@@ -90,14 +90,14 @@ export class DefaultAppState implements AppState {
                         `/html/embed.html?connectionAttemptUuid=${data.meta.connectionAttemptUuid}&desktopAgentId=${cs.getUserSessionID()}&instanceId=${instanceId}&appId=${appId ?? "unknown"}`,
                     },
                   },
-                  origin,
+                  origin
                 )
               } else {
                 console.error(
                   "Illegal handshake attempt",
                   JSON.stringify(data, null, 2),
                   appD,
-                  instanceId,
+                  instanceId
                 )
               }
             })
@@ -117,7 +117,7 @@ export class DefaultAppState implements AppState {
    * Since sometimes it takes the app windows a little while to load, here
    */
   async getInstanceIdForWindow(window: Window): Promise<string | undefined> {
-    return new Promise<string | undefined>((resolve) => {
+    return new Promise<string | undefined>(resolve => {
       const endTime = new Date().getTime() + 10000
 
       const retry = () => {
@@ -148,11 +148,11 @@ export class DefaultAppState implements AppState {
     // Get all numbers currently in use for this app title
     const usedNumbers = new Set(
       existingPanels
-        .filter((p) => p.title.startsWith(detail.title))
-        .map((p) => {
+        .filter(p => p.title.startsWith(detail.title))
+        .map(p => {
           const match = /\d+$/.exec(p.title)
           return match ? parseInt(match[0]) : 0
-        }),
+        })
     )
 
     // Find first unused number starting from 1
@@ -168,26 +168,19 @@ export class DefaultAppState implements AppState {
    * Opens either a new panel or a browser tab for the application to go in,
    * returns the instance id for the new thing.
    */
-  open(
-    detail: DirectoryApp,
-    destination?: AppHosting,
-  ): Promise<AppOpenDetails> {
-    return new Promise((resolve) => {
+  open(detail: DirectoryApp, destination?: AppHosting): Promise<AppOpenDetails> {
+    return new Promise(resolve => {
       const sailManifest = detail.hostManifests?.sail ?? {}
       const forceNewWindow =
-        (typeof sailManifest === "string" ? {} : sailManifest).forceNewWindow ??
-        false
+        (typeof sailManifest === "string" ? {} : sailManifest).forceNewWindow ?? false
       const hosting: AppHosting =
         destination ?? (forceNewWindow ? AppHosting.Tab : AppHosting.Frame)
       const instanceTitle = this.createTitle(detail)
       if (hosting == AppHosting.Tab) {
         this.getServerState()
           .registerAppLaunch(detail.appId, hosting, null, instanceTitle)
-          .then((instanceId) => {
-            const w = window.open(
-              (detail.details as WebAppDetails).url,
-              "_blank",
-            )
+          .then(instanceId => {
+            const w = window.open((detail.details as WebAppDetails).url, "_blank")
             if (w) {
               this.registerAppWindow(w, instanceId)
               resolve({ instanceId, channel: null, instanceTitle })
@@ -202,7 +195,7 @@ export class DefaultAppState implements AppState {
         const channel = this.getClientState().getActiveTab().id
         this.getServerState()
           .registerAppLaunch(detail.appId, hosting, channel, instanceTitle)
-          .then((instanceId) => {
+          .then(instanceId => {
             this.getClientState().newPanel(detail, instanceId, instanceTitle)
             resolve({ instanceId, channel, instanceTitle })
           })

@@ -29,7 +29,7 @@ function addStock(ticker: string, holding: number) {
 }
 
 function removeStock(si: StockItem) {
-  stockItems = stockItems.filter((e) => e != si)
+  stockItems = stockItems.filter(e => e != si)
   render()
 }
 
@@ -77,12 +77,10 @@ function render() {
     stockList.removeChild(stockList.lastElementChild)
   }
 
-  stockItems
-    .map((si) => renderStock(si))
-    .forEach((e) => stockList.appendChild(e))
+  stockItems.map(si => renderStock(si)).forEach(e => stockList.appendChild(e))
 
   const totalValue = stockItems
-    .map((si) => si.holding * si.value)
+    .map(si => si.holding * si.value)
     .reduce((a, b) => a + b, 0)
     .toFixed(2)
 
@@ -93,7 +91,7 @@ function render() {
 
 const theForm = document.getElementById("js-form") as HTMLFormElement
 
-theForm.addEventListener("submit", (event) => {
+theForm.addEventListener("submit", event => {
   event.preventDefault()
   const ticker = document.getElementById("ticker") as HTMLInputElement
   const holding = document.getElementById("holding") as HTMLInputElement
@@ -104,7 +102,7 @@ theForm.addEventListener("submit", (event) => {
 
 window.addEventListener("load", () => render())
 
-getAgent().then((fdc3_agent) => {
+getAgent().then(fdc3_agent => {
   fdc3 = fdc3_agent
   // update the screen
   setInterval(render, 5000)

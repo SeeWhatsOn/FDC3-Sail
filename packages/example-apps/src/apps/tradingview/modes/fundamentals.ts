@@ -4,8 +4,7 @@ import { TradingViewMode } from "../common"
 
 export const fundamentalsMode: TradingViewMode = {
   name: "fundamentals",
-  script:
-    "https://s3.tradingview.com/external-embedding/embed-widget-financials.js",
+  script: "https://s3.tradingview.com/external-embedding/embed-widget-financials.js",
   innerHTML: (state: object) => `{
                     "isTransparent": false,
                     "largeChartUrl": "",

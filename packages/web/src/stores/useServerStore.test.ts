@@ -84,18 +84,9 @@ describe("useServerStore - Connection Management", () => {
     store.connect()
 
     expect(mockSocket.on).toHaveBeenCalledWith("connect", expect.any(Function))
-    expect(mockSocket.on).toHaveBeenCalledWith(
-      "disconnect",
-      expect.any(Function),
-    )
-    expect(mockSocket.on).toHaveBeenCalledWith(
-      "connect_error",
-      expect.any(Function),
-    )
-    expect(mockSocket.on).toHaveBeenCalledWith(
-      "appStateUpdate",
-      expect.any(Function),
-    )
+    expect(mockSocket.on).toHaveBeenCalledWith("disconnect", expect.any(Function))
+    expect(mockSocket.on).toHaveBeenCalledWith("connect_error", expect.any(Function))
+    expect(mockSocket.on).toHaveBeenCalledWith("appStateUpdate", expect.any(Function))
   })
 
   it("should handle connect event", () => {
@@ -104,7 +95,7 @@ describe("useServerStore - Connection Management", () => {
 
     // Simulate connect event
     const connectHandler = mockSocket.on.mock.calls.find(
-      (call: unknown[]) => call[0] === "connect",
+      (call: unknown[]) => call[0] === "connect"
     )?.[1] as (...args: unknown[]) => void
     connectHandler?.()
 
@@ -120,7 +111,7 @@ describe("useServerStore - Connection Management", () => {
 
     // Simulate disconnect event
     const disconnectHandler = mockSocket.on.mock.calls.find(
-      (call: unknown[]) => call[0] === "disconnect",
+      (call: unknown[]) => call[0] === "disconnect"
     )?.[1] as (...args: unknown[]) => void
     disconnectHandler?.("transport close")
 
@@ -133,7 +124,7 @@ describe("useServerStore - Connection Management", () => {
 
     // Simulate connection error
     const errorHandler = mockSocket.on.mock.calls.find(
-      (call: unknown[]) => call[0] === "connect_error",
+      (call: unknown[]) => call[0] === "connect_error"
     )?.[1] as (...args: unknown[]) => void
     errorHandler?.(new Error("Connection failed"))
 
@@ -152,7 +143,7 @@ describe("useServerStore - Connection Management", () => {
 
     // Simulate app state update
     const updateHandler = mockSocket.on.mock.calls.find(
-      (call: unknown[]) => call[0] === "appStateUpdate",
+      (call: unknown[]) => call[0] === "appStateUpdate"
     )?.[1] as (...args: unknown[]) => void
     updateHandler?.(mockAppStates)
 
@@ -192,7 +183,7 @@ describe("useServerStore - Server Communication", () => {
         if (event === "registerDesktopAgent") {
           callback(mockResponse)
         }
-      },
+      }
     )
 
     const store = useServerStore.getState()
@@ -210,7 +201,7 @@ describe("useServerStore - Server Communication", () => {
     expect(mockSocket.emit).toHaveBeenCalledWith(
       "registerDesktopAgent",
       clientArgs,
-      expect.any(Function),
+      expect.any(Function)
     )
     expect(result).toEqual(mockResponse)
   })
@@ -228,9 +219,7 @@ describe("useServerStore - Server Communication", () => {
       contextHistory: {},
     }
 
-    await expect(store.registerDesktopAgent(clientArgs)).rejects.toThrow(
-      "Not connected to server",
-    )
+    await expect(store.registerDesktopAgent(clientArgs)).rejects.toThrow("Not connected to server")
   })
 
   it("should register app launch successfully", async () => {
@@ -240,7 +229,7 @@ describe("useServerStore - Server Communication", () => {
         if (event === "registerAppLaunch") {
           callback({ instanceId: mockInstanceId })
         }
-      },
+      }
     )
 
     const store = useServerStore.getState()
@@ -256,7 +245,7 @@ describe("useServerStore - Server Communication", () => {
     expect(mockSocket.emit).toHaveBeenCalledWith(
       "registerAppLaunch",
       launchParams,
-      expect.any(Function),
+      expect.any(Function)
     )
     expect(instanceId).toBe(mockInstanceId)
   })
@@ -267,7 +256,7 @@ describe("useServerStore - Server Communication", () => {
         if (event === "registerAppLaunch") {
           callback({ error: "App not found" })
         }
-      },
+      }
     )
 
     const store = useServerStore.getState()
@@ -277,9 +266,7 @@ describe("useServerStore - Server Communication", () => {
       instanceTitle: "Invalid App",
     }
 
-    await expect(store.registerAppLaunch(launchParams)).rejects.toThrow(
-      "App not found",
-    )
+    await expect(store.registerAppLaunch(launchParams)).rejects.toThrow("App not found")
   })
 
   it("should send client state successfully", async () => {
@@ -289,7 +276,7 @@ describe("useServerStore - Server Communication", () => {
         if (event === "sendClientState") {
           callback(mockResponse)
         }
-      },
+      }
     )
 
     const store = useServerStore.getState()
@@ -307,7 +294,7 @@ describe("useServerStore - Server Communication", () => {
     expect(mockSocket.emit).toHaveBeenCalledWith(
       "sendClientState",
       clientArgs,
-      expect.any(Function),
+      expect.any(Function)
     )
     expect(result).toEqual(mockResponse)
   })
@@ -331,9 +318,7 @@ describe("useServerStore - Server Communication", () => {
     const store = useServerStore.getState()
     store.intentChosen("req-123", "app-1", "intent-1", "channel-1")
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Cannot send intent choice: not connected to server",
-    )
+    expect(consoleSpy).toHaveBeenCalledWith("Cannot send intent choice: not connected to server")
     expect(mockSocket.emit).not.toHaveBeenCalled()
 
     consoleSpy.mockRestore()

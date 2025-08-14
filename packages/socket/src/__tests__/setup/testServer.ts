@@ -28,7 +28,7 @@ export async function setupTestServer(): Promise<TestServerContext> {
 
   initSocketService(io, sessions)
 
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     httpServer.listen(() => {
       const port = (httpServer.address() as AddressInfo).port
       testServer = { io, httpServer, port, sessions }
@@ -47,9 +47,7 @@ export async function teardownTestServer(): Promise<void> {
 
 export function getTestServer(): TestServerContext {
   if (!testServer) {
-    throw new Error(
-      "Test server not initialized. Call setupTestServer() first.",
-    )
+    throw new Error("Test server not initialized. Call setupTestServer() first.")
   }
   return testServer
 }

@@ -18,7 +18,7 @@ getAppState().addStateChangeCallback(() => {
 
 getServerState()
   .registerDesktopAgent(getClientState().createArgs())
-  .catch((error) => {
+  .catch(error => {
     console.error("Error registering desktop agent:", error)
   })
 

@@ -76,10 +76,10 @@ describe("SailDirectory", () => {
 
       const apps = directory.retrieveAllApps()
       expect(apps).toHaveLength(4)
-      expect(apps.find((app) => app.type === "web")).toBeDefined()
-      expect(apps.find((app) => app.type === "native")).toBeDefined()
-      expect(apps.find((app) => app.type === "citrix")).toBeDefined()
-      expect(apps.find((app) => app.type === "other")).toBeDefined()
+      expect(apps.find(app => app.type === "web")).toBeDefined()
+      expect(apps.find(app => app.type === "native")).toBeDefined()
+      expect(apps.find(app => app.type === "citrix")).toBeDefined()
+      expect(apps.find(app => app.type === "other")).toBeDefined()
     })
   })
 
@@ -124,9 +124,9 @@ describe("SailDirectory", () => {
       expect(apps.length).toBeGreaterThan(0)
 
       // Verify we have apps from both files
-      const webApps = apps.filter((app) => app.type === "web")
-      const nativeApps = apps.filter((app) => app.type === "native")
-      const citrixApps = apps.filter((app) => app.type === "citrix")
+      const webApps = apps.filter(app => app.type === "web")
+      const nativeApps = apps.filter(app => app.type === "native")
+      const citrixApps = apps.filter(app => app.type === "citrix")
 
       expect(webApps.length).toBeGreaterThan(0)
       expect(nativeApps.length).toBeGreaterThan(0)
@@ -139,14 +139,13 @@ describe("SailDirectory", () => {
       await directory.replace([webAppsPath])
 
       const apps = directory.retrieveAllApps()
-      const marketTerminal = apps.find((app) => app.appId === "market-terminal")
+      const marketTerminal = apps.find(app => app.appId === "market-terminal")
 
       expect(marketTerminal).toBeDefined()
       expect(marketTerminal?.interop?.intents).toBeDefined()
       expect(marketTerminal?.interop?.intents).toBeGreaterThan(0)
 
-      const viewInstrumentIntent =
-        marketTerminal?.interop?.intents?.listensFor?.["ViewInstrument"]
+      const viewInstrumentIntent = marketTerminal?.interop?.intents?.listensFor?.["ViewInstrument"]
       expect(viewInstrumentIntent).toBeDefined()
       expect(viewInstrumentIntent?.contexts).toContain("fdc3.instrument")
     })
@@ -168,20 +167,14 @@ describe("SailDirectory", () => {
       await directory.replace([nativeAppsPath])
 
       const apps = directory.retrieveAllApps()
-      const excelAddin = apps.find((app) => app.appId === "excel-addin")
+      const excelAddin = apps.find(app => app.appId === "excel-addin")
 
       expect(excelAddin).toBeDefined()
       expect(excelAddin?.type).toBe("native")
       expect(excelAddin?.type).toBe("native")
       expect((excelAddin?.details as { path: string })?.path).toContain(".exe")
-      expect(excelAddin?.details && "arguments" in excelAddin.details).toBe(
-        true,
-      )
-      expect(
-        Array.isArray(
-          (excelAddin?.details as { arguments?: string[] })?.arguments,
-        ),
-      ).toBe(true)
+      expect(excelAddin?.details && "arguments" in excelAddin.details).toBe(true)
+      expect(Array.isArray((excelAddin?.details as { arguments?: string[] })?.arguments)).toBe(true)
     })
 
     describe("Error Handling", () => {
@@ -202,10 +195,7 @@ describe("SailDirectory", () => {
 
       it("should handle missing files gracefully", async () => {
         const directory = new AppDirectoryManager()
-        const nonExistentPath = path.resolve(
-          __dirname,
-          "testData/nonexistent.json",
-        )
+        const nonExistentPath = path.resolve(__dirname, "testData/nonexistent.json")
 
         await expect(directory.replace([nonExistentPath])).rejects.toThrow()
       })

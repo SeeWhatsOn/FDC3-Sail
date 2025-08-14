@@ -18,25 +18,23 @@ export const createTestServer = async () => {
 
   const port = await getPort()
 
-  return new Promise<{ port: number; close: () => Promise<void> }>(
-    (resolve, reject) => {
-      httpServer.listen(port, (err?: Error) => {
-        if (err) {
-          reject(err)
-        } else {
-          console.log(`Test server started on port ${port}`)
-          resolve({
-            port,
-            close: () =>
-              new Promise((resolveClose) => {
-                httpServer.close(() => {
-                  console.log(`Test server on port ${port} closed`)
-                  resolveClose()
-                })
-              }),
-          })
-        }
-      })
-    },
-  )
+  return new Promise<{ port: number; close: () => Promise<void> }>((resolve, reject) => {
+    httpServer.listen(port, (err?: Error) => {
+      if (err) {
+        reject(err)
+      } else {
+        console.log(`Test server started on port ${port}`)
+        resolve({
+          port,
+          close: () =>
+            new Promise(resolveClose => {
+              httpServer.close(() => {
+                console.log(`Test server on port ${port} closed`)
+                resolveClose()
+              })
+            }),
+        })
+      }
+    })
+  })
 }

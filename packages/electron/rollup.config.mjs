@@ -36,16 +36,7 @@ const preloadPlugins = [
 ]
 
 // Shared external modules for all builds
-const external = [
-  "electron",
-  "path",
-  "fs",
-  "http",
-  "https",
-  "url",
-  "os",
-  "child_process",
-]
+const external = ["electron", "path", "fs", "http", "https", "url", "os", "child_process"]
 
 export default [
   // Main process build

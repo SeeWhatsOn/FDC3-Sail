@@ -16,10 +16,7 @@ import {
  * @param sessions - Map to store active FDC3 server sessions
  * @returns The configured Socket.IO server
  */
-export function initSocketService(
-  io: Server,
-  sessions: Map<string, SailFDC3Server>,
-): Server {
+export function initSocketService(io: Server, sessions: Map<string, SailFDC3Server>): Server {
   io.on("connection", (socket: Socket) => {
     console.log("New socket connection established:", socket.id)
 

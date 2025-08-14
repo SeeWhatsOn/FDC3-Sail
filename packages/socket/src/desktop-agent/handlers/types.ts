@@ -40,7 +40,7 @@ export const STATE_REPORT_INTERVAL_MS = CONFIG.STATE_REPORT_INTERVAL_MS
 export function getFdc3ServerInstance(
   sessions: Map<string, SailFDC3Server>,
   userSessionId: string,
-  timeoutMs: number = 5000,
+  timeoutMs: number = 5000
 ): Promise<SailFDC3Server> {
   return new Promise((resolve, reject) => {
     const startTime = Date.now()
@@ -50,11 +50,7 @@ export function getFdc3ServerInstance(
       if (fdc3Server) {
         resolve(fdc3Server)
       } else if (Date.now() - startTime > timeoutMs) {
-        reject(
-          new Error(
-            `Session '${userSessionId}' not found within ${timeoutMs}ms`,
-          ),
-        )
+        reject(new Error(`Session '${userSessionId}' not found within ${timeoutMs}ms`))
       } else {
         setTimeout(pollForServer, CONFIG.POLLING_INTERVAL_MS)
       }
@@ -70,7 +66,7 @@ export function getFdc3ServerInstance(
  */
 export function handleCallbackError(
   callback: (result: unknown, error?: string) => void,
-  errorMessage: string,
+  errorMessage: string
 ): void {
   callback(null, errorMessage)
 }

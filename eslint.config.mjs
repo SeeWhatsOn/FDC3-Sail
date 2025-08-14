@@ -52,7 +52,7 @@ export default defineConfig([
       "**/vitest.config.{ts,mts,cts}",
       "**/rollup.config.{ts,mts,cts}",
       "**/webpack.config.{ts,mts,cts}",
-      "**/esbuild.config.{ts,mts,cts}"
+      "**/esbuild.config.{ts,mts,cts}",
     ],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
@@ -72,7 +72,7 @@ export default defineConfig([
       "**/vitest.config.{ts,mts,cts}",
       "**/rollup.config.{ts,mts,cts}",
       "**/webpack.config.{ts,mts,cts}",
-      "**/esbuild.config.{ts,mts,cts}"
+      "**/esbuild.config.{ts,mts,cts}",
     ], // Exclude build config files from project service
     extends: [
       js.configs.recommended,
@@ -111,14 +111,7 @@ export default defineConfig([
       "import/order": [
         "error",
         {
-          groups: [
-            "builtin",
-            "external",
-            "internal",
-            "parent",
-            "sibling",
-            "index",
-          ],
+          groups: ["builtin", "external", "internal", "parent", "sibling", "index"],
           "newlines-between": "always",
         },
       ],

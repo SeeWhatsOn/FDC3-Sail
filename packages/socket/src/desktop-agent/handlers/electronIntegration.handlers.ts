@@ -2,12 +2,7 @@ import { v4 as uuid } from "uuid"
 import { SailAppInstanceManager } from "../sailAppInstanceManager"
 import { AppDirectoryManager } from "../../app-directory/appDirectoryManager"
 import { SailFDC3Server } from "../sailFDC3Server"
-import {
-  HandlerContext,
-  CONFIG,
-  handleCallbackError,
-  SocketIOCallback,
-} from "./types"
+import { HandlerContext, CONFIG, handleCallbackError, SocketIOCallback } from "./types"
 import { TabDetail, ContextHistory } from "@finos/fdc3-sail-shared"
 import { DirectoryApp } from "@finos/fdc3-web-impl"
 
@@ -54,15 +49,13 @@ function getSailUrl(): string {
 function handleElectronHello(
   electronHelloArgs: ElectronHelloArgs,
   callback: SocketIOCallback<ElectronAppResponse | ElectronDAResponse>,
-  { socket, connectionState, sessions }: HandlerContext,
+  { socket, connectionState, sessions }: HandlerContext
 ): void {
   console.log(`SAIL ELECTRON HELLO: ${JSON.stringify(electronHelloArgs)}`)
   const existingServer = sessions.get(electronHelloArgs.userSessionId)
 
   if (existingServer) {
-    const matchingAppList = existingServer
-      .getDirectory()
-      .retrieveAppsByUrl(electronHelloArgs.url)
+    const matchingAppList = existingServer.getDirectory().retrieveAppsByUrl(electronHelloArgs.url)
 
     if (matchingAppList.length > 0) {
       const [firstApp] = matchingAppList
@@ -79,17 +72,11 @@ function handleElectronHello(
       callback(response)
     } else {
       console.error("App not found", electronHelloArgs.url)
-      handleCallbackError(
-        callback as (result: unknown, error?: string) => void,
-        "App not found",
-      )
+      handleCallbackError(callback as (result: unknown, error?: string) => void, "App not found")
     }
   } else if (electronHelloArgs.url === getSailUrl()) {
     connectionState.userSessionId = electronHelloArgs.userSessionId
-    const serverContext = new SailAppInstanceManager(
-      new AppDirectoryManager(),
-      socket,
-    )
+    const serverContext = new SailAppInstanceManager(new AppDirectoryManager(), socket)
     const newServer = new SailFDC3Server(serverContext, {
       ...electronHelloArgs,
       directories: [],
@@ -105,10 +92,7 @@ function handleElectronHello(
     callback(response)
   } else {
     console.error("Session not found", connectionState.userSessionId)
-    handleCallbackError(
-      callback as (result: unknown, error?: string) => void,
-      "Session not found",
-    )
+    handleCallbackError(callback as (result: unknown, error?: string) => void, "Session not found")
   }
 }
 
@@ -122,9 +106,9 @@ export function registerElectronHandlers(context: HandlerContext): void {
     ELECTRON_HELLO,
     (
       electronHelloArgs: ElectronHelloArgs,
-      callback: SocketIOCallback<ElectronAppResponse | ElectronDAResponse>,
+      callback: SocketIOCallback<ElectronAppResponse | ElectronDAResponse>
     ) => {
       handleElectronHello(electronHelloArgs, callback, context)
-    },
+    }
   )
 }

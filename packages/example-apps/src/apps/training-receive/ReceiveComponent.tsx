@@ -11,13 +11,11 @@ export const ReceiveComponent = () => {
 
   useEffect(() => {
     console.log("starting...")
-    getAgent().then((agent) => {
+    getAgent().then(agent => {
       console.log("got api...")
       handleChannelChanged(agent)
 
-      agent.addEventListener("userChannelChanged", () =>
-        handleChannelChanged(agent),
-      )
+      agent.addEventListener("userChannelChanged", () => handleChannelChanged(agent))
     })
   }, [])
 
@@ -28,14 +26,11 @@ export const ReceiveComponent = () => {
       setCurrentChannel(channel?.id || null)
     }
 
-    setListener((l) => {
+    setListener(l => {
       if (l == null && channel != null) {
         console.log("setting listener", listener)
-        const lp = fdc3.addContextListener(null, (context) => {
-          setLogMessages((prev) => [
-            ...prev,
-            "Received: " + JSON.stringify(context),
-          ])
+        const lp = fdc3.addContextListener(null, context => {
+          setLogMessages(prev => [...prev, "Received: " + JSON.stringify(context)])
         })
 
         return lp
@@ -48,9 +43,7 @@ export const ReceiveComponent = () => {
   return (
     <div className={styles.receiveComponent}>
       <h2>Receive Component</h2>
-      <div className={styles.channelInfo}>
-        Current channel: {currentChannel}
-      </div>
+      <div className={styles.channelInfo}>Current channel: {currentChannel}</div>
       <div id="log" className={styles.receiveLog}>
         {logMessages.map((msg, index) => (
           <p className={styles.message} key={index}>

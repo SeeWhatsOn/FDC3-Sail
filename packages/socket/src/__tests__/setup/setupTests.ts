@@ -29,7 +29,7 @@ export async function setupTestServer(): Promise<TestServerContext> {
 
   initSocketService(io, sessions)
 
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     httpServer.listen(() => {
       const port = (httpServer.address() as AddressInfo).port
       testServer = { io, httpServer, port, sessions }
@@ -48,9 +48,7 @@ export async function teardownTestServer(): Promise<void> {
 
 export function getTestServer(): TestServerContext {
   if (!testServer) {
-    throw new Error(
-      "Test server not initialized. Call setupTestServer() first.",
-    )
+    throw new Error("Test server not initialized. Call setupTestServer() first.")
   }
   return testServer
 }
@@ -86,7 +84,7 @@ export async function cleanupTestResources(): Promise<void> {
     testServer.io.disconnectSockets(true)
 
     // Small delay to allow cleanup to complete
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise(resolve => setTimeout(resolve, 100))
   } catch (error) {
     console.warn("Error during test resource cleanup:", error)
   }

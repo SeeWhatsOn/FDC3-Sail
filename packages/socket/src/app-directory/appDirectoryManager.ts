@@ -49,24 +49,20 @@ export class AppDirectoryManager extends BasicDirectory {
       // Fetch data from remote endpoint
       const response = await fetch(url)
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch ${url}: ${response.status} ${response.statusText}`,
-        )
+        throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`)
       }
 
       // Parse and validate JSON response
       const data = (await response.json()) as DirectoryData
       if (!data.applications || !Array.isArray(data.applications)) {
-        throw new Error(
-          `Invalid data format from ${url}: applications not found or not an array`,
-        )
+        throw new Error(`Invalid data format from ${url}: applications not found or not an array`)
       }
 
       return data.applications
     } catch (error) {
       // Provide more context in error messages
       throw new Error(
-        `Failed to fetch from ${url}: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to fetch from ${url}: ${error instanceof Error ? error.message : String(error)}`
       )
     }
   }
@@ -78,9 +74,7 @@ export class AppDirectoryManager extends BasicDirectory {
    * @returns Promise resolving to array of DirectoryApp entries
    * @throws Error if file cannot be read or data format is invalid
    */
-  private async readLocalAppDirectory(
-    filePath: string,
-  ): Promise<DirectoryApp[]> {
+  private async readLocalAppDirectory(filePath: string): Promise<DirectoryApp[]> {
     try {
       // Read file contents as UTF-8 string
       const data = await fs.readFile(filePath, { encoding: "utf8" })
@@ -89,7 +83,7 @@ export class AppDirectoryManager extends BasicDirectory {
       const parsed: DirectoryData = JSON.parse(data) as DirectoryData
       if (!parsed.applications || !Array.isArray(parsed.applications)) {
         throw new Error(
-          `Invalid data format in ${filePath}: applications not found or not an array`,
+          `Invalid data format in ${filePath}: applications not found or not an array`
         )
       }
 
@@ -164,8 +158,8 @@ export class AppDirectoryManager extends BasicDirectory {
       }
 
       // Add non-duplicate apps based on appId
-      const existingAppIds = new Set(this.allApps.map((app) => app.appId))
-      const newApps = apps.filter((app) => !existingAppIds.has(app.appId))
+      const existingAppIds = new Set(this.allApps.map(app => app.appId))
+      const newApps = apps.filter(app => !existingAppIds.has(app.appId))
       this.allApps.push(...newApps)
     } catch (error) {
       const errorMessage = `Failed to load applications from ${uri}: ${
@@ -200,28 +194,20 @@ export class AppDirectoryManager extends BasicDirectory {
 
     // Load from all sources in parallel using Promise.allSettled
     // This allows partial success even if some sources fail
-    const results = await Promise.allSettled(
-      urls.map((url) => this.loadDirectory(url)),
-    )
+    const results = await Promise.allSettled(urls.map(url => this.loadDirectory(url)))
 
     // Collect errors using filter + map (more functional approach)
     const errors = results
       .map((result, index) =>
         result.status === "rejected"
-          ? `Failed to load ${urls[index]}: ${
-              (result.reason as Error).message || result.reason
-            }`
-          : null,
+          ? `Failed to load ${urls[index]}: ${(result.reason as Error).message || result.reason}`
+          : null
       )
       .filter((error): error is string => error !== null)
 
     // Log results summary
-    const successCount = results.filter(
-      (result) => result.status === "fulfilled",
-    ).length
-    console.log(
-      `Loaded ${this.allApps.length} apps from ${successCount}/${urls.length} sources`,
-    )
+    const successCount = results.filter(result => result.status === "fulfilled").length
+    console.log(`Loaded ${this.allApps.length} apps from ${successCount}/${urls.length} sources`)
 
     if (errors.length > 0) {
       console.warn("Some sources failed to load:", errors)
@@ -253,8 +239,7 @@ export class AppDirectoryManager extends BasicDirectory {
 
     // Filter for web apps matching the specified URL
     return this.retrieveAllApps().filter(
-      (app) =>
-        app.type === "web" && (app.details as WebAppDetails)?.url === url,
+      app => app.type === "web" && (app.details as WebAppDetails)?.url === url
     )
   }
 }

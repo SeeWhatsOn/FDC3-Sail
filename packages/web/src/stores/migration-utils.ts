@@ -34,42 +34,32 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
     setActiveTabId: async (id: string) =>
       Promise.resolve(useClientStore.getState().setActiveTabId(id)),
     getTabs: () => useClientStore.getState().tabs,
-    addTab: async (tab) =>
-      Promise.resolve(useClientStore.getState().addTab(tab)),
-    removeTab: async (id) =>
-      Promise.resolve(useClientStore.getState().removeTab(id)),
-    updateTab: async (tab) =>
-      Promise.resolve(useClientStore.getState().updateTab(tab)),
-    moveTab: async (id, delta) =>
-      Promise.resolve(useClientStore.getState().moveTab(id, delta)),
+    addTab: async tab => Promise.resolve(useClientStore.getState().addTab(tab)),
+    removeTab: async id => Promise.resolve(useClientStore.getState().removeTab(id)),
+    updateTab: async tab => Promise.resolve(useClientStore.getState().updateTab(tab)),
+    moveTab: async (id, delta) => Promise.resolve(useClientStore.getState().moveTab(id, delta)),
 
     // Directories
-    setDirectories: async (directories) =>
+    setDirectories: async directories =>
       Promise.resolve(useClientStore.getState().setDirectories(directories)),
     getDirectories: () => useClientStore.getState().getDirectories(),
-    updateDirectory: async (directory) =>
+    updateDirectory: async directory =>
       Promise.resolve(useClientStore.getState().updateDirectory(directory)),
 
     // Apps
     getKnownApps: () => useClientStore.getState().getKnownApps(),
-    setKnownApps: async (apps) =>
-      Promise.resolve(useClientStore.getState().setKnownApps(apps)),
+    setKnownApps: async apps => Promise.resolve(useClientStore.getState().setKnownApps(apps)),
     getCustomApps: () => useClientStore.getState().getCustomApps(),
-    setCustomApps: async (apps) =>
-      Promise.resolve(useClientStore.getState().setCustomApps(apps)),
+    setCustomApps: async apps => Promise.resolve(useClientStore.getState().setCustomApps(apps)),
 
     // Intent Resolution
     getIntentResolution: () => useClientStore.getState().getIntentResolution(),
-    setIntentResolution: (resolution) =>
-      useClientStore.getState().setIntentResolution(resolution),
+    setIntentResolution: resolution => useClientStore.getState().setIntentResolution(resolution),
 
     // Context History
-    getContextHistory: (tabId) =>
-      useClientStore.getState().getContextHistory(tabId),
+    getContextHistory: tabId => useClientStore.getState().getContextHistory(tabId),
     appendContextHistory: async (tabId, context) =>
-      Promise.resolve(
-        useClientStore.getState().appendContextHistory(tabId, context),
-      ),
+      Promise.resolve(useClientStore.getState().appendContextHistory(tabId, context)),
 
     // Callbacks (legacy - now handled by store subscriptions)
     addStateChangeCallback: (cb: () => void) => {
@@ -83,9 +73,7 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
         userSessionId: state.userSessionId,
         channels: state.tabs,
         panels: state.panels,
-        directories: state.directories
-          .filter((d) => d.active)
-          .map((d) => d.url),
+        directories: state.directories.filter(d => d.active).map(d => d.url),
         customApps: state.customApps,
         contextHistory: state.contextHistory,
       }
@@ -93,13 +81,11 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
 
     // Panel methods (these were missing from the interface but exist in implementation)
     getPanels: () => useClientStore.getState().getPanels(),
-    addPanel: (panel) => useClientStore.getState().addPanel(panel),
-    removePanel: (panelId) => useClientStore.getState().removePanel(panelId),
-    updatePanel: (panel) => useClientStore.getState().updatePanel(panel),
+    addPanel: panel => useClientStore.getState().addPanel(panel),
+    removePanel: panelId => useClientStore.getState().removePanel(panelId),
+    updatePanel: panel => useClientStore.getState().updatePanel(panel),
     newPanel: (app, instanceId, instanceTitle) =>
-      useClientStore
-        .getState()
-        .newPanel(app, instanceId, instanceTitle as string),
+      useClientStore.getState().newPanel(app, instanceId, instanceTitle as string),
   } as WebClientState
 
   const serverAdapter: ServerState = {
@@ -108,7 +94,7 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
       serverStore.connect()
     },
 
-    registerDesktopAgent: async (clientArgs) => {
+    registerDesktopAgent: async clientArgs => {
       const serverStore = useServerStore.getState()
       await serverStore.registerDesktopAgent(clientArgs)
     },
@@ -123,7 +109,7 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
       })
     },
 
-    sendClientState: async (clientArgs) => {
+    sendClientState: async clientArgs => {
       const serverStore = useServerStore.getState()
       await serverStore.sendClientState(clientArgs)
     },
@@ -134,7 +120,7 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
         requestId,
         (appId as unknown as string) || "",
         intentId || "",
-        (channelId as unknown as string) || "",
+        (channelId as unknown as string) || ""
       )
     },
 
@@ -153,8 +139,7 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
   const appAdapter: AppState = {
     getAppState: (instanceId: string) => {
       const serverStore = useServerStore.getState()
-      return serverStore.appStates.find((s) => s.instanceId === instanceId)
-        ?.state
+      return serverStore.appStates.find(s => s.instanceId === instanceId)?.state
     },
 
     setAppState: (states: SailAppStateArgs) => {
@@ -179,8 +164,7 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
     registerAppWindow: () => {},
     getInstanceIdForWindow: () => Promise.resolve(undefined),
     createTitle: () => "App",
-    open: () =>
-      Promise.resolve({ instanceId: "", channel: null, instanceTitle: "" }),
+    open: () => Promise.resolve({ instanceId: "", channel: null, instanceTitle: "" }),
   } as AppState
 
   return {

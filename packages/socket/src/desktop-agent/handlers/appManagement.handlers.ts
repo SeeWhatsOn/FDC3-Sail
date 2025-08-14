@@ -64,12 +64,10 @@ const logger = {
 function createRecoveryInstance(
   appHelloArgs: AppHelloArgs,
   directoryAppList: DirectoryAppEntry[],
-  socket: import("socket.io").Socket,
+  socket: import("socket.io").Socket
 ): SailData {
   const [directoryApp] = directoryAppList
-  const sailManifest = directoryApp.hostManifests?.sail as
-    | SailHostManifest
-    | undefined
+  const sailManifest = directoryApp.hostManifests?.sail as SailHostManifest | undefined
 
   return {
     appId: appHelloArgs.appId,
@@ -93,7 +91,7 @@ function createRecoveryInstance(
 async function handleAppHello(
   appHelloArgs: AppHelloArgs,
   callback: SocketIOCallback<AppHosting>,
-  { socket, connectionState, sessions }: HandlerContext,
+  { socket, connectionState, sessions }: HandlerContext
 ): Promise<void> {
   logger.info("SAIL APP HELLO", appHelloArgs)
 
@@ -102,20 +100,14 @@ async function handleAppHello(
   connectionState.socketType = SocketType.APP
 
   try {
-    const fdc3Server = await getFdc3ServerInstance(
-      sessions,
-      appHelloArgs.userSessionId,
-    )
+    const fdc3Server = await getFdc3ServerInstance(sessions, appHelloArgs.userSessionId)
 
     if (!fdc3Server) {
       logger.error("App tried connecting to non-existent DA instance", {
         userSessionId: appHelloArgs.userSessionId,
         instanceId: appHelloArgs.instanceId,
       })
-      handleCallbackError(
-        callback,
-        "App tried connecting to non-existent DA instance",
-      )
+      handleCallbackError(callback, "App tried connecting to non-existent DA instance")
       return
     }
 
@@ -124,12 +116,8 @@ async function handleAppHello(
       instanceId: appHelloArgs.instanceId,
     })
     const serverContext = fdc3Server.getServerContext()
-    const existingInstance = serverContext.getInstanceDetails(
-      appHelloArgs.instanceId,
-    )
-    const directoryAppList = serverContext.directory.retrieveAppsById(
-      appHelloArgs.appId,
-    )
+    const existingInstance = serverContext.getInstanceDetails(appHelloArgs.instanceId)
+    const directoryAppList = serverContext.directory.retrieveAppsById(appHelloArgs.appId)
 
     // Handle existing pending instance
     if (existingInstance?.state === State.Pending) {
@@ -152,18 +140,11 @@ async function handleAppHello(
     if (CONFIG.DEBUG_MODE && directoryAppList.length > 0) {
       logger.warn(
         "App tried to connect with invalid instance ID, allowing connection in debug mode",
-        { instanceId: appHelloArgs.instanceId },
+        { instanceId: appHelloArgs.instanceId }
       )
 
-      const recoveryInstance = createRecoveryInstance(
-        appHelloArgs,
-        directoryAppList,
-        socket,
-      )
-      serverContext.setInstanceDetails(
-        appHelloArgs.instanceId,
-        recoveryInstance,
-      )
+      const recoveryInstance = createRecoveryInstance(appHelloArgs, directoryAppList, socket)
+      serverContext.setInstanceDetails(appHelloArgs.instanceId, recoveryInstance)
       connectionState.fdc3ServerInstance = fdc3Server
       callback(recoveryInstance.hosting)
       return
@@ -192,7 +173,7 @@ async function handleFdc3AppEvent(
     | WebConnectionProtocol4ValidateAppIdentity
     | WebConnectionProtocol6Goodbye,
   sourceId: string,
-  { connectionState }: HandlerContext,
+  { connectionState }: HandlerContext
 ): Promise<void> {
   if (!eventData.type.startsWith("heartbeat")) {
     logger.debug("SAIL FDC3_APP_EVENT", { eventData, sourceId })
@@ -208,7 +189,7 @@ async function handleFdc3AppEvent(
 
     if (eventData.type === "broadcastRequest") {
       fdc3ServerInstance.serverContext.notifyBroadcastContext(
-        eventData as unknown as BroadcastRequest,
+        eventData as unknown as BroadcastRequest
       )
     }
   } catch (error) {
@@ -224,12 +205,9 @@ export function registerAppHandlers(context: HandlerContext): void {
 
   socket.on(
     HandshakeMessages.APP_HELLO,
-    async (
-      appHelloArgs: AppHelloArgs,
-      callback: SocketIOCallback<AppHosting>,
-    ) => {
+    async (appHelloArgs: AppHelloArgs, callback: SocketIOCallback<AppHosting>) => {
       await handleAppHello(appHelloArgs, callback, context)
-    },
+    }
   )
 
   socket.on(
@@ -239,9 +217,9 @@ export function registerAppHandlers(context: HandlerContext): void {
         | AppRequestMessage
         | WebConnectionProtocol4ValidateAppIdentity
         | WebConnectionProtocol6Goodbye,
-      sourceId: string,
+      sourceId: string
     ) => {
       await handleFdc3AppEvent(eventData, sourceId, context)
-    },
+    }
   )
 }

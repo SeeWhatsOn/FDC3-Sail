@@ -9,7 +9,7 @@ describe("Controls Component", () => {
     render(
       <Controls>
         <div>Test Child</div>
-      </Controls>,
+      </Controls>
     )
 
     expect(screen.getByText("Test Child")).toBeInTheDocument()
@@ -19,7 +19,7 @@ describe("Controls Component", () => {
     render(
       <Controls>
         <div>Test</div>
-      </Controls>,
+      </Controls>
     )
 
     const controlsElement = screen.getByText("Test").parentElement

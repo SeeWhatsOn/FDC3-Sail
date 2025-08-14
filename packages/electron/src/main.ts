@@ -59,17 +59,11 @@ async function createWindow() {
   win.contentView.addChildView(contentView)
 
   // Add these functions to your main.ts file
-  function openTitlebarDevTools(
-    win: Electron.BaseWindow,
-    titlebarView: WebContentsView,
-  ) {
+  function openTitlebarDevTools(win: Electron.BaseWindow, titlebarView: WebContentsView) {
     titlebarView.webContents.openDevTools({ mode: "detach" })
   }
 
-  function openContentDevTools(
-    win: Electron.BaseWindow,
-    contentView: WebContentsView,
-  ) {
+  function openContentDevTools(win: Electron.BaseWindow, contentView: WebContentsView) {
     contentView.webContents.openDevTools()
   }
 
@@ -125,9 +119,7 @@ async function createWindow() {
   await titlebarView.webContents.loadFile(titlebarHtmlPath)
 
   // Show loading screen in the main content area
-  await contentView.webContents.loadFile(
-    path.join(__dirname, "..", "static", "loading.html"),
-  )
+  await contentView.webContents.loadFile(path.join(__dirname, "..", "static", "loading.html"))
 
   // Wait for the server to be ready
   await waitForServer()
@@ -139,11 +131,11 @@ async function createWindow() {
   win.show()
 
   // Ensures the preload gets run in tabs and new windows
-  contentView.webContents.setWindowOpenHandler((hd) => {
+  contentView.webContents.setWindowOpenHandler(hd => {
     console.log("SAIL Window open handler", hd)
     return {
       action: "allow",
-      createWindow: (options) => {
+      createWindow: options => {
         const win2 = new BaseWindow({
           ...options,
           width: 600,
@@ -193,7 +185,7 @@ async function createWindow() {
         win2.on("resize", updateNewViewBounds)
 
         // Load titlebar
-        newTitlebarView.webContents.loadFile(titlebarHtmlPath).catch((e) => {
+        newTitlebarView.webContents.loadFile(titlebarHtmlPath).catch(e => {
           console.error("Error loading titlebar", e)
         })
 
@@ -227,18 +219,14 @@ async function waitForServer(maxAttempts = 30, intervalMs = 1000) {
       }
 
       attempts++
-      console.log(
-        `Checking server connection (attempt ${attempts}/${maxAttempts})...`,
-      )
+      console.log(`Checking server connection (attempt ${attempts}/${maxAttempts})...`)
 
-      const req = http.get(SAIL_URL, { timeout: 2000 }, (res) => {
+      const req = http.get(SAIL_URL, { timeout: 2000 }, res => {
         const status = Number(res.statusCode)
 
         // Accept 2xx and 3xx status codes as success
         if (status && status >= 200 && status < 400) {
-          console.log(
-            `Server is up (status: ${status}) after ${attempts} attempts`,
-          )
+          console.log(`Server is up (status: ${status}) after ${attempts} attempts`)
           isCancelled = true
           if (checkTimer) {
             clearTimeout(checkTimer)
@@ -252,7 +240,7 @@ async function waitForServer(maxAttempts = 30, intervalMs = 1000) {
         }
       })
 
-      req.on("error", (err) => {
+      req.on("error", err => {
         if (isCancelled) return
         lastError = err.message
         retry()
@@ -278,7 +266,7 @@ async function waitForServer(maxAttempts = 30, intervalMs = 1000) {
       }
 
       console.log(
-        `Server not ready (${lastError}), retrying in ${intervalMs}ms... (${attempts}/${maxAttempts})`,
+        `Server not ready (${lastError}), retrying in ${intervalMs}ms... (${attempts}/${maxAttempts})`
       )
       checkTimer = setTimeout(checkServer, intervalMs)
     }

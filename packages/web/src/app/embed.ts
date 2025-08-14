@@ -1,10 +1,6 @@
 import { io, Socket } from "socket.io-client"
 import { getAppId, getInstanceId, getUserSessionId, link } from "./util"
-import {
-  AppHosting,
-  HandshakeMessages,
-  AppHelloArgs,
-} from "@finos/fdc3-sail-shared"
+import { AppHosting, HandshakeMessages, AppHelloArgs } from "@finos/fdc3-sail-shared"
 import { BrowserTypes } from "@finos/fdc3"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 
@@ -15,7 +11,7 @@ function doSocketConnection(
   channel: MessageChannel,
   instanceId: string,
   appId: string,
-  messageData: BrowserTypes.WebConnectionProtocol1Hello,
+  messageData: BrowserTypes.WebConnectionProtocol1Hello
 ) {
   socket.on("connect", async () => {
     try {
@@ -55,7 +51,7 @@ function doSocketConnection(
           },
         } as BrowserTypes.WebConnectionProtocol3Handshake,
         "*",
-        [channel.port1],
+        [channel.port1]
       )
     } catch (e) {
       console.error("Error in handshake", e)
@@ -83,7 +79,7 @@ const helloListener = (e: MessageEvent) => {
       "Communication iframe adaptor received hello message from: ",
       eventSourceName,
       eventSource == appWindow ? "(parent window): " : "(NOT parent win): ",
-      messageData,
+      messageData
     )
 
     window.removeEventListener("message", helloListener)

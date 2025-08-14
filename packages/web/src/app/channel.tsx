@@ -45,7 +45,7 @@ export const ChannelPicker = ({
   if (open) {
     return (
       <div className={styles.channelBox}>
-        {channels.map((c) => {
+        {channels.map(c => {
           return (
             <Channel
               key={c.id}
@@ -70,7 +70,7 @@ export const ChannelPicker = ({
       </div>
     )
   } else {
-    const theChannel = channels.find((c) => c.id == selected) ?? NO_CHANNEL
+    const theChannel = channels.find(c => c.id == selected) ?? NO_CHANNEL
     return (
       <div className={styles.channelBox}>
         <Channel channel={theChannel} active={true} onClick={changeSize} />

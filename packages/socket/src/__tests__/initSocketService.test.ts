@@ -34,7 +34,7 @@ describe("initSocketService Integration Tests", () => {
       transports: ["websocket"],
     })
 
-    await new Promise<void>((resolve) => {
+    await new Promise<void>(resolve => {
       clientSocket.on("connect", resolve)
     })
   })
@@ -59,20 +59,16 @@ describe("initSocketService Integration Tests", () => {
         contextHistory: {},
       }
 
-      await new Promise<void>((resolve) => {
-        clientSocket.emit(
-          DA_HELLO,
-          helloArgs,
-          (response: boolean, error?: string) => {
-            expect(error).toBeUndefined()
-            expect(response).toBe(true)
-            expect(sessions.has("test-session-123")).toBe(true)
+      await new Promise<void>(resolve => {
+        clientSocket.emit(DA_HELLO, helloArgs, (response: boolean, error?: string) => {
+          expect(error).toBeUndefined()
+          expect(response).toBe(true)
+          expect(sessions.has("test-session-123")).toBe(true)
 
-            const session = sessions.get("test-session-123")
-            expect(session).toBeInstanceOf(SailFDC3Server)
-            resolve()
-          },
-        )
+          const session = sessions.get("test-session-123")
+          expect(session).toBeInstanceOf(SailFDC3Server)
+          resolve()
+        })
       })
     })
 
@@ -87,7 +83,7 @@ describe("initSocketService Integration Tests", () => {
       }
 
       // First connection
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(DA_HELLO, helloArgs, () => {
           expect(sessions.has("test-session-456")).toBe(true)
           resolve()
@@ -104,17 +100,13 @@ describe("initSocketService Integration Tests", () => {
         ],
       }
 
-      await new Promise<void>((resolve) => {
-        clientSocket.emit(
-          DA_HELLO,
-          updatedArgs,
-          (response: boolean, error?: string) => {
-            expect(error).toBeUndefined()
-            expect(response).toBe(true)
-            expect(sessions.has("test-session-456")).toBe(true)
-            resolve()
-          },
-        )
+      await new Promise<void>(resolve => {
+        clientSocket.emit(DA_HELLO, updatedArgs, (response: boolean, error?: string) => {
+          expect(error).toBeUndefined()
+          expect(response).toBe(true)
+          expect(sessions.has("test-session-456")).toBe(true)
+          resolve()
+        })
       })
     })
   })
@@ -133,7 +125,7 @@ describe("initSocketService Integration Tests", () => {
         contextHistory: {},
       }
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(DA_HELLO, helloArgs, () => {
           resolve()
         })
@@ -150,7 +142,7 @@ describe("initSocketService Integration Tests", () => {
       }
 
       // First register the app launch
-      const instanceId = await new Promise<string>((resolve) => {
+      const instanceId = await new Promise<string>(resolve => {
         clientSocket.emit(
           DA_REGISTER_APP_LAUNCH,
           registerArgs,
@@ -158,7 +150,7 @@ describe("initSocketService Integration Tests", () => {
             expect(error).toBeUndefined()
             expect(instanceId).toMatch(/^sail-app-/)
             resolve(instanceId)
-          },
+          }
         )
       })
 
@@ -169,16 +161,12 @@ describe("initSocketService Integration Tests", () => {
         userSessionId: sessionId,
       }
 
-      await new Promise<void>((resolve) => {
-        clientSocket.emit(
-          APP_HELLO,
-          appHelloArgs,
-          (hosting: AppHosting, error?: string) => {
-            expect(error).toBeUndefined()
-            expect(hosting).toBe(AppHosting.Tab)
-            resolve()
-          },
-        )
+      await new Promise<void>(resolve => {
+        clientSocket.emit(APP_HELLO, appHelloArgs, (hosting: AppHosting, error?: string) => {
+          expect(error).toBeUndefined()
+          expect(hosting).toBe(AppHosting.Tab)
+          resolve()
+        })
       })
     })
 
@@ -189,16 +177,12 @@ describe("initSocketService Integration Tests", () => {
         userSessionId: sessionId,
       }
 
-      await new Promise<void>((resolve) => {
-        clientSocket.emit(
-          APP_HELLO,
-          appHelloArgs,
-          (hosting: unknown, error?: string) => {
-            expect(hosting).toBeNull()
-            expect(error).toBe("Invalid instance id")
-            resolve()
-          },
-        )
+      await new Promise<void>(resolve => {
+        clientSocket.emit(APP_HELLO, appHelloArgs, (hosting: unknown, error?: string) => {
+          expect(hosting).toBeNull()
+          expect(error).toBe("Invalid instance id")
+          resolve()
+        })
       })
     })
   })
@@ -215,7 +199,7 @@ describe("initSocketService Integration Tests", () => {
         contextHistory: {},
       }
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(DA_HELLO, helloArgs, () => {
           resolve()
         })
@@ -225,17 +209,13 @@ describe("initSocketService Integration Tests", () => {
         userSessionId: sessionId,
       }
 
-      await new Promise<void>((resolve) => {
-        clientSocket.emit(
-          DA_DIRECTORY_LISTING,
-          listingArgs,
-          (apps: unknown[], error?: string) => {
-            expect(error).toBeUndefined()
-            expect(Array.isArray(apps)).toBe(true)
-            expect(apps).toHaveLength(0)
-            resolve()
-          },
-        )
+      await new Promise<void>(resolve => {
+        clientSocket.emit(DA_DIRECTORY_LISTING, listingArgs, (apps: unknown[], error?: string) => {
+          expect(error).toBeUndefined()
+          expect(Array.isArray(apps)).toBe(true)
+          expect(apps).toHaveLength(0)
+          resolve()
+        })
       })
     })
 
@@ -253,20 +233,16 @@ describe("initSocketService Integration Tests", () => {
         contextHistory: {},
       }
 
-      await new Promise<void>((resolve) => {
-        clientSocket.emit(
-          DA_HELLO,
-          helloArgs,
-          (response: boolean, error?: string) => {
-            expect(error).toBeUndefined()
-            expect(response).toBe(true)
-            expect(sessions.has(sessionId)).toBe(true)
+      await new Promise<void>(resolve => {
+        clientSocket.emit(DA_HELLO, helloArgs, (response: boolean, error?: string) => {
+          expect(error).toBeUndefined()
+          expect(response).toBe(true)
+          expect(sessions.has(sessionId)).toBe(true)
 
-            const session = sessions.get(sessionId)
-            expect(session).toBeInstanceOf(SailFDC3Server)
-            resolve()
-          },
-        )
+          const session = sessions.get(sessionId)
+          expect(session).toBeInstanceOf(SailFDC3Server)
+          resolve()
+        })
       })
 
       // Verify the session has no apps
@@ -274,17 +250,13 @@ describe("initSocketService Integration Tests", () => {
         userSessionId: sessionId,
       }
 
-      await new Promise<void>((resolve) => {
-        clientSocket.emit(
-          DA_DIRECTORY_LISTING,
-          listingArgs,
-          (apps: unknown[], error?: string) => {
-            expect(error).toBeUndefined()
-            expect(Array.isArray(apps)).toBe(true)
-            expect(apps).toHaveLength(0)
-            resolve()
-          },
-        )
+      await new Promise<void>(resolve => {
+        clientSocket.emit(DA_DIRECTORY_LISTING, listingArgs, (apps: unknown[], error?: string) => {
+          expect(error).toBeUndefined()
+          expect(Array.isArray(apps)).toBe(true)
+          expect(apps).toHaveLength(0)
+          resolve()
+        })
       })
     })
 
@@ -293,16 +265,12 @@ describe("initSocketService Integration Tests", () => {
         userSessionId: "non-existent-session",
       }
 
-      await new Promise<void>((resolve) => {
-        clientSocket.emit(
-          DA_DIRECTORY_LISTING,
-          listingArgs,
-          (apps: unknown, error?: string) => {
-            expect(apps).toBeNull()
-            expect(error).toBe("Session not found")
-            resolve()
-          },
-        )
+      await new Promise<void>(resolve => {
+        clientSocket.emit(DA_DIRECTORY_LISTING, listingArgs, (apps: unknown, error?: string) => {
+          expect(apps).toBeNull()
+          expect(error).toBe("Session not found")
+          resolve()
+        })
       })
     })
   })
@@ -325,7 +293,7 @@ describe("initSocketService Integration Tests", () => {
         contextHistory: {},
       }
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(DA_HELLO, helloArgs, () => {
           resolve()
         })
@@ -339,14 +307,10 @@ describe("initSocketService Integration Tests", () => {
         instanceTitle: "Channel Test App",
       }
 
-      instanceId = await new Promise<string>((resolve) => {
-        clientSocket.emit(
-          DA_REGISTER_APP_LAUNCH,
-          registerArgs,
-          (id: string) => {
-            resolve(id)
-          },
-        )
+      instanceId = await new Promise<string>(resolve => {
+        clientSocket.emit(DA_REGISTER_APP_LAUNCH, registerArgs, (id: string) => {
+          resolve(id)
+        })
       })
     })
 
@@ -356,7 +320,7 @@ describe("initSocketService Integration Tests", () => {
         instanceId: instanceId,
       }
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(
           CHANNEL_RECEIVER_HELLO,
           channelHelloArgs,
@@ -366,7 +330,7 @@ describe("initSocketService Integration Tests", () => {
             expect(update.tabs).toBeDefined()
             expect(Array.isArray(update.tabs)).toBe(true)
             resolve()
-          },
+          }
         )
       })
     })
@@ -377,7 +341,7 @@ describe("initSocketService Integration Tests", () => {
         instanceId: "non-existent-instance",
       }
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(
           CHANNEL_RECEIVER_HELLO,
           channelHelloArgs,
@@ -385,7 +349,7 @@ describe("initSocketService Integration Tests", () => {
             expect(update).toBeNull()
             expect(error).toBe("No app found")
             resolve()
-          },
+          }
         )
       })
     })
@@ -403,7 +367,7 @@ describe("initSocketService Integration Tests", () => {
         contextHistory: {},
       }
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(DA_HELLO, helloArgs, () => {
           expect(sessions.has(sessionId)).toBe(true)
           resolve()
@@ -413,7 +377,7 @@ describe("initSocketService Integration Tests", () => {
       clientSocket.disconnect()
 
       // Give it a moment to process the disconnect
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         setTimeout(() => {
           expect(sessions.has(sessionId)).toBe(false)
           resolve()

@@ -1,8 +1,4 @@
-import {
-  TabDetail,
-  Directory,
-  SailClientStateArgs,
-} from "@finos/fdc3-sail-shared"
+import { TabDetail, Directory, SailClientStateArgs } from "@finos/fdc3-sail-shared"
 import { Context } from "@finos/fdc3-context"
 import { DirectoryApp } from "@finos/fdc3-web-impl"
 import { AppPanel } from "./ui-types"

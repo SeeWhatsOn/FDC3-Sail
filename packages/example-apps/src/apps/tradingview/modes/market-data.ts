@@ -4,8 +4,7 @@ import { TradingViewMode } from "../common"
 
 export const marketDataMode: TradingViewMode = {
   name: "market-data",
-  script:
-    "https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js",
+  script: "https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js",
   innerHTML: (state: object) => `{
                         "symbolsGroups": [{
                                 "name": "Instruments",

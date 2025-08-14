@@ -17,7 +17,7 @@ export const connectClient = (client: Socket): Promise<void> => {
       resolve()
     })
 
-    client.once("connect_error", (error) => {
+    client.once("connect_error", error => {
       clearTimeout(timeout)
       reject(error)
     })
@@ -27,7 +27,7 @@ export const connectClient = (client: Socket): Promise<void> => {
 }
 
 export const disconnectClient = (client: Socket): Promise<void> => {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     client.once("disconnect", () => resolve())
     client.disconnect()
   })
@@ -36,7 +36,7 @@ export const disconnectClient = (client: Socket): Promise<void> => {
 export const waitForEvent = <T = unknown>(
   client: Socket,
   eventName: string,
-  timeout = 5000,
+  timeout = 5000
 ): Promise<T> => {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {

@@ -10,7 +10,7 @@ const MODES: PolygonMode[] = [newsMode]
 
 export const PolygonWidget = ({ mode }: { mode: string }) => {
   const container: any = useRef()
-  const modeProps = MODES.find((m) => m.name === mode) ?? MODES[0]
+  const modeProps = MODES.find(m => m.name === mode) ?? MODES[0]
 
   const [state, setState] = useState(modeProps.initialState)
   const [data, setData] = useState(modeProps.initialData)
@@ -25,9 +25,9 @@ export const PolygonWidget = ({ mode }: { mode: string }) => {
   }, [])
 
   useEffect(() => {
-    getAgent().then((fdc3) => {
-      modeProps.intents.forEach((intent) => {
-        fdc3.addIntentListener(intent.name, (context) => {
+    getAgent().then(fdc3 => {
+      modeProps.intents.forEach(intent => {
+        fdc3.addIntentListener(intent.name, context => {
           const newState = intent.function(context, state)
           setState(() => newState)
           console.log("new state", newState)
@@ -35,8 +35,8 @@ export const PolygonWidget = ({ mode }: { mode: string }) => {
       })
 
       setTimeout(() => {
-        modeProps.listeners.forEach((listener) => {
-          fdc3.addContextListener(listener.name, (context) => {
+        modeProps.listeners.forEach(listener => {
+          fdc3.addContextListener(listener.name, context => {
             const newState = listener.function(context, state)
             setState(() => newState)
             console.log("new state", newState)
@@ -49,7 +49,7 @@ export const PolygonWidget = ({ mode }: { mode: string }) => {
   useEffect(() => {
     if (apiKey) {
       const call = modeProps.endpoint(state, apiKey)
-      fetch(call).then(async (response) => {
+      fetch(call).then(async response => {
         console.log("CALLING POLYGON", response)
         const data = await response.json()
         console.log("data", data)
@@ -63,11 +63,7 @@ export const PolygonWidget = ({ mode }: { mode: string }) => {
       {modeProps.stateRenderer(state)}
       {modeProps.dataRenderer(data)}
       <div className="polygon-widget-copyright">
-        <a
-          href="https://www.polygon.io/"
-          rel="noopener nofollow"
-          target="_blank"
-        >
+        <a href="https://www.polygon.io/" rel="noopener nofollow" target="_blank">
           <span className="blue-text"> Powered by Polygon </span>
         </a>
       </div>

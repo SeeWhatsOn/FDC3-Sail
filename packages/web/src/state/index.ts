@@ -14,7 +14,6 @@ function ensureSetup() {
   theServerState = theServerState ?? new ServerStateImpl()
   theAppState = theAppState ?? new DefaultAppState()
   theClientState = theClientState ?? new LocalStorageClientState()
-
   ;(theClientState as LocalStorageClientState).init(theServerState)
   theServerState.init(theClientState, theAppState)
   theAppState.init(theServerState, theClientState)

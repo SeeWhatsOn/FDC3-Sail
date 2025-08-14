@@ -29,10 +29,7 @@ export default defineConfig({
         ...Object.fromEntries(
           glob
             .sync("html/**/*.html")
-            .map((file) => [
-              file.replace(/\.html$/, "").replace(/\//g, "-"),
-              file,
-            ]),
+            .map(file => [file.replace(/\.html$/, "").replace(/\//g, "-"), file])
         ),
       },
     },

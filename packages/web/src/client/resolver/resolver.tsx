@@ -1,10 +1,6 @@
 import { AppIdentifier, Context, Intent } from "@finos/fdc3"
 import { useState } from "react"
-import {
-  AugmentedAppIntent,
-  AugmentedAppMetadata,
-  TabDetail,
-} from "@finos/fdc3-sail-shared"
+import { AugmentedAppIntent, AugmentedAppMetadata, TabDetail } from "@finos/fdc3-sail-shared"
 
 import { Popup, PopupButton } from "../popups/popup"
 import { selectHighestContrast } from "../../util/contrast"
@@ -56,7 +52,7 @@ const LineItemComponent = ({
         src={icon}
         alt={text}
         className={styles.lineItemIcon}
-        onError={(x) => ((x.target as HTMLImageElement).src = DEFAULT_ICON)}
+        onError={x => ((x.target as HTMLImageElement).src = DEFAULT_ICON)}
       />
       <div className={styles.lineItemText}>{text}</div>
     </div>
@@ -70,13 +66,13 @@ function getFirstIcon(a: AugmentedAppMetadata): string {
 function relevantApps(
   a: AugmentedAppIntent,
   newApps: boolean,
-  currentChannel: string | null,
+  currentChannel: string | null
 ): AugmentedAppIntent | null {
   const out: AugmentedAppIntent = {
     intent: a.intent,
     apps: a.apps
-      .filter((x) => (newApps ? !x.instanceId : x.instanceId))
-      .filter((x) => {
+      .filter(x => (newApps ? !x.instanceId : x.instanceId))
+      .filter(x => {
         if (!newApps) {
           // only show apps that are in the current channel
           return x.channelData?.id === currentChannel
@@ -97,13 +93,13 @@ function firstApp(
   appIntents: AugmentedAppIntent[],
   intent: string,
   newApps: boolean,
-  currentChannel: string | null,
+  currentChannel: string | null
 ): AppIdentifier | null {
   const relevant = appIntents
-    .filter((a) => a.intent.name === intent)
-    .map((a) => relevantApps(a, newApps, currentChannel))
-    .filter((a) => a != null)
-    .flatMap((a) => a?.apps)
+    .filter(a => a.intent.name === intent)
+    .map(a => relevantApps(a, newApps, currentChannel))
+    .filter(a => a != null)
+    .flatMap(a => a?.apps)
 
   if (relevant.length == 0) {
     return null
@@ -118,60 +114,44 @@ function getAppTitle(app: AugmentedAppMetadata): string {
 
 function generateUniqueExistingAppIntents(
   appIntents: AugmentedAppIntent[],
-  currentChannel: string | null,
+  currentChannel: string | null
 ): Intent[] {
   return appIntents
-    .filter((a) => relevantApps(a, false, currentChannel) != null)
-    .map((a) => a.intent.name)
+    .filter(a => relevantApps(a, false, currentChannel) != null)
+    .map(a => a.intent.name)
     .filter((v, i, a) => a.indexOf(v) === i)
     .sort()
 }
 
 function generateUniqueNewAppIntents(
   appIntents: AugmentedAppIntent[],
-  currentChannel: string | null,
+  currentChannel: string | null
 ): Intent[] {
   return appIntents
-    .filter((a) => relevantApps(a, true, currentChannel) != null)
-    .map((a) => a.intent.name)
+    .filter(a => relevantApps(a, true, currentChannel) != null)
+    .map(a => a.intent.name)
     .filter((v, i, a) => a.indexOf(v) === i)
     .sort()
 }
 
 function generateStartState(
   appIntents: AugmentedAppIntent[],
-  currentChannel: string | null,
+  currentChannel: string | null
 ): State {
-  const uniqueExistingAppIntents = generateUniqueExistingAppIntents(
-    appIntents,
-    currentChannel,
-  )
-  const uniqueNewAppIntents = generateUniqueNewAppIntents(
-    appIntents,
-    currentChannel,
-  )
+  const uniqueExistingAppIntents = generateUniqueExistingAppIntents(appIntents, currentChannel)
+  const uniqueNewAppIntents = generateUniqueNewAppIntents(appIntents, currentChannel)
 
   const startState: State =
     uniqueExistingAppIntents.length > 0
       ? {
           newApps: false,
-          chosenApp: firstApp(
-            appIntents,
-            uniqueExistingAppIntents[0],
-            false,
-            currentChannel,
-          ),
+          chosenApp: firstApp(appIntents, uniqueExistingAppIntents[0], false, currentChannel),
           chosenIntent: uniqueExistingAppIntents[0],
           channelId: currentChannel,
         }
       : {
           newApps: true,
-          chosenApp: firstApp(
-            appIntents,
-            uniqueNewAppIntents[0],
-            true,
-            currentChannel,
-          ),
+          chosenApp: firstApp(appIntents, uniqueNewAppIntents[0], true, currentChannel),
           chosenIntent: uniqueNewAppIntents[0],
           channelId: currentChannel,
         }
@@ -194,28 +174,20 @@ export const ResolverPanel = ({
   chooseAction: (
     chosenApp: AppIdentifier | null,
     chosenIntent: string | null,
-    chosenChannel: string | null,
+    chosenChannel: string | null
   ) => void
 }) => {
   const [state, setState]: [State, (x: State) => void] = useState(
-    generateStartState(appIntents, currentChannel),
+    generateStartState(appIntents, currentChannel)
   )
 
   const uniqueChannelDetails = [...new Set(channelDetails)]
 
-  const uniqueExistingAppIntents = generateUniqueExistingAppIntents(
-    appIntents,
-    state.channelId,
-  )
+  const uniqueExistingAppIntents = generateUniqueExistingAppIntents(appIntents, state.channelId)
 
-  const uniqueNewAppIntents = generateUniqueNewAppIntents(
-    appIntents,
-    state.channelId,
-  )
+  const uniqueNewAppIntents = generateUniqueNewAppIntents(appIntents, state.channelId)
 
-  const intentsToUse = state.newApps
-    ? uniqueNewAppIntents
-    : uniqueExistingAppIntents
+  const intentsToUse = state.newApps ? uniqueNewAppIntents : uniqueExistingAppIntents
 
   return (
     <Popup
@@ -258,7 +230,7 @@ export const ResolverPanel = ({
           </div>
           <div className={styles.resolverPanesContainer}>
             <div className={styles.resolverPane}>
-              {uniqueChannelDetails.map((c) => (
+              {uniqueChannelDetails.map(c => (
                 <LineItemComponent
                   key={c.id}
                   li={c}
@@ -294,14 +266,14 @@ export const ResolverPanel = ({
               />
             </div>
             <div className={styles.resolverPane}>
-              {intentsToUse.map((i) => (
+              {intentsToUse.map(i => (
                 <LineItemComponent
                   key={i}
                   li={i}
                   icon={"/icons/control/intent.svg"}
                   background={null}
                   text={i}
-                  setState={(a) => {
+                  setState={a => {
                     if (state.chosenIntent != i) {
                       setState({
                         newApps: state.newApps,
@@ -311,27 +283,25 @@ export const ResolverPanel = ({
                       })
                     }
                   }}
-                  isSelected={(a) => a === state.chosenIntent}
+                  isSelected={a => a === state.chosenIntent}
                 />
               ))}
             </div>
             <div className={styles.resolverPane}>
               {appIntents
-                .filter((a) => a.intent.name === state.chosenIntent)
-                .map((ai) => relevantApps(ai, state.newApps, state.channelId))
-                .filter((a) => a != null)
-                .flatMap((a) => a?.apps)
-                .map((i) => (
+                .filter(a => a.intent.name === state.chosenIntent)
+                .map(ai => relevantApps(ai, state.newApps, state.channelId))
+                .filter(a => a != null)
+                .flatMap(a => a?.apps)
+                .map(i => (
                   <LineItemComponent
                     key={i.appId + i.instanceId}
                     li={i}
                     text={getAppTitle(i)}
                     icon={getFirstIcon(i)}
                     background={null}
-                    setState={(a) =>
-                      setState({ ...state, chosenApp: a as AppIdentifier })
-                    }
-                    isSelected={(a) => a === state.chosenApp}
+                    setState={a => setState({ ...state, chosenApp: a as AppIdentifier })}
+                    isSelected={a => a === state.chosenApp}
                   />
                 ))}
             </div>

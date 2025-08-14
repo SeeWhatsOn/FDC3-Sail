@@ -4,8 +4,7 @@ import { TradingViewMode } from "../common"
 
 export const chartMode: TradingViewMode = {
   name: "Chart",
-  script:
-    "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js",
+  script: "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js",
   innerHTML: (state: object) => `{
           "autosize": true,
           "symbol": "NASDAQ:${state}",

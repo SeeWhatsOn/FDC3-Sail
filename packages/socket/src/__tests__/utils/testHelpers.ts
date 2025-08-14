@@ -22,8 +22,8 @@ export function validateTestDataFiles(files: string[]): void {
 
   if (missingFiles.length > 0) {
     throw new Error(
-      `Test data files missing:\n${missingFiles.map((f) => `  - ${f}`).join("\n")}\n` +
-        "Please ensure all test data files are present before running tests.",
+      `Test data files missing:\n${missingFiles.map(f => `  - ${f}`).join("\n")}\n` +
+        "Please ensure all test data files are present before running tests."
     )
   }
 }
@@ -41,7 +41,7 @@ export async function waitForCondition(
     timeout?: number
     interval?: number
     description?: string
-  } = {},
+  } = {}
 ): Promise<void> {
   const startTime = Date.now()
 
@@ -50,7 +50,7 @@ export async function waitForCondition(
     if (result) {
       return
     }
-    await new Promise((resolve) => setTimeout(resolve, interval))
+    await new Promise(resolve => setTimeout(resolve, interval))
   }
 
   throw new Error(`Timeout waiting for ${description} after ${timeout}ms`)
@@ -61,7 +61,7 @@ export async function waitForCondition(
  */
 export function createTestPromise<T>(
   description: string,
-  timeoutMs = 10000,
+  timeoutMs = 10000
 ): {
   promise: Promise<T>
   resolve: (value: T) => void
@@ -76,11 +76,7 @@ export function createTestPromise<T>(
 
     // Add timeout
     setTimeout(() => {
-      reject(
-        new Error(
-          `Test promise "${description}" timed out after ${timeoutMs}ms`,
-        ),
-      )
+      reject(new Error(`Test promise "${description}" timed out after ${timeoutMs}ms`))
     }, timeoutMs)
   })
 
@@ -103,17 +99,17 @@ export class SocketTestHelper {
 
   async cleanup(): Promise<void> {
     await Promise.all(
-      this.sockets.map(async (socket) => {
+      this.sockets.map(async socket => {
         try {
           if (socket.connected) {
             socket.disconnect()
           }
           // Wait for disconnect to complete
-          await new Promise((resolve) => setTimeout(resolve, 50))
+          await new Promise(resolve => setTimeout(resolve, 50))
         } catch (error) {
           console.warn("Error cleaning up socket:", error)
         }
-      }),
+      })
     )
     this.sockets = []
   }

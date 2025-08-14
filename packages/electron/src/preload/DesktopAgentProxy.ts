@@ -35,25 +35,15 @@ export const fdc3 = {
     return Promise.resolve(this._agent)
   },
 
-  async open(
-    appOrName: AppIdentifier | string,
-    context?: Context,
-  ): Promise<AppIdentifier> {
+  async open(appOrName: AppIdentifier | string, context?: Context): Promise<AppIdentifier> {
     return (await this.getAgent()).open(appOrName as AppIdentifier, context)
   },
 
-  async findIntent(
-    intent: Intent,
-    context?: Context,
-    resultType?: string,
-  ): Promise<AppIntent> {
+  async findIntent(intent: Intent, context?: Context, resultType?: string): Promise<AppIntent> {
     return (await this.getAgent()).findIntent(intent, context, resultType)
   },
 
-  async findIntentsByContext(
-    context: Context,
-    resultType?: string,
-  ): Promise<Array<AppIntent>> {
+  async findIntentsByContext(context: Context, resultType?: string): Promise<Array<AppIntent>> {
     return (await this.getAgent()).findIntentsByContext(context, resultType)
   },
 
@@ -65,45 +55,23 @@ export const fdc3 = {
     return (await this.getAgent()).broadcast(context)
   },
 
-  async raiseIntent(
-    intent: Intent,
-    context: Context,
-    name?: string,
-  ): Promise<IntentResolution> {
+  async raiseIntent(intent: Intent, context: Context, name?: string): Promise<IntentResolution> {
     return (await this.getAgent()).raiseIntent(intent, context, name as string)
   },
 
-  async raiseIntentForContext(
-    context: Context,
-    name?: string,
-  ): Promise<IntentResolution> {
-    return (await this.getAgent()).raiseIntentForContext(
-      context,
-      name as string,
-    )
+  async raiseIntentForContext(context: Context, name?: string): Promise<IntentResolution> {
+    return (await this.getAgent()).raiseIntentForContext(context, name as string)
   },
 
-  async addIntentListener(
-    intent: Intent,
-    handler: IntentHandler,
-  ): Promise<Listener> {
+  async addIntentListener(intent: Intent, handler: IntentHandler): Promise<Listener> {
     return (await this.getAgent()).addIntentListener(intent, handler)
   },
 
-  async addContextListener(
-    contextType: ContextType,
-    handler?: ContextHandler,
-  ): Promise<Listener> {
-    return (await this.getAgent()).addContextListener(
-      contextType,
-      handler as ContextHandler,
-    )
+  async addContextListener(contextType: ContextType, handler?: ContextHandler): Promise<Listener> {
+    return (await this.getAgent()).addContextListener(contextType, handler as ContextHandler)
   },
 
-  async addEventListener(
-    type: FDC3EventTypes | null,
-    handler: EventHandler,
-  ): Promise<Listener> {
+  async addEventListener(type: FDC3EventTypes | null, handler: EventHandler): Promise<Listener> {
     return (await this.getAgent()).addEventListener(type, handler)
   },
 

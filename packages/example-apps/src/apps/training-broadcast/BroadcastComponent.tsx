@@ -19,13 +19,11 @@ export const BroadcastComponent = () => {
 
   useEffect(() => {
     console.log("starting...")
-    getAgent().then((agent) => {
+    getAgent().then(agent => {
       console.log("got api...")
       setFdc3(agent)
       handleChannelChanged(agent)
-      agent.addEventListener("userChannelChanged", () =>
-        handleChannelChanged(agent),
-      )
+      agent.addEventListener("userChannelChanged", () => handleChannelChanged(agent))
     })
   }, [])
 
@@ -52,13 +50,11 @@ export const BroadcastComponent = () => {
     <div className={styles.broadcastComponent}>
       <h2>Broadcast Component</h2>
       <div className={styles.channelList}>
-        {channelList.map((channel) => (
+        {channelList.map(channel => (
           <div
             key={channel.id}
             className={styles.channelItem}
-            style={
-              channel.id == currentChannel ? { backgroundColor: "green" } : {}
-            }
+            style={channel.id == currentChannel ? { backgroundColor: "green" } : {}}
           >
             {channel.id}
           </div>

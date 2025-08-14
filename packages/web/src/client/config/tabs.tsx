@@ -6,7 +6,6 @@ import { Icon } from "../icon/icon"
 import styles from "./styles.module.css"
 import { InlineButton } from "./shared"
 
-
 const ICON_PATH = "/icons/tabs/"
 
 const BUILT_IN_TABS: string[] = [
@@ -42,10 +41,7 @@ const BACKGROUND_COLOURS = [
 ]
 
 function newIconUrl(): string {
-  return (
-    ICON_PATH +
-    BUILT_IN_TABS[getClientState().getTabs().length % BUILT_IN_TABS.length]
-  )
+  return ICON_PATH + BUILT_IN_TABS[getClientState().getTabs().length % BUILT_IN_TABS.length]
 }
 
 function newTabTitle(): string {
@@ -53,7 +49,7 @@ function newTabTitle(): string {
   while (
     getClientState()
       .getTabs()
-      .find((t) => t.id == "New Tab " + i)
+      .find(t => t.id == "New Tab " + i)
   ) {
     i++
   }
@@ -61,23 +57,21 @@ function newTabTitle(): string {
 }
 
 function newBackgroundColour(): string {
-  return BACKGROUND_COLOURS[
-    getClientState().getTabs().length % BACKGROUND_COLOURS.length
-  ]
+  return BACKGROUND_COLOURS[getClientState().getTabs().length % BACKGROUND_COLOURS.length]
 }
 
 function hasApps(id: string): boolean {
   return (
     getClientState()
       .getPanels()
-      .find((p) => p.tabId == id) != null
+      .find(p => p.tabId == id) != null
   )
 }
 
 function updateBackground(id: string, background: string) {
   const tab = getClientState()
     .getTabs()
-    .find((t) => t.id == id)!
+    .find(t => t.id == id)!
   tab.background = background
   void getClientState().updateTab(tab)
 }
@@ -85,7 +79,7 @@ function updateBackground(id: string, background: string) {
 function updateTitle(id: string, text: string) {
   const tab = getClientState()
     .getTabs()
-    .find((t) => t.id == id)!
+    .find(t => t.id == id)!
   tab.id = text
   void getClientState().updateTab(tab)
 }
@@ -93,7 +87,7 @@ function updateTitle(id: string, text: string) {
 function updateIconUrl(id: string, url: string) {
   const tab = getClientState()
     .getTabs()
-    .find((t) => t.id == id)!
+    .find(t => t.id == id)!
   tab.icon = url
   void getClientState().updateTab(tab)
 }
@@ -111,7 +105,7 @@ function removeTab(is: string) {
   if (
     getClientState()
       .getPanels()
-      .find((p) => p.tabId == is)
+      .find(p => p.tabId == is)
   ) {
     alert("Cannot remove a tab -  close the applications on it first")
     return
@@ -143,21 +137,21 @@ const TabItem = ({ d }: { d: TabDetail }) => {
           className={styles.colour}
           type="color"
           value={d.background}
-          onChange={(e) => updateBackground(d.id, e.currentTarget.value)}
+          onChange={e => updateBackground(d.id, e.currentTarget.value)}
         />
       </div>
       <div className={styles.verticalControlsGrow}>
         <div
           className={styles.name}
           contentEditable={!hasApps(d.id)}
-          onBlur={(e) => updateTitle(d.id, e.currentTarget.textContent!)}
+          onBlur={e => updateTitle(d.id, e.currentTarget.textContent!)}
         >
           {d.id}
         </div>
         <div
           className={styles.url}
           contentEditable={true}
-          onBlur={(e) => updateIconUrl(d.id, e.currentTarget.textContent!)}
+          onBlur={e => updateIconUrl(d.id, e.currentTarget.textContent!)}
         >
           {d.icon}
         </div>
@@ -200,7 +194,7 @@ export const TabList = () => {
     <div className={styles.list}>
       {getClientState()
         .getTabs()
-        .map((d) => (
+        .map(d => (
           <TabItem key={d.id} d={d} />
         ))}
       <AddButton

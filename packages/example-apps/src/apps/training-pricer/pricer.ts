@@ -19,7 +19,7 @@ function calculateInitialPrice(ticker: string): number {
   return (
     (ticker
       .split("")
-      .map((c) => c.charCodeAt(0))
+      .map(c => c.charCodeAt(0))
       .reduce((a, b) => a + b * 7, 0) %
       5000) /
     100
@@ -52,7 +52,7 @@ function redrawChooser() {
     select.removeChild(select.lastElementChild)
   }
 
-  prices.forEach((p) => {
+  prices.forEach(p => {
     const option = document.createElement("option")
     option.selected = p === onScreenPrice
     option.textContent = p.ticker
@@ -84,7 +84,7 @@ function redrawPrice() {
 }
 
 function recalculate() {
-  prices.forEach((p) => {
+  prices.forEach(p => {
     const oldPrice = p.price
     const oldPriceStr = (Math.round(oldPrice * 100) / 100).toFixed(2)
     const change = 0.01 * (0.5 - Math.random())
@@ -92,11 +92,7 @@ function recalculate() {
     const newPriceStr = (Math.round(newPrice * 100) / 100).toFixed(2)
 
     const direction =
-      newPriceStr == oldPriceStr
-        ? Direction.NONE
-        : change > 0
-          ? Direction.UP
-          : Direction.DOWN
+      newPriceStr == oldPriceStr ? Direction.NONE : change > 0 ? Direction.UP : Direction.DOWN
     p.price = newPrice
     p.direction = direction
   })
@@ -110,7 +106,7 @@ setInterval(() => {
 
 function getPrice(ticker: string): Price {
   // first, check for an existing price
-  let price = prices.find((p) => p.ticker === ticker)
+  let price = prices.find(p => p.ticker === ticker)
   if (price === undefined) {
     price = {
       ticker,
@@ -145,16 +141,16 @@ window.addEventListener("load", () => {
   })
 })
 
-getAgent().then((fdc3) => {
+getAgent().then(fdc3 => {
   // training 1
-  fdc3.addContextListener("fdc3.instrument", (instrument) => {
+  fdc3.addContextListener("fdc3.instrument", instrument => {
     if (instrument?.id?.ticker) {
       changePrice(instrument.id.ticker)
     }
   })
 
   // training 3
-  fdc3.addIntentListener("ViewQuote", (instrument) => {
+  fdc3.addIntentListener("ViewQuote", instrument => {
     if (instrument?.id?.ticker) {
       changePrice(instrument.id.ticker)
     }

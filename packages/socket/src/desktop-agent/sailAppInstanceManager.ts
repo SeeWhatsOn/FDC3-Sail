@@ -162,10 +162,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    * @returns Promise resolving to the new instance ID
    * @throws Error if app is not found or has no URL
    */
-  async openAppInSail(
-    appId: string,
-    channel: string | null,
-  ): Promise<InstanceID> {
+  async openAppInSail(appId: string, channel: string | null): Promise<InstanceID> {
     const applications = this.directory.retrieveAppsById(appId)
 
     if (applications.length === 0) {
@@ -179,20 +176,15 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
       throw new Error(OpenError.AppNotFound)
     }
 
-    const forceNewWindow = (
-      firstApp.hostManifests as { sail?: { forceNewWindow?: boolean } }
-    )?.sail?.forceNewWindow
-    const hosting =
-      forceNewWindow || channel === null ? AppHosting.Tab : AppHosting.Frame
+    const forceNewWindow = (firstApp.hostManifests as { sail?: { forceNewWindow?: boolean } })?.sail
+      ?.forceNewWindow
+    const hosting = forceNewWindow || channel === null ? AppHosting.Tab : AppHosting.Frame
 
-    const openResponse = (await this.socket.emitWithAck(
-      AppManagementMessages.SAIL_APP_OPEN,
-      {
-        appDRecord: firstApp,
-        approach: hosting,
-        channel,
-      } as SailAppOpenArgs,
-    )) as SailAppOpenResponse
+    const openResponse = (await this.socket.emitWithAck(AppManagementMessages.SAIL_APP_OPEN, {
+      appDRecord: firstApp,
+      approach: hosting,
+      channel,
+    } as SailAppOpenArgs)) as SailAppOpenResponse
 
     const sailData: SailData = {
       appId,
@@ -220,7 +212,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    * @returns The matching SailData instance or undefined if not found
    */
   private findInstanceById(instanceId: InstanceID): SailData | undefined {
-    return this.instances.find((instance) => instance.instanceId === instanceId)
+    return this.instances.find(instance => instance.instanceId === instanceId)
   }
 
   /**
@@ -233,9 +225,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
       console.error("UUID mismatch", uuid, details.instanceId)
     }
 
-    const instanceIndex = this.instances.findIndex(
-      (instance) => instance.instanceId === uuid,
-    )
+    const instanceIndex = this.instances.findIndex(instance => instance.instanceId === uuid)
     if (instanceIndex >= 0) {
       this.instances[instanceIndex] = details
     } else {
@@ -257,10 +247,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    * @param app - The app identifier containing instance ID
    */
   async setInitialChannel(app: AppIdentifier): Promise<void> {
-    await this.socket.emitWithAck(
-      ChannelMessages.SAIL_CHANNEL_SETUP,
-      app.instanceId,
-    )
+    await this.socket.emitWithAck(ChannelMessages.SAIL_CHANNEL_SETUP, app.instanceId)
   }
 
   /**
@@ -269,7 +256,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    */
   async getConnectedApps(): Promise<AppRegistration[]> {
     const allApps = await this.getAllApps()
-    return allApps.filter((app) => app.state === State.Connected)
+    return allApps.filter(app => app.state === State.Connected)
   }
 
   /**
@@ -279,9 +266,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    */
   async isAppConnected(instanceId: InstanceID): Promise<boolean> {
     const allApps = await this.getAllApps()
-    return allApps.some(
-      (app) => app.instanceId === instanceId && app.state === State.Connected,
-    )
+    return allApps.some(app => app.instanceId === instanceId && app.state === State.Connected)
   }
 
   /**
@@ -290,17 +275,14 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    * @param state - The new state to set
    */
   async setAppState(instanceId: InstanceID, state: State): Promise<void> {
-    const instanceIndex = this.instances.findIndex(
-      (instance) => instance.instanceId === instanceId,
-    )
+    const instanceIndex = this.instances.findIndex(instance => instance.instanceId === instanceId)
 
     if (instanceIndex === -1) {
       return
     }
 
     const instance = this.instances[instanceIndex]
-    const needsInitialChannelSetup =
-      instance.state === State.Pending && state === State.Connected
+    const needsInitialChannelSetup = instance.state === State.Pending && state === State.Connected
 
     // Create updated instance with new state
     const updatedInstance: SailData = { ...instance, state }
@@ -322,11 +304,11 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    */
   async getAllApps(): Promise<AppRegistration[]> {
     return Promise.resolve(
-      this.instances.map((instance) => ({
+      this.instances.map(instance => ({
         appId: instance.appId,
         instanceId: instance.instanceId,
         state: instance.state,
-      })),
+      }))
     )
   }
 
@@ -389,9 +371,9 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    * @returns Augmented app intents with additional metadata
    */
   enrichIntentsWithMetadata(appIntents: AppIntent[]): AugmentedAppIntent[] {
-    return appIntents.map((appIntent) => ({
+    return appIntents.map(appIntent => ({
       intent: appIntent.intent,
-      apps: appIntent.apps.map((app) => {
+      apps: appIntent.apps.map(app => {
         const directoryApps = this.directory.retrieveAppsById(app.appId)
         const directoryApp = directoryApps[0]
         const iconSrc = getIcon(directoryApp)
@@ -406,7 +388,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
         if (app.instanceId) {
           const instance = this.getInstanceDetails(app.instanceId)
           const channels = this.getChannelDetails()
-          const channel = channels.find((c) => c.id === instance?.channel)
+          const channel = channels.find(c => c.id === instance?.channel)
 
           return {
             ...baseAppMetadata,
@@ -423,17 +405,12 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
   /**
    * Helper methods for intent narrowing
    */
-  private countRunningAppsInChannel(
-    appIntent: AugmentedAppIntent,
-    channel: string | null,
-  ): number {
-    return appIntent.apps.filter(
-      (app) => app.instanceId && app.channelData?.id === channel,
-    ).length
+  private countRunningAppsInChannel(appIntent: AugmentedAppIntent, channel: string | null): number {
+    return appIntent.apps.filter(app => app.instanceId && app.channelData?.id === channel).length
   }
 
   private countUniqueApps(appIntent: AppIntent): number {
-    const uniqueAppIds = new Set(appIntent.apps.map((app) => app.appId))
+    const uniqueAppIds = new Set(appIntent.apps.map(app => app.appId))
     return uniqueAppIds.size
   }
 
@@ -456,9 +433,9 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
 
   private async handleIntentResolverPromise(
     enrichedIntents: AugmentedAppIntent[],
-    context: Context,
+    context: Context
   ): Promise<AppIntent[]> {
-    return new Promise<AppIntent[]>((resolve) => {
+    return new Promise<AppIntent[]>(resolve => {
       console.log("SAIL Narrowing intents", enrichedIntents, context)
 
       this.socket.emit(
@@ -485,7 +462,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
           }
 
           resolve(response.appIntents)
-        },
+        }
       )
     })
   }
@@ -501,7 +478,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
   async narrowIntents(
     raiser: AppIdentifier,
     incomingIntents: AppIntent[],
-    context: Context,
+    context: Context
   ): Promise<AppIntent[]> {
     const enrichedIntents = this.enrichIntentsWithMetadata(incomingIntents)
 
@@ -516,22 +493,13 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
     }
 
     // Single intent with single app - check if we need to start or raise
-    if (
-      enrichedIntents.length === 1 &&
-      this.countUniqueApps(enrichedIntents[0]) === 1
-    ) {
+    if (enrichedIntents.length === 1 && this.countUniqueApps(enrichedIntents[0]) === 1) {
       const raiserChannel = this.getRaiserChannel(raiser)
-      const runningApps = this.countRunningAppsInChannel(
-        enrichedIntents[0],
-        raiserChannel,
-      )
+      const runningApps = this.countRunningAppsInChannel(enrichedIntents[0], raiserChannel)
 
       if (runningApps === 0) {
         // Start a new app in the same channel as the raiser
-        this.appStartDestinations.set(
-          enrichedIntents[0].apps[0].appId,
-          raiserChannel,
-        )
+        this.appStartDestinations.set(enrichedIntents[0].apps[0].appId, raiserChannel)
         return enrichedIntents
       } else if (runningApps === 1) {
         // Raise the existing app
@@ -566,17 +534,12 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    * @param instanceId - The instance ID to notify
    * @param channelId - The new channel ID (null for no channel)
    */
-  async notifyUserChannelsChanged(
-    instanceId: string,
-    channelId: string | null,
-  ): Promise<void> {
+  async notifyUserChannelsChanged(instanceId: string, channelId: string | null): Promise<void> {
     console.log("SAIL User channels changed", instanceId, channelId)
     const instance = this.getInstanceDetails(instanceId)
 
     if (!instance) {
-      console.warn(
-        `Cannot notify channel change - instance ${instanceId} not found`,
-      )
+      console.warn(`Cannot notify channel change - instance ${instanceId} not found`)
       return
     }
 
@@ -603,12 +566,9 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    * @param urls - Array of directory URLs to load
    * @param customApps - Array of custom apps to add
    */
-  async reloadAppDirectories(
-    urls: string[],
-    customApps: DirectoryApp[],
-  ): Promise<void> {
+  async reloadAppDirectories(urls: string[], customApps: DirectoryApp[]): Promise<void> {
     await this.directory.replace(urls)
-    customApps.forEach((customApp) => this.directory.add(customApp))
+    customApps.forEach(customApp => this.directory.add(customApp))
   }
 
   /**
@@ -629,9 +589,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    * @returns Array of tab details for all channels
    */
   getTabs(): TabDetail[] {
-    return this.getChannelDetails().map((channel) =>
-      this.convertToTabDetail(channel),
-    )
+    return this.getChannelDetails().map(channel => this.convertToTabDetail(channel))
   }
 
   /**
@@ -642,7 +600,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
    */
   private getRelevantHistory(
     channelId: string,
-    contextHistory?: ContextHistory,
+    contextHistory?: ContextHistory
   ): Context[] | undefined {
     if (!contextHistory || !contextHistory[channelId]) {
       return undefined
@@ -651,9 +609,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
     const channelHistory = contextHistory[channelId]
     const uniqueContexts = channelHistory.filter(
       (context, index, array) =>
-        array.findIndex(
-          (otherContext) => otherContext.type === context.type,
-        ) === index,
+        array.findIndex(otherContext => otherContext.type === context.type) === index
     )
 
     return uniqueContexts
@@ -670,10 +626,8 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
     // Clear existing channel state
     currentChannelStates.length = 0
 
-    const newChannelStates = mapChannels(channelData).map((channel) => {
-      const existingChannel = currentChannelStates.find(
-        (cs) => cs.id === channel.id,
-      )
+    const newChannelStates = mapChannels(channelData).map(channel => {
+      const existingChannel = currentChannelStates.find(cs => cs.id === channel.id)
       const contextFromHistory = this.getRelevantHistory(channel.id, history)
 
       return {

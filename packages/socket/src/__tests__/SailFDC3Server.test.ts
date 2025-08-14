@@ -25,16 +25,13 @@ describe("SailFDC3Server", () => {
       transports: ["websocket"],
     })
 
-    await new Promise<void>((resolve) => {
+    await new Promise<void>(resolve => {
       clientSocket.on("connect", resolve)
     })
 
     // Create real instances with actual test data files
     directory = new AppDirectoryManager()
-    serverContext = new SailAppInstanceManager(
-      directory,
-      clientSocket as unknown as Socket,
-    )
+    serverContext = new SailAppInstanceManager(directory, clientSocket as unknown as Socket)
 
     helloArgs = {
       userSessionId: "test-session-123",
@@ -112,16 +109,16 @@ describe("SailFDC3Server", () => {
       expect(server.serverContext).toBe(serverContext)
 
       // Wait for directory loading to complete
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 100))
 
       // Verify apps were loaded from real JSON files
       const apps = server.getDirectory().retrieveAllApps()
       expect(apps.length).toBeGreaterThan(0)
 
       // Check that we have apps from both files
-      const webApps = apps.filter((app) => app.type === "web")
-      const nativeApps = apps.filter((app) => app.type === "native")
-      const citrixApps = apps.filter((app) => app.type === "citrix")
+      const webApps = apps.filter(app => app.type === "web")
+      const nativeApps = apps.filter(app => app.type === "native")
+      const citrixApps = apps.filter(app => app.type === "citrix")
 
       expect(webApps.length).toBeGreaterThan(0)
       expect(nativeApps.length).toBeGreaterThan(0)
@@ -151,7 +148,7 @@ describe("SailFDC3Server", () => {
       expect(server).toBeInstanceOf(SailFDC3Server)
 
       // Wait and verify no apps were loaded
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 100))
       const apps = server.getDirectory().retrieveAllApps()
       expect(apps).toHaveLength(0)
     })
@@ -181,20 +178,19 @@ describe("SailFDC3Server", () => {
     it("should load and validate realistic FDC3 app data", async () => {
       const server = new SailFDC3Server(serverContext, helloArgs)
 
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 100))
       const apps = server.getDirectory().retrieveAllApps()
 
       // Find specific test apps we created
       const marketTerminal: DirectoryApp | undefined = apps.find(
-        (app) => app.appId === "market-terminal",
+        app => app.appId === "market-terminal"
       )
-      const excelAddin = apps.find((app) => app.appId === "excel-addin")
+      const excelAddin = apps.find(app => app.appId === "excel-addin")
 
       expect(marketTerminal).toBeDefined()
-      expect(
-        marketTerminal?.interop?.intents?.listensFor?.["ViewInstrument"]
-          ?.contexts,
-      ).toContain("fdc3.instrument")
+      expect(marketTerminal?.interop?.intents?.listensFor?.["ViewInstrument"]?.contexts).toContain(
+        "fdc3.instrument"
+      )
 
       expect(excelAddin).toBeDefined()
       expect(excelAddin?.type).toBe("native")
@@ -204,19 +200,15 @@ describe("SailFDC3Server", () => {
     it("should handle apps with different intent configurations", async () => {
       const server = new SailFDC3Server(serverContext, helloArgs)
 
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 100))
       const apps = server.getDirectory().retrieveAllApps()
 
       // Check variety of intent support
-      const appsWithViewInstrument = apps.filter((app) =>
-        app?.interop?.intents?.listensFor?.[
-          "ViewInstrument"
-        ]?.contexts?.includes("fdc3.instrument"),
+      const appsWithViewInstrument = apps.filter(app =>
+        app?.interop?.intents?.listensFor?.["ViewInstrument"]?.contexts?.includes("fdc3.instrument")
       )
-      const appsWithViewPortfolio = apps.filter((app) =>
-        app?.interop?.intents?.listensFor?.[
-          "ViewPortfolio"
-        ]?.contexts?.includes("fdc3.portfolio"),
+      const appsWithViewPortfolio = apps.filter(app =>
+        app?.interop?.intents?.listensFor?.["ViewPortfolio"]?.contexts?.includes("fdc3.portfolio")
       )
 
       expect(appsWithViewInstrument.length).toBeGreaterThan(1)

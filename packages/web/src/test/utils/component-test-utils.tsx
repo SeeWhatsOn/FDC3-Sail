@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event"
 // Custom render function that can be extended with providers later
 const customRender = (
   ui: ReactElement,
-  options?: Omit<RenderOptions, "wrapper">,
+  options?: Omit<RenderOptions, "wrapper">
 ): RenderResult & { user: ReturnType<typeof userEvent.setup> } => {
   const user = userEvent.setup()
 

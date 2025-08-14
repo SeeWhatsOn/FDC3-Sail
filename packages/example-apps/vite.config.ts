@@ -7,7 +7,7 @@ import fs from "fs"
 const appsDir = resolve(__dirname, "src/apps")
 const apps = fs
   .readdirSync(appsDir)
-  .filter((file) => fs.statSync(resolve(appsDir, file)).isDirectory())
+  .filter(file => fs.statSync(resolve(appsDir, file)).isDirectory())
 
 // Create the Rollup input object for multiple HTML entry points
 const input = apps.reduce((acc, app) => {
@@ -25,7 +25,7 @@ export default defineConfig({
       name: "html-output-control",
       enforce: "post", // Run after other build plugins
       generateBundle(_, bundle) {
-        Object.keys(bundle).forEach((key) => {
+        Object.keys(bundle).forEach(key => {
           const chunk = bundle[key]
           // Target HTML assets generated from the entry points
           if (

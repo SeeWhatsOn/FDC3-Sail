@@ -43,11 +43,10 @@ export class ServerStateImpl implements ServerState {
     }
 
     const userSessionId = this.cs!.getUserSessionID()
-    const response = (await this.socket.emitWithAck(
-      AppManagementMessages.DA_DIRECTORY_LISTING,
-      { userSessionId } as DesktopAgentDirectoryListingArgs,
-    )) as DirectoryApp[]
-    this.cs!.setKnownApps(response).catch((e) => {
+    const response = (await this.socket.emitWithAck(AppManagementMessages.DA_DIRECTORY_LISTING, {
+      userSessionId,
+    } as DesktopAgentDirectoryListingArgs)) as DirectoryApp[]
+    this.cs!.setKnownApps(response).catch(e => {
       console.error("Error setting known apps", e)
     })
     return response
@@ -57,7 +56,7 @@ export class ServerStateImpl implements ServerState {
     appId: string,
     hosting: AppHosting,
     channel: string | null,
-    instanceTitle: string,
+    instanceTitle: string
   ): Promise<string> {
     if (!this.socket) {
       throw new Error("Desktop Agent not registered")
@@ -72,7 +71,7 @@ export class ServerStateImpl implements ServerState {
         hosting,
         channel,
         instanceTitle,
-      } as DesktopAgentRegisterAppLaunchArgs,
+      } as DesktopAgentRegisterAppLaunchArgs
     )) as string
     return instanceId
   }
@@ -96,57 +95,40 @@ export class ServerStateImpl implements ServerState {
           .then(async () => {
             await this.getApplications()
           })
-          .catch((e) => {
+          .catch(e => {
             console.error("Error sending client state", e)
           })
       })
 
       this.socket?.on(
         AppManagementMessages.SAIL_APP_OPEN,
-        async (
-          data: SailAppOpenArgs,
-          callback: (response: SailAppOpenResponse) => void,
-        ) => {
+        async (data: SailAppOpenArgs, callback: (response: SailAppOpenResponse) => void) => {
           //console.log(`SAIL_APP_OPEN: ${JSON.stringify(data)}`)
           if (data.channel) {
             // opening in a panel inside sail
             await this.cs?.setActiveTabId(data.channel)
-            const openDetails = await this.as!.open(
-              data.appDRecord,
-              AppHosting.Frame,
-            )
+            const openDetails = await this.as!.open(data.appDRecord, AppHosting.Frame)
             callback(openDetails)
           } else {
             // opening in a new tab
-            const openDetails = await this.as!.open(
-              data.appDRecord,
-              AppHosting.Tab,
-            )
+            const openDetails = await this.as!.open(data.appDRecord, AppHosting.Tab)
             callback(openDetails)
           }
-        },
+        }
       )
 
-      this.socket?.on(
-        AppManagementMessages.SAIL_APP_STATE,
-        (data: SailAppStateArgs) => {
-          //console.log(`SAIL_APP_STATE: ${JSON.stringify(data)}`)
-          this.as!.setAppState(data)
-        },
-      )
+      this.socket?.on(AppManagementMessages.SAIL_APP_STATE, (data: SailAppStateArgs) => {
+        //console.log(`SAIL_APP_STATE: ${JSON.stringify(data)}`)
+        this.as!.setAppState(data)
+      })
 
-      this.socket?.on(
-        ChannelMessages.SAIL_CHANNEL_SETUP,
-        async (instanceId: string) => {
-          //console.log(`SAIL_CHANNEL_SETUP: ${instanceId}`)
-          const panel = this.cs!.getPanels().find(
-            (p) => p.panelId === instanceId,
-          )
-          if (panel) {
-            await this.setUserChannel(instanceId, panel.tabId)
-          }
-        },
-      )
+      this.socket?.on(ChannelMessages.SAIL_CHANNEL_SETUP, async (instanceId: string) => {
+        //console.log(`SAIL_CHANNEL_SETUP: ${instanceId}`)
+        const panel = this.cs!.getPanels().find(p => p.panelId === instanceId)
+        if (panel) {
+          await this.setUserChannel(instanceId, panel.tabId)
+        }
+      })
 
       this.socket?.on(
         IntentMessages.SAIL_INTENT_RESOLVE,
@@ -158,19 +140,14 @@ export class ServerStateImpl implements ServerState {
             requestId: data.requestId,
           })
 
-          this.resolveCallback = callback as (
-            x: SailIntentResolveResponse,
-          ) => void
-        },
+          this.resolveCallback = callback as (x: SailIntentResolveResponse) => void
+        }
       )
 
-      this.socket?.on(
-        ContextMessages.SAIL_BROADCAST_CONTEXT,
-        (data: SailBroadcastContextArgs) => {
-          console.log(`SAIL_BROADCAST_CONTEXT: ${JSON.stringify(data)}`)
-          void this.cs!.appendContextHistory(data.channelId, data.context)
-        },
-      )
+      this.socket?.on(ContextMessages.SAIL_BROADCAST_CONTEXT, (data: SailBroadcastContextArgs) => {
+        console.log(`SAIL_BROADCAST_CONTEXT: ${JSON.stringify(data)}`)
+        void this.cs!.appendContextHistory(data.channelId, data.context)
+      })
     })
 
     return Promise.resolve()
@@ -188,7 +165,7 @@ export class ServerStateImpl implements ServerState {
     requestId: string,
     ai: AppIdentifier | null,
     intent: string | null,
-    channel: string | null,
+    channel: string | null
   ) {
     if (this.resolveCallback) {
       if (ai && intent) {

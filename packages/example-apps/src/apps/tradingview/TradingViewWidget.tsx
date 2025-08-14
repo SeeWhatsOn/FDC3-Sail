@@ -21,14 +21,14 @@ const MODES: TradingViewMode[] = [
 
 export const TradingViewWidget = ({ mode }: { mode: string }) => {
   const container: any = useRef()
-  const modeProps = MODES.find((m) => m.name === mode) ?? MODES[0]
+  const modeProps = MODES.find(m => m.name === mode) ?? MODES[0]
 
   const [state, setState] = useState(modeProps.initialState)
 
   useEffect(() => {
-    getAgent().then((fdc3) => {
-      modeProps.intents.forEach((intent) => {
-        fdc3.addIntentListener(intent.name, (context) => {
+    getAgent().then(fdc3 => {
+      modeProps.intents.forEach(intent => {
+        fdc3.addIntentListener(intent.name, context => {
           const newState = intent.function(context, state)
           setState(() => newState)
           console.log("new state", newState)
@@ -36,8 +36,8 @@ export const TradingViewWidget = ({ mode }: { mode: string }) => {
       })
 
       setTimeout(() => {
-        modeProps.listeners.forEach((listener) => {
-          fdc3.addContextListener(listener.name, (context) => {
+        modeProps.listeners.forEach(listener => {
+          fdc3.addContextListener(listener.name, context => {
             const newState = listener.function(context, state)
             setState(() => newState)
             console.log("new state", newState)
@@ -50,9 +50,7 @@ export const TradingViewWidget = ({ mode }: { mode: string }) => {
   useEffect(() => {
     let script: HTMLScriptElement | null = null
 
-    script = document.getElementById(
-      "tradingview-widget-script",
-    ) as HTMLScriptElement
+    script = document.getElementById("tradingview-widget-script") as HTMLScriptElement
 
     if (script) {
       container.current.removeChild(script)
@@ -81,11 +79,7 @@ export const TradingViewWidget = ({ mode }: { mode: string }) => {
         style={{ height: "calc(100% - 32px)", width: "100%" }}
       ></div>
       <div className="tradingview-widget-copyright">
-        <a
-          href="https://www.tradingview.com/"
-          rel="noopener nofollow"
-          target="_blank"
-        >
+        <a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank">
           <span className="blue-text"> Track all markets on TradingView </span>
         </a>
       </div>

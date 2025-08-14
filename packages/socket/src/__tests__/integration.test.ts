@@ -36,7 +36,7 @@ describe("End-to-End Integration Tests", () => {
       transports: ["websocket"],
     })
 
-    await new Promise<void>((resolve) => {
+    await new Promise<void>(resolve => {
       clientSocket.on("connect", resolve)
     })
   })
@@ -67,17 +67,13 @@ describe("End-to-End Integration Tests", () => {
         contextHistory: {},
       }
 
-      await new Promise<void>((resolve) => {
-        clientSocket.emit(
-          DA_HELLO,
-          helloArgs,
-          (response: boolean, error?: string) => {
-            expect(error).toBeUndefined()
-            expect(response).toBe(true)
-            expect(sessions.has(sessionId)).toBe(true)
-            resolve()
-          },
-        )
+      await new Promise<void>(resolve => {
+        clientSocket.emit(DA_HELLO, helloArgs, (response: boolean, error?: string) => {
+          expect(error).toBeUndefined()
+          expect(response).toBe(true)
+          expect(sessions.has(sessionId)).toBe(true)
+          resolve()
+        })
       })
 
       // Step 2: Verify directory was loaded with realistic apps
@@ -85,7 +81,7 @@ describe("End-to-End Integration Tests", () => {
         userSessionId: sessionId,
       }
 
-      const apps = await new Promise<DirectoryApp[]>((resolve) => {
+      const apps = await new Promise<DirectoryApp[]>(resolve => {
         clientSocket.emit(
           DA_DIRECTORY_LISTING,
           listingArgs,
@@ -95,48 +91,41 @@ describe("End-to-End Integration Tests", () => {
 
             // Test data validation with better error messages
             if (apps.length === 0) {
-              const webAppsPath = path.resolve(
-                __dirname,
-                "testData/webApps.json",
-              )
-              const nativeAppsPath = path.resolve(
-                __dirname,
-                "testData/nativeApps.json",
-              )
+              const webAppsPath = path.resolve(__dirname, "testData/webApps.json")
+              const nativeAppsPath = path.resolve(__dirname, "testData/nativeApps.json")
               throw new Error(
                 "No apps loaded from directory. This indicates test data files are missing or invalid.\n" +
                   `Expected files:\n` +
                   `- ${webAppsPath}\n` +
-                  `- ${nativeAppsPath}`,
+                  `- ${nativeAppsPath}`
               )
             }
 
             // Validate expected test apps are present
             const expectedApps = ["market-terminal", "excel-addin"]
-            const appIds = apps.map((app) => app.appId)
-            expectedApps.forEach((expectedApp) => {
+            const appIds = apps.map(app => app.appId)
+            expectedApps.forEach(expectedApp => {
               if (!appIds.includes(expectedApp)) {
                 throw new Error(
-                  `Expected test app '${expectedApp}' not found in loaded apps: ${appIds.join(", ")}`,
+                  `Expected test app '${expectedApp}' not found in loaded apps: ${appIds.join(", ")}`
                 )
               }
             })
 
             expect(apps.length).toBeGreaterThan(0)
             resolve(apps)
-          },
+          }
         )
       })
 
       // Step 3: Verify we have realistic FDC3 apps with intents
-      const marketTerminal = apps.find((app) => app.appId === "market-terminal")
-      const excelAddin = apps.find((app) => app.appId === "excel-addin")
+      const marketTerminal = apps.find(app => app.appId === "market-terminal")
+      const excelAddin = apps.find(app => app.appId === "excel-addin")
 
       expect(marketTerminal).toBeDefined()
-      expect(
-        marketTerminal?.interop?.intents?.listensFor?.["ViewInstrument"]
-          ?.contexts,
-      ).toContain("fdc3.instrument")
+      expect(marketTerminal?.interop?.intents?.listensFor?.["ViewInstrument"]?.contexts).toContain(
+        "fdc3.instrument"
+      )
 
       expect(excelAddin).toBeDefined()
       expect(excelAddin?.type).toBe("native")
@@ -151,7 +140,7 @@ describe("End-to-End Integration Tests", () => {
         instanceTitle: "Market Terminal Instance",
       }
 
-      const instanceId = await new Promise<string>((resolve) => {
+      const instanceId = await new Promise<string>(resolve => {
         clientSocket.emit(
           DA_REGISTER_APP_LAUNCH,
           registerArgs,
@@ -159,7 +148,7 @@ describe("End-to-End Integration Tests", () => {
             expect(error).toBeUndefined()
             expect(instanceId).toMatch(/^sail-app-/)
             resolve(instanceId)
-          },
+          }
         )
       })
 
@@ -170,16 +159,12 @@ describe("End-to-End Integration Tests", () => {
         userSessionId: sessionId,
       }
 
-      await new Promise<void>((resolve) => {
-        clientSocket.emit(
-          APP_HELLO,
-          appHelloArgs,
-          (hosting: AppHosting, error?: string) => {
-            expect(error).toBeUndefined()
-            expect(hosting).toBe(AppHosting.Tab)
-            resolve()
-          },
-        )
+      await new Promise<void>(resolve => {
+        clientSocket.emit(APP_HELLO, appHelloArgs, (hosting: AppHosting, error?: string) => {
+          expect(error).toBeUndefined()
+          expect(hosting).toBe(AppHosting.Tab)
+          resolve()
+        })
       })
 
       // Step 6: Channel receiver connection
@@ -188,7 +173,7 @@ describe("End-to-End Integration Tests", () => {
         instanceId: instanceId,
       }
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(
           CHANNEL_RECEIVER_HELLO,
           channelHelloArgs,
@@ -198,7 +183,7 @@ describe("End-to-End Integration Tests", () => {
             expect(update.tabs).toBeDefined()
             expect(Array.isArray(update.tabs)).toBe(true)
             resolve()
-          },
+          }
         )
       })
     })
@@ -219,23 +204,23 @@ describe("End-to-End Integration Tests", () => {
         contextHistory: {},
       }
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(DA_HELLO, helloArgs, () => resolve())
       })
 
       // Get directory listing
-      const apps = await new Promise<DirectoryApp[]>((resolve) => {
+      const apps = await new Promise<DirectoryApp[]>(resolve => {
         clientSocket.emit(
           DA_DIRECTORY_LISTING,
           { userSessionId: sessionId },
-          (apps: DirectoryApp[]) => resolve(apps),
+          (apps: DirectoryApp[]) => resolve(apps)
         )
       })
 
       // Test different app types
-      const webApp = apps.find((app) => app.type === "web")
-      const nativeApp = apps.find((app) => app.type === "native")
-      const citrixApp = apps.find((app) => app.type === "citrix")
+      const webApp = apps.find(app => app.type === "web")
+      const nativeApp = apps.find(app => app.type === "native")
+      const citrixApp = apps.find(app => app.type === "citrix")
 
       expect(webApp).toBeDefined()
       expect(nativeApp).toBeDefined()
@@ -261,39 +246,33 @@ describe("End-to-End Integration Tests", () => {
         contextHistory: {},
       }
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(DA_HELLO, helloArgs, () => resolve())
       })
 
-      const apps = await new Promise<DirectoryApp[]>((resolve) => {
+      const apps = await new Promise<DirectoryApp[]>(resolve => {
         clientSocket.emit(
           DA_DIRECTORY_LISTING,
           { userSessionId: sessionId },
-          (apps: DirectoryApp[]) => resolve(apps),
+          (apps: DirectoryApp[]) => resolve(apps)
         )
       })
 
       // Verify intent distribution across apps
-      const viewInstrumentApps = apps.filter((app) =>
-        app.interop?.intents?.listensFor?.[
-          "ViewInstrument"
-        ]?.contexts?.includes("fdc3.instrument"),
+      const viewInstrumentApps = apps.filter(app =>
+        app.interop?.intents?.listensFor?.["ViewInstrument"]?.contexts?.includes("fdc3.instrument")
       )
 
-      const viewPortfolioApps = apps.filter((app) =>
-        app.interop?.intents?.listensFor?.["ViewPortfolio"]?.contexts?.includes(
-          "fdc3.portfolio",
-        ),
+      const viewPortfolioApps = apps.filter(app =>
+        app.interop?.intents?.listensFor?.["ViewPortfolio"]?.contexts?.includes("fdc3.portfolio")
       )
 
       expect(viewInstrumentApps.length).toBeGreaterThan(1)
       expect(viewPortfolioApps.length).toBeGreaterThan(0)
 
       // Verify context support
-      const instrumentContextApps = apps.filter((app) =>
-        app.interop?.intents?.listensFor?.[
-          "ViewInstrument"
-        ]?.contexts?.includes("fdc3.instrument"),
+      const instrumentContextApps = apps.filter(app =>
+        app.interop?.intents?.listensFor?.["ViewInstrument"]?.contexts?.includes("fdc3.instrument")
       )
 
       expect(instrumentContextApps.length).toBeGreaterThan(0)
@@ -325,12 +304,12 @@ describe("End-to-End Integration Tests", () => {
         },
       }
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(DA_HELLO, helloArgs, () => resolve())
       })
 
       // Register and connect market terminal app
-      const instanceId = await new Promise<string>((resolve) => {
+      const instanceId = await new Promise<string>(resolve => {
         clientSocket.emit(
           DA_REGISTER_APP_LAUNCH,
           {
@@ -340,11 +319,11 @@ describe("End-to-End Integration Tests", () => {
             channel: "red",
             instanceTitle: "Market Terminal",
           },
-          (instanceId: string) => resolve(instanceId),
+          (instanceId: string) => resolve(instanceId)
         )
       })
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(
           APP_HELLO,
           {
@@ -352,12 +331,12 @@ describe("End-to-End Integration Tests", () => {
             instanceId,
             userSessionId: sessionId,
           },
-          () => resolve(),
+          () => resolve()
         )
       })
 
       // Verify channel receiver gets context history
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(
           CHANNEL_RECEIVER_HELLO,
           {
@@ -370,10 +349,10 @@ describe("End-to-End Integration Tests", () => {
             expect(update.tabs).toBeDefined()
 
             // Should have red channel with AAPL context
-            const redChannel = update.tabs.find((tab) => tab.id === "red")
+            const redChannel = update.tabs.find(tab => tab.id === "red")
             expect(redChannel).toBeDefined()
             resolve()
-          },
+          }
         )
       })
     })
@@ -393,42 +372,40 @@ describe("End-to-End Integration Tests", () => {
         contextHistory: {},
       }
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(DA_HELLO, helloArgs, () => resolve())
       })
 
       // Get apps and verify ViewInstrument intent support
-      const apps = await new Promise<DirectoryApp[]>((resolve) => {
+      const apps = await new Promise<DirectoryApp[]>(resolve => {
         clientSocket.emit(
           DA_DIRECTORY_LISTING,
           { userSessionId: sessionId },
-          (apps: DirectoryApp[]) => resolve(apps),
+          (apps: DirectoryApp[]) => resolve(apps)
         )
       })
 
-      const viewInstrumentApps = apps.filter((app) =>
-        app.interop?.intents?.listensFor?.[
-          "ViewInstrument"
-        ]?.contexts?.includes("fdc3.instrument"),
+      const viewInstrumentApps = apps.filter(app =>
+        app.interop?.intents?.listensFor?.["ViewInstrument"]?.contexts?.includes("fdc3.instrument")
       )
 
       expect(viewInstrumentApps.length).toBeGreaterThan(1)
 
       // Verify different app types support the same intent
-      const webApp = viewInstrumentApps.find((app) => app.type === "web")
-      const nativeApp = viewInstrumentApps.find((app) => app.type === "native")
+      const webApp = viewInstrumentApps.find(app => app.type === "web")
+      const nativeApp = viewInstrumentApps.find(app => app.type === "native")
 
       expect(webApp).toBeDefined()
       expect(nativeApp).toBeDefined()
 
       // Both should support fdc3.instrument context
-      expect(
-        webApp?.interop?.intents?.listensFor?.["ViewInstrument"]?.contexts,
-      ).toContain("fdc3.instrument")
+      expect(webApp?.interop?.intents?.listensFor?.["ViewInstrument"]?.contexts).toContain(
+        "fdc3.instrument"
+      )
 
-      expect(
-        nativeApp?.interop?.intents?.listensFor?.["ViewInstrument"]?.contexts,
-      ).toContain("fdc3.instrument")
+      expect(nativeApp?.interop?.intents?.listensFor?.["ViewInstrument"]?.contexts).toContain(
+        "fdc3.instrument"
+      )
     })
   })
 
@@ -437,7 +414,7 @@ describe("End-to-End Integration Tests", () => {
       const sessionId = "error-test-session"
 
       // Setup minimal session
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(
           DA_HELLO,
           {
@@ -448,12 +425,12 @@ describe("End-to-End Integration Tests", () => {
             customApps: [],
             contextHistory: {},
           },
-          () => resolve(),
+          () => resolve()
         )
       })
 
       // Try to register non-existent app
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(
           DA_REGISTER_APP_LAUNCH,
           {
@@ -467,7 +444,7 @@ describe("End-to-End Integration Tests", () => {
             // Should handle gracefully
             expect(instanceId).toMatch(/^sail-app-/)
             resolve()
-          },
+          }
         )
       })
     })
@@ -485,7 +462,7 @@ describe("End-to-End Integration Tests", () => {
         contextHistory: {},
       }
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(DA_HELLO, helloArgs, (response: boolean) => {
           // Should still create session even if directory loading fails
           expect(response).toBe(true)
@@ -495,7 +472,7 @@ describe("End-to-End Integration Tests", () => {
       })
 
       // Directory listing should return empty array
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         clientSocket.emit(
           DA_DIRECTORY_LISTING,
           { userSessionId: sessionId },
@@ -503,7 +480,7 @@ describe("End-to-End Integration Tests", () => {
             expect(Array.isArray(apps)).toBe(true)
             expect(apps).toHaveLength(0)
             resolve()
-          },
+          }
         )
       })
     })

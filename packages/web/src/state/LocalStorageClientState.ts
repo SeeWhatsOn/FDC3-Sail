@@ -40,7 +40,7 @@ export class LocalStorageClientState extends AbstractClientState {
         directories ?? [],
         knownApps ?? [],
         customApps ?? [],
-        contextHistory ?? {},
+        contextHistory ?? {}
       )
     } else {
       super(
@@ -51,7 +51,7 @@ export class LocalStorageClientState extends AbstractClientState {
         DEFAULT_DIRECTORIES,
         [],
         [],
-        {},
+        {}
       )
     }
   }
@@ -75,7 +75,7 @@ export class LocalStorageClientState extends AbstractClientState {
     })
     localStorage.setItem(STORAGE_KEY, data)
     // console.log(`SAIL saved state: ${data}`)
-    this.callbacks.forEach((cb) => cb())
+    this.callbacks.forEach(cb => cb())
     await this.ss!.sendClientState(this.createArgs())
   }
 }

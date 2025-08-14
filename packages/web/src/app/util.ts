@@ -19,10 +19,9 @@ export function handleChannelUpdates(renderChannels: () => void) {
       userSessionId: getUserSessionId(),
       instanceId: getInstanceId(),
     }
-    const result = (await socket.emitWithAck(
-      ChannelMessages.CHANNEL_RECEIVER_HELLO,
-      msg,
-    )) as ChannelReceiverUpdate | undefined
+    const result = (await socket.emitWithAck(ChannelMessages.CHANNEL_RECEIVER_HELLO, msg)) as
+      | ChannelReceiverUpdate
+      | undefined
     if (result) {
       channels.length = 0
       channels.push(...result.tabs)
@@ -30,20 +29,14 @@ export function handleChannelUpdates(renderChannels: () => void) {
     }
   })
 
-  socket.on(
-    ChannelMessages.CHANNEL_RECEIVER_UPDATE,
-    (data: ChannelReceiverUpdate) => {
-      channels.length = 0
-      channels.push(...data.tabs)
-      renderChannels()
-    },
-  )
+  socket.on(ChannelMessages.CHANNEL_RECEIVER_UPDATE, (data: ChannelReceiverUpdate) => {
+    channels.length = 0
+    channels.push(...data.tabs)
+    renderChannels()
+  })
 }
 
-export async function setAppChannel(
-  appId: string,
-  channel: string,
-): Promise<void> {
+export async function setAppChannel(appId: string, channel: string): Promise<void> {
   const msg: SailIntentResolveOpenChannelArgs = {
     appId,
     channel,
@@ -54,11 +47,7 @@ export async function setAppChannel(
 }
 
 /* eslint-disable  @typescript-eslint/no-explicit-any */
-export function link(
-  socket: Socket,
-  channel: MessageChannel,
-  source: InstanceID,
-) {
+export function link(socket: Socket, channel: MessageChannel, source: InstanceID) {
   socket.on(AppManagementMessages.FDC3_DA_EVENT, (data: any) => {
     // console.log(`DA Sent ${JSON.stringify(data)} from socket`)
     channel.port2.postMessage(data)

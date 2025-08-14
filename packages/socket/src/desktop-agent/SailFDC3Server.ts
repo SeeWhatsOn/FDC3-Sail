@@ -1,13 +1,9 @@
 import { DesktopAgentHelloArgs, TabDetail } from "@finos/fdc3-sail-shared"
-import {
-  ChannelState,
-  ChannelType,
-  DefaultFDC3Server,
-} from "@finos/fdc3-web-impl"
+import { ChannelState, ChannelType, DefaultFDC3Server } from "@finos/fdc3-web-impl"
 import { SailAppInstanceManager } from "./sailAppInstanceManager"
 
 export const mapChannels = (channels: TabDetail[]): ChannelState[] =>
-  channels.map((channel) => ({
+  channels.map(channel => ({
     id: channel.id,
     type: ChannelType.user,
     displayMetadata: {

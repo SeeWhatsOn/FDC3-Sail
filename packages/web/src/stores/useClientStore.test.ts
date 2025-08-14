@@ -86,7 +86,7 @@ describe("useClientStore - Tab Management", () => {
 
     const { tabs, panels } = useClientStore.getState()
     expect(tabs).toHaveLength(1)
-    expect(tabs.find((t) => t.id === "Two")).toBeUndefined()
+    expect(tabs.find(t => t.id === "Two")).toBeUndefined()
     expect(panels).toHaveLength(0) // Panel should be removed too
   })
 
@@ -101,7 +101,7 @@ describe("useClientStore - Tab Management", () => {
     store.updateTab(updatedTab)
 
     const tabs = useClientStore.getState().tabs
-    const tab = tabs.find((t) => t.id === "One")
+    const tab = tabs.find(t => t.id === "One")
     expect(tab?.background).toBe("#FF0000")
     expect(tab?.icon).toBe("/icons/tabs/updated.svg")
   })

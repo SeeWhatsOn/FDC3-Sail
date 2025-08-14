@@ -35,11 +35,7 @@ interface ClientState {
   addPanel: (panel: AppPanel) => void
   removePanel: (panelId: string) => void
   updatePanel: (panel: AppPanel) => void
-  newPanel: (
-    app: DirectoryApp,
-    instanceId: string,
-    instanceTitle: string,
-  ) => void
+  newPanel: (app: DirectoryApp, instanceId: string, instanceTitle: string) => void
 
   // Actions - Directories
   setDirectories: (directories: Directory[]) => void
@@ -143,7 +139,7 @@ export const useClientStore = create<ClientState>()(
         // Tab actions
         getActiveTab: () => {
           const { tabs, activeTabId } = get()
-          const activeTab = tabs.find((t) => t.id === activeTabId)
+          const activeTab = tabs.find(t => t.id === activeTabId)
           if (!activeTab) {
             set({ activeTabId: tabs[0].id })
             return tabs[0]
@@ -156,28 +152,28 @@ export const useClientStore = create<ClientState>()(
         },
 
         addTab: (tab: TabDetail) => {
-          set((state) => ({
+          set(state => ({
             tabs: [...state.tabs, tab],
           }))
         },
 
         removeTab: (id: string) => {
-          set((state) => ({
-            tabs: state.tabs.filter((t) => t.id !== id),
-            panels: state.panels.filter((p) => p.tabId !== id),
+          set(state => ({
+            tabs: state.tabs.filter(t => t.id !== id),
+            panels: state.panels.filter(p => p.tabId !== id),
           }))
         },
 
         updateTab: (tab: TabDetail) => {
-          set((state) => ({
-            tabs: state.tabs.map((t) => (t.id === tab.id ? tab : t)),
+          set(state => ({
+            tabs: state.tabs.map(t => (t.id === tab.id ? tab : t)),
           }))
         },
 
         moveTab: (id: string, delta: "up" | "down") => {
-          set((state) => {
+          set(state => {
             const tabs = [...state.tabs]
-            const idx = tabs.findIndex((t) => t.id === id)
+            const idx = tabs.findIndex(t => t.id === id)
             if (idx === -1) return state
 
             if (delta === "up" && idx > 0) {
@@ -194,30 +190,24 @@ export const useClientStore = create<ClientState>()(
         getPanels: () => get().panels,
 
         addPanel: (panel: AppPanel) => {
-          set((state) => ({
+          set(state => ({
             panels: [...state.panels, panel],
           }))
         },
 
         removePanel: (panelId: string) => {
-          set((state) => ({
-            panels: state.panels.filter((p) => p.panelId !== panelId),
+          set(state => ({
+            panels: state.panels.filter(p => p.panelId !== panelId),
           }))
         },
 
         updatePanel: (panel: AppPanel) => {
-          set((state) => ({
-            panels: state.panels.map((p) =>
-              p.panelId === panel.panelId ? panel : p,
-            ),
+          set(state => ({
+            panels: state.panels.map(p => (p.panelId === panel.panelId ? panel : p)),
           }))
         },
 
-        newPanel: (
-          app: DirectoryApp,
-          instanceId: string,
-          instanceTitle: string,
-        ) => {
+        newPanel: (app: DirectoryApp, instanceId: string, instanceTitle: string) => {
           const { getActiveTab } = get()
           const activeTab = getActiveTab()
 
@@ -234,7 +224,7 @@ export const useClientStore = create<ClientState>()(
             h: 4,
           }
 
-          set((state) => ({
+          set(state => ({
             panels: [...state.panels, panel],
           }))
         },
@@ -247,10 +237,8 @@ export const useClientStore = create<ClientState>()(
         getDirectories: () => get().directories,
 
         updateDirectory: (directory: Directory) => {
-          set((state) => ({
-            directories: state.directories.map((d) =>
-              d.url === directory.url ? directory : d,
-            ),
+          set(state => ({
+            directories: state.directories.map(d => (d.url === directory.url ? directory : d)),
           }))
         },
 
@@ -281,7 +269,7 @@ export const useClientStore = create<ClientState>()(
         },
 
         appendContextHistory: (tabId: string, context: Context) => {
-          set((state) => ({
+          set(state => ({
             contextHistory: {
               ...state.contextHistory,
               [tabId]: [...(state.contextHistory[tabId] || []), context],
@@ -295,7 +283,7 @@ export const useClientStore = create<ClientState>()(
       {
         name: "sail-client-store",
         // Only persist essential data, exclude UI state
-        partialize: (state) => ({
+        partialize: state => ({
           userSessionId: state.userSessionId,
           activeTabId: state.activeTabId,
           tabs: state.tabs,
@@ -305,8 +293,8 @@ export const useClientStore = create<ClientState>()(
           customApps: state.customApps,
           contextHistory: state.contextHistory,
         }),
-      },
+      }
     ),
-    { name: "client-store" },
-  ),
+    { name: "client-store" }
+  )
 )

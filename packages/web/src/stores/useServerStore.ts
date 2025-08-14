@@ -1,11 +1,7 @@
 import { create } from "zustand"
 import { devtools } from "zustand/middleware"
 import { io, Socket } from "socket.io-client"
-import {
-  SailAppStateArgs,
-  AppHosting,
-  SailClientStateArgs,
-} from "@finos/fdc3-sail-shared"
+import { SailAppStateArgs, AppHosting, SailClientStateArgs } from "@finos/fdc3-sail-shared"
 
 interface AppLaunchParams {
   appId: string
@@ -29,12 +25,7 @@ interface ServerState {
   registerDesktopAgent: (clientArgs: SailClientStateArgs) => Promise<void>
   registerAppLaunch: (params: AppLaunchParams) => Promise<string>
   sendClientState: (clientArgs: SailClientStateArgs) => Promise<void>
-  intentChosen: (
-    requestId: string,
-    appId: string,
-    intentId: string,
-    channelId: string,
-  ) => void
+  intentChosen: (requestId: string, appId: string, intentId: string, channelId: string) => void
 
   // Internal methods
   _setAppStates: (states: SailAppStateArgs) => void
@@ -63,12 +54,12 @@ export const useServerStore = create<ServerState>()(
           get()._setConnectionState(true)
         })
 
-        newSocket.on("disconnect", (reason) => {
+        newSocket.on("disconnect", reason => {
           console.log("Disconnected from FDC3 server:", reason)
           get()._setConnectionState(false)
         })
 
-        newSocket.on("connect_error", (error) => {
+        newSocket.on("connect_error", error => {
           console.error("Connection error:", error)
           get()._setConnectionState(false, error.message)
         })
@@ -102,17 +93,13 @@ export const useServerStore = create<ServerState>()(
             return
           }
 
-          socket.emit(
-            "registerDesktopAgent",
-            clientArgs,
-            (response: { error?: string }) => {
-              if (response.error) {
-                reject(new Error(response.error))
-              } else {
-                resolve()
-              }
-            },
-          )
+          socket.emit("registerDesktopAgent", clientArgs, (response: { error?: string }) => {
+            if (response.error) {
+              reject(new Error(response.error))
+            } else {
+              resolve()
+            }
+          })
         })
       },
 
@@ -136,7 +123,7 @@ export const useServerStore = create<ServerState>()(
               } else {
                 reject(new Error("No instance ID received"))
               }
-            },
+            }
           )
         })
       },
@@ -150,26 +137,17 @@ export const useServerStore = create<ServerState>()(
             return
           }
 
-          socket.emit(
-            "sendClientState",
-            clientArgs,
-            (response: { error?: string }) => {
-              if (response.error) {
-                reject(new Error(response.error))
-              } else {
-                resolve()
-              }
-            },
-          )
+          socket.emit("sendClientState", clientArgs, (response: { error?: string }) => {
+            if (response.error) {
+              reject(new Error(response.error))
+            } else {
+              resolve()
+            }
+          })
         })
       },
 
-      intentChosen: (
-        requestId: string,
-        appId: string,
-        intentId: string,
-        channelId: string,
-      ) => {
+      intentChosen: (requestId: string, appId: string, intentId: string, channelId: string) => {
         const { socket, isConnected } = get()
 
         if (!socket || !isConnected) {
@@ -197,6 +175,6 @@ export const useServerStore = create<ServerState>()(
         })
       },
     }),
-    { name: "server-store" },
-  ),
+    { name: "server-store" }
+  )
 )

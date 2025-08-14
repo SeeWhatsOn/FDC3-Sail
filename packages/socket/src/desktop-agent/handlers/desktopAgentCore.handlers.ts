@@ -34,7 +34,7 @@ import {
 async function handleDesktopAgentHello(
   desktopAgentHelloArgs: DesktopAgentHelloArgs,
   callback: SocketIOCallback<boolean>,
-  { socket, connectionState, sessions }: HandlerContext,
+  { socket, connectionState, sessions }: HandlerContext
 ): Promise<void> {
   console.log(`SAIL DA HELLO: ${JSON.stringify(desktopAgentHelloArgs)}`)
 
@@ -47,23 +47,17 @@ async function handleDesktopAgentHello(
   let fdc3Server: SailFDC3Server
   if (existingServer) {
     // Reconfigure existing session
-    fdc3Server = new SailFDC3Server(
-      existingServer.serverContext,
-      desktopAgentHelloArgs,
-    )
+    fdc3Server = new SailFDC3Server(existingServer.serverContext, desktopAgentHelloArgs)
     await fdc3Server.loadDirectories(desktopAgentHelloArgs.directories)
     sessions.set(desktopAgentHelloArgs.userSessionId, fdc3Server)
     console.log(
       "SAIL updated desktop agent channels and directories",
       sessions.size,
-      desktopAgentHelloArgs.userSessionId,
+      desktopAgentHelloArgs.userSessionId
     )
   } else {
     // Create new session
-    const serverContext = new SailAppInstanceManager(
-      new AppDirectoryManager(),
-      socket,
-    )
+    const serverContext = new SailAppInstanceManager(new AppDirectoryManager(), socket)
     fdc3Server = new SailFDC3Server(serverContext, desktopAgentHelloArgs)
     serverContext.setFDC3Server(fdc3Server)
     await fdc3Server.loadDirectories(desktopAgentHelloArgs.directories)
@@ -71,7 +65,7 @@ async function handleDesktopAgentHello(
     console.log(
       "SAIL created agent session. Running sessions:",
       sessions.size,
-      desktopAgentHelloArgs.userSessionId,
+      desktopAgentHelloArgs.userSessionId
     )
   }
 
@@ -88,7 +82,7 @@ async function handleDesktopAgentHello(
 async function handleDirectoryListing(
   directoryListingArgs: DesktopAgentDirectoryListingArgs,
   callback: SocketIOCallback<unknown>,
-  { sessions }: HandlerContext,
+  { sessions }: HandlerContext
 ): Promise<void> {
   const { userSessionId } = directoryListingArgs
   try {
@@ -110,12 +104,11 @@ async function handleDirectoryListing(
 async function handleRegisterAppLaunch(
   appLaunchArgs: DesktopAgentRegisterAppLaunchArgs,
   callback: SocketIOCallback<string>,
-  { sessions }: HandlerContext,
+  { sessions }: HandlerContext
 ): Promise<void> {
   console.log(`SAIL DA REGISTER APP LAUNCH: ${JSON.stringify(appLaunchArgs)}`)
 
-  const { appId, userSessionId, hosting, channel, instanceTitle } =
-    appLaunchArgs
+  const { appId, userSessionId, hosting, channel, instanceTitle } = appLaunchArgs
   try {
     const fdc3Server = await getFdc3ServerInstance(sessions, userSessionId)
     const instanceId = `${CONFIG.APP_INSTANCE_PREFIX}${uuid()}`
@@ -135,10 +128,7 @@ async function handleRegisterAppLaunch(
     callback(instanceId)
   } catch (error) {
     console.error("SAIL Session not found", userSessionId, error)
-    handleCallbackError(
-      callback as SocketIOCallback<unknown>,
-      "Session not found",
-    )
+    handleCallbackError(callback as SocketIOCallback<unknown>, "Session not found")
   }
 }
 
@@ -147,10 +137,7 @@ async function handleRegisterAppLaunch(
  * @param serverContext - Server context for managing instance details
  * @param panelList - List of panels with their channel assignments
  */
-function updatePanelChannels(
-  serverContext: SailAppInstanceManager,
-  panelList: PanelData[],
-): void {
+function updatePanelChannels(serverContext: SailAppInstanceManager, panelList: PanelData[]): void {
   panelList.forEach(({ panelId, tabId: newChannel, title }) => {
     const instanceDetails = serverContext.getInstanceDetails(panelId)
     if (!instanceDetails) return
@@ -166,11 +153,9 @@ function updatePanelChannels(
 
     // Notify of channel change if different
     if (newChannel !== existingChannel) {
-      serverContext
-        .notifyUserChannelsChanged(panelId, newChannel)
-        .catch((error) => {
-          console.error("Error notifying user channels changed:", error)
-        })
+      serverContext.notifyUserChannelsChanged(panelId, newChannel).catch(error => {
+        console.error("Error notifying user channels changed:", error)
+      })
     }
   })
 }
@@ -182,11 +167,11 @@ function updatePanelChannels(
  */
 async function updateConnectedAppsChannels(
   serverContext: SailAppInstanceManager,
-  channelList: TabDetail[],
+  channelList: TabDetail[]
 ): Promise<void> {
   const connectedApps = await serverContext.getConnectedApps()
 
-  connectedApps.forEach((app) => {
+  connectedApps.forEach(app => {
     const instanceDetails = serverContext.getInstanceDetails(app.instanceId)
     if (!instanceDetails) return
 
@@ -194,7 +179,7 @@ async function updateConnectedAppsChannels(
       tabs: channelList,
     }
 
-    instanceDetails.channelSockets.forEach((channelSocket) => {
+    instanceDetails.channelSockets.forEach(channelSocket => {
       channelSocket.emit(ChannelMessages.CHANNEL_RECEIVER_UPDATE, channelUpdate)
     })
   })
@@ -209,21 +194,18 @@ async function updateConnectedAppsChannels(
 async function handleClientState(
   clientStateArgs: SailClientStateArgs,
   callback: SocketIOCallback<boolean>,
-  { sessions }: HandlerContext,
+  { sessions }: HandlerContext
 ): Promise<void> {
   console.log(`SAIL CLIENT STATE: ${JSON.stringify(clientStateArgs)}`)
 
   try {
-    const fdc3Server = await getFdc3ServerInstance(
-      sessions,
-      clientStateArgs.userSessionId,
-    )
+    const fdc3Server = await getFdc3ServerInstance(sessions, clientStateArgs.userSessionId)
     const { serverContext } = fdc3Server
 
     // Update directories and channels
     await serverContext.reloadAppDirectories(
       clientStateArgs.directories,
-      clientStateArgs.customApps,
+      clientStateArgs.customApps
     )
     serverContext.updateChannelData(clientStateArgs.channels)
     // Update panel channels
@@ -235,10 +217,7 @@ async function handleClientState(
     callback(true)
   } catch (error) {
     console.error("SAIL Client state update failed:", error)
-    handleCallbackError(
-      callback as SocketIOCallback<unknown>,
-      "Session not found",
-    )
+    handleCallbackError(callback as SocketIOCallback<unknown>, "Session not found")
   }
 }
 
@@ -250,61 +229,44 @@ export function registerDesktopAgentHandlers(context: HandlerContext): void {
 
   socket.on(
     HandshakeMessages.DA_HELLO,
-    (
-      desktopAgentHelloArgs: DesktopAgentHelloArgs,
-      callback: SocketIOCallback<boolean>,
-    ) => {
-      handleDesktopAgentHello(desktopAgentHelloArgs, callback, context).catch(
-        (error) => {
-          console.error("Error handling desktop agent hello:", error)
-          callback(false, "Failed to initialize desktop agent")
-        },
-      )
-    },
+    (desktopAgentHelloArgs: DesktopAgentHelloArgs, callback: SocketIOCallback<boolean>) => {
+      handleDesktopAgentHello(desktopAgentHelloArgs, callback, context).catch(error => {
+        console.error("Error handling desktop agent hello:", error)
+        callback(false, "Failed to initialize desktop agent")
+      })
+    }
   )
 
   socket.on(
     AppManagementMessages.DA_DIRECTORY_LISTING,
     (
       directoryListingArgs: DesktopAgentDirectoryListingArgs,
-      callback: SocketIOCallback<unknown>,
+      callback: SocketIOCallback<unknown>
     ) => {
-      handleDirectoryListing(directoryListingArgs, callback, context).catch(
-        (error) => {
-          console.error("Error handling directory listing:", error)
-          callback(error, "Failed to list directory")
-        },
-      )
-    },
+      handleDirectoryListing(directoryListingArgs, callback, context).catch(error => {
+        console.error("Error handling directory listing:", error)
+        callback(error, "Failed to list directory")
+      })
+    }
   )
 
   socket.on(
     AppManagementMessages.DA_REGISTER_APP_LAUNCH,
-    (
-      appLaunchArgs: DesktopAgentRegisterAppLaunchArgs,
-      callback: SocketIOCallback<string>,
-    ) => {
-      handleRegisterAppLaunch(appLaunchArgs, callback, context).catch(
-        (error: unknown) => {
-          console.error("Error handling register app launch:", error)
-          callback(error as string, "Failed to register app launch")
-        },
-      )
-    },
+    (appLaunchArgs: DesktopAgentRegisterAppLaunchArgs, callback: SocketIOCallback<string>) => {
+      handleRegisterAppLaunch(appLaunchArgs, callback, context).catch((error: unknown) => {
+        console.error("Error handling register app launch:", error)
+        callback(error as string, "Failed to register app launch")
+      })
+    }
   )
 
   socket.on(
     HandshakeMessages.SAIL_CLIENT_STATE,
-    (
-      clientStateArgs: SailClientStateArgs,
-      callback: SocketIOCallback<boolean>,
-    ) => {
-      handleClientState(clientStateArgs, callback, context).catch(
-        (error: unknown) => {
-          console.error("Error handling client state:", error)
-          callback(false, "Failed to update client state")
-        },
-      )
-    },
+    (clientStateArgs: SailClientStateArgs, callback: SocketIOCallback<boolean>) => {
+      handleClientState(clientStateArgs, callback, context).catch((error: unknown) => {
+        console.error("Error handling client state:", error)
+        callback(false, "Failed to update client state")
+      })
+    }
   )
 }

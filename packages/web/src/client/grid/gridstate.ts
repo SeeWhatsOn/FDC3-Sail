@@ -1,9 +1,4 @@
-import {
-  GridItemHTMLElement,
-  GridStack,
-  GridStackElement,
-  GridStackWidget,
-} from "gridstack"
+import { GridItemHTMLElement, GridStack, GridStackElement, GridStackWidget } from "gridstack"
 import { ReactElement } from "react"
 import { ClientState } from "../../types"
 import { AppPanel } from "../../types"
@@ -44,7 +39,7 @@ export class GridsStateImpl implements GridsState {
   constructor(
     containerId: string,
     render: (ap: AppPanel, id: string) => ReactElement,
-    cs: ClientState,
+    cs: ClientState
   ) {
     this.containerId = containerId
     this.render = render
@@ -67,7 +62,7 @@ export class GridsStateImpl implements GridsState {
   }
 
   getPanel(id: string): AppPanel | undefined {
-    return this.cs.getPanels().find((p) => p.panelId == id)
+    return this.cs.getPanels().find(p => p.panelId == id)
   }
 
   removePanel(ap: AppPanel) {
@@ -79,7 +74,7 @@ export class GridsStateImpl implements GridsState {
   }
 
   setupTabDropping() {
-    Array.from(document.querySelectorAll(".drop-tab")).forEach((t) => {
+    Array.from(document.querySelectorAll(".drop-tab")).forEach(t => {
       const tab = t as HTMLElement
       GridStack.getDD()
         .droppable(tab, {
@@ -116,7 +111,7 @@ export class GridsStateImpl implements GridsState {
           handles: "e, se, s, sw, w",
         },
       },
-      e as GridStackElement,
+      e as GridStackElement
     )
 
     grid.on("resizestop", (_event, element) => {
@@ -140,7 +135,7 @@ export class GridsStateImpl implements GridsState {
     grid.on("removed", (event, items) => {
       const targetId = (event.target as HTMLElement).getAttribute("id")
       if (targetId == TRASH_DROP) {
-        items.forEach((i) => this.cs.removePanel(i.id!))
+        items.forEach(i => this.cs.removePanel(i.id!))
       }
     })
 
@@ -177,7 +172,7 @@ export class GridsStateImpl implements GridsState {
 
   ensureGrid(container: ShadowRoot, tabId: string): GridStack {
     let gridEl = null
-    const td = this.cs.getTabs().find((t) => t.id == tabId)
+    const td = this.cs.getTabs().find(t => t.id == tabId)
     let gs = this.gridstacks[tabId]
     if (!gs) {
       gridEl = document.createElement("div")
@@ -201,11 +196,7 @@ export class GridsStateImpl implements GridsState {
     return gs
   }
 
-  createWidget(
-    grid: GridStack,
-    p: AppPanel,
-    content: boolean,
-  ): GridItemHTMLElement {
+  createWidget(grid: GridStack, p: AppPanel, content: boolean): GridItemHTMLElement {
     // check the panel size
     if (p.x == -1 || p.y == -1) {
       this.findEmptyArea(p, grid)
@@ -247,24 +238,16 @@ export class GridsStateImpl implements GridsState {
     }
   }
 
-  findChild(
-    e: DocumentFragment | HTMLElement | Element,
-    id: string,
-  ): HTMLElement | null {
-    return Array.from(e.children).find(
-      (c) => c.getAttribute("id") == id,
-    ) as HTMLElement
+  findChild(e: DocumentFragment | HTMLElement | Element, id: string): HTMLElement | null {
+    return Array.from(e.children).find(c => c.getAttribute("id") == id) as HTMLElement
   }
 
   changeTab(container: DocumentFragment, p: MountedPanel) {
     const oldGridEl = Array.from(container.children)
-      .filter((e) => e.tagName == "DIV")
-      .filter((e) => this.findChild(e, p.panelId))[0]
+      .filter(e => e.tagName == "DIV")
+      .filter(e => this.findChild(e, p.panelId))[0]
 
-    const oldWidget = this.findChild(
-      oldGridEl,
-      p.panelId,
-    ) as GridItemHTMLElement
+    const oldWidget = this.findChild(oldGridEl, p.panelId) as GridItemHTMLElement
 
     if (oldWidget) {
       const newGrid = this.gridstacks[p.tabId]
@@ -290,39 +273,33 @@ export class GridsStateImpl implements GridsState {
       // this ensures styling of the contents of the grid
       shadowRoot = container.attachShadow({ mode: "open" })
       const styles = Array.from(document.querySelectorAll("style"))
-      const links = Array.from(document.querySelectorAll("link")).filter((l) =>
-        l.href.endsWith(".css"),
+      const links = Array.from(document.querySelectorAll("link")).filter(l =>
+        l.href.endsWith(".css")
       )
       ;[...styles, ...links]
-        .map((el) => el.cloneNode(true))
-        .forEach((el) => shadowRoot!.appendChild(el))
+        .map(el => el.cloneNode(true))
+        .forEach(el => shadowRoot!.appendChild(el))
     }
 
     // remove old panels
-    const panelIds = this.cs.getPanels().map((p) => p.panelId)
-    const mountedIds = this.panelsInGrid.map((p) => p.panelId)
-    const removedPanels = this.panelsInGrid.filter(
-      (p) => !panelIds.includes(p.panelId),
-    )
+    const panelIds = this.cs.getPanels().map(p => p.panelId)
+    const mountedIds = this.panelsInGrid.map(p => p.panelId)
+    const removedPanels = this.panelsInGrid.filter(p => !panelIds.includes(p.panelId))
     const changedTabPanels = this.panelsInGrid.filter(
-      (p) =>
-        p.mountedTab !=
-        this.cs.getPanels().find((q) => q.panelId == p.panelId)?.tabId,
+      p => p.mountedTab != this.cs.getPanels().find(q => q.panelId == p.panelId)?.tabId
     )
-    const addedPanels = this.cs
-      .getPanels()
-      .filter((p) => !mountedIds.includes(p.panelId))
+    const addedPanels = this.cs.getPanels().filter(p => !mountedIds.includes(p.panelId))
 
     // reset destination
     this.newTabState = null
 
     // ensure all grids exist
-    this.cs.getTabs().forEach((t) => this.ensureGrid(shadowRoot, t.id))
+    this.cs.getTabs().forEach(t => this.ensureGrid(shadowRoot, t.id))
 
     // unchanged panels
-    this.panelsInGrid = this.panelsInGrid.filter((cp) => {
-      const removing = removedPanels.find((k) => k.panelId == cp.panelId)
-      const moving = changedTabPanels.find((k) => k.panelId == cp.panelId)
+    this.panelsInGrid = this.panelsInGrid.filter(cp => {
+      const removing = removedPanels.find(k => k.panelId == cp.panelId)
+      const moving = changedTabPanels.find(k => k.panelId == cp.panelId)
 
       if (removing || moving) {
         return false
@@ -331,14 +308,14 @@ export class GridsStateImpl implements GridsState {
       }
     })
 
-    this.panelsInGrid.forEach((p) => this.refreshPanel(p))
+    this.panelsInGrid.forEach(p => this.refreshPanel(p))
 
     // console.log(`Moved Tab: ${changedTabPanels.length} Removed: ${removedPanels.length} Added: ${addedPanels.length} Unchanged: ${this.panelsInGrid.length}`)
 
-    removedPanels.forEach((p) => this.removePanel(p))
+    removedPanels.forEach(p => this.removePanel(p))
 
-    changedTabPanels.forEach((mp) => {
-      const cp = this.cs.getPanels().find((p) => p.panelId == mp.panelId)
+    changedTabPanels.forEach(mp => {
+      const cp = this.cs.getPanels().find(p => p.panelId == mp.panelId)
       if (cp) {
         mp.tabId = cp.tabId
         this.changeTab(shadowRoot, mp)
@@ -349,7 +326,7 @@ export class GridsStateImpl implements GridsState {
       }
     })
 
-    addedPanels.forEach((ap) => {
+    addedPanels.forEach(ap => {
       const gs = this.ensureGrid(shadowRoot, ap.tabId)
       this.addPanel(gs, ap)
       this.panelsInGrid.push({

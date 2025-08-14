@@ -9,14 +9,14 @@ export const Widget = () => {
   const container: any = useRef()
 
   useEffect(() => {
-    getAgent().then((fdc3) => {
-      fdc3.addIntentListener("ViewChart", async (context) => {
+    getAgent().then(fdc3 => {
+      fdc3.addIntentListener("ViewChart", async context => {
         if (context?.id?.ticker && context.type == "fdc3.instrument") {
           setState(context?.id?.ticker)
         }
       })
 
-      fdc3.addContextListener("fdc3.instrument", async (context) => {
+      fdc3.addContextListener("fdc3.instrument", async context => {
         setState(context?.id?.ticker)
       })
     })
@@ -47,12 +47,7 @@ export const Widget = () => {
 
   return (
     <div style={{ width: "100%", height: "100%" }} ref={container}>
-      <div
-        id="bzf"
-        className="bz-widget"
-        data-name="newsfeed"
-        data-ticker={state}
-      ></div>
+      <div id="bzf" className="bz-widget" data-name="newsfeed" data-ticker={state}></div>
       <div style={{ textAlign: "center", width: "100%", fontSize: "14px" }}>
         <a
           href="https://www.benzinga.com"

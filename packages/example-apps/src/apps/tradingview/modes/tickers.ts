@@ -4,8 +4,7 @@ import { TradingViewMode } from "../common"
 
 export const tickersMode: TradingViewMode = {
   name: "tickers",
-  script:
-    "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js",
+  script: "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js",
   innerHTML: (state: object) => `{
                         "symbols": ${JSON.stringify(state)},
                         "showSymbolLogo": true,

@@ -10,9 +10,7 @@ import { HandlerContext, SocketType, CONFIG, AppInstance } from "./types"
  * @param appInstance - The app instance to update
  * @returns Updated app instance with cleared sockets
  */
-function clearChannelSocketsFromInstance(
-  appInstance: AppInstance,
-): AppInstance {
+function clearChannelSocketsFromInstance(appInstance: AppInstance): AppInstance {
   return {
     ...appInstance,
     channelSockets: [],
@@ -26,7 +24,7 @@ function clearChannelSocketsFromInstance(
  */
 async function handleAppDisconnect(
   serverContext: SailAppInstanceManager,
-  appInstanceId: string,
+  appInstanceId: string
 ): Promise<void> {
   await serverContext.setAppState(appInstanceId, State.Terminated)
   const remainingApps = await serverContext.getConnectedApps()
@@ -40,7 +38,7 @@ async function handleAppDisconnect(
  */
 function handleChannelDisconnect(
   serverContext: SailAppInstanceManager,
-  appInstanceId: string,
+  appInstanceId: string
 ): void {
   const instanceDetails = serverContext.getInstanceDetails(appInstanceId)
   if (instanceDetails) {
@@ -65,7 +63,7 @@ function handleChannelDisconnect(
 function handleDesktopAgentDisconnect(
   fdc3Server: SailFDC3Server,
   userSessionId: string,
-  sessions: Map<string, SailFDC3Server>,
+  sessions: Map<string, SailFDC3Server>
 ): void {
   fdc3Server.shutdown()
   sessions.delete(userSessionId)
@@ -79,10 +77,9 @@ function handleDesktopAgentDisconnect(
  */
 async function handleDisconnect(
   { connectionState, sessions }: HandlerContext,
-  stateReporterTimer: NodeJS.Timeout,
+  stateReporterTimer: NodeJS.Timeout
 ): Promise<void> {
-  const { fdc3ServerInstance, socketType, appInstanceId, userSessionId } =
-    connectionState
+  const { fdc3ServerInstance, socketType, appInstanceId, userSessionId } = connectionState
 
   if (!fdc3ServerInstance) {
     console.error("No server instance on disconnect")
@@ -94,29 +91,19 @@ async function handleDisconnect(
     switch (socketType) {
       case SocketType.APP:
         if (appInstanceId) {
-          await handleAppDisconnect(
-            fdc3ServerInstance.serverContext,
-            appInstanceId,
-          )
+          await handleAppDisconnect(fdc3ServerInstance.serverContext, appInstanceId)
         }
         break
 
       case SocketType.CHANNEL:
         if (appInstanceId) {
-          handleChannelDisconnect(
-            fdc3ServerInstance.serverContext,
-            appInstanceId,
-          )
+          handleChannelDisconnect(fdc3ServerInstance.serverContext, appInstanceId)
         }
         break
 
       case SocketType.DESKTOP_AGENT:
         if (userSessionId) {
-          handleDesktopAgentDisconnect(
-            fdc3ServerInstance,
-            userSessionId,
-            sessions,
-          )
+          handleDesktopAgentDisconnect(fdc3ServerInstance, userSessionId, sessions)
         }
         break
 
@@ -144,10 +131,10 @@ function setupStateReporter(context: HandlerContext): NodeJS.Timeout {
       try {
         fdc3ServerInstance.serverContext
           .getAllApps()
-          .then((appStates) => {
+          .then(appStates => {
             socket.emit(AppManagementMessages.SAIL_APP_STATE, appStates)
           })
-          .catch((error) => {
+          .catch(error => {
             console.error("Error reporting app state:", error)
           })
       } catch (error) {

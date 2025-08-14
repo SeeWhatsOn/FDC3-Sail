@@ -30,7 +30,7 @@ interface NewsItem {
 const NewsComponent = ({ newsData }: { newsData: NewsItem[] }) => {
   return (
     <div className={styles.newsContainer}>
-      {newsData.map((newsItem) => (
+      {newsData.map(newsItem => (
         <div key={newsItem.id} className={styles.newsItem}>
           <div className={styles.newsHeader}>
             <img
@@ -39,11 +39,7 @@ const NewsComponent = ({ newsData }: { newsData: NewsItem[] }) => {
               className={styles.publisherLogo}
             />
             <h2 className={styles.newsTitle}>
-              <a
-                href={newsItem.article_url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href={newsItem.article_url} target="_blank" rel="noopener noreferrer">
                 {newsItem.title}
               </a>
             </h2>
@@ -56,11 +52,7 @@ const NewsComponent = ({ newsData }: { newsData: NewsItem[] }) => {
           </div>
           <details>
             <summary>Read more</summary>
-            <img
-              src={newsItem.image_url}
-              alt={newsItem.title}
-              className={styles.newsImage}
-            />
+            <img src={newsItem.image_url} alt={newsItem.title} className={styles.newsImage} />
             <p className={styles.newsDescription}>{newsItem.description}</p>
             <div className={styles.newsInsights}>
               <h3>Insights</h3>
