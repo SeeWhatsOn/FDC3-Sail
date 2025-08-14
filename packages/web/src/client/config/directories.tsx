@@ -73,14 +73,14 @@ const DirectoryItem = ({ d }: { d: Directory }) => {
         <div
           className={styles.name}
           contentEditable={true}
-          onBlur={e => updateText(d.url, e.currentTarget.textContent!)}
+          onBlur={e => updateText(d.url, e.currentTarget.textContent ?? "")}
         >
           {d.label}
         </div>
         <div
           className={styles.url}
           contentEditable={true}
-          onBlur={e => updateUrl(d.url, e.currentTarget.textContent!)}
+          onBlur={e => updateUrl(d.url, e.currentTarget.textContent ?? "")}
         >
           {d.url}
         </div>

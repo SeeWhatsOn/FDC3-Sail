@@ -144,14 +144,14 @@ const TabItem = ({ d }: { d: TabDetail }) => {
         <div
           className={styles.name}
           contentEditable={!hasApps(d.id)}
-          onBlur={e => updateTitle(d.id, e.currentTarget.textContent!)}
+          onBlur={e => updateTitle(d.id, e.currentTarget.textContent ?? "")}
         >
           {d.id}
         </div>
         <div
           className={styles.url}
           contentEditable={true}
-          onBlur={e => updateIconUrl(d.id, e.currentTarget.textContent!)}
+          onBlur={e => updateIconUrl(d.id, e.currentTarget.textContent ?? "")}
         >
           {d.icon}
         </div>
