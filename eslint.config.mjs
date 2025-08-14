@@ -2,8 +2,11 @@ import js from "@eslint/js"
 import globals from "globals"
 import tseslint from "typescript-eslint"
 import pluginReact from "eslint-plugin-react"
+import reactHooks from "eslint-plugin-react-hooks"
+import importPlugin from "eslint-plugin-import"
 import json from "@eslint/json"
 import css from "@eslint/css"
+import prettier from "eslint-config-prettier"
 import { defineConfig } from "eslint/config"
 
 export default defineConfig([
@@ -93,12 +96,32 @@ export default defineConfig([
     },
   },
 
-  // React configuration
+  // React configuration with hooks
   {
     files: ["**/*.{jsx,tsx}"],
-    ...pluginReact.configs.flat.recommended,
+    plugins: {
+      react: pluginReact,
+      "react-hooks": reactHooks,
+      import: importPlugin,
+    },
     rules: {
+      ...pluginReact.configs.flat.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
       "react/react-in-jsx-scope": "off",
+      "import/order": [
+        "error",
+        {
+          groups: [
+            "builtin",
+            "external",
+            "internal",
+            "parent",
+            "sibling",
+            "index",
+          ],
+          "newlines-between": "always",
+        },
+      ],
     },
     languageOptions: {
       globals: { ...globals.browser },
@@ -106,6 +129,10 @@ export default defineConfig([
     settings: {
       react: {
         version: "detect", // Automatically detect React version
+      },
+      "import/resolver": {
+        typescript: true,
+        node: true,
       },
     },
   },
@@ -125,4 +152,7 @@ export default defineConfig([
     language: "css/css",
     extends: ["css/recommended"],
   },
+
+  // Prettier integration - must be last to override conflicting rules
+  prettier,
 ])

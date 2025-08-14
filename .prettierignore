@@ -1,1 +1,10 @@
 **/dist/**/*
+**/node_modules/**/*
+**/build/**/*
+**/.git/**/*
+**/coverage/**/*
+**/*.md
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+*.tsbuildinfo
