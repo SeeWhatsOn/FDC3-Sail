@@ -21,7 +21,9 @@ export default defineConfig([
       ".husky/",
       "**/.prettierrc.json",
       "**/.prettierignore",
-      "**/.package-lock.json",
+      "**/package-lock.json",
+      "**/yarn.lock",
+      "**/pnpm-lock.yaml",
       "**/assets/",
 
       "**/packages/example-apps/",
@@ -40,9 +42,35 @@ export default defineConfig([
     },
   },
 
+  // Build config files (no project service needed)
+  {
+    files: [
+      "**/vite.config.{ts,mts,cts}",
+      "**/vitest.config.{ts,mts,cts}",
+      "**/rollup.config.{ts,mts,cts}",
+      "**/webpack.config.{ts,mts,cts}",
+      "**/esbuild.config.{ts,mts,cts}"
+    ],
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    languageOptions: {
+      globals: { ...globals.node },
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+      },
+    },
+  },
+
   // TypeScript files with strict type checking (merged from slt.mjs)
   {
     files: ["packages/*/src/**/*.{ts,tsx}", "**/*.{ts,mts,cts,tsx}"],
+    ignores: [
+      "**/vite.config.{ts,mts,cts}",
+      "**/vitest.config.{ts,mts,cts}",
+      "**/rollup.config.{ts,mts,cts}",
+      "**/webpack.config.{ts,mts,cts}",
+      "**/esbuild.config.{ts,mts,cts}"
+    ], // Exclude build config files from project service
     extends: [
       js.configs.recommended,
       ...tseslint.configs.recommendedTypeChecked, // Strict type checking from slt.mjs

@@ -1,8 +1,15 @@
 import { useClientStore } from "./useClientStore"
 import { useServerStore } from "./useServerStore"
-import { WebClientState } from "../types"
+import { AppPanel, WebClientState } from "../types"
 import { AppState, ServerState } from "../types"
-import { SailAppStateArgs, SailClientStateArgs } from "@finos/fdc3-sail-shared"
+import {
+  ContextHistory,
+  Directory,
+  SailAppStateArgs,
+  SailClientStateArgs,
+  TabDetail,
+} from "@finos/fdc3-sail-shared"
+import { DirectoryApp } from "@finos/fdc3-web-impl"
 
 /**
  * Legacy adapter to bridge between old singleton pattern and new Zustand stores
@@ -25,26 +32,31 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
     // Tabs
     getActiveTab: () => useClientStore.getState().getActiveTab(),
     setActiveTabId: async (id: string) =>
-      useClientStore.getState().setActiveTabId(id),
+      Promise.resolve(useClientStore.getState().setActiveTabId(id)),
     getTabs: () => useClientStore.getState().tabs,
-    addTab: async (tab) => useClientStore.getState().addTab(tab),
-    removeTab: async (id) => useClientStore.getState().removeTab(id),
-    updateTab: async (tab) => useClientStore.getState().updateTab(tab),
-    moveTab: async (id, delta) => useClientStore.getState().moveTab(id, delta),
+    addTab: async (tab) =>
+      Promise.resolve(useClientStore.getState().addTab(tab)),
+    removeTab: async (id) =>
+      Promise.resolve(useClientStore.getState().removeTab(id)),
+    updateTab: async (tab) =>
+      Promise.resolve(useClientStore.getState().updateTab(tab)),
+    moveTab: async (id, delta) =>
+      Promise.resolve(useClientStore.getState().moveTab(id, delta)),
 
     // Directories
     setDirectories: async (directories) =>
-      useClientStore.getState().setDirectories(directories),
+      Promise.resolve(useClientStore.getState().setDirectories(directories)),
     getDirectories: () => useClientStore.getState().getDirectories(),
     updateDirectory: async (directory) =>
-      useClientStore.getState().updateDirectory(directory),
+      Promise.resolve(useClientStore.getState().updateDirectory(directory)),
 
     // Apps
     getKnownApps: () => useClientStore.getState().getKnownApps(),
-    setKnownApps: async (apps) => useClientStore.getState().setKnownApps(apps),
+    setKnownApps: async (apps) =>
+      Promise.resolve(useClientStore.getState().setKnownApps(apps)),
     getCustomApps: () => useClientStore.getState().getCustomApps(),
     setCustomApps: async (apps) =>
-      useClientStore.getState().setCustomApps(apps),
+      Promise.resolve(useClientStore.getState().setCustomApps(apps)),
 
     // Intent Resolution
     getIntentResolution: () => useClientStore.getState().getIntentResolution(),
@@ -55,7 +67,9 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
     getContextHistory: (tabId) =>
       useClientStore.getState().getContextHistory(tabId),
     appendContextHistory: async (tabId, context) =>
-      useClientStore.getState().appendContextHistory(tabId, context),
+      Promise.resolve(
+        useClientStore.getState().appendContextHistory(tabId, context),
+      ),
 
     // Callbacks (legacy - now handled by store subscriptions)
     addStateChangeCallback: (cb: () => void) => {
@@ -69,7 +83,9 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
         userSessionId: state.userSessionId,
         channels: state.tabs,
         panels: state.panels,
-        directories: state.directories.filter((d) => d.active).map((d) => d.url),
+        directories: state.directories
+          .filter((d) => d.active)
+          .map((d) => d.url),
         customApps: state.customApps,
         contextHistory: state.contextHistory,
       }
@@ -81,11 +97,13 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
     removePanel: (panelId) => useClientStore.getState().removePanel(panelId),
     updatePanel: (panel) => useClientStore.getState().updatePanel(panel),
     newPanel: (app, instanceId, instanceTitle) =>
-      useClientStore.getState().newPanel(app, instanceId, instanceTitle),
+      useClientStore
+        .getState()
+        .newPanel(app, instanceId, instanceTitle as string),
   } as WebClientState
 
   const serverAdapter: ServerState = {
-    init: async () => {
+    init: () => {
       const serverStore = useServerStore.getState()
       serverStore.connect()
     },
@@ -112,17 +130,23 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
 
     intentChosen: (requestId, appId, intentId, channelId) => {
       const serverStore = useServerStore.getState()
-      serverStore.intentChosen(requestId, appId || "", intentId || "", channelId)
+      serverStore.intentChosen(
+        requestId,
+        (appId as unknown as string) || "",
+        intentId || "",
+        (channelId as unknown as string) || "",
+      )
     },
 
-    getApplications: async () => {
+    getApplications: () => {
       // This would need to be implemented or delegated to the server store
-      return []
+      return Promise.resolve([])
     },
 
-    setUserChannel: async (instanceId: string, channel: string) => {
+    setUserChannel: (instanceId: string, channel: string) => {
       // This would need to be implemented in the server store
       console.log("setUserChannel called", instanceId, channel)
+      return Promise.resolve()
     },
   } as ServerState
 
@@ -153,9 +177,10 @@ export function createLegacyStateAdapter(): LegacyStateAdapter {
     getDirectoryAppForUrl: () => undefined,
     init: () => {},
     registerAppWindow: () => {},
-    getInstanceIdForWindow: async () => undefined,
+    getInstanceIdForWindow: () => Promise.resolve(undefined),
     createTitle: () => "App",
-    open: async () => ({ instanceId: "", channel: null, instanceTitle: "" }),
+    open: () =>
+      Promise.resolve({ instanceId: "", channel: null, instanceTitle: "" }),
   } as AppState
 
   return {
@@ -187,7 +212,16 @@ export function migrateFromLocalStorage() {
 
   if (stored) {
     try {
-      const data = JSON.parse(stored)
+      const data = JSON.parse(stored) as {
+        tabs: TabDetail[]
+        panels: AppPanel[]
+        activeTabId: string
+        userSessionId: string
+        directories: Directory[]
+        knownApps: DirectoryApp[]
+        customApps: DirectoryApp[]
+        contextHistory: ContextHistory
+      }
       const {
         tabs,
         panels,

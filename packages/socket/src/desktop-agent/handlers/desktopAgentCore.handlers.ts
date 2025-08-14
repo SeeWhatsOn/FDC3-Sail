@@ -166,7 +166,11 @@ function updatePanelChannels(
 
     // Notify of channel change if different
     if (newChannel !== existingChannel) {
-      serverContext.notifyUserChannelsChanged(panelId, newChannel)
+      serverContext
+        .notifyUserChannelsChanged(panelId, newChannel)
+        .catch((error) => {
+          console.error("Error notifying user channels changed:", error)
+        })
     }
   })
 }
@@ -265,7 +269,12 @@ export function registerDesktopAgentHandlers(context: HandlerContext): void {
       directoryListingArgs: DesktopAgentDirectoryListingArgs,
       callback: SocketIOCallback<unknown>,
     ) => {
-      handleDirectoryListing(directoryListingArgs, callback, context)
+      handleDirectoryListing(directoryListingArgs, callback, context).catch(
+        (error) => {
+          console.error("Error handling directory listing:", error)
+          callback(error, "Failed to list directory")
+        },
+      )
     },
   )
 
@@ -275,7 +284,12 @@ export function registerDesktopAgentHandlers(context: HandlerContext): void {
       appLaunchArgs: DesktopAgentRegisterAppLaunchArgs,
       callback: SocketIOCallback<string>,
     ) => {
-      handleRegisterAppLaunch(appLaunchArgs, callback, context)
+      handleRegisterAppLaunch(appLaunchArgs, callback, context).catch(
+        (error: unknown) => {
+          console.error("Error handling register app launch:", error)
+          callback(error as string, "Failed to register app launch")
+        },
+      )
     },
   )
 
@@ -285,7 +299,12 @@ export function registerDesktopAgentHandlers(context: HandlerContext): void {
       clientStateArgs: SailClientStateArgs,
       callback: SocketIOCallback<boolean>,
     ) => {
-      handleClientState(clientStateArgs, callback, context)
+      handleClientState(clientStateArgs, callback, context).catch(
+        (error: unknown) => {
+          console.error("Error handling client state:", error)
+          callback(false, "Failed to update client state")
+        },
+      )
     },
   )
 }

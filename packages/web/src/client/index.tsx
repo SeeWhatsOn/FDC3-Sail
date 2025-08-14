@@ -14,6 +14,10 @@ getAppState().addStateChangeCallback(() => {
   root.render(<Frame cs={getClientState()} as={getAppState()} />)
 })
 
-getServerState().registerDesktopAgent(getClientState().createArgs())
+getServerState()
+  .registerDesktopAgent(getClientState().createArgs())
+  .catch((error) => {
+    console.error("Error registering desktop agent:", error)
+  })
 
 getAppState().init(getServerState(), getClientState())

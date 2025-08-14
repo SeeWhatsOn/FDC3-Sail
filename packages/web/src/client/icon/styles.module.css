@@ -25,7 +25,7 @@
   flex-shrink: 1;
   margin: 0;
   overflow: hidden;
-  text-overflow: ellipses;
+  text-overflow: ellipsis;
 }
 
 .iconNameText {

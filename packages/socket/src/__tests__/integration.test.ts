@@ -17,7 +17,7 @@ import {
   AugmentedAppMetadata,
   ChannelReceiverUpdate,
 } from "@finos/fdc3-sail-shared"
-import { AppMetadata, IntentMetadata } from "@finos/fdc3-standard"
+
 import path from "path"
 import { DirectoryApp } from "@finos/fdc3-web-impl"
 
@@ -85,11 +85,11 @@ describe("End-to-End Integration Tests", () => {
         userSessionId: sessionId,
       }
 
-      const apps = await new Promise<AugmentedAppMetadata[]>((resolve) => {
+      const apps = await new Promise<DirectoryApp[]>((resolve) => {
         clientSocket.emit(
           DA_DIRECTORY_LISTING,
           listingArgs,
-          (apps: AugmentedAppMetadata[], error?: string) => {
+          (apps: DirectoryApp[], error?: string) => {
             expect(error).toBeUndefined()
             expect(Array.isArray(apps)).toBe(true)
 
@@ -224,27 +224,27 @@ describe("End-to-End Integration Tests", () => {
       })
 
       // Get directory listing
-      const apps = await new Promise<AugmentedAppMetadata[]>((resolve) => {
+      const apps = await new Promise<DirectoryApp[]>((resolve) => {
         clientSocket.emit(
           DA_DIRECTORY_LISTING,
           { userSessionId: sessionId },
-          (apps: AugmentedAppMetadata[]) => resolve(apps),
+          (apps: DirectoryApp[]) => resolve(apps),
         )
       })
 
       // Test different app types
-      const webApp = apps.find((app) => (app as any).type === "web")
-      const nativeApp = apps.find((app) => (app as any).type === "native")
-      const citrixApp = apps.find((app) => (app as any).type === "citrix")
+      const webApp = apps.find((app) => app.type === "web")
+      const nativeApp = apps.find((app) => app.type === "native")
+      const citrixApp = apps.find((app) => app.type === "citrix")
 
       expect(webApp).toBeDefined()
       expect(nativeApp).toBeDefined()
       expect(citrixApp).toBeDefined()
 
       // Verify each has proper configuration
-      expect((webApp as AppMetadata)?.details?.url).toBeDefined()
-      expect((nativeApp as AppMetadata)?.details?.path).toBeDefined()
-      expect((citrixApp as AppMetadata)?.details?.alias).toBeDefined()
+      expect("url" in (webApp?.details || {})).toBe(true)
+      expect("path" in (nativeApp?.details || {})).toBe(true)
+      expect("alias" in (citrixApp?.details || {})).toBe(true)
     })
   })
 
@@ -265,24 +265,24 @@ describe("End-to-End Integration Tests", () => {
         clientSocket.emit(DA_HELLO, helloArgs, () => resolve())
       })
 
-      const apps = await new Promise<AugmentedAppMetadata[]>((resolve) => {
+      const apps = await new Promise<DirectoryApp[]>((resolve) => {
         clientSocket.emit(
           DA_DIRECTORY_LISTING,
           { userSessionId: sessionId },
-          (apps: AugmentedAppMetadata[]) => resolve(apps),
+          (apps: DirectoryApp[]) => resolve(apps),
         )
       })
 
       // Verify intent distribution across apps
       const viewInstrumentApps = apps.filter((app) =>
-        (app as AppMetadata)?.intents?.some(
-          (intent: IntentMetadata) => intent.name === "ViewInstrument",
-        ),
+        app.interop?.intents?.listensFor?.[
+          "ViewInstrument"
+        ]?.contexts?.includes("fdc3.instrument"),
       )
 
       const viewPortfolioApps = apps.filter((app) =>
-        (app as AppMetadata)?.intents?.some(
-          (intent: IntentMetadata) => intent.name === "ViewPortfolio",
+        app.interop?.intents?.listensFor?.["ViewPortfolio"]?.contexts?.includes(
+          "fdc3.portfolio",
         ),
       )
 
@@ -291,9 +291,9 @@ describe("End-to-End Integration Tests", () => {
 
       // Verify context support
       const instrumentContextApps = apps.filter((app) =>
-        (app as AppMetadata)?.intents?.some((intent: IntentMetadata) =>
-          (intent as IntentMetadata).contexts?.includes("fdc3.instrument"),
-        ),
+        app.interop?.intents?.listensFor?.[
+          "ViewInstrument"
+        ]?.contexts?.includes("fdc3.instrument"),
       )
 
       expect(instrumentContextApps.length).toBeGreaterThan(0)
@@ -398,46 +398,36 @@ describe("End-to-End Integration Tests", () => {
       })
 
       // Get apps and verify ViewInstrument intent support
-      const apps = await new Promise<AugmentedAppMetadata[]>((resolve) => {
+      const apps = await new Promise<DirectoryApp[]>((resolve) => {
         clientSocket.emit(
           DA_DIRECTORY_LISTING,
           { userSessionId: sessionId },
-          (apps: AugmentedAppMetadata[]) => resolve(apps),
+          (apps: DirectoryApp[]) => resolve(apps),
         )
       })
 
       const viewInstrumentApps = apps.filter((app) =>
-        (app as AppMetadata)?.intents?.some(
-          (intent: IntentMetadata) =>
-            intent.name === "ViewInstrument" &&
-            (intent as IntentMetadata).contexts?.includes("fdc3.instrument"),
-        ),
+        app.interop?.intents?.listensFor?.[
+          "ViewInstrument"
+        ]?.contexts?.includes("fdc3.instrument"),
       )
 
       expect(viewInstrumentApps.length).toBeGreaterThan(1)
 
       // Verify different app types support the same intent
-      const webApp = viewInstrumentApps.find(
-        (app) => (app as AppMetadata).type === "web",
-      )
-      const nativeApp = viewInstrumentApps.find(
-        (app) => (app as AppMetadata).type === "native",
-      )
+      const webApp = viewInstrumentApps.find((app) => app.type === "web")
+      const nativeApp = viewInstrumentApps.find((app) => app.type === "native")
 
       expect(webApp).toBeDefined()
       expect(nativeApp).toBeDefined()
 
       // Both should support fdc3.instrument context
       expect(
-        (webApp as AppMetadata).intents.find(
-          (i: IntentMetadata) => i.name === "ViewInstrument",
-        ).contexts,
+        webApp?.interop?.intents?.listensFor?.["ViewInstrument"]?.contexts,
       ).toContain("fdc3.instrument")
 
       expect(
-        (nativeApp as AppMetadata).intents.find(
-          (i: IntentMetadata) => i.name === "ViewInstrument",
-        ).contexts,
+        nativeApp?.interop?.intents?.listensFor?.["ViewInstrument"]?.contexts,
       ).toContain("fdc3.instrument")
     })
   })

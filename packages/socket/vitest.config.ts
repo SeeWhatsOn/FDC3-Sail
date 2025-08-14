@@ -10,12 +10,7 @@ export default defineConfig({
     setupFiles: ["./src/__tests__/setup/setupTests.ts"],
     reporters: ["default", "html"],
     // Retry configuration for flaky tests
-    retry: {
-      // Retry integration tests that might have timing issues
-      "**/*integration*": 2,
-      // Retry socket tests once due to async nature
-      "**/*socket*": 1,
-    },
+    retry: 1,
     // Test isolation improvements
     isolate: true,
     // Pool configuration for better test isolation

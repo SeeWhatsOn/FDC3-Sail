@@ -13,12 +13,10 @@
 a.json-link {
   text-decoration: none;
   border-bottom: 1px solid;
-  outline: none;
 }
 
 a.json-link:hover {
   background-color: transparent;
-  outline: none;
 }
 
 ol.json-lines {
@@ -34,6 +32,7 @@ ol.json-lines > li {
   padding: 0px;
 }
 
+/* eslint-disable */
 ol.json-lines > li::marker {
   font-family: system-ui, sans-serif;
   font-weight: normal;
@@ -101,7 +100,7 @@ a.json-link:hover {
 a.json-link:active {
   color: slategray;
 }
-
+/* eslint-disable */
 ol.json-lines > li::marker {
   color: dimgray;
 }
@@ -162,7 +161,7 @@ ol.json-lines > li:hover {
 .dark-mode a.json-link:active {
   color: slategray;
 }
-
+/* eslint-disable */
 .dark-mode ol.json-lines > li::marker {
   color: silver;
 }

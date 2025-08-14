@@ -7,14 +7,22 @@ function updateText(url: string, text: string) {
   const directories = getClientState().getDirectories()
   const d = directories.find((d) => d.url == url)
   d!.label = text
-  getClientState().setDirectories(directories)
+  getClientState()
+    .setDirectories(directories)
+    .catch((error) => {
+      console.error("Error updating directory text:", error)
+    })
 }
 
 function updateUrl(url: string, text: string) {
   const directories = getClientState().getDirectories()
   const d = directories.find((d) => d.url == url)
   d!.url = text
-  getClientState().setDirectories(directories)
+  getClientState()
+    .setDirectories(directories)
+    .catch((error) => {
+      console.error("Error updating directory URL:", error)
+    })
 }
 
 function toggleDirectory(d: Directory) {
@@ -28,7 +36,14 @@ function updateDirectories(directories: Directory[]) {
   getClientState()
     .setDirectories(directories)
     .then(async () => {
-      getClientState().setKnownApps(await getServerState().getApplications())
+      getClientState()
+        .setKnownApps(await getServerState().getApplications())
+        .catch((error) => {
+          console.error("Error updating known apps:", error)
+        })
+    })
+    .catch((error) => {
+      console.error("Error updating directories:", error)
     })
 }
 
