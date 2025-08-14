@@ -3,7 +3,6 @@ import { DirectoryApp } from "@finos/fdc3-web-impl"
 import { AppDirectoryManager } from "../app-directory/appDirectoryManager"
 import path from "path"
 import { writeFileSync, unlinkSync } from "fs"
-import { AppMetadata, Intent, AppIntent } from "@finos/fdc3"
 
 // Test apps for direct testing
 const webApp1: DirectoryApp = {

@@ -2,11 +2,8 @@ import { Socket } from "socket.io"
 import { SailFDC3Server } from "../sailFDC3Server"
 import { SOCKET_CONFIG } from "../../constants"
 
-/** Socket.IO callback types */
-export type SocketIOCallback<T = unknown> = (
-  result: T | null,
-  error?: string,
-) => void
+/** Socket.IO callback type for handlers */
+export type SocketIOCallback<T> = (result: T, error?: string) => void
 
 /** Types of socket connections */
 export const enum SocketType {
@@ -71,8 +68,8 @@ export function getFdc3ServerInstance(
  * @param callback - The socket callback function
  * @param errorMessage - The error message to return
  */
-export function handleCallbackError<T>(
-  callback: SocketIOCallback<T>,
+export function handleCallbackError(
+  callback: (result: unknown, error?: string) => void,
   errorMessage: string,
 ): void {
   callback(null, errorMessage)

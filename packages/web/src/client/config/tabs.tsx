@@ -76,7 +76,7 @@ function updateBackground(id: string, background: string) {
     .getTabs()
     .find((t) => t.id == id)!
   tab.background = background
-  getClientState().updateTab(tab)
+  void getClientState().updateTab(tab)
 }
 
 function updateTitle(id: string, text: string) {
@@ -84,7 +84,7 @@ function updateTitle(id: string, text: string) {
     .getTabs()
     .find((t) => t.id == id)!
   tab.id = text
-  getClientState().updateTab(tab)
+  void getClientState().updateTab(tab)
 }
 
 function updateIconUrl(id: string, url: string) {
@@ -92,11 +92,11 @@ function updateIconUrl(id: string, url: string) {
     .getTabs()
     .find((t) => t.id == id)!
   tab.icon = url
-  getClientState().updateTab(tab)
+  void getClientState().updateTab(tab)
 }
 
 function move(id: string, d: "up" | "down") {
-  getClientState().moveTab(id, d)
+  void getClientState().moveTab(id, d)
 }
 
 function removeTab(is: string) {
@@ -115,7 +115,7 @@ function removeTab(is: string) {
   }
 
   if (confirm("Remove this tab - are you sure?") == true) {
-    getClientState().removeTab(is)
+    void getClientState().removeTab(is)
   }
 }
 
@@ -202,7 +202,7 @@ export const TabList = () => {
         ))}
       <AddButton
         onClick={() => {
-          getClientState().addTab({
+          void getClientState().addTab({
             id: newTabTitle(),
             icon: newIconUrl(),
             background: newBackgroundColour(),

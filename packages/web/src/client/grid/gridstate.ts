@@ -279,7 +279,7 @@ export class GridsStateImpl implements GridsState {
       oldGridEl.removeChild(oldWidget)
     }
 
-    getServerState().setUserChannel(p.panelId, p.tabId)
+    void getServerState().setUserChannel(p.panelId, p.tabId)
   }
 
   updatePanels(): void {

@@ -19,10 +19,10 @@ export function handleChannelUpdates(renderChannels: () => void) {
       userSessionId: getUserSessionId(),
       instanceId: getInstanceId(),
     }
-    const result: ChannelReceiverUpdate | undefined = await socket.emitWithAck(
+    const result = (await socket.emitWithAck(
       ChannelMessages.CHANNEL_RECEIVER_HELLO,
       msg,
-    )
+    )) as ChannelReceiverUpdate | undefined
     if (result) {
       channels.length = 0
       channels.push(...result.tabs)

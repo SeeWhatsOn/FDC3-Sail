@@ -25,12 +25,12 @@ const LineItemComponent = ({
   setState,
   isSelected,
 }: {
-  li: string | Intent | AppIdentifier | TabDetail
+  li: string | AppIdentifier | TabDetail
   text: string
   icon: string
   background: string | null
-  setState: (a: string | Intent | AppIdentifier | TabDetail) => void
-  isSelected: (a: string | Intent | AppIdentifier | TabDetail) => boolean
+  setState: (a: string | AppIdentifier | TabDetail) => void
+  isSelected: (a: string | AppIdentifier | TabDetail) => boolean
 }) => {
   const selected = isSelected(li)
   const lightBackground = background ? background + "44" : undefined
@@ -341,7 +341,7 @@ export const ResolverPanel = ({
           key="go"
           text="Go"
           disabled={state.chosenApp == null || state.chosenIntent == null}
-          onClick={async () => {
+          onClick={() => {
             if (state.chosenApp && state.chosenIntent) {
               chooseAction(state.chosenApp, state.chosenIntent, state.channelId)
               closeAction()

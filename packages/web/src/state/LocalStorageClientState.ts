@@ -1,8 +1,9 @@
 import { v4 as uuidv4 } from "uuid"
 import { AppPanel } from "../types/ui-types"
 import { AbstractClientState } from "./AbstractClientState"
-import { Directory, TabDetail } from "@finos/fdc3-sail-shared"
+import { ContextHistory, Directory, TabDetail } from "@finos/fdc3-sail-shared"
 import { ServerState } from "../types/ServerState"
+import { DirectoryApp } from "@finos/fdc3-web-impl"
 
 const STORAGE_KEY = "sail-client-state"
 
@@ -21,7 +22,16 @@ export class LocalStorageClientState extends AbstractClientState {
         knownApps,
         customApps,
         contextHistory,
-      } = JSON.parse(theState)
+      } = JSON.parse(theState) as {
+        tabs: TabDetail[]
+        panels: AppPanel[]
+        activeTabId: string
+        userSessionId: string
+        directories: Directory[]
+        knownApps: DirectoryApp[]
+        customApps: DirectoryApp[]
+        contextHistory: ContextHistory
+      }
       super(
         tabs,
         panels,

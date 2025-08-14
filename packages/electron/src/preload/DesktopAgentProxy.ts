@@ -23,17 +23,16 @@ import { getAgent as fdc3GetAgent } from "@finos/fdc3"
  * If any FDC3 function is called on it, it performs the getAgent process and acts as a proxy.
  *
  */
-/* eslint-disable  @typescript-eslint/no-explicit-any */
 export const fdc3 = {
-  _agent: null as unknown,
+  _agent: null as unknown as DesktopAgent,
 
-  getAgent(): Promise<DesktopAgent> {
+  async getAgent(): Promise<DesktopAgent> {
     if (this._agent == null) {
       console.log("SAIL: Getting agent")
-      this._agent = fdc3GetAgent()
+      this._agent = await fdc3GetAgent()
     }
 
-    return this._agent as Promise<DesktopAgent>
+    return Promise.resolve(this._agent)
   },
 
   async open(

@@ -1,19 +1,9 @@
 import { v4 as uuid } from "uuid"
-import {
-  ELECTRON_HELLO,
-  ElectronHelloArgs,
-  ElectronAppResponse,
-  ElectronDAResponse,
-} from "@finos/fdc3-sail-shared/message-types"
+import { HandshakeMessages } from "@finos/fdc3-sail-shared"
 import { SailAppInstanceManager } from "../sailAppInstanceManager"
 import { AppDirectoryManager } from "../../app-directory/appDirectoryManager"
 import { SailFDC3Server } from "../sailFDC3Server"
-import {
-  SocketIOCallback,
-  HandlerContext,
-  CONFIG,
-  handleCallbackError,
-} from "./types"
+import { HandlerContext, CONFIG, handleCallbackError } from "./types"
 
 /**
  * Gets the Sail URL from environment variables or returns default
@@ -28,11 +18,11 @@ function getSailUrl(): string {
  * @param callback - Socket callback to return app or DA response
  * @param context - Handler context with socket, connection state, and sessions
  */
-async function handleElectronHello(
+function handleElectronHello(
   electronHelloArgs: ElectronHelloArgs,
   callback: SocketIOCallback<ElectronAppResponse | ElectronDAResponse>,
   { socket, connectionState, sessions }: HandlerContext,
-): Promise<void> {
+): void {
   console.log(`SAIL ELECTRON HELLO: ${JSON.stringify(electronHelloArgs)}`)
   const existingServer = sessions.get(electronHelloArgs.userSessionId)
 

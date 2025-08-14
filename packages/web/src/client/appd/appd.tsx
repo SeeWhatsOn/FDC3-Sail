@@ -88,9 +88,9 @@ export class AppDPanel extends Component<AppPanelProps, AppPanelState> {
             key="open-frame"
             text="Open Here"
             disabled={this.state.chosen == null}
-            onClick={async () => {
+            onClick={() => {
               if (this.state.chosen) {
-                await getAppState().open(this.state.chosen, AppHosting.Frame)
+                void getAppState().open(this.state.chosen, AppHosting.Frame)
                 this.props.closeAction()
               }
             }}
@@ -99,9 +99,9 @@ export class AppDPanel extends Component<AppPanelProps, AppPanelState> {
             key="open-tab"
             text="Open In Tab"
             disabled={this.state.chosen == null}
-            onClick={async () => {
+            onClick={() => {
               if (this.state.chosen) {
-                getAppState().open(this.state.chosen, AppHosting.Tab)
+                void getAppState().open(this.state.chosen, AppHosting.Tab)
                 this.props.closeAction()
               }
             }}

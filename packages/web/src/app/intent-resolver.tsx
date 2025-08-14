@@ -66,9 +66,9 @@ window.addEventListener("load", () => {
             renderIntentResolver(null)
           }}
           channelDetails={channels}
-          chooseAction={async (app, intent, channel) => {
+          chooseAction={(app, intent, channel) => {
             console.log("chooseAction", app, intent, channel)
-            await callback(intent, app, channel) //TODO: fix this
+            void callback(intent, app, channel) //TODO: fix this
             renderIntentResolver(null)
           }}
         />,

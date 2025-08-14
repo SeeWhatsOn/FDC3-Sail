@@ -101,7 +101,7 @@ export abstract class AbstractClientState implements WebClientState {
   }
 
   /** Panels */
-  async updatePanel(ap: AppPanel): Promise<void> {
+  updatePanel(ap: AppPanel): void {
     // console.log("Panels " + JSON.stringify(this.panels))
     const idx = this.panels.findIndex((p) => p.panelId == ap.panelId)
     if (idx != -1) {
@@ -112,12 +112,16 @@ export abstract class AbstractClientState implements WebClientState {
 
     // console.log("Total Panels: " + this.panels.length)
 
-    await this.saveState()
+    this.saveState().catch(() => {
+      console.error("Error saving state")
+    })
   }
 
-  async removePanel(id: string): Promise<void> {
+  removePanel(id: string): void {
     this.panels = this.panels.filter((p) => p.panelId != id)
-    await this.saveState()
+    this.saveState().catch(() => {
+      console.error("Error saving state")
+    })
   }
 
   newPanel(detail: DirectoryApp, instanceId: string, title?: string): void {
@@ -129,7 +133,7 @@ export abstract class AbstractClientState implements WebClientState {
         y: -1,
         w: 6,
         h: 8,
-        title: title || detail.title || detail.name,
+        title: title || detail.title || detail.name || "Untitled",
         tabId: this.activeTabId,
         panelId: instanceId,
         url,

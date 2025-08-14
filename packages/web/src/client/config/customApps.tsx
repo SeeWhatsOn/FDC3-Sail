@@ -339,7 +339,9 @@ export const CustomAppList = () => {
     return getClientState()
       .setCustomApps(convertToDirectoryApps(newApps))
       .then(async () => {
-        getClientState().setKnownApps(await getServerState().getApplications())
+        void getClientState().setKnownApps(
+          await getServerState().getApplications(),
+        )
       })
   }
 
@@ -354,17 +356,21 @@ export const CustomAppList = () => {
               const idx = apps.findIndex((a) => a.id == d.id)
               const newApps = [...apps]
               newApps[idx] = app
-              updateApps(newApps)
+              void updateApps(newApps)
             } else {
               const idx = apps.findIndex((a) => a.id == d.id)
               const newApps = [...apps]
               newApps.splice(idx, 1)
-              updateApps(newApps)
+              void updateApps(newApps)
             }
           }}
         />
       ))}
-      <AddButton onClick={() => updateApps([...apps, newApp()])} />
+      <AddButton
+        onClick={() => {
+          void updateApps([...apps, newApp()])
+        }}
+      />
     </div>
   )
 }

@@ -35,7 +35,9 @@ export const Tabs = ({ cs }: { cs: ClientState }) => {
           key={t.id}
           td={t}
           active={t.id == cs.getActiveTab().id}
-          onClick={() => cs.setActiveTabId(t.id)}
+          onClick={() => {
+            void cs.setActiveTabId(t.id)
+          }}
         />
       ))}
     </div>

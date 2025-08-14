@@ -78,7 +78,7 @@
   padding: 0.4rem;
   margin: 0;
   overflow: hidden;
-  text-overflow: ellipses;
+  text-overflow: ellipsis;
 }
 
 .contentTitleTextSpan {
@@ -95,7 +95,7 @@
 }
 
 .iframe {
-  display: absolute;
+  position: absolute;
   top: 0;
   bottom: 0;
   left: 0;

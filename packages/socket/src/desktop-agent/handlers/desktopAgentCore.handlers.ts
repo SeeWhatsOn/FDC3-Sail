@@ -135,7 +135,10 @@ async function handleRegisterAppLaunch(
     callback(instanceId)
   } catch (error) {
     console.error("SAIL Session not found", userSessionId, error)
-    handleCallbackError(callback, "Session not found")
+    handleCallbackError(
+      callback as SocketIOCallback<unknown>,
+      "Session not found",
+    )
   }
 }
 
@@ -228,7 +231,10 @@ async function handleClientState(
     callback(true)
   } catch (error) {
     console.error("SAIL Client state update failed:", error)
-    handleCallbackError(callback, "Session not found")
+    handleCallbackError(
+      callback as SocketIOCallback<unknown>,
+      "Session not found",
+    )
   }
 }
 

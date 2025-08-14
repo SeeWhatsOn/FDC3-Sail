@@ -43,15 +43,14 @@ export class ServerStateImpl implements ServerState {
     }
 
     const userSessionId = this.cs!.getUserSessionID()
-    const response = await this.socket.emitWithAck(
+    const response = (await this.socket.emitWithAck(
       AppManagementMessages.DA_DIRECTORY_LISTING,
       { userSessionId } as DesktopAgentDirectoryListingArgs,
-    )
-    const out = response as DirectoryApp[]
-    this.cs!.setKnownApps(out).catch((e) => {
+    )) as DirectoryApp[]
+    this.cs!.setKnownApps(response).catch((e) => {
       console.error("Error setting known apps", e)
     })
-    return out
+    return response
   }
 
   async registerAppLaunch(
@@ -65,7 +64,7 @@ export class ServerStateImpl implements ServerState {
     }
 
     const userSessionId = this.cs!.getUserSessionID()
-    const instanceId: string = await this.socket.emitWithAck(
+    const instanceId = (await this.socket.emitWithAck(
       AppManagementMessages.DA_REGISTER_APP_LAUNCH,
       {
         userSessionId,
@@ -74,7 +73,7 @@ export class ServerStateImpl implements ServerState {
         channel,
         instanceTitle,
       } as DesktopAgentRegisterAppLaunchArgs,
-    )
+    )) as string
     return instanceId
   }
 
@@ -159,7 +158,9 @@ export class ServerStateImpl implements ServerState {
             requestId: data.requestId,
           })
 
-          this.resolveCallback = callback
+          this.resolveCallback = callback as (
+            x: SailIntentResolveResponse,
+          ) => void
         },
       )
 
@@ -167,7 +168,7 @@ export class ServerStateImpl implements ServerState {
         ContextMessages.SAIL_BROADCAST_CONTEXT,
         (data: SailBroadcastContextArgs) => {
           console.log(`SAIL_BROADCAST_CONTEXT: ${JSON.stringify(data)}`)
-          this.cs!.appendContextHistory(data.channelId, data.context)
+          void this.cs!.appendContextHistory(data.channelId, data.context)
         },
       )
     })
