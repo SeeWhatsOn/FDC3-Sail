@@ -4,11 +4,11 @@ import { resolve } from "path"
 export default defineConfig({
   test: {
     environment: "jsdom",
-    setupFiles: ["./src/test/setup.ts"],
+    setupFiles: ["./src/__test__/setup.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: ["node_modules/", "src/test/", "dist/"],
+      exclude: ["node_modules/", "src/__test__/", "dist/"],
       thresholds: {
         global: {
           branches: 80,

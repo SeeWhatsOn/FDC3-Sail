@@ -1,9 +1,9 @@
 import { AppIdentifier, Context, Intent } from "@finos/fdc3"
 import { useState } from "react"
+import Color from "color"
 import { AugmentedAppIntent, AugmentedAppMetadata, TabDetail } from "@finos/fdc3-sail-shared"
 
 import { Popup, PopupButton } from "../popups/popup"
-import { selectHighestContrast } from "../../util/contrast"
 import { DEFAULT_ICON, getIcon } from "../appd/appd"
 
 import styles from "./styles.module.css"
@@ -13,6 +13,22 @@ type State = {
   chosenIntent: string | null
   chosenApp: AppIdentifier | null
   channelId: string | null
+}
+
+export function selectHighestContrast(bgColorCSS: string, ...candidates: string[]) {
+  const bgColor = Color(bgColorCSS)
+  const contrasts: number[] = candidates.map(candidate => {
+    return bgColor.contrast(Color(candidate))
+  })
+  let bestCandidate = candidates[0],
+    highestContrast = contrasts[0]
+  for (let i = 1; i < contrasts.length; i++) {
+    if (contrasts[i] > highestContrast) {
+      bestCandidate = candidates[i]
+      highestContrast = contrasts[i]
+    }
+  }
+  return bestCandidate
 }
 
 const LineItemComponent = ({

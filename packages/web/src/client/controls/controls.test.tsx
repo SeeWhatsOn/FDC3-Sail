@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 
-import { render, screen } from "@/test/utils/component-test-utils"
+import { render, screen } from "@/__test__/utils/component-test-utils"
 
 import { Controls, NewPanel, Bin } from "./controls"
 
