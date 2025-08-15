@@ -23,7 +23,7 @@
     "@types/react": "^19.1.10",
     "eslint": "^9.9.1",
     "prettier": "^3.3.3",
-    "vite": "^5.0.2"
+    "vite": "^7.1.2"
   },
   "dependencies": {
     "@finos/fdc3": "^2.2.0",
@@ -31,7 +31,7 @@
     "@finos/fdc3-schema": "^2.2.1-beta.3",
     "@finos/fdc3-web-impl": "^2.2.1-beta.3",
     "@types/react-dom": "^19.1.7",
-    "@vitejs/plugin-react": "^4.4.1",
+    "@vitejs/plugin-react": "^5.0.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "tsx": "^4.5.0",

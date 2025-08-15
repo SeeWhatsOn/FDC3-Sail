@@ -3,15 +3,17 @@ import glob from "glob"
 import path from "path"
 
 export default defineConfig({
-  publicDir: "public",
+  root: "html",
+  publicDir: "../public",
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src"),
+      "@": path.resolve(__dirname, "../src"),
     },
   },
   server: {
     port: 5173,
     host: true,
+    // the proxy is used to proxy the socket.io requests to the backend to prevent CORS issues
     proxy: {
       "/socket.io": {
         target: "http://localhost:8090",
@@ -28,7 +30,8 @@ export default defineConfig({
         main: "index.html",
         ...Object.fromEntries(
           glob
-            .sync("html/**/*.html")
+            .sync("**/*.html", { cwd: "html" })
+            .filter(file => file !== "index.html")
             .map(file => [file.replace(/\.html$/, "").replace(/\//g, "-"), file])
         ),
       },
