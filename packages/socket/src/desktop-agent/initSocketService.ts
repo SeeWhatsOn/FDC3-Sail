@@ -1,5 +1,5 @@
 import { Server, Socket } from "socket.io"
-import { SailFDC3Server } from "./sailFDC3Server"
+import { SailFDC3Server } from "./SailFDC3Server"
 import {
   SocketConnectionState,
   HandlerContext,

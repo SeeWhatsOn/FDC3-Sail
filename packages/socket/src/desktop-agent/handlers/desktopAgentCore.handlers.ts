@@ -13,7 +13,7 @@ import {
 import { State } from "@finos/fdc3-web-impl"
 import { SailAppInstanceManager } from "../sailAppInstanceManager"
 import { AppDirectoryManager } from "../../app-directory/appDirectoryManager"
-import { SailFDC3Server } from "../sailFDC3Server"
+import { SailFDC3Server } from "../SailFDC3Server"
 import { SailData } from "../sailAppInstanceManager"
 import {
   SocketIOCallback,

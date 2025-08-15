@@ -2,7 +2,7 @@ import { createServer } from "http"
 import { Server as SocketServer } from "socket.io"
 import getPort from "get-port"
 import { initSocketService } from "@finos/fdc3-sail-socket/src/desktop-agent/initSocketService"
-import { SailFDC3Server } from "@finos/fdc3-sail-socket/src/desktop-agent/sailFDC3Server"
+import { SailFDC3Server } from "@finos/fdc3-sail-socket/src/desktop-agent/SailFDC3Server"
 
 export const createTestServer = async () => {
   const httpServer = createServer()

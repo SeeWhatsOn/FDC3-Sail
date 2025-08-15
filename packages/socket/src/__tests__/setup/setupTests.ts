@@ -3,7 +3,7 @@ import { Server } from "socket.io"
 import { createServer, Server as NodeServer } from "http"
 import { AddressInfo } from "net"
 import { initSocketService } from "../../desktop-agent/initSocketService"
-import { SailFDC3Server } from "../../desktop-agent/sailFDC3Server"
+import { SailFDC3Server } from "../../desktop-agent/SailFDC3Server"
 
 export interface TestServerContext {
   io: Server

@@ -1,5 +1,5 @@
 import { Socket } from "socket.io"
-import { SailFDC3Server } from "../sailFDC3Server"
+import { SailFDC3Server } from "../SailFDC3Server"
 import { SOCKET_CONFIG } from "../../constants"
 
 /** Socket.IO callback type for handlers */

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { io as Client, Socket as ClientSocket } from "socket.io-client"
 import { getTestServer, clearSessions } from "./setup/setupTests"
-import { SailFDC3Server } from "../desktop-agent/sailFDC3Server"
+import { SailFDC3Server } from "../desktop-agent/SailFDC3Server"
 import {
   DA_HELLO,
   APP_HELLO,

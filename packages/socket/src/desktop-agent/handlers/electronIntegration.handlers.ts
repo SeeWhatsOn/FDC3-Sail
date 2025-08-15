@@ -1,7 +1,7 @@
 import { v4 as uuid } from "uuid"
 import { SailAppInstanceManager } from "../sailAppInstanceManager"
 import { AppDirectoryManager } from "../../app-directory/appDirectoryManager"
-import { SailFDC3Server } from "../sailFDC3Server"
+import { SailFDC3Server } from "../SailFDC3Server"
 import { HandlerContext, CONFIG, handleCallbackError, SocketIOCallback } from "./types"
 import { TabDetail, ContextHistory } from "@finos/fdc3-sail-shared"
 import { DirectoryApp } from "@finos/fdc3-web-impl"

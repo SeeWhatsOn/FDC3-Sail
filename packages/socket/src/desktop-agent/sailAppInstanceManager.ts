@@ -30,7 +30,7 @@ import {
   BroadcastRequest,
   ChannelChangedEvent,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import { mapChannels } from "./sailFDC3Server"
+import { mapChannels } from "./SailFDC3Server"
 import { APP_CONFIG } from "../constants"
 
 /**
