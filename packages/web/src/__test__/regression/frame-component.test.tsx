@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { render, screen } from "@/__test__/utils/component-test-utils"
+
+import { render } from "@/__test__/utils/component-test-utils"
 import { Frame } from "@/client/frame/frame"
 import { useClientStore } from "@/stores/useClientStore"
 
@@ -27,7 +28,7 @@ describe("Frame Component - Regression Tests", () => {
     // This test verifies the current Frame component renders correctly
     // Critical for ensuring migration doesn't break basic layout
     render(<Frame />)
-    
+
     // These elements should always be present
     expect(document.querySelector("[class*='outer']")).toBeInTheDocument()
     expect(document.querySelector("[class*='top']")).toBeInTheDocument()
@@ -37,7 +38,7 @@ describe("Frame Component - Regression Tests", () => {
 
   it("should handle active tab styling", () => {
     render(<Frame />)
-    
+
     // The main area should have a border color based on active tab
     const mainElement = document.querySelector("[class*='main']")
     expect(mainElement).toHaveStyle("border: 1px solid #123456")
@@ -51,11 +52,12 @@ describe("Frame Component - Regression Tests", () => {
   it("should maintain consistent DOM structure", () => {
     // This test captures the current DOM structure to detect breaking changes
     const { container } = render(<Frame />)
-    
+
     // Critical structural elements that migration must preserve
     const outerDiv = container.firstChild
-    expect(outerDiv).toHaveClass(expect.stringMatching(/outer/))
-    
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    expect(outerDiv).toHaveClass(expect.stringMatching("outer"))
+
     const children = (outerDiv as Element).children
     expect(children.length).toBeGreaterThanOrEqual(3) // top, left, main
   })

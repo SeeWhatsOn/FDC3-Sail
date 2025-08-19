@@ -1,14 +1,13 @@
-import { Component } from "react"
+import { useState, useCallback, useMemo, memo } from "react"
 
-import { AppState } from "../../types"
-import { getClientState, getServerState } from "../../state"
-import { WebClientState } from "../../types"
+import { useClientStore } from "../../stores/useClientStore"
+import { useServerStore } from "../../stores/useServerStore"
 import { Tabs } from "../tabs/tabs"
 import { ContextHistory, Logo, Settings } from "../top/top"
 import { Bin, Controls, NewPanel } from "../controls/controls"
 import { AppDPanel } from "../appd/appd"
 import { Content, Grids } from "../grid/grid"
-import { GridsStateImpl, GridsState } from "../grid/gridstate"
+import { GridsStateImpl } from "../grid/gridstate"
 import { ConfigPanel } from "../config/config"
 import { ResolverPanel } from "../resolver/resolver"
 import { ContextHistoryPanel } from "../context/ContextHistory"
@@ -16,111 +15,142 @@ import { ContextHistoryPanel } from "../context/ContextHistory"
 import styles from "./styles.module.css"
 
 enum Popup {
-  NONE,
-  APPD,
-  SETTINGS,
-  RESOLVER,
-  CONTEXT_HISTORY,
-}
-
-interface FrameProps {
-  cs: WebClientState
-  as: AppState
-}
-
-interface FrameState {
-  popup: Popup
+  NONE = "none",
+  APPD = "appd",
+  SETTINGS = "settings",
+  RESOLVER = "resolver",
+  CONTEXT_HISTORY = "context_history",
 }
 
 const CONTAINER_ID = "container-id"
 
-export class Frame extends Component<FrameProps, FrameState> {
-  private gs: GridsState = new GridsStateImpl(
-    CONTAINER_ID,
-    (ap, id) => <Content panel={ap} cs={this.props.cs} as={this.props.as} id={id} />,
-    getClientState()
+export const Frame = memo(() => {
+  // Modern state management with Zustand
+  const { getActiveTab, tabs, getContextHistory, getIntentResolution, setIntentResolution } =
+    useClientStore()
+
+  const { intentChosen } = useServerStore()
+
+  // Local popup state
+  const [popup, setPopup] = useState<Popup>(Popup.NONE)
+
+  // Get current active tab
+  const activeTab = getActiveTab()
+
+  // Close popup handler
+  const closePopup = useCallback(() => setPopup(Popup.NONE), [])
+
+  // Intent resolution data
+  const intentResolution = getIntentResolution()
+
+  // Context history for active tab
+  const contextHistory = getContextHistory(activeTab.id)
+
+  // Create GridsState instance (memoized to prevent recreation)
+  // Note: This will be cleaned up when Grid component is migrated
+  const gridsState = useMemo(() => {
+    return new GridsStateImpl(
+      CONTAINER_ID,
+      (ap, id) => (
+        <Content
+          panel={ap}
+          cs={useClientStore.getState() as unknown as import("../../types").WebClientState}
+          as={{} as import("../../types").AppState} // Will be removed when Grid is migrated
+          id={id}
+        />
+      ),
+      useClientStore.getState() as unknown as import("../../types").WebClientState // Legacy adapter - will be removed
+    )
+  }, []) // Empty deps - only create once
+
+  // Popup handlers
+  const showAppD = useCallback(() => setPopup(Popup.APPD), [])
+  const showSettings = useCallback(() => setPopup(Popup.SETTINGS), [])
+  const showContextHistory = useCallback(() => setPopup(Popup.CONTEXT_HISTORY), [])
+
+  // Intent resolution handlers
+  const closeIntentResolution = useCallback(() => {
+    setIntentResolution(null)
+  }, [setIntentResolution])
+
+  const handleIntentChoice = useCallback(
+    (
+      chosenApp: import("@finos/fdc3").AppIdentifier | null,
+      chosenIntent: string | null,
+      chosenChannel: string | null
+    ) => {
+      if (intentResolution && chosenApp && chosenIntent && chosenChannel) {
+        intentChosen(intentResolution.requestId, chosenApp.appId, chosenIntent, chosenChannel)
+      }
+    },
+    [intentResolution, intentChosen]
   )
 
-  constructor(p: FrameProps) {
-    super(p)
-    this.state = {
-      popup: Popup.NONE,
-    }
-  }
-
-  render() {
-    const activeTab = this.props.cs.getActiveTab()
-
-    return (
-      <div className={styles.outer}>
-        <div className={styles.top}>
-          <Logo />
-          <ContextHistory
-            onClick={() => this.setState({ popup: Popup.CONTEXT_HISTORY })}
-            contextHistory={this.props.cs.getContextHistory(activeTab.id)}
-          />
-          <Settings onClick={() => this.setState({ popup: Popup.SETTINGS })} />
-        </div>
-        <div className={styles.left}>
-          <Tabs cs={this.props.cs} />
-          <Controls>
-            <NewPanel onClick={() => this.setState({ popup: Popup.APPD })} />
-            <Bin />
-          </Controls>
-        </div>
-        <div className={styles.main} style={{ border: `1px solid ${activeTab.background}` }}>
-          <Grids cs={this.props.cs} gs={this.gs} as={this.props.as} id={CONTAINER_ID} />
-        </div>
-        {this.state?.popup == Popup.APPD ? (
-          <AppDPanel
-            key="appd"
-            closeAction={() =>
-              this.setState({
-                popup: Popup.NONE,
-              })
-            }
-          />
-        ) : null}
-        {this.state?.popup == Popup.SETTINGS ? (
-          <ConfigPanel
-            key="config"
-            cs={this.props.cs}
-            closeAction={() =>
-              this.setState({
-                popup: Popup.NONE,
-              })
-            }
-          />
-        ) : null}
-        {this.state.popup == Popup.CONTEXT_HISTORY ? (
-          <ContextHistoryPanel
-            key="context-history"
-            history={this.props.cs.getContextHistory(activeTab.id)}
-            currentChannel={activeTab.id}
-            closeAction={() => this.setState({ popup: Popup.NONE })}
-          />
-        ) : null}
-        {this.props.cs.getIntentResolution() ? (
-          <ResolverPanel
-            key="resolver"
-            appIntents={this.props.cs.getIntentResolution()!.appIntents}
-            context={this.props.cs.getIntentResolution()!.context}
-            currentChannel={this.props.cs.getActiveTab().id}
-            channelDetails={this.props.cs.getTabs()}
-            closeAction={() => {
-              this.props.cs.setIntentResolution(null)
-            }}
-            chooseAction={(chosenApp, chosenIntent, chosenChannel) => {
-              getServerState().intentChosen(
-                this.props.cs.getIntentResolution()!.requestId,
-                chosenApp,
-                chosenIntent,
-                chosenChannel
-              )
-            }}
-          />
-        ) : null}
+  return (
+    <div className={styles.outer} data-testid="frame-modern">
+      {/* Top bar */}
+      <div className={styles.top} data-testid="frame-top">
+        <Logo />
+        <ContextHistory onClick={showContextHistory} contextHistory={contextHistory} />
+        <Settings onClick={showSettings} />
       </div>
-    )
-  }
-}
+
+      {/* Left sidebar */}
+      <div className={styles.left} data-testid="frame-left">
+        <Tabs />
+        <Controls>
+          <NewPanel onClick={showAppD} />
+          <Bin />
+        </Controls>
+      </div>
+
+      {/* Main content area */}
+      <div
+        className={styles.main}
+        data-testid="frame-main"
+        style={{ border: `1px solid ${activeTab.background}` }}
+      >
+        <Grids
+          cs={useClientStore.getState() as unknown as import("../../types").WebClientState}
+          gs={gridsState}
+          as={{} as import("../../types").AppState}
+          id={CONTAINER_ID}
+        />
+      </div>
+
+      {/* Popup modals */}
+      {popup === Popup.APPD && <AppDPanel key="appd" closeAction={closePopup} />}
+
+      {popup === Popup.SETTINGS && (
+        <ConfigPanel
+          key="config"
+          closeAction={closePopup}
+        />
+      )}
+
+      {popup === Popup.CONTEXT_HISTORY && (
+        <ContextHistoryPanel
+          key="context-history"
+          history={contextHistory}
+          currentChannel={activeTab.id}
+          closeAction={closePopup}
+        />
+      )}
+
+      {/* Intent Resolution Modal */}
+      {intentResolution && (
+        <ResolverPanel
+          key="resolver"
+          appIntents={intentResolution.appIntents}
+          context={intentResolution.context}
+          currentChannel={activeTab.id}
+          channelDetails={tabs}
+          closeAction={closeIntentResolution}
+          chooseAction={handleIntentChoice}
+        />
+      )}
+    </div>
+  )
+})
+
+Frame.displayName = "Frame"

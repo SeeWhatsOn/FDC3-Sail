@@ -1,11 +1,12 @@
 import { TabDetail } from "@finos/fdc3-sail-shared"
+import { memo, useCallback } from "react"
 
 import { Icon } from "../icon/icon"
-import { ClientState } from "../../types"
+import { useClientStore } from "../../stores/useClientStore"
 
 import styles from "./styles.module.css"
 
-const Tab = ({ td, active, onClick }: { td: TabDetail; active: boolean; onClick: () => void }) => {
+const Tab = memo(({ td, active, onClick }: { td: TabDetail; active: boolean; onClick: () => void }) => {
   return (
     <div
       id={td.id}
@@ -19,21 +20,29 @@ const Tab = ({ td, active, onClick }: { td: TabDetail; active: boolean; onClick:
       <Icon text={td.id} image={td.icon} dark={true} />
     </div>
   )
-}
+})
 
-export const Tabs = ({ cs }: { cs: ClientState }) => {
+Tab.displayName = "Tab"
+
+export const Tabs = memo(() => {
+  const { tabs, activeTabId, setActiveTabId } = useClientStore()
+
+  const handleTabClick = useCallback((tabId: string) => {
+    setActiveTabId(tabId)
+  }, [setActiveTabId])
+
   return (
     <div className={styles.tabs}>
-      {cs.getTabs().map(t => (
+      {tabs.map(t => (
         <Tab
           key={t.id}
           td={t}
-          active={t.id == cs.getActiveTab().id}
-          onClick={() => {
-            void cs.setActiveTabId(t.id)
-          }}
+          active={t.id === activeTabId}
+          onClick={() => handleTabClick(t.id)}
         />
       ))}
     </div>
   )
-}
+})
+
+Tabs.displayName = "Tabs"

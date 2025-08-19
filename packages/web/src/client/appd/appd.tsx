@@ -1,4 +1,4 @@
-import { Component } from "react"
+import { useState, useEffect, useCallback, memo } from "react"
 import { DirectoryApp, WebAppDetails } from "@finos/fdc3-web-impl"
 import { AppHosting } from "@finos/fdc3-sail-shared"
 import { AppMetadata, Image } from "@finos/fdc3"
@@ -24,105 +24,98 @@ export function getIcon(a: DirectoryApp | AppMetadata | undefined): string {
 
 type AppPanelProps = { closeAction: () => void }
 
-type AppPanelState = {
-  chosen: DirectoryApp | null
-  apps: DirectoryApp[]
-}
+export const AppDPanel = memo(({ closeAction }: AppPanelProps) => {
+  const [chosen, setChosen] = useState<DirectoryApp | null>(null)
+  const [apps, setApps] = useState<DirectoryApp[]>([])
 
-export class AppDPanel extends Component<AppPanelProps, AppPanelState> {
-  constructor(props: AppPanelProps) {
-    super(props)
-    this.state = {
-      chosen: null,
-      apps: getClientState()
-        .getKnownApps()
-        .filter(d => onlyRelevantApps(d)),
+  useEffect(() => {
+    const relevantApps = getClientState()
+      .getKnownApps()
+      .filter(app => {
+        const sail = app.hostManifests?.sail as { [key: string]: boolean }
+        return (
+          (sail ? sail.searchable !== false : true) &&
+          app.type === "web" &&
+          (app.details as WebAppDetails).url != null
+        )
+      })
+    setApps(relevantApps)
+  }, [])
+
+  const handleAppSelect = useCallback((app: DirectoryApp) => {
+    setChosen(app)
+  }, [])
+
+  const handleOpenInFrame = useCallback(() => {
+    if (chosen) {
+      void getAppState().open(chosen, AppHosting.Frame)
+      closeAction()
     }
-  }
+  }, [chosen, closeAction])
 
-  setChosen(app: DirectoryApp) {
-    //console.log("state changed " + app.appId);
-    this.setState({
-      apps: this.state.apps,
-      chosen: app,
-    })
-  }
+  const handleOpenInTab = useCallback(() => {
+    if (chosen) {
+      void getAppState().open(chosen, AppHosting.Tab)
+      closeAction()
+    }
+  }, [chosen, closeAction])
 
-  render() {
-    const app: DirectoryApp = this.state.chosen!
-
-    return (
-      <Popup
-        key="AppDPopup"
-        title="Start Application"
-        area={
-          <div className={styles.appDContent}>
-            <div className={styles.appDApps}>
-              {this.state.apps.map(a => (
-                <div
-                  key={a.appId}
-                  className={`${styles.appDApp} ${a == app ? styles.selected : ""}`}
-                  onClick={() => this.setChosen(a)}
-                >
-                  <Icon image={getIcon(a)} text={a.title} dark={false} />
-                </div>
-              ))}
-            </div>
-
-            <div className={styles.appDDetail}>
-              {app ? (
-                <div className={styles.appDInfo}>
-                  <h2>{app.title}</h2>
-                  <p>{app.description}</p>
-                  <ul>
-                    {app.categories?.map((c: string) => (
-                      <li key={c}>{c}</li>
-                    ))}
-                  </ul>
-                  <div className={styles.appDScreenshots}>
-                    {app.screenshots?.map((s: Image) => (
-                      <img key={s.src} src={s.src} title={s.label} />
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
+  return (
+    <Popup
+      key="AppDPopup"
+      title="Start Application"
+      area={
+        <div className={styles.appDContent}>
+          <div className={styles.appDApps}>
+            {apps.map(a => (
+              <div
+                key={a.appId}
+                className={`${styles.appDApp} ${a === chosen ? styles.selected : ""}`}
+                onClick={() => handleAppSelect(a)}
+              >
+                <Icon image={getIcon(a)} text={a.title} dark={false} />
+              </div>
+            ))}
           </div>
-        }
-        buttons={[
-          <PopupButton
-            key="open-frame"
-            text="Open Here"
-            disabled={this.state.chosen == null}
-            onClick={() => {
-              if (this.state.chosen) {
-                void getAppState().open(this.state.chosen, AppHosting.Frame)
-                this.props.closeAction()
-              }
-            }}
-          />,
-          <PopupButton
-            key="open-tab"
-            text="Open In Tab"
-            disabled={this.state.chosen == null}
-            onClick={() => {
-              if (this.state.chosen) {
-                void getAppState().open(this.state.chosen, AppHosting.Tab)
-                this.props.closeAction()
-              }
-            }}
-          />,
-        ]}
-        closeAction={() => this.props.closeAction()}
-        closeName="Cancel"
-      />
-    )
-  }
-}
-function onlyRelevantApps(d: DirectoryApp): boolean {
-  const sail = d.hostManifests?.sail as { [key: string]: boolean }
-  const show = sail ? sail.searchable != false : true
-  const type = d.type == "web"
-  const url = (d.details as WebAppDetails).url
-  return show && type && url != null
-}
+
+          <div className={styles.appDDetail}>
+            {chosen ? (
+              <div className={styles.appDInfo}>
+                <h2>{chosen.title}</h2>
+                <p>{chosen.description}</p>
+                <ul>
+                  {chosen.categories?.map((c: string) => (
+                    <li key={c}>{c}</li>
+                  ))}
+                </ul>
+                <div className={styles.appDScreenshots}>
+                  {chosen.screenshots?.map((s: Image) => (
+                    <img key={s.src} src={s.src} title={s.label} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      }
+      buttons={[
+        <PopupButton
+          key="open-frame"
+          text="Open Here"
+          disabled={chosen === null}
+          onClick={handleOpenInFrame}
+        />,
+        <PopupButton
+          key="open-tab"
+          text="Open In Tab"
+          disabled={chosen === null}
+          onClick={handleOpenInTab}
+        />,
+      ]}
+      closeAction={closeAction}
+      closeName="Cancel"
+    />
+  )
+})
+
+AppDPanel.displayName = "AppDPanel"

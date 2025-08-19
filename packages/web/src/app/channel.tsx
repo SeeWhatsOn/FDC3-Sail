@@ -1,6 +1,5 @@
 import { TabDetail } from "@finos/fdc3-sail-shared"
 
-import { Icon } from "./Icon"
 import styles from "./styles.module.css"
 
 const NO_CHANNEL: TabDetail = {
@@ -27,6 +26,9 @@ export const Channel = ({
       <Icon text={channel.id} image={channel.icon} />
     </div>
   )
+}
+export const Icon = ({ image, text }: { image: string; text: string }) => {
+  return <img src={image} className={styles.iconImage} title={text} />
 }
 
 export const ChannelPicker = ({

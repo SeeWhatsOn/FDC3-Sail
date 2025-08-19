@@ -4,9 +4,12 @@ import "@testing-library/jest-dom"
 import { vi } from "vitest"
 
 vi.mock("*.module.css", () => ({
-  default: new Proxy({}, {
-    get: (target, prop) => prop
-  })
+  default: new Proxy(
+    {},
+    {
+      get: (_target, prop) => prop,
+    }
+  ),
 }))
 
 // Simple setup for component tests

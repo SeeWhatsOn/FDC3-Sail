@@ -1,8 +1,9 @@
-import { Component } from "react"
+import { useEffect, useRef, memo, useCallback } from "react"
 import { State } from "@finos/fdc3-web-impl"
 
 import { AppState, ClientState, AppPanel } from "../../types"
 import { getAppState } from "../../state"
+import { useClientStore } from "../../stores/useClientStore"
 
 import styles from "./styles.module.css"
 import "gridstack/dist/gridstack.css"
@@ -12,27 +13,45 @@ import { GridsState } from "./gridstate"
 
 type GridsProps = { cs: ClientState; gs: GridsState; as: AppState; id: string }
 
-export class Grids extends Component<GridsProps> {
-  componentDidMount(): void {
-    this.componentDidUpdate()
-  }
+export const Grids = ({ cs, gs, id }: GridsProps) => {
+  const hasUpdated = useRef(false)
 
-  componentDidUpdate(): void {
-    this.props.gs.updatePanels()
-  }
+  useEffect(() => {
+    // Update panels on mount and whenever dependencies change
+    gs.updatePanels()
+    hasUpdated.current = true
+  }, [gs])
 
-  render() {
-    return (
-      <div className={styles.grids} id={this.props.id}>
-        {this.props.cs.getPanels().map(p => (
-          <AppFrame key={p.panelId} panel={p} />
-        ))}
-      </div>
-    )
-  }
+  useEffect(() => {
+    // Update panels on subsequent renders (like componentDidUpdate)
+    if (hasUpdated.current) {
+      gs.updatePanels()
+    }
+  })
+
+  return (
+    <div className={styles.grids} id={id}>
+      {cs.getPanels().map(p => (
+        <AppFrame key={p.panelId} panel={p} />
+      ))}
+    </div>
+  )
 }
 
-const AppFrame = ({ panel }: { panel: AppPanel }) => {
+const AppFrame = memo(({ panel }: { panel: AppPanel }) => {
+  const handleRef = useCallback((ref: HTMLIFrameElement | null) => {
+    if (ref) {
+      setTimeout(() => {
+        // this is a bit hacky but we need to track the window objects
+        // in the app state so we make sure we know who we're talking to
+        const contentWindow = ref.contentWindow
+        if (contentWindow) {
+          getAppState().registerAppWindow(contentWindow, panel.panelId)
+        }
+      }, 10)
+    }
+  }, [panel.panelId])
+
   return (
     <iframe
       src={panel.url}
@@ -40,19 +59,12 @@ const AppFrame = ({ panel }: { panel: AppPanel }) => {
       name={panel.panelId}
       slot={"slot_" + panel.panelId}
       className={styles.iframe}
-      ref={ref => {
-        setTimeout(() => {
-          // this is a bit hacky but we need to track the window objects
-          // in the app state so we make sure we know who we're talking to
-          if (ref) {
-            const contentWindow = ref.contentWindow
-            getAppState().registerAppWindow(contentWindow!, panel.panelId)
-          }
-        }, 10)
-      }}
+      ref={handleRef}
     />
   )
-}
+})
+
+AppFrame.displayName = "AppFrame"
 
 const AppStateIcon = ({ instanceId, as }: { instanceId: string; as: AppState }) => {
   const D = "/icons/app-state/"
@@ -79,63 +91,71 @@ const AppStateIcon = ({ instanceId, as }: { instanceId: string; as: AppState }) 
   return <img src={state[0]} className={styles.contentTitleIcon} title={state[1]} />
 }
 
-const CloseIcon = ({ action }: { action: () => void }) => {
+const CloseIcon = memo(({ action }: { action: () => void }) => {
+  const handleClick = useCallback(() => {
+    action()
+  }, [action])
+
   return (
     <img
       src="/icons/control/close.svg"
       className={styles.contentTitleIcon}
-      title="Pop Out"
-      onClick={() => action()}
+      title="Close"
+      onClick={handleClick}
     />
   )
-}
+})
 
-const AppSlot = ({ panel }: { panel: AppPanel }) => {
+CloseIcon.displayName = "CloseIcon"
+
+const AppSlot = memo(({ panel }: { panel: AppPanel }) => {
   return (
     <div id={"app_" + panel.panelId}>
       <slot name={"slot_" + panel.panelId} />
     </div>
   )
-}
+})
 
-export const Content = ({
+AppSlot.displayName = "AppSlot"
+
+export const Content = memo(({
   panel,
-  cs,
   as,
   id,
 }: {
   panel: AppPanel
-  cs: ClientState
+  cs?: ClientState // Optional for backward compatibility
   as: AppState
   id: string
 }) => {
+  const { getActiveTab, removePanel } = useClientStore()
+  const activeTab = getActiveTab()
+
+  const handleClose = useCallback(() => {
+    removePanel(panel.panelId)
+  }, [removePanel, panel.panelId])
+
   return (
     <div className={styles.content} id={id}>
       <div
         className={styles.contentInner}
-        style={{ border: `1px solid ${cs.getActiveTab().background}` }}
+        style={{ border: `1px solid ${activeTab.background}` }}
       >
         <div
           className={styles.contentTitle}
-          style={{ backgroundColor: cs.getActiveTab().background }}
+          style={{ backgroundColor: activeTab.background }}
         >
-          <CloseIcon action={() => cs.removePanel(panel.panelId)} />
+          <CloseIcon action={handleClose} />
           <p className={styles.contentTitleText}>
             <span className={styles.contentTitleTextSpan}>{panel.title}</span>
           </p>
           <AppStateIcon instanceId={panel.panelId} as={as} />
-          {/* <LockIcon />
-          <PopOutIcon
-            action={() => {
-              cs.removePanel(panel.panelId)
-              as.open(panel.appId, AppHosting.Tab)
-              window.open(panel.url, "_blank")
-            }}
-          /> */}
         </div>
         <div className={styles.resizeBaffle} />
         <div className={styles.contentBody}>{panel.url ? <AppSlot panel={panel} /> : <div />}</div>
       </div>
     </div>
   )
-}
+})
+
+Content.displayName = "Content"

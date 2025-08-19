@@ -1,4 +1,4 @@
-import { Component, ReactNode } from "react"
+import { useEffect, ReactNode, memo, useCallback } from "react"
 
 import { Logo } from "../top/top"
 
@@ -12,40 +12,37 @@ type PopupProps = {
   closeName: string
 }
 
-export class Popup extends Component<PopupProps> {
-  componentDidMount(): void {
-    setTimeout(() => {
+export const Popup = memo(({ buttons, area, closeAction, title, closeName }: PopupProps) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
       document.getElementById("backdrop")?.setAttribute("data-loaded", "true")
     }, 10)
-  }
 
-  render() {
-    return (
-      <div>
-        <div id="backdrop" className={styles.popup}>
-          <div id="popup" className={styles.popupInner}>
-            <div className={styles.popupTitle}>
-              <p className={styles.popupTitleText}>{this.props.title}</p>
-              <Logo />
-            </div>
-            <div className={styles.popupArea}>{this.props.area}</div>
-            <div className={styles.popupButtons}>
-              {this.props.buttons}
-              <PopupButton
-                key="cancel"
-                onClick={() => this.props.closeAction()}
-                text={this.props.closeName}
-                disabled={false}
-              />
-            </div>
+    return () => clearTimeout(timer)
+  }, [])
+
+  return (
+    <div>
+      <div id="backdrop" className={styles.popup}>
+        <div id="popup" className={styles.popupInner}>
+          <div className={styles.popupTitle}>
+            <p className={styles.popupTitleText}>{title}</p>
+            <Logo />
+          </div>
+          <div className={styles.popupArea}>{area}</div>
+          <div className={styles.popupButtons}>
+            {buttons}
+            <PopupButton key="cancel" onClick={closeAction} text={closeName} disabled={false} />
           </div>
         </div>
       </div>
-    )
-  }
-}
+    </div>
+  )
+})
 
-export const PopupButton = ({
+Popup.displayName = "Popup"
+
+export const PopupButton = memo(({
   text,
   onClick,
   disabled,
@@ -54,14 +51,20 @@ export const PopupButton = ({
   onClick: () => void
   disabled: boolean
 }) => {
+  const handleClick = useCallback(() => {
+    onClick()
+  }, [onClick])
+
   return (
     <button
       id="cancel"
       className={styles.popupButton}
-      onClick={() => onClick()}
+      onClick={handleClick}
       disabled={disabled}
     >
       {text}
     </button>
   )
-}
+})
+
+PopupButton.displayName = "PopupButton"

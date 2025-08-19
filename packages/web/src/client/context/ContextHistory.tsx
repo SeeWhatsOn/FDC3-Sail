@@ -1,4 +1,4 @@
-import { Component } from "react"
+import { useState, memo, useMemo, useCallback } from "react"
 import { prettyPrintJson } from "pretty-print-json"
 import { Context } from "@finos/fdc3-context"
 
@@ -12,11 +12,7 @@ type ContextHistoryPanelProps = {
   closeAction: () => void
 }
 
-type AppPanelState = {
-  chosen: number
-}
-
-export const ContextHistoryItem = ({
+export const ContextHistoryItem = memo(({
   context,
   selected,
   onClick,
@@ -31,49 +27,59 @@ export const ContextHistoryItem = ({
       <div className={styles.contextData}>{context.name ?? "No Name"}</div>
     </div>
   )
-}
+})
 
-export class ContextHistoryPanel extends Component<ContextHistoryPanelProps, AppPanelState> {
-  constructor(props: ContextHistoryPanelProps) {
-    super(props)
-    this.state = {
-      chosen: 0,
+ContextHistoryItem.displayName = "ContextHistoryItem"
+
+export const ContextHistoryPanel = memo(({
+  history,
+  currentChannel,
+  closeAction,
+}: ContextHistoryPanelProps) => {
+  const [chosen, setChosen] = useState<number>(0)
+
+  const json = useMemo(() => {
+    if (history[chosen]) {
+      return prettyPrintJson.toHtml(history[chosen], {
+        indent: 2,
+        linkUrls: false,
+        trailingCommas: false,
+        quoteKeys: true,
+      })
     }
-  }
+    return ""
+  }, [history, chosen])
 
-  render() {
-    const json = prettyPrintJson.toHtml(this.props.history[this.state.chosen], {
-      indent: 2,
-      linkUrls: false,
-      trailingCommas: false,
-      quoteKeys: true,
-    })
+  const handleItemClick = useCallback((index: number) => {
+    setChosen(index)
+  }, [])
 
-    return (
-      <Popup
-        key="ContextHistoryPopup"
-        title={`Context History On "${this.props.currentChannel}"`}
-        area={
-          <div className={styles.contextContent}>
-            <div className={styles.contextArea}>
-              {this.props.history.map((h, i) => (
-                <ContextHistoryItem
-                  key={i}
-                  context={h}
-                  onClick={() => this.setState({ chosen: i })}
-                  selected={i == this.state.chosen}
-                />
-              ))}
-            </div>
-            <div className={styles.contextDetail}>
-              <div dangerouslySetInnerHTML={{ __html: json }} />
-            </div>
+  return (
+    <Popup
+      key="ContextHistoryPopup"
+      title={`Context History On "${currentChannel}"`}
+      area={
+        <div className={styles.contextContent}>
+          <div className={styles.contextArea}>
+            {history.map((h, i) => (
+              <ContextHistoryItem
+                key={i}
+                context={h}
+                onClick={() => handleItemClick(i)}
+                selected={i === chosen}
+              />
+            ))}
           </div>
-        }
-        buttons={[]}
-        closeAction={() => this.props.closeAction()}
-        closeName="Close"
-      />
-    )
-  }
-}
+          <div className={styles.contextDetail}>
+            <div dangerouslySetInnerHTML={{ __html: json }} />
+          </div>
+        </div>
+      }
+      buttons={[]}
+      closeAction={closeAction}
+      closeName="Close"
+    />
+  )
+})
+
+ContextHistoryPanel.displayName = "ContextHistoryPanel"

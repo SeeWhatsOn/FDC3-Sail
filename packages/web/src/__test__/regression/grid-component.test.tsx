@@ -1,18 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, vi } from "vitest"
+
 import { render } from "@/__test__/utils/component-test-utils"
 import { Grids } from "@/client/grid/grid"
 import { GridsState } from "@/client/grid/gridstate"
 import { useClientStore } from "@/stores/useClientStore"
 import { AppPanel } from "@/types"
 
+import { mockGridStack } from "../utils/test-mocks"
+
 // Mock GridStack to avoid complex UI library in tests
 vi.mock("gridstack", () => ({
-  GridStack: vi.fn(() => ({
-    addWidget: vi.fn(),
-    removeWidget: vi.fn(),
-    update: vi.fn(),
-    destroy: vi.fn(),
-  }))
+  GridStack: mockGridStack(),
 }))
 
 // Regression tests for Grid component before migration to hooks
@@ -36,7 +34,7 @@ describe("Grid Component - Regression Tests", () => {
         h: 4,
       },
       {
-        panelId: "panel-2", 
+        panelId: "panel-2",
         tabId: "One",
         title: "Test App 2",
         url: "http://test2.com",
@@ -46,7 +44,7 @@ describe("Grid Component - Regression Tests", () => {
         y: 0,
         w: 6,
         h: 4,
-      }
+      },
     ]
 
     useClientStore.setState({
@@ -64,21 +62,21 @@ describe("Grid Component - Regression Tests", () => {
     // Mock GridsState
     mockGridsState = {
       updatePanels: vi.fn(),
-    } as any
+    } as unknown as GridsState
   })
 
   it("should render correct number of app frames", () => {
     const clientState = useClientStore.getState()
-    
+
     const { container } = render(
-      <Grids 
-        cs={clientState as any} 
-        gs={mockGridsState} 
-        as={{} as any} 
+      <Grids
+        cs={clientState as unknown as import("@/types").WebClientState}
+        gs={mockGridsState}
+        as={{} as import("@/types").AppState}
         id="test-grid"
       />
     )
-    
+
     // Should render iframe for each panel
     const iframes = container.querySelectorAll("iframe")
     expect(iframes).toHaveLength(2)
@@ -86,16 +84,16 @@ describe("Grid Component - Regression Tests", () => {
 
   it("should set correct iframe attributes", () => {
     const clientState = useClientStore.getState()
-    
+
     const { container } = render(
-      <Grids 
-        cs={clientState as any} 
-        gs={mockGridsState} 
-        as={{} as any} 
+      <Grids
+        cs={clientState as unknown as import("@/types").WebClientState}
+        gs={mockGridsState}
+        as={{} as import("@/types").AppState}
         id="test-grid"
       />
     )
-    
+
     const firstIframe = container.querySelector("iframe")
     expect(firstIframe).toHaveAttribute("src", "http://test1.com")
     expect(firstIframe).toHaveAttribute("id", "iframe_panel-1")
@@ -104,42 +102,44 @@ describe("Grid Component - Regression Tests", () => {
 
   it("should call updatePanels on mount and update", () => {
     const clientState = useClientStore.getState()
-    
+
     const { rerender } = render(
-      <Grids 
-        cs={clientState as any} 
-        gs={mockGridsState} 
-        as={{} as any} 
+      <Grids
+        cs={clientState as unknown as import("@/types").WebClientState}
+        gs={mockGridsState}
+        as={{} as import("@/types").AppState}
         id="test-grid"
       />
     )
-    
+
     // Should be called on mount
-    expect(mockGridsState.updatePanels).toHaveBeenCalledTimes(1)
-    
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(vi.mocked(mockGridsState.updatePanels)).toHaveBeenCalledTimes(1)
+
     // Should be called on update
     rerender(
-      <Grids 
-        cs={clientState as any} 
-        gs={mockGridsState} 
-        as={{} as any} 
+      <Grids
+        cs={clientState as unknown as import("@/types").WebClientState}
+        gs={mockGridsState}
+        as={{} as import("@/types").AppState}
         id="test-grid-updated"
       />
     )
-    
-    expect(mockGridsState.updatePanels).toHaveBeenCalledTimes(2)
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(vi.mocked(mockGridsState.updatePanels)).toHaveBeenCalledTimes(2)
   })
 
   it("should handle empty panels gracefully", () => {
     useClientStore.setState({ panels: [] })
     const clientState = useClientStore.getState()
-    
-    expect(() => 
+
+    expect(() =>
       render(
-        <Grids 
-          cs={clientState as any} 
-          gs={mockGridsState} 
-          as={{} as any} 
+        <Grids
+          cs={clientState as unknown as import("@/types").WebClientState}
+          gs={mockGridsState}
+          as={{} as import("@/types").AppState}
           id="test-grid"
         />
       )
@@ -148,19 +148,20 @@ describe("Grid Component - Regression Tests", () => {
 
   it("should maintain grid container structure", () => {
     const clientState = useClientStore.getState()
-    
+
     const { container } = render(
-      <Grids 
-        cs={clientState as any} 
-        gs={mockGridsState} 
-        as={{} as any} 
+      <Grids
+        cs={clientState as unknown as import("@/types").WebClientState}
+        gs={mockGridsState}
+        as={{} as import("@/types").AppState}
         id="test-grid"
       />
     )
-    
+
     // Main grid container should exist with correct ID
     const gridContainer = container.querySelector("#test-grid")
     expect(gridContainer).toBeInTheDocument()
-    expect(gridContainer).toHaveClass(expect.stringMatching(/grids/))
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    expect(gridContainer).toHaveClass(expect.stringMatching("grids"))
   })
 })

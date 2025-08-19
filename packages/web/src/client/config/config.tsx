@@ -1,6 +1,5 @@
-import { Component } from "react"
+import { useState, memo } from "react"
 
-import { ClientState } from "../../types"
 import { Popup } from "../popups/popup"
 
 import styles from "./styles.module.css"
@@ -12,51 +11,41 @@ const CONFIG_ITEMS = ["Directories", "Tabs", "Custom Apps"]
 
 type AppPanelProps = {
   closeAction: () => void
-  cs: ClientState
 }
 
-type AppPanelState = {
-  item: string
-}
+export const ConfigPanel = memo(({ closeAction }: AppPanelProps) => {
+  const [item, setItem] = useState<string>(CONFIG_ITEMS[0])
 
-export class ConfigPanel extends Component<AppPanelProps, AppPanelState> {
-  constructor(props: AppPanelProps) {
-    super(props)
-    this.state = {
-      item: CONFIG_ITEMS[0],
-    }
-  }
-
-  render() {
-    return (
-      <Popup
-        key="AppDConfigPopup"
-        title="Sail Configuration"
-        area={
-          <div className={styles.configContent}>
-            <div className={styles.configChoiceLeft}>
-              {CONFIG_ITEMS.map(a => (
-                <div
-                  key={a}
-                  className={`${styles.configItem} ${a == this.state.item ? styles.selected : ""}`}
-                  onClick={() => this.setState({ item: a })}
-                >
-                  {a}
-                </div>
-              ))}
-            </div>
-
-            <div className={styles.configChoice}>
-              {this.state.item == CONFIG_ITEMS[0] ? <DirectoryList /> : null}
-              {this.state.item == CONFIG_ITEMS[1] ? <TabList /> : null}
-              {this.state.item == CONFIG_ITEMS[2] ? <CustomAppList /> : null}
-            </div>
+  return (
+    <Popup
+      key="AppDConfigPopup"
+      title="Sail Configuration"
+      area={
+        <div className={styles.configContent}>
+          <div className={styles.configChoiceLeft}>
+            {CONFIG_ITEMS.map(a => (
+              <div
+                key={a}
+                className={`${styles.configItem} ${a === item ? styles.selected : ""}`}
+                onClick={() => setItem(a)}
+              >
+                {a}
+              </div>
+            ))}
           </div>
-        }
-        buttons={[]}
-        closeAction={() => this.props.closeAction()}
-        closeName="Done"
-      />
-    )
-  }
-}
+
+          <div className={styles.configChoice}>
+            {item === CONFIG_ITEMS[0] ? <DirectoryList /> : null}
+            {item === CONFIG_ITEMS[1] ? <TabList /> : null}
+            {item === CONFIG_ITEMS[2] ? <CustomAppList /> : null}
+          </div>
+        </div>
+      }
+      buttons={[]}
+      closeAction={closeAction}
+      closeName="Done"
+    />
+  )
+})
+
+ConfigPanel.displayName = "ConfigPanel"

@@ -24,6 +24,7 @@ interface ClientState {
 
   // Actions - Tabs
   getActiveTab: () => TabDetail
+  getTabs: () => TabDetail[]
   setActiveTabId: (id: string) => void
   addTab: (tab: TabDetail) => void
   removeTab: (id: string) => void
@@ -146,6 +147,8 @@ export const useClientStore = create<ClientState>()(
           }
           return activeTab
         },
+
+        getTabs: () => get().tabs,
 
         setActiveTabId: (id: string) => {
           set({ activeTabId: id })

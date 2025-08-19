@@ -1,25 +1,33 @@
 import { createRoot } from "react-dom/client"
 
-import { getClientState, getAppState, getServerState } from "../state"
+import { getServerState, getClientState } from "../state"
+import { useServerStore } from "../stores/useServerStore"
 
 import { Frame } from "./frame/frame"
 
+// Modern index entry point using Zustand stores
 const container = document.getElementById("app")
 const root = createRoot(container!)
-root.render(<Frame cs={getClientState()} as={getAppState()} />)
 
-getClientState().addStateChangeCallback(() => {
-  root.render(<Frame cs={getClientState()} as={getAppState()} />)
+// Initialize server connection
+const serverStore = useServerStore.getState()
+serverStore.connect()
+
+// Register desktop agent with server
+serverStore.registerDesktopAgent(getClientState().createArgs()).catch(error => {
+  console.error("Error registering desktop agent:", error)
 })
 
-getAppState().addStateChangeCallback(() => {
-  root.render(<Frame cs={getClientState()} as={getAppState()} />)
-})
-
+// Initialize app state (still using legacy for now)
+const appState = getClientState()
 getServerState()
-  .registerDesktopAgent(getClientState().createArgs())
+  .registerDesktopAgent(appState.createArgs())
   .catch(error => {
     console.error("Error registering desktop agent:", error)
   })
 
-getAppState().init(getServerState(), getClientState())
+// Render modern Frame component
+// The Frame component will handle its own state subscriptions
+root.render(<Frame />)
+
+console.log("🚀 FDC3 Sail - Modern Frame Implementation Loaded")
