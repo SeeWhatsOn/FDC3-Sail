@@ -8,7 +8,7 @@
     "build": "npm run build --workspaces --if-present",
     "dev": "npm run dev --workspaces --if-present",
     "web": "npm run build && npm run web --workspaces --if-present",
-    "example-apps": "npm run dev --workspace=packages/example-apps",
+    "example-apps": "npm run dev --workspace=apps/example-apps",
     "electron": "concurrently \"npm run web\" \"npm run electron --workspaces --if-present \"",
     "start:all": "concurrently \"npm run web\" \"npm run example-apps\" \"npm run electron\"",
     "lint": "eslint .",
@@ -20,11 +20,12 @@
   },
   "workspaces": [
     "packages/shared",
-    "packages/web",
     "packages/preload",
-    "packages/electron",
     "packages/socket",
-    "packages/example-apps"
+    "packages/app-directories",
+    "apps/sail-web",
+    "apps/sail-desktop",
+    "apps/example-apps"
   ],
   "devDependencies": {
     "@eslint/css": "^0.10.0",

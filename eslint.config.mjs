@@ -29,7 +29,7 @@ export default defineConfig([
       "**/pnpm-lock.yaml",
       "**/assets/",
 
-      "**/packages/example-apps/",
+      "**/apps/example-apps/",
 
       // Keep test files included for type checking
     ],
@@ -66,7 +66,7 @@ export default defineConfig([
 
   // TypeScript files with strict type checking (merged from slt.mjs)
   {
-    files: ["packages/*/src/**/*.{ts,tsx}", "**/*.{ts,mts,cts,tsx}"],
+    files: ["packages/*/src/**/*.{ts,tsx}", "apps/*/src/**/*.{ts,tsx}", "**/*.{ts,mts,cts,tsx}"],
     ignores: [
       "**/vite.config.{ts,mts,cts}",
       "**/vitest.config.{ts,mts,cts}",

@@ -1,5 +1,4 @@
 import { defineConfig } from "vite"
-import glob from "glob"
 import path from "path"
 
 export default defineConfig({
@@ -28,12 +27,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: "index.html",
-        ...Object.fromEntries(
-          glob
-            .sync("**/*.html", { cwd: "html" })
-            .filter(file => file !== "index.html")
-            .map(file => [file.replace(/\.html$/, "").replace(/\//g, "-"), file])
-        ),
+        embed: "embed.html",
       },
     },
   },

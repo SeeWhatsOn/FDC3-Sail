@@ -9,7 +9,7 @@
       "request": "launch",
       "name": "Launch Program",
       "skipFiles": ["<node_internals>/**"],
-      "program": "${workspaceFolder}/packages/web/src/server/da/SailServerContext.ts",
+      "program": "${workspaceFolder}/apps/sail-web/src/server/da/SailServerContext.ts",
       "outFiles": ["${workspaceFolder}/**/*.js"]
     }
   ]

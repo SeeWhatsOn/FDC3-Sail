@@ -5,8 +5,9 @@
   "references": [
     { "path": "./packages/shared" },
     { "path": "./packages/socket" },
-    { "path": "./packages/web" },
-    { "path": "./packages/electron" },
-    { "path": "./packages/example-apps" }
+    { "path": "./packages/app-directories" },
+    { "path": "./apps/sail-web" },
+    { "path": "./apps/sail-desktop" },
+    { "path": "./apps/example-apps" }
   ]
 }

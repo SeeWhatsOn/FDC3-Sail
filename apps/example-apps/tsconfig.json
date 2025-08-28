@@ -9,17 +9,13 @@
       }
     ],
     "outDir": "dist",
-    "rootDirs": ["src"],
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "rootDirs": ["src"]
   },
   "include": ["src/**/*.tsx", "src/**/*.ts", "types.d.ts", "src/**/*.css"],
   "exclude": ["node_modules", "dist", "vite.config.ts", "vitest.config.ts", "rollup.config.*"],
   "references": [
     {
-      "path": "../shared"
+      "path": "../../packages/shared"
     }
   ]
 }
