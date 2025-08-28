@@ -4,10 +4,11 @@
   "files": [],
   "references": [
     { "path": "./packages/shared" },
-    { "path": "./packages/socket" },
+    { "path": "./packages/desktop-agent" },
     { "path": "./packages/app-directories" },
     { "path": "./apps/sail-web" },
     { "path": "./apps/sail-desktop" },
+    { "path": "./apps/sail-server" },
     { "path": "./apps/example-apps" }
   ]
 }

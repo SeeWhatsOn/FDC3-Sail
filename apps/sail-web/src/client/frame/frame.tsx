@@ -121,12 +121,7 @@ export const Frame = memo(() => {
       {/* Popup modals */}
       {popup === Popup.APPD && <AppDPanel key="appd" closeAction={closePopup} />}
 
-      {popup === Popup.SETTINGS && (
-        <ConfigPanel
-          key="config"
-          closeAction={closePopup}
-        />
-      )}
+      {popup === Popup.SETTINGS && <ConfigPanel key="config" closeAction={closePopup} />}
 
       {popup === Popup.CONTEXT_HISTORY && (
         <ContextHistoryPanel

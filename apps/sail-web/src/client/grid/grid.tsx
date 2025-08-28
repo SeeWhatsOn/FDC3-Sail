@@ -39,18 +39,21 @@ export const Grids = ({ cs, gs, id }: GridsProps) => {
 }
 
 const AppFrame = memo(({ panel }: { panel: AppPanel }) => {
-  const handleRef = useCallback((ref: HTMLIFrameElement | null) => {
-    if (ref) {
-      setTimeout(() => {
-        // this is a bit hacky but we need to track the window objects
-        // in the app state so we make sure we know who we're talking to
-        const contentWindow = ref.contentWindow
-        if (contentWindow) {
-          getAppState().registerAppWindow(contentWindow, panel.panelId)
-        }
-      }, 10)
-    }
-  }, [panel.panelId])
+  const handleRef = useCallback(
+    (ref: HTMLIFrameElement | null) => {
+      if (ref) {
+        setTimeout(() => {
+          // this is a bit hacky but we need to track the window objects
+          // in the app state so we make sure we know who we're talking to
+          const contentWindow = ref.contentWindow
+          if (contentWindow) {
+            getAppState().registerAppWindow(contentWindow, panel.panelId)
+          }
+        }, 10)
+      }
+    },
+    [panel.panelId]
+  )
 
   return (
     <iframe
@@ -118,44 +121,45 @@ const AppSlot = memo(({ panel }: { panel: AppPanel }) => {
 
 AppSlot.displayName = "AppSlot"
 
-export const Content = memo(({
-  panel,
-  as,
-  id,
-}: {
-  panel: AppPanel
-  cs?: ClientState // Optional for backward compatibility
-  as: AppState
-  id: string
-}) => {
-  const { getActiveTab, removePanel } = useClientStore()
-  const activeTab = getActiveTab()
+export const Content = memo(
+  ({
+    panel,
+    as,
+    id,
+  }: {
+    panel: AppPanel
+    cs?: ClientState // Optional for backward compatibility
+    as: AppState
+    id: string
+  }) => {
+    const { getActiveTab, removePanel } = useClientStore()
+    const activeTab = getActiveTab()
 
-  const handleClose = useCallback(() => {
-    removePanel(panel.panelId)
-  }, [removePanel, panel.panelId])
+    const handleClose = useCallback(() => {
+      removePanel(panel.panelId)
+    }, [removePanel, panel.panelId])
 
-  return (
-    <div className={styles.content} id={id}>
-      <div
-        className={styles.contentInner}
-        style={{ border: `1px solid ${activeTab.background}` }}
-      >
+    return (
+      <div className={styles.content} id={id}>
         <div
-          className={styles.contentTitle}
-          style={{ backgroundColor: activeTab.background }}
+          className={styles.contentInner}
+          style={{ border: `1px solid ${activeTab.background}` }}
         >
-          <CloseIcon action={handleClose} />
-          <p className={styles.contentTitleText}>
-            <span className={styles.contentTitleTextSpan}>{panel.title}</span>
-          </p>
-          <AppStateIcon instanceId={panel.panelId} as={as} />
+          <div className={styles.contentTitle} style={{ backgroundColor: activeTab.background }}>
+            <CloseIcon action={handleClose} />
+            <p className={styles.contentTitleText}>
+              <span className={styles.contentTitleTextSpan}>{panel.title}</span>
+            </p>
+            <AppStateIcon instanceId={panel.panelId} as={as} />
+          </div>
+          <div className={styles.resizeBaffle} />
+          <div className={styles.contentBody}>
+            {panel.url ? <AppSlot panel={panel} /> : <div />}
+          </div>
         </div>
-        <div className={styles.resizeBaffle} />
-        <div className={styles.contentBody}>{panel.url ? <AppSlot panel={panel} /> : <div />}</div>
       </div>
-    </div>
-  )
-})
+    )
+  }
+)
 
 Content.displayName = "Content"

@@ -21,10 +21,11 @@
   "workspaces": [
     "packages/shared",
     "packages/preload",
-    "packages/socket",
+    "packages/desktop-agent",
     "packages/app-directories",
     "apps/sail-web",
     "apps/sail-desktop",
+    "apps/sail-server",
     "apps/example-apps"
   ],
   "devDependencies": {

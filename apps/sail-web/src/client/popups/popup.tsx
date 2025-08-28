@@ -42,29 +42,18 @@ export const Popup = memo(({ buttons, area, closeAction, title, closeName }: Pop
 
 Popup.displayName = "Popup"
 
-export const PopupButton = memo(({
-  text,
-  onClick,
-  disabled,
-}: {
-  text: string
-  onClick: () => void
-  disabled: boolean
-}) => {
-  const handleClick = useCallback(() => {
-    onClick()
-  }, [onClick])
+export const PopupButton = memo(
+  ({ text, onClick, disabled }: { text: string; onClick: () => void; disabled: boolean }) => {
+    const handleClick = useCallback(() => {
+      onClick()
+    }, [onClick])
 
-  return (
-    <button
-      id="cancel"
-      className={styles.popupButton}
-      onClick={handleClick}
-      disabled={disabled}
-    >
-      {text}
-    </button>
-  )
-})
+    return (
+      <button id="cancel" className={styles.popupButton} onClick={handleClick} disabled={disabled}>
+        {text}
+      </button>
+    )
+  }
+)
 
 PopupButton.displayName = "PopupButton"
