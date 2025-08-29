@@ -1,29 +1,37 @@
 import { IDockviewHeaderActionsProps } from "dockview"
-import React from "react"
-import { nextId } from "./defaultLayout.ts"
+import { useMemo, useState, useEffect, FC } from "react"
+import { Download, Plus, Menu, Maximize2, Minimize2, ExternalLink, X, Star } from "lucide-react"
+
+const randomId = () => {
+  const hash = window.crypto.randomUUID()
+  return hash
+}
 
 const Icon = (props: {
-  icon: string
+  icon: React.ComponentType<{ size?: number }>
   title?: string
   onClick?: (event: React.MouseEvent) => void
 }) => {
+  const IconComponent = props.icon
   return (
-    <div title={props.title} className="action" onClick={props.onClick}>
-      <span style={{ fontSize: "inherit" }} className="material-symbols-outlined">
-        {props.icon}
-      </span>
+    <div 
+      title={props.title} 
+      className="action cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded" 
+      onClick={props.onClick}
+    >
+      <IconComponent size={16} />
     </div>
   )
 }
 
-const groupControlsComponents: Record<string, React.FC> = {
+const groupControlsComponents: Record<string, FC> = {
   panel_1: () => {
-    return <Icon icon="file_download" />
+    return <Icon icon={Download} />
   },
 }
 
 export const RightControls = (props: IDockviewHeaderActionsProps) => {
-  const Component = React.useMemo(() => {
+  const Component = useMemo(() => {
     if (!props.isGroupActive || !props.activePanel) {
       return null
     }
@@ -31,13 +39,11 @@ export const RightControls = (props: IDockviewHeaderActionsProps) => {
     return groupControlsComponents[props.activePanel.id]
   }, [props.isGroupActive, props.activePanel])
 
-  const [isMaximized, setIsMaximized] = React.useState<boolean>(
-    props.containerApi.hasMaximizedGroup()
-  )
+  const [isMaximized, setIsMaximized] = useState<boolean>(props.containerApi.hasMaximizedGroup())
 
-  const [isPopout, setIsPopout] = React.useState<boolean>(props.api.location.type === "popout")
+  const [isPopout, setIsPopout] = useState<boolean>(props.api.location.type === "popout")
 
-  React.useEffect(() => {
+  useEffect(() => {
     const disposable = props.containerApi.onDidMaximizedGroupChange(() => {
       setIsMaximized(props.containerApi.hasMaximizedGroup())
     })
@@ -79,17 +85,17 @@ export const RightControls = (props: IDockviewHeaderActionsProps) => {
         color: "var(--dv-activegroup-visiblepanel-tab-color)",
       }}
     >
-      {props.isGroupActive && <Icon icon="star" />}
+      {props.isGroupActive && <Icon icon={Star} />}
       {Component && <Component />}
       <Icon
         title={isPopout ? "Close Window" : "Open In New Window"}
-        icon={isPopout ? "close_fullscreen" : "open_in_new"}
+        icon={isPopout ? X : ExternalLink}
         onClick={onClick2}
       />
       {!isPopout && (
         <Icon
           title={isMaximized ? "Minimize View" : "Maximize View"}
-          icon={isMaximized ? "collapse_content" : "expand_content"}
+          icon={isMaximized ? Minimize2 : Maximize2}
           onClick={onClick}
         />
       )}
@@ -102,7 +108,7 @@ export const LeftControls = (props: IDockviewHeaderActionsProps) => {
     props.containerApi.addPanel({
       id: `id_${Date.now().toString()}`,
       component: "default",
-      title: `Tab ${nextId()}`,
+      title: `Tab ${randomId()}`, // this is a random id for the tab before it had a nextId function so might need to be changed
       position: {
         referenceGroup: props.group,
       },
@@ -120,12 +126,12 @@ export const LeftControls = (props: IDockviewHeaderActionsProps) => {
         color: "var(--dv-activegroup-visiblepanel-tab-color)",
       }}
     >
-      <Icon onClick={onClick} icon="add" />
+      <Icon onClick={onClick} icon={Plus} />
     </div>
   )
 }
 
-export const PrefixHeaderControls = (props: IDockviewHeaderActionsProps) => {
+export const PrefixHeaderControls = (_props: IDockviewHeaderActionsProps) => {
   return (
     <div
       className="group-control"
@@ -137,7 +143,7 @@ export const PrefixHeaderControls = (props: IDockviewHeaderActionsProps) => {
         color: "var(--dv-activegroup-visiblepanel-tab-color)",
       }}
     >
-      <Icon icon="Menu" />
+      <Icon icon={Menu} />
     </div>
   )
 }

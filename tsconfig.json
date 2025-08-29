@@ -6,6 +6,7 @@
     { "path": "./packages/shared" },
     { "path": "./packages/desktop-agent" },
     { "path": "./packages/app-directories" },
+    { "path": "./packages/sail-layout" },
     { "path": "./apps/sail-web" },
     { "path": "./apps/sail-desktop" },
     { "path": "./apps/sail-server" },

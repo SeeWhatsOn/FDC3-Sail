@@ -1,3 +1,5 @@
+@import "dockview/dist/styles/dockview.css";
+
 .group-control .action {
     padding: 4px;
     display: flex;

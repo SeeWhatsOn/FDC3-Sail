@@ -6,9 +6,11 @@ import {
   IDockviewPanelProps,
   DockviewApi,
 } from "dockview"
-import React from "react"
+import { useState, useEffect } from "react"
 import "./styles.css"
 import { LeftControls, PrefixHeaderControls, RightControls } from "./controls"
+import { FDC3Panel, FDC3AppPanel } from "../fdc3-iframe"
+import { DockviewStateImpl, LegacyAppPanel } from "./dockviewState"
 
 export function defaultConfig(api: DockviewApi) {
   const panel1 = api.addPanel({
@@ -97,19 +99,24 @@ const components = {
       </div>
     )
   },
-  iframe: (props: IDockviewPanelProps) => {
+  fdc3: (props: IDockviewPanelProps) => {
+    const panelData = (props.params as { panel?: FDC3AppPanel })?.panel
+
+    if (!panelData) {
+      return <div className="p-4 text-red-500">Error: No panel data provided</div>
+    }
+
     return (
-      <iframe
-        onMouseDown={() => {
-          if (!props.api.isActive) {
-            props.api.setActive()
-          }
+      <FDC3Panel
+        {...props}
+        panel={panelData}
+        onAppWindowRegister={(contentWindow, panelId) => {
+          console.log("App window registered:", panelId, contentWindow)
         }}
-        style={{
-          width: "100%",
-          height: "100%",
+        onClose={panelId => {
+          console.log("Panel close requested:", panelId)
+          props.api.close()
         }}
-        src="https://dockview.dev"
       />
     )
   },
@@ -125,23 +132,35 @@ const headerComponents = {
   },
 }
 
-const DockviewSail = (props: { theme?: string }) => {
-  const [panels, setPanels] = React.useState<string[]>([])
-  const [groups, setGroups] = React.useState<string[]>([])
-  const [api, setApi] = React.useState<DockviewApi>()
+interface DockviewSailProps {
+  theme?: string
+  // Optional store integration
+  externalPanels?: LegacyAppPanel[]
+  activeTabId?: string
+  onPanelAdd?: (panel: FDC3AppPanel) => void
+  onPanelRemove?: (panelId: string) => void
+  onPanelUpdate?: (panel: FDC3AppPanel) => void
+}
 
-  const [activePanel, setActivePanel] = React.useState<string>()
-  const [activeGroup, setActiveGroup] = React.useState<string>()
+const DockviewSail = (props: DockviewSailProps) => {
+  const [_panels, setPanels] = useState<string[]>([])
+  const [_groups, setGroups] = useState<string[]>([])
+  const [api, setApi] = useState<DockviewApi>()
+  const [dockviewState] = useState(() => new DockviewStateImpl())
+
+  const [_activePanel, setActivePanel] = useState<string>()
+  const [_activeGroup, setActiveGroup] = useState<string>()
 
   const onReady = (event: DockviewReadyEvent) => {
     setApi(event.api)
+    dockviewState.setApi(event.api)
     setPanels([])
     setGroups([])
     setActivePanel(undefined)
     setActiveGroup(undefined)
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!api) {
       return
     }
@@ -149,6 +168,11 @@ const DockviewSail = (props: { theme?: string }) => {
     const disposables = [
       api.onDidAddPanel(event => {
         setPanels(_ => [..._, event.id])
+        // If this panel was added externally (not through Zustand), notify the store
+        const panel = dockviewState.getPanel(event.id)
+        if (panel && props.onPanelAdd) {
+          props.onPanelAdd(panel)
+        }
       }),
       api.onDidActivePanelChange(event => {
         setActivePanel(event?.id)
@@ -163,6 +187,10 @@ const DockviewSail = (props: { theme?: string }) => {
 
           return next
         })
+        // Notify the store about panel removal
+        if (props.onPanelRemove) {
+          props.onPanelRemove(event.id)
+        }
       }),
 
       api.onDidAddGroup(event => {
@@ -204,37 +232,32 @@ const DockviewSail = (props: { theme?: string }) => {
     return disposables.forEach(disposable => disposable.dispose())
   }, [api])
 
+  // Sync with external panels when they change
+  useEffect(() => {
+    if (props.externalPanels && props.activeTabId) {
+      dockviewState.syncWithPanels(props.externalPanels, props.activeTabId)
+    }
+  }, [props.externalPanels, props.activeTabId, dockviewState])
+
   return (
     <div
       style={{
+        width: "100%",
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        flexGrow: 1,
-        // padding: "8px",
-        backgroundColor: "rgba(0,0,50,0.25)",
-        borderRadius: "8px",
+        flex: 1
       }}
     >
-      <div
-        style={{
-          flexGrow: 1,
-          overflow: "hidden",
-          // flexBasis: 0
-          height: 0,
-          display: "flex",
-        }}
-      >
-        <DockviewReact
-          components={components}
-          defaultTabComponent={headerComponents.default}
-          rightHeaderActionsComponent={RightControls}
-          leftHeaderActionsComponent={LeftControls}
-          prefixHeaderActionsComponent={PrefixHeaderControls}
-          onReady={onReady}
-          className={props.theme || "dockview-theme-abyss"}
-        />
-      </div>
+      <DockviewReact
+        components={components}
+        defaultTabComponent={headerComponents.default}
+        rightHeaderActionsComponent={RightControls}
+        leftHeaderActionsComponent={LeftControls}
+        prefixHeaderActionsComponent={PrefixHeaderControls}
+        onReady={onReady}
+        className={props.theme || "dockview-theme-abyss"}
+      />
     </div>
   )
 }
