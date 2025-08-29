@@ -12,19 +12,19 @@
   "dependencies": {
     "@finos/fdc3": "^2.2.0",
     "@finos/fdc3-agent-proxy": "^2.2.1-beta.3",
-    "@finos/fdc3-sail-shared": "0.0.0",
     "@finos/fdc3-schema": "^2.2.1-beta.3",
     "@finos/fdc3-web-impl": "^2.2.1-beta.3",
     "@radix-ui/react-slot": "^1.2.3",
     "@tailwindcss/vite": "^4.1.12",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dockview-react": "^4.7.0",
     "lucide-react": "^0.542.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "socket.io-client": "^4.7.5",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.12",
-    "socket.io-client": "^4.7.5",
     "zustand": "^5.0.7"
   },
   "devDependencies": {
