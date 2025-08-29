@@ -10,7 +10,16 @@ import { useState, useEffect } from "react"
 import "./styles.css"
 import { LeftControls, PrefixHeaderControls, RightControls } from "./controls"
 import { FDC3Panel, FDC3AppPanel } from "../fdc3-iframe"
-import { DockviewStateImpl, LegacyAppPanel } from "./dockviewState"
+
+// Simple panel interface for Zustand integration
+export interface AppPanel {
+  title: string
+  url: string
+  tabId: string
+  panelId: string
+  appId: string
+  icon: string | null
+}
 
 export function defaultConfig(api: DockviewApi) {
   const panel1 = api.addPanel({
@@ -113,10 +122,6 @@ const components = {
         onAppWindowRegister={(contentWindow, panelId) => {
           console.log("App window registered:", panelId, contentWindow)
         }}
-        onClose={panelId => {
-          console.log("Panel close requested:", panelId)
-          props.api.close()
-        }}
       />
     )
   },
@@ -135,7 +140,7 @@ const headerComponents = {
 interface DockviewSailProps {
   theme?: string
   // Optional store integration
-  externalPanels?: LegacyAppPanel[]
+  externalPanels?: AppPanel[]
   activeTabId?: string
   onPanelAdd?: (panel: FDC3AppPanel) => void
   onPanelRemove?: (panelId: string) => void
@@ -146,14 +151,13 @@ const DockviewSail = (props: DockviewSailProps) => {
   const [_panels, setPanels] = useState<string[]>([])
   const [_groups, setGroups] = useState<string[]>([])
   const [api, setApi] = useState<DockviewApi>()
-  const [dockviewState] = useState(() => new DockviewStateImpl())
+  const [mountedPanels, setMountedPanels] = useState<Map<string, FDC3AppPanel>>(new Map())
 
   const [_activePanel, setActivePanel] = useState<string>()
   const [_activeGroup, setActiveGroup] = useState<string>()
 
   const onReady = (event: DockviewReadyEvent) => {
     setApi(event.api)
-    dockviewState.setApi(event.api)
     setPanels([])
     setGroups([])
     setActivePanel(undefined)
@@ -168,8 +172,8 @@ const DockviewSail = (props: DockviewSailProps) => {
     const disposables = [
       api.onDidAddPanel(event => {
         setPanels(_ => [..._, event.id])
-        // If this panel was added externally (not through Zustand), notify the store
-        const panel = dockviewState.getPanel(event.id)
+        // If this panel was added externally, notify the store
+        const panel = mountedPanels.get(event.id)
         if (panel && props.onPanelAdd) {
           props.onPanelAdd(panel)
         }
@@ -225,19 +229,58 @@ const DockviewSail = (props: DockviewSailProps) => {
       }
     }
 
-    if (!success) {
+    if (!success && !props.externalPanels?.length) {
       defaultConfig(api)
     }
 
     return disposables.forEach(disposable => disposable.dispose())
-  }, [api])
+  }, [api, mountedPanels, props])
 
   // Sync with external panels when they change
   useEffect(() => {
-    if (props.externalPanels && props.activeTabId) {
-      dockviewState.syncWithPanels(props.externalPanels, props.activeTabId)
-    }
-  }, [props.externalPanels, props.activeTabId, dockviewState])
+    if (!api || !props.externalPanels || !props.activeTabId) return
+
+    const tabPanels = props.externalPanels.filter(p => p.tabId === props.activeTabId)
+    const currentPanelIds = Array.from(mountedPanels.keys())
+    const externalPanelIds = tabPanels.map(p => p.panelId)
+
+    // Remove panels that no longer exist
+    currentPanelIds
+      .filter(id => !externalPanelIds.includes(id))
+      .forEach(id => {
+        const panel = api.getPanel(id)
+        if (panel) api.removePanel(panel)
+        setMountedPanels(prev => {
+          const next = new Map(prev)
+          next.delete(id)
+          return next
+        })
+      })
+
+    // Add new panels  
+    tabPanels
+      .filter(panel => !currentPanelIds.includes(panel.panelId))
+      .forEach(panel => {
+        const fdc3Panel: FDC3AppPanel = {
+          title: panel.title,
+          url: panel.url,
+          tabId: panel.tabId,
+          panelId: panel.panelId,
+          appId: panel.appId,
+          icon: panel.icon
+        }
+        
+        api.addPanel({
+          id: panel.panelId,
+          component: "fdc3",
+          title: panel.title,
+          params: { panel: fdc3Panel }
+        })
+        
+        setMountedPanels(prev => new Map(prev).set(panel.panelId, fdc3Panel))
+      })
+
+  }, [api, props.externalPanels, props.activeTabId, mountedPanels])
 
   return (
     <div

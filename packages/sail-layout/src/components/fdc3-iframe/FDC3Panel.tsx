@@ -1,5 +1,5 @@
 import { IDockviewPanelProps } from "dockview"
-import { useCallback, useState } from "react"
+import { useCallback } from "react"
 
 export interface FDC3AppPanel {
   title: string
@@ -13,12 +13,9 @@ export interface FDC3AppPanel {
 interface FDC3PanelProps extends IDockviewPanelProps {
   panel: FDC3AppPanel
   onAppWindowRegister?: (contentWindow: Window, panelId: string) => void
-  onClose?: (panelId: string) => void
 }
 
-export const FDC3Panel = ({ api, panel, onAppWindowRegister, onClose }: FDC3PanelProps) => {
-  const [appState, _setAppState] = useState<"pending" | "connected" | "not-responding" | "terminated">("pending")
-
+export const FDC3Panel = ({ panel, onAppWindowRegister }: FDC3PanelProps) => {
   const handleIframeRef = useCallback(
     (ref: HTMLIFrameElement | null) => {
       if (ref && onAppWindowRegister) {
@@ -33,53 +30,19 @@ export const FDC3Panel = ({ api, panel, onAppWindowRegister, onClose }: FDC3Pane
     [panel.panelId, onAppWindowRegister]
   )
 
-  const handleClose = useCallback(() => {
-    if (onClose) {
-      onClose(panel.panelId)
-    }
-  }, [onClose, panel.panelId])
-
-  const handleMouseDown = useCallback(() => {
-    if (!api.isActive) {
-      api.setActive()
-    }
-  }, [api])
-
   return (
-    <div className="h-full w-full flex flex-col bg-white">
-      <div className="flex items-center justify-between px-2 py-1 bg-gray-100 border-b text-sm">
-        <div className="flex items-center gap-2">
-          {panel.icon && (
-            <img src={panel.icon} alt="" className="w-4 h-4" />
-          )}
-          <span className="font-medium text-gray-700">{panel.title}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div 
-            className={`w-2 h-2 rounded-full ${
-              appState === "connected" ? "bg-green-500" : 
-              appState === "pending" ? "bg-yellow-500" : 
-              appState === "not-responding" ? "bg-orange-500" : "bg-red-500"
-            }`}
-            title={appState}
-          />
-          <button 
-            onClick={handleClose}
-            className="w-4 h-4 flex items-center justify-center hover:bg-gray-200 rounded text-gray-500"
-          >
-            ×
-          </button>
-        </div>
-      </div>
-      <div className="flex-1 relative">
-        <iframe
-          ref={handleIframeRef}
-          src={panel.url}
-          name={panel.panelId}
-          onMouseDown={handleMouseDown}
-          className="w-full h-full border-none"
-        />
-      </div>
-    </div>
+    <iframe
+      ref={handleIframeRef}
+      src={panel.url}
+      name={panel.panelId}
+      style={{
+        width: '100%',
+        height: '100%', 
+        border: 'none',
+        margin: 0,
+        padding: 0,
+        display: 'block'
+      }}
+    />
   )
 }

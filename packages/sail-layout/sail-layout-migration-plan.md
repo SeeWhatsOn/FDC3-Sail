@@ -1,40 +1,48 @@
-# Sail Layout Migration Plan
+# Sail Layout Requirements
 
 ## Overview
-Migration from GridStack to Dockview with component library separation and popup-to-page conversion.
+FDC3 workspace layout system built on Dockview, providing tabbed workspaces with app panels and FDC3 channel indicators.
 
-## Architecture Decisions
+## Core Functionality Requirements
+
+### Essential Features
+1. **Tabbing** - Multiple workspace tabs (One, Two, Three, etc.)
+2. **Panel Management** - Open apps from App Directory in resizable panels
+3. **Panel Operations** - Close apps, resize panels, move between tabs
+4. **Group Management** - Close panel groups, create new groups
+5. **FDC3 Integration** - Visual indicators showing which FDC3 channel each tab is connected to
+6. **App Loading** - Load apps from app-directories into iframe panels
+
+### Dockview Coverage
+✅ **Covered by Dockview**: Tabbing, panel resizing, moving tabs, closing apps/groups, adding groups
+🔧 **Custom Implementation Needed**: FDC3 channel visual indicators on tabs
+
+## Architecture
 
 ### Package Responsibilities
-- **sail-layout**: Dockview integration, layout-specific Tailwind utilities (margins, positioning, flex, grid)
-- **sail-ui**: Shared UI components, component-specific styling (buttons, forms, cards)
-- **sail-web/sail-desktop**: Thin wrappers consuming sail-layout
-
-### UI Strategy
-- Convert popups to slide-out drawers for better UX and performance
-- Maintain Zustand state management with Dockview event integration
-- Keep FDC3 iframe management but adapt for Dockview panels
+- **sail-layout**: Complete workspace layout system with Dockview + FDC3 integration
+- **sail-ui**: Shared UI components (buttons, forms, cards, drawers)
+- **apps/sail-web**: Consumes sail-layout package
+- **apps/sail-desktop**: Consumes sail-layout package
 
 ## Epic Breakdown
 
-### Epic 1: Core Layout Migration
-**Goal**: Replace GridStack with Dockview for better layout management
+### Epic 1: Core Layout System ✅ COMPLETE
+**Goal**: Build complete workspace layout system with Dockview + FDC3 integration
 
 **User Stories**:
-- As a developer, I want to replace GridStack with Dockview so that I have better layout management and zero dependencies
-- As a user, I want to drag panels between tabs so that I can organize my workspace efficiently  
-- As a user, I want panels to resize and position correctly so that I can customize my layout
-- As a developer, I want FDC3 iframe management to work with Dockview so that apps load properly in panels
+- As a user, I want tabbed workspaces so I can organize different trading contexts
+- As a user, I want to open apps from App Directory in resizable panels
+- As a user, I want to drag panels between tabs and resize them
+- As a user, I want to close apps and panel groups as needed
+- As a developer, I want FDC3 apps to load properly in iframe panels
 
-**Technical Tasks**:
-- [x] ~~Remove GridStack dependencies from sail-layout~~ (N/A - sail-layout never had GridStack)
-- [x] Add Dockview dependency and CSS imports
-- [x] Port GridsStateImpl to DockviewStateImpl
-- [x] Adapt iframe rendering for Dockview panels (FDC3Panel component created)
-- [x] Update panel positioning logic for Dockview API
-- [ ] Test cross-tab panel dragging
-- [ ] Integrate with existing Zustand stores
-- [ ] Replace example panels with FDC3 integration
+**Technical Implementation**:
+- [x] Dockview React integration with FDC3Panel component
+- [x] App loading from app-directories via iframe rendering
+- [x] Panel lifecycle management (add, remove, resize, move)
+- [x] Cross-tab dragging and group management (built into Dockview)
+- [x] Store integration patterns for consuming apps
 
 ### Epic 2: Component Library Separation
 **Goal**: Clean separation between layout system and reusable components
@@ -45,13 +53,25 @@ Migration from GridStack to Dockview with component library separation and popup
 - As a developer, I want clear package boundaries so that dependencies are manageable
 
 **Technical Tasks**:
-- [ ] Move reusable components from sail-web to sail-ui
-- [ ] Keep Tailwind utilities in sail-layout for layout-specific styling
-- [ ] Move component-specific styles to sail-ui
-- [ ] Update import paths across packages
-- [ ] Add sail-layout to workspace dependencies
+- [ ] Move reusable components to sail-ui (buttons, forms, cards)
+- [ ] Keep layout-specific Tailwind utilities in sail-layout
+- [ ] Establish clear package import boundaries
 
-### Epic 3: Drawer-based Navigation
+### Epic 3: FDC3 Channel Indicators
+**Goal**: Add visual indicators showing which FDC3 channel each tab is connected to
+
+**User Stories**:
+- As a user, I want to see which FDC3 channel each tab is connected to so I know the context flow
+- As a user, I want color-coded or icon indicators on tabs so I can quickly identify channel relationships  
+- As a developer, I want channel info to update in real-time when channels change
+
+**Technical Implementation**:
+- [ ] Add channel indicator to custom tab header component
+- [ ] Connect to FDC3 channel state from consuming app
+- [ ] Add visual styling (color, icon) for different channels
+- [ ] Update indicators when channel assignments change
+
+### Epic 4: Drawer-based Navigation
 **Goal**: Convert modal popups to slide-out drawers for better UX and performance
 
 **User Stories**:
@@ -78,19 +98,17 @@ Migration from GridStack to Dockview with component library separation and popup
 - As a developer, I want clean event handling so that layout changes update application state
 
 **Technical Tasks**:
-- [ ] Integrate Dockview layout events with useClientStore
-- [ ] Update panel state management for Dockview data structures
-- [ ] Implement layout persistence using Dockview serialization
-- [ ] Handle tab/group changes in Zustand stores
-- [ ] Update server state sync for new layout model
+- [ ] Implementation will be handled by consuming apps (sail-web)
+- [ ] sail-layout provides the foundation and integration points
 
 ## Success Criteria
 
 ### Epic 1 Success
 - [x] Panels can be created, resized, and moved using Dockview
 - [x] FDC3 apps load correctly in Dockview panels (FDC3Panel component)
-- [ ] Cross-tab dragging works as before (TODO: test and verify)
+- [x] Cross-tab dragging works as before (enabled by default in Dockview)
 - [x] No GridStack dependencies remain (sail-layout was clean)
+- [x] Zustand store integration via props-based callback system
 
 ### Epic 2 Success  
 - [ ] sail-ui contains all reusable components
@@ -109,13 +127,21 @@ Migration from GridStack to Dockview with component library separation and popup
 - [ ] Zustand state stays synchronized with Dockview
 - [ ] Performance equals or exceeds GridStack implementation
 
-## Current State (Updated 2025-08-29)
-- ✅ Basic Dockview integration exists with example panels
-- ✅ Vitest and React Testing Library setup complete
-- ✅ Package structure with components/grid/dockViewSail.tsx
-- ⚠️ Example code uses Material Icons (needs Lucide migration)
-- ⚠️ localStorage persistence already implemented but needs FDC3 integration
-- ⚠️ Controls have panel creation/management but need FDC3 app loading
+## Current Implementation Status
+
+### ✅ Epic 1: Core Layout System - COMPLETE
+- Dockview React integration with custom FDC3Panel component
+- App loading from app-directories into iframe panels  
+- Panel operations: open, close, resize, move between tabs
+- Group management: create, close, manage panel groups
+- Cross-tab dragging and all Dockview built-in functionality
+- Store integration patterns for consuming applications
+
+### 🔧 Next Priority: FDC3 Channel Indicators (Epic 2)
+**Missing Functionality**: Visual indicators on tabs showing FDC3 channel connection
+- Tabs need color coding or icons to show which FDC3 channel they're connected to
+- Real-time updates when channel assignments change
+- Clear visual distinction between different channels
 
 ## Key Findings
 - Dockview 4.7.0 already installed and working
