@@ -9,7 +9,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "./ui/sidebar"
+} from "sail-ui"
 import { Home, Zap, Settings, ChevronUp, User2 } from "lucide-react"
 
 export function AppSidebar() {

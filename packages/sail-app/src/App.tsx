@@ -12,24 +12,24 @@ const MOCK_PANELS: AppPanel[] = [
     tabId: "One",
     panelId: "trading-1",
     appId: "tradingview",
-    icon: null
+    icon: null,
   },
   {
     title: "Market Data",
     url: "https://polygon.io/dashboard",
-    tabId: "One", 
+    tabId: "One",
     panelId: "market-1",
     appId: "polygon",
-    icon: null
+    icon: null,
   },
   {
     title: "News Feed",
     url: "https://benzinga.com/news",
     tabId: "Two",
-    panelId: "news-1", 
+    panelId: "news-1",
     appId: "benzinga",
-    icon: null
-  }
+    icon: null,
+  },
 ]
 
 function App() {
@@ -38,15 +38,13 @@ function App() {
 
   return (
     <Layout>
-      <div style={{ width: "100%", height: "100%" }}>
-        <DockviewSail 
-          externalPanels={panels}
-          activeTabId={activeTabId}
-          onPanelAdd={(panel) => console.log("Panel added:", panel)}
-          onPanelRemove={(panelId) => console.log("Panel removed:", panelId)}
-          onPanelUpdate={(panel) => console.log("Panel updated:", panel)}
-        />
-      </div>
+      <DockviewSail
+        externalPanels={panels}
+        activeTabId={activeTabId}
+        onPanelAdd={panel => console.log("Panel added:", panel)}
+        onPanelRemove={panelId => console.log("Panel removed:", panelId)}
+        onPanelUpdate={panel => console.log("Panel updated:", panel)}
+      />
     </Layout>
   )
 }

@@ -1,5 +1,5 @@
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "sail-ui"
-import { AppSidebar } from "sail-ui"
+import { AppSidebar } from "../AppSidebar"
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
