@@ -1,5 +1,6 @@
 import { IDockviewHeaderActionsProps } from "dockview"
 import { useMemo, useState, useEffect, FC } from "react"
+
 import { Download, Plus, Menu, Maximize2, Minimize2, ExternalLink, X, Star } from "lucide-react"
 
 const randomId = () => {
@@ -14,9 +15,9 @@ const Icon = (props: {
 }) => {
   const IconComponent = props.icon
   return (
-    <div 
-      title={props.title} 
-      className="action cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded" 
+    <div
+      title={props.title}
+      className="action cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded"
       onClick={props.onClick}
     >
       <IconComponent size={16} />

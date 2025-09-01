@@ -5,11 +5,12 @@ import {
   IDockviewPanelHeaderProps,
   IDockviewPanelProps,
   DockviewApi,
-} from "dockview"
+} from "dockview-react"
 import { useState, useEffect } from "react"
 import "./styles.css"
 import { LeftControls, PrefixHeaderControls, RightControls } from "./controls"
 import { FDC3Panel, FDC3AppPanel } from "../fdc3-iframe"
+import { defaultConfig } from "./config"
 
 // Simple panel interface for Zustand integration
 export interface AppPanel {
@@ -19,66 +20,6 @@ export interface AppPanel {
   panelId: string
   appId: string
   icon: string | null
-}
-
-export function defaultConfig(api: DockviewApi) {
-  const panel1 = api.addPanel({
-    id: "panel_1",
-    component: "default",
-    renderer: "always",
-    title: "Panel 1",
-  })
-
-  api.addPanel({
-    id: "panel_2",
-    component: "default",
-    title: "Panel 2",
-    position: { referencePanel: panel1 },
-  })
-
-  api.addPanel({
-    id: "panel_3",
-    component: "default",
-    title: "Panel 3",
-    position: { referencePanel: panel1 },
-  })
-
-  const panel4 = api.addPanel({
-    id: "panel_4",
-    component: "default",
-    title: "Panel 4",
-    position: { referencePanel: panel1, direction: "right" },
-  })
-
-  const panel5 = api.addPanel({
-    id: "panel_5",
-    component: "default",
-    title: "Panel 5",
-    position: { referencePanel: panel4 },
-  })
-
-  const panel6 = api.addPanel({
-    id: "panel_6",
-    component: "default",
-    title: "Panel 6",
-    position: { referencePanel: panel5, direction: "below" },
-  })
-
-  const panel7 = api.addPanel({
-    id: "panel_7",
-    component: "default",
-    title: "Panel 7",
-    position: { referencePanel: panel6, direction: "left" },
-  })
-
-  api.addPanel({
-    id: "panel8",
-    component: "default",
-    title: "Panel 8",
-    position: { referencePanel: panel7, direction: "below" },
-  })
-
-  panel1.api.setActive()
 }
 
 const components = {
@@ -257,7 +198,7 @@ const DockviewSail = (props: DockviewSailProps) => {
         })
       })
 
-    // Add new panels  
+    // Add new panels
     tabPanels
       .filter(panel => !currentPanelIds.includes(panel.panelId))
       .forEach(panel => {
@@ -267,19 +208,18 @@ const DockviewSail = (props: DockviewSailProps) => {
           tabId: panel.tabId,
           panelId: panel.panelId,
           appId: panel.appId,
-          icon: panel.icon
+          icon: panel.icon,
         }
-        
+
         api.addPanel({
           id: panel.panelId,
           component: "fdc3",
           title: panel.title,
-          params: { panel: fdc3Panel }
+          params: { panel: fdc3Panel },
         })
-        
+
         setMountedPanels(prev => new Map(prev).set(panel.panelId, fdc3Panel))
       })
-
   }, [api, props.externalPanels, props.activeTabId, mountedPanels])
 
   return (
@@ -289,7 +229,7 @@ const DockviewSail = (props: DockviewSailProps) => {
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        flex: 1
+        flex: 1,
       }}
     >
       <DockviewReact

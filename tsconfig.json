@@ -6,10 +6,10 @@
     { "path": "./packages/shared" },
     { "path": "./packages/desktop-agent" },
     { "path": "./packages/app-directories" },
-    { "path": "./packages/sail-layout" },
+    { "path": "./packages/sail-app" },
     { "path": "./apps/sail-web" },
     { "path": "./apps/sail-desktop" },
-    { "path": "./apps/sail-server" },
-    { "path": "./apps/example-apps" }
+    { "path": "./apps/sail-socket" },
+    { "path": "./apps/example-fdc3-apps" }
   ]
 }

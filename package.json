@@ -7,10 +7,13 @@
     "clean": "npm run clean --workspaces",
     "build": "npm run build --workspaces --if-present",
     "dev": "npm run dev --workspaces --if-present",
-    "web": "npm run build && npm run web --workspaces --if-present",
-    "example-apps": "npm run dev --workspace=apps/example-apps",
-    "electron": "concurrently \"npm run web\" \"npm run electron --workspaces --if-present \"",
-    "start:all": "concurrently \"npm run web\" \"npm run example-apps\" \"npm run electron\"",
+    "socket": "npm run dev --workspace=apps/sail-socket",
+    "app": "npm run dev --workspace=packages/sail-app",
+    "web": "concurrently \"npm run socket\" \"npm run dev --workspace=apps/sail-web\" \"npm run dev --workspace=apps/example-fdc3-apps\"",
+    "desktop": "concurrently \"npm run socket\" \"npm run app\" \"npm run dev --workspace=apps/example-fdc3-apps\"",
+    "electron": "concurrently \"npm run desktop\" \"npm run dev --workspace=apps/sail-desktop\"",
+    "example-apps": "npm run dev --workspace=apps/example-fdc3-apps",
+    "start:all": "concurrently \"npm run web\" \"npm run electron\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --build --verbose",
@@ -23,10 +26,11 @@
     "packages/preload",
     "packages/desktop-agent",
     "packages/app-directories",
+    "packages/sail-app",
     "apps/sail-web",
     "apps/sail-desktop",
-    "apps/sail-server",
-    "apps/example-apps"
+    "apps/sail-socket",
+    "apps/example-fdc3-apps"
   ],
   "devDependencies": {
     "@eslint/css": "^0.10.0",
@@ -45,5 +49,9 @@
   },
   "dependencies": {
     "wait-on": "^8.0.3"
+  },
+  "overrides": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
   }
 }
