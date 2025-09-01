@@ -1,6 +1,8 @@
 import "./App.css"
-import DockviewSail, { AppPanel } from "./components/grid/dockViewSail"
 import { useState } from "react"
+
+import DockviewSail, { AppPanel } from "./components/grid/dockViewSail"
+import Layout from "./components/menu/Menu"
 
 // Mock data that simulates what would come from Zustand store
 const MOCK_PANELS: AppPanel[] = [
@@ -35,15 +37,17 @@ function App() {
   const [activeTabId] = useState("One")
 
   return (
-    <div style={{ width: "100vw", height: "100vh" }}>
-      <DockviewSail 
-        externalPanels={panels}
-        activeTabId={activeTabId}
-        onPanelAdd={(panel) => console.log("Panel added:", panel)}
-        onPanelRemove={(panelId) => console.log("Panel removed:", panelId)}
-        onPanelUpdate={(panel) => console.log("Panel updated:", panel)}
-      />
-    </div>
+    <Layout>
+      <div style={{ width: "100%", height: "100%" }}>
+        <DockviewSail 
+          externalPanels={panels}
+          activeTabId={activeTabId}
+          onPanelAdd={(panel) => console.log("Panel added:", panel)}
+          onPanelRemove={(panelId) => console.log("Panel removed:", panelId)}
+          onPanelUpdate={(panel) => console.log("Panel updated:", panel)}
+        />
+      </div>
+    </Layout>
   )
 }
 

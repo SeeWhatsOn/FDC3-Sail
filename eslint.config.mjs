@@ -29,7 +29,8 @@ export default defineConfig([
       "**/pnpm-lock.yaml",
       "**/assets/",
 
-      "**/apps/example-apps/",
+      // TODO: remove this at a later date
+      "**/apps/example-fdc3-apps/",
 
       // Keep test files included for type checking
     ],

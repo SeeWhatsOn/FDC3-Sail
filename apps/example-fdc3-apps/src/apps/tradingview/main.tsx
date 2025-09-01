@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client"
+
 import TradingViewWidget from "./TradingViewWidget"
 
 const container = document.getElementById("app")

@@ -51,7 +51,7 @@ export const Widget = () => {
       <div style={{ textAlign: "center", width: "100%", fontSize: "14px" }}>
         <a
           href="https://www.benzinga.com"
-          rel="noopener"
+          rel="noopener noreferrer"
           target="_blank"
           style={{ color: "#6a6d78", textDecoration: "none" }}
         >

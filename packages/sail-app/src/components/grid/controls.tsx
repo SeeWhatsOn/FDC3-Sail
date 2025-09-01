@@ -1,6 +1,5 @@
 import { IDockviewHeaderActionsProps } from "dockview"
 import { useMemo, useState, useEffect, FC } from "react"
-
 import { Download, Plus, Menu, Maximize2, Minimize2, ExternalLink, X, Star } from "lucide-react"
 
 const randomId = () => {
@@ -57,7 +56,7 @@ export const RightControls = (props: IDockviewHeaderActionsProps) => {
       disposable.dispose()
       disposable2.dispose()
     }
-  }, [props.containerApi])
+  }, [props.api, props.containerApi])
 
   const onClick = () => {
     if (props.containerApi.hasMaximizedGroup()) {
@@ -69,7 +68,14 @@ export const RightControls = (props: IDockviewHeaderActionsProps) => {
 
   const onClick2 = () => {
     if (props.api.location.type !== "popout") {
-      props.containerApi.addPopoutGroup(props.group)
+      props.containerApi
+        .addPopoutGroup(props.group)
+        .then(() => {
+          // props.api.moveTo({ position: "right" })
+        })
+        .catch(() => {
+          console.error("Failed to add popout group")
+        })
     } else {
       props.api.moveTo({ position: "right" })
     }
@@ -132,6 +138,7 @@ export const LeftControls = (props: IDockviewHeaderActionsProps) => {
   )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const PrefixHeaderControls = (_props: IDockviewHeaderActionsProps) => {
   return (
     <div

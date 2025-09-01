@@ -2,6 +2,7 @@
 
 import { PolygonMode } from "../common"
 import NewsComponent from "../components/news/NewsComponent"
+
 import styles from "./styles.module.css"
 export const newsMode: PolygonMode = {
   name: "news",

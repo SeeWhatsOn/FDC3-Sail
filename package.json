@@ -27,6 +27,7 @@
     "packages/desktop-agent",
     "packages/app-directories",
     "packages/sail-app",
+    "packages/sail-ui",
     "apps/sail-web",
     "apps/sail-desktop",
     "apps/sail-socket",
@@ -49,9 +50,5 @@
   },
   "dependencies": {
     "wait-on": "^8.0.3"
-  },
-  "overrides": {
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1"
   }
 }

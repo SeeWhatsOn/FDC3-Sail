@@ -1,6 +1,7 @@
 // TradingViewWidget.jsx
 import { getAgent } from "@finos/fdc3"
 import { useEffect, useRef, memo, useState } from "react"
+
 import { PolygonMode } from "./common"
 import { newsMode } from "./modes/news"
 
@@ -63,7 +64,7 @@ export const PolygonWidget = ({ mode }: { mode: string }) => {
       {modeProps.stateRenderer(state)}
       {modeProps.dataRenderer(data)}
       <div className="polygon-widget-copyright">
-        <a href="https://www.polygon.io/" rel="noopener nofollow" target="_blank">
+        <a href="https://www.polygon.io/" rel="noopener nofollow noreferrer" target="_blank">
           <span className="blue-text"> Powered by Polygon </span>
         </a>
       </div>

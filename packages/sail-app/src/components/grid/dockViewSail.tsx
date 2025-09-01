@@ -7,9 +7,11 @@ import {
   DockviewApi,
 } from "dockview-react"
 import { useState, useEffect } from "react"
+
 import "./styles.css"
-import { LeftControls, PrefixHeaderControls, RightControls } from "./controls"
 import { FDC3Panel, FDC3AppPanel } from "../fdc3-iframe"
+
+import { LeftControls, PrefixHeaderControls, RightControls } from "./controls"
 import { defaultConfig } from "./config"
 
 // Simple panel interface for Zustand integration
