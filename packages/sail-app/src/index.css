@@ -1,4 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+
+/* Development: import sail-ui styles directly for hot reload */
 @import "sail-ui/index.css";
 

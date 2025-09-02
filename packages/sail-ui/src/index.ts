@@ -1,4 +1,4 @@
-// Export styles (marked as sideEffect in package.json)
+// Export styles (automatically loaded via sideEffects)
 import "./index.css"
 
 // Export specific components (named exports for tree-shaking)

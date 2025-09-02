@@ -1,4 +1,5 @@
-/* Design tokens and theme variables for sail-ui components - Tailwind CSS is imported by consuming app */ 
+/* Design tokens and theme variables for sail-ui components */
+@import "tailwindcss"; 
 
 @custom-variant dark (&:is(.dark *));
 
