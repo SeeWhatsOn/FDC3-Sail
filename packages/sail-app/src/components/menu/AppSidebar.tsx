@@ -14,6 +14,7 @@ import {
 import { Home, Zap, Settings, ChevronUp, User2 } from "lucide-react"
 import { SidebarSeparator } from "@/components/ui/sidebar"
 import { ModeToggle } from "../theme/ModeToggle"
+import { SailLogoButton } from "@/components/ui/sailLogoButton"
 
 const items = [
   {
@@ -41,10 +42,7 @@ export function AppSidebar() {
     <Sidebar collapsible="offcanvas">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1">
-          <div className="h-8 w-8 rounded bg-sidebar-primary flex items-center justify-center">
-            <Zap className="h-4 w-4 text-sidebar-primary-foreground" />
-          </div>
-          <span className="font-semibold">FDC3 Sail</span>
+          <SailLogoButton variant="ghost" style={{ height: "44px", width: "44px" }} />
         </div>
       </SidebarHeader>
       <SidebarContent>
