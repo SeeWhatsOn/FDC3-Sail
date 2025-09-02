@@ -4,7 +4,7 @@
     "baseUrl": ".",
     "jsx": "react-jsx",
     "paths": {
-      "@/*": ["./src/*", "../sail-ui/src/*"],
+      "@/*": ["../sail-ui/src/*"],
       "sail-ui": ["../sail-ui/src/index.ts"],
       "sail-ui/*": ["../sail-ui/src/*"]
     },

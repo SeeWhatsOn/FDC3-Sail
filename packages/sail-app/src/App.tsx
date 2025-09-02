@@ -5,6 +5,7 @@ import DockviewSail, { AppPanel } from "./components/grid/DockViewSail"
 import { SidebarProvider } from "sail-ui"
 import { AppSidebar } from "./components/menu/AppSidebar"
 import { HeaderBar } from "./components/HeaderBar"
+import { ThemeProvider } from "./components/theme/theme-provider"
 
 // Mock data that simulates what would come from Zustand store
 const MOCK_PANELS: AppPanel[] = [
@@ -39,21 +40,23 @@ function App() {
   const [activeTabId] = useState("One")
 
   return (
-    <SidebarProvider defaultOpen={false}>
-      <AppSidebar />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <HeaderBar />
-        <div className="flex-1 overflow-hidden">
-          <DockviewSail
-            externalPanels={panels}
-            activeTabId={activeTabId}
-            onPanelAdd={panel => console.log("Panel added:", panel)}
-            onPanelRemove={panelId => console.log("Panel removed:", panelId)}
-            onPanelUpdate={panel => console.log("Panel updated:", panel)}
-          />
-        </div>
-      </main>
-    </SidebarProvider>
+    <ThemeProvider>
+      <SidebarProvider defaultOpen={false}>
+        <AppSidebar />
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <HeaderBar />
+          <div className="flex-1 overflow-hidden">
+            <DockviewSail
+              externalPanels={panels}
+              activeTabId={activeTabId}
+              onPanelAdd={panel => console.log("Panel added:", panel)}
+              onPanelRemove={panelId => console.log("Panel removed:", panelId)}
+              onPanelUpdate={panel => console.log("Panel updated:", panel)}
+            />
+          </div>
+        </main>
+      </SidebarProvider>
+    </ThemeProvider>
   )
 }
 

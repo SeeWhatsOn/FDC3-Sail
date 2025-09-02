@@ -12,6 +12,8 @@ import {
   useSidebar,
 } from "sail-ui"
 import { Home, Zap, Settings, ChevronUp, User2 } from "lucide-react"
+import { SidebarSeparator } from "@/components/ui/sidebar"
+import { ModeToggle } from "../theme/ModeToggle"
 
 const items = [
   {
@@ -37,7 +39,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="offcanvas">
-        <SidebarHeader>
+      <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1">
           <div className="h-8 w-8 rounded bg-sidebar-primary flex items-center justify-center">
             <Zap className="h-4 w-4 text-sidebar-primary-foreground" />
@@ -60,6 +62,14 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+            <SidebarSeparator />
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <ModeToggle />
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

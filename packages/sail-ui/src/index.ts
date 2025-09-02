@@ -1,11 +1,18 @@
 // Export styles (automatically loaded via sideEffects)
-import "./index.css"
+// import "./index.css"
 
 // Export specific components (named exports for tree-shaking)
-export { 
+export {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./components/ui/dropdown-menu"
+
+export {
   Sidebar,
   SidebarContent,
-  SidebarFooter, 
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -15,13 +22,19 @@ export {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
-  useSidebar
+  useSidebar,
 } from "./components/ui/sidebar"
 
 export { Button } from "./components/ui/button"
 export { Input } from "./components/ui/input"
 export { Separator } from "./components/ui/separator"
-export { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./components/ui/sheet"
+export {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "./components/ui/sheet"
 export { Skeleton } from "./components/ui/skeleton"
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./components/ui/tooltip"
 
