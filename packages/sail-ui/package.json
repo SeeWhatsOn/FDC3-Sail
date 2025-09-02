@@ -17,8 +17,17 @@
     "./components/*": {
       "types": "./dist/components/*.d.ts",
       "import": "./dist/components/*.js"
+    },
+    "./sidebar": {
+      "types": "./dist/components/ui/sidebar.d.ts",
+      "import": "./dist/components/ui/sidebar.js"
+    },
+    "./button": {
+      "types": "./dist/components/ui/button.d.ts", 
+      "import": "./dist/components/ui/button.js"
     }
   },
+  "sideEffects": ["./src/index.css", "./dist/sail-ui.css"],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

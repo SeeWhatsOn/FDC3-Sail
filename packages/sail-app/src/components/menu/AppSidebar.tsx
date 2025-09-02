@@ -9,6 +9,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "sail-ui"
 import { Home, Zap, Settings, ChevronUp, User2 } from "lucide-react"
 
@@ -31,9 +32,12 @@ const items = [
 ]
 
 export function AppSidebar() {
+  const { state, open } = useSidebar()
+  console.log("AppSidebar render - Sidebar state:", { state, open })
+
   return (
-    <Sidebar>
-      <SidebarHeader>
+    <Sidebar collapsible="offcanvas">
+        <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1">
           <div className="h-8 w-8 rounded bg-sidebar-primary flex items-center justify-center">
             <Zap className="h-4 w-4 text-sidebar-primary-foreground" />
@@ -46,7 +50,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Application</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {items.map(item => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <a href={item.url}>

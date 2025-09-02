@@ -11,7 +11,7 @@ import { useState, useEffect } from "react"
 import "./styles.css"
 import { FDC3Panel, FDC3AppPanel } from "../fdc3-iframe"
 
-import { LeftControls, PrefixHeaderControls, RightControls } from "./controls"
+import { LeftControls, PrefixHeaderControls, RightControls } from "./Controls"
 import { defaultConfig } from "./config"
 
 // Simple panel interface for Zustand integration

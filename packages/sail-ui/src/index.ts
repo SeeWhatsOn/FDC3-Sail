@@ -1,13 +1,29 @@
-// Export styles
+// Export styles (marked as sideEffect in package.json)
 import "./index.css"
 
-// Export all UI components
-export * from "./components/ui/sidebar"
-export * from "./components/ui/button"
-export * from "./components/ui/input"
-export * from "./components/ui/separator"
-export * from "./components/ui/sheet"
-export * from "./components/ui/skeleton"
-export * from "./components/ui/tooltip"
-export * from "./hooks/use-mobile"
-export * from "./lib/utils"
+// Export specific components (named exports for tree-shaking)
+export { 
+  Sidebar,
+  SidebarContent,
+  SidebarFooter, 
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar
+} from "./components/ui/sidebar"
+
+export { Button } from "./components/ui/button"
+export { Input } from "./components/ui/input"
+export { Separator } from "./components/ui/separator"
+export { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./components/ui/sheet"
+export { Skeleton } from "./components/ui/skeleton"
+export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./components/ui/tooltip"
+
+export { useIsMobile } from "./hooks/use-mobile"
+export { cn } from "./lib/utils"
