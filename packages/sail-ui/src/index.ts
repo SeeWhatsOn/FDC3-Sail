@@ -1,3 +1,6 @@
+// Export styles
+import "./index.css"
+
 // Export all UI components
 export * from "./components/ui/sidebar"
 export * from "./components/ui/button"

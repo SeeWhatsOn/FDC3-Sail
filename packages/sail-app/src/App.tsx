@@ -38,13 +38,15 @@ function App() {
 
   return (
     <Layout>
-      <DockviewSail
-        externalPanels={panels}
-        activeTabId={activeTabId}
-        onPanelAdd={panel => console.log("Panel added:", panel)}
-        onPanelRemove={panelId => console.log("Panel removed:", panelId)}
-        onPanelUpdate={panel => console.log("Panel updated:", panel)}
-      />
+      <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min">
+        <DockviewSail
+          externalPanels={panels}
+          activeTabId={activeTabId}
+          onPanelAdd={panel => console.log("Panel added:", panel)}
+          onPanelRemove={panelId => console.log("Panel removed:", panelId)}
+          onPanelUpdate={panel => console.log("Panel updated:", panel)}
+        />
+      </div>
     </Layout>
   )
 }

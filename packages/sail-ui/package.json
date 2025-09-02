@@ -3,12 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/sail-ui.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/sail-ui.js"
+    },
+    "./styles": {
+      "import": "./dist/sail-ui.css",
+      "require": "./dist/sail-ui.css"
     },
     "./components/*": {
       "types": "./dist/components/*.d.ts",
