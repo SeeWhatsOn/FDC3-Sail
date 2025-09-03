@@ -11,9 +11,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "sail-ui"
-import { Home, Zap, Settings, ChevronUp, User2 } from "lucide-react"
-import { SidebarSeparator } from "@/components/ui/sidebar"
+import { Home, Zap, Settings, ChevronUp, User2, LayoutGrid } from "lucide-react"
 import { SailLogoButton } from "@/components/ui/sailLogoButton"
+import { Logo } from "sail-ui"
 
 import { ModeToggle } from "../theme/ModeToggle"
 
@@ -29,6 +29,11 @@ const items = [
     icon: Zap,
   },
   {
+    title: "Workspaces",
+    url: "#",
+    icon: LayoutGrid,
+  },
+  {
     title: "Settings",
     url: "#",
     icon: Settings,
@@ -41,9 +46,16 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="offcanvas">
+      <div className="flex items-center justify-end p-2">
+        <ModeToggle />
+      </div>
+
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1">
-          <SailLogoButton variant="ghost" style={{ height: "44px", width: "44px" }} />
+          {/* <SailLogoButton variant="ghost" style={{ height: "44px", width: "44px" }} /> */}
+          <div className="flex items-center gap-2 px-2 py-1 border-2 border-red-500 rounded-3xl h-10 w-10">
+            <Logo />
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -61,14 +73,6 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-            </SidebarMenu>
-            <SidebarSeparator />
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <ModeToggle />
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
