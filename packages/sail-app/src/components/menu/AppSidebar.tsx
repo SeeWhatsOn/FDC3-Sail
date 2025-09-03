@@ -13,8 +13,9 @@ import {
 } from "sail-ui"
 import { Home, Zap, Settings, ChevronUp, User2 } from "lucide-react"
 import { SidebarSeparator } from "@/components/ui/sidebar"
-import { ModeToggle } from "../theme/ModeToggle"
 import { SailLogoButton } from "@/components/ui/sailLogoButton"
+
+import { ModeToggle } from "../theme/ModeToggle"
 
 const items = [
   {

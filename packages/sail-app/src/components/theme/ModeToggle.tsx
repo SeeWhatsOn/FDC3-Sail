@@ -1,7 +1,7 @@
 import { Moon, Sun } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "sail-ui"
+
 import { useTheme } from "./theme-provider"
 
 export function ModeToggle() {
