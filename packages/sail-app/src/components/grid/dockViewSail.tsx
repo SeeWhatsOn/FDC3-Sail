@@ -9,7 +9,7 @@ import {
 import { useState, useEffect } from "react"
 
 import "./styles.css"
-import { FDC3Panel, FDC3AppPanel } from "../fdc3-iframe"
+import { FDC3Panel, FDC3AppPanel } from "../fdc3-iframe/FDC3Panel"
 
 import { LeftControls, PrefixHeaderControls, RightControls } from "./Controls"
 import { defaultConfig } from "./config"
