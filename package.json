@@ -17,6 +17,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --build --verbose",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "check-all": "npm run lint && npm run type-check && npm run format"
