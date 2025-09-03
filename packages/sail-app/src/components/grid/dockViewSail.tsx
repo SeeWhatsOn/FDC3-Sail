@@ -10,6 +10,7 @@ import { useState, useEffect } from "react"
 
 import "./styles.css"
 import { FDC3Panel, FDC3AppPanel } from "../fdc3-iframe/FDC3Panel"
+import { DefaultTabComponent } from "./DefaultTabComponent"
 
 import { LeftControls, PrefixHeaderControls, RightControls } from "./Controls"
 import { defaultConfig } from "./config"
@@ -31,23 +32,13 @@ const components = {
         style={{
           height: "100%",
           overflow: "auto",
-          color: "white",
           position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        <span
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%,-50%)",
-            pointerEvents: "none",
-            fontSize: "42px",
-            opacity: 0.5,
-          }}
-        >
-          {props.api.title}
-        </span>
+        <DefaultTabComponent />
       </div>
     )
   },
