@@ -53,9 +53,10 @@ export function AppSidebar() {
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1">
           {/* <SailLogoButton variant="ghost" style={{ height: "44px", width: "44px" }} /> */}
-          <div className="flex items-center gap-2 px-2 py-1 border-2 border-red-500 rounded-3xl h-10 w-10">
+          <div className="flex items-center justify-center border-2 border-sail-secondary rounded-md h-20 w-20 p-4">
             <Logo />
           </div>
+          <p className="text-2xl font-sail-logo">FDC3 Sail</p>
         </div>
       </SidebarHeader>
       <SidebarContent>
