@@ -52,7 +52,6 @@ export function AppSidebar() {
 
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1">
-          {/* <SailLogoButton variant="ghost" style={{ height: "44px", width: "44px" }} /> */}
           <div className="flex items-center justify-center border-2 border-sail-secondary rounded-md h-20 w-20 p-4">
             <Logo />
           </div>
