@@ -1,4 +1,4 @@
-import { Logo, SidebarTrigger } from "sail-ui"
+import { LogoSail, SidebarTrigger } from "sail-ui"
 
 export const HeaderBar = () => {
   return (
@@ -6,9 +6,8 @@ export const HeaderBar = () => {
       <SidebarTrigger />
       <div className="flex items-center gap-2 px-2 py-1 absolute right-0">
         <div className="flex items-center justify-center w-10">
-          <Logo />
+          <LogoSail />
         </div>
-        <p className="text-2xl font-sail-logo">FDC3 Sail</p>
       </div>
     </header>
   )

@@ -13,7 +13,7 @@ import {
 } from "sail-ui"
 import { Home, Zap, Settings, ChevronUp, User2, LayoutGrid } from "lucide-react"
 import { SailLogoButton } from "@/components/ui/sailLogoButton"
-import { Logo } from "sail-ui"
+import { LogoSail } from "sail-ui"
 
 import { ModeToggle } from "../theme/ModeToggle"
 
@@ -46,17 +46,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="offcanvas">
-      <div className="flex items-center justify-end p-2">
-        <ModeToggle />
-      </div>
-
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1">
-          <div className="flex items-center justify-center border-2 border-sail-secondary rounded-md h-20 w-20 p-4">
-            <Logo />
-          </div>
-          <p className="text-2xl font-sail-logo">FDC3 Sail</p>
-        </div>
+        <ModeToggle />
+        <LogoSail className="w-30 h-30" />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
