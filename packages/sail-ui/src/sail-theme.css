@@ -78,6 +78,10 @@
     font-family: var(--sail-font-mono);
   }
   
+  .font-sail-logo {
+    font-family: var(--sail-font-logo);
+  }
+  
   .bg-gradient-sail {
     background: var(--sail-gradient-primary);
   }
