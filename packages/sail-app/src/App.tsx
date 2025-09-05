@@ -2,7 +2,7 @@ import "./App.css"
 import { useState } from "react"
 import { SidebarProvider } from "sail-ui"
 
-import DockviewSail, { AppPanel } from "./components/grid/DockViewSail"
+import DockviewSail, { AppPanel } from "./components/layout-grid/DockViewSail"
 import { AppSidebar } from "./components/menu/AppSidebar"
 import { HeaderBar } from "./components/HeaderBar"
 import { ThemeProvider } from "./components/theme/theme-provider"

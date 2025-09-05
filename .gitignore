@@ -13,3 +13,4 @@ local-docs
 packages/socket/html
 .claude/settings.local.json
 *.tsbuildinfo
+packages/sail-app/PRODUCT.md

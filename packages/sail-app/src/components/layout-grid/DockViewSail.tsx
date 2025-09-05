@@ -6,11 +6,12 @@ import {
   IDockviewPanelProps,
   DockviewApi,
 } from "dockview-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 
 import "./styles.css"
 import { FDC3Panel, FDC3AppPanel } from "../fdc3-iframe/FDC3Panel"
 import { DefaultTabComponent } from "./DefaultTabComponent"
+import { useDesktopAgent } from "../../hooks/useDesktopAgent"
 
 import { LeftControls, PrefixHeaderControls, RightControls } from "./Controls"
 import { defaultConfig } from "./config"
@@ -49,15 +50,7 @@ const components = {
       return <div className="p-4 text-red-500">Error: No panel data provided</div>
     }
 
-    return (
-      <FDC3Panel
-        {...props}
-        panel={panelData}
-        onAppWindowRegister={(contentWindow, panelId) => {
-          console.log("App window registered:", panelId, contentWindow)
-        }}
-      />
-    )
+    return <FDC3Panel {...props} panel={panelData} />
   },
 }
 
@@ -82,29 +75,33 @@ interface DockviewSailProps {
 }
 
 const DockviewSail = (props: DockviewSailProps) => {
+  const api = useRef<DockviewApi | undefined>(undefined)
+  const [mountedPanels, setMountedPanels] = useState<Map<string, FDC3AppPanel>>(new Map())
   const [_panels, setPanels] = useState<string[]>([])
   const [_groups, setGroups] = useState<string[]>([])
-  const [api, setApi] = useState<DockviewApi>()
-  const [mountedPanels, setMountedPanels] = useState<Map<string, FDC3AppPanel>>(new Map())
 
-  const [_activePanel, setActivePanel] = useState<string>()
-  const [_activeGroup, setActiveGroup] = useState<string>()
+  const { disconnectSocket } = useDesktopAgent()
+
+  // Cleanup socket on unmount
+  useEffect(() => {
+    return () => {
+      disconnectSocket()
+    }
+  }, [disconnectSocket])
 
   const onReady = (event: DockviewReadyEvent) => {
-    setApi(event.api)
+    api.current = event.api
     setPanels([])
     setGroups([])
-    setActivePanel(undefined)
-    setActiveGroup(undefined)
   }
 
   useEffect(() => {
-    if (!api) {
+    if (!api.current) {
       return
     }
 
     const disposables = [
-      api.onDidAddPanel(event => {
+      api.current.onDidAddPanel(event => {
         setPanels(_ => [..._, event.id])
         // If this panel was added externally, notify the store
         const panel = mountedPanels.get(event.id)
@@ -112,10 +109,7 @@ const DockviewSail = (props: DockviewSailProps) => {
           props.onPanelAdd(panel)
         }
       }),
-      api.onDidActivePanelChange(event => {
-        setActivePanel(event?.id)
-      }),
-      api.onDidRemovePanel(event => {
+      api.current.onDidRemovePanel(event => {
         setPanels(_ => {
           const next = [..._]
           next.splice(
@@ -125,17 +119,19 @@ const DockviewSail = (props: DockviewSailProps) => {
 
           return next
         })
+        // Clean up desktop agent registration
+        // TODO: Implement window unregistration when needed
         // Notify the store about panel removal
         if (props.onPanelRemove) {
           props.onPanelRemove(event.id)
         }
       }),
 
-      api.onDidAddGroup(event => {
+      api.current.onDidAddGroup(event => {
         setGroups(_ => [..._, event.id])
       }),
 
-      api.onDidRemoveGroup(event => {
+      api.current.onDidRemoveGroup(event => {
         setGroups(_ => {
           const next = [..._]
           next.splice(
@@ -146,9 +142,6 @@ const DockviewSail = (props: DockviewSailProps) => {
           return next
         })
       }),
-      api.onDidActiveGroupChange(event => {
-        setActiveGroup(event?.id)
-      }),
     ]
 
     let success = false
@@ -156,7 +149,7 @@ const DockviewSail = (props: DockviewSailProps) => {
     const state = localStorage.getItem("dv-demo-state")
     if (state) {
       try {
-        api.fromJSON(JSON.parse(state))
+        api.current.fromJSON(JSON.parse(state))
         success = true
       } catch {
         localStorage.removeItem("dv-demo-state")
@@ -164,15 +157,15 @@ const DockviewSail = (props: DockviewSailProps) => {
     }
 
     if (!success && !props.externalPanels?.length) {
-      defaultConfig(api)
+      defaultConfig(api.current)
     }
 
-    return disposables.forEach(disposable => disposable.dispose())
-  }, [api, mountedPanels, props])
+    return () => disposables.forEach(disposable => disposable.dispose())
+  }, [mountedPanels, props])
 
   // Sync with external panels when they change
   useEffect(() => {
-    if (!api || !props.externalPanels || !props.activeTabId) return
+    if (!api.current || !props.externalPanels || !props.activeTabId) return
 
     const tabPanels = props.externalPanels.filter(p => p.tabId === props.activeTabId)
     const currentPanelIds = Array.from(mountedPanels.keys())
@@ -182,8 +175,8 @@ const DockviewSail = (props: DockviewSailProps) => {
     currentPanelIds
       .filter(id => !externalPanelIds.includes(id))
       .forEach(id => {
-        const panel = api.getPanel(id)
-        if (panel) api.removePanel(panel)
+        const panel = api.current?.getPanel(id)
+        if (panel) api.current?.removePanel(panel)
         setMountedPanels(prev => {
           const next = new Map(prev)
           next.delete(id)
@@ -204,7 +197,7 @@ const DockviewSail = (props: DockviewSailProps) => {
           icon: panel.icon,
         }
 
-        api.addPanel({
+        api.current?.addPanel({
           id: panel.panelId,
           component: "fdc3",
           title: panel.title,
@@ -213,7 +206,7 @@ const DockviewSail = (props: DockviewSailProps) => {
 
         setMountedPanels(prev => new Map(prev).set(panel.panelId, fdc3Panel))
       })
-  }, [api, props.externalPanels, props.activeTabId, mountedPanels])
+  }, [props.externalPanels, props.activeTabId, mountedPanels])
 
   return (
     <div
