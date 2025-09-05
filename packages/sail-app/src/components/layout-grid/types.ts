@@ -1,4 +1,4 @@
-import { FDC3AppPanel } from "../fdc3-iframe/FDC3Panel"
+import { FDC3AppPanel } from "./panels/FDC3IframePanel"
 
 // Simple panel interface for Zustand integration
 export interface AppPanel {
@@ -13,6 +13,7 @@ export interface AppPanel {
 export interface DockviewSailProps {
   theme?: string
   // Optional props for external control (now using Zustand store by default)
+  // Note: Store now uses Map<string, AppPanel> for better performance
   externalPanels?: AppPanel[]
   activeTabId?: string
   onPanelAdd?: (panel: FDC3AppPanel) => void

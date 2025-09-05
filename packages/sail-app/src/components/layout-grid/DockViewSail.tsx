@@ -2,14 +2,13 @@ import { DockviewReact, DockviewReadyEvent, DockviewApi } from "dockview-react"
 import { useState, useEffect, useRef } from "react"
 
 import "./styles.css"
-import { FDC3AppPanel } from "../fdc3-iframe/FDC3Panel"
+import { FDC3AppPanel } from "./panels/FDC3IframePanel"
 import { useDesktopAgent } from "../../hooks/useDesktopAgent"
 import { usePanelStore } from "../../stores/panelStore"
 
-import { LeftControls, PrefixHeaderControls, RightControls } from "./Controls"
-import { defaultConfig } from "./config"
+import { LeftControls, PrefixHeaderControls, RightControls } from "./toolbars/Controls"
 import { dockViewComponents, dockViewHeaderComponents } from "./DockViewComponents"
-import { DockviewSailProps } from "./types"
+import type { DockviewSailProps } from "./types"
 
 // Re-export types for backward compatibility
 export type { AppPanel, DockviewSailProps } from "./types"
@@ -19,7 +18,7 @@ const DockviewSail = (props: DockviewSailProps) => {
   const [mountedPanels, setMountedPanels] = useState<Map<string, FDC3AppPanel>>(new Map())
 
   // Use Zustand store instead of props
-  const { panels, activeTabId, addPanel, removePanel } = usePanelStore()
+  const { panels, activeTabId, addPanel, removePanel, getTabPanels } = usePanelStore()
   const { disconnectSocket } = useDesktopAgent()
 
   // Cleanup socket on unmount
@@ -63,20 +62,13 @@ const DockviewSail = (props: DockviewSailProps) => {
       }),
     ]
 
-    let success = false
-
     const state = localStorage.getItem("dv-demo-state")
     if (state) {
       try {
         api.current.fromJSON(JSON.parse(state))
-        success = true
       } catch {
         localStorage.removeItem("dv-demo-state")
       }
-    }
-
-    if (!success && !panels.length) {
-      defaultConfig(api.current)
     }
 
     return () => disposables.forEach(disposable => disposable.dispose())
@@ -86,7 +78,7 @@ const DockviewSail = (props: DockviewSailProps) => {
   useEffect(() => {
     if (!api.current || !panels || !activeTabId) return
 
-    const tabPanels = panels.filter(p => p.tabId === activeTabId)
+    const tabPanels = getTabPanels(activeTabId)
     const currentPanelIds = Array.from(mountedPanels.keys())
     const externalPanelIds = tabPanels.map(p => p.panelId)
 
@@ -125,7 +117,7 @@ const DockviewSail = (props: DockviewSailProps) => {
 
         setMountedPanels(prev => new Map(prev).set(panel.panelId, fdc3Panel))
       })
-  }, [panels, activeTabId, mountedPanels])
+  }, [panels, activeTabId, mountedPanels, getTabPanels])
 
   return (
     <div

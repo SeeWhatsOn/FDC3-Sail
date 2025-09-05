@@ -11,27 +11,29 @@ export interface AppPanel {
 }
 
 interface PanelState {
-  panels: AppPanel[]
+  panels: Map<string, AppPanel>
   activeTabId: string
 }
 
 interface PanelActions {
-  setPanels: (panels: AppPanel[]) => void
+  setPanels: (panels: Map<string, AppPanel>) => void
   setActiveTab: (tabId: string) => void
   addPanel: (panel: AppPanel) => void
   removePanel: (panelId: string) => void
+  getPanel: (panelId: string) => AppPanel | undefined
   getTabPanels: (tabId: string) => AppPanel[]
+  getAllPanels: () => AppPanel[]
 }
 
 export interface PanelStore extends PanelState, PanelActions {}
 
 // Mock data that simulates what would come from external sources
-const MOCK_PANELS: AppPanel[] = [
+const MOCK_PANELS_DATA: AppPanel[] = [
   {
     title: "Trading Terminal",
     url: "https://tradingview.com/chart/",
     tabId: "One",
-    panelId: "trading-1",
+    panelId: "tradingview-1", // Combined appId-instanceId format
     appId: "tradingview",
     icon: null,
   },
@@ -39,7 +41,7 @@ const MOCK_PANELS: AppPanel[] = [
     title: "Market Data",
     url: "https://polygon.io/dashboard",
     tabId: "One",
-    panelId: "market-1",
+    panelId: "polygon-1", // Combined appId-instanceId format
     appId: "polygon",
     icon: null,
   },
@@ -47,11 +49,14 @@ const MOCK_PANELS: AppPanel[] = [
     title: "News Feed",
     url: "https://benzinga.com/news",
     tabId: "Two",
-    panelId: "news-1",
+    panelId: "benzinga-1", // Combined appId-instanceId format
     appId: "benzinga",
     icon: null,
   },
 ]
+
+// Convert array to Map for better performance
+const MOCK_PANELS = new Map(MOCK_PANELS_DATA.map(panel => [panel.panelId, panel]))
 
 export const createPanelStore = () =>
   create<PanelStore>()(
@@ -61,7 +66,7 @@ export const createPanelStore = () =>
       activeTabId: "One",
 
       // Actions using Immer for clean immutable updates
-      setPanels: (panels: AppPanel[]) =>
+      setPanels: (panels: Map<string, AppPanel>) =>
         set(state => {
           state.panels = panels
         }),
@@ -73,25 +78,27 @@ export const createPanelStore = () =>
 
       addPanel: (panel: AppPanel) =>
         set(state => {
-          // Check if panel already exists (prevent duplicates)
-          const existingIndex = state.panels.findIndex(p => p.panelId === panel.panelId)
-          if (existingIndex !== -1) {
-            // Update existing panel
-            state.panels[existingIndex] = panel
-          } else {
-            // Add new panel
-            state.panels.push(panel)
-          }
+          // Map automatically handles updates/inserts
+          state.panels.set(panel.panelId, panel)
         }),
 
       removePanel: (panelId: string) =>
         set(state => {
-          state.panels = state.panels.filter(panel => panel.panelId !== panelId)
+          state.panels.delete(panelId)
         }),
 
-      // Computed getter - doesn't need Immer
+      // Computed getters - don't need Immer
+      getPanel: (panelId: string) => {
+        return get().panels.get(panelId)
+      },
+
       getTabPanels: (tabId: string) => {
-        return get().panels.filter(panel => panel.tabId === tabId)
+        const panels = get().panels
+        return Array.from(panels.values()).filter(panel => panel.tabId === tabId)
+      },
+
+      getAllPanels: () => {
+        return Array.from(get().panels.values())
       },
     }))
   )

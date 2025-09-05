@@ -42,7 +42,7 @@ const items = [
 
 export function AppSidebar() {
   const { state, open } = useSidebar()
-  console.log("AppSidebar render - Sidebar state:", { state, open })
+  // AppSidebar render with current state
 
   return (
     <Sidebar collapsible="offcanvas">

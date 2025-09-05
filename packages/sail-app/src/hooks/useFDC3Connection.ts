@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react"
+import { useCallback } from "react"
 import { Socket } from "socket.io-client"
 import {
   AppHosting,
@@ -15,7 +15,7 @@ import { useDesktopAgent, SessionInfo } from "./useDesktopAgent"
  * Links socket and MessageChannel for bidirectional FDC3 communication
  */
 function link(socket: Socket, channel: MessageChannel, source: InstanceID) {
-  socket.on(AppManagementMessages.FDC3_DA_EVENT, (data: any) => {
+  socket.on(AppManagementMessages.FDC3_DA_EVENT, (data: unknown) => {
     channel.port2.postMessage(data)
   })
 
@@ -48,7 +48,7 @@ export const useFDC3Connection = (panelId: string) => {
           appId: sessionInfo.appId,
         } as AppHelloArgs)) as AppHosting
 
-        console.log(`SAIL Panel ${panelId} Received:`, JSON.stringify(response))
+        // Response received from desktop agent
 
         const suffix = `?desktopAgentId=${sessionInfo.userSessionId}&instanceId=${sessionInfo.instanceId}`
         const intentResolverUrl =
@@ -89,22 +89,13 @@ export const useFDC3Connection = (panelId: string) => {
       const messageData = event.data as BrowserTypes.WebConnectionProtocol1Hello
 
       if (isWebConnectionProtocol1Hello(messageData) && event.source === contentWindow) {
-        console.debug(
-          `FDC3 Panel ${panelId} received WCP1Hello:`,
-          messageData
-        )
+        console.debug(`FDC3 Panel ${panelId} received WCP1Hello:`, messageData)
 
         const socket = getSocket()
         const channel = new MessageChannel()
         const sessionInfo = getSessionInfo()
 
-        await handleSocketConnection(
-          socket,
-          channel,
-          sessionInfo,
-          messageData,
-          contentWindow
-        )
+        await handleSocketConnection(socket, channel, sessionInfo, messageData, contentWindow)
       }
     },
     [panelId, getSocket, getSessionInfo, handleSocketConnection]

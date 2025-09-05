@@ -1,9 +1,9 @@
 import { IDockviewPanelProps } from "dockview"
 import { useCallback, useEffect, useRef } from "react"
-import { useFDC3Connection } from "../../hooks/useFDC3Connection"
+import { useFDC3Connection } from "../../../hooks/useFDC3Connection"
 
 /**
- * In this coponent we create the iframe to insert the FDC3 App.
+ * In this component we create the iframe to insert the FDC3 App.
  * WCP happpens like so:
  *    1. Desktop Agent Loads App into Iframe
       2. FDC3 app calls getAgent()
@@ -58,7 +58,7 @@ export const FDC3Panel = ({ panel }: FDC3PanelProps) => {
         }, 10)
       }
     },
-    [panel.panelId, registerWindow]
+    [registerWindow]
   )
 
   // Cleanup on unmount

@@ -1,8 +1,8 @@
 import { IDockviewPanelHeaderProps, IDockviewPanelProps } from "dockview-react"
 import { DockviewDefaultTab } from "dockview-react"
 
-import { FDC3Panel, FDC3AppPanel } from "../fdc3-iframe/FDC3Panel"
-import { DefaultTabComponent } from "./DefaultTabComponent"
+import { FDC3Panel, FDC3AppPanel } from "./panels/FDC3IframePanel"
+import { DefaultTabComponent } from "./panels/DefaultTabComponent"
 
 export const dockViewComponents = {
   default: () => {
