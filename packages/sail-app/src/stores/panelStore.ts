@@ -1,5 +1,5 @@
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
+import { create } from "zustand"
+import { immer } from "zustand/middleware/immer"
 
 export interface AppPanel {
   title: string
@@ -25,26 +25,54 @@ interface PanelActions {
 
 export interface PanelStore extends PanelState, PanelActions {}
 
+// Mock data that simulates what would come from external sources
+const MOCK_PANELS: AppPanel[] = [
+  {
+    title: "Trading Terminal",
+    url: "https://tradingview.com/chart/",
+    tabId: "One",
+    panelId: "trading-1",
+    appId: "tradingview",
+    icon: null,
+  },
+  {
+    title: "Market Data",
+    url: "https://polygon.io/dashboard",
+    tabId: "One",
+    panelId: "market-1",
+    appId: "polygon",
+    icon: null,
+  },
+  {
+    title: "News Feed",
+    url: "https://benzinga.com/news",
+    tabId: "Two",
+    panelId: "news-1",
+    appId: "benzinga",
+    icon: null,
+  },
+]
+
 export const createPanelStore = () =>
   create<PanelStore>()(
     immer((set, get) => ({
-      // Initial state
-      panels: [],
+      // Initial state with mock data
+      panels: MOCK_PANELS,
       activeTabId: "One",
 
       // Actions using Immer for clean immutable updates
       setPanels: (panels: AppPanel[]) =>
-        set((state) => {
+        set(state => {
           state.panels = panels
         }),
 
       setActiveTab: (tabId: string) =>
-        set((state) => {
+        set(state => {
           state.activeTabId = tabId
         }),
 
       addPanel: (panel: AppPanel) =>
-        set((state) => {
+        set(state => {
           // Check if panel already exists (prevent duplicates)
           const existingIndex = state.panels.findIndex(p => p.panelId === panel.panelId)
           if (existingIndex !== -1) {
@@ -57,7 +85,7 @@ export const createPanelStore = () =>
         }),
 
       removePanel: (panelId: string) =>
-        set((state) => {
+        set(state => {
           state.panels = state.panels.filter(panel => panel.panelId !== panelId)
         }),
 
