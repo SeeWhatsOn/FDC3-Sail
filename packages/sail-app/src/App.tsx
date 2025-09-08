@@ -1,10 +1,11 @@
 import "./App.css"
 import { SidebarProvider } from "sail-ui"
 
-import DockviewSail from "./components/layout-grid/DockViewSail"
-import { AppSidebar } from "./components/menu/AppSidebar"
+import { AppSidebar } from "./components/sidebar/AppSidebar"
 import { HeaderBar } from "./components/HeaderBar"
 import { ThemeProvider } from "./components/theme/theme-provider"
+import { Workspace } from "./components/workspace/Workspace"
+import Layout from "./components/layout-grid/Layout"
 
 function App() {
   return (
@@ -13,9 +14,9 @@ function App() {
         <AppSidebar />
         <main className="flex-1 flex flex-col overflow-hidden">
           <HeaderBar />
-          <div className="flex-1 overflow-hidden">
-            <DockviewSail />
-          </div>
+          <Workspace>
+            <Layout />
+          </Workspace>
         </main>
       </SidebarProvider>
     </ThemeProvider>

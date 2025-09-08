@@ -2,18 +2,19 @@ import { DockviewReact, DockviewReadyEvent, DockviewApi } from "dockview-react"
 import { useState, useEffect, useRef } from "react"
 
 import "./styles.css"
-import { FDC3AppPanel } from "./panels/FDC3IframePanel"
+import { FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
 import { useDesktopAgent } from "../../hooks/useDesktopAgent"
 import { usePanelStore } from "../../stores/panelStore"
 
-import { LeftControls, PrefixHeaderControls, RightControls } from "./toolbars/Controls"
-import { dockViewComponents, dockViewHeaderComponents } from "./DockViewComponents"
+import { LeftControls, PrefixToolbarControls, RightControls } from "./toolbar/Controls"
+import { Panels } from "./Panels"
 import type { DockviewSailProps } from "./types"
+import { WatermarkPanel } from "./panel-templates/WatermarkPanel"
 
 // Re-export types for backward compatibility
 export type { AppPanel, DockviewSailProps } from "./types"
 
-const DockviewSail = (props: DockviewSailProps) => {
+const Layout = (props: DockviewSailProps) => {
   const api = useRef<DockviewApi | undefined>(undefined)
   const [mountedPanels, setMountedPanels] = useState<Map<string, FDC3AppPanel>>(new Map())
 
@@ -130,16 +131,16 @@ const DockviewSail = (props: DockviewSailProps) => {
       }}
     >
       <DockviewReact
-        components={dockViewComponents}
-        defaultTabComponent={dockViewHeaderComponents.default}
+        components={Panels}
         rightHeaderActionsComponent={RightControls}
         leftHeaderActionsComponent={LeftControls}
-        prefixHeaderActionsComponent={PrefixHeaderControls}
+        prefixHeaderActionsComponent={PrefixToolbarControls}
         onReady={onReady}
         className={props.theme || "dockview-theme-abyss"}
+        watermarkComponent={WatermarkPanel}
       />
     </div>
   )
 }
 
-export default DockviewSail
+export default Layout

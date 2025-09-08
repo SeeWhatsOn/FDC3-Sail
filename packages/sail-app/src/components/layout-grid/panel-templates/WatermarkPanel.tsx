@@ -1,6 +1,6 @@
 import { LogoSail } from "sail-ui"
 
-export const DefaultTabComponent = () => {
+export const WatermarkPanel = () => {
   return (
     <div className="w-full h-full flex items-center justify-center flex-col">
       <div className="flex items-center gap-2 px-2 py-1 flex-col">

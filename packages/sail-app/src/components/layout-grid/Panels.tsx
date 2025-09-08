@@ -1,10 +1,8 @@
-import { IDockviewPanelHeaderProps, IDockviewPanelProps } from "dockview-react"
-import { DockviewDefaultTab } from "dockview-react"
+import { IDockviewPanelProps } from "dockview-react"
 
-import { FDC3Panel, FDC3AppPanel } from "./panels/FDC3IframePanel"
-import { DefaultTabComponent } from "./panels/DefaultTabComponent"
+import { FDC3Panel, FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
 
-export const dockViewComponents = {
+export const Panels = {
   default: () => {
     return (
       <div
@@ -17,7 +15,7 @@ export const dockViewComponents = {
           justifyContent: "center",
         }}
       >
-        <DefaultTabComponent />
+        App D LAuncher here
       </div>
     )
   },
@@ -29,11 +27,5 @@ export const dockViewComponents = {
     }
 
     return <FDC3Panel {...props} panel={panelData} />
-  },
-}
-
-export const dockViewHeaderComponents = {
-  default: (props: IDockviewPanelHeaderProps) => {
-    return <DockviewDefaultTab {...props} />
   },
 }

@@ -1,3 +1,4 @@
+import { enableMapSet } from "immer"
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
 
@@ -57,6 +58,9 @@ const MOCK_PANELS_DATA: AppPanel[] = [
 
 // Convert array to Map for better performance
 const MOCK_PANELS = new Map(MOCK_PANELS_DATA.map(panel => [panel.panelId, panel]))
+
+// Enable Map/Set support for Immer
+enableMapSet()
 
 export const createPanelStore = () =>
   create<PanelStore>()(
