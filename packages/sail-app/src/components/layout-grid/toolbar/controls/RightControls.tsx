@@ -1,8 +1,11 @@
 import { IDockviewHeaderActionsProps } from "dockview"
 import { useState, useEffect } from "react"
 import { Maximize2, Minimize2, ExternalLink, X } from "lucide-react"
+
 import { ChannelSelectorButton as ChannelSelector } from "../../../channel-selector/ChannelSelectorButton"
+
 import { Icon } from "./Icon"
+
 import "./controls.css"
 import { ChannelMenu } from "../../../channel-selector/ChannelMenu"
 

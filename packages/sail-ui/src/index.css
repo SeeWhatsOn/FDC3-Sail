@@ -1,5 +1,5 @@
 /* Design tokens and theme variables for sail-ui components */
-@import "tailwindcss"; 
+@import "tailwindcss";
 @import "tw-animate-css";
 @import "./sail-theme.css";
 

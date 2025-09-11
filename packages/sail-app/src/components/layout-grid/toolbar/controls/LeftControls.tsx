@@ -1,5 +1,6 @@
 import { IDockviewHeaderActionsProps } from "dockview"
 import { Plus } from "lucide-react"
+
 import { Icon } from "./Icon"
 import "./controls.css"
 

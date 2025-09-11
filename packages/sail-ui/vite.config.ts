@@ -15,17 +15,17 @@ export default defineConfig({
     lib: {
       entry: path.resolve(__dirname, "src/index.ts"),
       name: "SailUI",
-      formats: ["es"]
+      formats: ["es"],
     },
     rollupOptions: {
       external: ["react", "react-dom"],
       output: {
         globals: {
           react: "React",
-          "react-dom": "ReactDOM"
-        }
-      }
+          "react-dom": "ReactDOM",
+        },
+      },
     },
-    cssCodeSplit: false
-  }
+    cssCodeSplit: false,
+  },
 })

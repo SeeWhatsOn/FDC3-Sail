@@ -2,10 +2,10 @@ import { DockviewReact, DockviewReadyEvent, DockviewApi } from "dockview-react"
 import { useState, useEffect, useRef } from "react"
 
 import "./styles.css"
-import { FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
 import { useDesktopAgent } from "../../hooks/useDesktopAgent"
 import { usePanelStore } from "../../stores/panelStore"
 
+import { FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
 import { LeftControls, PrefixToolbarControls, RightControls } from "./toolbar/controls/index"
 import { Panels } from "./Panels"
 import type { DockviewSailProps } from "./types"

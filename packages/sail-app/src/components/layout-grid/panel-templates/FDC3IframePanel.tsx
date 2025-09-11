@@ -1,5 +1,6 @@
 import { IDockviewPanelProps } from "dockview"
 import { useCallback, useEffect, useRef } from "react"
+
 import { useFDC3Connection } from "../../../hooks/useFDC3Connection"
 
 /**

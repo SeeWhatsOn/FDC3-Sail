@@ -54,20 +54,20 @@ export const useDesktopAgent = () => {
   const getAppDirectories = async (): Promise<DirectoryApp[]> => {
     const socket = getSocket()
     const { userSessionId } = getSessionInfo()
-    
+
     if (!userSessionId) {
-      throw new Error('No user session ID available')
+      throw new Error("No user session ID available")
     }
 
     try {
       const response = await socket.emitWithAck(AppManagementMessages.DA_DIRECTORY_LISTING, {
-        userSessionId
+        userSessionId,
       } as DesktopAgentDirectoryListingArgs)
-      
+
       return response as DirectoryApp[]
     } catch (error) {
-      console.error('Failed to get app directories:', error)
-      throw new Error('Failed to retrieve app directories from desktop agent')
+      console.error("Failed to get app directories:", error)
+      throw new Error("Failed to retrieve app directories from desktop agent")
     }
   }
 

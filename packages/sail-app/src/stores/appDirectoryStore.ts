@@ -90,7 +90,7 @@ export const createAppDirectoryStore = () =>
       // Async actions for loading apps
       loadApps: async () => {
         const { setLoading, setError, setApps } = get()
-        
+
         try {
           setLoading(true)
           setError(null)
@@ -103,8 +103,8 @@ export const createAppDirectoryStore = () =>
             const { getAppDirectories } = useDesktopAgent()
             apps = await getAppDirectories()
           } catch (wsError) {
-            console.warn('Failed to load from desktop agent WebSocket, using fallback:', wsError)
-            
+            console.warn("Failed to load from desktop agent WebSocket, using fallback:", wsError)
+
             // Fallback to mock data for development
             apps = [
               {
@@ -115,31 +115,31 @@ export const createAppDirectoryStore = () =>
                 version: "1.0.0",
                 type: "web",
                 details: {
-                  url: "https://www.calculator.net/"
+                  url: "https://www.calculator.net/",
                 },
                 icons: [
                   {
                     src: "https://via.placeholder.com/64/4f46e5/ffffff?text=Calc",
-                    size: "64x64"
-                  }
-                ]
+                    size: "64x64",
+                  },
+                ],
               },
               {
                 appId: "example-notepad",
                 name: "Notepad",
                 title: "Online Notepad",
                 description: "Simple text editor for quick notes",
-                version: "2.1.0", 
+                version: "2.1.0",
                 type: "web",
                 details: {
-                  url: "https://notepad-plus-plus.org/online/"
+                  url: "https://notepad-plus-plus.org/online/",
                 },
                 icons: [
                   {
                     src: "https://via.placeholder.com/64/059669/ffffff?text=Note",
-                    size: "64x64"
-                  }
-                ]
+                    size: "64x64",
+                  },
+                ],
               },
               {
                 appId: "example-weather",
@@ -147,25 +147,25 @@ export const createAppDirectoryStore = () =>
                 title: "Weather App",
                 description: "Check current weather conditions and forecasts",
                 version: "3.2.1",
-                type: "web", 
+                type: "web",
                 details: {
-                  url: "https://openweathermap.org/"
+                  url: "https://openweathermap.org/",
                 },
                 icons: [
                   {
                     src: "https://via.placeholder.com/64/0ea5e9/ffffff?text=☀",
-                    size: "64x64"
-                  }
-                ]
-              }
+                    size: "64x64",
+                  },
+                ],
+              },
             ] as DirectoryApp[]
           }
-          
+
           setApps(apps)
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to load apps'
+          const errorMessage = error instanceof Error ? error.message : "Failed to load apps"
           setError(errorMessage)
-          console.error('Failed to load app directory:', error)
+          console.error("Failed to load app directory:", error)
         } finally {
           setLoading(false)
         }

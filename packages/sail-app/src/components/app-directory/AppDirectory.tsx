@@ -2,9 +2,10 @@ import { useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "sail-ui"
 import { Skeleton } from "sail-ui"
 import type { DirectoryApp } from "@finos/fdc3-web-impl"
+import { ExternalLink } from "lucide-react"
+
 import { useAppDirectoryStore } from "../../stores/appDirectoryStore"
 import { useAppDirectorySocket } from "../../hooks/useAppDirectorySocket"
-import { ExternalLink } from "lucide-react"
 
 interface WebAppDetails {
   url: string
@@ -31,27 +32,25 @@ const AppCard = ({ app, onAppClick }: AppCardProps) => {
   }
 
   return (
-    <Card 
+    <Card
       className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
       onClick={() => onAppClick(app)}
     >
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0">
-            <img 
-              src={getAppIcon(app)} 
+            <img
+              src={getAppIcon(app)}
               alt={`${app.title} icon`}
               className="w-10 h-10 rounded-md object-cover"
-              onError={(e) => {
+              onError={e => {
                 const target = e.target as HTMLImageElement
                 target.src = "/default-app-icon.png"
               }}
             />
           </div>
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-sm font-medium line-clamp-1">
-              {app.title}
-            </CardTitle>
+            <CardTitle className="text-sm font-medium line-clamp-1">{app.title}</CardTitle>
             {app.type === "web" && getAppUrl(app) && (
               <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                 <ExternalLink className="w-3 h-3" />
@@ -66,9 +65,7 @@ const AppCard = ({ app, onAppClick }: AppCardProps) => {
           {app.description || "No description available"}
         </CardDescription>
         {app.version && (
-          <div className="mt-2 text-xs text-muted-foreground">
-            Version {app.version}
-          </div>
+          <div className="mt-2 text-xs text-muted-foreground">Version {app.version}</div>
         )}
       </CardContent>
     </Card>
@@ -101,7 +98,7 @@ const AppDirectorySkeleton = () => (
 
 export function AppDirectory() {
   const { apps, isLoading, error, loadApps } = useAppDirectoryStore()
-  
+
   // Set up WebSocket listener for real-time updates
   useAppDirectorySocket()
 
@@ -112,7 +109,7 @@ export function AppDirectory() {
 
   const handleAppClick = (app: DirectoryApp) => {
     console.log("App clicked:", app)
-    
+
     // TODO: Implement app launching logic
     if (app.type === "web" && app.details) {
       const webDetails = app.details as WebAppDetails
@@ -129,10 +126,8 @@ export function AppDirectory() {
             <CardTitle className="text-destructive">Error Loading Apps</CardTitle>
           </CardHeader>
           <CardContent>
-            <CardDescription className="text-sm">
-              {error}
-            </CardDescription>
-            <button 
+            <CardDescription className="text-sm">{error}</CardDescription>
+            <button
               onClick={loadApps}
               className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90"
             >
@@ -159,7 +154,7 @@ export function AppDirectory() {
             <CardDescription>
               No applications are currently available in the directory.
             </CardDescription>
-            <button 
+            <button
               onClick={loadApps}
               className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90"
             >
@@ -174,21 +169,15 @@ export function AppDirectory() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight mb-2">
-          App Directory
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight mb-2">App Directory</h1>
         <p className="text-muted-foreground">
           Browse and launch applications ({apps.length} available)
         </p>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {apps.map((app) => (
-          <AppCard 
-            key={app.appId} 
-            app={app} 
-            onAppClick={handleAppClick}
-          />
+        {apps.map(app => (
+          <AppCard key={app.appId} app={app} onAppClick={handleAppClick} />
         ))}
       </div>
     </div>
