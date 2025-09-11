@@ -1,17 +1,17 @@
 import { Socket } from "socket.io"
 import { v4 as uuidv4 } from "uuid"
-import {
+import { State } from "@finos/fdc3-web-impl"
+import type { ChannelState } from "@finos/fdc3-web-impl/dist/src/handlers/BroadcastHandler"
+import type {
   AppRegistration,
-  ChannelState,
   DirectoryApp,
   InstanceID,
   ServerContext,
-  State,
+  FDC3Server,
 } from "@finos/fdc3-web-impl"
-import type { FDC3Server } from "@finos/fdc3-web-impl"
 import { AppIdentifier } from "@finos/fdc3"
 import { AppDirectoryManager } from "../app-directory/appDirectoryManager"
-import { AppIntent, Context, OpenError } from "@finos/fdc3"
+import { AppIntent, Context } from "@finos/fdc3"
 import {
   AppManagementMessages,
   ChannelMessages,
@@ -166,14 +166,14 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
     const applications = this.directory.retrieveAppsById(appId)
 
     if (applications.length === 0) {
-      throw new Error(OpenError.AppNotFound)
+      throw new Error("AppNotFound")
     }
 
     const [firstApp] = applications
     const url = (firstApp.details as { url?: string })?.url
 
     if (!url) {
-      throw new Error(OpenError.AppNotFound)
+      throw new Error("AppNotFound")
     }
 
     const forceNewWindow = (firstApp.hostManifests as { sail?: { forceNewWindow?: boolean } })?.sail

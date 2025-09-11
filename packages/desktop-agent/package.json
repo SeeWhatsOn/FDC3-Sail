@@ -8,11 +8,13 @@
   "scripts": {
     "build": "tsc",
     "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run"
   },
   "devDependencies": {
     "@types/node": "^24.2.1",
+    "@types/socket.io": "^3.0.1",
     "@vitest/ui": "^3.2.4",
     "rimraf": "^6.0.1",
     "socket.io-client": "^4.7.5",

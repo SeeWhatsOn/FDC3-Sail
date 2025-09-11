@@ -1,6 +1,15 @@
 import { DesktopAgentHelloArgs, TabDetail } from "@finos/fdc3-sail-shared"
-import { ChannelState, ChannelType, DefaultFDC3Server } from "@finos/fdc3-web-impl"
+import * as FDC3Impl from "@finos/fdc3-web-impl"
+const { DefaultFDC3Server } = FDC3Impl
+import { ChannelState } from "@finos/fdc3-web-impl/dist/src/handlers/BroadcastHandler"
 import { SailAppInstanceManager } from "./sailAppInstanceManager"
+
+// Define ChannelType locally since it's not exported from the package
+enum ChannelType {
+  user = 0,
+  app = 1,
+  private = 2,
+}
 
 export const mapChannels = (channels: TabDetail[]): ChannelState[] =>
   channels.map(channel => ({
