@@ -1,6 +1,7 @@
 import { IDockviewPanelProps } from "dockview-react"
 
 import { FDC3Panel, FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
+import { AppDirectory } from "../app-directory/AppDirectory"
 
 export const Panels = {
   default: () => {
@@ -15,7 +16,7 @@ export const Panels = {
           justifyContent: "center",
         }}
       >
-        App D LAuncher here
+        <AppDirectory />
       </div>
     )
   },

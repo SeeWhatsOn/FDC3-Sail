@@ -25,6 +25,8 @@ export {
   useSidebar,
 } from "./components/ui/sidebar"
 
+export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from "./components/ui/popover"
+
 export { Button } from "./components/ui/button"
 export { Input } from "./components/ui/input"
 export { Logo } from "./components/ui/logo"
@@ -42,3 +44,5 @@ export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./comp
 
 export { useIsMobile } from "./hooks/use-mobile"
 export { cn } from "./lib/utils"
+
+export { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./components/ui/card"

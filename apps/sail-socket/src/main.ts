@@ -1,6 +1,6 @@
 import { Server } from "socket.io"
 import { createServer } from "http"
-import { SailFDC3Server, initSocketService } from "@finos/fdc3-sail-desktop-agent"
+import { type SailFDC3Server, initSocketService } from "@finos/fdc3-sail-desktop-agent"
 import { APP_CONFIG } from "./constants"
 import dotenv from "dotenv"
 

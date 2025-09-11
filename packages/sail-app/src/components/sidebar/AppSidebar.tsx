@@ -9,10 +9,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "sail-ui"
 import { Home, Zap, Settings, ChevronUp, User2, LayoutGrid } from "lucide-react"
-import { SailLogoButton } from "@/components/ui/sailLogoButton"
 import { LogoSail } from "sail-ui"
 
 import { ModeToggle } from "../theme/ModeToggle"
@@ -41,7 +39,6 @@ const items = [
 ]
 
 export function AppSidebar() {
-  const { state, open } = useSidebar()
   // AppSidebar render with current state
 
   return (

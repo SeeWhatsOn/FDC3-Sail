@@ -1,4 +1,6 @@
 import { io, Socket } from "socket.io-client"
+import { DirectoryApp } from "@finos/fdc3-web-impl"
+import { AppManagementMessages, DesktopAgentDirectoryListingArgs } from "@finos/fdc3-sail-shared"
 
 // Utility functions for extracting URL parameters
 function getQueryParam(variable: string): string {
@@ -49,9 +51,30 @@ export const useDesktopAgent = () => {
     }
   }
 
+  const getAppDirectories = async (): Promise<DirectoryApp[]> => {
+    const socket = getSocket()
+    const { userSessionId } = getSessionInfo()
+    
+    if (!userSessionId) {
+      throw new Error('No user session ID available')
+    }
+
+    try {
+      const response = await socket.emitWithAck(AppManagementMessages.DA_DIRECTORY_LISTING, {
+        userSessionId
+      } as DesktopAgentDirectoryListingArgs)
+      
+      return response as DirectoryApp[]
+    } catch (error) {
+      console.error('Failed to get app directories:', error)
+      throw new Error('Failed to retrieve app directories from desktop agent')
+    }
+  }
+
   return {
     getSocket,
     getSessionInfo,
     disconnectSocket,
+    getAppDirectories,
   }
 }

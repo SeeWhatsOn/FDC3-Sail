@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "nodemon -w src -x tsx src/main.ts --trace-uncaught",
     "build": "tsc",
-    "start": "node dist/main.js",
+    "start": "tsx src/main.ts",
     "clean": "rimraf dist"
   },
   "devDependencies": {

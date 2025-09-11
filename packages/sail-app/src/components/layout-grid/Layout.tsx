@@ -6,7 +6,7 @@ import { FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
 import { useDesktopAgent } from "../../hooks/useDesktopAgent"
 import { usePanelStore } from "../../stores/panelStore"
 
-import { LeftControls, PrefixToolbarControls, RightControls } from "./toolbar/Controls"
+import { LeftControls, PrefixToolbarControls, RightControls } from "./toolbar/controls/index"
 import { Panels } from "./Panels"
 import type { DockviewSailProps } from "./types"
 import { WatermarkPanel } from "./panel-templates/WatermarkPanel"
