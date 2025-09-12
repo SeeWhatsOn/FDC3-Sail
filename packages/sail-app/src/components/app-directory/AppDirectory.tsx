@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "sail-ui"
 import { Skeleton } from "sail-ui"
-import type { DirectoryApp } from "@finos/fdc3-web-impl"
+import type { DirectoryApp } from "@finos/fdc3-sail-shared"
 import { ExternalLink } from "lucide-react"
 
 import { useAppDirectoryStore } from "../../stores/appDirectoryStore"

@@ -10,7 +10,7 @@ import {
   ChannelReceiverUpdate,
   TabDetail,
 } from "@finos/fdc3-sail-shared"
-import { State } from "@finos/fdc3-web-impl"
+import { State } from "@finos/fdc3-sail-shared"
 import { SailAppInstanceManager } from "../sailAppInstanceManager"
 import { AppDirectoryManager } from "../../app-directory/appDirectoryManager"
 import { SailFDC3Server } from "../SailFDC3Server"

@@ -4,7 +4,7 @@ import { AppDirectoryManager } from "../../app-directory/appDirectoryManager"
 import { SailFDC3Server } from "../SailFDC3Server"
 import { HandlerContext, CONFIG, handleCallbackError, SocketIOCallback } from "./types"
 import { TabDetail, ContextHistory } from "@finos/fdc3-sail-shared"
-import { DirectoryApp } from "@finos/fdc3-web-impl"
+import { DirectoryApp } from "@finos/fdc3-sail-shared"
 
 // Electron integration constants
 const ELECTRON_HELLO = "electron-hello"

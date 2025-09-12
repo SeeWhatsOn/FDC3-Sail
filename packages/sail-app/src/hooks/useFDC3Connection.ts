@@ -8,7 +8,7 @@ import {
 } from "@finos/fdc3-sail-shared"
 import { BrowserTypes } from "@finos/fdc3"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import { InstanceID } from "@finos/fdc3-web-impl"
+import { InstanceID } from "@finos/fdc3-sail-shared"
 import { useDesktopAgent, SessionInfo } from "./useDesktopAgent"
 
 /**

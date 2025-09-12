@@ -8,7 +8,8 @@
 
 import fs from "node:fs/promises"
 import { constants } from "node:fs"
-import { BasicDirectory, DirectoryApp } from "@finos/fdc3-web-impl"
+import { BasicDirectory } from "@finos/fdc3-web-impl/dist/src/directory/BasicDirectory"
+import type { DirectoryApp } from "@finos/fdc3-sail-shared"
 
 /** Type definition for web application details in directory entries */
 interface WebAppDetails {

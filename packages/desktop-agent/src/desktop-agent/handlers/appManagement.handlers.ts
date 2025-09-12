@@ -5,7 +5,7 @@ import {
   AppHosting,
 } from "@finos/fdc3-sail-shared"
 import { SailHostManifest } from "../../types"
-import { State, WebAppDetails } from "@finos/fdc3-web-impl"
+import { State, WebAppDetails } from "@finos/fdc3-sail-shared"
 import {
   AppRequestMessage,
   BroadcastRequest,

@@ -1,5 +1,5 @@
 import { io, Socket } from "socket.io-client"
-import { DirectoryApp } from "@finos/fdc3-web-impl"
+import { DirectoryApp } from "@finos/fdc3-sail-shared"
 import { AppManagementMessages, DesktopAgentDirectoryListingArgs } from "@finos/fdc3-sail-shared"
 
 // Utility functions for extracting URL parameters

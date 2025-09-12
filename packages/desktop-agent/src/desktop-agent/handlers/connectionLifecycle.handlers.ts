@@ -1,4 +1,4 @@
-import { State } from "@finos/fdc3-web-impl"
+import { State } from "@finos/fdc3-sail-shared"
 import { AppManagementMessages } from "@finos/fdc3-sail-shared"
 import { SailAppInstanceManager } from "../sailAppInstanceManager"
 import { SailFDC3Server } from "../SailFDC3Server"

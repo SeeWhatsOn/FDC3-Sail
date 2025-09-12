@@ -19,7 +19,7 @@ import {
 } from "@finos/fdc3-sail-shared"
 
 import path from "path"
-import { DirectoryApp } from "@finos/fdc3-web-impl"
+import { DirectoryApp } from "@finos/fdc3-sail-shared"
 
 describe("End-to-End Integration Tests", () => {
   let clientSocket: ClientSocket

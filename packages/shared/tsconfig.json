@@ -4,6 +4,8 @@
   "exclude": ["node_modules", "dist"],
   "compilerOptions": {
     "outDir": "dist",
-    "rootDirs": ["src"]
+    "rootDirs": ["src"],
+    "module": "ES2022",
+    "moduleResolution": "bundler"
   }
 }

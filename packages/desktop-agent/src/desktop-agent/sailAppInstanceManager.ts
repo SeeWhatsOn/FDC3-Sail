@@ -1,14 +1,14 @@
 import { Socket } from "socket.io"
 import { v4 as uuidv4 } from "uuid"
-import { State } from "@finos/fdc3-web-impl"
-import type { ChannelState } from "@finos/fdc3-web-impl/dist/src/handlers/BroadcastHandler"
-import type {
-  AppRegistration,
-  DirectoryApp,
-  InstanceID,
-  ServerContext,
-  FDC3Server,
-} from "@finos/fdc3-web-impl"
+import {
+  State,
+  type AppRegistration,
+  type InstanceID,
+  type ServerContext,
+  type FDC3Server,
+  type ChannelState,
+  type DirectoryApp
+} from "@finos/fdc3-sail-shared"
 import { AppIdentifier } from "@finos/fdc3"
 import { AppDirectoryManager } from "../app-directory/appDirectoryManager"
 import { AppIntent, Context } from "@finos/fdc3"

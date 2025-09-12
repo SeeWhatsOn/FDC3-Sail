@@ -1,4 +1,5 @@
-import { AppRegistration, DirectoryApp } from "@finos/fdc3-web-impl"
+import { AppRegistration } from "./fdc3-types"
+import { DirectoryApp } from "./fdc3-types"
 import { AppIntent, IntentMetadata, AppMetadata } from "@finos/fdc3-standard"
 import { Context } from "@finos/fdc3-context"
 import { AppHosting } from "./constants"

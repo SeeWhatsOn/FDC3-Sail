@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
-import type { DirectoryApp } from "@finos/fdc3-web-impl"
+import type { DirectoryApp } from "@finos/fdc3-sail-shared"
 import { useDesktopAgent } from "../hooks/useDesktopAgent"
 
 interface AppDirectoryState {

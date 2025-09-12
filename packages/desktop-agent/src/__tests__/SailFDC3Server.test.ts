@@ -5,7 +5,7 @@ import { SailFDC3Server, mapChannels } from "../desktop-agent/SailFDC3Server"
 import { SailAppInstanceManager } from "../desktop-agent/sailAppInstanceManager"
 import { AppDirectoryManager } from "../app-directory/appDirectoryManager"
 import { DesktopAgentHelloArgs, TabDetail } from "@finos/fdc3-sail-shared"
-import { ChannelType, DirectoryApp } from "@finos/fdc3-web-impl"
+import { ChannelType, DirectoryApp } from "@finos/fdc3-sail-shared"
 import { getTestServer, clearSessions } from "./setup/setupTests"
 import path from "path"
 

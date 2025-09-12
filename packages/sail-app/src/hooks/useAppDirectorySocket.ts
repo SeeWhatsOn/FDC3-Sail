@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { Socket } from "socket.io-client"
-import type { DirectoryApp } from "@finos/fdc3-web-impl"
+import type { DirectoryApp } from "@finos/fdc3-sail-shared"
 import { useDesktopAgent } from "./useDesktopAgent"
 import { useAppDirectoryStore } from "../stores/appDirectoryStore"
 
