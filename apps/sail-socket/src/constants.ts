@@ -8,7 +8,7 @@ export const APP_CONFIG = {
   PROVIDER_VERSION: "2.0",
   FDC3_VERSION: "2.0",
   PROVIDER_NAME: "FDC3 Sail",
-  DEFAULT_PORT: 8090,
+  DEFAULT_PORT: 8091,
   DEFAULT_ICON: "/icons/control/choose-app.svg",
   CORS_ORIGINS: ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
 } as const

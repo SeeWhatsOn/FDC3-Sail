@@ -1,14 +1,17 @@
-import { AppIdentifier, AppIntent } from '@finos/fdc3'
-import { Context } from '@finos/fdc3'
+import { AppIdentifier, AppIntent } from "@finos/fdc3"
+import { Context } from "@finos/fdc3"
+import { DefaultFDC3Server } from "@finos/fdc3-web-impl/dist/src/index.js"
+
+export { DefaultFDC3Server }
 
 /**
  * App instance state enumeration
  */
 export enum State {
-  Pending = 0,     // App has started, but not completed FDC3 Handshake
-  Connected = 1,   // App has completed FDC3 handshake
+  Pending = 0, // App has started, but not completed FDC3 Handshake
+  Connected = 1, // App has completed FDC3 handshake
   NotResponding = 2, // App has not responded to a heartbeat
-  Terminated = 3   // App has sent a termination message
+  Terminated = 3, // App has sent a termination message
 }
 
 /**
@@ -44,7 +47,7 @@ export interface WebAppDetails {
 export enum ChannelType {
   user = 0,
   app = 1,
-  private = 2
+  private = 2,
 }
 
 /**
@@ -83,15 +86,15 @@ export interface DirectoryApp {
   /** Description of the application */
   description?: string
   /** Application type (web, native, etc.) */
-  type?: string
+  type?: "web" | "native" | "citrix" | "onlineNative" | "other"
   /** Launch details specific to the application type */
   details?: {
     url?: string
-    [key: string]: any
+    [key: string]: unknown
   }
   /** Host-specific manifests */
   hostManifests?: {
-    [key: string]: any
+    [key: string]: unknown
   }
   /** Array of icons */
   icons?: Array<{
@@ -123,6 +126,34 @@ export interface DirectoryApp {
   localizedVersions?: {
     [key: string]: Partial<DirectoryApp>
   }
+  /** Interoperability configuration for intents and contexts */
+  interop?: {
+    intents?: {
+      listensFor?: {
+        [intentName: string]: {
+          displayName?: string
+          contexts: string[]
+          resultType?: string
+          customConfig?: Record<string, unknown>
+        }
+      }
+      raises?: {
+        [intentName: string]:
+          | string[]
+          | {
+              contexts?: string[]
+              resultType?: string
+            }
+      }
+    }
+    userChannels?: {
+      [channelId: string]: unknown
+    }
+    appChannels?: Array<{
+      id: string
+      [key: string]: unknown
+    }>
+  }
 }
 
 /**
@@ -141,12 +172,19 @@ export interface DirectoryIntent {
  */
 export interface FDC3Directory {
   retrieveAllApps(): DirectoryApp[]
-  retrieveApps(contextType: string | undefined, intentName: string | undefined, resultType: string | undefined): DirectoryApp[]
+  retrieveApps(
+    contextType: string | undefined,
+    intentName: string | undefined,
+    resultType: string | undefined
+  ): DirectoryApp[]
   retrieveAllIntents(): DirectoryIntent[]
-  retrieveIntents(contextType: string | undefined, intentName?: string | undefined, resultType?: string): DirectoryIntent[]
+  retrieveIntents(
+    contextType: string | undefined,
+    intentName?: string,
+    resultType?: string
+  ): DirectoryIntent[]
   retrieveAppsById(appId: string): DirectoryApp[]
 }
-
 
 /**
  * FDC3 Server interface for handling messages and cleanup
@@ -155,7 +193,7 @@ export interface FDC3Server {
   /**
    * Receive an incoming message
    */
-  receive(message: any, from: InstanceID): Promise<void>
+  receive(message: object, from: InstanceID): Promise<void>
   /**
    * Cleanup state relating to an instance that has disconnected
    */
@@ -234,5 +272,9 @@ export interface ServerContext<X extends AppRegistration> {
    * an opportunity for the server to either present an intent resolver
    * or otherwise mess with the available intents, or do nothing.
    */
-  narrowIntents(raiser: AppIdentifier, appIntents: AppIntent[], context: Context): Promise<AppIntent[]>
+  narrowIntents(
+    raiser: AppIdentifier,
+    appIntents: AppIntent[],
+    context: Context
+  ): Promise<AppIntent[]>
 }
