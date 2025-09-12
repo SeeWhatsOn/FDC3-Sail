@@ -6,17 +6,15 @@
   "main": "dist/main.js",
   "scripts": {
     "dev": "vite-node --watch src/main.ts",
-    "dev:tsx": "tsx --watch src/main.ts --trace-uncaught",
     "build": "vite build",
     "build:tsc": "tsc",
-    "start": "tsx src/main.ts",
+    "start": "vite-node src/main.ts",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^24.2.1",
     "rimraf": "^6.0.1",
-    "tsx": "^4.5.0",
     "typescript": "^5.3.2",
     "vite": "^7.1.5",
     "vite-node": "^3.2.4"
