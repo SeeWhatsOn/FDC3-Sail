@@ -8,6 +8,7 @@
     "build": "npm run build --workspaces --if-present",
     "dev": "npm run dev --workspaces --if-present",
     "socket": "npm run dev --workspace=apps/sail-socket",
+    "socket:dev": "concurrently \"npm run dev --workspace=packages/desktop-agent\" \"npm run dev --workspace=apps/sail-socket\"",
     "app": "npm run dev --workspace=packages/sail-app",
     "web": "concurrently \"npm run socket\" \"npm run dev --workspace=apps/sail-web\" \"npm run dev --workspace=apps/example-fdc3-apps\"",
     "sail-app:dev": "concurrently \"npm run build --workspace=packages/desktop-agent -- --watch\" \"npm run socket\" \"npm run app\" \"npm run example-apps\"",

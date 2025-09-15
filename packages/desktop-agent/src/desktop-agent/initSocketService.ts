@@ -17,8 +17,11 @@ import {
  * @returns The configured Socket.IO server
  */
 export function initSocketService(io: Server, sessions: Map<string, SailFDC3Server>): Server {
+  console.log("=== SAIL Socket Service Initialized ===")
+
   io.on("connection", (socket: Socket) => {
-    console.log("New socket connection established:", socket.id)
+    console.log("🔌 NEW SOCKET CONNECTION:", socket.id)
+    console.log("📊 Total connections:", io.sockets.sockets.size)
 
     // Initialize connection state
     const connectionState: SocketConnectionState = {}
