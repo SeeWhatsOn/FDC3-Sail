@@ -12,7 +12,6 @@ import {
   SocketIOCallback,
   HandlerContext,
   SocketType,
-  getFdc3ServerInstance,
   handleCallbackError,
   AppInstance,
 } from "./types"
@@ -40,12 +39,25 @@ function addChannelSocketToInstance(appInstance: AppInstance, socket: Socket): A
 async function handleChannelChange(
   channelChangeArgs: SailChannelChangeArgs,
   callback: SocketIOCallback<boolean>,
-  { sessions }: HandlerContext
+  { socket }: HandlerContext
 ): Promise<void> {
   console.log(`SAIL CHANNEL CHANGE: ${JSON.stringify(channelChangeArgs)}`)
 
   try {
-    const fdc3Server = await getFdc3ServerInstance(sessions, channelChangeArgs.userSessionId)
+    // Get authenticated socket with desktop agent
+    const authenticatedSocket = socket as any
+    const userId = authenticatedSocket.userId
+    const fdc3Server = authenticatedSocket.desktopAgent
+
+    if (!userId) {
+      console.error("No authenticated userId found on socket")
+      return handleCallbackError(callback, "Authentication required")
+    }
+
+    if (!fdc3Server) {
+      console.error("No desktop agent found for user:", userId)
+      return handleCallbackError(callback, "Desktop agent not initialized")
+    }
 
     const joinChannelRequest: BrowserTypes.JoinUserChannelRequest = {
       type: "joinUserChannelRequest",
@@ -82,14 +94,27 @@ async function handleChannelChange(
 async function handleChannelReceiverHello(
   receiverHelloRequest: ChannelReceiverHelloRequest,
   callback: SocketIOCallback<ChannelReceiverUpdate>,
-  { socket, connectionState, sessions }: HandlerContext
+  { socket, connectionState }: HandlerContext
 ): Promise<void> {
-  connectionState.userSessionId = receiverHelloRequest.userSessionId
+  // Note: userSessionId removed from connectionState, authentication handled at socket level
   connectionState.appInstanceId = receiverHelloRequest.instanceId
   connectionState.socketType = SocketType.CHANNEL
 
   try {
-    const fdc3Server = await getFdc3ServerInstance(sessions, receiverHelloRequest.userSessionId)
+    // Get authenticated socket with desktop agent
+    const authenticatedSocket = socket as any
+    const userId = authenticatedSocket.userId
+    const fdc3Server = authenticatedSocket.desktopAgent
+
+    if (!userId) {
+      console.error("No authenticated userId found on socket")
+      return handleCallbackError(callback, "Authentication required")
+    }
+
+    if (!fdc3Server) {
+      console.error("No desktop agent found for user:", userId)
+      return handleCallbackError(callback, "Desktop agent not initialized")
+    }
     const serverContext = fdc3Server.getServerContext()
     const appInstance = serverContext.getInstanceDetails(receiverHelloRequest.instanceId)
 

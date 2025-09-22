@@ -1,7 +1,6 @@
 import { State } from "@finos/fdc3-sail-shared"
 import { AppManagementMessages } from "@finos/fdc3-sail-shared"
 import { SailAppInstanceManager } from "../sailAppInstanceManager"
-import { SailFDC3Server } from "../SailFDC3Server"
 import { SailData } from "../sailAppInstanceManager"
 import { HandlerContext, SocketType, CONFIG, AppInstance } from "./types"
 
@@ -55,31 +54,20 @@ function handleChannelDisconnect(
 }
 
 /**
- * Handles desktop agent disconnection by shutting down and cleaning up session
- * @param fdc3Server - FDC3 server instance to shut down
- * @param userSessionId - Session ID to remove from sessions map
- * @param sessions - Map of active sessions to clean up
- */
-function handleDesktopAgentDisconnect(
-  fdc3Server: SailFDC3Server,
-  userSessionId: string,
-  sessions: Map<string, SailFDC3Server>
-): void {
-  fdc3Server.shutdown()
-  sessions.delete(userSessionId)
-  console.log("Desktop Agent disconnected:", userSessionId)
-}
-
-/**
  * Handles socket disconnection based on connection type with proper cleanup
  * @param context - Handler context with connection state and sessions
  * @param stateReporterTimer - Timer for state reporting that needs to be cleared
  */
 async function handleDisconnect(
-  { connectionState, sessions }: HandlerContext,
+  { socket, connectionState }: HandlerContext,
   stateReporterTimer: NodeJS.Timeout
 ): Promise<void> {
-  const { fdc3ServerInstance, socketType, appInstanceId, userSessionId } = connectionState
+  const { fdc3ServerInstance, socketType, appInstanceId } = connectionState
+
+  // Get userId and desktop agent from authenticated socket
+  const authenticatedSocket = socket as any
+  const userId = authenticatedSocket?.userId
+  const desktopAgent = authenticatedSocket?.desktopAgent
 
   if (!fdc3ServerInstance) {
     console.error("No server instance on disconnect")
@@ -102,8 +90,14 @@ async function handleDisconnect(
         break
 
       case SocketType.DESKTOP_AGENT:
-        if (userSessionId) {
-          handleDesktopAgentDisconnect(fdc3ServerInstance, userSessionId, sessions)
+        if (desktopAgent) {
+          // Simple cleanup - just shutdown the desktop agent
+          try {
+            desktopAgent.shutdown()
+          } catch (error) {
+            console.error("Error shutting down desktop agent:", error)
+          }
+          console.log("Desktop Agent disconnected for user:", userId)
         }
         break
 

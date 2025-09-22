@@ -49,10 +49,19 @@ function getSailUrl(): string {
 function handleElectronHello(
   electronHelloArgs: ElectronHelloArgs,
   callback: SocketIOCallback<ElectronAppResponse | ElectronDAResponse>,
-  { socket, connectionState, sessions }: HandlerContext
+  { socket }: HandlerContext
 ): void {
   console.log(`SAIL ELECTRON HELLO: ${JSON.stringify(electronHelloArgs)}`)
-  const existingServer = sessions.get(electronHelloArgs.userSessionId)
+
+  // Get authenticated socket with desktop agent
+  const authenticatedSocket = socket as any
+  const userId = authenticatedSocket.userId
+  const existingServer = authenticatedSocket.desktopAgent
+
+  if (!userId) {
+    console.error("No authenticated userId found on socket")
+    return handleCallbackError(callback as (result: unknown, error?: string) => void, "Authentication required")
+  }
 
   if (existingServer) {
     const matchingAppList = existingServer.getDirectory().retrieveAppsByUrl(electronHelloArgs.url)
@@ -63,7 +72,7 @@ function handleElectronHello(
 
       const response: ElectronAppResponse = {
         type: "app",
-        userSessionId: electronHelloArgs.userSessionId,
+        userSessionId: userId, // Using authenticated userId
         appId: firstApp.appId,
         instanceId: `${CONFIG.APP_INSTANCE_PREFIX}${uuid()}`,
         intentResolver: null,
@@ -75,7 +84,7 @@ function handleElectronHello(
       handleCallbackError(callback as (result: unknown, error?: string) => void, "App not found")
     }
   } else if (electronHelloArgs.url === getSailUrl()) {
-    connectionState.userSessionId = electronHelloArgs.userSessionId
+    // Note: userSessionId removed from connectionState, authentication handled at socket level
     const serverContext = new SailAppInstanceManager(new AppDirectoryManager(), socket)
     const newServer = new SailFDC3Server(serverContext, {
       ...electronHelloArgs,
@@ -86,13 +95,15 @@ function handleElectronHello(
       contextHistory: {},
     })
     serverContext.setFDC3Server(newServer)
-    sessions.set(electronHelloArgs.userSessionId, newServer)
+
+    // Store desktop agent on socket (Socket.IO session!)
+    authenticatedSocket.desktopAgent = newServer
 
     const response: ElectronDAResponse = { type: "da" }
     callback(response)
   } else {
-    console.error("Session not found", connectionState.userSessionId)
-    handleCallbackError(callback as (result: unknown, error?: string) => void, "Session not found")
+    console.error("Unknown electron hello request")
+    handleCallbackError(callback as (result: unknown, error?: string) => void, "Unknown request type")
   }
 }
 

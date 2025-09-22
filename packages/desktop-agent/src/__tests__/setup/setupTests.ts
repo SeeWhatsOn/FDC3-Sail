@@ -27,7 +27,7 @@ export async function setupTestServer(): Promise<TestServerContext> {
     pingInterval: 500,
   })
 
-  initSocketService(io, sessions)
+  initSocketService(io)
 
   return new Promise(resolve => {
     httpServer.listen(() => {

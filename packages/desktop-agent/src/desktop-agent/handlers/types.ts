@@ -15,7 +15,6 @@ export const enum SocketType {
 /** Socket connection state */
 export interface SocketConnectionState {
   fdc3ServerInstance?: SailFDC3Server
-  userSessionId?: string
   appInstanceId?: string
   socketType?: SocketType
 }
@@ -100,5 +99,4 @@ export interface DirectoryAppEntry {
 export interface HandlerContext {
   socket: Socket
   connectionState: SocketConnectionState
-  sessions: Map<string, SailFDC3Server>
 }

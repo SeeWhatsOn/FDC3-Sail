@@ -1,19 +1,17 @@
 import { Server } from "socket.io"
 import { createServer } from "http"
-import { type SailFDC3Server, initSocketService } from "@finos/fdc3-sail-desktop-agent"
+import { initSocketService } from "@finos/fdc3-sail-desktop-agent"
 import { APP_CONFIG } from "./constants"
+import { authMiddleware } from "./middleware/auth"
 import dotenv from "dotenv"
 
 // Load environment variables from .env file
 dotenv.config()
 
-// running sessions - the server state
-const sessions = new Map<string, SailFDC3Server>()
-
 // Create HTTP server
 const httpServer = createServer()
 
-// Create Socket.IO server with CORS for localhost
+// Create Socket.IO server with CORS and authentication
 const io = new Server(httpServer, {
   cors: {
     origin: Array.from(APP_CONFIG.CORS_ORIGINS),
@@ -22,10 +20,22 @@ const io = new Server(httpServer, {
   },
 })
 
+// Add authentication middleware
+io.use(authMiddleware)
+
 const port = process.env.PORT || APP_CONFIG.DEFAULT_PORT
 
 httpServer.listen(port, () => {
-  console.log(`SAIL Socket Server is listening on port ${port}`)
+  console.log(`🚀 SAIL Socket Server is listening on port ${port}`)
+  console.log(`🔐 Authentication middleware enabled`)
+  console.log(`📋 Using simple Socket.IO sessions`)
 })
 
-initSocketService(io, sessions)
+// Initialize socket service (no session manager needed!)
+initSocketService(io)
+
+// Optional: Periodic cleanup for disconnected sockets
+setInterval(() => {
+  const connectedSockets = io.sockets.sockets.size
+  console.log(`📊 Active connections: ${connectedSockets}`)
+}, 5 * 60 * 1000)

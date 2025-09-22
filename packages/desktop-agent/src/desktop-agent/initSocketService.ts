@@ -1,5 +1,4 @@
 import { Server, Socket } from "socket.io"
-import { SailFDC3Server } from "./SailFDC3Server"
 import {
   SocketConnectionState,
   HandlerContext,
@@ -13,11 +12,11 @@ import {
 /**
  * Initializes the Socket.IO service for handling FDC3 communications
  * @param io - The Socket.IO server instance
- * @param sessions - Map to store active FDC3 server sessions
  * @returns The configured Socket.IO server
  */
-export function initSocketService(io: Server, sessions: Map<string, SailFDC3Server>): Server {
+export function initSocketService(io: Server): Server {
   console.log("=== SAIL Socket Service Initialized ===")
+  console.log("📋 Using simple Socket.IO sessions")
 
   io.on("connection", (socket: Socket) => {
     console.log("🔌 NEW SOCKET CONNECTION:", socket.id)
@@ -30,7 +29,6 @@ export function initSocketService(io: Server, sessions: Map<string, SailFDC3Serv
     const context: HandlerContext = {
       socket,
       connectionState,
-      sessions,
     }
 
     // Register all handlers

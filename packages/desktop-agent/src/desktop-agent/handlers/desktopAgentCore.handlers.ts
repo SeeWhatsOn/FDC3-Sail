@@ -21,9 +21,13 @@ import {
   SocketType,
   CONFIG,
   PanelData,
-  getFdc3ServerInstance,
   handleCallbackError,
 } from "./types"
+
+interface AuthenticatedSocket {
+  userId: string
+  desktopAgent?: any
+}
 
 /**
  * Handles Desktop Agent hello messages for session setup and management
@@ -34,39 +38,39 @@ import {
 async function handleDesktopAgentHello(
   desktopAgentHelloArgs: DesktopAgentHelloArgs,
   callback: SocketIOCallback<boolean>,
-  { socket, connectionState, sessions }: HandlerContext
+  { socket, connectionState }: HandlerContext
 ): Promise<void> {
   console.log(`SAIL DA HELLO: ${JSON.stringify(desktopAgentHelloArgs)}`)
 
-  connectionState.socketType = SocketType.DESKTOP_AGENT
-  connectionState.userSessionId = desktopAgentHelloArgs.userSessionId
-  console.log("SAIL Desktop Agent Connecting", connectionState.userSessionId)
+  // Get authenticated userId from socket
+  const authenticatedSocket = socket as AuthenticatedSocket
+  const userId = authenticatedSocket.userId
 
-  const existingServer = sessions.get(desktopAgentHelloArgs.userSessionId)
+  if (!userId) {
+    console.error("No authenticated userId found on socket")
+    return callback(false, "Authentication required")
+  }
+
+  connectionState.socketType = SocketType.DESKTOP_AGENT
+  console.log("SAIL Desktop Agent Connecting for user:", userId)
 
   let fdc3Server: SailFDC3Server
-  if (existingServer) {
-    // Reconfigure existing session
-    fdc3Server = new SailFDC3Server(existingServer.serverContext, desktopAgentHelloArgs)
+
+  if (authenticatedSocket.desktopAgent) {
+    // Reconfigure existing desktop agent
+    fdc3Server = authenticatedSocket.desktopAgent
     await fdc3Server.loadDirectories(desktopAgentHelloArgs.directories)
-    sessions.set(desktopAgentHelloArgs.userSessionId, fdc3Server)
-    console.log(
-      "SAIL updated desktop agent channels and directories",
-      sessions.size,
-      desktopAgentHelloArgs.userSessionId
-    )
+    console.log("SAIL updated desktop agent channels and directories for user:", userId)
   } else {
-    // Create new session
+    // Create new desktop agent
     const serverContext = new SailAppInstanceManager(new AppDirectoryManager(), socket)
     fdc3Server = new SailFDC3Server(serverContext, desktopAgentHelloArgs)
     serverContext.setFDC3Server(fdc3Server)
     await fdc3Server.loadDirectories(desktopAgentHelloArgs.directories)
-    sessions.set(desktopAgentHelloArgs.userSessionId, fdc3Server)
-    console.log(
-      "SAIL created agent session. Running sessions:",
-      sessions.size,
-      desktopAgentHelloArgs.userSessionId
-    )
+
+    // Store on socket (Socket.IO session!)
+    authenticatedSocket.desktopAgent = fdc3Server
+    console.log("SAIL created agent session for user:", userId)
   }
 
   connectionState.fdc3ServerInstance = fdc3Server
@@ -80,18 +84,31 @@ async function handleDesktopAgentHello(
  * @param context - Handler context with sessions map
  */
 async function handleDirectoryListing(
-  directoryListingArgs: DesktopAgentDirectoryListingArgs,
+  _directoryListingArgs: DesktopAgentDirectoryListingArgs,
   callback: SocketIOCallback<unknown>,
-  { sessions }: HandlerContext
+  { socket }: HandlerContext
 ): Promise<void> {
-  const { userSessionId } = directoryListingArgs
+  // Get authenticated socket with desktop agent
+  const authenticatedSocket = socket as AuthenticatedSocket
+  const userId = authenticatedSocket.userId
+  const fdc3Server = authenticatedSocket.desktopAgent
+
+  if (!userId) {
+    console.error("No authenticated userId found on socket")
+    return handleCallbackError(callback, "Authentication required")
+  }
+
+  if (!fdc3Server) {
+    console.error("No desktop agent found for user:", userId)
+    return handleCallbackError(callback, "Desktop agent not initialized")
+  }
+
   try {
-    const fdc3Server = await getFdc3ServerInstance(sessions, userSessionId)
     const directoryAppList = fdc3Server.getDirectory().allApps
     callback(directoryAppList)
   } catch (error) {
-    console.error("Session not found", userSessionId, error)
-    handleCallbackError(callback, "Session not found")
+    console.error("Error getting directory for user:", userId, error)
+    handleCallbackError(callback, "Failed to get directory")
   }
 }
 
@@ -104,13 +121,30 @@ async function handleDirectoryListing(
 async function handleRegisterAppLaunch(
   appLaunchArgs: DesktopAgentRegisterAppLaunchArgs,
   callback: SocketIOCallback<string>,
-  { sessions }: HandlerContext
+  { socket }: HandlerContext
 ): Promise<void> {
   console.log(`SAIL DA REGISTER APP LAUNCH: ${JSON.stringify(appLaunchArgs)}`)
 
-  const { appId, userSessionId, hosting, channel, instanceTitle } = appLaunchArgs
+  // Get authenticated socket with desktop agent
+  const authenticatedSocket = socket as AuthenticatedSocket
+  const userId = authenticatedSocket.userId
+  const fdc3Server = authenticatedSocket.desktopAgent
+
+  if (!userId) {
+    console.error("No authenticated userId found on socket")
+    return handleCallbackError(callback as SocketIOCallback<unknown>, "Authentication required")
+  }
+
+  if (!fdc3Server) {
+    console.error("No desktop agent found for user:", userId)
+    return handleCallbackError(
+      callback as SocketIOCallback<unknown>,
+      "Desktop agent not initialized"
+    )
+  }
+
+  const { appId, hosting, channel, instanceTitle } = appLaunchArgs
   try {
-    const fdc3Server = await getFdc3ServerInstance(sessions, userSessionId)
     const instanceId = `${CONFIG.APP_INSTANCE_PREFIX}${uuid()}`
 
     const instanceDetails: SailData = {
@@ -124,11 +158,11 @@ async function handleRegisterAppLaunch(
     }
 
     fdc3Server.serverContext.setInstanceDetails(instanceId, instanceDetails)
-    console.log("SAIL Registered app", appId, instanceId)
+    console.log("SAIL Registered app for user:", userId, "appId:", appId, "instanceId:", instanceId)
     callback(instanceId)
   } catch (error) {
-    console.error("SAIL Session not found", userSessionId, error)
-    handleCallbackError(callback as SocketIOCallback<unknown>, "Session not found")
+    console.error("SAIL Failed to register app for user:", userId, error)
+    handleCallbackError(callback as SocketIOCallback<unknown>, "Failed to register app")
   }
 }
 
@@ -194,12 +228,26 @@ async function updateConnectedAppsChannels(
 async function handleClientState(
   clientStateArgs: SailClientStateArgs,
   callback: SocketIOCallback<boolean>,
-  { sessions }: HandlerContext
+  { socket }: HandlerContext
 ): Promise<void> {
   console.log(`SAIL CLIENT STATE: ${JSON.stringify(clientStateArgs)}`)
 
+  // Get authenticated userId from socket
+  const authenticatedSocket = socket as AuthenticatedSocket
+  const userId = authenticatedSocket.userId
+
+  if (!userId) {
+    console.error("No authenticated userId found on socket")
+    return handleCallbackError(callback as SocketIOCallback<unknown>, "Authentication required")
+  }
+
   try {
-    const fdc3Server = await getFdc3ServerInstance(sessions, clientStateArgs.userSessionId)
+    // Get desktop agent from socket
+    const fdc3Server = authenticatedSocket.desktopAgent
+
+    if (!fdc3Server) {
+      throw new Error(`No desktop agent session found for user: ${userId}`)
+    }
     const { serverContext } = fdc3Server
 
     // Update directories and channels

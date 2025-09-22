@@ -19,7 +19,6 @@ import {
   SocketType,
   CONFIG,
   DirectoryAppEntry,
-  getFdc3ServerInstance,
   handleCallbackError,
   LogLevel,
 } from "./types"
@@ -88,31 +87,43 @@ function createRecoveryInstance(
  * @param callback - Socket callback to return hosting type or error
  * @param context - Handler context with socket, connection state, and sessions
  */
-async function handleAppHello(
+function handleAppHello(
   appHelloArgs: AppHelloArgs,
   callback: SocketIOCallback<AppHosting>,
-  { socket, connectionState, sessions }: HandlerContext
-): Promise<void> {
+  { socket, connectionState }: HandlerContext
+): void {
   logger.info("SAIL APP HELLO", appHelloArgs)
 
+  // Get authenticated userId from socket
+  const authenticatedSocket = socket as any
+  const userId = authenticatedSocket.userId
+
+  if (!userId) {
+    logger.error("No authenticated userId found on socket")
+    return handleCallbackError(callback as SocketIOCallback<unknown>, "Authentication required")
+  }
+
   connectionState.appInstanceId = appHelloArgs.instanceId
-  connectionState.userSessionId = appHelloArgs.userSessionId
   connectionState.socketType = SocketType.APP
 
   try {
-    const fdc3Server = await getFdc3ServerInstance(sessions, appHelloArgs.userSessionId)
+    // Get desktop agent from socket
+    const fdc3Server = authenticatedSocket.desktopAgent
 
     if (!fdc3Server) {
       logger.error("App tried connecting to non-existent DA instance", {
-        userSessionId: appHelloArgs.userSessionId,
+        userId,
         instanceId: appHelloArgs.instanceId,
       })
-      handleCallbackError(callback, "App tried connecting to non-existent DA instance")
+      handleCallbackError(
+        callback as SocketIOCallback<unknown>,
+        "App tried connecting to non-existent DA instance"
+      )
       return
     }
 
     logger.info("SAIL App connected", {
-      userSessionId: appHelloArgs.userSessionId,
+      userId,
       instanceId: appHelloArgs.instanceId,
     })
     const serverContext = fdc3Server.getServerContext()
@@ -205,8 +216,8 @@ export function registerAppHandlers(context: HandlerContext): void {
 
   socket.on(
     HandshakeMessages.APP_HELLO,
-    async (appHelloArgs: AppHelloArgs, callback: SocketIOCallback<AppHosting>) => {
-      await handleAppHello(appHelloArgs, callback, context)
+    (appHelloArgs: AppHelloArgs, callback: SocketIOCallback<AppHosting>) => {
+      handleAppHello(appHelloArgs, callback, context)
     }
   )
 
