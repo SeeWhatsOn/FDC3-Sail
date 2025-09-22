@@ -2,7 +2,6 @@ import { Server, Socket } from "socket.io"
 import {
   SocketConnectionState,
   HandlerContext,
-  registerElectronHandlers,
   registerDesktopAgentHandlers,
   registerAppHandlers,
   registerChannelHandlers,
@@ -32,7 +31,6 @@ export function initSocketService(io: Server): Server {
     }
 
     // Register all handlers
-    registerElectronHandlers(context)
     registerDesktopAgentHandlers(context)
     registerAppHandlers(context)
     registerChannelHandlers(context)

@@ -1,4 +1,5 @@
 import { v4 as uuid } from "uuid"
+import { Socket } from "socket.io"
 import {
   HandshakeMessages,
   AppManagementMessages,
@@ -24,7 +25,7 @@ import {
   handleCallbackError,
 } from "./types"
 
-interface AuthenticatedSocket {
+interface AuthenticatedSocket extends Socket {
   userId: string
   desktopAgent?: SailFDC3Server
 }
@@ -108,7 +109,7 @@ function handleDirectoryListing(
     callback(directoryAppList)
   } catch (error) {
     console.error("Error getting directory for user:", userId, error)
-    handleCallbackError(callback, "Failed to get directory")
+    return handleCallbackError(callback, "Failed to get directory")
   }
 }
 
