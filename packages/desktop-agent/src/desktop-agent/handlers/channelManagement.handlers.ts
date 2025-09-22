@@ -14,6 +14,7 @@ import {
   SocketType,
   handleCallbackError,
   AppInstance,
+  AuthenticatedSocket,
 } from "./types"
 import { Socket } from "socket.io"
 
@@ -45,7 +46,7 @@ async function handleChannelChange(
 
   try {
     // Get authenticated socket with desktop agent
-    const authenticatedSocket = socket as any
+    const authenticatedSocket = socket as AuthenticatedSocket
     const userId = authenticatedSocket.userId
     const fdc3Server = authenticatedSocket.desktopAgent
 
@@ -91,18 +92,18 @@ async function handleChannelChange(
  * @param callback - Socket callback to return channel update or error
  * @param context - Handler context with socket, connection state, and sessions
  */
-async function handleChannelReceiverHello(
+function handleChannelReceiverHello(
   receiverHelloRequest: ChannelReceiverHelloRequest,
   callback: SocketIOCallback<ChannelReceiverUpdate>,
   { socket, connectionState }: HandlerContext
-): Promise<void> {
+): void {
   // Note: userSessionId removed from connectionState, authentication handled at socket level
   connectionState.appInstanceId = receiverHelloRequest.instanceId
   connectionState.socketType = SocketType.CHANNEL
 
   try {
     // Get authenticated socket with desktop agent
-    const authenticatedSocket = socket as any
+    const authenticatedSocket = socket as AuthenticatedSocket
     const userId = authenticatedSocket.userId
     const fdc3Server = authenticatedSocket.desktopAgent
 
@@ -187,11 +188,11 @@ export function registerChannelHandlers(context: HandlerContext): void {
 
   socket.on(
     ChannelMessages.CHANNEL_RECEIVER_HELLO,
-    async (
+    (
       receiverHelloRequest: ChannelReceiverHelloRequest,
       callback: SocketIOCallback<ChannelReceiverUpdate>
     ) => {
-      await handleChannelReceiverHello(receiverHelloRequest, callback, context)
+      handleChannelReceiverHello(receiverHelloRequest, callback, context)
     }
   )
 

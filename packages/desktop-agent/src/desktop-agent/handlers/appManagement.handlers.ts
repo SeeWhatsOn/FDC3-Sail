@@ -21,6 +21,7 @@ import {
   DirectoryAppEntry,
   handleCallbackError,
   LogLevel,
+  AuthenticatedSocket,
 } from "./types"
 
 /** Global state for debug reconnections */
@@ -95,7 +96,7 @@ function handleAppHello(
   logger.info("SAIL APP HELLO", appHelloArgs)
 
   // Get authenticated userId from socket
-  const authenticatedSocket = socket as any
+  const authenticatedSocket = socket as AuthenticatedSocket
   const userId = authenticatedSocket.userId
 
   if (!userId) {

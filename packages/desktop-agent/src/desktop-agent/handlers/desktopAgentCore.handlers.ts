@@ -1,5 +1,4 @@
 import { v4 as uuid } from "uuid"
-import { Socket } from "socket.io"
 import {
   HandshakeMessages,
   AppManagementMessages,
@@ -23,12 +22,8 @@ import {
   CONFIG,
   PanelData,
   handleCallbackError,
+  AuthenticatedSocket,
 } from "./types"
-
-interface AuthenticatedSocket extends Socket {
-  userId: string
-  desktopAgent?: SailFDC3Server
-}
 
 /**
  * Handles Desktop Agent hello messages for session setup and management

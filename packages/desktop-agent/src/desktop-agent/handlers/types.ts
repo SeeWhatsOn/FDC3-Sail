@@ -2,6 +2,12 @@ import { Socket } from "socket.io"
 import { SailFDC3Server } from "../SailFDC3Server"
 import { SOCKET_CONFIG } from "../../constants"
 
+/** Socket with authentication and desktop agent */
+export interface AuthenticatedSocket extends Socket {
+  userId: string
+  desktopAgent?: SailFDC3Server
+}
+
 /** Socket.IO callback type for handlers */
 export type SocketIOCallback<T> = (result: T, error?: string) => void
 

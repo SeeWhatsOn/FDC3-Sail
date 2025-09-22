@@ -2,7 +2,13 @@ import { State } from "@finos/fdc3-sail-shared"
 import { AppManagementMessages } from "@finos/fdc3-sail-shared"
 import { SailAppInstanceManager } from "../sailAppInstanceManager"
 import { SailData } from "../sailAppInstanceManager"
+import { SailFDC3Server } from "../SailFDC3Server"
 import { HandlerContext, SocketType, CONFIG, AppInstance } from "./types"
+
+interface AuthenticatedSocket {
+  userId?: string
+  desktopAgent?: SailFDC3Server
+}
 
 /**
  * Removes all channel sockets from an app instance
@@ -65,7 +71,7 @@ async function handleDisconnect(
   const { fdc3ServerInstance, socketType, appInstanceId } = connectionState
 
   // Get userId and desktop agent from authenticated socket
-  const authenticatedSocket = socket as any
+  const authenticatedSocket = socket as unknown as AuthenticatedSocket
   const userId = authenticatedSocket?.userId
   const desktopAgent = authenticatedSocket?.desktopAgent
 
