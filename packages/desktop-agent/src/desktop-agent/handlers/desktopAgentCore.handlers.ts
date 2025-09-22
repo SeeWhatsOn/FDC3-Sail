@@ -26,7 +26,7 @@ import {
 
 interface AuthenticatedSocket {
   userId: string
-  desktopAgent?: any
+  desktopAgent?: SailFDC3Server
 }
 
 /**
@@ -43,7 +43,7 @@ async function handleDesktopAgentHello(
   console.log(`SAIL DA HELLO: ${JSON.stringify(desktopAgentHelloArgs)}`)
 
   // Get authenticated userId from socket
-  const authenticatedSocket = socket as AuthenticatedSocket
+  const authenticatedSocket = socket as unknown as AuthenticatedSocket
   const userId = authenticatedSocket.userId
 
   if (!userId) {
@@ -83,13 +83,13 @@ async function handleDesktopAgentHello(
  * @param callback - Socket callback to return directory apps or error
  * @param context - Handler context with sessions map
  */
-async function handleDirectoryListing(
+function handleDirectoryListing(
   _directoryListingArgs: DesktopAgentDirectoryListingArgs,
   callback: SocketIOCallback<unknown>,
   { socket }: HandlerContext
-): Promise<void> {
+): void {
   // Get authenticated socket with desktop agent
-  const authenticatedSocket = socket as AuthenticatedSocket
+  const authenticatedSocket = socket as unknown as AuthenticatedSocket
   const userId = authenticatedSocket.userId
   const fdc3Server = authenticatedSocket.desktopAgent
 
@@ -118,15 +118,15 @@ async function handleDirectoryListing(
  * @param callback - Socket callback to return instance ID or error
  * @param context - Handler context with sessions map
  */
-async function handleRegisterAppLaunch(
+function handleRegisterAppLaunch(
   appLaunchArgs: DesktopAgentRegisterAppLaunchArgs,
   callback: SocketIOCallback<string>,
   { socket }: HandlerContext
-): Promise<void> {
+): void {
   console.log(`SAIL DA REGISTER APP LAUNCH: ${JSON.stringify(appLaunchArgs)}`)
 
   // Get authenticated socket with desktop agent
-  const authenticatedSocket = socket as AuthenticatedSocket
+  const authenticatedSocket = socket as unknown as AuthenticatedSocket
   const userId = authenticatedSocket.userId
   const fdc3Server = authenticatedSocket.desktopAgent
 
@@ -233,7 +233,7 @@ async function handleClientState(
   console.log(`SAIL CLIENT STATE: ${JSON.stringify(clientStateArgs)}`)
 
   // Get authenticated userId from socket
-  const authenticatedSocket = socket as AuthenticatedSocket
+  const authenticatedSocket = socket as unknown as AuthenticatedSocket
   const userId = authenticatedSocket.userId
 
   if (!userId) {
@@ -291,20 +291,24 @@ export function registerDesktopAgentHandlers(context: HandlerContext): void {
       directoryListingArgs: DesktopAgentDirectoryListingArgs,
       callback: SocketIOCallback<unknown>
     ) => {
-      handleDirectoryListing(directoryListingArgs, callback, context).catch(error => {
+      try {
+        handleDirectoryListing(directoryListingArgs, callback, context)
+      } catch (error) {
         console.error("Error handling directory listing:", error)
-        callback(error, "Failed to list directory")
-      })
+        callback(error as string, "Failed to list directory")
+      }
     }
   )
 
   socket.on(
     AppManagementMessages.DA_REGISTER_APP_LAUNCH,
     (appLaunchArgs: DesktopAgentRegisterAppLaunchArgs, callback: SocketIOCallback<string>) => {
-      handleRegisterAppLaunch(appLaunchArgs, callback, context).catch((error: unknown) => {
+      try {
+        handleRegisterAppLaunch(appLaunchArgs, callback, context)
+      } catch (error) {
         console.error("Error handling register app launch:", error)
         callback(error as string, "Failed to register app launch")
-      })
+      }
     }
   )
 

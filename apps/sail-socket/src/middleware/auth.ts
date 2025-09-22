@@ -8,7 +8,7 @@ export interface AuthenticatedSocket extends Socket {
   userId: string
   sessionId: string
   isAuthenticated: boolean
-  desktopAgent?: SailFDC3Server  // FDC3 Desktop Agent instance
+  desktopAgent?: SailFDC3Server // FDC3 Desktop Agent instance
 }
 
 /**
@@ -25,14 +25,14 @@ export interface AuthResult {
  * Simple authentication function - validates user credentials
  * In production, this would integrate with JWT, OAuth, etc.
  */
-export function authenticateUser(token?: string, userId?: string): AuthResult {
+export function authenticateUser(_token?: string, userId?: string): AuthResult {
   // For development/demo purposes - simple validation
   // In production, this would verify JWT tokens, API keys, etc.
 
   if (!userId) {
     return {
       success: false,
-      error: "Missing userId in authentication"
+      error: "Missing userId in authentication",
     }
   }
 
@@ -43,7 +43,7 @@ export function authenticateUser(token?: string, userId?: string): AuthResult {
   return {
     success: true,
     userId,
-    sessionId
+    sessionId,
   }
 }
 
@@ -56,13 +56,13 @@ export function authMiddleware(socket: Socket, next: (err?: Error) => void) {
   const authData = socket.handshake.auth || {}
   const queryData = socket.handshake.query || {}
 
-  const token = authData.token || queryData.token
-  const userId = authData.userId || queryData.userId
+  const token = (authData.token as string) || (queryData.token as string)
+  const userId = (authData.userId as string) || (queryData.userId as string)
 
   console.log("🔐 Authenticating socket connection:", {
     userId,
     hasToken: !!token,
-    source: authData.userId ? 'auth' : 'query'
+    source: authData.userId ? "auth" : "query",
   })
 
   const authResult = authenticateUser(token, userId)
@@ -80,7 +80,7 @@ export function authMiddleware(socket: Socket, next: (err?: Error) => void) {
 
   console.log("✅ Authentication successful:", {
     userId: authResult.userId,
-    sessionId: authResult.sessionId
+    sessionId: authResult.sessionId,
   })
 
   next()

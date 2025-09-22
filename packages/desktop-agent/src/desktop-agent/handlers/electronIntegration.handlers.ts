@@ -1,4 +1,5 @@
 import { v4 as uuid } from "uuid"
+import { Socket } from "socket.io"
 import { SailAppInstanceManager } from "../sailAppInstanceManager"
 import { AppDirectoryManager } from "../../app-directory/appDirectoryManager"
 import { SailFDC3Server } from "../SailFDC3Server"
@@ -54,13 +55,16 @@ function handleElectronHello(
   console.log(`SAIL ELECTRON HELLO: ${JSON.stringify(electronHelloArgs)}`)
 
   // Get authenticated socket with desktop agent
-  const authenticatedSocket = socket as any
+  const authenticatedSocket = socket as Socket & { userId: string; desktopAgent?: SailFDC3Server }
   const userId = authenticatedSocket.userId
   const existingServer = authenticatedSocket.desktopAgent
 
   if (!userId) {
     console.error("No authenticated userId found on socket")
-    return handleCallbackError(callback as (result: unknown, error?: string) => void, "Authentication required")
+    return handleCallbackError(
+      callback as (result: unknown, error?: string) => void,
+      "Authentication required"
+    )
   }
 
   if (existingServer) {
@@ -103,7 +107,10 @@ function handleElectronHello(
     callback(response)
   } else {
     console.error("Unknown electron hello request")
-    handleCallbackError(callback as (result: unknown, error?: string) => void, "Unknown request type")
+    handleCallbackError(
+      callback as (result: unknown, error?: string) => void,
+      "Unknown request type"
+    )
   }
 }
 
