@@ -1,28 +1,34 @@
 import { create } from "zustand"
 
+export type QuickAccessPanelContent = 'app-directory' | 'workspace-directory' | null
+
 interface UIState {
-  displayAppDirectory: boolean
+  activeQuickAccessPanel: QuickAccessPanelContent
 }
 
 interface UIActions {
-  setDisplayAppDirectory: (show: boolean) => void
+  setActiveQuickAccessPanel: (content: QuickAccessPanelContent) => void
   openAppDirectory: () => void
-  closeAppDirectory: () => void
+  openWorkspaceDirectory: () => void
+  closeQuickAccessPanel: () => void
 }
 
 export interface UIStore extends UIState, UIActions {}
 
 export const useUIStore = create<UIStore>((set) => ({
   // Initial state
-  displayAppDirectory: false,
+  activeQuickAccessPanel: null,
 
   // Actions
-  setDisplayAppDirectory: (show: boolean) =>
-    set({ displayAppDirectory: show }),
+  setActiveQuickAccessPanel: (content: QuickAccessPanelContent) =>
+    set({ activeQuickAccessPanel: content }),
 
   openAppDirectory: () =>
-    set({ displayAppDirectory: true }),
+    set({ activeQuickAccessPanel: 'app-directory' }),
 
-  closeAppDirectory: () =>
-    set({ displayAppDirectory: false }),
+  openWorkspaceDirectory: () =>
+    set({ activeQuickAccessPanel: 'workspace-directory' }),
+
+  closeQuickAccessPanel: () =>
+    set({ activeQuickAccessPanel: null }),
 }))

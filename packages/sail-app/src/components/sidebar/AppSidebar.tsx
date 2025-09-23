@@ -11,43 +11,57 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "sail-ui"
-import { Home, Zap, Settings, ChevronUp, User2, LayoutGrid } from "lucide-react"
+import { Home, Zap, Settings, ChevronUp, User2, LayoutGrid, LucideIcon } from "lucide-react"
 import { LogoSail } from "sail-ui"
 
 import { ModeToggle } from "../theme/ModeToggle"
 import { useUIStore } from "../../stores/uiStore"
 
-const items = [
-  {
-    title: "Dashboard",
-    url: "#",
-    icon: Home,
-  },
-  {
-    title: "Apps",
-    url: "#",
-    icon: Zap,
-  },
-  {
-    title: "Workspaces",
-    url: "#",
-    icon: LayoutGrid,
-  },
-  {
-    title: "Settings",
-    url: "#",
-    icon: Settings,
-  },
-]
+interface SidebarItem {
+  title: string
+  icon: LucideIcon
+  action: {
+    type: 'url' | 'handler'
+    value: string | (() => void)
+  }
+}
 
 export function AppSidebar() {
-  const { openAppDirectory } = useUIStore()
+  const { openAppDirectory, openWorkspaceDirectory } = useUIStore()
   const { setOpen } = useSidebar()
 
   const handleAppsClick = () => {
     openAppDirectory()
     setOpen(false) // Close sidebar when opening app directory
   }
+
+  const handleWorkspacesClick = () => {
+    openWorkspaceDirectory()
+    setOpen(false) // Close sidebar when opening workspace directory
+  }
+
+  const items: SidebarItem[] = [
+    {
+      title: "Dashboard",
+      icon: Home,
+      action: { type: 'url', value: '#' }
+    },
+    {
+      title: "Apps",
+      icon: Zap,
+      action: { type: 'handler', value: handleAppsClick }
+    },
+    {
+      title: "Workspaces",
+      icon: LayoutGrid,
+      action: { type: 'handler', value: handleWorkspacesClick }
+    },
+    {
+      title: "Settings",
+      icon: Settings,
+      action: { type: 'url', value: '#' }
+    },
+  ]
 
   return (
     <Sidebar collapsible="offcanvas">
@@ -63,16 +77,16 @@ export function AppSidebar() {
               {items.map(item => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    onClick={item.title === "Apps" ? handleAppsClick : undefined}
-                    asChild={item.title !== "Apps"}
+                    onClick={item.action.type === 'handler' ? item.action.value as () => void : undefined}
+                    asChild={item.action.type === 'url'}
                   >
-                    {item.title === "Apps" ? (
+                    {item.action.type === 'handler' ? (
                       <>
                         <item.icon />
                         <span>{item.title}</span>
                       </>
                     ) : (
-                      <a href={item.url}>
+                      <a href={item.action.value as string}>
                         <item.icon />
                         <span>{item.title}</span>
                       </a>
