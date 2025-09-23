@@ -28,10 +28,10 @@ export const createAppDirectoryStore = () =>
   create<AppDirectoryStore>()(
     immer((set, get) => ({
       // Initial state
-      apps: [],
+      apps: [] as DirectoryApp[],
       isLoading: false,
-      error: null,
-      lastUpdated: null,
+      error: null as string | null,
+      lastUpdated: null as Date | null,
 
       // Actions
       setApps: (apps: DirectoryApp[]) =>

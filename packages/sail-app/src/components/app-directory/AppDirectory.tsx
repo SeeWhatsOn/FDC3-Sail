@@ -6,6 +6,7 @@ import { ExternalLink } from "lucide-react"
 
 import { useAppDirectoryStore } from "../../stores/appDirectoryStore"
 import { useAppDirectorySocket } from "../../hooks/useAppDirectorySocket"
+import { usePanelStore } from "../../stores/panelStore"
 
 interface WebAppDetails {
   url: string
@@ -98,6 +99,7 @@ const AppDirectorySkeleton = () => (
 
 export function AppDirectory() {
   const { apps, isLoading, error, loadApps } = useAppDirectoryStore()
+  const { addPanel, activeTabId } = usePanelStore()
 
   // Set up WebSocket listener for real-time updates
   useAppDirectorySocket()
@@ -110,11 +112,24 @@ export function AppDirectory() {
   const handleAppClick = (app: DirectoryApp) => {
     console.log("App clicked:", app)
 
-    // TODO: Implement app launching logic
     if (app.type === "web" && app.details) {
       const webDetails = app.details as WebAppDetails
-      // For now, just open in new tab - this should be handled by the desktop agent
-      window.open(webDetails.url, "_blank")
+
+      // Generate unique panel ID and instance title
+      const instanceId = `${app.appId}-${Date.now()}`
+      const instanceTitle = `${app.title} ${Date.now().toString().slice(-4)}`
+
+      // Create AppPanel and add to dockview
+      const appPanel = {
+        title: instanceTitle,
+        url: webDetails.url,
+        tabId: activeTabId,
+        panelId: instanceId,
+        appId: app.appId,
+        icon: app.icons?.[0]?.src || null,
+      }
+
+      addPanel(appPanel)
     }
   }
 
