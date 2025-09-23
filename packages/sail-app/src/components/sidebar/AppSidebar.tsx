@@ -9,11 +9,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "sail-ui"
 import { Home, Zap, Settings, ChevronUp, User2, LayoutGrid } from "lucide-react"
 import { LogoSail } from "sail-ui"
 
 import { ModeToggle } from "../theme/ModeToggle"
+import { useUIStore } from "../../stores/uiStore"
 
 const items = [
   {
@@ -39,7 +41,13 @@ const items = [
 ]
 
 export function AppSidebar() {
-  // AppSidebar render with current state
+  const { openAppDirectory } = useUIStore()
+  const { setOpen } = useSidebar()
+
+  const handleAppsClick = () => {
+    openAppDirectory()
+    setOpen(false) // Close sidebar when opening app directory
+  }
 
   return (
     <Sidebar collapsible="offcanvas">
@@ -54,11 +62,21 @@ export function AppSidebar() {
             <SidebarMenu>
               {items.map(item => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </a>
+                  <SidebarMenuButton
+                    onClick={item.title === "Apps" ? handleAppsClick : undefined}
+                    asChild={item.title !== "Apps"}
+                  >
+                    {item.title === "Apps" ? (
+                      <>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </>
+                    ) : (
+                      <a href={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </a>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
