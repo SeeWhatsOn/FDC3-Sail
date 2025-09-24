@@ -39,9 +39,9 @@ export const SailMessages = {
   // Context Management
   SAIL_BROADCAST_CONTEXT: "sailBroadcastContext",
 
-  // Deprecated - for backward compatibility only
-  FDC3_APP_EVENT: "fdc3-app-event", // Use specific DACP events instead
-  FDC3_DA_EVENT: "fdc3-da-event", // Use specific DACP events instead
+  // Protocol Event Names
+  SAIL_EVENT: "sail_event", // Socket.IO event for all Sail platform messages
+  FDC3_EVENT: "fdc3_event", // Socket.IO event for all DACP messages
 } as const
 
 // ============================================================================
@@ -183,6 +183,8 @@ export const SAIL_APP_STATE = SailMessages.SAIL_APP_STATE
 export const CHANNEL_RECEIVER_HELLO = SailMessages.CHANNEL_RECEIVER_HELLO
 export const CHANNEL_RECEIVER_UPDATE = SailMessages.CHANNEL_RECEIVER_UPDATE
 export const SAIL_INTENT_RESOLVE = SailMessages.SAIL_INTENT_RESOLVE
+export const SAIL_EVENT = SailMessages.SAIL_EVENT
+export const FDC3_EVENT = SailMessages.FDC3_EVENT
 
 // Type helpers
 export type SailMessageType = keyof typeof SailMessages

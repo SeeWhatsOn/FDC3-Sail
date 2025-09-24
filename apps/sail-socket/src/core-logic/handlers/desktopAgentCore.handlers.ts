@@ -1,16 +1,14 @@
 import { v4 as uuid } from "uuid"
+import { SailMessages, SailMessage } from "../../protocol/sail-messages"
 import {
-  HandshakeMessages,
-  AppManagementMessages,
-  ChannelMessages,
-  DesktopAgentHelloArgs,
-  DesktopAgentDirectoryListingArgs,
-  DesktopAgentRegisterAppLaunchArgs,
-  SailClientStateArgs,
-  ChannelReceiverUpdate,
+  DesktopAgentHelloPayload,
+  DesktopAgentDirectoryListingPayload,
+  DesktopAgentRegisterAppLaunchPayload,
+  SailClientStatePayload,
+  ChannelReceiverUpdatePayload,
   TabDetail,
-} from "@finos/fdc3-sail-shared"
-import { State } from "@finos/fdc3-sail-shared"
+} from "../../protocol/sail-messages"
+import { State } from "../../types/sail-types"
 import { SailAppInstanceManager } from "../sailAppInstanceManager"
 import { AppDirectoryManager } from "@finos/fdc3-sail-desktop-agent"
 import { SailFDC3Server } from "../SailFDC3Server"
@@ -32,7 +30,7 @@ import {
  * @param context - Handler context with socket, connection state, and sessions
  */
 async function handleDesktopAgentHello(
-  desktopAgentHelloArgs: DesktopAgentHelloArgs,
+  desktopAgentHelloArgs: DesktopAgentHelloPayload,
   callback: SocketIOCallback<boolean>,
   { socket, connectionState }: HandlerContext
 ): Promise<void> {
@@ -80,7 +78,7 @@ async function handleDesktopAgentHello(
  * @param context - Handler context with sessions map
  */
 function handleDirectoryListing(
-  _directoryListingArgs: DesktopAgentDirectoryListingArgs,
+  _directoryListingArgs: DesktopAgentDirectoryListingPayload,
   callback: SocketIOCallback<unknown>,
   { socket }: HandlerContext
 ): void {
@@ -115,7 +113,7 @@ function handleDirectoryListing(
  * @param context - Handler context with sessions map
  */
 function handleRegisterAppLaunch(
-  appLaunchArgs: DesktopAgentRegisterAppLaunchArgs,
+  appLaunchArgs: DesktopAgentRegisterAppLaunchPayload,
   callback: SocketIOCallback<string>,
   { socket }: HandlerContext
 ): void {
@@ -222,7 +220,7 @@ async function updateConnectedAppsChannels(
  * @param context - Handler context with sessions map
  */
 async function handleClientState(
-  clientStateArgs: SailClientStateArgs,
+  clientStateArgs: SailClientStatePayload,
   callback: SocketIOCallback<boolean>,
   { socket }: HandlerContext
 ): Promise<void> {
@@ -271,50 +269,79 @@ async function handleClientState(
 export function registerDesktopAgentHandlers(context: HandlerContext): void {
   const { socket } = context
 
-  socket.on(
-    HandshakeMessages.DA_HELLO,
-    (desktopAgentHelloArgs: DesktopAgentHelloArgs, callback: SocketIOCallback<boolean>) => {
-      handleDesktopAgentHello(desktopAgentHelloArgs, callback, context).catch(error => {
-        console.error("Error handling desktop agent hello:", error)
-        callback(false, "Failed to initialize desktop agent")
-      })
-    }
-  )
+  // Register single sail_event handler for all Sail platform messages
+  socket.on(SailMessages.SAIL_EVENT, async (sailMessage: SailMessage, callback?: SocketIOCallback<any>) => {
+    await routeSailMessage(sailMessage, callback, context)
+  })
+}
 
-  socket.on(
-    AppManagementMessages.DA_DIRECTORY_LISTING,
-    (
-      directoryListingArgs: DesktopAgentDirectoryListingArgs,
-      callback: SocketIOCallback<unknown>
-    ) => {
-      try {
-        handleDirectoryListing(directoryListingArgs, callback, context)
-      } catch (error) {
-        console.error("Error handling directory listing:", error)
-        callback(error as string, "Failed to list directory")
-      }
-    }
-  )
+/**
+ * Routes Sail platform messages to appropriate handlers based on message type
+ * @param sailMessage - The Sail message to route
+ * @param callback - Socket callback for responses
+ * @param context - Handler context with connection state
+ */
+async function routeSailMessage(
+  sailMessage: SailMessage,
+  callback: SocketIOCallback<any> | undefined,
+  context: HandlerContext
+): Promise<void> {
+  try {
+    console.log(`SAIL Message Router: ${sailMessage.type}`, sailMessage)
 
-  socket.on(
-    AppManagementMessages.DA_REGISTER_APP_LAUNCH,
-    (appLaunchArgs: DesktopAgentRegisterAppLaunchArgs, callback: SocketIOCallback<string>) => {
-      try {
-        handleRegisterAppLaunch(appLaunchArgs, callback, context)
-      } catch (error) {
-        console.error("Error handling register app launch:", error)
-        callback(error as string, "Failed to register app launch")
-      }
-    }
-  )
+    // Route based on Sail message type
+    switch (sailMessage.type) {
+      case 'daHello':
+        if (callback) {
+          await handleDesktopAgentHello(
+            sailMessage.payload as DesktopAgentHelloPayload,
+            callback as SocketIOCallback<boolean>,
+            context
+          )
+        }
+        break
 
-  socket.on(
-    HandshakeMessages.SAIL_CLIENT_STATE,
-    (clientStateArgs: SailClientStateArgs, callback: SocketIOCallback<boolean>) => {
-      handleClientState(clientStateArgs, callback, context).catch((error: unknown) => {
-        console.error("Error handling client state:", error)
-        callback(false, "Failed to update client state")
-      })
+      case 'daDirectoryListing':
+        if (callback) {
+          handleDirectoryListing(
+            sailMessage.payload as DesktopAgentDirectoryListingPayload,
+            callback,
+            context
+          )
+        }
+        break
+
+      case 'daRegisterAppLaunch':
+        if (callback) {
+          handleRegisterAppLaunch(
+            sailMessage.payload as DesktopAgentRegisterAppLaunchPayload,
+            callback as SocketIOCallback<string>,
+            context
+          )
+        }
+        break
+
+      case 'sailClientState':
+        if (callback) {
+          await handleClientState(
+            sailMessage.payload as SailClientStatePayload,
+            callback as SocketIOCallback<boolean>,
+            context
+          )
+        }
+        break
+
+      default:
+        console.warn('Unknown Sail message type:', sailMessage.type)
+        if (callback) {
+          callback('Unknown message type', null)
+        }
+        break
     }
-  )
+  } catch (error) {
+    console.error("Error routing Sail message:", error)
+    if (callback) {
+      callback(error as string, null)
+    }
+  }
 }

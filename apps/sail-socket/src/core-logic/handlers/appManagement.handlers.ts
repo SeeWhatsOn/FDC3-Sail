@@ -1,17 +1,11 @@
+import { SailMessages } from "../../protocol/sail-messages"
+import { AppHosting, State, WebAppDetails, AppHelloArgs } from "../../types/sail-types"
 import {
-  HandshakeMessages,
-  AppManagementMessages,
-  AppHelloArgs,
-  AppHosting,
-} from "@finos/fdc3-sail-shared"
-import { SailHostManifest } from "../../types"
-import { State, WebAppDetails } from "@finos/fdc3-sail-shared"
-import {
-  AppRequestMessage,
-  BroadcastRequest,
-  WebConnectionProtocol4ValidateAppIdentity,
-  WebConnectionProtocol6Goodbye,
-} from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
+  DACPMessage,
+  BROADCAST_REQUEST,
+  ADD_CONTEXT_LISTENER_REQUEST,
+  RAISE_INTENT_REQUEST,
+} from "@finos/fdc3-sail-desktop-agent"
 import { SailData } from "../sailAppInstanceManager"
 import {
   SocketIOCallback,
@@ -173,8 +167,71 @@ function handleAppHello(
 }
 
 /**
+ * Routes DACP messages to appropriate handlers based on message type
+ * @param dacpMessage - The DACP message to route
+ * @param sourceId - Source identifier for the message
+ * @param context - Handler context with connection state
+ */
+async function routeDACPMessage(
+  dacpMessage: DACPMessage,
+  sourceId: string,
+  context: HandlerContext
+): Promise<void> {
+  if (!dacpMessage?.type?.startsWith("heartbeat")) {
+    logger.debug("SAIL DACP Message", { dacpMessage, sourceId })
+  }
+
+  const { connectionState } = context
+  const { fdc3ServerInstance } = connectionState
+
+  if (!fdc3ServerInstance) {
+    logger.error("No server instance available for DACP message")
+    return
+  }
+
+  try {
+    // Route based on DACP message type
+    switch (dacpMessage.type) {
+      case 'broadcastRequest':
+        await handleBroadcastRequest(dacpMessage, sourceId, fdc3ServerInstance)
+        break
+
+      case 'addContextListenerRequest':
+      case 'raiseIntentRequest':
+      case 'getCurrentChannelRequest':
+      case 'joinUserChannelRequest':
+      default:
+        // For now, forward all messages to the existing handler
+        await handleFdc3AppEvent(dacpMessage as any, sourceId, context)
+        break
+    }
+  } catch (error) {
+    logger.error("Error routing DACP message", error)
+  }
+}
+
 /**
- * Handles FDC3 app events and forwards them to the server instance
+ * Handles broadcast requests with context notification
+ * @param message - The broadcast request message
+ * @param sourceId - Source identifier for the message
+ * @param fdc3ServerInstance - FDC3 server instance
+ */
+async function handleBroadcastRequest(
+  message: DACPMessage,
+  sourceId: string,
+  fdc3ServerInstance: any
+): Promise<void> {
+  // Forward to FDC3 server
+  await fdc3ServerInstance.receive(message, sourceId)
+
+  // Notify broadcast context (existing logic)
+  if (message.type === "broadcastRequest") {
+    fdc3ServerInstance.serverContext.notifyBroadcastContext(message as any)
+  }
+}
+
+/**
+ * Legacy handler for FDC3 app events (will be gradually replaced)
  * @param eventData - FDC3 event data containing type and payload
  * @param sourceId - Source identifier for the event
  * @param context - Handler context containing connection state
@@ -188,7 +245,7 @@ async function handleFdc3AppEvent(
   { connectionState }: HandlerContext
 ): Promise<void> {
   if (!eventData.type.startsWith("heartbeat")) {
-    logger.debug("SAIL FDC3_APP_EVENT", { eventData, sourceId })
+    logger.debug("SAIL DACP Message", { eventData, sourceId })
   }
 
   const { fdc3ServerInstance } = connectionState
@@ -216,22 +273,14 @@ export function registerAppHandlers(context: HandlerContext): void {
   const { socket } = context
 
   socket.on(
-    HandshakeMessages.APP_HELLO,
+    SailMessages.APP_HELLO,
     (appHelloArgs: AppHelloArgs, callback: SocketIOCallback<AppHosting>) => {
       handleAppHello(appHelloArgs, callback, context)
     }
   )
 
-  socket.on(
-    AppManagementMessages.FDC3_APP_EVENT,
-    async (
-      eventData:
-        | AppRequestMessage
-        | WebConnectionProtocol4ValidateAppIdentity
-        | WebConnectionProtocol6Goodbye,
-      sourceId: string
-    ) => {
-      await handleFdc3AppEvent(eventData, sourceId, context)
-    }
-  )
+  // Register single fdc3_event handler for all DACP messages (Socket.IO best practice)
+  socket.on(SailMessages.FDC3_EVENT, async (dacpMessage: DACPMessage, sourceId: string) => {
+    await routeDACPMessage(dacpMessage, sourceId, context)
+  })
 }

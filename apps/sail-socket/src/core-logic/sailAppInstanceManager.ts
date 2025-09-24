@@ -114,7 +114,8 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
       if (!messageWithType?.type?.startsWith("heartbeat")) {
         this.log(`Posting message to app: ${JSON.stringify(message)}`)
       }
-      instance.socket?.emit(AppManagementMessages.FDC3_DA_EVENT, message)
+      // Use single fdc3_event for all DACP messages (Socket.IO best practice)
+      instance.socket?.emit('fdc3_event', message)
       //TODO:fix these return promises
       return Promise.resolve()
     } else {
