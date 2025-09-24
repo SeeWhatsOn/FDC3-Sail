@@ -21,7 +21,7 @@ export default defineConfig({
       fileName: 'main'
     },
     rollupOptions: {
-      external: ['socket.io', 'dotenv', 'http']
+      external: ['socket.io', 'dotenv', 'http', /^node:.*/]
     }
   }
 })

@@ -1,7 +1,6 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
 import type { DirectoryApp } from "@finos/fdc3-sail-shared"
-import { useDesktopAgent } from "../hooks/useDesktopAgent"
 
 interface AppDirectoryState {
   apps: DirectoryApp[]
@@ -24,12 +23,12 @@ interface AppDirectoryActions {
 
 export interface AppDirectoryStore extends AppDirectoryState, AppDirectoryActions {}
 
-export const createAppDirectoryStore = () =>
+export const createAppDirectoryStore = (getAppDirectories?: () => Promise<DirectoryApp[]>) =>
   create<AppDirectoryStore>()(
     immer((set, get) => ({
       // Initial state
       apps: [] as DirectoryApp[],
-      isLoading: false,
+      isLoading: false as boolean,
       error: null as string | null,
       lastUpdated: null as Date | null,
 
@@ -100,8 +99,11 @@ export const createAppDirectoryStore = () =>
 
           try {
             // Use the desktop agent WebSocket connection
-            const { getAppDirectories } = useDesktopAgent()
-            apps = await getAppDirectories()
+            if (getAppDirectories) {
+              apps = await getAppDirectories()
+            } else {
+              throw new Error("No getAppDirectories function provided")
+            }
           } catch (wsError) {
             console.warn("Failed to load from desktop agent WebSocket, using fallback:", wsError)
 
@@ -178,4 +180,5 @@ export const createAppDirectoryStore = () =>
     }))
   )
 
-export const useAppDirectoryStore = createAppDirectoryStore()
+// This will be initialized in a React component where useDesktopAgent can be called
+export const useAppDirectoryStore = createAppDirectoryStore(undefined)

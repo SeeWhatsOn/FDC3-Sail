@@ -30,7 +30,8 @@
     "@finos/fdc3-schema": "^2.2.1-beta.3",
     "@finos/fdc3-web-impl": "^2.2.1-beta.3",
     "socket.io": "^4.7.5",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zod": "^4.1.11"
   },
   "author": "",
   "license": "ISC"

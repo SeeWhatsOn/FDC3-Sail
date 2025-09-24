@@ -12,7 +12,7 @@ import {
 } from "@finos/fdc3-sail-shared"
 import { State } from "@finos/fdc3-sail-shared"
 import { SailAppInstanceManager } from "../sailAppInstanceManager"
-import { AppDirectoryManager } from "../../app-directory/appDirectoryManager"
+import { AppDirectoryManager } from "@finos/fdc3-sail-desktop-agent"
 import { SailFDC3Server } from "../SailFDC3Server"
 import { SailData } from "../sailAppInstanceManager"
 import {

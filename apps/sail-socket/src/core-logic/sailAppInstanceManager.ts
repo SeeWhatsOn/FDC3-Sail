@@ -10,7 +10,7 @@ import {
   type DirectoryApp
 } from "@finos/fdc3-sail-shared"
 import { AppIdentifier } from "@finos/fdc3"
-import { AppDirectoryManager } from "../app-directory/appDirectoryManager"
+import { AppDirectoryManager } from "@finos/fdc3-sail-desktop-agent"
 import { AppIntent, Context } from "@finos/fdc3"
 import {
   AppManagementMessages,
