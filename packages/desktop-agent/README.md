@@ -323,7 +323,7 @@ npm run typecheck
 1. **Follow the Architecture**: Keep FDC3 logic separate from transport concerns
 2. **Add Tests**: All new handlers must have integration tests
 3. **Update Schemas**: Regenerate DACP schemas when FDC3 spec updates
-4. **Maintain Types**: Use shared types from `@finos/fdc3-sail-shared`
+4. **Maintain Types**: Use official FDC3 types from `@finos/fdc3`
 
 ### Adding New DACP Handlers
 
@@ -364,7 +364,6 @@ describe('New Feature Handler', () => {
 
 ### Runtime Dependencies
 - `@finos/fdc3` - Official FDC3 types and interfaces
-- `@finos/fdc3-sail-shared` - Shared types across Sail packages
 - `zod` - Runtime type validation for DACP messages
 - `uuid` - Unique identifier generation
 
@@ -375,8 +374,7 @@ describe('New Feature Handler', () => {
 
 ## Related Packages
 
-- [`@finos/fdc3-sail-shared`](../shared/) - Shared types and constants
-- [`@apps/sail-socket`](../../apps/sail-socket/) - Socket server with Sail services
+- [`@apps/sail-socket`](../../apps/sail-socket/) - Socket server with Sail platform integration
 - [`@packages/sail-app`](../sail-app/) - Frontend application using FDC3
 
 ## License

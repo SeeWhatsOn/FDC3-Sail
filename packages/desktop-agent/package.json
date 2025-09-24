@@ -26,7 +26,6 @@
   "dependencies": {
     "@finos/fdc3": "^2.2.0",
     "@finos/fdc3-agent-proxy": "^2.2.1-beta.3",
-    "@finos/fdc3-sail-shared": "0.0.0",
     "@finos/fdc3-schema": "^2.2.1-beta.3",
     "@finos/fdc3-web-impl": "^2.2.1-beta.3",
     "socket.io": "^4.7.5",

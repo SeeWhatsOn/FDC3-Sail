@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { DirectoryApp } from "@finos/fdc3-sail-shared"
+// TODO: Import DirectoryApp from @apps/sail-socket when implementing
+interface DirectoryApp {
+  appId: string;
+  title?: string;
+  name?: string;
+}
 import { AppDirectoryManager } from "../app-directory/appDirectoryManager"
 import path from "path"
 import { writeFileSync, unlinkSync } from "fs"

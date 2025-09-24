@@ -1,5 +1,24 @@
 import { Socket } from 'socket.io';
-import { ServerContext, FDC3Server } from '@finos/fdc3-sail-shared';
+
+// Minimal interfaces to avoid circular dependencies
+// These match the full interfaces in @apps/sail-socket/src/types/sail-types.ts
+export interface ServerContext<X = any> {
+  createUUID(): string;
+  post(message: object, instanceId: string): Promise<void>;
+  open(appId: string): Promise<string>;
+  setAppState(app: string, state: any): Promise<void>;
+  setInstanceDetails(uuid: string, details: X): void;
+  getInstanceDetails(uuid: string): X | undefined;
+  getConnectedApps(): Promise<any[]>;
+  getAllApps(): Promise<any[]>;
+  isAppConnected(app: string): Promise<boolean>;
+  log(message: string): void;
+}
+
+export interface FDC3Server {
+  receive(message: object, from: string): Promise<void>;
+  cleanup(instanceId: string): void;
+}
 
 // DACP Handler context
 export interface DACPHandlerContext {

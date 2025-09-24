@@ -25,13 +25,13 @@ This plan outlines the implementation of a fully compliant FDC3 Desktop Agent th
 ### Dependencies
 ```bash
 npm install zod @finos/fdc3 @types/uuid uuid
-# Note: Use existing @finos/fdc3-sail-shared package for official FDC3 types
+# Note: Use official @finos/fdc3 package for standard FDC3 types
 ```
 
-### Leverage Existing Shared Types
-**✅ Use `@finos/fdc3-sail-shared` types instead of creating new ones:**
+### Use Sail Platform Types
+**✅ Import Sail-specific types from `@apps/sail-socket`:**
 
-The shared package already provides production-ready types:
+The sail-socket package provides Sail platform types:
 - `AppRegistration` - App instance state management
 - `ChannelState` - Channel information and context
 - `DirectoryApp` - FDC3 app directory structure
@@ -47,7 +47,7 @@ import {
   DirectoryApp,
   InstanceID,
   State
-} from '@finos/fdc3-sail-shared'
+} from '@apps/sail-socket'
 ```
 
 ---
@@ -71,7 +71,7 @@ mkdir -p packages/desktop-agent/src/handlers/dacp/private-channels
 **File**: `packages/desktop-agent/src/state/AppInstanceRegistry.ts`
 ```typescript
 import { AppMetadata } from '@finos/fdc3'
-import { AppRegistration, InstanceID, State } from '@finos/fdc3-sail-shared'
+import { AppRegistration, InstanceID, State } from '@apps/sail-socket'
 
 export interface AppInstance extends AppRegistration {
   title?: string
@@ -99,7 +99,7 @@ export class AppInstanceRegistry {
 **File**: `packages/desktop-agent/src/state/IntentRegistry.ts`
 ```typescript
 import { Intent, AppMetadata } from '@finos/fdc3'
-import { InstanceID, DirectoryApp } from '@finos/fdc3-sail-shared'
+import { InstanceID, DirectoryApp } from '@apps/sail-socket'
 
 export interface IntentHandler {
   appId: string
@@ -123,7 +123,7 @@ export class IntentRegistry {
 **File**: `packages/desktop-agent/src/state/PrivateChannelRegistry.ts`
 ```typescript
 import { PrivateChannel } from '@finos/fdc3'
-import { InstanceID } from '@finos/fdc3-sail-shared'
+import { InstanceID } from '@apps/sail-socket'
 
 export interface PrivateChannelInstance {
   id: string

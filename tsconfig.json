@@ -3,7 +3,6 @@
   "extends": "./tsconfig.root.json",
   "files": [],
   "references": [
-    { "path": "./packages/shared" },
     { "path": "./packages/desktop-agent" },
     { "path": "./packages/app-directories" },
     { "path": "./packages/sail-app" },

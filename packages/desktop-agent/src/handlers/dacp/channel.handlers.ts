@@ -10,7 +10,13 @@ import {
   JoinuserchannelrequestSchema
 } from '../validation/dacp-schemas'
 import { DACPHandlerContext, logger } from '../types'
-import { ChannelState, ChannelType } from '@finos/fdc3-sail-shared'
+// TODO: Import from @finos/fdc3 standard Channel type instead
+// For now, using minimal interfaces
+interface ChannelState {
+  id: string;
+  type: number; // ChannelType enum value
+  context: any[];
+}
 
 // Type for user channel membership tracking
 interface ChannelMembership {

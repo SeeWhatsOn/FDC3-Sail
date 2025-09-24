@@ -9,7 +9,15 @@
 import fs from "node:fs/promises"
 import { constants } from "node:fs"
 import { BasicDirectory } from "@finos/fdc3-web-impl/dist/src/directory/BasicDirectory"
-import type { DirectoryApp } from "@finos/fdc3-sail-shared"
+// TODO: Import DirectoryApp from @apps/sail-socket when implementing
+// For now, using a minimal interface to avoid circular dependencies
+interface DirectoryApp {
+  appId: string;
+  title?: string;
+  name?: string;
+  type?: string;
+  details?: { url?: string; [key: string]: unknown };
+}
 
 /** Type definition for web application details in directory entries */
 interface WebAppDetails {
