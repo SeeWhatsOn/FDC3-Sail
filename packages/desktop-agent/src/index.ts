@@ -9,9 +9,10 @@ export * from "./handlers/validation/dacp-validator";
 export * from "./handlers/validation/dacp-schemas";
 export * from "./handlers/types";
 
-// State Management (when implemented)
-// export * from "./state/AppInstanceRegistry";
-// export * from "./state/IntentRegistry";
+// State Management
+export * from "./state/AppInstanceRegistry"
+export * from "./state/IntentRegistry";
+// TODO: Complete implementation
 // export * from "./state/PrivateChannelRegistry";
 
 // App directory management
