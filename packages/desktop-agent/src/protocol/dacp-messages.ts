@@ -80,7 +80,7 @@ export const DACPMessages = {
  * Standard DACP message structure following FDC3 specification
  * All DACP messages must conform to this structure
  */
-export interface DACPMessage<TPayload = Record<string, any>> {
+export interface DACPMessageBase<TPayload = Record<string, any>> {
   /** Message type - matches DACP specification */
   type: keyof typeof DACPMessages | string
   /** Message payload containing request/response data */

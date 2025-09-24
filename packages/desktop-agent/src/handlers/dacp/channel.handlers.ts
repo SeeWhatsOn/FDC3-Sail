@@ -7,14 +7,29 @@ import {
 } from '../validation/dacp-validator'
 import {
   GetcurrentchannelrequestSchema,
-  JoinuserchannelrequestSchema
+  JoinuserchannelrequestSchema,
+  LeavecurrentchannelrequestSchema,
+  GetuserchannelsrequestSchema
 } from '../validation/dacp-schemas'
 import { DACPHandlerContext, logger } from '../types'
 // TODO: Import from @finos/fdc3 standard Channel type instead
 // For now, using minimal interfaces
+
+// ChannelType enum - should match @finos/fdc3
+enum ChannelType {
+  app = 'app',
+  user = 'user',
+  private = 'private'
+}
+
 interface ChannelState {
   id: string;
-  type: number; // ChannelType enum value
+  type: ChannelType;
+  displayMetadata?: {
+    name?: string;
+    color?: string;
+    glyph?: string;
+  };
   context: any[];
 }
 
@@ -151,7 +166,7 @@ export async function handleLeaveCurrentChannelRequest(
   const { messagePort } = context
 
   try {
-    const request = message as any
+    const request = validateDACPMessage(message, LeavecurrentchannelrequestSchema)
 
     logger.info('DACP: Processing leave current channel request', {
       requestUuid: request.meta?.requestUuid
@@ -205,7 +220,7 @@ export async function handleGetUserChannelsRequest(
   const { messagePort } = context
 
   try {
-    const request = message as any
+    const request = validateDACPMessage(message, GetuserchannelsrequestSchema)
 
     logger.info('DACP: Processing get user channels request', {
       requestUuid: request.meta?.requestUuid
