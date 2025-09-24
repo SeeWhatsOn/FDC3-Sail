@@ -177,3 +177,16 @@ export enum AppHosting {
   Frame,
   Tab,
 }
+
+// ============================================================================
+// SAIL MESSAGE PAYLOAD INTERFACES
+// ============================================================================
+
+/**
+ * App Hello message arguments for FDC3 connection handshake
+ */
+export interface AppHelloArgs {
+  instanceId: string
+  appId: string
+  userSessionId?: string
+}

@@ -16,7 +16,15 @@ interface DirectoryApp {
   title?: string;
   name?: string;
   type?: string;
-  details?: { url?: string; [key: string]: unknown };
+  details?: { url?: string; path?: string; alias?: string; arguments?: string; [key: string]: unknown };
+  icons?: { src: string }[];
+  interop?: {
+    intents?: {
+      listensFor?: Record<string, { contexts: string[] }>;
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  };
 }
 
 /** Type definition for web application details in directory entries */

@@ -4,6 +4,16 @@ interface DirectoryApp {
   appId: string;
   title?: string;
   name?: string;
+  type?: string;
+  details?: { url?: string; path?: string; alias?: string; arguments?: string; [key: string]: unknown };
+  icons?: { src: string }[];
+  interop?: {
+    intents?: {
+      listensFor?: Record<string, { contexts: string[] }>;
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  };
 }
 import { AppDirectoryManager } from "../app-directory/appDirectoryManager"
 import path from "path"
@@ -179,7 +189,7 @@ describe("SailDirectory", () => {
       expect(excelAddin?.type).toBe("native")
       expect((excelAddin?.details as { path: string })?.path).toContain(".exe")
       expect(excelAddin?.details && "arguments" in excelAddin.details).toBe(true)
-      expect(Array.isArray((excelAddin?.details as { arguments?: string[] })?.arguments)).toBe(true)
+      expect(typeof (excelAddin?.details as { arguments?: string })?.arguments).toBe("string")
     })
 
     describe("Error Handling", () => {
