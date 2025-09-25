@@ -148,7 +148,12 @@ export default defineConfig([
 
   // Tailwind CSS files with v4 directives (@theme, @source, @custom-variant)
   {
-    files: ["**/packages/sail-ui/src/*.css", "**/packages/sail-app/src/*.css"],
+    files: [
+      "packages/sail-ui/src/*.css",
+      "packages/sail-app/src/*.css",
+      "**/packages/sail-ui/src/*.css",
+      "**/packages/sail-app/src/*.css"
+    ],
     plugins: { css },
     language: "css/css",
     extends: ["css/recommended"],

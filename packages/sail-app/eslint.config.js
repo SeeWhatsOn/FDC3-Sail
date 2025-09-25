@@ -1,6 +1,7 @@
 import rootConfig from "../../eslint.config.mjs"
 import reactRefresh from "eslint-plugin-react-refresh"
 import tseslint from "typescript-eslint"
+import css from "@eslint/css"
 
 export default tseslint.config(
   // Inherit all the rules from the root configuration
@@ -17,6 +18,17 @@ export default tseslint.config(
         "warn",
         { allowConstantExport: true },
       ],
+    },
+  },
+
+  // Tailwind CSS files with v4 directives specific to this package
+  {
+    files: ["src/**/*.css"],
+    plugins: { css },
+    language: "css/css",
+    rules: {
+      "css/no-invalid-at-rules": "off",
+      "css/no-parsing-error": "off",
     },
   },
 )
