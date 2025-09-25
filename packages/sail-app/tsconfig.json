@@ -14,11 +14,5 @@
     "rootDir": "../../"
   },
   "include": ["src/**/*", "../sail-ui/src/**/*"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "vitest.config.ts",
-    "**/*.test.ts",
-    "src/__tests__"
-  ]
+  "exclude": ["node_modules", "dist", "vitest.config.ts"]
 }

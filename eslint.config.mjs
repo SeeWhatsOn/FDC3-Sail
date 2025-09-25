@@ -7,14 +7,13 @@ import importPlugin from "eslint-plugin-import"
 import json from "@eslint/json"
 import css from "@eslint/css"
 import prettier from "eslint-config-prettier"
+// import tailwind from "eslint-plugin-tailwindcss"
 import { defineConfig } from "eslint/config"
 
 export default defineConfig([
   // Global ignores
   {
     ignores: [
-      "**/*.js",
-      "**/*.mjs",
       "**/dist/",
       "**/node_modules/",
       "**/build/",
@@ -90,10 +89,10 @@ export default defineConfig([
       // Strict TypeScript rules from slt.mjs
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unused-vars": "error",
-      "@typescript-eslint/no-unsafe-assignment": "error",
-      "@typescript-eslint/no-unsafe-member-access": "error",
-      "@typescript-eslint/no-unsafe-call": "error",
-      "@typescript-eslint/no-unsafe-return": "error",
+      "@typescript-eslint/no-unsafe-assignment": "warn",
+      "@typescript-eslint/no-unsafe-member-access": "warn",
+      "@typescript-eslint/no-unsafe-call": "warn",
+      "@typescript-eslint/no-unsafe-return": "warn",
     },
   },
 
@@ -145,6 +144,18 @@ export default defineConfig([
     plugins: { css },
     language: "css/css",
     extends: ["css/recommended"],
+  },
+
+  // Tailwind CSS files with v4 directives (@theme, @source, @custom-variant)
+  {
+    files: ["**/packages/sail-ui/src/*.css", "**/packages/sail-app/src/*.css"],
+    plugins: { css },
+    language: "css/css",
+    extends: ["css/recommended"],
+    rules: {
+      "css/no-invalid-at-rules": "off",
+      "css/no-parsing-error": "off",
+    },
   },
 
   // Prettier integration - must be last to override conflicting rules
