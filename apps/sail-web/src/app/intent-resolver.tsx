@@ -4,7 +4,7 @@ import {
   isFdc3UserInterfaceHandshake,
   isFdc3UserInterfaceResolve,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import { AugmentedAppIntent } from "@finos/fdc3-sail-shared"
+import { AugmentedAppIntent } from "../types/common"
 
 import { ResolverPanel } from "../client/resolver/resolver"
 

@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client"
 import { getAppId, getInstanceId, getUserSessionId, link } from "./util"
-import { AppHosting, HandshakeMessages, AppHelloArgs } from "@finos/fdc3-sail-shared"
+import { AppHosting, HandshakeMessages, AppHelloArgs } from "../types/common"
 import { BrowserTypes } from "@finos/fdc3"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 

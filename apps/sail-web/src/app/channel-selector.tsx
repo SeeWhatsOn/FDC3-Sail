@@ -1,6 +1,6 @@
 import { BrowserTypes } from "@finos/fdc3"
 import { createRoot } from "react-dom/client"
-import { TabDetail } from "@finos/fdc3-sail-shared"
+import { TabDetail } from "../types/common"
 import {
   isFdc3UserInterfaceChannels,
   isFdc3UserInterfaceHandshake,

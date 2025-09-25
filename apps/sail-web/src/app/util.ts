@@ -8,7 +8,7 @@ import {
   ChannelReceiverUpdate,
   SailIntentResolveOpenChannelArgs,
   TabDetail,
-} from "@finos/fdc3-sail-shared"
+} from "../types/common"
 
 export const channels: TabDetail[] = []
 const socket = io()

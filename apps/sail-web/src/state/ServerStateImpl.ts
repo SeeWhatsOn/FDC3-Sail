@@ -18,8 +18,8 @@ import {
   SailClientStateArgs,
   SailIntentResolveArgs,
   SailIntentResolveResponse,
-} from "@finos/fdc3-sail-shared"
-import { AppHosting } from "@finos/fdc3-sail-shared"
+  AppHosting,
+} from "../types/common"
 import { ServerState } from "../types"
 import { AppState } from "../types"
 import { WebClientState } from "../types"
