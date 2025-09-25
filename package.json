@@ -29,8 +29,6 @@
     "check-all": "npm run lint && npm run type-check && npm run format"
   },
   "workspaces": [
-    "packages/shared",
-    "packages/preload",
     "packages/desktop-agent",
     "packages/app-directories",
     "packages/sail-app",

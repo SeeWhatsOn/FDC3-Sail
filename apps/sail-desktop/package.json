@@ -8,7 +8,8 @@
     "clean": "rimraf dist",
     "build": "rollup -c rollup.config.mjs",
     "watch": "rollup -c rollup.config.mjs -w",
-    "dev": "npm run build && electron ."
+    "dev": "npm run build && electron .",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.1",

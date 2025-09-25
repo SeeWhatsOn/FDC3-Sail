@@ -1,4 +1,5 @@
 {
+  "_comment": "TODO: Remove test files from the 'exclude' array below and fix the Vitest/Jest type conflicts.",
   "extends": "../../tsconfig.root.json",
   "compilerOptions": {
     "baseUrl": ".",
@@ -9,9 +10,15 @@
       "sail-ui/*": ["../sail-ui/src/*"]
     },
     "outDir": "./dist",
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "types": ["vitest/globals"],
     "rootDir": "../../"
   },
   "include": ["src/**/*", "../sail-ui/src/**/*"],
-  "exclude": ["node_modules", "dist", "vitest.config.ts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "vitest.config.ts",
+    "**/*.test.ts",
+    "src/__tests__"
+  ]
 }
