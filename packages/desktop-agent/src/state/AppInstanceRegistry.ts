@@ -32,6 +32,9 @@ export interface AppInstance {
   /** FDC3 app identifier */
   appId: string
 
+  /** Message port for DACP communication */
+  messagePort?: MessagePort
+
   /** App metadata from directory */
   metadata: AppMetadata
 

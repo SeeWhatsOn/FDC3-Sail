@@ -20,17 +20,17 @@ export interface FDC3Server {
   cleanup(instanceId: string): void;
 }
 
+import { AppInstanceRegistry } from '../state/AppInstanceRegistry';
+import { IntentRegistry } from '../state/IntentRegistry';
+
 // DACP Handler context
 export interface DACPHandlerContext {
   messagePort: MessagePort;
+  instanceId: string;
+  appInstanceRegistry: AppInstanceRegistry;
+  intentRegistry: IntentRegistry;
   serverContext: ServerContext<any>; // Generic context
   fdc3Server: FDC3Server; // Generic FDC3 server interface
-  socket: Socket;
-  connectionState: {
-    authenticated: boolean;
-    userId: string;
-    socketType: undefined;
-  };
 }
 
 // Log levels for structured logging

@@ -15,41 +15,65 @@ import * as channelHandlers from './channel.handlers'
 // Handler registry type
 type DACPHandlerFunction = (message: unknown, context: DACPHandlerContext) => Promise<void>
 
+import { appInstanceRegistry } from '../../state/AppInstanceRegistry';
+import { intentRegistry } from '../../state/IntentRegistry';
+
 /**
- * Main DACP message router
+ * Processes a single DACP message in a transport-agnostic way.
+ * @param message The incoming DACP message.
+ * @param context The handler context, excluding the transport-specific messagePort.
+ * @param reply A function to send a reply back to the client.
+ */
+export async function processDACPMessage(
+  message: unknown,
+  context: Omit<DACPHandlerContext, 'messagePort'>,
+  reply: (response: any) => void
+) {
+  // Create a mock messagePort for the handlers to use
+  const messagePort = {
+    postMessage: reply,
+  } as MessagePort;
+
+  const fullContext: DACPHandlerContext = {
+    ...context,
+    messagePort,
+  };
+
+  await routeDACPMessage(message, fullContext);
+}
+
+
+/**
+ * Main DACP message router for MessagePort
  * Routes incoming DACP messages to appropriate handlers with validation and timeout management
  */
 export function registerDACPHandlers(
   messagePort: MessagePort,
   serverContext: any,
-  fdc3Server: any
+  fdc3Server: any,
+  instanceId: string
 ): void {
-  logger.info('Registering DACP message handlers')
+  logger.info('Registering DACP message handlers for instance', { instanceId });
 
-  // Create handler context
-  const context: DACPHandlerContext = {
-    messagePort,
+  const context: Omit<DACPHandlerContext, 'messagePort'> = {
     serverContext,
     fdc3Server,
-    socket: {} as any, // Mock socket for DACP handlers
-    connectionState: {
-      authenticated: true,
-      userId: 'dacp-user',
-      socketType: undefined
-    }
-  }
+    instanceId,
+    appInstanceRegistry,
+    intentRegistry,
+  };
 
-  // Set up message listener
   messagePort.onmessage = async (event) => {
-    await routeDACPMessage(event.data, context)
-  }
+    await processDACPMessage(event.data, context, (response) => {
+      messagePort.postMessage(response);
+    });
+  };
 
-  // Handle connection errors
   messagePort.onmessageerror = (event) => {
-    logger.error('DACP MessagePort error:', event)
-  }
+    logger.error('DACP MessagePort error:', event);
+  };
 
-  logger.info('DACP handlers registered successfully')
+  logger.info('DACP handlers registered successfully for instance', { instanceId });
 }
 
 /**
@@ -169,21 +193,18 @@ function getTimeoutForMessageType(messageType: string): number {
 }
 
 /**
- * Cleanup function to be called when MessagePort connection is closed
+ * Cleanup function to be called when a DACP connection is closed.
+ * This now delegates cleanup to the central registries.
  */
 export function cleanupDACPHandlers(instanceId: string): void {
-  logger.info('Cleaning up DACP handlers for instance', { instanceId })
+  logger.info('Cleaning up DACP handlers for instance', { instanceId });
 
-  // Cleanup context listeners
-  contextHandlers.cleanupContextListeners(instanceId)
+  // The new model is that registries are responsible for their own cleanup
+  // when an instance is fully removed. This function can be used to trigger that.
+  appInstanceRegistry.removeInstance(instanceId);
+  intentRegistry.removeInstanceListeners(instanceId);
 
-  // Cleanup intent listeners
-  intentHandlers.cleanupIntentListeners(instanceId)
-
-  // Cleanup channel membership
-  channelHandlers.cleanupChannelMembership(instanceId)
-
-  logger.debug('DACP handlers cleanup completed', { instanceId })
+  logger.debug('DACP handlers cleanup completed', { instanceId });
 }
 
 /**

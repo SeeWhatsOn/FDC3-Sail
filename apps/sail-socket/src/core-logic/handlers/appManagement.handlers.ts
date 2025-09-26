@@ -172,16 +172,20 @@ function handleAppHello(
  * @param sourceId - Source identifier for the message
  * @param context - Handler context with connection state
  */
+import { processDACPMessage, appInstanceRegistry, intentRegistry } from "@finos/fdc3-sail-desktop-agent"
+
+/**
+ * Routes DACP messages from the socket to the transport-agnostic DACP processor.
+ * @param dacpMessage - The DACP message to route.
+ * @param sourceId - Source identifier for the message.
+ * @param context - Handler context with connection state.
+ */
 async function routeDACPMessage(
   dacpMessage: DACPMessage,
   sourceId: string,
   context: HandlerContext
 ): Promise<void> {
-  if (!dacpMessage?.type?.startsWith("heartbeat")) {
-    logger.debug("SAIL DACP Message", { dacpMessage, sourceId })
-  }
-
-  const { connectionState } = context
+  const { socket, connectionState } = context
   const { fdc3ServerInstance } = connectionState
 
   if (!fdc3ServerInstance) {
@@ -189,81 +193,21 @@ async function routeDACPMessage(
     return
   }
 
-  try {
-    // Route based on DACP message type
-    switch (dacpMessage.type) {
-      case 'broadcastRequest':
-        await handleBroadcastRequest(dacpMessage, sourceId, fdc3ServerInstance)
-        break
-
-      case 'addContextListenerRequest':
-      case 'raiseIntentRequest':
-      case 'getCurrentChannelRequest':
-      case 'joinUserChannelRequest':
-      default:
-        // For now, forward all messages to the existing handler
-        await handleFdc3AppEvent(dacpMessage as any, sourceId, context)
-        break
-    }
-  } catch (error) {
-    logger.error("Error routing DACP message", error)
-  }
-}
-
-/**
- * Handles broadcast requests with context notification
- * @param message - The broadcast request message
- * @param sourceId - Source identifier for the message
- * @param fdc3ServerInstance - FDC3 server instance
- */
-async function handleBroadcastRequest(
-  message: DACPMessage,
-  sourceId: string,
-  fdc3ServerInstance: any
-): Promise<void> {
-  // Forward to FDC3 server
-  await fdc3ServerInstance.receive(message, sourceId)
-
-  // Notify broadcast context (existing logic)
-  if (message.type === "broadcastRequest") {
-    fdc3ServerInstance.serverContext.notifyBroadcastContext(message as any)
-  }
-}
-
-/**
- * Legacy handler for FDC3 app events (will be gradually replaced)
- * @param eventData - FDC3 event data containing type and payload
- * @param sourceId - Source identifier for the event
- * @param context - Handler context containing connection state
- */
-async function handleFdc3AppEvent(
-  eventData:
-    | AppRequestMessage
-    | WebConnectionProtocol4ValidateAppIdentity
-    | WebConnectionProtocol6Goodbye,
-  sourceId: string,
-  { connectionState }: HandlerContext
-): Promise<void> {
-  if (!eventData.type.startsWith("heartbeat")) {
-    logger.debug("SAIL DACP Message", { eventData, sourceId })
+  // The context for the DACP engine, without transport-specific details.
+  const dacpContext = {
+    instanceId: sourceId,
+    serverContext: fdc3ServerInstance.serverContext,
+    fdc3Server: fdc3ServerInstance,
+    appInstanceRegistry,
+    intentRegistry,
   }
 
-  const { fdc3ServerInstance } = connectionState
-  if (!fdc3ServerInstance) {
-    logger.error("No server instance available for FDC3 event")
-    return
+  // The reply function that sends a message back over the socket.
+  const reply = (response: any) => {
+    socket.emit(SailMessages.FDC3_EVENT, response)
   }
-  try {
-    await fdc3ServerInstance.receive(eventData, sourceId)
 
-    if (eventData.type === "broadcastRequest") {
-      fdc3ServerInstance.serverContext.notifyBroadcastContext(
-        eventData as unknown as BroadcastRequest
-      )
-    }
-  } catch (error) {
-    logger.error("Error processing FDC3 message", error)
-  }
+  await processDACPMessage(dacpMessage, dacpContext, reply)
 }
 
 /**

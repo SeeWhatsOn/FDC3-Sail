@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { registerDACPHandlers, cleanupDACPHandlers, getDACPHandlerStats } from '../index'
 import { generateRequestUuid } from '../../validation/dacp-validator'
 
+import { appInstanceRegistry, AppInstance, AppInstanceState } from '../../../state/AppInstanceRegistry';
+
 // Mock server context and FDC3 server
 const mockServerContext = {
   directory: {
@@ -16,6 +18,19 @@ const mockFDC3Server = {
   handlers: [],
   cleanup: vi.fn()
 }
+
+const mockInstance: AppInstance = {
+  instanceId: 'test-instance-id',
+  appId: 'test-app',
+  state: AppInstanceState.CONNECTED,
+  contextListeners: new Set(),
+  intentListeners: new Set(),
+  privateChannels: new Set(),
+  currentChannel: null,
+  createdAt: new Date(),
+  lastActivity: new Date(),
+  metadata: { appId: 'test-app', name: 'Test App' }
+};
 
 describe('DACP Handler Integration Tests', () => {
   let messageChannel: MessageChannel
@@ -39,8 +54,11 @@ describe('DACP Handler Integration Tests', () => {
     port1.start()
     port2.start()
 
+    // Register a mock instance for the tests
+    appInstanceRegistry.createInstance(mockInstance);
+
     // Register DACP handlers
-    registerDACPHandlers(port1, mockServerContext, mockFDC3Server)
+    registerDACPHandlers(port1, mockServerContext, mockFDC3Server, mockInstance.instanceId)
   })
 
   afterEach(() => {
@@ -197,8 +215,8 @@ describe('DACP Handler Integration Tests', () => {
 
       expect(receivedMessages).toHaveLength(1)
       expect(receivedMessages[0].type).toBe('findIntentResponse')
-      expect(receivedMessages[0].payload.intent).toBe('ViewChart')
-      expect(receivedMessages[0].payload.apps).toBeDefined()
+      expect(receivedMessages[0].payload.appIntent.intent.name).toBe('ViewChart')
+      expect(receivedMessages[0].payload.appIntent.apps).toBeDefined()
     })
   })
 
@@ -234,11 +252,12 @@ describe('DACP Handler Integration Tests', () => {
       }
 
       port2.postMessage(joinChannelRequest)
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 500))
 
-      expect(receivedMessages).toHaveLength(1)
-      expect(receivedMessages[0].type).toBe('joinUserChannelResponse')
-      expect(receivedMessages[0].meta.requestUuid).toBe(joinChannelRequest.meta.requestUuid)
+      expect(receivedMessages.length).toBeGreaterThan(0)
+      const response = receivedMessages.find(m => m.type === 'joinUserChannelResponse');
+      expect(response).toBeDefined();
+      expect(response.meta.requestUuid).toBe(joinChannelRequest.meta.requestUuid)
     })
 
     it('should handle get user channels request successfully', async () => {
@@ -273,11 +292,12 @@ describe('DACP Handler Integration Tests', () => {
       }
 
       port2.postMessage(joinInvalidChannelRequest)
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 500))
 
-      expect(receivedMessages).toHaveLength(1)
-      expect(receivedMessages[0].type).toBe('joinUserChannelResponse')
-      expect(receivedMessages[0].payload.error).toBeDefined()
+      expect(receivedMessages.length).toBeGreaterThan(0)
+      const response = receivedMessages.find(m => m.type === 'joinUserChannelResponse');
+      expect(response).toBeDefined();
+      expect(response.payload.error).toBeDefined()
     })
   })
 

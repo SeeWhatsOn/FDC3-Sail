@@ -415,6 +415,21 @@ export class IntentRegistry {
   // ============================================================================
 
   /**
+   * Resolves an intent request, finding and launching apps if necessary.
+   * This is a placeholder for the logic being moved from sailAppInstanceManager.
+   */
+  async resolveIntent(request: IntentResolutionRequest): Promise<any> {
+    // TODO: Implement the logic from sailAppInstanceManager.narrowIntents here.
+    // This will involve:
+    // 1. Finding compatible handlers (findIntentHandlers).
+    // 2. If one handler, returning it.
+    // 3. If multiple handlers, calling a UI resolver function passed in during initialization.
+    // 4. If no handlers, deciding whether to launch a new app.
+    console.log('IntentRegistry.resolveIntent called with:', request);
+    return Promise.resolve({} as any);
+  }
+
+  /**
    * Finds available handlers for an intent resolution request
    */
   findIntentHandlers(request: IntentResolutionRequest): {

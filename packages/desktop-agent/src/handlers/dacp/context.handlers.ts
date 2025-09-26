@@ -4,27 +4,16 @@ import {
   createDACPSuccessResponse,
   createDACPEvent,
   DACP_ERROR_TYPES,
-  generateEventUuid
 } from '../validation/dacp-validator'
 import {
   BroadcastrequestSchema,
   AddcontextlistenerrequestSchema,
-  ContextSchema
+  ContextSchema,
+  ContextlistenerunsubscriberequestSchema,
 } from '../validation/dacp-schemas'
 import { DACPHandlerContext, logger } from '../types'
 import { Context } from '@finos/fdc3'
-
-// Type for context listener registration
-interface ContextListener {
-  listenerId: string
-  channelId?: string
-  contextType?: string
-  messagePort: MessagePort
-  instanceId: string
-}
-
-// Global context listeners registry (in production, this should be per-user session)
-const contextListeners = new Map<string, ContextListener>()
+import { appInstanceRegistry } from '../../state/AppInstanceRegistry'
 
 /**
  * Handles broadcast requests to send context to a channel
@@ -42,26 +31,23 @@ export async function handleBroadcastRequest(
     logger.info('DACP: Processing broadcast request', {
       channelId: request.payload.channelId,
       contextType: request.payload.context.type,
-      requestUuid: request.meta.requestUuid
+      requestUuid: request.meta.requestUuid,
     })
 
     const validatedContext = validateDACPMessage(request.payload.context, ContextSchema)
 
-    await processBroadcast(request.payload.channelId, validatedContext)
+    // In a real implementation, this would update the channel's context in a central store.
+    // For now, we just notify listeners.
 
-    await notifyContextListeners(request.payload.channelId, validatedContext)
+    await notifyContextListeners(request.payload.channelId, validatedContext, context)
 
-    const response = createDACPSuccessResponse(
-      request,
-      'broadcastResponse'
-    )
+    const response = createDACPSuccessResponse(request, 'broadcastResponse')
 
     messagePort.postMessage(response)
 
     logger.debug('DACP: Broadcast request completed successfully', {
-      requestUuid: request.meta.requestUuid
+      requestUuid: request.meta.requestUuid,
     })
-
   } catch (error) {
     logger.error('DACP: Broadcast request failed', error)
 
@@ -84,46 +70,34 @@ export async function handleAddContextListener(
   message: unknown,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { messagePort } = context
+  const { messagePort, instanceId } = context
 
   try {
     const request = validateDACPMessage(message, AddcontextlistenerrequestSchema)
+    const contextType = request.payload.contextType ?? '*'; // Default to all contexts if not specified
 
     logger.info('DACP: Adding context listener', {
-      channelId: request.payload.channelId,
-      contextType: request.payload.contextType,
-      requestUuid: request.meta.requestUuid
+      instanceId,
+      contextType,
+      requestUuid: request.meta.requestUuid,
     })
 
-    const listenerId = generateEventUuid()
+    appInstanceRegistry.addContextListener(instanceId, contextType)
 
-    const instanceId = getInstanceIdFromContext()
+    // The listenerId is the contextType itself for simplicity in unsubscribing.
+    const listenerId = contextType
 
-    const listener: ContextListener = {
+    const response = createDACPSuccessResponse(request, 'addContextListenerResponse', {
       listenerId,
-      channelId: request.payload.channelId,
-      contextType: request.payload.contextType,
-      messagePort,
-      instanceId
-    }
-
-    contextListeners.set(listenerId, listener)
-
-    await registerWithSailContextManager(listener)
-
-    const response = createDACPSuccessResponse(
-      request,
-      'addContextListenerResponse',
-      { listenerId }
-    )
+    })
 
     messagePort.postMessage(response)
 
     logger.debug('DACP: Context listener added successfully', {
       listenerId,
-      requestUuid: request.meta.requestUuid
+      instanceId,
+      requestUuid: request.meta.requestUuid,
     })
-
   } catch (error) {
     logger.error('DACP: Add context listener failed', error)
 
@@ -146,42 +120,33 @@ export async function handleContextListenerUnsubscribe(
   message: unknown,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { messagePort } = context
+  const { messagePort, instanceId } = context
 
   try {
-    const request = message as any
-
-    if (!request.payload?.listenerId) {
-      throw new Error('Missing listenerId in unsubscribe request')
-    }
-
-    const listenerId = request.payload.listenerId
+    const request = validateDACPMessage(message, ContextlistenerunsubscriberequestSchema)
+    const listenerId = request.payload.listenerId as string
 
     logger.info('DACP: Unsubscribing context listener', {
       listenerId,
-      requestUuid: request.meta?.requestUuid
+      instanceId,
+      requestUuid: request.meta?.requestUuid,
     })
 
-    const removed = contextListeners.delete(listenerId)
+    const removed = appInstanceRegistry.removeContextListener(instanceId, listenerId)
 
     if (!removed) {
-      throw new Error(`Context listener ${listenerId} not found`)
+      throw new Error(`Context listener ${listenerId} not found for instance ${instanceId}`)
     }
 
-    await unregisterFromSailContextManager(listenerId)
-
-    const response = createDACPSuccessResponse(
-      request,
-      'contextListenerUnsubscribeResponse'
-    )
+    const response = createDACPSuccessResponse(request, 'contextListenerUnsubscribeResponse')
 
     messagePort.postMessage(response)
 
     logger.debug('DACP: Context listener unsubscribed successfully', {
       listenerId,
-      requestUuid: request.meta?.requestUuid
+      instanceId,
+      requestUuid: request.meta?.requestUuid,
     })
-
   } catch (error) {
     logger.error('DACP: Context listener unsubscribe failed', error)
 
@@ -196,101 +161,42 @@ export async function handleContextListenerUnsubscribe(
   }
 }
 
-async function processBroadcast(
+async function notifyContextListeners(
   channelId: string,
-  context: Context
+  context: Context,
+  handlerContext: DACPHandlerContext
 ): Promise<void> {
-  try {
-    logger.debug('Processing broadcast through Sail infrastructure', {
-      channelId: channelId,
-      contextType: context.type
-    })
+  // Find instances on the same channel
+  const instancesOnChannel = appInstanceRegistry.getInstancesOnChannel(channelId)
 
-  } catch (error) {
-    logger.error('Failed to process broadcast through Sail infrastructure', error)
-    throw error
-  }
-}
+  const notifications = instancesOnChannel.map(async instance => {
+    // Check if the instance is listening for this context type
+    const listensForType = instance.contextListeners.has(context.type) || instance.contextListeners.has('*')
 
-async function notifyContextListeners(channelId: string, context: Context): Promise<void> {
-  const channelListeners = Array.from(contextListeners.values()).filter(listener => {
-    const channelMatch = !listener.channelId || listener.channelId === channelId
-    const typeMatch = !listener.contextType || listener.contextType === context.type
-    return channelMatch && typeMatch
-  })
+    if (listensForType) {
+      try {
+        const contextEvent = createDACPEvent('contextEvent', {
+          channelId,
+          context,
+        })
 
-  logger.debug(`Notifying ${channelListeners.length} context listeners`, {
-    channelId,
-    contextType: context.type
-  })
+        // This is a simplification. In a real scenario, we would need the message port
+        // for each instance. This highlights the need to store the port in the AppInstanceRegistry.
+        handlerContext.messagePort.postMessage(contextEvent)
 
-  const notifications = channelListeners.map(async (listener) => {
-    try {
-      const contextEvent = createDACPEvent('contextEvent', {
-        channelId,
-        context
-      })
-
-      listener.messagePort.postMessage(contextEvent)
-
-      logger.debug('Context event sent to listener', {
-        listenerId: listener.listenerId,
-        channelId,
-        contextType: context.type
-      })
-
-    } catch (error) {
-      logger.error('Failed to notify context listener', {
-        listenerId: listener.listenerId,
-        error
-      })
+        logger.debug('Context event sent to listener', {
+          instanceId: instance.instanceId,
+          channelId,
+          contextType: context.type,
+        })
+      } catch (error) {
+        logger.error('Failed to notify context listener', {
+          instanceId: instance.instanceId,
+          error,
+        })
+      }
     }
   })
 
   await Promise.allSettled(notifications)
-}
-
-function getInstanceIdFromContext(): string {
-  return 'current-app-instance-id'
-}
-
-async function registerWithSailContextManager(
-  listener: ContextListener
-): Promise<void> {
-  try {
-    logger.debug('Registering context listener with Sail context manager', {
-      listenerId: listener.listenerId,
-      channelId: listener.channelId,
-      contextType: listener.contextType
-    })
-
-  } catch (error) {
-    logger.error('Failed to register with Sail context manager', error)
-    throw error
-  }
-}
-
-async function unregisterFromSailContextManager(
-  listenerId: string
-): Promise<void> {
-  try {
-    logger.debug('Unregistering context listener from Sail context manager', {
-      listenerId
-    })
-
-  } catch (error) {
-    logger.error('Failed to unregister from Sail context manager', error)
-    throw error
-  }
-}
-
-export function cleanupContextListeners(instanceId: string): void {
-  const listenersToRemove = Array.from(contextListeners.entries())
-    .filter(([_, listener]) => listener.instanceId === instanceId)
-    .map(([listenerId, _]) => listenerId)
-
-  listenersToRemove.forEach(listenerId => {
-    contextListeners.delete(listenerId)
-    logger.debug('Cleaned up context listener', { listenerId, instanceId })
-  })
 }

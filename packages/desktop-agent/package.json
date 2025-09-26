@@ -16,10 +16,8 @@
   },
   "devDependencies": {
     "@types/node": "^24.2.1",
-    "@types/socket.io": "^3.0.1",
     "@vitest/ui": "^3.2.4",
     "rimraf": "^6.0.1",
-    "socket.io-client": "^4.7.5",
     "typescript": "^5.3.2",
     "vitest": "^3.2.4"
   },
@@ -28,7 +26,6 @@
     "@finos/fdc3-agent-proxy": "^2.2.1-beta.3",
     "@finos/fdc3-schema": "^2.2.1-beta.3",
     "@finos/fdc3-web-impl": "^2.2.1-beta.3",
-    "socket.io": "^4.7.5",
     "uuid": "^11.1.0",
     "zod": "^4.1.11"
   },

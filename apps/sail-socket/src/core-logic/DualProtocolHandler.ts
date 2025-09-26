@@ -84,7 +84,7 @@ export class DualProtocolHandler {
     // Allow for custom properties on the socket object by casting to a more specific type.
     type CustomSocket = Socket & { userId?: string }
 
-    socket.on("dacp:init", (callback: (port: MessagePort) => void) => {
+    socket.on("dacp:init", (instanceId: string, callback: (port: MessagePort) => void) => {
       try {
         const channel = new MessageChannel()
         context.messagePortChannel = channel
@@ -99,22 +99,19 @@ export class DualProtocolHandler {
           return
         }
 
+        // The dacpContext is now largely managed within the desktop-agent package.
+        // This is kept for potential legacy use or debugging.
         context.dacpContext = {
           messagePort: channel.port1,
           serverContext: serverContext,
           fdc3Server: fdc3ServerInstance,
-          socket: socket,
-          connectionState: {
-            authenticated: true,
-            userId: (socket as CustomSocket).userId || "dacp-user",
-            socketType: undefined,
-          },
-        }
+          instanceId: instanceId
+        } as any;
 
-        registerDACPHandlers(channel.port1, serverContext, fdc3ServerInstance)
+        registerDACPHandlers(channel.port1, serverContext, fdc3ServerInstance, instanceId)
 
         context.dacpEnabled = true
-        console.info(`DACP handlers registered for socket: ${socketId}`)
+        console.info(`DACP handlers registered for socket: ${socketId} and instance: ${instanceId}`)
 
         callback(channel.port2)
       } catch (error) {

@@ -17,6 +17,3 @@ export * from "./state/IntentRegistry";
 
 // App directory management
 export { AppDirectoryManager } from "./app-directory/appDirectoryManager";
-
-// Constants
-export { APP_CONFIG } from "./constants";
