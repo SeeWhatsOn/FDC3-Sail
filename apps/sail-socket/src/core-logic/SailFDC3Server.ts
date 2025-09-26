@@ -4,7 +4,7 @@ import {
   ChannelState,
   ChannelType,
   DefaultFDC3Server,
-} from "@finos/fdc3-sail-shared"
+} from "@finos/fdc3-web-impl"
 import { SailAppInstanceManager } from "./sailAppInstanceManager"
 
 export const mapChannels = (channels: TabDetail[]): ChannelState[] =>

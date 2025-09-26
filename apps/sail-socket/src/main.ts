@@ -1,6 +1,6 @@
 import { Server } from "socket.io"
 import { createServer } from "http"
-import { initSocketService } from "@finos/fdc3-sail-desktop-agent"
+import { initSocketService } from "./core-logic"
 import { APP_CONFIG } from "./constants"
 import { authMiddleware } from "./middleware/auth"
 import dotenv from "dotenv"

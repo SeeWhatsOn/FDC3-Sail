@@ -8,7 +8,7 @@ import {
   type FDC3Server,
   type ChannelState,
   type DirectoryApp
-} from "@finos/fdc3-sail-shared"
+} from "@finos/fdc3-web-impl"
 import { AppIdentifier } from "@finos/fdc3"
 import { AppDirectoryManager } from "@finos/fdc3-sail-desktop-agent"
 import { AppIntent, Context } from "@finos/fdc3"
@@ -25,7 +25,7 @@ import {
   SailAppOpenResponse,
   TabDetail,
   ContextHistory,
-} from "@finos/fdc3-sail-shared"
+} from "@finos/fdc3-web-impl"
 import {
   BroadcastRequest,
   ChannelChangedEvent,

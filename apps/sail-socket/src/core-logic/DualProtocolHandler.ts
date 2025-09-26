@@ -14,7 +14,7 @@ import {
   registerChannelHandlers,
   registerDisconnectHandler,
   HandlerContext as SailHandlerContext,
-} from "./core-logic/handlers"
+} from "./handlers"
 
 export interface DualProtocolConfig {
   enableDACP: boolean
@@ -81,6 +81,9 @@ export class DualProtocolHandler {
   private registerDACPHandlersForSocket(socket: Socket, context: DualProtocolContext): void {
     const socketId = socket.id
 
+    // Allow for custom properties on the socket object by casting to a more specific type.
+    type CustomSocket = Socket & { userId?: string }
+
     socket.on("dacp:init", (callback: (port: MessagePort) => void) => {
       try {
         const channel = new MessageChannel()
@@ -103,7 +106,7 @@ export class DualProtocolHandler {
           socket: socket,
           connectionState: {
             authenticated: true,
-            userId: (socket as any).userId || "dacp-user",
+            userId: (socket as CustomSocket).userId || "dacp-user",
             socketType: undefined,
           },
         }

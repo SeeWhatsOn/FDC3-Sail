@@ -1,5 +1,5 @@
 import { Server, Socket } from "socket.io"
-import { dualProtocolHandler } from "../handlers/DualProtocolHandler"
+import { dualProtocolHandler } from "./DualProtocolHandler"
 
 /**
  * Initializes the Socket.IO service with dual protocol support (DACP + Sail)
@@ -17,7 +17,7 @@ export function initSocketService(io: Server): Server {
     // Register dual protocol handlers (DACP + Sail Socket.IO)
     const context = dualProtocolHandler.registerHandlers(socket, {
       enableDACP: true,
-      enableSailSocket: true
+      enableSailSocket: true,
     })
 
     console.log("Dual protocol handlers registered for connection:", socket.id)
@@ -25,7 +25,7 @@ export function initSocketService(io: Server): Server {
     console.log("- DACP ready:", context.config.enableDACP)
 
     // Log protocol statistics periodically
-    socket.on('disconnect', () => {
+    socket.on("disconnect", () => {
       const stats = dualProtocolHandler.getStats()
       console.log("📊 Protocol Handler Statistics:", stats)
     })

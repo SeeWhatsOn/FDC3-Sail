@@ -6,7 +6,7 @@ import {
   ChannelReceiverHelloRequest,
   ChannelReceiverUpdate,
   SailIntentResolveOpenChannelArgs,
-} from "@finos/fdc3-sail-shared"
+} from "@finos/fdc3-web-impl"
 import { BrowserTypes } from "@finos/fdc3"
 import {
   SocketIOCallback,
