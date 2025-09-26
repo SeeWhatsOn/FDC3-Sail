@@ -1,17 +1,24 @@
 import { defineConfig } from "vite"
+import react from "@vitejs/plugin-react"
+import tailwindcss from "@tailwindcss/vite"
 import path from "path"
 
 export default defineConfig({
-  root: "html",
-  publicDir: "../public",
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "../src"),
+      "@": path.resolve(__dirname, "src"),
+      "sail-ui": path.resolve(__dirname, "../../packages/sail-ui/src"),
     },
+    conditions: ["development"],
   },
   server: {
     port: 5173,
     host: true,
+    fs: {
+      // Allow serving files from workspace packages
+      allow: ["../.."],
+    },
     // the proxy is used to proxy the socket.io requests to the backend to prevent CORS issues
     proxy: {
       "/socket.io": {
@@ -24,11 +31,6 @@ export default defineConfig({
   build: {
     cssMinify: false, // makes the css easier to read
     sourcemap: true, // provide sourcemap for prod debug
-    rollupOptions: {
-      input: {
-        main: "index.html",
-        embed: "embed.html",
-      },
-    },
+    outDir: "dist",
   },
 })

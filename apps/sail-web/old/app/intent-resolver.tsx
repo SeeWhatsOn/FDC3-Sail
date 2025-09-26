@@ -4,8 +4,8 @@ import {
   isFdc3UserInterfaceHandshake,
   isFdc3UserInterfaceResolve,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import { AugmentedAppIntent } from "../types/common"
 
+import { AugmentedAppIntent } from "../types/common"
 import { ResolverPanel } from "../client/resolver/resolver"
 
 import { channels, handleChannelUpdates, setAppChannel } from "./util"
