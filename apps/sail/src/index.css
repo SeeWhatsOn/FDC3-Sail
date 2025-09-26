@@ -4,7 +4,7 @@
   Import the UI library's base styles, which include
   CSS variables (@theme) and base layer styles (@layer).
 */
-@import "../../sail-ui/src/index.css";
+@import "../../packages/sail-ui/src/index.css";
 /* 
   Tell Tailwind where to scan for classes.
   This is crucial for a monorepo setup.
@@ -12,4 +12,4 @@
   processes @source and @import before Vite's path aliases are applied.
 */
 @source "./**/*.{js,ts,jsx,tsx}";
-@source "../../sail-ui/src/**/*.{js,ts,jsx,tsx}";
+@source "../../packages/sail-ui/src/**/*.{js,ts,jsx,tsx}";

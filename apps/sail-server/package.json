@@ -1,8 +1,8 @@
 {
-  "name": "@finos/fdc3-sail-socket",
+  "name": "@finos/fdc3-sail-server",
   "version": "0.0.1",
   "type": "module",
-  "description": "FDC3 Sail Socket server - Backend socket application for FDC3 Sail",
+  "description": "FDC3 Sail Server - Backend server application for FDC3 Sail",
   "main": "dist/main.js",
   "scripts": {
     "dev": "vite-node --watch src/main.ts",

@@ -1,5 +1,5 @@
 {
-  "name": "@finos/fdc3-sail-desktop",
+  "name": "@finos/fdc3-sail-electron",
   "version": "0.0.0",
   "type": "module",
   "description": "",

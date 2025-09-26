@@ -150,9 +150,9 @@ export default defineConfig([
   {
     files: [
       "packages/sail-ui/src/*.css",
-      "packages/sail-app/src/*.css",
+      "apps/sail/src/*.css",
       "**/packages/sail-ui/src/*.css",
-      "**/packages/sail-app/src/*.css"
+      "**/apps/sail/src/*.css"
     ],
     plugins: { css },
     language: "css/css",

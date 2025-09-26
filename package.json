@@ -6,8 +6,8 @@
   "scripts": {
     "clean": "npm run clean --workspaces",
     "build": "npm run build --workspaces --if-present",
-    "dev:web": "concurrently \"npm run dev --workspace=apps/sail-socket\" \"npm run dev --workspace=apps/sail-web\" \"npm run dev --workspace=apps/example-fdc3-apps\"",
-    "dev:desktop": "concurrently \"npm run dev --workspace=apps/sail-socket\" \"npm run dev --workspace=apps/example-fdc3-apps\"",
+    "dev:web": "concurrently \"npm run dev --workspace=@finos/fdc3-sail-server\" \"npm run dev --workspace=@finos/fdc3-sail-app\" \"npm run dev --workspace=apps/example-fdc3-apps\"",
+    "dev:desktop": "concurrently \"npm run dev --workspace=@finos/fdc3-sail-server\" \"npm run dev --workspace=@finos/fdc3-sail-electron\" \"npm run dev --workspace=apps/example-fdc3-apps\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "npm run typecheck --workspaces --if-present",
@@ -20,11 +20,10 @@
   "workspaces": [
     "packages/desktop-agent",
     "packages/app-directories",
-    "packages/sail-app",
     "packages/sail-ui",
-    "apps/sail-web",
-    "apps/sail-desktop",
-    "apps/sail-socket",
+    "apps/sail",
+    "apps/sail-electron",
+    "apps/sail-server",
     "apps/example-fdc3-apps"
   ],
   "devDependencies": {
