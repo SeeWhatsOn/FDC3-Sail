@@ -14,7 +14,7 @@ import {
   registerChannelHandlers,
   registerDisconnectHandler,
   HandlerContext as SailHandlerContext,
-} from "./handlers"
+} from "../handlers"
 
 export interface DualProtocolConfig {
   enableDACP: boolean

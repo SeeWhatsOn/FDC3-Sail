@@ -2,7 +2,7 @@
 export * from "./types"
 
 // Export individual handlers
-export * from "./desktopAgentCore.handlers"
+export * from "./platform.handlers"
 export * from "./appManagement.handlers"
 export * from "./channelManagement.handlers"
 export * from "./connectionLifecycle.handlers"

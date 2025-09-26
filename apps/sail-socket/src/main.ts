@@ -1,6 +1,6 @@
 import { Server } from "socket.io"
 import { createServer } from "http"
-import { initSocketService } from "./core-logic"
+import { initSocketService } from "./services/SocketService"
 import { APP_CONFIG } from "./constants"
 import { authMiddleware } from "./middleware/auth"
 import dotenv from "dotenv"
