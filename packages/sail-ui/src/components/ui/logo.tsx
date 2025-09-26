@@ -18,7 +18,7 @@ export const Logo: React.FC<LogoProps> = ({ className, width = 88.3, height = 12
       x="0px"
       y="0px"
       viewBox="0 0 88.3 129.1"
-      style={{ enableBackground: "new 0 0 88.3 129.1" }}
+      style={{ }}
       xmlSpace="preserve"
       width={width}
       height={height}

@@ -91,15 +91,15 @@
   }
 
   .bg-gradient-sail {
-    background: var(--sail-gradient-primary);
+    background-image: var(--sail-gradient-primary);
   }
 
   .bg-gradient-sail-secondary {
-    background: var(--sail-gradient-secondary);
+    background-image: var(--sail-gradient-secondary);
   }
 
   .bg-gradient-sail-wave {
-    background: var(--sail-gradient-wave);
+    background-image: var(--sail-gradient-wave);
   }
 
   .shadow-sail {
