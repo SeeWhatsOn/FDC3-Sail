@@ -136,7 +136,7 @@ export const IconButton = () => {
   return (
     <div
       ref={buttonRef}
-      className="bg-sidebar border border-brand-secondary rounded-lg shadow-lg hover:shadow-xl w-full h-full flex items-center justify-center"
+      className="bg-sidebar border-brand-secondary flex size-full items-center justify-center rounded-lg border shadow-lg hover:shadow-xl"
       style={getButtonStyles()}
       onMouseDown={handleMouseDown}
     >

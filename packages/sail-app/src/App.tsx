@@ -13,7 +13,7 @@ function App() {
     <ThemeProvider>
       <SidebarProvider defaultOpen={false}>
         <AppSidebar />
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex flex-1 flex-col overflow-hidden">
           <Workspace>
             <Layout />
           </Workspace>

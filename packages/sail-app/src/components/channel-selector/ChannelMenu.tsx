@@ -84,7 +84,7 @@ export const ChannelMenu = ({ trigger }: { trigger: React.ReactNode }) => {
           {recommendedChannels.map(channel => (
             <>
               <div key={channel.id} className="flex items-center gap-2">
-                <Check className="w-4 h-4" />
+                <Check className="size-4" />
                 {channel.displayMetadata.name}
               </div>
 

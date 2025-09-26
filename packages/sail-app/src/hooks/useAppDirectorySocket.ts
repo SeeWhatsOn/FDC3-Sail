@@ -1,6 +1,6 @@
 import { useEffect } from "react"
-import { Socket } from "socket.io-client"
-import type { DirectoryApp } from "@finos/fdc3-sail-shared"
+
+import type { DirectoryApp } from "../types/common"
 import { useDesktopAgent } from "./useDesktopAgent"
 import { useAppDirectoryStore } from "../stores/appDirectoryStore"
 
@@ -18,6 +18,15 @@ export const useAppDirectorySocket = () => {
   const { getSocket } = useDesktopAgent()
   const { addApp, removeApp, updateApp, setApps } = useAppDirectoryStore()
 
+  const isAppAllowed = (appId: string) => {
+    const allowedAppIds = ["fdc3-wcp-test", "sail-training-broadcaster", "sail-training-receiver"]
+    return (
+      allowedAppIds.includes(appId) ||
+      appId.startsWith("sail-training-") ||
+      appId.startsWith("fdc3-")
+    )
+  }
+
   useEffect(() => {
     const socket = getSocket()
 
@@ -26,8 +35,10 @@ export const useAppDirectorySocket = () => {
 
       switch (event.type) {
         case "APP_ADDED":
-          if (event.app) {
+          if (event.app && typeof event.app.appId === "string" && isAppAllowed(event.app.appId)) {
             addApp(event.app)
+          } else if (event.app) {
+            console.log(`Filtering out unwanted app: ${event.app.appId}`)
           }
           break
 
@@ -38,14 +49,21 @@ export const useAppDirectorySocket = () => {
           break
 
         case "APP_UPDATED":
-          if (event.app && event.appId) {
+          if (event.app && event.appId && isAppAllowed(event.appId)) {
             updateApp(event.appId, event.app)
+          } else if (event.app) {
+            console.log(`Filtering out unwanted app update: ${event.appId}`)
           }
           break
 
         case "DIRECTORY_REFRESH":
           if (event.apps) {
-            setApps(event.apps)
+            // Filter apps in directory refresh
+            const filteredApps = event.apps.filter(app => isAppAllowed(app.appId))
+            console.log(
+              `Directory refresh: filtered ${event.apps.length} apps down to ${filteredApps.length}`
+            )
+            setApps(filteredApps)
           }
           break
 

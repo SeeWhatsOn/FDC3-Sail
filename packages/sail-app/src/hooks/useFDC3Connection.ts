@@ -3,25 +3,31 @@ import { Socket } from "socket.io-client"
 import {
   AppHosting,
   HandshakeMessages,
-  AppHelloArgs,
+  type AppHelloArgs,
   AppManagementMessages,
-} from "@finos/fdc3-sail-shared"
+  type InstanceID,
+} from "../types/common"
 import { BrowserTypes } from "@finos/fdc3"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import { InstanceID } from "@finos/fdc3-sail-shared"
-import { useDesktopAgent, SessionInfo } from "./useDesktopAgent"
+import { useDesktopAgent, type SessionInfo } from "./useDesktopAgent"
 
 /**
  * Links socket and MessageChannel for bidirectional FDC3 communication
  */
 function link(socket: Socket, channel: MessageChannel, source: InstanceID) {
+  console.log(`[WCP-Link] Setting up bidirectional link for instance: ${source}`)
+
   socket.on(AppManagementMessages.FDC3_DA_EVENT, (data: unknown) => {
+    console.log(`[WCP-Link] Desktop Agent -> App:`, data)
     channel.port2.postMessage(data)
   })
 
   channel.port2.onmessage = function (event) {
+    console.log(`[WCP-Link] App -> Desktop Agent:`, event.data)
     socket.emit(AppManagementMessages.FDC3_APP_EVENT, event.data, source)
   }
+
+  console.log(`[WCP-Link] Bidirectional link established for instance: ${source}`)
 }
 
 /**
@@ -40,15 +46,29 @@ export const useFDC3Connection = (panelId: string) => {
       targetWindow: Window
     ) => {
       try {
+        console.log(
+          `[WCP-Handler] ${panelId} - Starting socket connection for session:`,
+          sessionInfo
+        )
+        console.log(`[WCP-Handler] ${panelId} - WCP1Hello message data:`, messageData)
+
         link(socket, channel, sessionInfo.instanceId)
 
-        const response = (await socket.emitWithAck(HandshakeMessages.APP_HELLO, {
+        console.log(`[WCP-Handler] ${panelId} - Sending APP_HELLO to desktop agent`)
+        const appHelloArgs = {
           userSessionId: sessionInfo.userSessionId,
           instanceId: sessionInfo.instanceId,
           appId: sessionInfo.appId,
-        } as AppHelloArgs)) as AppHosting
+        } as AppHelloArgs
 
-        // Response received from desktop agent
+        console.log(`[WCP-Handler] ${panelId} - APP_HELLO args:`, appHelloArgs)
+
+        const response = (await socket.emitWithAck(
+          HandshakeMessages.APP_HELLO,
+          appHelloArgs
+        )) as AppHosting
+
+        console.log(`[WCP-Handler] ${panelId} - Desktop agent response:`, response)
 
         const suffix = `?desktopAgentId=${sessionInfo.userSessionId}&instanceId=${sessionInfo.instanceId}`
         const intentResolverUrl =
@@ -60,25 +80,32 @@ export const useFDC3Connection = (panelId: string) => {
             ? window.location.origin + `/html/ui/channel-selector.html${suffix}`
             : undefined
 
+        console.log(`[WCP-Handler] ${panelId} - Generated URLs:`, {
+          intentResolverUrl,
+          channelSelectorUrl,
+        })
+
+        const handshakeResponse = {
+          type: "WCP3Handshake",
+          meta: {
+            connectionAttemptUuid: messageData.meta.connectionAttemptUuid,
+            timestamp: new Date(),
+          },
+          payload: {
+            fdc3Version: "2.2",
+            intentResolverUrl,
+            channelSelectorUrl,
+          },
+        } as BrowserTypes.WebConnectionProtocol3Handshake
+
+        console.log(`[WCP-Handler] ${panelId} - Sending WCP3Handshake response:`, handshakeResponse)
+
         // Send handshake response to the app window
-        targetWindow.postMessage(
-          {
-            type: "WCP3Handshake",
-            meta: {
-              connectionAttemptUuid: messageData.meta.connectionAttemptUuid,
-              timestamp: new Date(),
-            },
-            payload: {
-              fdc3Version: "2.2",
-              intentResolverUrl,
-              channelSelectorUrl,
-            },
-          } as BrowserTypes.WebConnectionProtocol3Handshake,
-          "*",
-          [channel.port1]
-        )
+        targetWindow.postMessage(handshakeResponse, "*", [channel.port1])
+
+        console.log(`[WCP-Handler] ${panelId} - WCP handshake completed successfully`)
       } catch (e) {
-        console.error(`Error in FDC3 handshake for panel ${panelId}:`, e)
+        console.error(`[WCP-Handler] ${panelId} - Error in FDC3 handshake:`, e)
       }
     },
     [panelId]
@@ -86,16 +113,35 @@ export const useFDC3Connection = (panelId: string) => {
 
   const handleWCPMessage = useCallback(
     async (event: MessageEvent, contentWindow: Window) => {
+      console.log(`[WCP-Message] ${panelId} - Received message from:`, event.origin)
+      console.log(`[WCP-Message] ${panelId} - Message data:`, event.data)
+      console.log(
+        `[WCP-Message] ${panelId} - Event source === contentWindow:`,
+        event.source === contentWindow
+      )
+
       const messageData = event.data as BrowserTypes.WebConnectionProtocol1Hello
 
       if (isWebConnectionProtocol1Hello(messageData) && event.source === contentWindow) {
-        console.debug(`FDC3 Panel ${panelId} received WCP1Hello:`, messageData)
+        console.log(`[WCP-Message] ${panelId} - Valid WCP1Hello message received:`, messageData)
 
         const socket = getSocket()
         const channel = new MessageChannel()
         const sessionInfo = getSessionInfo()
 
+        console.log(
+          `[WCP-Message] ${panelId} - Initiating socket connection with session:`,
+          sessionInfo
+        )
+
         await handleSocketConnection(socket, channel, sessionInfo, messageData, contentWindow)
+      } else {
+        if (!isWebConnectionProtocol1Hello(messageData)) {
+          console.log(`[WCP-Message] ${panelId} - Message is not a valid WCP1Hello:`, messageData)
+        }
+        if (event.source !== contentWindow) {
+          console.log(`[WCP-Message] ${panelId} - Message source mismatch, ignoring`)
+        }
       }
     },
     [panelId, getSocket, getSessionInfo, handleSocketConnection]
@@ -103,17 +149,24 @@ export const useFDC3Connection = (panelId: string) => {
 
   const registerWindow = useCallback(
     (contentWindow: Window) => {
-      console.log(`FDC3 Panel ${panelId} registering window`)
+      console.log(`[WCP-Register] ${panelId} - Registering window for WCP message handling`)
+      console.log(`[WCP-Register] ${panelId} - Content window:`, contentWindow)
 
       const messageListener = (event: MessageEvent) => {
-        handleWCPMessage(event, contentWindow)
+        console.log(`[WCP-Register] ${panelId} - Message listener triggered for event:`, {
+          origin: event.origin,
+          type: event.data?.type,
+          source: event.source,
+        })
+        void handleWCPMessage(event, contentWindow)
       }
 
+      console.log(`[WCP-Register] ${panelId} - Adding message event listener to window`)
       window.addEventListener("message", messageListener)
 
       // Return cleanup function
       return () => {
-        console.log(`FDC3 Panel ${panelId} unregistering window`)
+        console.log(`[WCP-Register] ${panelId} - Cleaning up: removing message event listener`)
         window.removeEventListener("message", messageListener)
       }
     },

@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
-import type { DirectoryApp } from "@finos/fdc3-sail-shared"
+import type { DirectoryApp } from "../types/common"
 
 interface AppDirectoryState {
   apps: DirectoryApp[]
@@ -107,59 +107,87 @@ export const createAppDirectoryStore = (getAppDirectories?: () => Promise<Direct
           } catch (wsError) {
             console.warn("Failed to load from desktop agent WebSocket, using fallback:", wsError)
 
-            // Fallback to mock data for development
+            // Fallback to essential training apps only
             apps = [
               {
-                appId: "example-calculator",
-                name: "Calculator",
-                title: "Calculator",
-                description: "A simple calculator application",
+                appId: "fdc3-wcp-test",
+                name: "FDC3 WCP Test",
+                title: "FDC3 WCP Test",
+                description: "Test application for FDC3 Web Connection Protocol debugging and message testing",
                 version: "1.0.0",
                 type: "web",
+                publisher: "FINOS",
                 details: {
-                  url: "https://www.calculator.net/",
+                  url: "/html/example-apps/wcp-test/index.html",
                 },
                 icons: [
                   {
-                    src: "https://via.placeholder.com/64/4f46e5/ffffff?text=Calc",
+                    src: "https://via.placeholder.com/64/dc2626/ffffff?text=WCP",
                     size: "64x64",
                   },
                 ],
+                hostManifests: {
+                  sail: {
+                    injectApi: "2.0"
+                  }
+                },
+                interop: {
+                  intents: {
+                    listensFor: {
+                      "fdc3.wcp-test": {
+                        displayName: "WCP Test Message",
+                        contexts: ["fdc3.wcp-test"]
+                      }
+                    }
+                  }
+                }
               },
               {
-                appId: "example-notepad",
-                name: "Notepad",
-                title: "Online Notepad",
-                description: "Simple text editor for quick notes",
-                version: "2.1.0",
+                appId: "sail-training-broadcaster",
+                name: "Sail Broadcaster",
+                title: "Sail Broadcaster",
+                description: "App will connect to the desktop agent and broadcast on the user channel when you hit the button",
+                version: "1.0.0",
                 type: "web",
+                publisher: "FINOS",
                 details: {
-                  url: "https://notepad-plus-plus.org/online/",
+                  url: "/html/example-apps/training-broadcast/index.html",
                 },
                 icons: [
                   {
-                    src: "https://via.placeholder.com/64/059669/ffffff?text=Note",
+                    src: "https://via.placeholder.com/64/059669/ffffff?text=📡",
                     size: "64x64",
                   },
                 ],
+                hostManifests: {
+                  sail: {
+                    injectApi: "2.0"
+                  }
+                }
               },
               {
-                appId: "example-weather",
-                name: "Weather",
-                title: "Weather App",
-                description: "Check current weather conditions and forecasts",
-                version: "3.2.1",
+                appId: "sail-training-receiver",
+                name: "Sail Receiver",
+                title: "Sail Receiver",
+                description: "App will connect to the desktop agent on startup and listen to messages",
+                version: "1.0.0",
                 type: "web",
+                publisher: "FINOS",
                 details: {
-                  url: "https://openweathermap.org/",
+                  url: "/html/example-apps/training-receive/index.html",
                 },
                 icons: [
                   {
-                    src: "https://via.placeholder.com/64/0ea5e9/ffffff?text=☀",
+                    src: "https://via.placeholder.com/64/2563eb/ffffff?text=📨",
                     size: "64x64",
                   },
                 ],
-              },
+                hostManifests: {
+                  sail: {
+                    injectApi: "2.0"
+                  }
+                }
+              }
             ] as DirectoryApp[]
           }
 

@@ -5,7 +5,7 @@ import { AppDirectory } from "../app-directory/AppDirectory"
 import { FDC3Panel, FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
 
 export const Panels = {
-  default: () => {
+  default: (props: IDockviewPanelProps) => {
     return (
       <div
         style={{
@@ -17,7 +17,7 @@ export const Panels = {
           justifyContent: "center",
         }}
       >
-        <AppDirectory />
+        <AppDirectory panelProps={props} />
       </div>
     )
   },

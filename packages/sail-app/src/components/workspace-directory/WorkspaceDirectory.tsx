@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "sail-ui"
 import { LayoutGrid, ExternalLink, Play } from "lucide-react"
-import type { AppPanel } from "../../stores/panelStore"
+
+import type { Panel } from "../../stores/workspaceStore"
 
 interface WorkspaceLayout {
   id: string
@@ -9,7 +10,7 @@ interface WorkspaceLayout {
   tabs: {
     tabId: string
     name: string
-    panels: AppPanel[]
+    panels: Panel[]
   }[]
   createdAt: Date
   lastModified: Date
@@ -21,71 +22,71 @@ interface WorkspaceCardProps {
 }
 
 const WorkspaceCard = ({ workspace, onWorkspaceClick }: WorkspaceCardProps) => {
-  const totalPanels = workspace.tabs.reduce((acc, tab) => acc + tab.panels.length, 0)
+  
   const uniqueApps = new Set(workspace.tabs.flatMap(tab => tab.panels.map(panel => panel.appId))).size
 
   return (
     <Card
-      className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
+      className="cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
       onClick={() => onWorkspaceClick(workspace)}
     >
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0">
-            <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
-              <LayoutGrid className="w-5 h-5 text-primary" />
+            <div className="bg-primary/10 flex size-10 items-center justify-center rounded-md">
+              <LayoutGrid className="text-primary size-5" />
             </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-sm font-medium line-clamp-1">{workspace.name}</CardTitle>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="inline-flex items-center px-2 py-1 rounded-md bg-secondary text-xs text-secondary-foreground">
+          <div className="min-w-0 flex-1">
+            <CardTitle className="line-clamp-1 text-sm font-medium">{workspace.name}</CardTitle>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="bg-secondary text-secondary-foreground inline-flex items-center rounded-md px-2 py-1 text-xs">
                 {workspace.tabs.length} tab{workspace.tabs.length !== 1 ? 's' : ''}
               </span>
-              <span className="inline-flex items-center px-2 py-1 rounded-md border text-xs">
+              <span className="inline-flex items-center rounded-md border px-2 py-1 text-xs">
                 {uniqueApps} app{uniqueApps !== 1 ? 's' : ''}
               </span>
             </div>
           </div>
           <div className="flex-shrink-0">
-            <Play className="w-4 h-4 text-muted-foreground" />
+            <Play className="text-muted-foreground size-4" />
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <CardDescription className="text-xs line-clamp-2 mb-3">
+        <CardDescription className="mb-3 line-clamp-2 text-xs">
           {workspace.description || "No description available"}
         </CardDescription>
 
         <div className="space-y-2">
           {workspace.tabs.slice(0, 2).map(tab => (
             <div key={tab.tabId} className="text-xs">
-              <div className="font-medium text-foreground mb-1">{tab.name}</div>
+              <div className="text-foreground mb-1 font-medium">{tab.name}</div>
               <div className="flex flex-wrap gap-1">
                 {tab.panels.slice(0, 3).map(panel => (
                   <div
                     key={panel.panelId}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-muted rounded-sm"
+                    className="bg-muted inline-flex items-center gap-1 rounded-sm px-2 py-1"
                   >
                     {panel.icon && (
                       <img
                         src={panel.icon}
                         alt=""
-                        className="w-3 h-3 rounded-sm"
+                        className="size-3 rounded-sm"
                         onError={e => {
                           const target = e.target as HTMLImageElement
                           target.style.display = 'none'
                         }}
                       />
                     )}
-                    <span className="truncate max-w-[80px]">{panel.title}</span>
+                    <span className="max-w-[80px] truncate">{panel.title}</span>
                     {panel.url && (
-                      <ExternalLink className="w-2 h-2 text-muted-foreground" />
+                      <ExternalLink className="text-muted-foreground size-2" />
                     )}
                   </div>
                 ))}
                 {tab.panels.length > 3 && (
-                  <div className="inline-flex items-center px-2 py-1 bg-muted/50 rounded-sm text-muted-foreground">
+                  <div className="bg-muted/50 text-muted-foreground inline-flex items-center rounded-sm px-2 py-1">
                     +{tab.panels.length - 3}
                   </div>
                 )}
@@ -93,13 +94,13 @@ const WorkspaceCard = ({ workspace, onWorkspaceClick }: WorkspaceCardProps) => {
             </div>
           ))}
           {workspace.tabs.length > 2 && (
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               +{workspace.tabs.length - 2} more tab{workspace.tabs.length - 2 !== 1 ? 's' : ''}
             </div>
           )}
         </div>
 
-        <div className="mt-3 text-xs text-muted-foreground">
+        <div className="text-muted-foreground mt-3 text-xs">
           Modified {workspace.lastModified.toLocaleDateString()}
         </div>
       </CardContent>
@@ -249,13 +250,13 @@ export function WorkspaceDirectory() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight mb-2">Workspaces</h1>
+        <h1 className="mb-2 text-2xl font-semibold tracking-tight">Workspaces</h1>
         <p className="text-muted-foreground">
           Saved layouts and configurations ({MOCK_WORKSPACES.length} available)
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {MOCK_WORKSPACES.map(workspace => (
           <WorkspaceCard
             key={workspace.id}

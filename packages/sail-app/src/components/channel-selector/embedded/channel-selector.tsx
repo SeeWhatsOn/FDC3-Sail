@@ -1,10 +1,11 @@
 import { BrowserTypes } from "@finos/fdc3"
 import { createRoot } from "react-dom/client"
-import { TabDetail } from "@finos/fdc3-sail-shared"
 import {
   isFdc3UserInterfaceChannels,
   isFdc3UserInterfaceHandshake,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
+
+import { TabDetail } from "../../../types/common"
 
 import { ChannelPicker } from "./channel"
 import { handleChannelUpdates, channels } from "./util"
@@ -120,9 +121,7 @@ window.addEventListener("load", () => {
     }
   })
 
-  handleChannelUpdates(() => {
-    renderChannels(open)
-  })
+  handleChannelUpdates()
 
   renderChannels(open)
 })

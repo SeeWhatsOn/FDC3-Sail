@@ -1,4 +1,5 @@
 import { Sheet, SheetContent } from "sail-ui"
+
 import { AppDirectory } from "../app-directory/AppDirectory"
 import { WorkspaceDirectory } from "../workspace-directory/WorkspaceDirectory"
 import { useUIStore, type QuickAccessPanelContent } from "../../stores/uiStore"
@@ -23,7 +24,7 @@ export function QuickAccessPanel() {
     <Sheet open={isOpen} onOpenChange={closeQuickAccessPanel}>
       <SheetContent
         side="left"
-        className="w-full sm:max-w-none p-0 overflow-y-auto"
+        className="w-full overflow-y-auto p-0 sm:max-w-none"
       >
         <QuickAccessContent content={activeQuickAccessPanel} />
       </SheetContent>

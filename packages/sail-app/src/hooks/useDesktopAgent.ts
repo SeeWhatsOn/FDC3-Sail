@@ -1,6 +1,9 @@
 import { io, Socket } from "socket.io-client"
-import { DirectoryApp } from "@finos/fdc3-sail-shared"
-import { AppManagementMessages, DesktopAgentDirectoryListingArgs } from "@finos/fdc3-sail-shared"
+import {
+  type DirectoryApp,
+  AppManagementMessages,
+  type DesktopAgentDirectoryListingArgs,
+} from "../types/common"
 
 // Utility functions for extracting URL parameters
 function getQueryParam(variable: string): string {
@@ -64,7 +67,18 @@ export const useDesktopAgent = () => {
         userSessionId,
       } as DesktopAgentDirectoryListingArgs)
 
-      return response as DirectoryApp[]
+      // Filter out unwanted apps
+      const allApps = response as DirectoryApp[]
+      const allowedAppIds = ["fdc3-wcp-test", "sail-training-broadcaster", "sail-training-receiver"]
+      const filteredApps = allApps.filter(
+        app =>
+          allowedAppIds.includes(app.appId) ||
+          app.appId.startsWith("sail-training-") ||
+          app.appId.startsWith("fdc3-")
+      )
+
+      console.log(`Filtered ${allApps.length} apps down to ${filteredApps.length} allowed apps`)
+      return filteredApps
     } catch (error) {
       console.error("Failed to get app directories:", error)
       throw new Error("Failed to retrieve app directories from desktop agent")

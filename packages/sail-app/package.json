@@ -1,11 +1,34 @@
 {
   "name": "@finos/fdc3-sail-app",
-  "private": true,
+  "private": false,
   "version": "0.0.0",
   "type": "module",
+  "main": "./dist/sail-app.umd.cjs",
+  "module": "./dist/sail-app.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "development": {
+        "types": "./src/index.ts",
+        "import": "./src/index.ts"
+      },
+      "types": "./dist/index.d.ts",
+      "import": "./dist/sail-app.js",
+      "require": "./dist/sail-app.umd.cjs"
+    },
+    "./style.css": {
+      "development": "./src/index.css",
+      "default": "./dist/sail-app.css"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite",
+    "dev:lib": "vite build --mode lib --watch",
     "build": "tsc -b && vite build",
+    "build:lib": "vite build --mode lib",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
@@ -33,6 +56,15 @@
     "tw-animate-css": "^1.3.7",
     "zustand": "^5.0.8"
   },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "tailwindcss": "^4.0.0",
+    "dockview-react": "^4.7.0",
+    "socket.io-client": "^4.7.0",
+    "zustand": "^5.0.0",
+    "sail-ui": "*"
+  },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
     "@testing-library/jest-dom": "^6.8.0",
@@ -50,6 +82,7 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
     "vite": "^7.1.2",
+    "vite-plugin-dts": "^4.5.4",
     "vitest": "^3.2.4"
   }
 }

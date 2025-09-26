@@ -39,43 +39,57 @@ interface FDC3PanelProps extends IDockviewPanelProps {
 }
 
 export const FDC3Panel = ({ panel }: FDC3PanelProps) => {
+  console.log(`[FDC3Panel] Initializing panel: ${panel.panelId} with URL: ${panel.url}`)
   const { registerWindow } = useFDC3Connection(panel.panelId)
   const cleanupRef = useRef<(() => void) | null>(null)
 
   const handleIframeRef = useCallback(
     (ref: HTMLIFrameElement | null) => {
+      console.log(`[FDC3Panel] ${panel.panelId} - handleIframeRef called with:`, ref ? 'valid iframe' : 'null')
+
       // Clean up previous registration
       if (cleanupRef.current) {
+        console.log(`[FDC3Panel] ${panel.panelId} - Cleaning up previous window registration`)
         cleanupRef.current()
         cleanupRef.current = null
       }
 
       if (ref) {
+        console.log(`[FDC3Panel] ${panel.panelId} - Setting up iframe reference, waiting 10ms for content window`)
         setTimeout(() => {
           const contentWindow = ref.contentWindow
           if (contentWindow) {
+            console.log(`[FDC3Panel] ${panel.panelId} - Content window available, registering for WCP messages`)
             cleanupRef.current = registerWindow(contentWindow)
+          } else {
+            console.warn(`[FDC3Panel] ${panel.panelId} - Content window not available after 10ms delay`)
           }
         }, 10)
       }
     },
-    [registerWindow]
+    [registerWindow, panel.panelId]
   )
 
   // Cleanup on unmount
   useEffect(() => {
+    console.log(`[FDC3Panel] ${panel.panelId} - Component mounted, setting up cleanup effect`)
     return () => {
+      console.log(`[FDC3Panel] ${panel.panelId} - Component unmounting, cleaning up`)
       if (cleanupRef.current) {
         cleanupRef.current()
       }
     }
-  }, [])
+  }, [panel.panelId])
+
+  console.log(`[FDC3Panel] ${panel.panelId} - Rendering iframe with src: ${panel.url}`)
 
   return (
     <iframe
       ref={handleIframeRef}
       src={panel.url}
       name={panel.panelId}
+      onLoad={() => console.log(`[FDC3Panel] ${panel.panelId} - Iframe loaded successfully`)}
+      onError={(e) => console.error(`[FDC3Panel] ${panel.panelId} - Iframe load error:`, e)}
       style={{
         width: "100%",
         height: "100%",

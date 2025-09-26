@@ -1,26 +1,40 @@
-import { DockviewReact, DockviewReadyEvent, DockviewApi } from "dockview-react"
+import { DockviewReact, type DockviewReadyEvent, DockviewApi } from "dockview-react"
 import { useState, useEffect, useRef } from "react"
 
 import "./styles.css"
 import { useDesktopAgent } from "../../hooks/useDesktopAgent"
-import { usePanelStore } from "../../stores/panelStore"
+import { useWorkspaceStore } from "../../stores/workspaceStore"
 
-import { FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
+import type { FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
 import { LeftControls, PrefixToolbarControls, RightControls } from "./toolbar/controls/index"
 import { Panels } from "./Panels"
 import type { DockviewSailProps } from "./types"
 import { WatermarkPanel } from "./panel-templates/WatermarkPanel"
 
 // Re-export types for backward compatibility
-export type { AppPanel, DockviewSailProps } from "./types"
+export type { DockviewSailProps } from "./types"
+export type { Panel as WorkspacePanel } from "../../stores/workspaceStore"
 
 const Layout = (props: DockviewSailProps) => {
   const api = useRef<DockviewApi | undefined>(undefined)
   const [mountedPanels, setMountedPanels] = useState<Map<string, FDC3AppPanel>>(new Map())
 
-  // Use Zustand store instead of props
-  const { panels, activeTabId, addPanel, removePanel, getTabPanels } = usePanelStore()
+  // Use Zustand workspace store
+  const {
+    workspaces,
+    activeWorkspaceId,
+    addPanel,
+    removePanel,
+    getPanelsForTab,
+    setDockviewLayout,
+    getDockviewLayout,
+    getTabsForWorkspace
+  } = useWorkspaceStore()
   const { disconnectSocket } = useDesktopAgent()
+
+  const activeWorkspace = workspaces.get(activeWorkspaceId)
+  const activeTabId = activeWorkspace?.layout.activeTabId || ""
+  const panels = activeWorkspace ? getPanelsForTab(activeWorkspaceId, activeTabId) : []
 
   // Cleanup socket on unmount
   useEffect(() => {
@@ -38,57 +52,95 @@ const Layout = (props: DockviewSailProps) => {
       return
     }
 
+    const saveState = () => {
+      if (api.current && activeWorkspaceId) {
+        try {
+          const state = api.current.toJSON()
+          setDockviewLayout(activeWorkspaceId, state)
+        } catch (error) {
+          console.warn("Failed to save layout state:", error)
+        }
+      }
+    }
+
     const disposables = [
       api.current.onDidAddPanel(event => {
         // If this panel was added externally, notify the store
         const panel = mountedPanels.get(event.id)
-        if (panel) {
-          // Convert FDC3AppPanel to AppPanel and add to store
-          const appPanel = {
-            title: panel.title,
-            url: panel.url,
-            tabId: panel.tabId,
+        if (panel && activeWorkspaceId && activeTabId) {
+          // Convert FDC3AppPanel to Panel and add to store
+          const workspacePanel = {
             panelId: panel.panelId,
             appId: panel.appId,
+            title: panel.title,
+            url: panel.url,
             icon: panel.icon,
           }
-          addPanel(appPanel)
+          addPanel(activeWorkspaceId, activeTabId, workspacePanel)
         }
+        // Save state after adding panel
+        saveState()
       }),
       api.current.onDidRemovePanel(event => {
         // Clean up desktop agent registration
         // TODO: Implement window unregistration when needed
         // Remove from store
-        removePanel(event.id)
+        if (activeWorkspaceId && activeTabId) {
+          removePanel(activeWorkspaceId, activeTabId, event.id)
+        }
+        // Save state after removing panel
+        saveState()
+      }),
+      // Save state on layout changes
+      api.current.onDidLayoutChange(() => {
+        saveState()
       }),
     ]
 
-    const state = localStorage.getItem("dv-demo-state")
-    if (state) {
-      try {
-        api.current.fromJSON(JSON.parse(state))
-      } catch {
-        localStorage.removeItem("dv-demo-state")
+    if (activeWorkspaceId) {
+      const savedLayoutState = getDockviewLayout(activeWorkspaceId)
+      if (savedLayoutState) {
+        try {
+          console.log("Restoring layout state from workspace store")
+          api.current.fromJSON(savedLayoutState)
+          console.log("Layout state restored successfully")
+        } catch (error) {
+          console.warn("Failed to restore layout state:", error)
+          setDockviewLayout(activeWorkspaceId, null)
+        }
       }
     }
 
     return () => disposables.forEach(disposable => disposable.dispose())
-  }, [mountedPanels, panels, addPanel, removePanel])
+  }, [mountedPanels, panels, addPanel, removePanel, setDockviewLayout, getDockviewLayout, activeWorkspaceId])
 
   // Sync with store panels when they change
   useEffect(() => {
-    if (!api.current || !panels || !activeTabId) return
+    if (!api.current || !panels || !activeTabId || !activeWorkspaceId) return
 
-    const tabPanels = getTabPanels(activeTabId)
     const currentPanelIds = Array.from(mountedPanels.keys())
-    const externalPanelIds = tabPanels.map(p => p.panelId)
+    const externalPanelIds = panels.map(p => p.panelId)
 
-    // Remove panels that no longer exist
+    // Get all existing panels from Dockview to check current state
+    const existingDockviewPanels = api.current.panels.map(p => p.id)
+    console.log(
+      "Sync check - Store panels:",
+      externalPanelIds,
+      "Mounted:",
+      currentPanelIds,
+      "Dockview:",
+      existingDockviewPanels
+    )
+
+    // Remove panels that no longer exist in the store but exist in mounted/dockview
     currentPanelIds
       .filter(id => !externalPanelIds.includes(id))
       .forEach(id => {
         const panel = api.current?.getPanel(id)
-        if (panel) api.current?.removePanel(panel)
+        if (panel) {
+          console.log(`Removing panel ${id} as it's no longer in store`)
+          api.current?.removePanel(panel)
+        }
         setMountedPanels(prev => {
           const next = new Map(prev)
           next.delete(id)
@@ -96,29 +148,47 @@ const Layout = (props: DockviewSailProps) => {
         })
       })
 
-    // Add new panels
-    tabPanels
+    // Add new panels from store that don't exist in Dockview
+    panels
       .filter(panel => !currentPanelIds.includes(panel.panelId))
       .forEach(panel => {
-        const fdc3Panel: FDC3AppPanel = {
-          title: panel.title,
-          url: panel.url,
-          tabId: panel.tabId,
-          panelId: panel.panelId,
-          appId: panel.appId,
-          icon: panel.icon,
+        // Double-check that the panel doesn't already exist in Dockview
+        if (!api.current?.getPanel(panel.panelId)) {
+          console.log(`Creating new panel ${panel.panelId}`)
+          const fdc3Panel: FDC3AppPanel = {
+            title: panel.title,
+            url: panel.url,
+            tabId: activeTabId, // Use the active tab ID
+            panelId: panel.panelId,
+            appId: panel.appId,
+            icon: panel.icon,
+          }
+
+          api.current?.addPanel({
+            id: panel.panelId,
+            component: "fdc3",
+            title: panel.title,
+            params: { panel: fdc3Panel },
+          })
+
+          setMountedPanels(prev => new Map(prev).set(panel.panelId, fdc3Panel))
+        } else {
+          console.warn(
+            `Panel ${panel.panelId} already exists in Dockview, updating mounted panels tracking`
+          )
+          // If panel exists in Dockview but not in mountedPanels, add it to tracking
+          const fdc3Panel: FDC3AppPanel = {
+            title: panel.title,
+            url: panel.url,
+            tabId: activeTabId, // Use the active tab ID
+            panelId: panel.panelId,
+            appId: panel.appId,
+            icon: panel.icon,
+          }
+          setMountedPanels(prev => new Map(prev).set(panel.panelId, fdc3Panel))
         }
-
-        api.current?.addPanel({
-          id: panel.panelId,
-          component: "fdc3",
-          title: panel.title,
-          params: { panel: fdc3Panel },
-        })
-
-        setMountedPanels(prev => new Map(prev).set(panel.panelId, fdc3Panel))
       })
-  }, [panels, activeTabId, mountedPanels, getTabPanels])
+  }, [panels, activeTabId, mountedPanels, activeWorkspaceId])
 
   return (
     <div
