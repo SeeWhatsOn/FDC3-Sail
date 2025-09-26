@@ -5,7 +5,7 @@
  * and FDC3 capabilities. Provides centralized state management for the desktop agent.
  */
 
-import { AppIdentifier, AppMetadata } from '@finos/fdc3'
+import { AppMetadata } from "@finos/fdc3"
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -15,11 +15,11 @@ import { AppIdentifier, AppMetadata } from '@finos/fdc3'
  * FDC3 App Instance connection states
  */
 export enum AppInstanceState {
-  PENDING = 'pending',        // App launched but not completed FDC3 handshake
-  CONNECTED = 'connected',    // App completed FDC3 handshake and ready
-  NOT_RESPONDING = 'not_responding', // App not responding to heartbeat
-  DISCONNECTING = 'disconnecting',   // App in process of disconnecting
-  TERMINATED = 'terminated'   // App has disconnected or been terminated
+  PENDING = "pending", // App launched but not completed FDC3 handshake
+  CONNECTED = "connected", // App completed FDC3 handshake and ready
+  NOT_RESPONDING = "not_responding", // App not responding to heartbeat
+  DISCONNECTING = "disconnecting", // App in process of disconnecting
+  TERMINATED = "terminated", // App has disconnected or been terminated
 }
 
 /**
@@ -59,7 +59,7 @@ export interface AppInstance {
   /** Instance-specific metadata */
   instanceMetadata?: {
     title?: string
-    hosting?: 'frame' | 'tab' | 'window'
+    hosting?: "frame" | "tab" | "window"
     parentInstanceId?: string
     [key: string]: unknown
   }
@@ -72,7 +72,7 @@ export interface CreateAppInstanceParams {
   instanceId: string
   appId: string
   metadata: AppMetadata
-  instanceMetadata?: AppInstance['instanceMetadata']
+  instanceMetadata?: AppInstance["instanceMetadata"]
 }
 
 /**
@@ -131,14 +131,14 @@ export class AppInstanceRegistry {
       contextListeners: new Set(),
       intentListeners: new Set(),
       privateChannels: new Set(),
-      instanceMetadata
+      instanceMetadata,
     }
 
     // Store instance
     this.instances.set(instanceId, instance)
 
     // Update indexes
-    this.updateAppIdIndex(appId, instanceId, 'add')
+    this.updateAppIdIndex(appId, instanceId, "add")
 
     return instance
   }
@@ -239,18 +239,18 @@ export class AppInstanceRegistry {
     }
 
     // Clean up indexes
-    this.updateAppIdIndex(instance.appId, instanceId, 'remove')
+    this.updateAppIdIndex(instance.appId, instanceId, "remove")
 
     if (instance.currentChannel) {
-      this.updateChannelIndex(instance.currentChannel, instanceId, 'remove')
+      this.updateChannelIndex(instance.currentChannel, instanceId, "remove")
     }
 
     instance.contextListeners.forEach(contextType => {
-      this.updateContextListenerIndex(contextType, instanceId, 'remove')
+      this.updateContextListenerIndex(contextType, instanceId, "remove")
     })
 
     instance.intentListeners.forEach(intentName => {
-      this.updateIntentListenerIndex(intentName, instanceId, 'remove')
+      this.updateIntentListenerIndex(intentName, instanceId, "remove")
     })
 
     // Remove instance
@@ -274,7 +274,7 @@ export class AppInstanceRegistry {
 
     // Remove from old channel index
     if (instance.currentChannel) {
-      this.updateChannelIndex(instance.currentChannel, instanceId, 'remove')
+      this.updateChannelIndex(instance.currentChannel, instanceId, "remove")
     }
 
     // Update instance
@@ -283,7 +283,7 @@ export class AppInstanceRegistry {
 
     // Add to new channel index
     if (channelId) {
-      this.updateChannelIndex(channelId, instanceId, 'add')
+      this.updateChannelIndex(channelId, instanceId, "add")
     }
 
     return true
@@ -314,7 +314,7 @@ export class AppInstanceRegistry {
 
     instance.contextListeners.add(contextType)
     instance.lastActivity = new Date()
-    this.updateContextListenerIndex(contextType, instanceId, 'add')
+    this.updateContextListenerIndex(contextType, instanceId, "add")
 
     return true
   }
@@ -331,7 +331,7 @@ export class AppInstanceRegistry {
     const removed = instance.contextListeners.delete(contextType)
     if (removed) {
       instance.lastActivity = new Date()
-      this.updateContextListenerIndex(contextType, instanceId, 'remove')
+      this.updateContextListenerIndex(contextType, instanceId, "remove")
     }
 
     return removed
@@ -362,7 +362,7 @@ export class AppInstanceRegistry {
 
     instance.intentListeners.add(intentName)
     instance.lastActivity = new Date()
-    this.updateIntentListenerIndex(intentName, instanceId, 'add')
+    this.updateIntentListenerIndex(intentName, instanceId, "add")
 
     return true
   }
@@ -379,7 +379,7 @@ export class AppInstanceRegistry {
     const removed = instance.intentListeners.delete(intentName)
     if (removed) {
       instance.lastActivity = new Date()
-      this.updateIntentListenerIndex(intentName, instanceId, 'remove')
+      this.updateIntentListenerIndex(intentName, instanceId, "remove")
     }
 
     return removed
@@ -434,9 +434,7 @@ export class AppInstanceRegistry {
    * Gets all instances with access to a specific private channel
    */
   getPrivateChannelInstances(channelId: string): AppInstance[] {
-    return this.getAllInstances().filter(instance =>
-      instance.privateChannels.has(channelId)
-    )
+    return this.getAllInstances().filter(instance => instance.privateChannels.has(channelId))
   }
 
   // ============================================================================
@@ -448,10 +446,13 @@ export class AppInstanceRegistry {
    */
   getStats() {
     const instances = this.getAllInstances()
-    const stateCount = instances.reduce((acc, instance) => {
-      acc[instance.state] = (acc[instance.state] || 0) + 1
-      return acc
-    }, {} as Record<AppInstanceState, number>)
+    const stateCount = instances.reduce(
+      (acc, instance) => {
+        acc[instance.state] = (acc[instance.state] || 0) + 1
+        return acc
+      },
+      {} as Record<AppInstanceState, number>
+    )
 
     return {
       totalInstances: instances.length,
@@ -459,7 +460,7 @@ export class AppInstanceRegistry {
       uniqueApps: this.appIdIndex.size,
       activeChannels: this.channelIndex.size,
       contextListenerTypes: this.contextListenerIndex.size,
-      intentListenerTypes: this.intentListenerIndex.size
+      intentListenerTypes: this.intentListenerIndex.size,
     }
   }
 
@@ -483,25 +484,25 @@ export class AppInstanceRegistry {
    */
   private handleStateTransition(
     instance: AppInstance,
-    oldState: AppInstanceState,
+    _oldState: AppInstanceState,
     newState: AppInstanceState
   ): void {
     // Clean up resources when instance becomes terminated
     if (newState === AppInstanceState.TERMINATED) {
       // Remove from channel if connected to one
       if (instance.currentChannel) {
-        this.updateChannelIndex(instance.currentChannel, instance.instanceId, 'remove')
+        this.updateChannelIndex(instance.currentChannel, instance.instanceId, "remove")
         instance.currentChannel = null
       }
 
       // Clear all listeners
       instance.contextListeners.forEach(contextType => {
-        this.updateContextListenerIndex(contextType, instance.instanceId, 'remove')
+        this.updateContextListenerIndex(contextType, instance.instanceId, "remove")
       })
       instance.contextListeners.clear()
 
       instance.intentListeners.forEach(intentName => {
-        this.updateIntentListenerIndex(intentName, instance.instanceId, 'remove')
+        this.updateIntentListenerIndex(intentName, instance.instanceId, "remove")
       })
       instance.intentListeners.clear()
 
@@ -513,8 +514,8 @@ export class AppInstanceRegistry {
   /**
    * Updates the appId index
    */
-  private updateAppIdIndex(appId: string, instanceId: string, operation: 'add' | 'remove'): void {
-    if (operation === 'add') {
+  private updateAppIdIndex(appId: string, instanceId: string, operation: "add" | "remove"): void {
+    if (operation === "add") {
       if (!this.appIdIndex.has(appId)) {
         this.appIdIndex.set(appId, new Set())
       }
@@ -533,8 +534,12 @@ export class AppInstanceRegistry {
   /**
    * Updates the channel index
    */
-  private updateChannelIndex(channelId: string, instanceId: string, operation: 'add' | 'remove'): void {
-    if (operation === 'add') {
+  private updateChannelIndex(
+    channelId: string,
+    instanceId: string,
+    operation: "add" | "remove"
+  ): void {
+    if (operation === "add") {
       if (!this.channelIndex.has(channelId)) {
         this.channelIndex.set(channelId, new Set())
       }
@@ -553,8 +558,12 @@ export class AppInstanceRegistry {
   /**
    * Updates the context listener index
    */
-  private updateContextListenerIndex(contextType: string, instanceId: string, operation: 'add' | 'remove'): void {
-    if (operation === 'add') {
+  private updateContextListenerIndex(
+    contextType: string,
+    instanceId: string,
+    operation: "add" | "remove"
+  ): void {
+    if (operation === "add") {
       if (!this.contextListenerIndex.has(contextType)) {
         this.contextListenerIndex.set(contextType, new Set())
       }
@@ -573,8 +582,12 @@ export class AppInstanceRegistry {
   /**
    * Updates the intent listener index
    */
-  private updateIntentListenerIndex(intentName: string, instanceId: string, operation: 'add' | 'remove'): void {
-    if (operation === 'add') {
+  private updateIntentListenerIndex(
+    intentName: string,
+    instanceId: string,
+    operation: "add" | "remove"
+  ): void {
+    if (operation === "add") {
       if (!this.intentListenerIndex.has(intentName)) {
         this.intentListenerIndex.set(intentName, new Set())
       }

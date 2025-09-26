@@ -6,7 +6,7 @@
  * for the FDC3 desktop agent.
  */
 
-import { AppIdentifier, AppIntent, AppMetadata, Context, IntentMetadata } from '@finos/fdc3'
+import { AppIdentifier, AppIntent, AppMetadata, Context, IntentMetadata } from "@finos/fdc3"
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -177,7 +177,16 @@ export class IntentRegistry {
     active?: boolean
     metadata?: Record<string, unknown>
   }): IntentListener {
-    const { listenerId, intentName, instanceId, appId, contextTypes = [], resultType, active = true, metadata } = params
+    const {
+      listenerId,
+      intentName,
+      instanceId,
+      appId,
+      contextTypes = [],
+      resultType,
+      active = true,
+      metadata,
+    } = params
 
     if (this.listeners.has(listenerId)) {
       throw new Error(`Intent listener ${listenerId} already exists`)
@@ -194,20 +203,20 @@ export class IntentRegistry {
       registeredAt: now,
       lastActivity: now,
       active,
-      metadata
+      metadata,
     }
 
     // Store listener
     this.listeners.set(listenerId, listener)
 
     // Update indexes
-    this.updateIntentIndex(intentName, listenerId, 'add')
-    this.updateInstanceIndex(instanceId, listenerId, 'add')
-    this.updateAppIndex(appId, listenerId, 'add')
+    this.updateIntentIndex(intentName, listenerId, "add")
+    this.updateInstanceIndex(instanceId, listenerId, "add")
+    this.updateAppIndex(appId, listenerId, "add")
 
     // Index by context types (if specified)
     contextTypes.forEach(contextType => {
-      this.updateContextTypeIndex(contextType, listenerId, 'add')
+      this.updateContextTypeIndex(contextType, listenerId, "add")
     })
 
     return listener
@@ -223,12 +232,12 @@ export class IntentRegistry {
     }
 
     // Clean up indexes
-    this.updateIntentIndex(listener.intentName, listenerId, 'remove')
-    this.updateInstanceIndex(listener.instanceId, listenerId, 'remove')
-    this.updateAppIndex(listener.appId, listenerId, 'remove')
+    this.updateIntentIndex(listener.intentName, listenerId, "remove")
+    this.updateInstanceIndex(listener.instanceId, listenerId, "remove")
+    this.updateAppIndex(listener.appId, listenerId, "remove")
 
     listener.contextTypes.forEach(contextType => {
-      this.updateContextTypeIndex(contextType, listenerId, 'remove')
+      this.updateContextTypeIndex(contextType, listenerId, "remove")
     })
 
     // Remove listener
@@ -274,10 +283,11 @@ export class IntentRegistry {
 
     // Filter by context type support
     if (query.contextType !== undefined) {
-      listeners = listeners.filter(l =>
-        l.contextTypes.length === 0 || // Accepts all context types
-        l.contextTypes.includes(query.contextType!) ||
-        l.contextTypes.includes('*') // Wildcard support
+      listeners = listeners.filter(
+        l =>
+          l.contextTypes.length === 0 || // Accepts all context types
+          l.contextTypes.includes(query.contextType!) ||
+          l.contextTypes.includes("*") // Wildcard support
       )
     }
 
@@ -352,8 +362,8 @@ export class IntentRegistry {
       this.capabilities.set(key, { ...capability, appId })
 
       // Update indexes
-      this.updateAppIntentIndex(appId, capability.intentName, 'add')
-      this.updateIntentCapabilityIndex(capability.intentName, appId, 'add')
+      this.updateAppIntentIndex(appId, capability.intentName, "add")
+      this.updateIntentCapabilityIndex(capability.intentName, appId, "add")
     })
   }
 
@@ -366,7 +376,7 @@ export class IntentRegistry {
     intentNames.forEach(intentName => {
       const key = `${appId}:${intentName}`
       this.capabilities.delete(key)
-      this.updateIntentCapabilityIndex(intentName, appId, 'remove')
+      this.updateIntentCapabilityIndex(intentName, appId, "remove")
     })
 
     this.appIntentIndex.delete(appId)
@@ -418,7 +428,7 @@ export class IntentRegistry {
     let runningListeners = this.queryListeners({
       intentName: intent,
       contextType: context.type,
-      active: true
+      active: true,
     })
 
     // Get app capabilities for this intent
@@ -443,13 +453,13 @@ export class IntentRegistry {
     const runningAppIds = new Set(runningListeners.map(l => l.appId))
     const compatibleApps: (IntentListener | IntentCapability)[] = [
       ...runningListeners,
-      ...availableApps.filter(app => !runningAppIds.has(app.appId))
+      ...availableApps.filter(app => !runningAppIds.has(app.appId)),
     ]
 
     return {
       runningListeners,
       availableApps,
-      compatibleApps
+      compatibleApps,
     }
   }
 
@@ -471,9 +481,9 @@ export class IntentRegistry {
         appIntentsMap.set(capability.appId, {
           intent: {
             name: intentName,
-            displayName: capability.displayName || intentName
+            displayName: capability.displayName || intentName,
           },
-          apps: []
+          apps: [],
         })
       }
 
@@ -482,7 +492,7 @@ export class IntentRegistry {
       const appMetadata: AppMetadata = {
         appId: capability.appId,
         name: capability.appId, // Placeholder - should come from directory
-        version: '1.0.0' // Placeholder
+        version: "1.0.0", // Placeholder
       }
 
       appIntentsMap.get(capability.appId)!.apps.push(appMetadata)
@@ -557,7 +567,7 @@ export class IntentRegistry {
 
     listeners.forEach(listener => {
       if (listener.contextTypes.length === 0) {
-        contextTypes.add('*') // Accepts any context
+        contextTypes.add("*") // Accepts any context
       } else {
         listener.contextTypes.forEach(type => contextTypes.add(type))
       }
@@ -566,7 +576,6 @@ export class IntentRegistry {
     return {
       name: intentName,
       displayName: capabilities[0]?.displayName || intentName,
-      contexts: Array.from(contextTypes).sort()
     }
   }
 
@@ -614,7 +623,7 @@ export class IntentRegistry {
       appCapabilities: this.capabilities.size,
       resolutionHistory: this.resolutionHistory.size,
       intentBreakdown: this.getIntentBreakdown(),
-      appBreakdown: this.getAppBreakdown()
+      appBreakdown: this.getAppBreakdown(),
     }
   }
 
@@ -645,7 +654,7 @@ export class IntentRegistry {
       return true // Accepts all context types
     }
 
-    return supportedTypes.includes(contextType) || supportedTypes.includes('*')
+    return supportedTypes.includes(contextType) || supportedTypes.includes("*")
   }
 
   /**
@@ -677,8 +686,12 @@ export class IntentRegistry {
   /**
    * Updates intent index
    */
-  private updateIntentIndex(intentName: string, listenerId: string, operation: 'add' | 'remove'): void {
-    if (operation === 'add') {
+  private updateIntentIndex(
+    intentName: string,
+    listenerId: string,
+    operation: "add" | "remove"
+  ): void {
+    if (operation === "add") {
       if (!this.intentIndex.has(intentName)) {
         this.intentIndex.set(intentName, new Set())
       }
@@ -697,8 +710,12 @@ export class IntentRegistry {
   /**
    * Updates instance index
    */
-  private updateInstanceIndex(instanceId: string, listenerId: string, operation: 'add' | 'remove'): void {
-    if (operation === 'add') {
+  private updateInstanceIndex(
+    instanceId: string,
+    listenerId: string,
+    operation: "add" | "remove"
+  ): void {
+    if (operation === "add") {
       if (!this.instanceIndex.has(instanceId)) {
         this.instanceIndex.set(instanceId, new Set())
       }
@@ -717,8 +734,8 @@ export class IntentRegistry {
   /**
    * Updates app index
    */
-  private updateAppIndex(appId: string, listenerId: string, operation: 'add' | 'remove'): void {
-    if (operation === 'add') {
+  private updateAppIndex(appId: string, listenerId: string, operation: "add" | "remove"): void {
+    if (operation === "add") {
       if (!this.appIndex.has(appId)) {
         this.appIndex.set(appId, new Set())
       }
@@ -737,8 +754,12 @@ export class IntentRegistry {
   /**
    * Updates context type index
    */
-  private updateContextTypeIndex(contextType: string, listenerId: string, operation: 'add' | 'remove'): void {
-    if (operation === 'add') {
+  private updateContextTypeIndex(
+    contextType: string,
+    listenerId: string,
+    operation: "add" | "remove"
+  ): void {
+    if (operation === "add") {
       if (!this.contextTypeIndex.has(contextType)) {
         this.contextTypeIndex.set(contextType, new Set())
       }
@@ -757,8 +778,12 @@ export class IntentRegistry {
   /**
    * Updates app intent index
    */
-  private updateAppIntentIndex(appId: string, intentName: string, operation: 'add' | 'remove'): void {
-    if (operation === 'add') {
+  private updateAppIntentIndex(
+    appId: string,
+    intentName: string,
+    operation: "add" | "remove"
+  ): void {
+    if (operation === "add") {
       if (!this.appIntentIndex.has(appId)) {
         this.appIntentIndex.set(appId, new Set())
       }
@@ -777,8 +802,12 @@ export class IntentRegistry {
   /**
    * Updates intent capability index
    */
-  private updateIntentCapabilityIndex(intentName: string, appId: string, operation: 'add' | 'remove'): void {
-    if (operation === 'add') {
+  private updateIntentCapabilityIndex(
+    intentName: string,
+    appId: string,
+    operation: "add" | "remove"
+  ): void {
+    if (operation === "add") {
       if (!this.intentCapabilityIndex.has(intentName)) {
         this.intentCapabilityIndex.set(intentName, new Set())
       }

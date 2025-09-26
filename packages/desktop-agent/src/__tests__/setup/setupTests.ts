@@ -13,22 +13,5 @@ globalThis.console.log = (...args) => {
   }
 }
 
-// Mock Date.now for consistent timestamps in tests
-const originalDateNow = Date.now
-let mockTime = new Date('2024-01-01T00:00:00Z').getTime()
-
-// Allow tests to control time
-globalThis.setMockTime = (time: Date | number) => {
-  mockTime = typeof time === 'number' ? time : time.getTime()
-}
-
-globalThis.advanceMockTime = (ms: number) => {
-  mockTime += ms
-}
-
-globalThis.resetMockTime = () => {
-  mockTime = new Date('2024-01-01T00:00:00Z').getTime()
-}
-
 // Setup complete
-console.info('Desktop Agent test setup complete')
+console.info("Desktop Agent test setup complete")
