@@ -6,7 +6,7 @@
  * for the FDC3 desktop agent.
  */
 
-import { AppIdentifier, AppIntent, AppMetadata, Context, IntentMetadata } from "@finos/fdc3"
+import type { AppIdentifier, AppIntent, AppMetadata, Context, IntentMetadata } from "@finos/fdc3"
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -425,8 +425,8 @@ export class IntentRegistry {
     // 2. If one handler, returning it.
     // 3. If multiple handlers, calling a UI resolver function passed in during initialization.
     // 4. If no handlers, deciding whether to launch a new app.
-    console.log('IntentRegistry.resolveIntent called with:', request);
-    return Promise.resolve({} as any);
+    console.log("IntentRegistry.resolveIntent called with:", request)
+    return Promise.resolve({} as any)
   }
 
   /**

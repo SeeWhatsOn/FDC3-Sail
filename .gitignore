@@ -14,3 +14,4 @@ packages/socket/html
 .claude/settings.local.json
 *.tsbuildinfo
 apps/sail/PRODUCT.md
+packages/fdc3-web-impl/

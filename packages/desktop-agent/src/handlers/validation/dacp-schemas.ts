@@ -21,7 +21,7 @@ export const ContextSchema = z.object({
   type: z.string(),
   id: z.record(z.string(), z.unknown()).optional(),
   name: z.string().optional()
-}).passthrough() // Allow additional properties
+}).catchall(z.unknown()) // Allow additional properties
 
 // Addcontextlistenerrequest
 export const AddcontextlistenerrequestSchema = z.object({

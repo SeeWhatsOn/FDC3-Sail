@@ -11,8 +11,8 @@ import {
   ContextSchema,
   ContextlistenerunsubscriberequestSchema,
 } from '../validation/dacp-schemas'
-import { DACPHandlerContext, logger } from '../types'
-import { Context } from '@finos/fdc3'
+import { type DACPHandlerContext, logger } from '../types'
+import type { Context } from '@finos/fdc3'
 import { appInstanceRegistry } from '../../state/AppInstanceRegistry'
 
 /**
@@ -52,7 +52,7 @@ export async function handleBroadcastRequest(
     logger.error('DACP: Broadcast request failed', error)
 
     const errorResponse = createDACPErrorResponse(
-      message as any,
+      { meta: { requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "" } },
       DACP_ERROR_TYPES.BROADCAST_ERROR,
       'broadcastResponse',
       error instanceof Error ? error.message : 'Unknown broadcast error'
@@ -66,10 +66,10 @@ export async function handleBroadcastRequest(
  * Handles add context listener requests
  * Implements DACP addContextListenerRequest message handling
  */
-export async function handleAddContextListener(
+export function handleAddContextListener(
   message: unknown,
   context: DACPHandlerContext
-): Promise<void> {
+): void {
   const { messagePort, instanceId } = context
 
   try {
@@ -102,7 +102,7 @@ export async function handleAddContextListener(
     logger.error('DACP: Add context listener failed', error)
 
     const errorResponse = createDACPErrorResponse(
-      message as any,
+      { meta: { requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "" } },
       DACP_ERROR_TYPES.LISTENER_ERROR,
       'addContextListenerResponse',
       error instanceof Error ? error.message : 'Failed to add context listener'
@@ -116,15 +116,15 @@ export async function handleAddContextListener(
  * Handles context listener unsubscribe requests
  * Implements DACP contextListenerUnsubscribeRequest message handling
  */
-export async function handleContextListenerUnsubscribe(
+export function handleContextListenerUnsubscribe(
   message: unknown,
   context: DACPHandlerContext
-): Promise<void> {
+): void {
   const { messagePort, instanceId } = context
 
   try {
     const request = validateDACPMessage(message, ContextlistenerunsubscriberequestSchema)
-    const listenerId = request.payload.listenerId as string
+    const listenerId = request.payload.listenerId
 
     logger.info('DACP: Unsubscribing context listener', {
       listenerId,
@@ -151,7 +151,7 @@ export async function handleContextListenerUnsubscribe(
     logger.error('DACP: Context listener unsubscribe failed', error)
 
     const errorResponse = createDACPErrorResponse(
-      message as any,
+      { meta: { requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "" } },
       DACP_ERROR_TYPES.LISTENER_ERROR,
       'contextListenerUnsubscribeResponse',
       error instanceof Error ? error.message : 'Failed to unsubscribe context listener'
@@ -161,15 +161,15 @@ export async function handleContextListenerUnsubscribe(
   }
 }
 
-async function notifyContextListeners(
+function notifyContextListeners(
   channelId: string,
   context: Context,
   handlerContext: DACPHandlerContext
-): Promise<void> {
+): void {
   // Find instances on the same channel
   const instancesOnChannel = appInstanceRegistry.getInstancesOnChannel(channelId)
 
-  const notifications = instancesOnChannel.map(async instance => {
+  const notifications = instancesOnChannel.map(instance => {
     // Check if the instance is listening for this context type
     const listensForType = instance.contextListeners.has(context.type) || instance.contextListeners.has('*')
 
@@ -198,5 +198,5 @@ async function notifyContextListeners(
     }
   })
 
-  await Promise.allSettled(notifications)
+Promise.allSettled(notifications)
 }

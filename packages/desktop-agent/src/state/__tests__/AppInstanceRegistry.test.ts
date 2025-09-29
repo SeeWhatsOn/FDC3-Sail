@@ -7,12 +7,12 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest"
-import { AppMetadata } from "@finos/fdc3"
+import type { AppMetadata } from "@finos/fdc3"
 import {
   AppInstanceRegistry,
   AppInstanceState,
-  CreateAppInstanceParams,
-  AppInstanceQuery,
+  type CreateAppInstanceParams,
+  type AppInstanceQuery,
 } from "../AppInstanceRegistry"
 
 describe("AppInstanceRegistry", () => {

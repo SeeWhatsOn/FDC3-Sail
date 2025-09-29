@@ -21,6 +21,7 @@
     "packages/desktop-agent",
     "packages/app-directories",
     "packages/sail-ui",
+    "packages/sail-api",
     "apps/sail",
     "apps/sail-electron",
     "apps/sail-server",

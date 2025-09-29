@@ -1,34 +1,40 @@
-import { z } from 'zod'
-import { v4 as uuidv4 } from 'uuid'
+import { z } from "zod"
+import { v4 as uuidv4 } from "uuid"
 import {
   BaseDACPMessageSchema,
-  BaseDACPMessage,
+  type BaseDACPMessage,
   BroadcastrequestSchema,
   AddcontextlistenerrequestSchema,
   RaiseintentrequestSchema,
   GetcurrentchannelrequestSchema,
-  JoinuserchannelrequestSchema
-} from './dacp-schemas'
+  JoinuserchannelrequestSchema,
+} from "./dacp-schemas"
 
 // Custom error types
 export class DACPValidationError extends Error {
-  constructor(message: string, public readonly zodError?: z.ZodError) {
+  constructor(
+    message: string,
+    public readonly zodError?: z.ZodError
+  ) {
     super(message)
-    this.name = 'DACPValidationError'
+    this.name = "DACPValidationError"
   }
 }
 
 export class DACPTimeoutError extends Error {
   constructor(message: string) {
     super(message)
-    this.name = 'DACPTimeoutError'
+    this.name = "DACPTimeoutError"
   }
 }
 
 export class DACPProcessingError extends Error {
-  constructor(message: string, public readonly originalError?: Error) {
+  constructor(
+    message: string,
+    public readonly originalError?: Error
+  ) {
     super(message)
-    this.name = 'DACPProcessingError'
+    this.name = "DACPProcessingError"
   }
 }
 
@@ -36,53 +42,49 @@ export class DACPProcessingError extends Error {
 export const DACP_TIMEOUTS = {
   DEFAULT: 10000, // 10 seconds
   APP_LAUNCH: 100000, // 100 seconds
-  MINIMUM_APP_LAUNCH: 15000 // 15 seconds minimum
+  MINIMUM_APP_LAUNCH: 15000, // 15 seconds minimum
 } as const
 
 // Standard DACP error types (from specification)
 export const DACP_ERROR_TYPES = {
   // Generic errors
-  APP_TIMEOUT: 'AppTimeout',
-  API_TIMEOUT: 'ApiTimeout',
-  MALFORMED_MESSAGE: 'MalformedMessage',
+  APP_TIMEOUT: "AppTimeout",
+  API_TIMEOUT: "ApiTimeout",
+  MALFORMED_MESSAGE: "MalformedMessage",
 
   // Context errors
-  BROADCAST_ERROR: 'BroadcastError',
-  LISTENER_ERROR: 'ListenerError',
-  NO_CHANNEL_FOUND: 'NoChannelFound',
+  BROADCAST_ERROR: "BroadcastError",
+  LISTENER_ERROR: "ListenerError",
+  NO_CHANNEL_FOUND: "NoChannelFound",
 
   // Intent errors
-  INTENT_DELIVERY_FAILED: 'IntentDeliveryFailed',
-  NO_APPS_FOUND: 'NoAppsFound',
-  RESOLVER_UNAVAILABLE: 'ResolverUnavailable',
+  INTENT_DELIVERY_FAILED: "IntentDeliveryFailed",
+  NO_APPS_FOUND: "NoAppsFound",
+  RESOLVER_UNAVAILABLE: "ResolverUnavailable",
 
   // Channel errors
-  CHANNEL_ERROR: 'ChannelError',
-  ACCESS_DENIED: 'AccessDenied',
+  CHANNEL_ERROR: "ChannelError",
+  ACCESS_DENIED: "AccessDenied",
 
   // App errors
-  APP_NOT_FOUND: 'AppNotFound',
-  APP_LAUNCH_FAILED: 'AppLaunchFailed'
+  APP_NOT_FOUND: "AppNotFound",
+  APP_LAUNCH_FAILED: "AppLaunchFailed",
 } as const
 
-export type DACPErrorType = typeof DACP_ERROR_TYPES[keyof typeof DACP_ERROR_TYPES]
+export type DACPErrorType = (typeof DACP_ERROR_TYPES)[keyof typeof DACP_ERROR_TYPES]
 
 // Validation utility function
-export function validateDACPMessage<T>(
-  message: unknown,
-  schema: z.ZodSchema<T>
-): T {
+export function validateDACPMessage<T>(message: unknown, schema: z.ZodSchema<T>): T {
   try {
     return schema.parse(message)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorDetails = error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ')
-      throw new DACPValidationError(
-        `Invalid DACP message structure: ${errorDetails}`,
-        error
-      )
+      const errorDetails = error.issues
+        .map((e: z.ZodIssue) => `${e.path.join(".")}: ${e.message}`)
+        .join(", ")
+      throw new DACPValidationError(`Invalid DACP message structure: ${errorDetails}`, error)
     }
-    throw new DACPValidationError(`Unknown validation error: ${error}`)
+    throw new DACPValidationError(`Unknown validation error: ${error as string}`)
   }
 }
 
@@ -97,7 +99,7 @@ export function safeParseDACPMessage<T>(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof DACPValidationError ? error : new DACPValidationError(`${error}`)
+      error: error instanceof DACPValidationError ? error : new DACPValidationError(`${error as string}`),
     }
   }
 }
@@ -113,13 +115,13 @@ export function createDACPErrorResponse(
     type: responseType,
     payload: {
       error: errorType,
-      ...(errorMessage && { message: errorMessage })
+      ...(errorMessage && { message: errorMessage }),
     },
     meta: {
       responseUuid: uuidv4(),
       requestUuid: originalRequest.meta.requestUuid,
-      timestamp: new Date()
-    }
+      timestamp: new Date(),
+    },
   }
 }
 
@@ -135,23 +137,20 @@ export function createDACPSuccessResponse(
     meta: {
       responseUuid: uuidv4(),
       requestUuid: originalRequest.meta.requestUuid,
-      timestamp: new Date()
-    }
+      timestamp: new Date(),
+    },
   }
 }
 
 // Event message creator
-export function createDACPEvent(
-  eventType: string,
-  payload: Record<string, unknown> = {}
-) {
+export function createDACPEvent(eventType: string, payload: Record<string, unknown> = {}) {
   return {
     type: eventType,
     payload,
     meta: {
       eventUuid: uuidv4(),
-      timestamp: new Date()
-    }
+      timestamp: new Date(),
+    },
   }
 }
 
@@ -179,30 +178,30 @@ export function isJoinUserChannelRequest(message: unknown): boolean {
 // Generic type guards from base schema
 export function isDACPRequest(message: unknown): message is BaseDACPMessage {
   const result = safeParseDACPMessage(message, BaseDACPMessageSchema)
-  return result.success &&
-         typeof result.data.type === 'string' &&
-         result.data.type.endsWith('Request')
+  return (
+    result.success && typeof result.data.type === "string" && result.data.type.endsWith("Request")
+  )
 }
 
 export function isDACPResponse(message: unknown): message is BaseDACPMessage {
   const result = safeParseDACPMessage(message, BaseDACPMessageSchema)
-  return result.success &&
-         typeof result.data.type === 'string' &&
-         result.data.type.endsWith('Response')
+  return (
+    result.success && typeof result.data.type === "string" && result.data.type.endsWith("Response")
+  )
 }
 
 export function isDACPEvent(message: unknown): message is BaseDACPMessage {
   const result = safeParseDACPMessage(message, BaseDACPMessageSchema)
-  return result.success &&
-         typeof result.data.type === 'string' &&
-         result.data.type.endsWith('Event')
+  return (
+    result.success && typeof result.data.type === "string" && result.data.type.endsWith("Event")
+  )
 }
 
 // Timeout utility for DACP operations
 export function withDACPTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number = DACP_TIMEOUTS.DEFAULT,
-  operation: string = 'DACP operation'
+  operation: string = "DACP operation"
 ): Promise<T> {
   return Promise.race([
     promise,
@@ -210,7 +209,7 @@ export function withDACPTimeout<T>(
       setTimeout(() => {
         reject(new DACPTimeoutError(`${operation} timed out after ${timeoutMs}ms`))
       }, timeoutMs)
-    })
+    }),
   ])
 }
 
@@ -229,7 +228,7 @@ export function generateEventUuid(): string {
 
 // Logging utility for DACP messages (with sensitive data filtering)
 export function logDACPMessage(
-  direction: 'incoming' | 'outgoing',
+  direction: "incoming" | "outgoing",
   message: unknown,
   source?: string
 ): void {
@@ -244,14 +243,14 @@ export function logDACPMessage(
         responseUuid: meta.responseUuid,
         eventUuid: meta.eventUuid,
         timestamp: meta.timestamp,
-        source
+        source,
       }
 
       console.log(`[DACP ${direction.toUpperCase()}]`, logEntry)
     } else {
       console.warn(`[DACP INVALID ${direction.toUpperCase()}]`, {
         error: baseMessage.error.message,
-        source
+        source,
       })
     }
   } catch (error) {

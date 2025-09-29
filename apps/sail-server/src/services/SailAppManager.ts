@@ -1,52 +1,14 @@
 import { Socket } from "socket.io"
-import { v4 as uuidv4 } from "uuid"
 import {
-  State,
   type AppRegistration,
   type InstanceID,
   type ServerContext,
-  type FDC3Server,
   type ChannelState,
-  type DirectoryApp
+  type DirectoryApp,
 } from "@finos/fdc3-web-impl"
-import { AppIdentifier } from "@finos/fdc3"
+import type { AppIdentifier } from "@finos/fdc3"
 import { AppDirectoryManager } from "@finos/fdc3-sail-desktop-agent"
-import { AppIntent, Context } from "@finos/fdc3"
-import {
-  AppManagementMessages,
-  ChannelMessages,
-  IntentMessages,
-  ContextMessages,
-  SailAppOpenArgs,
-  AppHosting,
-  SailIntentResolveResponse,
-  AugmentedAppIntent,
-  AugmentedAppMetadata,
-  SailAppOpenResponse,
-  TabDetail,
-  ContextHistory,
-} from "@finos/fdc3-web-impl"
-import {
-  BroadcastRequest,
-  ChannelChangedEvent,
-} from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { APP_CONFIG } from "../constants"
-
-/**
- * Retrieves the icon URL for an application directory entry
- * @param appDirectory - The directory app entry to get icon for
- * @returns The icon source URL or default icon if none found
- */
-function getIcon(appDirectory: DirectoryApp | undefined): string {
-  if (appDirectory) {
-    const icons = appDirectory.icons ?? []
-    if (icons.length > 0) {
-      return icons[0].src
-    }
-  }
-
-  return APP_CONFIG.DEFAULT_ICON
-}
 
 /** Type for FDC3Server handlers to safely access channel state */
 interface FDC3ServerWithHandlers {
@@ -106,7 +68,7 @@ export class SailAppInstanceManager implements ServerContext<SailData> {
         this.log(`Posting message to app: ${JSON.stringify(message)}`)
       }
       // Use single fdc3_event for all DACP messages (Socket.IO best practice)
-      instance.socket?.emit('fdc3_event', message)
+      instance.socket?.emit("fdc3_event", message)
       return Promise.resolve()
     } else {
       this.log(`Cannot find app with instanceId: ${JSON.stringify(instanceId)}`)

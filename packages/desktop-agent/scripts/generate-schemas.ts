@@ -1,6 +1,6 @@
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import fs from "fs"
+import path from "path"
+import { fileURLToPath } from "url"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -8,18 +8,21 @@ const __dirname = path.dirname(__filename)
 interface SchemaInfo {
   name: string
   fileName: string
-  schema: any
+  schema: unknown
 }
 
 function generateZodSchemas() {
   // Find all DACP schema files
-  const schemaDir = path.join(__dirname, '../../../node_modules/@finos/fdc3-schema/dist/schemas/api')
-  const outputFile = path.join(__dirname, '../src/handlers/validation/dacp-schemas.ts')
+  const schemaDir = path.join(
+    __dirname,
+    "../../../node_modules/@finos/fdc3-schema/dist/schemas/api"
+  )
+  const outputFile = path.join(__dirname, "../src/handlers/validation/dacp-schemas.ts")
 
   if (!fs.existsSync(schemaDir)) {
     console.error(`Schema directory not found: ${schemaDir}`)
-    console.log('Available paths:')
-    const nodeModulesPath = path.join(__dirname, '../../../node_modules/@finos')
+    console.log("Available paths:")
+    const nodeModulesPath = path.join(__dirname, "../../../node_modules/@finos")
     if (fs.existsSync(nodeModulesPath)) {
       fs.readdirSync(nodeModulesPath).forEach(dir => {
         console.log(`  ${dir}`)
@@ -28,8 +31,7 @@ function generateZodSchemas() {
     return
   }
 
-  const schemaFiles = fs.readdirSync(schemaDir)
-    .filter(file => file.endsWith('.schema.json'))
+  const schemaFiles = fs.readdirSync(schemaDir).filter(file => file.endsWith(".schema.json"))
 
   console.log(`Found ${schemaFiles.length} schema files in ${schemaDir}`)
 
@@ -43,8 +45,8 @@ function generateZodSchemas() {
   for (const file of schemaFiles) {
     try {
       const schemaPath = path.join(schemaDir, file)
-      const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'))
-      const name = file.replace('.schema.json', '')
+      const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"))
+      const name = file.replace(".schema.json", "")
       schemas.push({ name, fileName: file, schema })
       console.log(`Loaded schema: ${name}`)
     } catch (error) {
@@ -70,9 +72,10 @@ function generateZodSchemas() {
 }
 
 function toPascalCase(str: string): string {
-  return str.split(/[-_]/).map(word =>
-    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-  ).join('')
+  return str
+    .split(/[-_]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join("")
 }
 
 function generateBaseMessageSchema(): string {
@@ -100,17 +103,21 @@ export const ContextSchema = z.object({
 `
 }
 
-function generateZodFromJsonSchema(schemaName: string, schema: any, originalName: string): string {
+function generateZodFromJsonSchema(
+  schemaName: string,
+  schema: unknown,
+  originalName: string
+): string {
   console.log(`Generating schema for: ${schemaName}`)
 
   // For now, we'll create simplified schemas based on common DACP patterns
   // This can be enhanced later with full JSON Schema to Zod conversion
 
-  if (originalName.includes('Request')) {
+  if (originalName.includes("Request")) {
     return generateRequestSchema(schemaName, originalName)
-  } else if (originalName.includes('Response')) {
+  } else if (originalName.includes("Response")) {
     return generateResponseSchema(schemaName, originalName)
-  } else if (originalName.includes('Event')) {
+  } else if (originalName.includes("Event")) {
     return generateEventSchema(schemaName, originalName)
   }
 
@@ -187,44 +194,44 @@ export type ${schemaName} = z.infer<typeof ${schemaName}Schema>
 
 function getPayloadSchemaForRequest(requestType: string): string {
   switch (requestType) {
-    case 'broadcastRequest':
+    case "broadcastRequest":
       return `z.object({
         channelId: z.string(),
         context: ContextSchema
       })`
 
-    case 'addContextListenerRequest':
+    case "addContextListenerRequest":
       return `z.object({
         channelId: z.string().optional(),
         contextType: z.string().optional()
       })`
 
-    case 'raiseIntentRequest':
+    case "raiseIntentRequest":
       return `z.object({
         intent: z.string(),
         context: ContextSchema,
         app: z.string().optional()
       })`
 
-    case 'addIntentListenerRequest':
+    case "addIntentListenerRequest":
       return `z.object({
         intent: z.string()
       })`
 
-    case 'getCurrentChannelRequest':
+    case "getCurrentChannelRequest":
       return `z.object({}).optional()`
 
-    case 'joinUserChannelRequest':
+    case "joinUserChannelRequest":
       return `z.object({
         channelId: z.string()
       })`
 
-    case 'findInstancesRequest':
+    case "findInstancesRequest":
       return `z.object({
         app: z.string()
       })`
 
-    case 'getInfoRequest':
+    case "getInfoRequest":
       return `z.object({}).optional()`
 
     default:
@@ -234,19 +241,19 @@ function getPayloadSchemaForRequest(requestType: string): string {
 
 function getPayloadSchemaForResponse(responseType: string): string {
   switch (responseType) {
-    case 'broadcastResponse':
+    case "broadcastResponse":
       return `z.union([
         z.object({}), // Success
         z.object({ error: z.string() }) // Error
       ])`
 
-    case 'addContextListenerResponse':
+    case "addContextListenerResponse":
       return `z.union([
         z.object({ listenerId: z.string() }), // Success
         z.object({ error: z.string() }) // Error
       ])`
 
-    case 'raiseIntentResponse':
+    case "raiseIntentResponse":
       return `z.union([
         z.object({
           intentResult: z.unknown().optional(),
@@ -255,7 +262,7 @@ function getPayloadSchemaForResponse(responseType: string): string {
         z.object({ error: z.string() }) // Error
       ])`
 
-    case 'getCurrentChannelResponse':
+    case "getCurrentChannelResponse":
       return `z.union([
         z.object({ channel: z.string().nullable() }), // Success
         z.object({ error: z.string() }) // Error
@@ -274,7 +281,7 @@ function generateMessageTypeUnion(schemas: SchemaInfo[]): string {
 
   return `// Union of all DACP message schemas
 export const DACPMessageSchema = z.union([
-  ${schemaNames.join(',\n  ')}
+  ${schemaNames.join(",\n  ")}
 ])
 
 export type DACPMessage = z.infer<typeof DACPMessageSchema>

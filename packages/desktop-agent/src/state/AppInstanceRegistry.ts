@@ -4,8 +4,7 @@
  * Tracks all connected FDC3 app instances with their metadata, connection state,
  * and FDC3 capabilities. Provides centralized state management for the desktop agent.
  */
-
-import { AppMetadata } from "@finos/fdc3"
+import type { AppMetadata } from "@finos/fdc3"
 
 // ============================================================================
 // TYPES AND INTERFACES

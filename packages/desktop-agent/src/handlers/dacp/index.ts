@@ -2,21 +2,21 @@ import {
   validateDACPMessage,
   withDACPTimeout,
   DACP_TIMEOUTS,
-  logDACPMessage
-} from '../validation/dacp-validator'
-import { BaseDACPMessageSchema } from '../validation/dacp-schemas'
-import { DACPHandlerContext, logger } from '../types'
+  logDACPMessage,
+} from "../validation/dacp-validator"
+import { BaseDACPMessageSchema } from "../validation/dacp-schemas"
+import { type DACPHandlerContext, logger } from "../types"
 
 // Import all DACP handlers
-import * as contextHandlers from './context.handlers'
-import * as intentHandlers from './intent.handlers'
-import * as channelHandlers from './channel.handlers'
+import * as contextHandlers from "./context.handlers"
+import * as intentHandlers from "./intent.handlers"
+import * as channelHandlers from "./channel.handlers"
 
 // Handler registry type
 type DACPHandlerFunction = (message: unknown, context: DACPHandlerContext) => Promise<void>
 
-import { appInstanceRegistry } from '../../state/AppInstanceRegistry';
-import { intentRegistry } from '../../state/IntentRegistry';
+import { appInstanceRegistry } from "../../state/AppInstanceRegistry"
+import { intentRegistry } from "../../state/IntentRegistry"
 
 /**
  * Processes a single DACP message in a transport-agnostic way.
@@ -26,22 +26,21 @@ import { intentRegistry } from '../../state/IntentRegistry';
  */
 export async function processDACPMessage(
   message: unknown,
-  context: Omit<DACPHandlerContext, 'messagePort'>,
+  context: Omit<DACPHandlerContext, "messagePort">,
   reply: (response: any) => void
 ) {
   // Create a mock messagePort for the handlers to use
   const messagePort = {
     postMessage: reply,
-  } as MessagePort;
+  } as MessagePort
 
   const fullContext: DACPHandlerContext = {
     ...context,
     messagePort,
-  };
+  }
 
-  await routeDACPMessage(message, fullContext);
+  await routeDACPMessage(message, fullContext)
 }
-
 
 /**
  * Main DACP message router for MessagePort
@@ -53,39 +52,36 @@ export function registerDACPHandlers(
   fdc3Server: any,
   instanceId: string
 ): void {
-  logger.info('Registering DACP message handlers for instance', { instanceId });
+  logger.info("Registering DACP message handlers for instance", { instanceId })
 
-  const context: Omit<DACPHandlerContext, 'messagePort'> = {
+  const context: Omit<DACPHandlerContext, "messagePort"> = {
     serverContext,
     fdc3Server,
     instanceId,
     appInstanceRegistry,
     intentRegistry,
-  };
+  }
 
-  messagePort.onmessage = async (event) => {
-    await processDACPMessage(event.data, context, (response) => {
-      messagePort.postMessage(response);
-    });
-  };
+  messagePort.onmessage = async event => {
+    await processDACPMessage(event.data, context, response => {
+      messagePort.postMessage(response)
+    })
+  }
 
-  messagePort.onmessageerror = (event) => {
-    logger.error('DACP MessagePort error:', event);
-  };
+  messagePort.onmessageerror = event => {
+    logger.error("DACP MessagePort error:", event)
+  }
 
-  logger.info('DACP handlers registered successfully for instance', { instanceId });
+  logger.info("DACP handlers registered successfully for instance", { instanceId })
 }
 
 /**
  * Routes DACP messages to appropriate handlers
  */
-async function routeDACPMessage(
-  message: unknown,
-  context: DACPHandlerContext
-): Promise<void> {
+async function routeDACPMessage(message: unknown, context: DACPHandlerContext): Promise<void> {
   try {
     // Log incoming message (with sensitive data filtering)
-    logDACPMessage('incoming', message, 'DACP Router')
+    logDACPMessage("incoming", message, "DACP Router")
 
     // Validate base message structure
     const baseMessage = validateDACPMessage(message, BaseDACPMessageSchema)
@@ -99,15 +95,15 @@ async function routeDACPMessage(
       timeout,
       `DACP ${baseMessage.type} handling`
     )
-
   } catch (error) {
-    logger.error('DACP message routing failed:', {
+    logger.error("DACP message routing failed:", {
       error: error instanceof Error ? error.message : error,
       stack: error instanceof Error ? error.stack : undefined,
-      messageType: typeof message === 'object' && message !== null && 'type' in message
-        ? (message as any).type
-        : 'unknown',
-      messageData: message
+      messageType:
+        typeof message === "object" && message !== null && "type" in message
+          ? (message as any).type
+          : "unknown",
+      messageData: message,
     })
 
     // Note: Individual handlers are responsible for sending error responses
@@ -141,21 +137,21 @@ async function handleDACPMessage(
 function getHandlerForMessageType(messageType: string): DACPHandlerFunction | null {
   const handlerMap: Record<string, DACPHandlerFunction> = {
     // Context handlers
-    'broadcastRequest': contextHandlers.handleBroadcastRequest,
-    'addContextListenerRequest': contextHandlers.handleAddContextListener,
-    'contextListenerUnsubscribeRequest': contextHandlers.handleContextListenerUnsubscribe,
+    broadcastRequest: contextHandlers.handleBroadcastRequest,
+    addContextListenerRequest: contextHandlers.handleAddContextListener,
+    contextListenerUnsubscribeRequest: contextHandlers.handleContextListenerUnsubscribe,
 
     // Intent handlers
-    'raiseIntentRequest': intentHandlers.handleRaiseIntentRequest,
-    'addIntentListenerRequest': intentHandlers.handleAddIntentListener,
-    'intentListenerUnsubscribeRequest': intentHandlers.handleIntentListenerUnsubscribe,
-    'findIntentRequest': intentHandlers.handleFindIntentRequest,
+    raiseIntentRequest: intentHandlers.handleRaiseIntentRequest,
+    addIntentListenerRequest: intentHandlers.handleAddIntentListener,
+    intentListenerUnsubscribeRequest: intentHandlers.handleIntentListenerUnsubscribe,
+    findIntentRequest: intentHandlers.handleFindIntentRequest,
 
     // Channel handlers
-    'getCurrentChannelRequest': channelHandlers.handleGetCurrentChannelRequest,
-    'joinUserChannelRequest': channelHandlers.handleJoinUserChannelRequest,
-    'leaveCurrentChannelRequest': channelHandlers.handleLeaveCurrentChannelRequest,
-    'getUserChannelsRequest': channelHandlers.handleGetUserChannelsRequest,
+    getCurrentChannelRequest: channelHandlers.handleGetCurrentChannelRequest,
+    joinUserChannelRequest: channelHandlers.handleJoinUserChannelRequest,
+    leaveCurrentChannelRequest: channelHandlers.handleLeaveCurrentChannelRequest,
+    getUserChannelsRequest: channelHandlers.handleGetUserChannelsRequest,
 
     // App management handlers (to be implemented in Phase 3)
     // 'getInfoRequest': appHandlers.handleGetInfoRequest,
@@ -178,11 +174,7 @@ function getHandlerForMessageType(messageType: string): DACPHandlerFunction | nu
  */
 function getTimeoutForMessageType(messageType: string): number {
   // App launch operations get longer timeout
-  const appLaunchMessages = [
-    'openRequest',
-    'raiseIntentRequest',
-    'findInstancesRequest'
-  ]
+  const appLaunchMessages = ["openRequest", "raiseIntentRequest", "findInstancesRequest"]
 
   if (appLaunchMessages.includes(messageType)) {
     return DACP_TIMEOUTS.APP_LAUNCH
@@ -197,14 +189,14 @@ function getTimeoutForMessageType(messageType: string): number {
  * This now delegates cleanup to the central registries.
  */
 export function cleanupDACPHandlers(instanceId: string): void {
-  logger.info('Cleaning up DACP handlers for instance', { instanceId });
+  logger.info("Cleaning up DACP handlers for instance", { instanceId })
 
   // The new model is that registries are responsible for their own cleanup
   // when an instance is fully removed. This function can be used to trigger that.
-  appInstanceRegistry.removeInstance(instanceId);
-  intentRegistry.removeInstanceListeners(instanceId);
+  appInstanceRegistry.removeInstance(instanceId)
+  intentRegistry.removeInstanceListeners(instanceId)
 
-  logger.debug('DACP handlers cleanup completed', { instanceId });
+  logger.debug("DACP handlers cleanup completed", { instanceId })
 }
 
 /**
@@ -216,26 +208,26 @@ export function getDACPHandlerStats(): {
 } {
   const handlerMap = {
     // Context handlers
-    'broadcastRequest': true,
-    'addContextListenerRequest': true,
-    'contextListenerUnsubscribeRequest': true,
+    broadcastRequest: true,
+    addContextListenerRequest: true,
+    contextListenerUnsubscribeRequest: true,
 
     // Intent handlers
-    'raiseIntentRequest': true,
-    'addIntentListenerRequest': true,
-    'intentListenerUnsubscribeRequest': true,
-    'findIntentRequest': true,
+    raiseIntentRequest: true,
+    addIntentListenerRequest: true,
+    intentListenerUnsubscribeRequest: true,
+    findIntentRequest: true,
 
     // Channel handlers
-    'getCurrentChannelRequest': true,
-    'joinUserChannelRequest': true,
-    'leaveCurrentChannelRequest': true,
-    'getUserChannelsRequest': true,
+    getCurrentChannelRequest: true,
+    joinUserChannelRequest: true,
+    leaveCurrentChannelRequest: true,
+    getUserChannelsRequest: true,
   }
 
   return {
     supportedMessageTypes: Object.keys(handlerMap),
-    totalHandlers: Object.keys(handlerMap).length
+    totalHandlers: Object.keys(handlerMap).length,
   }
 }
 
@@ -243,11 +235,11 @@ export function getDACPHandlerStats(): {
  * Health check function for DACP handlers
  */
 export function checkDACPHandlerHealth(): {
-  status: 'healthy' | 'degraded' | 'unhealthy'
+  status: "healthy" | "degraded" | "unhealthy"
   details: string[]
 } {
   const details: string[] = []
-  let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy'
+  let status: "healthy" | "degraded" | "unhealthy" = "healthy"
 
   try {
     // Check if handler functions are available
@@ -256,11 +248,11 @@ export function checkDACPHandlerHealth(): {
 
     // Check for required handlers
     const requiredHandlers = [
-      'broadcastRequest',
-      'addContextListenerRequest',
-      'raiseIntentRequest',
-      'getCurrentChannelRequest',
-      'joinUserChannelRequest'
+      "broadcastRequest",
+      "addContextListenerRequest",
+      "raiseIntentRequest",
+      "getCurrentChannelRequest",
+      "joinUserChannelRequest",
     ]
 
     const missingHandlers = requiredHandlers.filter(
@@ -268,8 +260,8 @@ export function checkDACPHandlerHealth(): {
     )
 
     if (missingHandlers.length > 0) {
-      status = 'unhealthy'
-      details.push(`Missing required handlers: ${missingHandlers.join(', ')}`)
+      status = "unhealthy"
+      details.push(`Missing required handlers: ${missingHandlers.join(", ")}`)
     }
 
     // Additional health checks could be added here
@@ -277,12 +269,11 @@ export function checkDACPHandlerHealth(): {
     // - Check if validation is working
     // - Check if timeouts are configured correctly
 
-    if (status === 'healthy') {
-      details.push('All DACP handlers operational')
+    if (status === "healthy") {
+      details.push("All DACP handlers operational")
     }
-
   } catch (error) {
-    status = 'unhealthy'
+    status = "unhealthy"
     details.push(`Health check failed: ${error}`)
   }
 
