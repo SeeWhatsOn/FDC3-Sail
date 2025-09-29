@@ -1,18 +1,17 @@
 import { v4 as uuid } from "uuid"
-import { SailMessages, SailMessage } from "../../protocol/sail-messages"
 import {
+  SailMessages,
+  SailMessage,
   DesktopAgentHelloPayload,
   DesktopAgentDirectoryListingPayload,
   DesktopAgentRegisterAppLaunchPayload,
   SailClientStatePayload,
-  ChannelReceiverUpdatePayload,
   TabDetail,
-} from "../../protocol/sail-messages"
-import { State } from "../../types/sail-types"
-import { SailAppInstanceManager } from "../sailAppInstanceManager"
+  State,
+} from "@finos/sail-api"
+import { SailAppInstanceManager } from "../../sailAppInstanceManager"
 import { AppDirectoryManager } from "@finos/fdc3-sail-desktop-agent"
-import { SailFDC3Server } from "../SailFDC3Server"
-import { SailData } from "../sailAppInstanceManager"
+import { SailData } from "../../sailAppInstanceManager"
 import {
   SocketIOCallback,
   HandlerContext,
@@ -21,36 +20,7 @@ import {
   PanelData,
   handleCallbackError,
   AuthenticatedSocket,
-} from "./types"
-
-/**
- * Handles Desktop Agent hello messages for session setup and management
- * @param desktopAgentHelloArgs - Desktop agent hello arguments with session configuration
- * @param callback - Socket callback to confirm session creation
- * @param context - Handler context with socket, connection state, and sessions
- */
-import { v4 as uuid } from "uuid"
-import { SailMessages, SailMessage } from "../../protocol/sail-messages"
-import {
-  DesktopAgentHelloPayload,
-  DesktopAgentDirectoryListingPayload,
-  DesktopAgentRegisterAppLaunchPayload,
-  SailClientStatePayload,
-  TabDetail,
-} from "../../protocol/sail-messages"
-import { State } from "../../types/sail-types"
-import { SailAppInstanceManager } from "../sailAppInstanceManager"
-import { AppDirectoryManager } from "@finos/fdc3-sail-desktop-agent"
-import { SailData } from "../sailAppInstanceManager"
-import {
-  SocketIOCallback,
-  HandlerContext,
-  SocketType,
-  CONFIG,
-  PanelData,
-  handleCallbackError,
-  AuthenticatedSocket,
-} from "./types"
+} from "../types"
 
 /**
  * Handles Desktop Agent hello messages for session setup and management.
@@ -89,7 +59,6 @@ async function handleDesktopAgentHello(
     console.log("SAIL created app instance manager for user:", userId)
   }
 
-  // This is now simplified, as the FDC3 server is not directly managed here.
   connectionState.appInstanceManager = appInstanceManager
   callback(true)
 }
@@ -247,22 +216,7 @@ async function handleClientState(
 }
 
 /**
- * Registers desktop agent socket handlers
- */
-export function registerDesktopAgentHandlers(context: HandlerContext): void {
-  const { socket } = context
-
-  // Register single sail_event handler for all Sail platform messages
-  socket.on(SailMessages.SAIL_EVENT, async (sailMessage: SailMessage, callback?: SocketIOCallback<any>) => {
-    await routeSailMessage(sailMessage, callback, context)
-  })
-}
-
-/**
  * Routes Sail platform messages to appropriate handlers based on message type
- * @param sailMessage - The Sail message to route
- * @param callback - Socket callback for responses
- * @param context - Handler context with connection state
  */
 async function routeSailMessage(
   sailMessage: SailMessage,
@@ -272,45 +226,28 @@ async function routeSailMessage(
   try {
     console.log(`SAIL Message Router: ${sailMessage.type}`, sailMessage)
 
-    // Route based on Sail message type
     switch (sailMessage.type) {
       case 'daHello':
         if (callback) {
-          await handleDesktopAgentHello(
-            sailMessage.payload as DesktopAgentHelloPayload,
-            callback as SocketIOCallback<boolean>,
-            context
-          )
+          await handleDesktopAgentHello(sailMessage.payload as DesktopAgentHelloPayload, callback as SocketIOCallback<boolean>, context)
         }
         break
 
       case 'daDirectoryListing':
         if (callback) {
-          handleDirectoryListing(
-            sailMessage.payload as DesktopAgentDirectoryListingPayload,
-            callback,
-            context
-          )
+          handleDirectoryListing(sailMessage.payload as DesktopAgentDirectoryListingPayload, callback, context)
         }
         break
 
       case 'daRegisterAppLaunch':
         if (callback) {
-          handleRegisterAppLaunch(
-            sailMessage.payload as DesktopAgentRegisterAppLaunchPayload,
-            callback as SocketIOCallback<string>,
-            context
-          )
+          handleRegisterAppLaunch(sailMessage.payload as DesktopAgentRegisterAppLaunchPayload, callback as SocketIOCallback<string>, context)
         }
         break
 
       case 'sailClientState':
         if (callback) {
-          await handleClientState(
-            sailMessage.payload as SailClientStatePayload,
-            callback as SocketIOCallback<boolean>,
-            context
-          )
+          await handleClientState(sailMessage.payload as SailClientStatePayload, callback as SocketIOCallback<boolean>, context)
         }
         break
 
@@ -327,4 +264,15 @@ async function routeSailMessage(
       callback(error as string, null)
     }
   }
+}
+
+/**
+ * Registers layout-related socket handlers, driven by the main UI shell.
+ */
+export function registerLayoutHandlers(context: HandlerContext): void {
+  const { socket } = context
+
+  socket.on(SailMessages.SAIL_EVENT, async (sailMessage: SailMessage, callback?: SocketIOCallback<any>) => {
+    await routeSailMessage(sailMessage, callback, context)
+  })
 }

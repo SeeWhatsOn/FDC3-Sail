@@ -4,6 +4,7 @@
   "files": [],
   "references": [
     { "path": "./packages/desktop-agent" },
+    { "path": "./packages/sail-api" },
     { "path": "./packages/app-directories" },
     { "path": "./packages/sail-ui" },
     { "path": "./apps/sail" },

@@ -3,9 +3,9 @@
  * Proprietary Sail platform communication protocol
  */
 
-import { Context } from "@finos/fdc3-context"
-import { AppIntent, IntentMetadata, AppMetadata } from "@finos/fdc3-standard"
-import { AppRegistration, DirectoryApp, TabDetail, AppHosting } from "../types/sail-types"
+import type { Context } from "@finos/fdc3-context"
+import type { AppIntent, IntentMetadata, AppMetadata } from "@finos/fdc3-standard"
+import type { AppRegistration, DirectoryApp, TabDetail, AppHosting } from "../types/sail-types"
 
 // ============================================================================
 // SAIL MESSAGE TYPES
@@ -52,9 +52,9 @@ export const SailMessages = {
  * Unified Sail message structure following DACP-style format
  * All Sail messages use this consistent structure
  */
-export interface SailMessage<TPayload = Record<string, any>> {
+export interface SailMessage<TPayload = Record<string, unknown>> {
   /** Message type - matches Sail protocol event name */
-  type: keyof typeof SailMessages | string
+  type: keyof typeof SailMessages
   /** Message payload containing actual data */
   payload: TPayload
   /** Message metadata */
@@ -85,7 +85,9 @@ export interface DesktopAgentHelloPayload<T = unknown> {
   contextHistory: { [id: string]: Context[] }
 }
 
-export interface SailClientStatePayload<T = unknown> extends DesktopAgentHelloPayload<T> {}
+export interface SailClientStatePayload<T = unknown> extends DesktopAgentHelloPayload<T> {
+  type: keyof typeof SailMessages
+}
 
 export interface AppHelloPayload {
   instanceId: string
@@ -103,6 +105,7 @@ export interface DesktopAgentRegisterAppLaunchPayload {
 
 export interface DesktopAgentDirectoryListingPayload {
   // Empty payload - request for directory listing
+  type: keyof typeof SailMessages
 }
 
 export interface SailAppOpenPayload {
@@ -188,6 +191,11 @@ export const FDC3_EVENT = SailMessages.FDC3_EVENT
 
 // Type helpers
 export type SailMessageType = keyof typeof SailMessages
-export type SailHandshakeMessage = typeof SailMessages.DA_HELLO | typeof SailMessages.SAIL_CLIENT_STATE | typeof SailMessages.APP_HELLO
+export type SailHandshakeMessage =
+  | typeof SailMessages.DA_HELLO
+  | typeof SailMessages.SAIL_CLIENT_STATE
+  | typeof SailMessages.APP_HELLO
 export type SailAppMessage = typeof SailMessages.SAIL_APP_OPEN | typeof SailMessages.SAIL_APP_STATE
-export type SailChannelMessage = typeof SailMessages.SAIL_CHANNEL_SETUP | typeof SailMessages.SAIL_CHANNEL_CHANGE
+export type SailChannelMessage =
+  | typeof SailMessages.SAIL_CHANNEL_SETUP
+  | typeof SailMessages.SAIL_CHANNEL_CHANGE

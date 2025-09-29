@@ -9,10 +9,10 @@ import {
   DACPHandlerContext,
 } from "@finos/fdc3-sail-desktop-agent"
 import {
-  registerDesktopAgentHandlers,
-  registerAppHandlers,
-  registerChannelHandlers,
+  registerLayoutHandlers,
+  registerWorkspaceHandlers,
   registerDisconnectHandler,
+  registerFdc3Handlers,
   HandlerContext as SailHandlerContext,
 } from "../handlers"
 
@@ -121,10 +121,15 @@ export class DualProtocolHandler {
   }
 
   private registerSailHandlers(context: SailHandlerContext): void {
-    registerDesktopAgentHandlers(context)
-    registerAppHandlers(context)
-    registerChannelHandlers(context)
+    // Register handlers for proprietary Sail UI (layout and workspace)
+    registerLayoutHandlers(context)
+    registerWorkspaceHandlers(context)
+
+    // Register generic connection handlers
     registerDisconnectHandler(context)
+
+    // Register FDC3 message handlers
+    registerFdc3Handlers(context)
   }
 
   private cleanup(socketId: string): void {
