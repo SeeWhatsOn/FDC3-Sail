@@ -6,6 +6,9 @@ export { DesktopAgent, getDesktopAgent, type DesktopAgentConfig, type DesktopAge
 // DACP Protocol Messages (exported for client use)
 export * from "./protocol/dacp-messages";
 
+// Transport Layer (transport-agnostic communication)
+export * from "./transport";
+
 // DACP Handlers and validation
 export * from "./handlers/dacp";
 export * from "./handlers/validation/dacp-validator";

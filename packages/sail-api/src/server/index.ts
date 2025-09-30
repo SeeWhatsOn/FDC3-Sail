@@ -7,16 +7,13 @@ export {
   SailServer,
   type SailServerConfig,
   type DirectoryResponse,
-  type ConnectedAppsResponse
+  type ConnectedAppsResponse,
 } from "./SailServer"
-
-// Desktop Agent Singleton
-export { DesktopAgentSingleton } from "./DesktopAgentSingleton"
 
 // Re-export FDC3 types for convenience
 export type {
   AppInstance,
   AppInstanceRegistry,
   AppDirectoryManager,
-  AppInstanceState
+  AppInstanceState,
 } from "@finos/fdc3-sail-desktop-agent"

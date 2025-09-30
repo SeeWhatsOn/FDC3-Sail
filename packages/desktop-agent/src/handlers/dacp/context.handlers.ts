@@ -11,7 +11,7 @@ import {
   ContextSchema,
   ContextlistenerunsubscriberequestSchema,
 } from '../validation/dacp-schemas'
-import { type DACPHandlerContext, logger } from '../types'
+import { type TransportAgnosticDACPHandlerContext, logger } from '../types'
 import type { Context } from '@finos/fdc3'
 import { appInstanceRegistry } from '../../state/AppInstanceRegistry'
 
@@ -21,9 +21,9 @@ import { appInstanceRegistry } from '../../state/AppInstanceRegistry'
  */
 export async function handleBroadcastRequest(
   message: unknown,
-  context: DACPHandlerContext
+  context: TransportAgnosticDACPHandlerContext
 ): Promise<void> {
-  const { messagePort } = context
+  const { reply } = context
 
   try {
     const request = validateDACPMessage(message, BroadcastrequestSchema)
@@ -43,7 +43,7 @@ export async function handleBroadcastRequest(
 
     const response = createDACPSuccessResponse(request, 'broadcastResponse')
 
-    messagePort.postMessage(response)
+    reply(response)
 
     logger.debug('DACP: Broadcast request completed successfully', {
       requestUuid: request.meta.requestUuid,
@@ -58,7 +58,7 @@ export async function handleBroadcastRequest(
       error instanceof Error ? error.message : 'Unknown broadcast error'
     )
 
-    messagePort.postMessage(errorResponse)
+    reply(errorResponse)
   }
 }
 
@@ -68,9 +68,9 @@ export async function handleBroadcastRequest(
  */
 export function handleAddContextListener(
   message: unknown,
-  context: DACPHandlerContext
+  context: TransportAgnosticDACPHandlerContext
 ): void {
-  const { messagePort, instanceId } = context
+  const { reply, instanceId } = context
 
   try {
     const request = validateDACPMessage(message, AddcontextlistenerrequestSchema)
@@ -91,7 +91,7 @@ export function handleAddContextListener(
       listenerId,
     })
 
-    messagePort.postMessage(response)
+    reply(response)
 
     logger.debug('DACP: Context listener added successfully', {
       listenerId,
@@ -108,7 +108,7 @@ export function handleAddContextListener(
       error instanceof Error ? error.message : 'Failed to add context listener'
     )
 
-    messagePort.postMessage(errorResponse)
+    reply(errorResponse)
   }
 }
 
@@ -118,9 +118,9 @@ export function handleAddContextListener(
  */
 export function handleContextListenerUnsubscribe(
   message: unknown,
-  context: DACPHandlerContext
+  context: TransportAgnosticDACPHandlerContext
 ): void {
-  const { messagePort, instanceId } = context
+  const { reply, instanceId } = context
 
   try {
     const request = validateDACPMessage(message, ContextlistenerunsubscriberequestSchema)
@@ -140,7 +140,7 @@ export function handleContextListenerUnsubscribe(
 
     const response = createDACPSuccessResponse(request, 'contextListenerUnsubscribeResponse')
 
-    messagePort.postMessage(response)
+    reply(response)
 
     logger.debug('DACP: Context listener unsubscribed successfully', {
       listenerId,
@@ -157,14 +157,14 @@ export function handleContextListenerUnsubscribe(
       error instanceof Error ? error.message : 'Failed to unsubscribe context listener'
     )
 
-    messagePort.postMessage(errorResponse)
+    reply(errorResponse)
   }
 }
 
 function notifyContextListeners(
   channelId: string,
   context: Context,
-  handlerContext: DACPHandlerContext
+  handlerContext: TransportAgnosticDACPHandlerContext
 ): void {
   // Find instances on the same channel
   const instancesOnChannel = appInstanceRegistry.getInstancesOnChannel(channelId)
@@ -180,9 +180,9 @@ function notifyContextListeners(
           context,
         })
 
-        // This is a simplification. In a real scenario, we would need the message port
-        // for each instance. This highlights the need to store the port in the AppInstanceRegistry.
-        handlerContext.messagePort.postMessage(contextEvent)
+        // Note: In the new transport-agnostic model, we send events through the reply function
+        // This assumes the transport layer will route events to the correct instances
+        handlerContext.reply(contextEvent)
 
         logger.debug('Context event sent to listener', {
           instanceId: instance.instanceId,
@@ -198,5 +198,5 @@ function notifyContextListeners(
     }
   })
 
-Promise.allSettled(notifications)
+  Promise.allSettled(notifications)
 }

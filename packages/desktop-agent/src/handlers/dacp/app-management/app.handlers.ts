@@ -1,11 +1,11 @@
-import { 
-    validateDACPMessage, 
-    createDACPSuccessResponse, 
-    createDACPErrorResponse, 
-    DACP_ERROR_TYPES 
+import {
+    validateDACPMessage,
+    createDACPSuccessResponse,
+    createDACPErrorResponse,
+    DACP_ERROR_TYPES
 } from "../../validation/dacp-validator";
 import { GetinforequestSchema } from "../../validation/dacp-schemas";
-import { DACPHandlerContext, logger } from "../../types";
+import { TransportAgnosticDACPHandlerContext, logger } from "../../types";
 import { getDesktopAgent } from "../../../desktopAgent";
 
 /**
@@ -13,9 +13,9 @@ import { getDesktopAgent } from "../../../desktopAgent";
  */
 export async function handleGetInfoRequest(
   message: unknown,
-  context: DACPHandlerContext
+  context: TransportAgnosticDACPHandlerContext
 ): Promise<void> {
-  const { messagePort } = context;
+  const { reply } = context;
 
   try {
     const request = validateDACPMessage(message, GetinforequestSchema);
@@ -25,12 +25,12 @@ export async function handleGetInfoRequest(
     const implementationMetadata = desktopAgent.getImplementationMetadata();
 
     const response = createDACPSuccessResponse(
-      request, 
-      'getInfoResponse', 
+      request,
+      'getInfoResponse',
       implementationMetadata
     );
 
-    messagePort.postMessage(response);
+    reply(response);
 
   } catch (error) {
     logger.error('DACP: getInfoRequest failed', error);
@@ -40,6 +40,6 @@ export async function handleGetInfoRequest(
       'getInfoResponse',
       error instanceof Error ? error.message : 'Failed to get implementation info'
     );
-    messagePort.postMessage(errorResponse);
+    reply(errorResponse);
   }
 }

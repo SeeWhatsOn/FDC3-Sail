@@ -11,7 +11,7 @@ import {
   LeavecurrentchannelrequestSchema,
   GetuserchannelsrequestSchema,
 } from "../validation/dacp-schemas"
-import { type DACPHandlerContext, logger } from "../types"
+import { type TransportAgnosticDACPHandlerContext, logger } from "../types"
 import { appInstanceRegistry } from "../../state/AppInstanceRegistry"
 
 /**
@@ -19,9 +19,9 @@ import { appInstanceRegistry } from "../../state/AppInstanceRegistry"
  */
 export function handleGetCurrentChannelRequest(
   message: unknown,
-  context: DACPHandlerContext
+  context: TransportAgnosticDACPHandlerContext
 ): void {
-  const { messagePort, instanceId } = context
+  const { reply, instanceId } = context
 
   try {
     const request = validateDACPMessage(message, GetcurrentchannelrequestSchema)
@@ -31,7 +31,7 @@ export function handleGetCurrentChannelRequest(
     const response = createDACPSuccessResponse(request, "getCurrentChannelResponse", {
       channel: currentChannel,
     })
-    messagePort.postMessage(response)
+    reply(response)
   } catch (error) {
     const errorResponse = createDACPErrorResponse(
       {
@@ -43,15 +43,15 @@ export function handleGetCurrentChannelRequest(
       "getCurrentChannelResponse",
       error instanceof Error ? error.message : "Failed to get current channel"
     )
-    messagePort.postMessage(errorResponse)
+    reply(errorResponse)
   }
 }
 
 /**
  * Handles join user channel requests
  */
-export function handleJoinUserChannelRequest(message: unknown, context: DACPHandlerContext): void {
-  const { messagePort, instanceId } = context
+export function handleJoinUserChannelRequest(message: unknown, context: TransportAgnosticDACPHandlerContext): void {
+  const { reply, instanceId } = context
 
   try {
     const request = validateDACPMessage(message, JoinuserchannelrequestSchema)
@@ -65,9 +65,9 @@ export function handleJoinUserChannelRequest(message: unknown, context: DACPHand
     appInstanceRegistry.setInstanceChannel(instanceId, channelId)
 
     const response = createDACPSuccessResponse(request, "joinUserChannelResponse")
-    messagePort.postMessage(response)
+    reply(response)
 
-    notifyChannelChanged(instanceId, channelId, messagePort)
+    notifyChannelChanged(instanceId, channelId, reply)
   } catch (error) {
     const errorResponse = createDACPErrorResponse(
       {
@@ -81,7 +81,7 @@ export function handleJoinUserChannelRequest(message: unknown, context: DACPHand
       "joinUserChannelResponse",
       error instanceof Error ? error.message : "Failed to join user channel"
     )
-    messagePort.postMessage(errorResponse)
+    reply(errorResponse)
   }
 }
 
@@ -90,18 +90,18 @@ export function handleJoinUserChannelRequest(message: unknown, context: DACPHand
  */
 export function handleLeaveCurrentChannelRequest(
   message: unknown,
-  context: DACPHandlerContext
+  context: TransportAgnosticDACPHandlerContext
 ): void {
-  const { messagePort, instanceId } = context
+  const { reply, instanceId } = context
 
   try {
     const request = validateDACPMessage(message, LeavecurrentchannelrequestSchema)
     appInstanceRegistry.setInstanceChannel(instanceId, null)
 
     const response = createDACPSuccessResponse(request, "leaveCurrentChannelResponse")
-    messagePort.postMessage(response)
+    reply(response)
 
-    notifyChannelChanged(instanceId, null, messagePort)
+    notifyChannelChanged(instanceId, null, reply)
   } catch (error) {
     const errorResponse = createDACPErrorResponse(
       {
@@ -113,15 +113,15 @@ export function handleLeaveCurrentChannelRequest(
       "leaveCurrentChannelResponse",
       error instanceof Error ? error.message : "Failed to leave current channel"
     )
-    messagePort.postMessage(errorResponse)
+    reply(errorResponse)
   }
 }
 
 /**
  * Handles get user channels requests
  */
-export function handleGetUserChannelsRequest(message: unknown, context: DACPHandlerContext): void {
-  const { messagePort } = context
+export function handleGetUserChannelsRequest(message: unknown, context: TransportAgnosticDACPHandlerContext): void {
+  const { reply } = context
 
   try {
     const request = validateDACPMessage(message, GetuserchannelsrequestSchema)
@@ -130,7 +130,7 @@ export function handleGetUserChannelsRequest(message: unknown, context: DACPHand
     const response = createDACPSuccessResponse(request, "getUserChannelsResponse", {
       userChannels: userChannels,
     })
-    messagePort.postMessage(response)
+    reply(response)
   } catch (error) {
     const errorResponse = createDACPErrorResponse(
       {
@@ -142,7 +142,7 @@ export function handleGetUserChannelsRequest(message: unknown, context: DACPHand
       "getUserChannelsResponse",
       error instanceof Error ? error.message : "Failed to get user channels"
     )
-    messagePort.postMessage(errorResponse)
+    reply(errorResponse)
   }
 }
 
@@ -163,7 +163,7 @@ function getUserChannelsFromContext(): unknown[] {
 function notifyChannelChanged(
   instanceId: string,
   channelId: string | null,
-  messagePort: MessagePort
+  reply: (message: any) => void
 ): void {
   const instance = appInstanceRegistry.getInstance(instanceId)
   if (!instance) {
@@ -179,5 +179,5 @@ function notifyChannelChanged(
     },
   })
 
-  messagePort.postMessage(channelChangedEvent)
+  reply(channelChangedEvent)
 }

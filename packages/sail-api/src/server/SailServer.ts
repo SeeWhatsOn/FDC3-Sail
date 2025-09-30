@@ -5,8 +5,7 @@
  * Provides clean business logic for Sail UI operations.
  */
 
-import { DesktopAgentSingleton } from "./DesktopAgentSingleton"
-import type { AppInstance } from "@finos/fdc3-sail-desktop-agent"
+import type { AppInstance, TransportAdapter } from "@finos/fdc3-sail-desktop-agent"
 import type { DirectoryApp } from "../types/sail-types"
 
 // ============================================================================
@@ -49,7 +48,7 @@ export class SailServer {
    */
   getDirectoryApps(): DirectoryResponse {
     return {
-      apps: this.desktopAgent.getDirectoryApps()
+      apps: this.desktopAgent.getDirectoryApps(),
     }
   }
 
@@ -69,7 +68,7 @@ export class SailServer {
    */
   getConnectedApps(): ConnectedAppsResponse {
     return {
-      apps: this.desktopAgent.getConnectedApps()
+      apps: this.desktopAgent.getConnectedApps(),
     }
   }
 
@@ -142,7 +141,7 @@ export class SailServer {
     const success = this.desktopAgent.registerAppInstance({
       instanceId,
       appId: params.appId,
-      hosting: params.hosting
+      hosting: params.hosting,
     })
 
     if (!success) {
@@ -201,12 +200,12 @@ export class SailServer {
     // This could be enhanced to listen to actual FDC3 events when available
 
     // For now, just provide the interface for manual event triggering
-    this.onAppConnected = (callback) => {
+    this.onAppConnected = callback => {
       // TODO: Hook into actual FDC3 events
       console.log("App connected callback registered")
     }
 
-    this.onChannelChanged = (callback) => {
+    this.onChannelChanged = callback => {
       // TODO: Hook into actual FDC3 events
       console.log("Channel changed callback registered")
     }
@@ -236,7 +235,7 @@ export class SailServer {
       case "daHello":
         return this.handleDesktopAgentHello({
           ...message.payload,
-          userId
+          userId,
         })
 
       case "daDirectoryListing":
@@ -246,26 +245,26 @@ export class SailServer {
       case "daRegisterAppLaunch":
         const registerResponse = await this.registerAppLaunch({
           ...message.payload,
-          userId
+          userId,
         })
         return registerResponse.instanceId
 
       case "sailClientState":
         return this.handleClientStateUpdate({
           ...message.payload,
-          userId
+          userId,
         })
 
       case "appHello":
         return this.handleAppHello({
           ...message.payload,
-          userId
+          userId,
         })
 
       case "sailChannelChange":
         return this.handleChannelChange({
           ...message.payload,
-          userId
+          userId,
         })
 
       default:
@@ -293,6 +292,21 @@ export class SailServer {
     this.desktopAgent.initializeDACPMessagePort(instanceId, messagePort)
   }
 
+  /**
+   * Register a transport adapter for an instance
+   * This enables transport-agnostic FDC3 communication
+   */
+  registerTransport(instanceId: string, transport: TransportAdapter): void {
+    this.desktopAgent.registerTransport(instanceId, transport)
+  }
+
+  /**
+   * Cleanup transport for an instance
+   */
+  cleanupTransport(instanceId: string): void {
+    this.desktopAgent.cleanupTransport(instanceId)
+  }
+
   // ============================================================================
   // UTILITIES
   // ============================================================================
@@ -308,7 +322,7 @@ export class SailServer {
     return {
       connectedApps: connectedApps.apps.length,
       directoryApps: directoryApps.apps.length,
-      activeChannels: Object.keys(channelMap).length
+      activeChannels: Object.keys(channelMap).length,
     }
   }
 }

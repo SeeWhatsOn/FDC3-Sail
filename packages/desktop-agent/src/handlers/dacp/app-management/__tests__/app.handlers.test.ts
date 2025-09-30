@@ -98,4 +98,52 @@ describe('DACP App Management Handlers', () => {
     expect(metadata.provider).toBe('FDC3-Sail');
     expect(metadata.optionalFeatures.PrivateChannels).toBe(false);
   })
+
+  it('should handle findInstancesRequest and return matching app instances', async () => {
+    // Register additional instances for this test
+    appInstanceRegistry.createInstance({ 
+        instanceId: 'instance-a-1', 
+        appId: 'app-a', 
+        metadata: { appId: 'app-a', name: 'App A' }
+    });
+    appInstanceRegistry.createInstance({ 
+        instanceId: 'instance-a-2', 
+        appId: 'app-a', 
+        metadata: { appId: 'app-a', name: 'App A' }
+    });
+    appInstanceRegistry.createInstance({ 
+        instanceId: 'instance-b-1', 
+        appId: 'app-b', 
+        metadata: { appId: 'app-b', name: 'App B' }
+    });
+
+    const findInstancesRequest = {
+      type: 'findInstancesRequest',
+      payload: {
+        app: { appId: 'app-a' }
+      },
+      meta: {
+        requestUuid: generateRequestUuid(),
+        timestamp: new Date()
+      }
+    }
+
+    // Send the message
+    port2.postMessage(findInstancesRequest)
+
+    // Wait for the response
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    // Verify the response
+    expect(receivedMessages).toHaveLength(1)
+    const response = receivedMessages[0];
+    expect(response.type).toBe('findInstancesResponse')
+    expect(response.meta.requestUuid).toBe(findInstancesRequest.meta.requestUuid)
+    expect(response.payload.error).toBeUndefined()
+
+    const { instances } = response.payload;
+    expect(instances).toHaveLength(2);
+    expect(instances.map((inst: any) => inst.instanceId).sort()).toEqual(['instance-a-1', 'instance-a-2']);
+  })
+
 })

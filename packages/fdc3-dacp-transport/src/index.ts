@@ -62,5 +62,5 @@ export type {
   WCPHandlerResult,
   TransportFactory,
   SocketIOTransportConfig,
-  MessagePortTransportConfig
+  MessagePortTransportConfig,
 } from './types'

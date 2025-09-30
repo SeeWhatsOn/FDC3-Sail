@@ -17,7 +17,8 @@ import {
   getDACPHandlerStats,
   checkDACPHandlerHealth
 } from "./handlers/dacp"
-import type { DACPHandlerContext } from "./handlers/types"
+import type { DACPHandlerContext, TransportAgnosticDACPHandlerContext } from "./handlers/types"
+import type { TransportAdapter, DACPMessage } from "./transport"
 
 /**
  * Configuration options for the Desktop Agent
@@ -193,6 +194,44 @@ export class DesktopAgent {
     reply: (response: any) => void
   ): Promise<void> {
     await processDACPMessage(message, context, reply)
+  }
+
+  /**
+   * Registers a transport adapter for an instance
+   * This enables transport-agnostic communication
+   */
+  registerTransport(
+    transport: TransportAdapter,
+    serverContext: any,
+    fdc3Server: any,
+    instanceId: string
+  ): void {
+    const context: Omit<TransportAgnosticDACPHandlerContext, "reply"> = {
+      serverContext,
+      fdc3Server,
+      instanceId,
+      appInstanceRegistry,
+      intentRegistry
+    }
+
+    // Set up transport to handle incoming messages
+    transport.listen('*', async (message: DACPMessage) => {
+      const reply = (response: any) => {
+        // Ensure response has proper structure
+        if (message.meta.requestUuid) {
+          response.meta = {
+            ...response.meta,
+            responseUuid: message.meta.requestUuid,
+            timestamp: new Date().toISOString()
+          }
+        }
+        // Note: For transport adapters, responses are typically sent through
+        // the transport's own mechanism, not through a reply function
+        // This is handled by the individual handlers
+      }
+
+      await this.processDACPMessage(message, context, reply)
+    })
   }
 
   /**

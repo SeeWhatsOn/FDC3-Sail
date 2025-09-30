@@ -89,7 +89,7 @@ export function createWCPHandler(config: WCPHandlerConfig): WCPHandlerResult {
   /**
    * Handles incoming WCP1Hello messages and completes the handshake.
    */
-  function handleWCPMessage(event: MessageEvent, contentWindow: Window): void {
+  async function handleWCPMessage(event: MessageEvent, contentWindow: Window): Promise<void> {
     if (isDisposed) {
       log("Handler disposed, ignoring message")
       return
@@ -113,14 +113,18 @@ export function createWCPHandler(config: WCPHandlerConfig): WCPHandlerResult {
     log("Valid WCP1Hello received:", messageData)
 
     try {
-      // Create MessageChannel for app communication
+      // Per FDC3 WCP spec: Desktop Agent responds immediately with WCP3Handshake + MessagePort
+      // App identity validation happens AFTER via WCP4ValidateAppIdentity on the MessagePort
+
+      // 1. Create MessageChannel for app communication
       const channel = new MessageChannel()
       log("Created MessageChannel for app communication")
 
-      // Link the MessagePort to our transport
+      // 2. Link the MessagePort to our transport
+      // This allows the Desktop Agent to receive WCP4ValidateAppIdentity and DACP messages
       linkMessagePortToTransport(channel)
 
-      // Build WCP3Handshake response
+      // 3. Build WCP3Handshake response per FDC3 spec
       const handshakeResponse: BrowserTypes.WebConnectionProtocol3Handshake = {
         type: "WCP3Handshake",
         meta: {
@@ -134,12 +138,13 @@ export function createWCPHandler(config: WCPHandlerConfig): WCPHandlerResult {
         },
       }
 
-      log("Sending WCP3Handshake response:", handshakeResponse)
+      log("Sending WCP3Handshake response with MessagePort:", handshakeResponse)
 
-      // Send handshake response with MessagePort to the app
+      // 4. Send WCP3Handshake with MessagePort to the app
+      // App will then send WCP4ValidateAppIdentity on this MessagePort
       contentWindow.postMessage(handshakeResponse, "*", [channel.port1])
 
-      log("WCP handshake completed successfully")
+      log("WCP3Handshake sent. App will now send WCP4ValidateAppIdentity for validation.")
     } catch (error) {
       console.error("[WCP-Handler] Error during handshake:", error)
       throw error

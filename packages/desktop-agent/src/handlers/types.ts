@@ -31,6 +31,16 @@ export interface DACPHandlerContext {
   fdc3Server: FDC3Server // Generic FDC3 server interface
 }
 
+// Transport-agnostic DACP Handler context
+export interface TransportAgnosticDACPHandlerContext {
+  instanceId: string
+  appInstanceRegistry: AppInstanceRegistry
+  intentRegistry: IntentRegistry
+  serverContext: ServerContext<unknown>
+  fdc3Server: FDC3Server
+  reply: (message: any) => void
+}
+
 // Log levels for structured logging
 export enum LogLevel {
   ERROR = "ERROR",
