@@ -1,3 +1,5 @@
+> _**Note:** This document contains the detailed implementation plan for the Desktop Agent. For a comprehensive overview of the entire system architecture and how this component fits in, please see [**SYSTEM_ARCHITECTURE.md**](../../docs/SYSTEM_ARCHITECTURE.md)._
+
 # FDC3 Desktop Agent Implementation Plan
 
 ## Overview

@@ -1,5 +1,8 @@
 // Main exports for FDC3 Sail Desktop Agent package
 
+// Primary Desktop Agent API - Main entry point
+export { DesktopAgent, getDesktopAgent, type DesktopAgentConfig, type DesktopAgentHealth } from "./desktopAgent";
+
 // DACP Protocol Messages (exported for client use)
 export * from "./protocol/dacp-messages";
 
@@ -17,3 +20,6 @@ export * from "./state/IntentRegistry";
 
 // App directory management
 export { AppDirectoryManager } from "./app-directory/appDirectoryManager";
+
+// Default export for convenience
+export { default } from "./desktopAgent";

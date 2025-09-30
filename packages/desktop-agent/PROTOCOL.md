@@ -1,3 +1,5 @@
+> _**Note:** This document provides specific details about the Socket.IO protocol convention. For a comprehensive overview of the entire system architecture and how this protocol fits in, please see [**SYSTEM_ARCHITECTURE.md**](../../docs/SYSTEM_ARCHITECTURE.md)._
+
 # FDC3 Sail Unified Protocol Convention
 
 ## Overview

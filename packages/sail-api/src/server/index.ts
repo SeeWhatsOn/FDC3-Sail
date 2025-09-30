@@ -10,6 +10,9 @@ export {
   type ConnectedAppsResponse
 } from "./SailServer"
 
+// Desktop Agent Singleton
+export { DesktopAgentSingleton } from "./DesktopAgentSingleton"
+
 // Re-export FDC3 types for convenience
 export type {
   AppInstance,
