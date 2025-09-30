@@ -4,3 +4,6 @@ export * from "./types/sail-types";
 
 // Client API
 export * from "./client/SailClient";
+
+// Server API
+export * from "./server";

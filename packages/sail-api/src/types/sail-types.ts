@@ -7,7 +7,7 @@
 //
 // ============================================================================
 
-import { AppIdentifier, AppIntent, Context } from "@finos/fdc3"
+import type { AppIdentifier, AppIntent, Context } from "@finos/fdc3"
 
 // ============================================================================
 // SAIL INSTANCE MANAGEMENT
