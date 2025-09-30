@@ -77,30 +77,67 @@ For clients connecting via Socket.IO, the system uses exactly two event channels
 
 This separation ensures that FDC3-standard logic is cleanly isolated from proprietary features.
 
-### 5.2. Supported Transports
+### 5.2. FDC3 Transport Abstraction
 
-The architecture supports two primary transport mechanisms for FDC3 communication.
+The architecture supports **transport-agnostic FDC3 communication** through a proxy layer that translates between different transports while maintaining DACP compliance.
 
 ```mermaid
-flowchart LR
-    subgraph "Web-Based Clients"
-        WB["Sail UI / FDC3 Web App"]
-    end
-    subgraph "Desktop-Based Clients"
-        DB["Native / Sandboxed FDC3 App"]
-    end
-    subgraph "Sail Server"
-        SS["Socket.IO Server"]
-        DA["Desktop Agent"]
+flowchart TB
+    subgraph "FDC3 Application (iframe)"
+        APP["App using @finos/fdc3 getAgent()"]
     end
 
-    WB -- "fdc3_event (DACP over Socket.IO)" --> SS
-    SS --> DA
-    DB -- "DACP over MessagePort" --> DA
+    subgraph "Parent Window (Sail UI)"
+        WCP["WCP Handshake Handler"]
+        PROXY["FDC3 Transport Proxy"]
+    end
+
+    subgraph "Transport Layer"
+        SOCKETIO["Socket.IO Transport"]
+        MSGPORT["MessagePort Transport"]
+    end
+
+    subgraph "Desktop Agent"
+        DA["DesktopAgent (DACP Processor)"]
+    end
+
+    APP -- "WCP1Hello (postMessage)" --> WCP
+    WCP -- "WCP3Handshake + MessagePort" --> APP
+    APP -- "DACP (via MessagePort)" --> PROXY
+    PROXY -- "DACP wrapped in fdc3_event" --> SOCKETIO
+    PROXY -- "DACP (direct)" --> MSGPORT
+    SOCKETIO -- "DACP" --> DA
+    MSGPORT -- "DACP" --> DA
 ```
 
--   **Socket.IO**: The primary transport for web applications running inside the Sail environment or connecting remotely. DACP messages are wrapped within the `fdc3_event` channel.
--   **DACP over `MessagePort`**: The standard FDC3 mechanism for non-web clients. The desktop agent can establish direct communication with other desktop applications using the browser `MessagePort` API, allowing for true interoperability.
+#### Transport Modes
+
+**1. Socket.IO Transport (Remote Desktop Agent)**
+- FDC3 apps use standard `@finos/fdc3` library and WCP handshake
+- Parent window captures DACP messages from MessagePort
+- Proxy forwards DACP messages over Socket.IO using `fdc3_event` channel
+- Desktop Agent runs on remote server, processes DACP messages
+- Use case: Multi-user server environments, cloud deployments
+
+**2. MessagePort Transport (Local Desktop Agent)**
+- FDC3 apps use standard `@finos/fdc3` library and WCP handshake
+- Parent window routes DACP messages directly to local Desktop Agent
+- Desktop Agent runs in parent window/same process
+- Use case: Single-user desktop apps, offline environments, iframe-to-iframe communication
+
+#### Key Implementation Details
+
+The **FDC3 Transport Proxy** (implemented in `useFDC3Connection` hook) performs:
+
+1. **WCP Handshake**: Responds to `WCP1Hello` from FDC3 apps with `WCP3Handshake`
+2. **MessagePort Bridging**: Links app's MessagePort to selected transport
+3. **DACP Forwarding**: Routes DACP messages between app and Desktop Agent
+4. **Bi-directional Communication**: Handles both request/response and event messaging
+
+This separation ensures:
+- Desktop Agent remains **transport-agnostic** (only processes DACP)
+- FDC3 apps remain **unmodified** (use standard `@finos/fdc3` library)
+- Transport choice is **runtime configurable** (Socket.IO vs MessagePort vs future options)
 
 ## 6. Message & Data Flow
 
