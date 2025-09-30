@@ -115,6 +115,23 @@ export class DesktopAgent {
     return this.initialized
   }
 
+  /**
+   * Gets the FDC3 implementation metadata for this agent.
+   */
+  getImplementationMetadata() {
+    // As per the implementation plan and tests
+    return {
+      fdc3Version: "2.2",
+      provider: "FDC3-Sail",
+      providerVersion: "0.1.0", // Placeholder version
+      optionalFeatures: {
+        OriginatingAppMetadata: true,
+        UserChannelMembershipAPIs: true,
+        PrivateChannels: false, // To be updated once implemented
+      },
+    };
+  }
+
   // ============================================================================
   // APP INSTANCE MANAGEMENT
   // ============================================================================

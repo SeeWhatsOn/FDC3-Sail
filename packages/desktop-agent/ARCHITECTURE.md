@@ -18,22 +18,25 @@ The system is designed as a two-part architecture to maintain a clean separation
 ```mermaid
 flowchart TD
     subgraph Browser
-        FDC3App["FDC3 Web App (in iframe)"]
-        SailApp["Sail UI Shell (@packages/sail-app)"]
+        FDC3App["FDC3 Web App (uses @finos/fdc3)"]
+        SailUI["Sail UI Shell (@apps/sail)"]
+        Proxy["FDC3 Transport Proxy (useFDC3Connection)"]
     end
 
     subgraph Backend Server
-        SailSocket["@apps/sail-socket (Server Application)"]
+        SailServer["@apps/sail-server (Server Application)"]
         DesktopAgent["@packages/desktop-agent (FDC3 Engine Library)"]
-        SailHandlers["Sail Logic Handlers (within sail-socket)"]
+        SailHandlers["Sail Logic Handlers (within sail-server)"]
     end
 
-    FDC3App -- "WCP via MessagePort" --> SailApp
-    SailApp -- "Sail Protocol via Socket.IO" --> SailSocket
-    SailApp -- "DACP Messages (Tunneled over Socket.IO)" --> SailSocket
+    FDC3App -- "1. WCP Handshake (postMessage)" --> Proxy
+    Proxy -- "2. WCP3Handshake + MessagePort" --> FDC3App
+    FDC3App -- "3. DACP via MessagePort" --> Proxy
+    Proxy -- "4. DACP wrapped in fdc3_event (Socket.IO)" --> SailServer
+    SailUI -- "Sail Protocol via Socket.IO" --> SailServer
 
-    SailSocket --> |Routes DACP| DesktopAgent
-    SailSocket --> |Routes Sail Msgs| SailHandlers
+    SailServer --> |Routes DACP| DesktopAgent
+    SailServer --> |Routes Sail Msgs| SailHandlers
 ```
 
 ### 2. Protocol Definitions
@@ -82,14 +85,33 @@ All incoming DACP messages are validated against auto-generated Zod schemas deri
 
 ## Message Flow Architecture
 
-### FDC3 Message Flow (DACP over WCP)
+### FDC3 Message Flow (DACP with Transport Abstraction)
 
-1.  **Connection**: An FDC3-compliant application (e.g., in an iframe) initiates a **WCP** handshake.
-2.  **Orchestration**: The host application (`@apps/sail-socket`) completes the handshake, establishing a `MessagePort` for communication.
-3.  **Processing**: The orchestrator attaches the DACP handlers from this package to the `MessagePort`.
-4.  **State Management**: The desktop agent maintains FDC3 state through dedicated registries (AppInstanceRegistry, IntentRegistry, PrivateChannelRegistry).
-5.  **Communication**: All subsequent FDC3 API calls from the app are sent as **DACP** messages over the `MessagePort`, received by the handlers in this package, and processed against the core state registries.
-6.  **Integration**: The desktop agent integrates with the existing `SailAppInstanceManager` for app launching and lifecycle management.
+This Desktop Agent is **transport-agnostic** and only processes DACP messages. A **transport proxy layer** sits between FDC3 apps and the Desktop Agent.
+
+#### Complete Flow (Socket.IO Transport Example)
+
+1.  **WCP Handshake**: An FDC3 app (using `@finos/fdc3`) sends a `WCP1Hello` via `postMessage` to the parent window
+2.  **Proxy Setup**: The FDC3 Transport Proxy (e.g., `useFDC3Connection` hook in parent window):
+    - Creates a `MessageChannel`
+    - Responds with `WCP3Handshake`, transferring `port1` to the FDC3 app
+    - Establishes transport connection (Socket.IO, MessagePort, etc.)
+3.  **DACP Forwarding**: The proxy bridges the app's MessagePort (`port2`) to the chosen transport:
+    - **Inbound**: App sends DACP via `port2` → Proxy forwards over Socket.IO (`fdc3_event`)
+    - **Outbound**: Desktop Agent sends DACP response → Proxy posts back to app via `port2`
+4.  **Desktop Agent Processing**: This package receives pure DACP messages and:
+    - Validates against FDC3 schemas
+    - Processes using state registries (AppInstanceRegistry, IntentRegistry, etc.)
+    - Returns DACP-compliant responses
+5.  **State Management**: Desktop Agent maintains FDC3 state independently of transport
+6.  **Integration**: Desktop Agent integrates with Sail's app lifecycle while remaining transport-agnostic
+
+#### Why This Matters
+
+- **FDC3 Apps**: Use standard `@finos/fdc3` library unchanged, always use WCP/MessagePort
+- **Transport Proxy**: Handles WCP handshake and routes DACP to appropriate transport (Socket.IO, direct MessagePort, REST, etc.)
+- **Desktop Agent**: Receives and processes only DACP messages, never knows about underlying transport
+- **Flexibility**: Same Desktop Agent works locally (MessagePort) or remotely (Socket.IO) without modification
 
 ```typescript
 // Simplified Flow within this package

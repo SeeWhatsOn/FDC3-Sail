@@ -11,6 +11,7 @@ import { type DACPHandlerContext, logger } from "../types"
 import * as contextHandlers from "./context.handlers"
 import * as intentHandlers from "./intent.handlers"
 import * as channelHandlers from "./channel.handlers"
+import * as appHandlers from "./app-management/app.handlers"
 
 // Handler registry type
 type DACPHandlerFunction = (message: unknown, context: DACPHandlerContext) => Promise<void>
@@ -154,7 +155,7 @@ function getHandlerForMessageType(messageType: string): DACPHandlerFunction | nu
     getUserChannelsRequest: channelHandlers.handleGetUserChannelsRequest,
 
     // App management handlers (to be implemented in Phase 3)
-    // 'getInfoRequest': appHandlers.handleGetInfoRequest,
+    'getInfoRequest': appHandlers.handleGetInfoRequest,
     // 'findInstancesRequest': appHandlers.handleFindInstancesRequest,
     // 'openRequest': appHandlers.handleOpenRequest,
 
