@@ -5,7 +5,6 @@
 
 import { Server } from "socket.io"
 // import { SailServer } from "@finos/sail-api"
-import { DesktopAgent } from "@finos/sail-api/dist/server/DesktopAgentSingleton"
 import { APP_CONFIG } from "./constants"
 // import { authMiddleware } from "./middleware/auth"
 import dotenv from "dotenv"
@@ -13,9 +12,6 @@ import dotenv from "dotenv"
 dotenv.config()
 
 const port = process.env.PORT || APP_CONFIG.DEFAULT_PORT
-
-// Initialize Desktop Agent
-const desktopAgent = new DesktopAgent()
 
 // Create Sail Server
 // const sailServer = new SailServer({ desktopAgent })
@@ -40,6 +36,7 @@ io.on("connection", socket => {
   })
 
   socket.on("fdc3_event", async (message: DACPMessage) => {
+    handleDACPMessage(message)
     // FDC3 desktop agent will handle the message
   })
 })
