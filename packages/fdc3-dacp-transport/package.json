@@ -1,0 +1,47 @@
+{
+  "name": "@finos/fdc3-dacp-transport",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "FDC3 DACP transport abstraction layer for routing Desktop Agent Communication Protocol messages over different transports",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "dev": "tsc --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "keywords": [
+    "fdc3",
+    "dacp",
+    "wcp",
+    "desktop-agent",
+    "transport",
+    "interop"
+  ],
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "@vitest/ui": "^3.2.4",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.3.2",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@finos/fdc3": "^2.2.0",
+    "@finos/fdc3-schema": "^2.2.1-beta.3",
+    "socket.io-client": "^4.8.1"
+  },
+  "peerDependencies": {
+    "socket.io-client": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "socket.io-client": {
+      "optional": true
+    }
+  },
+  "author": "",
+  "license": "Apache-2.0"
+}
