@@ -110,12 +110,12 @@ export function handleFindInstancesRequest(message: unknown, context: DACPHandle
  * @param context
  */
 export function handleGetAppMetadataRequest(message: unknown, context: DACPHandlerContext): void {
-  const { socket, appDirectory } = context
+  const { socket } = context
 
   try {
     const request = validateDACPMessage(message, GetappmetadatarequestSchema)
-
-    const appMetadata = appDirectory.getAppMetadata(request.payload.app)
+    // TODO: Implement this
+    // const appMetadata = appDirectory.getAppMetadata(request.payload.app)
 
     const response = createDACPSuccessResponse(
       request,

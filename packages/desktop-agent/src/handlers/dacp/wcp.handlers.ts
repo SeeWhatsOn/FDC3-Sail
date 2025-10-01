@@ -6,6 +6,7 @@
  * to validate their identity before sending DACP messages.
  */
 
+import type { AppMetadata } from "@finos/fdc3"
 import type { DACPHandlerContext } from "../types"
 
 /**
@@ -184,9 +185,9 @@ export async function handleWCP4ValidateAppIdentity(
 /**
  * Helper to create a new app instance
  */
-async function createAppInstance(
+function createAppInstance(
   context: DACPHandlerContext,
-  appMetadata: any,
+  appMetadata: AppMetadata,
   identityUrl: string
 ) {
   const instanceId = crypto.randomUUID()
@@ -195,7 +196,7 @@ async function createAppInstance(
   context.appInstanceRegistry.createInstance({
     instanceId,
     appId: appMetadata.appId,
-    appMetadata: {
+    metadata: {
       appId: appMetadata.appId,
       name: appMetadata.name,
       title: appMetadata.title,

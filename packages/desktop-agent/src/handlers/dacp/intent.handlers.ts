@@ -15,10 +15,9 @@ import {
 } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../types"
 import { type Context } from "@finos/fdc3"
-import type { DACPMessageBase } from "../../protocol/dacp-messages"
 
 export async function handleRaiseIntentRequest(
-  message: DACPMessageBase,
+  message: unknown,
   context: DACPHandlerContext
 ): Promise<void> {
   const { socket, instanceId, appInstanceRegistry, intentRegistry } = context
@@ -67,10 +66,7 @@ export async function handleRaiseIntentRequest(
   }
 }
 
-export function handleAddIntentListener(
-  message: DACPMessageBase,
-  context: DACPHandlerContext
-): void {
+export function handleAddIntentListener(message: unknown, context: DACPHandlerContext): void {
   const { socket, instanceId, appInstanceRegistry, intentRegistry } = context
 
   try {
@@ -108,7 +104,7 @@ export function handleAddIntentListener(
 }
 
 export function handleIntentListenerUnsubscribe(
-  message: DACPMessageBase,
+  message: unknown,
   context: DACPHandlerContext
 ): void {
   const { socket, intentRegistry } = context
