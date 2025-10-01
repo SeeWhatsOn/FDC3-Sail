@@ -13,9 +13,6 @@ dotenv.config()
 
 const port = process.env.PORT || APP_CONFIG.DEFAULT_PORT
 
-// Create Sail Server
-// const sailServer = new SailServer({ desktopAgent })
-
 // Create Socket.IO server
 const io = new Server(Number(port), {
   cors: {
@@ -24,8 +21,6 @@ const io = new Server(Number(port), {
     credentials: true,
   },
 })
-
-// io.use(authMiddleware)
 
 // Socket.IO connection handling
 io.on("connection", socket => {
