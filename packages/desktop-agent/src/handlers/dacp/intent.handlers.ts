@@ -2,24 +2,23 @@ import {
   validateDACPMessage,
   createDACPErrorResponse,
   createDACPSuccessResponse,
-  createDACPEvent,
+  // createDACPEvent,
   DACP_ERROR_TYPES,
   generateEventUuid,
-  DACPErrorType,
-} from '../validation/dacp-validator'
+} from "../validation/dacp-validator"
 import {
   RaiseintentrequestSchema,
-  Raiseintentrequest,
   AddintentlistenerrequestSchema,
   IntentlistenerunsubscriberequestSchema,
   FindintentrequestSchema,
   ContextSchema,
-} from '../validation/dacp-schemas'
-import { DACPHandlerContext, logger } from '../types'
-import { Context, AppMetadata, IntentResolution } from '@finos/fdc3'
+} from "../validation/dacp-schemas"
+import { type DACPHandlerContext, logger } from "../types"
+import { type Context } from "@finos/fdc3"
+import type { DACPMessageBase } from "../../protocol/dacp-messages"
 
 export async function handleRaiseIntentRequest(
-  message: unknown,
+  message: DACPMessageBase,
   context: DACPHandlerContext
 ): Promise<void> {
   const { socket, instanceId, appInstanceRegistry, intentRegistry } = context
@@ -27,7 +26,7 @@ export async function handleRaiseIntentRequest(
   try {
     const request = validateDACPMessage(message, RaiseintentrequestSchema)
 
-    logger.info('DACP: Processing raise intent request', {
+    logger.info("DACP: Processing raise intent request", {
       intent: request.payload.intent,
       requestUuid: request.meta.requestUuid,
     })
@@ -50,28 +49,28 @@ export async function handleRaiseIntentRequest(
 
     const intentResult = await intentResolution.getResult()
 
-    const response = createDACPSuccessResponse(request, 'raiseIntentResponse', {
+    const response = createDACPSuccessResponse(request, "raiseIntentResponse", {
       intentResult: intentResult,
       source: intentResolution.source?.appId,
     })
 
-    socket.emit('fdc3_message', response)
+    socket.emit("fdc3_message", response)
   } catch (error) {
-    logger.error('DACP: Raise intent request failed', error)
+    logger.error("DACP: Raise intent request failed", error)
     const errorResponse = createDACPErrorResponse(
-      message as any,
+      message as { meta: { requestUuid: string } },
       DACP_ERROR_TYPES.INTENT_DELIVERY_FAILED,
-      'raiseIntentResponse',
-      error instanceof Error ? error.message : 'Intent delivery failed'
+      "raiseIntentResponse",
+      error instanceof Error ? error.message : "Intent delivery failed"
     )
-    socket.emit('fdc3_message', errorResponse)
+    socket.emit("fdc3_message", errorResponse)
   }
 }
 
-export async function handleAddIntentListener(
-  message: unknown,
+export function handleAddIntentListener(
+  message: DACPMessageBase,
   context: DACPHandlerContext
-): Promise<void> {
+): void {
   const { socket, instanceId, appInstanceRegistry, intentRegistry } = context
 
   try {
@@ -91,78 +90,75 @@ export async function handleAddIntentListener(
       appId: instance.appId,
     })
 
-    const response = createDACPSuccessResponse(request, 'addIntentListenerResponse', {
+    const response = createDACPSuccessResponse(request, "addIntentListenerResponse", {
       listenerId,
     })
 
-    socket.emit('fdc3_message', response)
+    socket.emit("fdc3_message", response)
   } catch (error) {
-    logger.error('DACP: Add intent listener failed', error)
+    logger.error("DACP: Add intent listener failed", error)
     const errorResponse = createDACPErrorResponse(
-      message as any,
+      message as { meta: { requestUuid: string } },
       DACP_ERROR_TYPES.LISTENER_ERROR,
-      'addIntentListenerResponse',
-      error instanceof Error ? error.message : 'Failed to add intent listener'
+      "addIntentListenerResponse",
+      error instanceof Error ? error.message : "Failed to add intent listener"
     )
-    socket.emit('fdc3_message', errorResponse)
+    socket.emit("fdc3_message", errorResponse)
   }
 }
 
-export async function handleIntentListenerUnsubscribe(
-  message: unknown,
+export function handleIntentListenerUnsubscribe(
+  message: DACPMessageBase,
   context: DACPHandlerContext
-): Promise<void> {
+): void {
   const { socket, intentRegistry } = context
 
   try {
     const request = validateDACPMessage(message, IntentlistenerunsubscriberequestSchema)
-    const listenerId = request.payload.listenerId as string;
+    const listenerId = (request.payload as { listenerId: string }).listenerId
 
     const unregistered = intentRegistry.unregisterListener(listenerId)
     if (!unregistered) {
       throw new Error(`Intent listener ${listenerId} not found`)
     }
 
-    const response = createDACPSuccessResponse(request, 'intentListenerUnsubscribeResponse')
-    socket.emit('fdc3_message', response)
+    const response = createDACPSuccessResponse(request, "intentListenerUnsubscribeResponse")
+    socket.emit("fdc3_message", response)
   } catch (error) {
-    logger.error('DACP: Intent listener unsubscribe failed', error)
+    logger.error("DACP: Intent listener unsubscribe failed", error)
     const errorResponse = createDACPErrorResponse(
-      message as any,
+      message as { meta: { requestUuid: string } },
       DACP_ERROR_TYPES.LISTENER_ERROR,
-      'intentListenerUnsubscribeResponse',
-      error instanceof Error ? error.message : 'Failed to unsubscribe intent listener'
+      "intentListenerUnsubscribeResponse",
+      error instanceof Error ? error.message : "Failed to unsubscribe intent listener"
     )
-    socket.emit('fdc3_message', errorResponse)
+    socket.emit("fdc3_message", errorResponse)
   }
 }
 
-export async function handleFindIntentRequest(
-  message: unknown,
-  context: DACPHandlerContext
-): Promise<void> {
+export function handleFindIntentRequest(message: unknown, context: DACPHandlerContext): void {
   const { socket, intentRegistry } = context
 
   try {
     const request = validateDACPMessage(message, FindintentrequestSchema)
-    const intent = request.payload.intent as string;
-    const contextType = (request.payload.context as Context)?.type;
+    const intent = (request.payload as { intent: string }).intent
+    const contextType = (request.payload as { context: Context })?.context?.type
 
     const appIntents = intentRegistry.createAppIntents(intent, contextType)
 
-    const response = createDACPSuccessResponse(request, 'findIntentResponse', {
+    const response = createDACPSuccessResponse(request, "findIntentResponse", {
       appIntent: appIntents[0] ?? { intent: { name: intent, displayName: intent }, apps: [] },
     })
 
-    socket.emit('fdc3_message', response)
+    socket.emit("fdc3_message", response)
   } catch (error) {
-    logger.error('DACP: Find intent request failed', error)
+    logger.error("DACP: Find intent request failed", error)
     const errorResponse = createDACPErrorResponse(
-      message as any,
+      message as { meta: { requestUuid: string } },
       DACP_ERROR_TYPES.NO_APPS_FOUND,
-      'findIntentResponse',
-      error instanceof Error ? error.message : 'Failed to find apps for intent'
+      "findIntentResponse",
+      error instanceof Error ? error.message : "Failed to find apps for intent"
     )
-    socket.emit('fdc3_message', errorResponse)
+    socket.emit("fdc3_message", errorResponse)
   }
 }

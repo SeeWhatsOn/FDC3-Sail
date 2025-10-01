@@ -36,16 +36,16 @@ export async function routeDACPMessage(message: unknown, context: DACPHandlerCon
     )
   } catch (error) {
     logger.error("DACP message routing failed:", {
-      error: error instanceof Error ? error.message : error,
+      error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       messageType:
         typeof message === "object" && message !== null && "type" in message
-          ? (message as any).type
+          ? (message as { type: string }).type
           : "unknown",
       messageData: message,
     })
 
-    // Note: Individual handlers are responsible for sending error responses
+    // Note: Individual handlers are responsible for sending error responses to the client
     // The router doesn't send responses directly to avoid conflicts
   }
 }
@@ -217,7 +217,7 @@ export function checkDACPHandlerHealth(): {
     }
   } catch (error) {
     status = "unhealthy"
-    details.push(`Health check failed: ${error}`)
+    details.push(`Health check failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 
   return { status, details }

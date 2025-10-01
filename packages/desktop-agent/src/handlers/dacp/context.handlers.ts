@@ -4,15 +4,15 @@ import {
   createDACPSuccessResponse,
   createDACPEvent,
   DACP_ERROR_TYPES,
-} from '../validation/dacp-validator'
+} from "../validation/dacp-validator"
 import {
   BroadcastrequestSchema,
   AddcontextlistenerrequestSchema,
   ContextSchema,
   ContextlistenerunsubscriberequestSchema,
-} from '../validation/dacp-schemas'
-import { type DACPHandlerContext, logger } from '../types'
-import type { Context } from '@finos/fdc3'
+} from "../validation/dacp-schemas"
+import { type DACPHandlerContext, logger } from "../types"
+import type { Context } from "@finos/fdc3"
 
 /**
  * Handles broadcast requests to send context to a channel
@@ -27,7 +27,7 @@ export async function handleBroadcastRequest(
   try {
     const request = validateDACPMessage(message, BroadcastrequestSchema)
 
-    logger.info('DACP: Processing broadcast request', {
+    logger.info("DACP: Processing broadcast request", {
       channelId: request.payload.channelId,
       contextType: request.payload.context.type,
       requestUuid: request.meta.requestUuid,
@@ -40,24 +40,28 @@ export async function handleBroadcastRequest(
 
     await notifyContextListeners(request.payload.channelId, validatedContext, context)
 
-    const response = createDACPSuccessResponse(request, 'broadcastResponse')
+    const response = createDACPSuccessResponse(request, "broadcastResponse")
 
-    socket.emit('fdc3_message', response)
+    socket.emit("fdc3_message", response)
 
-    logger.debug('DACP: Broadcast request completed successfully', {
+    logger.debug("DACP: Broadcast request completed successfully", {
       requestUuid: request.meta.requestUuid,
     })
   } catch (error) {
-    logger.error('DACP: Broadcast request failed', error)
+    logger.error("DACP: Broadcast request failed", error)
 
     const errorResponse = createDACPErrorResponse(
-      { meta: { requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "" } },
+      {
+        meta: {
+          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
+        },
+      },
       DACP_ERROR_TYPES.BROADCAST_ERROR,
-      'broadcastResponse',
-      error instanceof Error ? error.message : 'Unknown broadcast error'
+      "broadcastResponse",
+      error instanceof Error ? error.message : "Unknown broadcast error"
     )
 
-    socket.emit('fdc3_message', errorResponse)
+    socket.emit("fdc3_message", errorResponse)
   }
 }
 
@@ -65,17 +69,14 @@ export async function handleBroadcastRequest(
  * Handles add context listener requests
  * Implements DACP addContextListenerRequest message handling
  */
-export function handleAddContextListener(
-  message: unknown,
-  context: DACPHandlerContext
-): void {
+export function handleAddContextListener(message: unknown, context: DACPHandlerContext): void {
   const { socket, instanceId, appInstanceRegistry } = context
 
   try {
     const request = validateDACPMessage(message, AddcontextlistenerrequestSchema)
-    const contextType = request.payload.contextType ?? '*'; // Default to all contexts if not specified
+    const contextType = request.payload.contextType ?? "*" // Default to all contexts if not specified
 
-    logger.info('DACP: Adding context listener', {
+    logger.info("DACP: Adding context listener", {
       instanceId,
       contextType,
       requestUuid: request.meta.requestUuid,
@@ -86,28 +87,32 @@ export function handleAddContextListener(
     // The listenerId is the contextType itself for simplicity in unsubscribing.
     const listenerId = contextType
 
-    const response = createDACPSuccessResponse(request, 'addContextListenerResponse', {
+    const response = createDACPSuccessResponse(request, "addContextListenerResponse", {
       listenerId,
     })
 
-    socket.emit('fdc3_message', response)
+    socket.emit("fdc3_message", response)
 
-    logger.debug('DACP: Context listener added successfully', {
+    logger.debug("DACP: Context listener added successfully", {
       listenerId,
       instanceId,
       requestUuid: request.meta.requestUuid,
     })
   } catch (error) {
-    logger.error('DACP: Add context listener failed', error)
+    logger.error("DACP: Add context listener failed", error)
 
     const errorResponse = createDACPErrorResponse(
-      { meta: { requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "" } },
+      {
+        meta: {
+          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
+        },
+      },
       DACP_ERROR_TYPES.LISTENER_ERROR,
-      'addContextListenerResponse',
-      error instanceof Error ? error.message : 'Failed to add context listener'
+      "addContextListenerResponse",
+      error instanceof Error ? error.message : "Failed to add context listener"
     )
 
-    socket.emit('fdc3_message', errorResponse)
+    socket.emit("fdc3_message", errorResponse)
   }
 }
 
@@ -123,9 +128,9 @@ export function handleContextListenerUnsubscribe(
 
   try {
     const request = validateDACPMessage(message, ContextlistenerunsubscriberequestSchema)
-    const listenerId = request.payload.listenerId
+    const listenerId = (request.payload as any).listenerId
 
-    logger.info('DACP: Unsubscribing context listener', {
+    logger.info("DACP: Unsubscribing context listener", {
       listenerId,
       instanceId,
       requestUuid: request.meta?.requestUuid,
@@ -137,26 +142,30 @@ export function handleContextListenerUnsubscribe(
       throw new Error(`Context listener ${listenerId} not found for instance ${instanceId}`)
     }
 
-    const response = createDACPSuccessResponse(request, 'contextListenerUnsubscribeResponse')
+    const response = createDACPSuccessResponse(request, "contextListenerUnsubscribeResponse")
 
-    socket.emit('fdc3_message', response)
+    socket.emit("fdc3_message", response)
 
-    logger.debug('DACP: Context listener unsubscribed successfully', {
+    logger.debug("DACP: Context listener unsubscribed successfully", {
       listenerId,
       instanceId,
       requestUuid: request.meta?.requestUuid,
     })
   } catch (error) {
-    logger.error('DACP: Context listener unsubscribe failed', error)
+    logger.error("DACP: Context listener unsubscribe failed", error)
 
     const errorResponse = createDACPErrorResponse(
-      { meta: { requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "" } },
+      {
+        meta: {
+          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
+        },
+      },
       DACP_ERROR_TYPES.LISTENER_ERROR,
-      'contextListenerUnsubscribeResponse',
-      error instanceof Error ? error.message : 'Failed to unsubscribe context listener'
+      "contextListenerUnsubscribeResponse",
+      error instanceof Error ? error.message : "Failed to unsubscribe context listener"
     )
 
-    socket.emit('fdc3_message', errorResponse)
+    socket.emit("fdc3_message", errorResponse)
   }
 }
 
@@ -170,25 +179,26 @@ function notifyContextListeners(
 
   const notifications = instancesOnChannel.map(instance => {
     // Check if the instance is listening for this context type
-    const listensForType = instance.contextListeners.has(context.type) || instance.contextListeners.has('*')
+    const listensForType =
+      instance.contextListeners.has(context.type) || instance.contextListeners.has("*")
 
     if (listensForType && instance.socket) {
       try {
-        const contextEvent = createDACPEvent('contextEvent', {
+        const contextEvent = createDACPEvent("contextEvent", {
           channelId,
           context,
         })
 
         // Send to the LISTENER's socket, not the sender's!
-        instance.socket.emit('fdc3_message', contextEvent)
+        instance.socket.emit("fdc3_message", contextEvent)
 
-        logger.debug('Context event sent to listener', {
+        logger.debug("Context event sent to listener", {
           instanceId: instance.instanceId,
           channelId,
           contextType: context.type,
         })
       } catch (error) {
-        logger.error('Failed to notify context listener', {
+        logger.error("Failed to notify context listener", {
           instanceId: instance.instanceId,
           error,
         })

@@ -6,13 +6,13 @@
  * to validate their identity before sending DACP messages.
  */
 
-import type { DACPHandlerContext } from '../types'
+import type { DACPHandlerContext } from "../types"
 
 /**
  * WCP4ValidateAppIdentity message from FDC3 app
  */
 interface WCP4ValidateAppIdentity {
-  type: 'WCP4ValidateAppIdentity'
+  type: "WCP4ValidateAppIdentity"
   payload: {
     identityUrl: string
     actualUrl: string
@@ -28,7 +28,7 @@ interface WCP4ValidateAppIdentity {
  * WCP5ValidateAppIdentityResponse - success response
  */
 interface WCP5ValidateAppIdentityResponse {
-  type: 'WCP5ValidateAppIdentityResponse'
+  type: "WCP5ValidateAppIdentityResponse"
   payload: {
     appId: string
     instanceId: string
@@ -48,7 +48,7 @@ interface WCP5ValidateAppIdentityResponse {
  * WCP5ValidateAppIdentityFailedResponse - failure response
  */
 interface WCP5ValidateAppIdentityFailedResponse {
-  type: 'WCP5ValidateAppIdentityFailedResponse'
+  type: "WCP5ValidateAppIdentityFailedResponse"
   payload: {
     error: string
   }
@@ -75,10 +75,15 @@ export async function handleWCP4ValidateAppIdentity(
   const wcp4Message = message as WCP4ValidateAppIdentity
   const { socket, appInstanceRegistry, appDirectory } = context
 
-  console.log('[WCP4] Received app identity validation request:', wcp4Message.payload)
+  console.log("[WCP4] Received app identity validation request:", wcp4Message.payload)
 
   try {
-    const { identityUrl, actualUrl, instanceId: reconnectInstanceId, instanceUuid: reconnectInstanceUuid } = wcp4Message.payload
+    const {
+      identityUrl,
+      actualUrl,
+      instanceId: reconnectInstanceId,
+      instanceUuid: reconnectInstanceUuid,
+    } = wcp4Message.payload
 
     // 1. Extract origins from URLs
     const identityOrigin = new URL(identityUrl).origin
@@ -86,15 +91,18 @@ export async function handleWCP4ValidateAppIdentity(
 
     // 2. Validate origins match (per FDC3 spec requirement)
     if (identityOrigin !== actualOrigin) {
-      console.error('[WCP4] Origin mismatch:', { identityOrigin, actualOrigin })
-      sendFailureResponse(context, 'Origin mismatch: identityUrl and actualUrl must have same origin')
+      console.error("[WCP4] Origin mismatch:", { identityOrigin, actualOrigin })
+      sendFailureResponse(
+        context,
+        "Origin mismatch: identityUrl and actualUrl must have same origin"
+      )
       return
     }
 
     // TODO: Also validate MessageEvent.origin matches (requires context enhancement)
 
     // 3. Look up app in app directory
-    const apps = await appDirectory.getAllApps()
+    const apps = appDirectory.allApps
 
     // Find app by matching identityUrl or actualUrl
     const appMetadata = apps.find((app: any) => {
@@ -111,12 +119,12 @@ export async function handleWCP4ValidateAppIdentity(
     }) as any
 
     if (!appMetadata) {
-      console.error('[WCP4] App not found in directory for identity:', identityUrl)
-      sendFailureResponse(context, 'App not found in app directory')
+      console.error("[WCP4] App not found in directory for identity:", identityUrl)
+      sendFailureResponse(context, "App not found in app directory")
       return
     }
 
-    console.log('[WCP4] App found in directory:', appMetadata.appId)
+    console.log("[WCP4] App found in directory:", appMetadata.appId)
 
     // 4. Check if reconnecting to existing instance
     let instanceId: string
@@ -127,11 +135,11 @@ export async function handleWCP4ValidateAppIdentity(
       const existingInstance = appInstanceRegistry.getInstance(reconnectInstanceId)
 
       if (existingInstance) {
-        console.log('[WCP4] Reconnecting to existing instance:', reconnectInstanceId)
+        console.log("[WCP4] Reconnecting to existing instance:", reconnectInstanceId)
         instanceId = reconnectInstanceId
         instanceUuid = reconnectInstanceUuid
       } else {
-        console.warn('[WCP4] Instance not found for reconnection, creating new instance')
+        console.warn("[WCP4] Instance not found for reconnection, creating new instance")
         const newInstance = await createAppInstance(context, appMetadata, identityUrl)
         instanceId = newInstance.instanceId
         instanceUuid = newInstance.instanceId // Use same for now
@@ -145,31 +153,30 @@ export async function handleWCP4ValidateAppIdentity(
 
     // 5. Send success response
     const response: WCP5ValidateAppIdentityResponse = {
-      type: 'WCP5ValidateAppIdentityResponse',
+      type: "WCP5ValidateAppIdentityResponse",
       payload: {
         appId: appMetadata.appId,
         instanceId,
         instanceUuid,
         implementationMetadata: {
-          fdc3Version: '2.2',
-          provider: 'FDC3-Sail',
-          providerVersion: '0.0.1'
-        }
+          fdc3Version: "2.2",
+          provider: "FDC3-Sail",
+          providerVersion: "0.0.1",
+        },
       },
       meta: {
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     }
 
-    console.log('[WCP4] Validation successful, sending WCP5 response:', response.payload)
+    console.log("[WCP4] Validation successful, sending WCP5 response:", response.payload)
 
-    socket.emit('fdc3_message', response)
-
+    socket.emit("fdc3_message", response)
   } catch (error) {
-    console.error('[WCP4] Error during validation:', error)
+    console.error("[WCP4] Error during validation:", error)
     sendFailureResponse(
       context,
-      error instanceof Error ? error.message : 'Internal validation error'
+      error instanceof Error ? error.message : "Internal validation error"
     )
   }
 }
@@ -185,7 +192,7 @@ async function createAppInstance(
   const instanceId = crypto.randomUUID()
 
   // Register the instance in the app instance registry
-  context.appInstanceRegistry.registerInstance({
+  context.appInstanceRegistry.createInstance({
     instanceId,
     appId: appMetadata.appId,
     appMetadata: {
@@ -194,14 +201,14 @@ async function createAppInstance(
       title: appMetadata.title,
       description: appMetadata.description,
       icons: appMetadata.icons,
-      screenshots: appMetadata.screenshots
-    }
+      screenshots: appMetadata.screenshots,
+    },
   })
 
-  console.log('[WCP4] Created new app instance:', {
+  console.log("[WCP4] Created new app instance:", {
     instanceId,
     appId: appMetadata.appId,
-    identityUrl
+    identityUrl,
   })
 
   return { instanceId }
@@ -212,16 +219,16 @@ async function createAppInstance(
  */
 function sendFailureResponse(context: DACPHandlerContext, error: string): void {
   const response: WCP5ValidateAppIdentityFailedResponse = {
-    type: 'WCP5ValidateAppIdentityFailedResponse',
+    type: "WCP5ValidateAppIdentityFailedResponse",
     payload: {
-      error
+      error,
     },
     meta: {
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    },
   }
 
-  console.log('[WCP4] Validation failed, sending WCP5 failure response:', error)
+  console.log("[WCP4] Validation failed, sending WCP5 failure response:", error)
 
-  context.socket.emit('fdc3_message', response)
+  context.socket.emit("fdc3_message", response)
 }
