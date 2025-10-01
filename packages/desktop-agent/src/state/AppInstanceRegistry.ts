@@ -5,6 +5,7 @@
  * and FDC3 capabilities. Provides centralized state management for the desktop agent.
  */
 import type { AppMetadata } from "@finos/fdc3"
+import type { Socket } from "socket.io"
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -31,8 +32,8 @@ export interface AppInstance {
   /** FDC3 app identifier */
   appId: string
 
-  /** Message port for DACP communication */
-  messagePort?: MessagePort
+  /** Socket.IO socket for this specific app instance connection */
+  socket?: Socket
 
   /** App metadata from directory */
   metadata: AppMetadata
@@ -51,9 +52,6 @@ export interface AppInstance {
 
   /** Set of context types this instance listens for */
   contextListeners: Set<string>
-
-  /** Set of intents this instance listens for */
-  intentListeners: Set<string>
 
   /** Set of private channel IDs this instance has access to */
   privateChannels: Set<string>
@@ -105,7 +103,6 @@ export class AppInstanceRegistry {
   private appIdIndex = new Map<string, Set<string>>() // appId -> instanceIds
   private channelIndex = new Map<string, Set<string>>() // channelId -> instanceIds
   private contextListenerIndex = new Map<string, Set<string>>() // contextType -> instanceIds
-  private intentListenerIndex = new Map<string, Set<string>>() // intentName -> instanceIds
 
   // ============================================================================
   // CORE INSTANCE MANAGEMENT
@@ -251,10 +248,6 @@ export class AppInstanceRegistry {
       this.updateContextListenerIndex(contextType, instanceId, "remove")
     })
 
-    instance.intentListeners.forEach(intentName => {
-      this.updateIntentListenerIndex(intentName, instanceId, "remove")
-    })
-
     // Remove instance
     this.instances.delete(instanceId)
 
@@ -350,54 +343,6 @@ export class AppInstanceRegistry {
   }
 
   // ============================================================================
-  // INTENT LISTENER MANAGEMENT
-  // ============================================================================
-
-  /**
-   * Adds an intent listener for an app instance
-   */
-  addIntentListener(instanceId: string, intentName: string): boolean {
-    const instance = this.instances.get(instanceId)
-    if (!instance) {
-      return false
-    }
-
-    instance.intentListeners.add(intentName)
-    instance.lastActivity = new Date()
-    this.updateIntentListenerIndex(intentName, instanceId, "add")
-
-    return true
-  }
-
-  /**
-   * Removes an intent listener for an app instance
-   */
-  removeIntentListener(instanceId: string, intentName: string): boolean {
-    const instance = this.instances.get(instanceId)
-    if (!instance) {
-      return false
-    }
-
-    const removed = instance.intentListeners.delete(intentName)
-    if (removed) {
-      instance.lastActivity = new Date()
-      this.updateIntentListenerIndex(intentName, instanceId, "remove")
-    }
-
-    return removed
-  }
-
-  /**
-   * Gets all instances listening for a specific intent
-   */
-  getIntentListeners(intentName: string): AppInstance[] {
-    const instanceIds = this.intentListenerIndex.get(intentName) || new Set()
-    return Array.from(instanceIds)
-      .map(id => this.instances.get(id))
-      .filter((instance): instance is AppInstance => instance !== undefined)
-  }
-
-  // ============================================================================
   // PRIVATE CHANNEL MANAGEMENT
   // ============================================================================
 
@@ -462,7 +407,6 @@ export class AppInstanceRegistry {
       uniqueApps: this.appIdIndex.size,
       activeChannels: this.channelIndex.size,
       contextListenerTypes: this.contextListenerIndex.size,
-      intentListenerTypes: this.intentListenerIndex.size,
     }
   }
 
@@ -474,7 +418,6 @@ export class AppInstanceRegistry {
     this.appIdIndex.clear()
     this.channelIndex.clear()
     this.contextListenerIndex.clear()
-    this.intentListenerIndex.clear()
   }
 
   // ============================================================================
@@ -502,11 +445,6 @@ export class AppInstanceRegistry {
         this.updateContextListenerIndex(contextType, instance.instanceId, "remove")
       })
       instance.contextListeners.clear()
-
-      instance.intentListeners.forEach(intentName => {
-        this.updateIntentListenerIndex(intentName, instance.instanceId, "remove")
-      })
-      instance.intentListeners.clear()
 
       // Clear private channel access
       instance.privateChannels.clear()
@@ -581,37 +519,6 @@ export class AppInstanceRegistry {
     }
   }
 
-  /**
-   * Updates the intent listener index
-   */
-  private updateIntentListenerIndex(
-    intentName: string,
-    instanceId: string,
-    operation: "add" | "remove"
-  ): void {
-    if (operation === "add") {
-      if (!this.intentListenerIndex.has(intentName)) {
-        this.intentListenerIndex.set(intentName, new Set())
-      }
-      this.intentListenerIndex.get(intentName)!.add(instanceId)
-    } else {
-      const instanceSet = this.intentListenerIndex.get(intentName)
-      if (instanceSet) {
-        instanceSet.delete(instanceId)
-        if (instanceSet.size === 0) {
-          this.intentListenerIndex.delete(intentName)
-        }
-      }
-    }
-  }
 }
 
-// ============================================================================
-// SINGLETON EXPORT
-// ============================================================================
-
-/**
- * Global app instance registry instance
- * Used by the desktop agent for centralized app instance management
- */
-export const appInstanceRegistry = new AppInstanceRegistry()
+// Note: No singleton export - instances should be created via dependency injection

@@ -5,32 +5,40 @@ import {
     DACP_ERROR_TYPES
 } from "../../validation/dacp-validator";
 import { GetinforequestSchema } from "../../validation/dacp-schemas";
-import { TransportAgnosticDACPHandlerContext, logger } from "../../types";
-import { getDesktopAgent } from "../../../desktopAgent";
+import { DACPHandlerContext, logger } from "../../types";
+
+/**
+ * Implementation metadata constants
+ */
+const IMPLEMENTATION_METADATA = {
+  fdc3Version: '2.2',
+  provider: 'FDC3-Sail',
+  providerVersion: '0.0.1',
+  optionalFeatures: {
+    OriginatingAppMetadata: true,
+    UserChannelMembershipAPIs: true,
+  }
+}
 
 /**
  * Handles getInfoRequest to return implementation metadata.
  */
 export async function handleGetInfoRequest(
   message: unknown,
-  context: TransportAgnosticDACPHandlerContext
+  context: DACPHandlerContext
 ): Promise<void> {
-  const { reply } = context;
+  const { socket } = context;
 
   try {
     const request = validateDACPMessage(message, GetinforequestSchema);
 
-    // The singleton DesktopAgent instance holds the metadata
-    const desktopAgent = getDesktopAgent();
-    const implementationMetadata = desktopAgent.getImplementationMetadata();
-
     const response = createDACPSuccessResponse(
       request,
       'getInfoResponse',
-      implementationMetadata
+      IMPLEMENTATION_METADATA
     );
 
-    reply(response);
+    socket.emit('fdc3_message', response);
 
   } catch (error) {
     logger.error('DACP: getInfoRequest failed', error);
@@ -40,6 +48,6 @@ export async function handleGetInfoRequest(
       'getInfoResponse',
       error instanceof Error ? error.message : 'Failed to get implementation info'
     );
-    reply(errorResponse);
+    socket.emit('fdc3_message', errorResponse);
   }
 }

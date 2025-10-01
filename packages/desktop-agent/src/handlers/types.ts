@@ -1,45 +1,41 @@
-// Minimal interfaces to avoid circular dependencies
-// These match the full interfaces in @apps/sail-socket/src/types/sail-types.ts
-export interface ServerContext<X = unknown> {
-  createUUID(): string
-  post(message: object, instanceId: string): Promise<void>
-  open(appId: string): Promise<string>
-  setAppState(app: string, state: unknown): Promise<void>
-  setInstanceDetails(uuid: string, details: X): void
-  getInstanceDetails(uuid: string): X | undefined
-  getConnectedApps(): Promise<unknown[]>
-  getAllApps(): Promise<unknown[]>
-  isAppConnected(app: string): Promise<boolean>
-  log(message: string): void
-}
+import type { Socket } from "socket.io"
+import type { AppInstanceRegistry } from "../state/AppInstanceRegistry"
+import type { IntentRegistry } from "../state/IntentRegistry"
+import type { AppDirectoryManager } from "../app-directory/appDirectoryManager"
 
-export interface FDC3Server {
-  receive(message: object, from: string): Promise<void>
-  cleanup(instanceId: string): void
-}
+// ============================================================================
+// DACP HANDLER CONTEXT
+// ============================================================================
 
-import { AppInstanceRegistry } from "../state/AppInstanceRegistry"
-import { IntentRegistry } from "../state/IntentRegistry"
-
-// DACP Handler context
+/**
+ * Context passed to all DACP message handlers
+ * Contains state registries and the app-specific socket for sending responses
+ */
 export interface DACPHandlerContext {
-  messagePort: MessagePort
+  /** The Socket.IO socket connected to this specific app instance */
+  socket: Socket
+
+  /** Unique identifier for this app instance */
   instanceId: string
+
+  /** Registry of all app instances and their state */
   appInstanceRegistry: AppInstanceRegistry
+
+  /** Registry of intent listeners and capabilities */
   intentRegistry: IntentRegistry
-  serverContext: ServerContext<unknown> // Generic context
-  fdc3Server: FDC3Server // Generic FDC3 server interface
+
+  /** App directory manager for app metadata lookups */
+  appDirectory: AppDirectoryManager
 }
 
-// Transport-agnostic DACP Handler context
-export interface TransportAgnosticDACPHandlerContext {
-  instanceId: string
-  appInstanceRegistry: AppInstanceRegistry
-  intentRegistry: IntentRegistry
-  serverContext: ServerContext<unknown>
-  fdc3Server: FDC3Server
-  reply: (message: any) => void
-}
+/**
+ * Type for DACP handler functions
+ */
+export type DACPHandler = (message: unknown, context: DACPHandlerContext) => void | Promise<void>
+
+// ============================================================================
+// LOGGING
+// ============================================================================
 
 // Log levels for structured logging
 export enum LogLevel {

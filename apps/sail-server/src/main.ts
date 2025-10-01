@@ -1,12 +1,11 @@
 /**
- * Sail Server - Transport Layer
- * Handles Socket.IO transport and delegates FDC3 logic to SailServer
+ * Sail Server - FDC3 Desktop Agent Server
+ * Handles Socket.IO transport and FDC3 Desktop Agent protocol
  */
 
 import { Server } from "socket.io"
-// import { SailServer } from "@finos/sail-api"
+import { startDesktopAgent } from "@finos/fdc3-sail-desktop-agent"
 import { APP_CONFIG } from "./constants"
-// import { authMiddleware } from "./middleware/auth"
 import dotenv from "dotenv"
 
 dotenv.config()
@@ -22,27 +21,31 @@ const io = new Server(Number(port), {
   },
 })
 
+// Start FDC3 Desktop Agent
+const desktopAgent = startDesktopAgent()
+
 // Socket.IO connection handling
 io.on("connection", socket => {
-  console.log("🔌 Connection:", socket.id)
+  console.log("🔌 FDC3 Client connected:", socket.id)
 
-  socket.on("sail_event", (message, callback) => {
-    console.log("Sail message:", message)
-  })
+  // Delegate to desktop agent
+  desktopAgent.handleConnection(socket)
 
-  socket.on("fdc3_event", async (message: DACPMessage) => {
-    handleDACPMessage(message)
-    // FDC3 desktop agent will handle the message
+  socket.on("disconnect", () => {
+    console.log("🔌 FDC3 Client disconnected:", socket.id)
   })
 })
 
-console.log(`🚢 Sail Server listening on port ${port}`)
+console.log(`🚢 Sail Server (FDC3 Desktop Agent) listening on port ${port}`)
 
 // Graceful shutdown
 const shutdown = () => {
-  console.log("Shutting down...")
+  console.log("Shutting down Sail Server...")
   io.close()
-    .then(() => process.exit(0))
+    .then(() => {
+      console.log("Sail Server stopped")
+      process.exit(0)
+    })
     .catch(error => {
       console.error("Error shutting down:", error)
       process.exit(1)

@@ -838,13 +838,3 @@ export class IntentRegistry {
     }
   }
 }
-
-// ============================================================================
-// SINGLETON EXPORT
-// ============================================================================
-
-/**
- * Global intent registry instance
- * Used by the desktop agent for centralized intent management
- */
-export const intentRegistry = new IntentRegistry()

@@ -6,7 +6,7 @@
  * to validate their identity before sending DACP messages.
  */
 
-import type { TransportAgnosticDACPHandlerContext } from '../types'
+import type { DACPHandlerContext } from '../types'
 
 /**
  * WCP4ValidateAppIdentity message from FDC3 app
@@ -70,9 +70,10 @@ interface WCP5ValidateAppIdentityFailedResponse {
  */
 export async function handleWCP4ValidateAppIdentity(
   message: unknown,
-  context: TransportAgnosticDACPHandlerContext
+  context: DACPHandlerContext
 ): Promise<void> {
   const wcp4Message = message as WCP4ValidateAppIdentity
+  const { socket, appInstanceRegistry, appDirectory } = context
 
   console.log('[WCP4] Received app identity validation request:', wcp4Message.payload)
 
@@ -93,7 +94,7 @@ export async function handleWCP4ValidateAppIdentity(
     // TODO: Also validate MessageEvent.origin matches (requires context enhancement)
 
     // 3. Look up app in app directory
-    const apps = await context.serverContext.getAllApps()
+    const apps = await appDirectory.getAllApps()
 
     // Find app by matching identityUrl or actualUrl
     const appMetadata = apps.find((app: any) => {
@@ -123,7 +124,7 @@ export async function handleWCP4ValidateAppIdentity(
 
     if (reconnectInstanceId && reconnectInstanceUuid) {
       // Attempt to reconnect to existing instance
-      const existingInstance = context.appInstanceRegistry.getInstance(reconnectInstanceId)
+      const existingInstance = appInstanceRegistry.getInstance(reconnectInstanceId)
 
       if (existingInstance) {
         console.log('[WCP4] Reconnecting to existing instance:', reconnectInstanceId)
@@ -162,7 +163,7 @@ export async function handleWCP4ValidateAppIdentity(
 
     console.log('[WCP4] Validation successful, sending WCP5 response:', response.payload)
 
-    context.reply(response)
+    socket.emit('fdc3_message', response)
 
   } catch (error) {
     console.error('[WCP4] Error during validation:', error)
@@ -177,7 +178,7 @@ export async function handleWCP4ValidateAppIdentity(
  * Helper to create a new app instance
  */
 async function createAppInstance(
-  context: TransportAgnosticDACPHandlerContext,
+  context: DACPHandlerContext,
   appMetadata: any,
   identityUrl: string
 ) {
@@ -209,7 +210,7 @@ async function createAppInstance(
 /**
  * Helper to send WCP5 failure response
  */
-function sendFailureResponse(context: TransportAgnosticDACPHandlerContext, error: string): void {
+function sendFailureResponse(context: DACPHandlerContext, error: string): void {
   const response: WCP5ValidateAppIdentityFailedResponse = {
     type: 'WCP5ValidateAppIdentityFailedResponse',
     payload: {
@@ -222,5 +223,5 @@ function sendFailureResponse(context: TransportAgnosticDACPHandlerContext, error
 
   console.log('[WCP4] Validation failed, sending WCP5 failure response:', error)
 
-  context.reply(response)
+  context.socket.emit('fdc3_message', response)
 }

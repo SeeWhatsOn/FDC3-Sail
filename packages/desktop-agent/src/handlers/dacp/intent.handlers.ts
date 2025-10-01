@@ -15,16 +15,14 @@ import {
   FindintentrequestSchema,
   ContextSchema,
 } from '../validation/dacp-schemas'
-import { TransportAgnosticDACPHandlerContext, logger } from '../types'
+import { DACPHandlerContext, logger } from '../types'
 import { Context, AppMetadata, IntentResolution } from '@finos/fdc3'
-import { intentRegistry } from '../../state/IntentRegistry'
-import { appInstanceRegistry } from '../../state/AppInstanceRegistry'
 
 export async function handleRaiseIntentRequest(
   message: unknown,
-  context: TransportAgnosticDACPHandlerContext
+  context: DACPHandlerContext
 ): Promise<void> {
-  const { reply, instanceId } = context
+  const { socket, instanceId, appInstanceRegistry, intentRegistry } = context
 
   try {
     const request = validateDACPMessage(message, RaiseintentrequestSchema)
@@ -57,7 +55,7 @@ export async function handleRaiseIntentRequest(
       source: intentResolution.source?.appId,
     })
 
-    reply(response)
+    socket.emit('fdc3_message', response)
   } catch (error) {
     logger.error('DACP: Raise intent request failed', error)
     const errorResponse = createDACPErrorResponse(
@@ -66,15 +64,15 @@ export async function handleRaiseIntentRequest(
       'raiseIntentResponse',
       error instanceof Error ? error.message : 'Intent delivery failed'
     )
-    reply(errorResponse)
+    socket.emit('fdc3_message', errorResponse)
   }
 }
 
 export async function handleAddIntentListener(
   message: unknown,
-  context: TransportAgnosticDACPHandlerContext
+  context: DACPHandlerContext
 ): Promise<void> {
-  const { reply, instanceId } = context
+  const { socket, instanceId, appInstanceRegistry, intentRegistry } = context
 
   try {
     const request = validateDACPMessage(message, AddintentlistenerrequestSchema)
@@ -97,7 +95,7 @@ export async function handleAddIntentListener(
       listenerId,
     })
 
-    reply(response)
+    socket.emit('fdc3_message', response)
   } catch (error) {
     logger.error('DACP: Add intent listener failed', error)
     const errorResponse = createDACPErrorResponse(
@@ -106,15 +104,15 @@ export async function handleAddIntentListener(
       'addIntentListenerResponse',
       error instanceof Error ? error.message : 'Failed to add intent listener'
     )
-    reply(errorResponse)
+    socket.emit('fdc3_message', errorResponse)
   }
 }
 
 export async function handleIntentListenerUnsubscribe(
   message: unknown,
-  context: TransportAgnosticDACPHandlerContext
+  context: DACPHandlerContext
 ): Promise<void> {
-  const { reply } = context
+  const { socket, intentRegistry } = context
 
   try {
     const request = validateDACPMessage(message, IntentlistenerunsubscriberequestSchema)
@@ -126,7 +124,7 @@ export async function handleIntentListenerUnsubscribe(
     }
 
     const response = createDACPSuccessResponse(request, 'intentListenerUnsubscribeResponse')
-    reply(response)
+    socket.emit('fdc3_message', response)
   } catch (error) {
     logger.error('DACP: Intent listener unsubscribe failed', error)
     const errorResponse = createDACPErrorResponse(
@@ -135,15 +133,15 @@ export async function handleIntentListenerUnsubscribe(
       'intentListenerUnsubscribeResponse',
       error instanceof Error ? error.message : 'Failed to unsubscribe intent listener'
     )
-    reply(errorResponse)
+    socket.emit('fdc3_message', errorResponse)
   }
 }
 
 export async function handleFindIntentRequest(
   message: unknown,
-  context: TransportAgnosticDACPHandlerContext
+  context: DACPHandlerContext
 ): Promise<void> {
-  const { reply } = context
+  const { socket, intentRegistry } = context
 
   try {
     const request = validateDACPMessage(message, FindintentrequestSchema)
@@ -156,7 +154,7 @@ export async function handleFindIntentRequest(
       appIntent: appIntents[0] ?? { intent: { name: intent, displayName: intent }, apps: [] },
     })
 
-    reply(response)
+    socket.emit('fdc3_message', response)
   } catch (error) {
     logger.error('DACP: Find intent request failed', error)
     const errorResponse = createDACPErrorResponse(
@@ -165,6 +163,6 @@ export async function handleFindIntentRequest(
       'findIntentResponse',
       error instanceof Error ? error.message : 'Failed to find apps for intent'
     )
-    reply(errorResponse)
+    socket.emit('fdc3_message', errorResponse)
   }
 }

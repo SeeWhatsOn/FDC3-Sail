@@ -11,9 +11,8 @@ import {
   ContextSchema,
   ContextlistenerunsubscriberequestSchema,
 } from '../validation/dacp-schemas'
-import { type TransportAgnosticDACPHandlerContext, logger } from '../types'
+import { type DACPHandlerContext, logger } from '../types'
 import type { Context } from '@finos/fdc3'
-import { appInstanceRegistry } from '../../state/AppInstanceRegistry'
 
 /**
  * Handles broadcast requests to send context to a channel
@@ -21,9 +20,9 @@ import { appInstanceRegistry } from '../../state/AppInstanceRegistry'
  */
 export async function handleBroadcastRequest(
   message: unknown,
-  context: TransportAgnosticDACPHandlerContext
+  context: DACPHandlerContext
 ): Promise<void> {
-  const { reply } = context
+  const { socket } = context
 
   try {
     const request = validateDACPMessage(message, BroadcastrequestSchema)
@@ -43,7 +42,7 @@ export async function handleBroadcastRequest(
 
     const response = createDACPSuccessResponse(request, 'broadcastResponse')
 
-    reply(response)
+    socket.emit('fdc3_message', response)
 
     logger.debug('DACP: Broadcast request completed successfully', {
       requestUuid: request.meta.requestUuid,
@@ -58,7 +57,7 @@ export async function handleBroadcastRequest(
       error instanceof Error ? error.message : 'Unknown broadcast error'
     )
 
-    reply(errorResponse)
+    socket.emit('fdc3_message', errorResponse)
   }
 }
 
@@ -68,9 +67,9 @@ export async function handleBroadcastRequest(
  */
 export function handleAddContextListener(
   message: unknown,
-  context: TransportAgnosticDACPHandlerContext
+  context: DACPHandlerContext
 ): void {
-  const { reply, instanceId } = context
+  const { socket, instanceId, appInstanceRegistry } = context
 
   try {
     const request = validateDACPMessage(message, AddcontextlistenerrequestSchema)
@@ -91,7 +90,7 @@ export function handleAddContextListener(
       listenerId,
     })
 
-    reply(response)
+    socket.emit('fdc3_message', response)
 
     logger.debug('DACP: Context listener added successfully', {
       listenerId,
@@ -108,7 +107,7 @@ export function handleAddContextListener(
       error instanceof Error ? error.message : 'Failed to add context listener'
     )
 
-    reply(errorResponse)
+    socket.emit('fdc3_message', errorResponse)
   }
 }
 
@@ -118,9 +117,9 @@ export function handleAddContextListener(
  */
 export function handleContextListenerUnsubscribe(
   message: unknown,
-  context: TransportAgnosticDACPHandlerContext
+  context: DACPHandlerContext
 ): void {
-  const { reply, instanceId } = context
+  const { socket, instanceId, appInstanceRegistry } = context
 
   try {
     const request = validateDACPMessage(message, ContextlistenerunsubscriberequestSchema)
@@ -140,7 +139,7 @@ export function handleContextListenerUnsubscribe(
 
     const response = createDACPSuccessResponse(request, 'contextListenerUnsubscribeResponse')
 
-    reply(response)
+    socket.emit('fdc3_message', response)
 
     logger.debug('DACP: Context listener unsubscribed successfully', {
       listenerId,
@@ -157,32 +156,31 @@ export function handleContextListenerUnsubscribe(
       error instanceof Error ? error.message : 'Failed to unsubscribe context listener'
     )
 
-    reply(errorResponse)
+    socket.emit('fdc3_message', errorResponse)
   }
 }
 
 function notifyContextListeners(
   channelId: string,
   context: Context,
-  handlerContext: TransportAgnosticDACPHandlerContext
+  handlerContext: DACPHandlerContext
 ): void {
   // Find instances on the same channel
-  const instancesOnChannel = appInstanceRegistry.getInstancesOnChannel(channelId)
+  const instancesOnChannel = handlerContext.appInstanceRegistry.getInstancesOnChannel(channelId)
 
   const notifications = instancesOnChannel.map(instance => {
     // Check if the instance is listening for this context type
     const listensForType = instance.contextListeners.has(context.type) || instance.contextListeners.has('*')
 
-    if (listensForType) {
+    if (listensForType && instance.socket) {
       try {
         const contextEvent = createDACPEvent('contextEvent', {
           channelId,
           context,
         })
 
-        // Note: In the new transport-agnostic model, we send events through the reply function
-        // This assumes the transport layer will route events to the correct instances
-        handlerContext.reply(contextEvent)
+        // Send to the LISTENER's socket, not the sender's!
+        instance.socket.emit('fdc3_message', contextEvent)
 
         logger.debug('Context event sent to listener', {
           instanceId: instance.instanceId,

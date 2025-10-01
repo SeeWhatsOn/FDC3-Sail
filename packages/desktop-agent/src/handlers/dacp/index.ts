@@ -5,7 +5,7 @@ import {
   logDACPMessage,
 } from "../validation/dacp-validator"
 import { BaseDACPMessageSchema } from "../validation/dacp-schemas"
-import { type DACPHandlerContext, logger } from "../types"
+import { type DACPHandler, type DACPHandlerContext, logger } from "../types"
 
 // Import all DACP handlers
 import * as contextHandlers from "./context.handlers"
@@ -14,73 +14,10 @@ import * as channelHandlers from "./channel.handlers"
 import * as appHandlers from "./app-management/app.handlers"
 import * as wcpHandlers from "./wcp.handlers"
 
-// Handler registry type
-type DACPHandlerFunction = (message: unknown, context: DACPHandlerContext) => Promise<void>
-
-import { appInstanceRegistry } from "../../state/AppInstanceRegistry"
-import { intentRegistry } from "../../state/IntentRegistry"
-
-/**
- * Processes a single DACP message in a transport-agnostic way.
- * @param message The incoming DACP message.
- * @param context The handler context, excluding the transport-specific messagePort.
- * @param reply A function to send a reply back to the client.
- */
-export async function processDACPMessage(
-  message: unknown,
-  context: Omit<DACPHandlerContext, "messagePort">,
-  reply: (response: any) => void
-) {
-  // Create a mock messagePort for the handlers to use
-  const messagePort = {
-    postMessage: reply,
-  } as MessagePort
-
-  const fullContext: DACPHandlerContext = {
-    ...context,
-    messagePort,
-  }
-
-  await routeDACPMessage(message, fullContext)
-}
-
-/**
- * Main DACP message router for MessagePort
- * Routes incoming DACP messages to appropriate handlers with validation and timeout management
- */
-export function registerDACPHandlers(
-  messagePort: MessagePort,
-  serverContext: any,
-  fdc3Server: any,
-  instanceId: string
-): void {
-  logger.info("Registering DACP message handlers for instance", { instanceId })
-
-  const context: Omit<DACPHandlerContext, "messagePort"> = {
-    serverContext,
-    fdc3Server,
-    instanceId,
-    appInstanceRegistry,
-    intentRegistry,
-  }
-
-  messagePort.onmessage = async event => {
-    await processDACPMessage(event.data, context, response => {
-      messagePort.postMessage(response)
-    })
-  }
-
-  messagePort.onmessageerror = event => {
-    logger.error("DACP MessagePort error:", event)
-  }
-
-  logger.info("DACP handlers registered successfully for instance", { instanceId })
-}
-
 /**
  * Routes DACP messages to appropriate handlers
  */
-async function routeDACPMessage(message: unknown, context: DACPHandlerContext): Promise<void> {
+export async function routeDACPMessage(message: unknown, context: DACPHandlerContext): Promise<void> {
   try {
     // Log incoming message (with sensitive data filtering)
     logDACPMessage("incoming", message, "DACP Router")
@@ -136,8 +73,8 @@ async function handleDACPMessage(
 /**
  * Handler registry - maps message types to handler functions
  */
-function getHandlerForMessageType(messageType: string): DACPHandlerFunction | null {
-  const handlerMap: Record<string, DACPHandlerFunction> = {
+function getHandlerForMessageType(messageType: string): DACPHandler | null {
+  const handlerMap: Record<string, DACPHandler> = {
     // Context handlers
     broadcastRequest: contextHandlers.handleBroadcastRequest,
     addContextListenerRequest: contextHandlers.handleAddContextListener,
@@ -155,19 +92,17 @@ function getHandlerForMessageType(messageType: string): DACPHandlerFunction | nu
     leaveCurrentChannelRequest: channelHandlers.handleLeaveCurrentChannelRequest,
     getUserChannelsRequest: channelHandlers.handleGetUserChannelsRequest,
 
-    // App management handlers (to be implemented in Phase 3)
+    // App management handlers
     'getInfoRequest': appHandlers.handleGetInfoRequest,
-    // 'findInstancesRequest': appHandlers.handleFindInstancesRequest,
-    // 'openRequest': appHandlers.handleOpenRequest,
 
     // WCP handlers
     'WCP4ValidateAppIdentity': wcpHandlers.handleWCP4ValidateAppIdentity,
 
-    // Private channel handlers (to be implemented in Phase 3)
+    // TODO: Private channel handlers (to be implemented)
     // 'createPrivateChannelRequest': privateChannelHandlers.handleCreatePrivateChannelRequest,
     // 'privateChannelDisconnectRequest': privateChannelHandlers.handlePrivateChannelDisconnectRequest,
 
-    // Heartbeat handlers (to be implemented in Phase 3)
+    // TODO: Heartbeat handlers (to be implemented)
     // 'heartbeatAcknowledgmentRequest': heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,
   }
 
@@ -191,13 +126,14 @@ function getTimeoutForMessageType(messageType: string): number {
 
 /**
  * Cleanup function to be called when a DACP connection is closed.
- * This now delegates cleanup to the central registries.
+ * Removes instance from registries.
  */
-export function cleanupDACPHandlers(instanceId: string): void {
+export function cleanupDACPHandlers(context: DACPHandlerContext): void {
+  const { instanceId, appInstanceRegistry, intentRegistry } = context
+
   logger.info("Cleaning up DACP handlers for instance", { instanceId })
 
-  // The new model is that registries are responsible for their own cleanup
-  // when an instance is fully removed. This function can be used to trigger that.
+  // Remove instance from registries
   appInstanceRegistry.removeInstance(instanceId)
   intentRegistry.removeInstanceListeners(instanceId)
 
@@ -228,6 +164,12 @@ export function getDACPHandlerStats(): {
     joinUserChannelRequest: true,
     leaveCurrentChannelRequest: true,
     getUserChannelsRequest: true,
+
+    // App management handlers
+    getInfoRequest: true,
+
+    // WCP handlers
+    WCP4ValidateAppIdentity: true,
   }
 
   return {
@@ -258,6 +200,7 @@ export function checkDACPHandlerHealth(): {
       "raiseIntentRequest",
       "getCurrentChannelRequest",
       "joinUserChannelRequest",
+      "WCP4ValidateAppIdentity",
     ]
 
     const missingHandlers = requiredHandlers.filter(
@@ -268,11 +211,6 @@ export function checkDACPHandlerHealth(): {
       status = "unhealthy"
       details.push(`Missing required handlers: ${missingHandlers.join(", ")}`)
     }
-
-    // Additional health checks could be added here
-    // - Check if schemas are loaded
-    // - Check if validation is working
-    // - Check if timeouts are configured correctly
 
     if (status === "healthy") {
       details.push("All DACP handlers operational")
@@ -286,4 +224,4 @@ export function checkDACPHandlerHealth(): {
 }
 
 // Re-export handlers for testing and direct access
-export { contextHandlers, intentHandlers, channelHandlers }
+export { contextHandlers, intentHandlers, channelHandlers, appHandlers, wcpHandlers }

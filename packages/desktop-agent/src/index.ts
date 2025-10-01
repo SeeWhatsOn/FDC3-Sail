@@ -1,19 +1,110 @@
-// Main exports for FDC3 Sail Desktop Agent package
+import type { Socket } from "socket.io"
+import { AppDirectoryManager } from "./app-directory/appDirectoryManager"
+import { AppInstanceRegistry } from "./state/AppInstanceRegistry"
+import { IntentRegistry } from "./state/IntentRegistry"
+import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
+import type { DACPHandlerContext } from "./handlers/types"
 
-// DACP Protocol Messages (exported for client use)
-export * from "./protocol/dacp-messages"
+/**
+ * Desktop Agent state and dependencies
+ */
+export interface DesktopAgentDependencies {
+  appInstanceRegistry: AppInstanceRegistry
+  intentRegistry: IntentRegistry
+  appDirectory: AppDirectoryManager
+}
 
-// DACP Handlers and validation
-export * from "./handlers/dacp"
-export * from "./handlers/validation/dacp-validator"
-export * from "./handlers/validation/dacp-schemas"
-export * from "./handlers/types"
+/**
+ * Socket connection handler returned by startDesktopAgent
+ */
+export interface DesktopAgentConnectionHandler {
+  /**
+   * Handle a new Socket.IO connection from an FDC3 app
+   * @param socket - Socket.IO socket for the connected app
+   */
+  handleConnection: (socket: Socket) => void
 
-// State Management
-export * from "./state/AppInstanceRegistry"
-export * from "./state/IntentRegistry"
-// TODO: Complete implementation
-// export * from "./state/PrivateChannelRegistry";
+  /**
+   * Access to desktop agent state (for testing/debugging)
+   */
+  state: DesktopAgentDependencies
+}
 
-// App directory management
-export { AppDirectoryManager } from "./app-directory/appDirectoryManager"
+/**
+ * Starts the FDC3 Desktop Agent and returns a connection handler.
+ *
+ * This creates the core state registries (AppInstanceRegistry, IntentRegistry, AppDirectory)
+ * and returns a handler function to wire up Socket.IO connections.
+ *
+ * @example
+ * ```typescript
+ * const desktopAgent = startDesktopAgent()
+ *
+ * io.on('connection', (socket) => {
+ *   desktopAgent.handleConnection(socket)
+ * })
+ * ```
+ */
+export function startDesktopAgent(): DesktopAgentConnectionHandler {
+  // Create state registries once
+  const state: DesktopAgentDependencies = {
+    appInstanceRegistry: new AppInstanceRegistry(),
+    intentRegistry: new IntentRegistry(),
+    appDirectory: new AppDirectoryManager(),
+  }
+
+  return {
+    state,
+    handleConnection: (socket: Socket) => {
+      // Instance ID will be set after WCP handshake validates the app identity
+      let instanceId: string | null = null
+
+      // Listen for FDC3 messages
+      socket.on("fdc3_message", async (message) => {
+        // Create handler context
+        const context: DACPHandlerContext = {
+          socket,
+          instanceId: instanceId || "", // WCP handler will set this
+          appInstanceRegistry: state.appInstanceRegistry,
+          intentRegistry: state.intentRegistry,
+          appDirectory: state.appDirectory,
+        }
+
+        // Route message to appropriate handler
+        await routeDACPMessage(message, context)
+
+        // If instanceId was just set by WCP handler, capture it
+        if (!instanceId && message && typeof message === 'object' && 'type' in message) {
+          if (message.type === 'WCP4ValidateAppIdentity') {
+            // After WCP validation, the instance should be registered
+            // Find the most recently registered instance (this is a simplification)
+            // TODO: Better way to communicate instanceId from WCP handler
+            const instances = state.appInstanceRegistry.getAllInstances()
+            if (instances.length > 0) {
+              instanceId = instances[instances.length - 1].instanceId
+            }
+          }
+        }
+      })
+
+      // Clean up when socket disconnects
+      socket.on("disconnect", () => {
+        if (instanceId) {
+          const context: DACPHandlerContext = {
+            socket,
+            instanceId,
+            appInstanceRegistry: state.appInstanceRegistry,
+            intentRegistry: state.intentRegistry,
+            appDirectory: state.appDirectory,
+          }
+          cleanupDACPHandlers(context)
+        }
+      })
+
+      // Handle socket errors
+      socket.on("error", (error) => {
+        console.error("[Desktop Agent] Socket error:", error)
+      })
+    },
+  }
+}
