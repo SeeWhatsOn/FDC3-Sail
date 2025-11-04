@@ -1,4 +1,4 @@
-import type { Socket } from "socket.io"
+import type { MessageTransport } from "../transport/MessageTransport"
 import type { AppInstanceRegistry } from "../state/AppInstanceRegistry"
 import type { IntentRegistry } from "../state/IntentRegistry"
 import type { AppDirectoryManager } from "../app-directory/appDirectoryManager"
@@ -9,11 +9,11 @@ import type { AppDirectoryManager } from "../app-directory/appDirectoryManager"
 
 /**
  * Context passed to all DACP message handlers
- * Contains state registries and the app-specific socket for sending responses
+ * Contains state registries and the message transport for sending responses
  */
 export interface DACPHandlerContext {
-  /** The Socket.IO socket connected to this specific app instance */
-  socket: Socket
+  /** Message transport for sending responses to this specific app instance */
+  transport: MessageTransport
 
   /** Unique identifier for this app instance */
   instanceId: string

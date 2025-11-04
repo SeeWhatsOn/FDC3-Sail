@@ -1,32 +1,40 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "sail-ui"
 import { Skeleton } from "sail-ui"
 import { ExternalLink } from "lucide-react"
-import { IDockviewPanelProps } from "dockview-react"
+import type { IDockviewPanelProps } from "dockview-react"
+import type { AppMetadata } from "@finos/fdc3-standard"
+import {} from "@finos/fdc3"
 
-import type { DirectoryApp } from "../../types/common"
 import { useAppDirectoryStore } from "../../stores/appDirectoryStore"
 import { useAppDirectorySocket } from "../../hooks/useAppDirectorySocket"
 import { useWorkspaceStore } from "../../stores/workspaceStore"
+
+import { ChooseAppIcon } from "./ChooseAppIcon"
 
 interface WebAppDetails {
   url: string
 }
 
 interface AppCardProps {
-  app: DirectoryApp
-  onAppClick: (app: DirectoryApp) => void
+  app: AppMetadata
+  onAppClick: (app: AppMetadata) => void
 }
 
 const AppCard = ({ app, onAppClick }: AppCardProps) => {
-  const getAppIcon = (app: DirectoryApp) => {
-    if (app.icons && app.icons.length > 0) {
+  const [imageError, setImageError] = useState(false)
+
+  const getAppIconUrl = (app: AppMetadata): string | null => {
+    if (app.icons && app.icons.length > 0 && app.icons[0].src) {
       return app.icons[0].src
     }
-    return "/default-app-icon.png" // fallback icon
+    return null
   }
 
-  const getAppUrl = (app: DirectoryApp) => {
+  const iconUrl = getAppIconUrl(app)
+  const showFallback = !iconUrl || imageError
+
+  const getAppUrl = (app: AppMetadata) => {
     if (app.type === "web" && app.details) {
       return (app.details as WebAppDetails).url
     }
@@ -41,15 +49,16 @@ const AppCard = ({ app, onAppClick }: AppCardProps) => {
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0">
-            <img
-              src={getAppIcon(app)}
-              alt={`${app.title} icon`}
-              className="size-10 rounded-md object-cover"
-              onError={e => {
-                const target = e.target as HTMLImageElement
-                target.src = "/default-app-icon.png"
-              }}
-            />
+            {!showFallback ? (
+              <img
+                src={iconUrl}
+                alt={`${app.title} icon`}
+                className="size-10 rounded-md object-cover"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <ChooseAppIcon size={40} className="size-10 rounded-md" />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <CardTitle className="line-clamp-1 text-sm font-medium">{app.title}</CardTitle>

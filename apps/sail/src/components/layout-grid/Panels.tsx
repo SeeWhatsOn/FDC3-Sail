@@ -1,8 +1,8 @@
-import { IDockviewPanelProps } from "dockview-react"
+import type { IDockviewPanelProps } from "dockview-react"
 
 import { AppDirectory } from "../app-directory/AppDirectory"
 
-import { FDC3Panel, FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
+import { FDC3Panel, type FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
 
 export const Panels = {
   default: (props: IDockviewPanelProps) => {

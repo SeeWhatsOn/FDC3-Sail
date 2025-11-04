@@ -22,7 +22,7 @@ export async function handleBroadcastRequest(
   message: unknown,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { socket } = context
+  const { transport, instanceId } = context
 
   try {
     const request = validateDACPMessage(message, BroadcastrequestSchema)
@@ -42,7 +42,7 @@ export async function handleBroadcastRequest(
 
     const response = createDACPSuccessResponse(request, "broadcastResponse")
 
-    socket.emit("fdc3_message", response)
+    transport.send(instanceId, response)
 
     logger.debug("DACP: Broadcast request completed successfully", {
       requestUuid: request.meta.requestUuid,
@@ -61,7 +61,7 @@ export async function handleBroadcastRequest(
       error instanceof Error ? error.message : "Unknown broadcast error"
     )
 
-    socket.emit("fdc3_message", errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
@@ -70,7 +70,7 @@ export async function handleBroadcastRequest(
  * Implements DACP addContextListenerRequest message handling
  */
 export function handleAddContextListener(message: unknown, context: DACPHandlerContext): void {
-  const { socket, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, appInstanceRegistry } = context
 
   try {
     const request = validateDACPMessage(message, AddcontextlistenerrequestSchema)
@@ -91,7 +91,7 @@ export function handleAddContextListener(message: unknown, context: DACPHandlerC
       listenerId,
     })
 
-    socket.emit("fdc3_message", response)
+    transport.send(instanceId, response)
 
     logger.debug("DACP: Context listener added successfully", {
       listenerId,
@@ -112,7 +112,7 @@ export function handleAddContextListener(message: unknown, context: DACPHandlerC
       error instanceof Error ? error.message : "Failed to add context listener"
     )
 
-    socket.emit("fdc3_message", errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
@@ -124,7 +124,7 @@ export function handleContextListenerUnsubscribe(
   message: unknown,
   context: DACPHandlerContext
 ): void {
-  const { socket, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, appInstanceRegistry } = context
 
   try {
     const request = validateDACPMessage(message, ContextlistenerunsubscriberequestSchema)
@@ -144,7 +144,7 @@ export function handleContextListenerUnsubscribe(
 
     const response = createDACPSuccessResponse(request, "contextListenerUnsubscribeResponse")
 
-    socket.emit("fdc3_message", response)
+    transport.send(instanceId, response)
 
     logger.debug("DACP: Context listener unsubscribed successfully", {
       listenerId,
@@ -165,7 +165,7 @@ export function handleContextListenerUnsubscribe(
       error instanceof Error ? error.message : "Failed to unsubscribe context listener"
     )
 
-    socket.emit("fdc3_message", errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
@@ -182,15 +182,15 @@ function notifyContextListeners(
     const listensForType =
       instance.contextListeners.has(context.type) || instance.contextListeners.has("*")
 
-    if (listensForType && instance.socket) {
+    if (listensForType && instance.transport) {
       try {
         const contextEvent = createDACPEvent("contextEvent", {
           channelId,
           context,
         })
 
-        // Send to the LISTENER's socket, not the sender's!
-        instance.socket.emit("fdc3_message", contextEvent)
+        // Send to the LISTENER's transport, not the sender's!
+        instance.transport.send(instance.instanceId, contextEvent)
 
         logger.debug("Context event sent to listener", {
           instanceId: instance.instanceId,

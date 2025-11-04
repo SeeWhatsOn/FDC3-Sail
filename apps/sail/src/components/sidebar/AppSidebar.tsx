@@ -11,17 +11,18 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "sail-ui"
-import { Home, Zap, Settings, ChevronUp, User2, LayoutGrid, LucideIcon } from "lucide-react"
+import { Home, Zap, Settings, ChevronUp, User2, LayoutGrid } from "lucide-react"
 import { LogoSail } from "sail-ui"
+import React from "react"
 
 import { ModeToggle } from "../theme/ModeToggle"
 import { useUIStore } from "../../stores/uiStore"
 
 interface SidebarItem {
   title: string
-  icon: LucideIcon
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   action: {
-    type: 'url' | 'handler'
+    type: "url" | "handler"
     value: string | (() => void)
   }
 }
@@ -44,22 +45,22 @@ export function AppSidebar() {
     {
       title: "Dashboard",
       icon: Home,
-      action: { type: 'url', value: '#' }
+      action: { type: "url", value: "#" },
     },
     {
       title: "Apps",
       icon: Zap,
-      action: { type: 'handler', value: handleAppsClick }
+      action: { type: "handler", value: handleAppsClick },
     },
     {
       title: "Workspaces",
       icon: LayoutGrid,
-      action: { type: 'handler', value: handleWorkspacesClick }
+      action: { type: "handler", value: handleWorkspacesClick },
     },
     {
       title: "Settings",
       icon: Settings,
-      action: { type: 'url', value: '#' }
+      action: { type: "url", value: "#" },
     },
   ]
 
@@ -77,10 +78,12 @@ export function AppSidebar() {
               {items.map(item => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    onClick={item.action.type === 'handler' ? item.action.value as () => void : undefined}
-                    asChild={item.action.type === 'url'}
+                    onClick={
+                      item.action.type === "handler" ? (item.action.value as () => void) : undefined
+                    }
+                    asChild={item.action.type === "url"}
                   >
-                    {item.action.type === 'handler' ? (
+                    {item.action.type === "handler" ? (
                       <>
                         <item.icon />
                         <span>{item.title}</span>

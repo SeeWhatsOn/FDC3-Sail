@@ -4,6 +4,7 @@ import { AppInstanceRegistry } from "./state/AppInstanceRegistry"
 import { IntentRegistry } from "./state/IntentRegistry"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
 import type { DACPHandlerContext } from "./handlers/types"
+import { SocketIOTransport } from "./transport/SocketIOTransport"
 
 /**
  * Desktop Agent state and dependencies
@@ -56,6 +57,9 @@ export function startDesktopAgent(): DesktopAgentConnectionHandler {
   return {
     state,
     handleConnection: (socket: Socket) => {
+      // Create transport wrapper around Socket.IO socket
+      const transport = new SocketIOTransport(socket)
+
       // Instance ID will be set after WCP handshake validates the app identity
       let instanceId: string | null = null
 
@@ -63,7 +67,7 @@ export function startDesktopAgent(): DesktopAgentConnectionHandler {
       socket.on("fdc3_message", async (message) => {
         // Create handler context
         const context: DACPHandlerContext = {
-          socket,
+          transport,
           instanceId: instanceId || "", // WCP handler will set this
           appInstanceRegistry: state.appInstanceRegistry,
           intentRegistry: state.intentRegistry,
@@ -82,6 +86,13 @@ export function startDesktopAgent(): DesktopAgentConnectionHandler {
             const instances = state.appInstanceRegistry.getAllInstances()
             if (instances.length > 0) {
               instanceId = instances[instances.length - 1].instanceId
+              // Set the instanceId on the transport
+              transport.setInstanceId(instanceId)
+              // Store the transport reference in the instance
+              const instance = state.appInstanceRegistry.getInstance(instanceId)
+              if (instance) {
+                instance.transport = transport
+              }
             }
           }
         }
@@ -91,7 +102,7 @@ export function startDesktopAgent(): DesktopAgentConnectionHandler {
       socket.on("disconnect", () => {
         if (instanceId) {
           const context: DACPHandlerContext = {
-            socket,
+            transport,
             instanceId,
             appInstanceRegistry: state.appInstanceRegistry,
             intentRegistry: state.intentRegistry,

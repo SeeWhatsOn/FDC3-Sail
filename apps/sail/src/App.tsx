@@ -18,7 +18,7 @@ function App() {
             <Layout />
           </Workspace>
         </main>
-        <IconButton />
+        {/* <IconButton /> */}
         <QuickAccessPanel />
       </SidebarProvider>
     </ThemeProvider>

@@ -1,5 +1,5 @@
 import { DockviewReact, type DockviewReadyEvent, DockviewApi } from "dockview-react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 
 import "./styles.css"
 import { useDesktopAgent } from "../../hooks/useDesktopAgent"
@@ -18,6 +18,9 @@ export type { Panel as WorkspacePanel } from "../../stores/workspaceStore"
 const Layout = (props: DockviewSailProps) => {
   const api = useRef<DockviewApi | undefined>(undefined)
   const [mountedPanels, setMountedPanels] = useState<Map<string, FDC3AppPanel>>(new Map())
+  const restoredWorkspaceIdRef = useRef<string | null>(null)
+  const [apiReady, setApiReady] = useState(false)
+  const isRestoringRef = useRef(false)
 
   // Use Zustand workspace store
   const {
@@ -28,13 +31,15 @@ const Layout = (props: DockviewSailProps) => {
     getPanelsForTab,
     setDockviewLayout,
     getDockviewLayout,
-    getTabsForWorkspace
   } = useWorkspaceStore()
   const { disconnectSocket } = useDesktopAgent()
 
   const activeWorkspace = workspaces.get(activeWorkspaceId)
   const activeTabId = activeWorkspace?.layout.activeTabId || ""
-  const panels = activeWorkspace ? getPanelsForTab(activeWorkspaceId, activeTabId) : []
+  const panels = useMemo(
+    () => (activeWorkspace ? getPanelsForTab(activeWorkspaceId, activeTabId) : []),
+    [activeWorkspace, activeWorkspaceId, activeTabId, getPanelsForTab]
+  )
 
   // Cleanup socket on unmount
   useEffect(() => {
@@ -45,18 +50,88 @@ const Layout = (props: DockviewSailProps) => {
 
   const onReady = (event: DockviewReadyEvent) => {
     api.current = event.api
+    setApiReady(true)
   }
 
+  // Reset restoration tracking when workspace changes
+  useEffect(() => {
+    restoredWorkspaceIdRef.current = null
+  }, [activeWorkspaceId])
+
+  // Layout restoration - only run once per workspace when API is ready
+  useEffect(() => {
+    if (!apiReady || !api.current || !activeWorkspaceId) {
+      return
+    }
+
+    // Only restore once per workspace ID
+    if (restoredWorkspaceIdRef.current === activeWorkspaceId) {
+      return
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const savedLayoutState = getDockviewLayout(activeWorkspaceId)
+
+    // Validate that we have a non-empty, valid layout
+    // Empty layouts like {}, null, or objects without proper structure should be skipped
+    if (
+      !savedLayoutState ||
+      typeof savedLayoutState !== "object" ||
+      savedLayoutState === null ||
+      // Check if it has at least some structure (not just empty object)
+      Object.keys(savedLayoutState as Record<string, unknown>).length === 0
+    ) {
+      // No valid layout to restore, mark as restored to prevent re-checking
+      restoredWorkspaceIdRef.current = activeWorkspaceId
+      return
+    }
+
+    try {
+      console.log("Restoring layout state from workspace store")
+      // Prevent saveState from running during restoration
+      isRestoringRef.current = true
+      restoredWorkspaceIdRef.current = activeWorkspaceId
+
+      // The layout state comes from Dockview's toJSON() which returns SerializedDockview
+      // We store it as any in the store, so we need to cast it back
+      api.current.fromJSON(savedLayoutState as Parameters<typeof api.current.fromJSON>[0])
+
+      // Use setTimeout to allow layout change events to settle before re-enabling saves
+      setTimeout(() => {
+        isRestoringRef.current = false
+      }, 200)
+
+      console.log("Layout state restored successfully")
+    } catch (error) {
+      console.warn("Failed to restore layout state:", error)
+      isRestoringRef.current = false
+      setDockviewLayout(activeWorkspaceId, null)
+      restoredWorkspaceIdRef.current = activeWorkspaceId
+    }
+  }, [apiReady, activeWorkspaceId, getDockviewLayout, setDockviewLayout])
+
+  // Event listeners and state saving - separate from restoration
   useEffect(() => {
     if (!api.current) {
       return
     }
 
     const saveState = () => {
+      // Don't save during restoration to prevent loops
+      if (isRestoringRef.current) {
+        return
+      }
+
       if (api.current && activeWorkspaceId) {
         try {
           const state = api.current.toJSON()
-          setDockviewLayout(activeWorkspaceId, state)
+          // Only save if there are actually panels, avoid saving empty layouts
+          if (state && api.current.panels.length > 0) {
+            setDockviewLayout(activeWorkspaceId, state)
+          } else {
+            // Clear empty layout from store
+            setDockviewLayout(activeWorkspaceId, null)
+          }
         } catch (error) {
           console.warn("Failed to save layout state:", error)
         }
@@ -97,22 +172,8 @@ const Layout = (props: DockviewSailProps) => {
       }),
     ]
 
-    if (activeWorkspaceId) {
-      const savedLayoutState = getDockviewLayout(activeWorkspaceId)
-      if (savedLayoutState) {
-        try {
-          console.log("Restoring layout state from workspace store")
-          api.current.fromJSON(savedLayoutState)
-          console.log("Layout state restored successfully")
-        } catch (error) {
-          console.warn("Failed to restore layout state:", error)
-          setDockviewLayout(activeWorkspaceId, null)
-        }
-      }
-    }
-
     return () => disposables.forEach(disposable => disposable.dispose())
-  }, [mountedPanels, panels, addPanel, removePanel, setDockviewLayout, getDockviewLayout, activeWorkspaceId])
+  }, [mountedPanels, activeTabId, addPanel, removePanel, setDockviewLayout, activeWorkspaceId])
 
   // Sync with store panels when they change
   useEffect(() => {

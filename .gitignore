@@ -15,3 +15,4 @@ packages/socket/html
 *.tsbuildinfo
 apps/sail/PRODUCT.md
 packages/fdc3-web-impl/
+CLAUDE.md

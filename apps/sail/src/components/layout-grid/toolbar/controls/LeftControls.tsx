@@ -1,4 +1,4 @@
-import { IDockviewHeaderActionsProps } from "dockview"
+import type { IDockviewHeaderActionsProps } from "dockview"
 import { Plus } from "lucide-react"
 
 import { Icon } from "./Icon"

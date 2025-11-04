@@ -5,7 +5,7 @@
  * and FDC3 capabilities. Provides centralized state management for the desktop agent.
  */
 import type { AppMetadata } from "@finos/fdc3"
-import type { Socket } from "socket.io"
+import type { MessageTransport } from "../transport/MessageTransport"
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -32,8 +32,8 @@ export interface AppInstance {
   /** FDC3 app identifier */
   appId: string
 
-  /** Socket.IO socket for this specific app instance connection */
-  socket?: Socket
+  /** Message transport for this specific app instance connection */
+  transport?: MessageTransport
 
   /** App metadata from directory */
   metadata: AppMetadata
@@ -52,6 +52,9 @@ export interface AppInstance {
 
   /** Set of context types this instance listens for */
   contextListeners: Set<string>
+
+  /** Set of intents this instance listens for */
+  intentListeners: Set<string>
 
   /** Set of private channel IDs this instance has access to */
   privateChannels: Set<string>

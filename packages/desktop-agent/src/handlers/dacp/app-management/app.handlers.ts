@@ -29,14 +29,14 @@ const IMPLEMENTATION_METADATA = {
  * Handles getInfoRequest to return implementation metadata.
  */
 export function handleGetInfoRequest(message: unknown, context: DACPHandlerContext): void {
-  const { socket } = context
+  const { transport, instanceId } = context
 
   try {
     const request = validateDACPMessage(message, GetinforequestSchema)
 
     const response = createDACPSuccessResponse(request, "getInfoResponse", IMPLEMENTATION_METADATA)
 
-    socket.emit("fdc3_message", response)
+    transport.send(instanceId, response)
   } catch (error) {
     logger.error("DACP: getInfoRequest failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -45,7 +45,7 @@ export function handleGetInfoRequest(message: unknown, context: DACPHandlerConte
       "getInfoResponse",
       error instanceof Error ? error.message : "Failed to get implementation info"
     )
-    socket.emit("fdc3_message", errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
@@ -54,14 +54,14 @@ export function handleOpenRequest(message: unknown, context: DACPHandlerContext)
   // this will need to be done in sail server to open the app. it will either need to send to the browser for web apps or to electron for desktop apps or to some other protocol for native apps
   //  OPEN_REQUEST: "openRequest",
   //  OPEN_RESPONSE: "openResponse",
-  const { socket } = context
+  const { transport, instanceId } = context
 
   try {
     const request = validateDACPMessage(message, OpenrequestSchema)
 
     const response = createDACPSuccessResponse(request, "openResponse", IMPLEMENTATION_METADATA)
 
-    socket.emit("fdc3_message", response)
+    transport.send(instanceId, response)
   } catch (error) {
     logger.error("DACP: getInfoRequest failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -70,7 +70,7 @@ export function handleOpenRequest(message: unknown, context: DACPHandlerContext)
       "getInfoResponse",
       error instanceof Error ? error.message : "Failed to get implementation info"
     )
-    socket.emit("fdc3_message", errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
@@ -80,7 +80,7 @@ export function handleOpenRequest(message: unknown, context: DACPHandlerContext)
  * @param context
  */
 export function handleFindInstancesRequest(message: unknown, context: DACPHandlerContext): void {
-  const { socket, appInstanceRegistry } = context
+  const { transport, instanceId, appInstanceRegistry } = context
 
   try {
     const request = validateDACPMessage(message, FindinstancesrequestSchema)
@@ -91,7 +91,7 @@ export function handleFindInstancesRequest(message: unknown, context: DACPHandle
       instances: appInstances,
     })
 
-    socket.emit("fdc3_message", response)
+    transport.send(instanceId, response)
   } catch (error) {
     logger.error("DACP: getInfoRequest failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -100,7 +100,7 @@ export function handleFindInstancesRequest(message: unknown, context: DACPHandle
       "getInfoResponse",
       error instanceof Error ? error.message : "Failed to get implementation info"
     )
-    socket.emit("fdc3_message", errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
@@ -110,7 +110,7 @@ export function handleFindInstancesRequest(message: unknown, context: DACPHandle
  * @param context
  */
 export function handleGetAppMetadataRequest(message: unknown, context: DACPHandlerContext): void {
-  const { socket } = context
+  const { transport, instanceId } = context
 
   try {
     const request = validateDACPMessage(message, GetappmetadatarequestSchema)
@@ -123,7 +123,7 @@ export function handleGetAppMetadataRequest(message: unknown, context: DACPHandl
       IMPLEMENTATION_METADATA
     )
 
-    socket.emit("fdc3_message", response)
+    transport.send(instanceId, response)
   } catch (error) {
     logger.error("DACP: getInfoRequest failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -132,6 +132,6 @@ export function handleGetAppMetadataRequest(message: unknown, context: DACPHandl
       "getInfoResponse",
       error instanceof Error ? error.message : "Failed to get implementation info"
     )
-    socket.emit("fdc3_message", errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }

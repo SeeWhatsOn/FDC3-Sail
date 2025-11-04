@@ -101,8 +101,6 @@ export const RightControls = (props: IDockviewHeaderActionsProps) => {
 
   const isFocused = activePanel?.api.isActive
 
-  console.log(isFocused)
-  console.log(activePanel)
   return (
     <div className="group-control">
       <ChannelSelectorButton />

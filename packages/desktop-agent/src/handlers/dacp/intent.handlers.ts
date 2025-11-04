@@ -20,7 +20,7 @@ export async function handleRaiseIntentRequest(
   message: unknown,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { socket, instanceId, appInstanceRegistry, intentRegistry } = context
+  const { transport, instanceId, appInstanceRegistry, intentRegistry } = context
 
   try {
     const request = validateDACPMessage(message, RaiseintentrequestSchema)
@@ -53,7 +53,7 @@ export async function handleRaiseIntentRequest(
       source: intentResolution.source?.appId,
     })
 
-    socket.emit("fdc3_message", response)
+    transport.send(instanceId, response)
   } catch (error) {
     logger.error("DACP: Raise intent request failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -62,12 +62,12 @@ export async function handleRaiseIntentRequest(
       "raiseIntentResponse",
       error instanceof Error ? error.message : "Intent delivery failed"
     )
-    socket.emit("fdc3_message", errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
 export function handleAddIntentListener(message: unknown, context: DACPHandlerContext): void {
-  const { socket, instanceId, appInstanceRegistry, intentRegistry } = context
+  const { transport, instanceId, appInstanceRegistry, intentRegistry } = context
 
   try {
     const request = validateDACPMessage(message, AddintentlistenerrequestSchema)
@@ -90,7 +90,7 @@ export function handleAddIntentListener(message: unknown, context: DACPHandlerCo
       listenerId,
     })
 
-    socket.emit("fdc3_message", response)
+    transport.send(instanceId, response)
   } catch (error) {
     logger.error("DACP: Add intent listener failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -99,7 +99,7 @@ export function handleAddIntentListener(message: unknown, context: DACPHandlerCo
       "addIntentListenerResponse",
       error instanceof Error ? error.message : "Failed to add intent listener"
     )
-    socket.emit("fdc3_message", errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
@@ -107,7 +107,7 @@ export function handleIntentListenerUnsubscribe(
   message: unknown,
   context: DACPHandlerContext
 ): void {
-  const { socket, intentRegistry } = context
+  const { transport, instanceId, intentRegistry } = context
 
   try {
     const request = validateDACPMessage(message, IntentlistenerunsubscriberequestSchema)
@@ -119,7 +119,7 @@ export function handleIntentListenerUnsubscribe(
     }
 
     const response = createDACPSuccessResponse(request, "intentListenerUnsubscribeResponse")
-    socket.emit("fdc3_message", response)
+    transport.send(instanceId, response)
   } catch (error) {
     logger.error("DACP: Intent listener unsubscribe failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -128,12 +128,12 @@ export function handleIntentListenerUnsubscribe(
       "intentListenerUnsubscribeResponse",
       error instanceof Error ? error.message : "Failed to unsubscribe intent listener"
     )
-    socket.emit("fdc3_message", errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
 export function handleFindIntentRequest(message: unknown, context: DACPHandlerContext): void {
-  const { socket, intentRegistry } = context
+  const { transport, instanceId, intentRegistry } = context
 
   try {
     const request = validateDACPMessage(message, FindintentrequestSchema)
@@ -146,7 +146,7 @@ export function handleFindIntentRequest(message: unknown, context: DACPHandlerCo
       appIntent: appIntents[0] ?? { intent: { name: intent, displayName: intent }, apps: [] },
     })
 
-    socket.emit("fdc3_message", response)
+    transport.send(instanceId, response)
   } catch (error) {
     logger.error("DACP: Find intent request failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -155,6 +155,6 @@ export function handleFindIntentRequest(message: unknown, context: DACPHandlerCo
       "findIntentResponse",
       error instanceof Error ? error.message : "Failed to find apps for intent"
     )
-    socket.emit("fdc3_message", errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }

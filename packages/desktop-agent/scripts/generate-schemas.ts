@@ -105,7 +105,7 @@ export const ContextSchema = z.object({
 
 function generateZodFromJsonSchema(
   schemaName: string,
-  schema: unknown,
+  _schema: unknown,
   originalName: string
 ): string {
   console.log(`Generating schema for: ${schemaName}`)

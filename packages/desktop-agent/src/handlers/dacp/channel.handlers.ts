@@ -20,7 +20,7 @@ export function handleGetCurrentChannelRequest(
   message: unknown,
   context: DACPHandlerContext
 ): void {
-  const { socket, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, appInstanceRegistry } = context
 
   try {
     const request = validateDACPMessage(message, GetcurrentchannelrequestSchema)
@@ -30,7 +30,7 @@ export function handleGetCurrentChannelRequest(
     const response = createDACPSuccessResponse(request, "getCurrentChannelResponse", {
       channel: currentChannel,
     })
-    socket.emit('fdc3_message', response)
+    transport.send(instanceId, response)
   } catch (error) {
     const errorResponse = createDACPErrorResponse(
       {
@@ -42,7 +42,7 @@ export function handleGetCurrentChannelRequest(
       "getCurrentChannelResponse",
       error instanceof Error ? error.message : "Failed to get current channel"
     )
-    socket.emit('fdc3_message', errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
@@ -50,7 +50,7 @@ export function handleGetCurrentChannelRequest(
  * Handles join user channel requests
  */
 export function handleJoinUserChannelRequest(message: unknown, context: DACPHandlerContext): void {
-  const { socket, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, appInstanceRegistry } = context
 
   try {
     const request = validateDACPMessage(message, JoinuserchannelrequestSchema)
@@ -64,7 +64,7 @@ export function handleJoinUserChannelRequest(message: unknown, context: DACPHand
     appInstanceRegistry.setInstanceChannel(instanceId, channelId)
 
     const response = createDACPSuccessResponse(request, "joinUserChannelResponse")
-    socket.emit('fdc3_message', response)
+    transport.send(instanceId, response)
 
     notifyChannelChanged(instanceId, channelId, context)
   } catch (error) {
@@ -80,7 +80,7 @@ export function handleJoinUserChannelRequest(message: unknown, context: DACPHand
       "joinUserChannelResponse",
       error instanceof Error ? error.message : "Failed to join user channel"
     )
-    socket.emit('fdc3_message', errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
@@ -91,14 +91,14 @@ export function handleLeaveCurrentChannelRequest(
   message: unknown,
   context: DACPHandlerContext
 ): void {
-  const { socket, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, appInstanceRegistry } = context
 
   try {
     const request = validateDACPMessage(message, LeavecurrentchannelrequestSchema)
     appInstanceRegistry.setInstanceChannel(instanceId, null)
 
     const response = createDACPSuccessResponse(request, "leaveCurrentChannelResponse")
-    socket.emit('fdc3_message', response)
+    transport.send(instanceId, response)
 
     notifyChannelChanged(instanceId, null, context)
   } catch (error) {
@@ -112,7 +112,7 @@ export function handleLeaveCurrentChannelRequest(
       "leaveCurrentChannelResponse",
       error instanceof Error ? error.message : "Failed to leave current channel"
     )
-    socket.emit('fdc3_message', errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
@@ -120,7 +120,7 @@ export function handleLeaveCurrentChannelRequest(
  * Handles get user channels requests
  */
 export function handleGetUserChannelsRequest(message: unknown, context: DACPHandlerContext): void {
-  const { socket } = context
+  const { transport, instanceId } = context
 
   try {
     const request = validateDACPMessage(message, GetuserchannelsrequestSchema)
@@ -129,7 +129,7 @@ export function handleGetUserChannelsRequest(message: unknown, context: DACPHand
     const response = createDACPSuccessResponse(request, "getUserChannelsResponse", {
       userChannels: userChannels,
     })
-    socket.emit('fdc3_message', response)
+    transport.send(instanceId, response)
   } catch (error) {
     const errorResponse = createDACPErrorResponse(
       {
@@ -141,7 +141,7 @@ export function handleGetUserChannelsRequest(message: unknown, context: DACPHand
       "getUserChannelsResponse",
       error instanceof Error ? error.message : "Failed to get user channels"
     )
-    socket.emit('fdc3_message', errorResponse)
+    transport.send(instanceId, errorResponse)
   }
 }
 
@@ -178,5 +178,5 @@ function notifyChannelChanged(
     },
   })
 
-  context.socket.emit('fdc3_message', channelChangedEvent)
+  context.transport.send(instanceId, channelChangedEvent)
 }

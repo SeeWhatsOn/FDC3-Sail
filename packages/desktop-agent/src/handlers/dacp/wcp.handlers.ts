@@ -74,7 +74,7 @@ export async function handleWCP4ValidateAppIdentity(
   context: DACPHandlerContext
 ): Promise<void> {
   const wcp4Message = message as WCP4ValidateAppIdentity
-  const { socket, appInstanceRegistry, appDirectory } = context
+  const { transport, appInstanceRegistry, appDirectory } = context
 
   console.log("[WCP4] Received app identity validation request:", wcp4Message.payload)
 
@@ -172,7 +172,9 @@ export async function handleWCP4ValidateAppIdentity(
 
     console.log("[WCP4] Validation successful, sending WCP5 response:", response.payload)
 
-    socket.emit("fdc3_message", response)
+    // Get the instanceId from the response to send the message
+    const responseInstanceId = response.payload.instanceId
+    transport.send(responseInstanceId, response)
   } catch (error) {
     console.error("[WCP4] Error during validation:", error)
     sendFailureResponse(
@@ -231,5 +233,12 @@ function sendFailureResponse(context: DACPHandlerContext, error: string): void {
 
   console.log("[WCP4] Validation failed, sending WCP5 failure response:", error)
 
-  context.socket.emit("fdc3_message", response)
+  // For failure responses, we need to send to the transport's current instance
+  // Since we don't have a validated instanceId yet, we use the transport's getInstanceId()
+  const instanceId = context.transport.getInstanceId()
+  if (instanceId) {
+    context.transport.send(instanceId, response)
+  } else {
+    console.error("[WCP4] Cannot send failure response: no instanceId available")
+  }
 }

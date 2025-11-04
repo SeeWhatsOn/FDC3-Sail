@@ -1,4 +1,5 @@
 // Placeholder definitions for custom types that were previously in @finos/fdc3-sail-shared
+import type { AppIdentifier } from "@finos/fdc3-standard"
 
 export interface TabDetail {
   [key: string]: unknown

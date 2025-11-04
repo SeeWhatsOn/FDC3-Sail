@@ -5,14 +5,14 @@
     "baseUrl": ".",
     "jsx": "react-jsx",
     "paths": {
-      "@/*": ["../sail-ui/src/*"],
-      "sail-ui": ["../sail-ui/src/index.ts"],
-      "sail-ui/*": ["../sail-ui/src/*"]
+      "@/*": ["../../packages/sail-ui/src/*"],
+      "sail-ui": ["../../packages/sail-ui/src/index.ts"],
+      "sail-ui/*": ["../../packages/sail-ui/src/*"]
     },
     "outDir": "./dist",
     "types": ["vitest/globals"],
     "rootDir": "../../"
   },
-  "include": ["src/**/*", "../sail-ui/src/**/*"],
+  "include": ["src/**/*", "../../packages/sail-ui/src/**/*"],
   "exclude": ["node_modules", "dist", "vitest.config.ts"]
 }
