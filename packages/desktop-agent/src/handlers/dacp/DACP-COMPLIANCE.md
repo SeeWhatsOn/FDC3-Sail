@@ -12,11 +12,11 @@ This document tracks the implementation status of all DACP message types defined
 
 ### Implementation Status Summary
 
-- ✅ **Implemented & Working:** 23 message types
+- ✅ **Implemented & Working:** 26 message types
 - ⚠️ **Implemented but Not Registered:** 0 message types
-- ❌ **Not Implemented:** 9+ message types
+- ❌ **Not Implemented:** 6+ message types
 
-**Spec Coverage:** ~60% complete
+**Spec Coverage:** ~70% complete
 
 ---
 
@@ -389,44 +389,59 @@ This document tracks the implementation status of all DACP message types defined
 
 ## 6. Private Channels
 
-### ❌ createPrivateChannelRequest / createPrivateChannelResponse
-**Status:** Not Implemented
-**Priority:** 🟢 LOW (unless needed for your use case)
+### ✅ createPrivateChannelRequest / createPrivateChannelResponse
+**Status:** Implemented & Working
+**Location:** `private-channel.handlers.ts:23`
+**Registered:** `index.ts:113`
 
 **Spec Requirements:**
-- ❌ Create a private channel
-- ❌ Returns private channel ID
-- ❌ Only accessible to apps with ID
-
-**Implementation Plan:**
-1. Create PrivateChannelRegistry
-2. Add schemas in `dacp-schemas.ts`
-3. Add handler in new `private-channel.handlers.ts`
-4. Track private channel membership in AppInstanceRegistry
-5. Register in handler map
-
-**Note:** Commented TODO at `index.ts:101`
+- ✅ Create a private channel
+- ✅ Returns private channel ID and type
+- ✅ Uses PrivateChannelRegistry for tracking
+- ✅ Only accessible to connected apps
+- ✅ Tracks creator app and instance
+- ✅ Proper error handling
 
 ---
 
-### ❌ privateChannelDisconnectRequest / privateChannelDisconnectResponse
-**Status:** Not Implemented
-**Priority:** 🟢 LOW
+### ✅ privateChannelDisconnectRequest / privateChannelDisconnectResponse
+**Status:** Implemented & Working
+**Location:** `private-channel.handlers.ts:71`
+**Registered:** `index.ts:114`
 
 **Spec Requirements:**
-- ❌ Disconnect from private channel
-- ❌ Cleanup channel if no more members
+- ✅ Disconnect instance from private channel
+- ✅ Validates instance is connected
+- ✅ Notifies other participants with disconnectEvent
+- ✅ Cleanup channel if no more members
+- ✅ Proper error handling
 
 ---
 
-### ❌ Private Channel Events
-**Status:** Not Implemented
-**Priority:** 🟢 LOW
+### ✅ privateChannelAddContextListenerRequest / Response
+**Status:** Implemented & Working
+**Location:** `private-channel.handlers.ts:151`
+**Registered:** `index.ts:115`
+
+**Spec Requirements:**
+- ✅ Add context listener to private channel
+- ✅ Validates channel and instance connection
+- ✅ Returns listenerId
+- ✅ Broadcasts addContextListenerEvent to other participants
+- ✅ Proper error handling
+
+---
+
+### ✅ Private Channel Events
+**Status:** Implemented & Working
 
 **Events:**
-- ❌ onAddContextListener - Notifies when listener added to private channel
-- ❌ onUnsubscribe - Notifies when listener removed
-- ❌ onDisconnect - Notifies when app disconnects from private channel
+- ✅ **privateChannelAddContextListenerEvent** - Sent when listener added (line 184)
+  - Notifies other connected instances
+  - Includes channelId and contextType
+- ✅ **privateChannelDisconnectEvent** - Sent when instance disconnects (line 96)
+  - Notifies remaining instances
+  - Includes channelId and disconnecting instanceId
 
 ---
 
