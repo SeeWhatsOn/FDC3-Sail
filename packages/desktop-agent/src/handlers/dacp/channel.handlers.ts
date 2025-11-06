@@ -7,6 +7,7 @@ import {
 } from "../validation/dacp-validator"
 import {
   GetcurrentchannelrequestSchema,
+  GetcurrentcontextrequestSchema,
   JoinuserchannelrequestSchema,
   LeavecurrentchannelrequestSchema,
   GetuserchannelsrequestSchema,
@@ -140,6 +141,55 @@ export function handleGetUserChannelsRequest(message: unknown, context: DACPHand
       DACP_ERROR_TYPES.CHANNEL_ERROR,
       "getUserChannelsResponse",
       error instanceof Error ? error.message : "Failed to get user channels"
+    )
+    transport.send(instanceId, errorResponse)
+  }
+}
+
+/**
+ * Handles get current context requests
+ * TODO: Implement channel context storage to track last broadcast context per channel
+ */
+export function handleGetCurrentContextRequest(message: unknown, context: DACPHandlerContext): void {
+  const { transport, instanceId, appInstanceRegistry } = context
+
+  try {
+    const request = validateDACPMessage(message, GetcurrentcontextrequestSchema)
+    const payload = request.payload as { channelId?: string; contextType?: string }
+
+    const instance = appInstanceRegistry.getInstance(instanceId)
+    const channelId = payload.channelId || instance?.currentChannel
+
+    if (!channelId) {
+      throw new Error("No channel specified and app is not on a channel")
+    }
+
+    // TODO: Implement channel context storage
+    // For now, return null (no context available)
+    // When implemented, this should:
+    // 1. Get the last broadcast context for the specified channel
+    // 2. Filter by contextType if specified
+    // 3. Return the context or null if no matching context exists
+
+    logger.warn("DACP: getCurrentContext not fully implemented - channel context storage needed", {
+      channelId,
+      contextType: payload.contextType,
+    })
+
+    const response = createDACPSuccessResponse(request, "getCurrentContextResponse", {
+      context: null, // No context storage yet
+    })
+    transport.send(instanceId, response)
+  } catch (error) {
+    const errorResponse = createDACPErrorResponse(
+      {
+        meta: {
+          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
+        },
+      },
+      DACP_ERROR_TYPES.CHANNEL_ERROR,
+      "getCurrentContextResponse",
+      error instanceof Error ? error.message : "Failed to get current context"
     )
     transport.send(instanceId, errorResponse)
   }

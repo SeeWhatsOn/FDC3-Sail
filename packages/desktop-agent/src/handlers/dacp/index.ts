@@ -90,6 +90,7 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
 
     // Channel handlers
     getCurrentChannelRequest: channelHandlers.handleGetCurrentChannelRequest,
+    getCurrentContextRequest: channelHandlers.handleGetCurrentContextRequest,
     joinUserChannelRequest: channelHandlers.handleJoinUserChannelRequest,
     leaveCurrentChannelRequest: channelHandlers.handleLeaveCurrentChannelRequest,
     getUserChannelsRequest: channelHandlers.handleGetUserChannelsRequest,
@@ -174,6 +175,7 @@ export function getDACPHandlerStats(): {
 
     // Channel handlers
     getCurrentChannelRequest: true,
+    getCurrentContextRequest: true,
     joinUserChannelRequest: true,
     leaveCurrentChannelRequest: true,
     getUserChannelsRequest: true,
