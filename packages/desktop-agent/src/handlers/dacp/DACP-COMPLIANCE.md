@@ -2,7 +2,7 @@
 
 FDC3 Desktop Agent Communication Protocol v2.2 Specification Compliance
 
-**Last Updated:** 2025-10-29
+**Last Updated:** 2025-11-06
 
 ---
 
@@ -12,12 +12,11 @@ This document tracks the implementation status of all DACP message types defined
 
 ### Implementation Status Summary
 
-- ✅ **Implemented & Working:** 13 message types
+- ✅ **Implemented & Working:** 17 message types
 - ⚠️ **Implemented but Not Registered:** 3 message types
-- 🐛 **Implemented with Issues:** 4 message types
 - ❌ **Not Implemented:** 15+ message types
 
-**Spec Coverage:** ~40% complete
+**Spec Coverage:** ~45% complete
 
 ---
 
@@ -30,6 +29,7 @@ This document tracks the implementation status of all DACP message types defined
 
 **Spec Requirements:**
 - ✅ Validates channelId and context
+- ✅ Stores context in ChannelContextRegistry
 - ✅ Notifies context listeners on the same channel
 - ✅ Sends broadcastResponse back to sender
 - ✅ Proper error handling
@@ -75,24 +75,18 @@ This document tracks the implementation status of all DACP message types defined
 
 ## 2. Intent Operations
 
-### 🐛 raiseIntentRequest / raiseIntentResponse
-**Status:** Implemented with Issues
+### ✅ raiseIntentRequest / raiseIntentResponse
+**Status:** Implemented & Working
 **Location:** `intent.handlers.ts:19`
-
-**Issues:**
-- ❌ **Missing intentEvent flow** - Does not send intentEvent to target app
-- ❌ **Missing intentResultRequest handling** - Target app cannot send result back
-- ⚠️ Intent resolution relies on IntentRegistry (needs verification)
 
 **Spec Requirements:**
 - ✅ Validates intent name and context
 - ✅ Supports optional target app
-- ❌ **CRITICAL:** Should send intentEvent to target app after resolution
-- ❌ **CRITICAL:** Should wait for intentResultRequest from target app
+- ✅ Sends intentEvent to target app after resolution
+- ✅ Waits for intentResultRequest from target app
 - ✅ Returns intentResult in response
 - ✅ Proper error handling
-
-**Fix Priority:** 🔴 HIGH - Core FDC3 functionality broken
+- ✅ Tracks pending intents in IntentRegistry
 
 ---
 
@@ -168,44 +162,28 @@ This document tracks the implementation status of all DACP message types defined
 
 ---
 
-### ❌ intentEvent
-**Status:** Not Implemented
-**Priority:** 🔴 HIGH - Required for raiseIntent to work properly
+### ✅ intentEvent
+**Status:** Implemented & Working
+**Location:** `intent.handlers.ts:89` (sent from raiseIntentRequest)
 
 **Spec Requirements:**
-- ❌ Sent from Desktop Agent to target app when intent is raised
-- ❌ Contains intent name, context, and source app metadata
-- ❌ Target app handles intent and sends intentResultRequest back
-
-**Implementation Plan:**
-1. Create schema for intentEvent in `dacp-schemas.ts`
-2. Modify `handleRaiseIntentRequest` to:
-   - Resolve target app
-   - Send intentEvent to target app's socket
-   - Wait for intentResultRequest or timeout
-   - Return result to source app
-3. Add to IntentRegistry for tracking pending intents
-
-**Related To:** raiseIntentRequest fix
+- ✅ Sent from Desktop Agent to target app when intent is raised
+- ✅ Contains intent name, context, and source app metadata
+- ✅ Target app handles intent and sends intentResultRequest back
 
 ---
 
-### ❌ intentResultRequest / intentResultResponse
-**Status:** Not Implemented
-**Priority:** 🔴 HIGH - Required for raiseIntent to work properly
+### ✅ intentResultRequest / intentResultResponse
+**Status:** Implemented & Working
+**Location:** `intent.handlers.ts:219`
+**Registered:** `index.ts:92`
 
 **Spec Requirements:**
-- ❌ Sent from target app back to Desktop Agent after handling intent
-- ❌ Contains intentResult (void, context, or channel)
-- ❌ Desktop Agent forwards result to source app
-
-**Implementation Plan:**
-1. Create schemas in `dacp-schemas.ts`
-2. Add handler in `intent.handlers.ts`
-3. Link result back to pending intent in IntentRegistry
-4. Complete the raiseIntentResponse to source app
-
-**Related To:** raiseIntentRequest fix, intentEvent
+- ✅ Sent from target app back to Desktop Agent after handling intent
+- ✅ Contains intentResult (void, context, or channel)
+- ✅ Desktop Agent forwards result to source app
+- ✅ Links back to pending intent via requestUuid
+- ✅ Resolves or rejects intent promise
 
 ---
 
@@ -260,6 +238,20 @@ This document tracks the implementation status of all DACP message types defined
 
 ---
 
+### ✅ getCurrentContextRequest / getCurrentContextResponse
+**Status:** Implemented & Working
+**Location:** `channel.handlers.ts:152`
+**Registered:** `index.ts:96`
+
+**Spec Requirements:**
+- ✅ Returns last broadcast context for specified channel
+- ✅ Filters by contextType if specified
+- ✅ Returns null if no context available
+- ✅ Uses ChannelContextRegistry for storage
+- ✅ Proper error handling
+
+---
+
 ### 🐛 channelChangedEvent
 **Status:** Implemented with Issues
 **Location:** `channel.handlers.ts:162`
@@ -277,20 +269,17 @@ This document tracks the implementation status of all DACP message types defined
 
 ---
 
-### ❌ getOrCreateChannelRequest / getOrCreateChannelResponse
-**Status:** Not Implemented
-**Priority:** 🟡 MEDIUM
+### ✅ getOrCreateChannelRequest / getOrCreateChannelResponse
+**Status:** Implemented & Working
+**Location:** `channel.handlers.ts:199`
+**Registered:** `index.ts:100`
 
 **Spec Requirements:**
-- ❌ Get or create app channel by ID
-- ❌ Returns Channel interface
-- ❌ Different from user channels
-
-**Implementation Plan:**
-1. Create channel service/registry for app channels
-2. Add schema in `dacp-schemas.ts`
-3. Add handler in `channel.handlers.ts`
-4. Register in handler map
+- ✅ Get or create app channel by ID
+- ✅ Returns Channel interface (id, type: "app", displayMetadata)
+- ✅ Different from user channels
+- ✅ Uses AppChannelRegistry for tracking
+- ✅ Proper error handling
 
 ---
 

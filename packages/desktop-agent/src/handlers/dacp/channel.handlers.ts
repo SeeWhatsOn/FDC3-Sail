@@ -11,6 +11,7 @@ import {
   JoinuserchannelrequestSchema,
   LeavecurrentchannelrequestSchema,
   GetuserchannelsrequestSchema,
+  GetorcreatechannelrequestSchema,
 } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../types"
 
@@ -148,10 +149,9 @@ export function handleGetUserChannelsRequest(message: unknown, context: DACPHand
 
 /**
  * Handles get current context requests
- * TODO: Implement channel context storage to track last broadcast context per channel
  */
 export function handleGetCurrentContextRequest(message: unknown, context: DACPHandlerContext): void {
-  const { transport, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, appInstanceRegistry, channelContextRegistry } = context
 
   try {
     const request = validateDACPMessage(message, GetcurrentcontextrequestSchema)
@@ -164,20 +164,17 @@ export function handleGetCurrentContextRequest(message: unknown, context: DACPHa
       throw new Error("No channel specified and app is not on a channel")
     }
 
-    // TODO: Implement channel context storage
-    // For now, return null (no context available)
-    // When implemented, this should:
-    // 1. Get the last broadcast context for the specified channel
-    // 2. Filter by contextType if specified
-    // 3. Return the context or null if no matching context exists
+    // Get the last broadcast context for the channel
+    const storedContext = channelContextRegistry.getContext(channelId, payload.contextType)
 
-    logger.warn("DACP: getCurrentContext not fully implemented - channel context storage needed", {
+    logger.debug("DACP: getCurrentContext", {
       channelId,
       contextType: payload.contextType,
+      hasContext: !!storedContext,
     })
 
     const response = createDACPSuccessResponse(request, "getCurrentContextResponse", {
-      context: null, // No context storage yet
+      context: storedContext,
     })
     transport.send(instanceId, response)
   } catch (error) {
@@ -190,6 +187,47 @@ export function handleGetCurrentContextRequest(message: unknown, context: DACPHa
       DACP_ERROR_TYPES.CHANNEL_ERROR,
       "getCurrentContextResponse",
       error instanceof Error ? error.message : "Failed to get current context"
+    )
+    transport.send(instanceId, errorResponse)
+  }
+}
+
+/**
+ * Handles get or create channel requests
+ * Creates an app channel if it doesn't exist, or returns existing one
+ */
+export function handleGetOrCreateChannelRequest(
+  message: unknown,
+  context: DACPHandlerContext
+): void {
+  const { transport, instanceId, appChannelRegistry } = context
+
+  try {
+    const request = validateDACPMessage(message, GetorcreatechannelrequestSchema)
+    const { channelId } = request.payload
+
+    // Get or create the app channel
+    const channel = appChannelRegistry.getOrCreate(channelId)
+
+    logger.debug("DACP: getOrCreateChannel", {
+      channelId,
+      existed: appChannelRegistry.has(channelId),
+    })
+
+    const response = createDACPSuccessResponse(request, "getOrCreateChannelResponse", {
+      channel,
+    })
+    transport.send(instanceId, response)
+  } catch (error) {
+    const errorResponse = createDACPErrorResponse(
+      {
+        meta: {
+          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
+        },
+      },
+      DACP_ERROR_TYPES.CHANNEL_ERROR,
+      "getOrCreateChannelResponse",
+      error instanceof Error ? error.message : "Failed to get or create channel"
     )
     transport.send(instanceId, errorResponse)
   }

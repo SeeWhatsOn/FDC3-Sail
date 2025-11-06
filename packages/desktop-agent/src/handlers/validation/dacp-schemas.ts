@@ -646,7 +646,9 @@ export type Getinforesponse = z.infer<typeof GetinforesponseSchema>
 // Getorcreatechannelrequest
 export const GetorcreatechannelrequestSchema = z.object({
   type: z.literal('getOrCreateChannelRequest'),
-  payload: z.unknown().optional(),
+  payload: z.object({
+    channelId: z.string()
+  }),
   meta: z.object({
     requestUuid: z.string(),
     timestamp: z.coerce.date()
@@ -658,10 +660,17 @@ export type Getorcreatechannelrequest = z.infer<typeof Getorcreatechannelrequest
 // Getorcreatechannelresponse
 export const GetorcreatechannelresponseSchema = z.object({
   type: z.literal('getOrCreateChannelResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
+  payload: z.object({
+    channel: z.object({
+      id: z.string(),
+      type: z.literal('app'),
+      displayMetadata: z.object({
+        name: z.string().optional(),
+        color: z.string().optional(),
+        glyph: z.string().optional()
+      }).optional()
+    })
+  }),
   meta: z.object({
     responseUuid: z.string(),
     requestUuid: z.string(),

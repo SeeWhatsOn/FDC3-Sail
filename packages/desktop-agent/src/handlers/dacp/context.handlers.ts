@@ -22,7 +22,7 @@ export async function handleBroadcastRequest(
   message: unknown,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId } = context
+  const { transport, instanceId, channelContextRegistry } = context
 
   try {
     const request = validateDACPMessage(message, BroadcastrequestSchema)
@@ -35,9 +35,14 @@ export async function handleBroadcastRequest(
 
     const validatedContext = validateDACPMessage(request.payload.context, ContextSchema)
 
-    // In a real implementation, this would update the channel's context in a central store.
-    // For now, we just notify listeners.
+    // Store context in channel context registry
+    channelContextRegistry.storeContext(
+      request.payload.channelId,
+      validatedContext,
+      instanceId
+    )
 
+    // Notify listeners on the channel
     await notifyContextListeners(request.payload.channelId, validatedContext, context)
 
     const response = createDACPSuccessResponse(request, "broadcastResponse")
@@ -169,11 +174,11 @@ export function handleContextListenerUnsubscribe(
   }
 }
 
-function notifyContextListeners(
+async function notifyContextListeners(
   channelId: string,
   context: Context,
   handlerContext: DACPHandlerContext
-): void {
+): Promise<void> {
   // Find instances on the same channel
   const instancesOnChannel = handlerContext.appInstanceRegistry.getInstancesOnChannel(channelId)
 
@@ -206,5 +211,5 @@ function notifyContextListeners(
     }
   })
 
-  Promise.allSettled(notifications)
+  await Promise.allSettled(notifications)
 }

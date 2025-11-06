@@ -11,6 +11,8 @@ import type { Transport } from "./interfaces/Transport"
 import type { AppLauncher } from "./interfaces/AppLauncher"
 import { AppInstanceRegistry } from "./state/AppInstanceRegistry"
 import { IntentRegistry } from "./state/IntentRegistry"
+import { ChannelContextRegistry } from "./state/ChannelContextRegistry"
+import { AppChannelRegistry } from "./state/AppChannelRegistry"
 import { AppDirectoryManager } from "./app-directory/appDirectoryManager"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
 import type { DACPHandlerContext } from "./handlers/types"
@@ -44,6 +46,18 @@ export interface DesktopAgentConfig {
   intentRegistry?: IntentRegistry
 
   /**
+   * Channel context registry for storing last broadcast context per channel.
+   * OPTIONAL - defaults to new instance if not provided.
+   */
+  channelContextRegistry?: ChannelContextRegistry
+
+  /**
+   * App channel registry for managing dynamically created app channels.
+   * OPTIONAL - defaults to new instance if not provided.
+   */
+  appChannelRegistry?: AppChannelRegistry
+
+  /**
    * App directory manager for querying app metadata.
    * OPTIONAL - defaults to new instance if not provided.
    */
@@ -74,6 +88,8 @@ export class DesktopAgent {
   private appLauncher?: AppLauncher
   private appInstanceRegistry: AppInstanceRegistry
   private intentRegistry: IntentRegistry
+  private channelContextRegistry: ChannelContextRegistry
+  private appChannelRegistry: AppChannelRegistry
   private appDirectory: AppDirectoryManager
   private isStarted: boolean = false
 
@@ -84,6 +100,8 @@ export class DesktopAgent {
     // Use provided registries or create defaults
     this.appInstanceRegistry = config.appInstanceRegistry ?? new AppInstanceRegistry()
     this.intentRegistry = config.intentRegistry ?? new IntentRegistry()
+    this.channelContextRegistry = config.channelContextRegistry ?? new ChannelContextRegistry()
+    this.appChannelRegistry = config.appChannelRegistry ?? new AppChannelRegistry()
     this.appDirectory = config.appDirectory ?? new AppDirectoryManager()
   }
 
@@ -161,6 +179,8 @@ export class DesktopAgent {
       instanceId: this.transport.getInstanceId(),
       appInstanceRegistry: this.appInstanceRegistry,
       intentRegistry: this.intentRegistry,
+      channelContextRegistry: this.channelContextRegistry,
+      appChannelRegistry: this.appChannelRegistry,
       appDirectory: this.appDirectory,
       appLauncher: this.appLauncher,
     }
@@ -178,6 +198,20 @@ export class DesktopAgent {
    */
   getIntentRegistry(): IntentRegistry {
     return this.intentRegistry
+  }
+
+  /**
+   * Get the channel context registry (for testing/inspection)
+   */
+  getChannelContextRegistry(): ChannelContextRegistry {
+    return this.channelContextRegistry
+  }
+
+  /**
+   * Get the app channel registry (for testing/inspection)
+   */
+  getAppChannelRegistry(): AppChannelRegistry {
+    return this.appChannelRegistry
   }
 
   /**

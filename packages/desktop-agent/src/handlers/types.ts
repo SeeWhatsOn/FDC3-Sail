@@ -2,6 +2,8 @@ import type { Transport } from "../interfaces/Transport"
 import type { AppLauncher } from "../interfaces/AppLauncher"
 import type { AppInstanceRegistry } from "../state/AppInstanceRegistry"
 import type { IntentRegistry } from "../state/IntentRegistry"
+import type { ChannelContextRegistry } from "../state/ChannelContextRegistry"
+import type { AppChannelRegistry } from "../state/AppChannelRegistry"
 import type { AppDirectoryManager } from "../app-directory/appDirectoryManager"
 
 // ============================================================================
@@ -24,6 +26,12 @@ export interface DACPHandlerContext {
 
   /** Registry of intent listeners and capabilities */
   intentRegistry: IntentRegistry
+
+  /** Registry of channel contexts (last broadcast context per channel) */
+  channelContextRegistry: ChannelContextRegistry
+
+  /** Registry of app channels (dynamically created channels) */
+  appChannelRegistry: AppChannelRegistry
 
   /** App directory manager for app metadata lookups */
   appDirectory: AppDirectoryManager

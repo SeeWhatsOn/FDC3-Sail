@@ -97,6 +97,7 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
     joinUserChannelRequest: channelHandlers.handleJoinUserChannelRequest,
     leaveCurrentChannelRequest: channelHandlers.handleLeaveCurrentChannelRequest,
     getUserChannelsRequest: channelHandlers.handleGetUserChannelsRequest,
+    getOrCreateChannelRequest: channelHandlers.handleGetOrCreateChannelRequest,
 
     // App management handlers
     getInfoRequest: appHandlers.handleGetInfoRequest,
@@ -200,6 +201,7 @@ export function getDACPHandlerStats(): {
     joinUserChannelRequest: true,
     leaveCurrentChannelRequest: true,
     getUserChannelsRequest: true,
+    getOrCreateChannelRequest: true,
 
     // App management handlers
     getInfoRequest: true,
