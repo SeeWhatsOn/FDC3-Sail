@@ -11,6 +11,7 @@ import {
   AddintentlistenerrequestSchema,
   IntentlistenerunsubscriberequestSchema,
   FindintentrequestSchema,
+  FindintentsbycontextrequestSchema,
   IntentresultrequestSchema,
   ContextSchema,
 } from "../validation/dacp-schemas"
@@ -275,6 +276,51 @@ export function handleIntentResultRequest(
       DACP_ERROR_TYPES.INTENT_DELIVERY_FAILED,
       "intentResultResponse",
       error instanceof Error ? error.message : "Failed to process intent result"
+    )
+    transport.send(instanceId, errorResponse)
+  }
+}
+
+export function handleFindIntentsByContextRequest(
+  message: unknown,
+  context: DACPHandlerContext
+): void {
+  const { transport, instanceId, intentRegistry } = context
+
+  try {
+    const request = validateDACPMessage(message, FindintentsbycontextrequestSchema)
+    const contextType = (request.payload as { context: Context }).context?.type
+
+    if (!contextType) {
+      throw new Error("Context type is required for findIntentsByContext")
+    }
+
+    logger.info("DACP: Finding intents for context type", { contextType })
+
+    // Use IntentRegistry to find all intents that can handle this context type
+    const intentMetadata = intentRegistry.findIntentsByContext(contextType)
+
+    // Convert to AppIntent[] format
+    const appIntents = intentMetadata.map(metadata => {
+      const appIntentsForIntent = intentRegistry.createAppIntents(metadata.name, contextType)
+      return appIntentsForIntent[0] || {
+        intent: { name: metadata.name, displayName: metadata.displayName || metadata.name },
+        apps: [],
+      }
+    })
+
+    const response = createDACPSuccessResponse(request, "findIntentsByContextResponse", {
+      appIntents,
+    })
+
+    transport.send(instanceId, response)
+  } catch (error) {
+    logger.error("DACP: Find intents by context request failed", error)
+    const errorResponse = createDACPErrorResponse(
+      message as { meta: { requestUuid: string } },
+      DACP_ERROR_TYPES.NO_APPS_FOUND,
+      "findIntentsByContextResponse",
+      error instanceof Error ? error.message : "Failed to find intents for context type"
     )
     transport.send(instanceId, errorResponse)
   }

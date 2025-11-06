@@ -85,6 +85,7 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
     addIntentListenerRequest: intentHandlers.handleAddIntentListener,
     intentListenerUnsubscribeRequest: intentHandlers.handleIntentListenerUnsubscribe,
     findIntentRequest: intentHandlers.handleFindIntentRequest,
+    findIntentsByContextRequest: intentHandlers.handleFindIntentsByContextRequest,
     intentResultRequest: intentHandlers.handleIntentResultRequest,
 
     // Channel handlers
@@ -168,6 +169,7 @@ export function getDACPHandlerStats(): {
     addIntentListenerRequest: true,
     intentListenerUnsubscribeRequest: true,
     findIntentRequest: true,
+    findIntentsByContextRequest: true,
     intentResultRequest: true,
 
     // Channel handlers
