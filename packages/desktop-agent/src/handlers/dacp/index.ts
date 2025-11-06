@@ -14,6 +14,7 @@ import * as channelHandlers from "./channel.handlers"
 import * as eventHandlers from "./event.handlers"
 import * as appHandlers from "./app-management/app.handlers"
 import * as wcpHandlers from "./wcp.handlers"
+import * as privateChannelHandlers from "./private-channel.handlers"
 
 /**
  * Routes DACP messages to appropriate handlers
@@ -107,12 +108,13 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
     addEventListenerRequest: eventHandlers.handleAddEventListenerRequest,
     eventListenerUnsubscribeRequest: eventHandlers.handleEventListenerUnsubscribeRequest,
 
+    // Private channel handlers
+    createPrivateChannelRequest: privateChannelHandlers.handleCreatePrivateChannelRequest,
+    privateChannelDisconnectRequest: privateChannelHandlers.handlePrivateChannelDisconnectRequest,
+    privateChannelAddContextListenerRequest: privateChannelHandlers.handlePrivateChannelAddContextListenerRequest,
+
     // WCP handlers
     'WCP4ValidateAppIdentity': wcpHandlers.handleWCP4ValidateAppIdentity,
-
-    // TODO: Private channel handlers (to be implemented)
-    // 'createPrivateChannelRequest': privateChannelHandlers.handleCreatePrivateChannelRequest,
-    // 'privateChannelDisconnectRequest': privateChannelHandlers.handlePrivateChannelDisconnectRequest,
 
     // TODO: Heartbeat handlers (to be implemented)
     // 'heartbeatAcknowledgmentRequest': heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,
@@ -155,6 +157,12 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
   const removedEventListeners = eventHandlers.removeInstanceEventListeners(instanceId)
   if (removedEventListeners > 0) {
     logger.info(`Removed ${removedEventListeners} event listeners for disconnected instance`, { instanceId })
+  }
+
+  // Remove private channels
+  const removedPrivateChannels = privateChannelHandlers.removeInstancePrivateChannels(instanceId)
+  if (removedPrivateChannels > 0) {
+    logger.info(`Removed ${removedPrivateChannels} private channels for disconnected instance`, { instanceId })
   }
 
   // Remove instance from registries
@@ -202,6 +210,11 @@ export function getDACPHandlerStats(): {
     // Event handlers
     addEventListenerRequest: true,
     eventListenerUnsubscribeRequest: true,
+
+    // Private channel handlers
+    createPrivateChannelRequest: true,
+    privateChannelDisconnectRequest: true,
+    privateChannelAddContextListenerRequest: true,
 
     // WCP handlers
     WCP4ValidateAppIdentity: true,
@@ -259,4 +272,4 @@ export function checkDACPHandlerHealth(): {
 }
 
 // Re-export handlers for testing and direct access
-export { contextHandlers, intentHandlers, channelHandlers, eventHandlers, appHandlers, wcpHandlers }
+export { contextHandlers, intentHandlers, channelHandlers, eventHandlers, appHandlers, wcpHandlers, privateChannelHandlers }
