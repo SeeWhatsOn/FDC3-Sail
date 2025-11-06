@@ -12,11 +12,11 @@ This document tracks the implementation status of all DACP message types defined
 
 ### Implementation Status Summary
 
-- ✅ **Implemented & Working:** 17 message types
-- ⚠️ **Implemented but Not Registered:** 3 message types
-- ❌ **Not Implemented:** 15+ message types
+- ✅ **Implemented & Working:** 23 message types
+- ⚠️ **Implemented but Not Registered:** 0 message types
+- ❌ **Not Implemented:** 9+ message types
 
-**Spec Coverage:** ~45% complete
+**Spec Coverage:** ~60% complete
 
 ---
 
@@ -127,38 +127,31 @@ This document tracks the implementation status of all DACP message types defined
 
 ---
 
-### ❌ findIntentsByContextRequest / findIntentsByContextResponse
-**Status:** Not Implemented
-**Priority:** 🟡 MEDIUM
+### ✅ findIntentsByContextRequest / findIntentsByContextResponse
+**Status:** Implemented & Working
+**Location:** `intent.handlers.ts:285`
+**Registered:** `index.ts:91`
 
 **Spec Requirements:**
-- ❌ Find all intents that can handle a specific context type
-- ❌ Returns array of AppIntents
-- ❌ Used for discovery without knowing intent name
-
-**Implementation Plan:**
-1. Create schema in `dacp-schemas.ts`
-2. Add handler in `intent.handlers.ts`
-3. Query IntentRegistry by context type
-4. Register in handler map at `index.ts:76`
+- ✅ Find all intents that can handle a specific context type
+- ✅ Returns array of AppIntents
+- ✅ Used for discovery without knowing intent name
+- ✅ Queries IntentRegistry by context type
+- ✅ Proper error handling
 
 ---
 
-### ❌ raiseIntentForContextRequest / raiseIntentForContextResponse
-**Status:** Not Implemented
-**Priority:** 🟢 LOW
+### ✅ raiseIntentForContextRequest / raiseIntentForContextResponse
+**Status:** Implemented & Working
+**Location:** `intent.handlers.ts:330`
+**Registered:** `index.ts:87`
 
 **Spec Requirements:**
-- ❌ Raise intent without specifying intent name
-- ❌ Desktop Agent determines appropriate intent from context
-- ❌ Similar to raiseIntent but context-first
-
-**Implementation Plan:**
-1. Create schema in `dacp-schemas.ts`
-2. Add handler in `intent.handlers.ts`
-3. Use IntentRegistry to find matching intents by context
-4. Present resolution UI if multiple options
-5. Register in handler map
+- ✅ Raise intent without specifying intent name
+- ✅ Desktop Agent determines appropriate intent from context
+- ✅ Similar to raiseIntent but context-first
+- ✅ Uses IntentRegistry to find matching intents
+- ✅ Proper error handling
 
 ---
 
@@ -252,20 +245,16 @@ This document tracks the implementation status of all DACP message types defined
 
 ---
 
-### 🐛 channelChangedEvent
-**Status:** Implemented with Issues
-**Location:** `channel.handlers.ts:162`
-
-**Issues:**
-- ⚠️ Only sent to the app that changed channels
-- ❌ **Should be sent to all apps that registered for DA events via addEventListener**
+### ✅ channelChangedEvent
+**Status:** Implemented & Working
+**Location:** `channel.handlers.ts:250` (notifyChannelChanged)
 
 **Spec Requirements:**
 - ✅ Sent when app joins/leaves channel
 - ✅ Contains channelId and app identity
-- ❌ Should be broadcast to all subscribed apps, not just the one that changed
-
-**Fix Priority:** 🟡 MEDIUM - Depends on addEventListener implementation
+- ✅ Broadcast to all apps subscribed via addEventListener
+- ✅ Sent to the app that changed channels
+- ✅ Uses getEventListeners to find subscribers
 
 ---
 
@@ -370,35 +359,32 @@ This document tracks the implementation status of all DACP message types defined
 
 ## 5. Desktop Agent Events
 
-### ❌ addEventListenerRequest / addEventListenerResponse
-**Status:** Not Implemented
-**Priority:** 🟡 MEDIUM
+### ✅ addEventListenerRequest / addEventListenerResponse
+**Status:** Implemented & Working
+**Location:** `event.handlers.ts:97`
+**Registered:** `index.ts:108`
 
 **Spec Requirements:**
-- ❌ Register listener for DA-level events (not context/intent)
-- ❌ Event types: channelChanged, userChannelChanged, etc.
-- ❌ Returns listenerId
-
-**Implementation Plan:**
-1. Add event listener registry to AppInstanceRegistry
-2. Create schemas in `dacp-schemas.ts`
-3. Add handler (possibly in new `event.handlers.ts`)
-4. Modify channelChangedEvent to notify registered listeners
-5. Register in handler map
+- ✅ Register listener for DA-level events (not context/intent)
+- ✅ Supports event type: "channelChanged"
+- ✅ Returns listenerId
+- ✅ Uses EventListenerRegistry singleton
+- ✅ Validates event types
+- ✅ Proper error handling
 
 ---
 
-### ❌ eventListenerUnsubscribeRequest / eventListenerUnsubscribeResponse
-**Status:** Not Implemented
-**Priority:** 🟡 MEDIUM
+### ✅ eventListenerUnsubscribeRequest / eventListenerUnsubscribeResponse
+**Status:** Implemented & Working
+**Location:** `event.handlers.ts:146`
+**Registered:** `index.ts:109`
 
 **Spec Requirements:**
-- ❌ Unsubscribe from DA-level events
-- ❌ Takes listenerId
-
-**Implementation Plan:**
-1. Add handler to remove event listener
-2. Register in handler map
+- ✅ Unsubscribe from DA-level events
+- ✅ Takes listenerId
+- ✅ Removes from EventListenerRegistry
+- ✅ Returns error if listener not found
+- ✅ Proper error handling
 
 ---
 
@@ -545,13 +531,20 @@ This document tracks the implementation status of all DACP message types defined
 
 ### Phase 2: Important Missing Features 🟡 MEDIUM
 
-#### 2.1 Implement findIntentsByContext
-**Estimated Effort:** 1 hour
-**Benefit:** Enables intent discovery without knowing intent name
+#### ✅ 2.1 Implement findIntentsByContext - COMPLETED
+**Status:** Verified complete in existing implementation
+- ✅ Handler implemented (intent.handlers.ts:285)
+- ✅ Registered in index.ts:91
+- ✅ Queries IntentRegistry by context type
+- ✅ Returns array of AppIntents
 
-#### 2.2 Implement Desktop Agent Event Listeners (addEventListener)
-**Estimated Effort:** 2 hours
-**Benefit:** Enables apps to listen for channelChanged and other DA events
+#### ✅ 2.2 Implement Desktop Agent Event Listeners (addEventListener) - COMPLETED
+**Status:** Verified complete in existing implementation
+- ✅ EventListenerRegistry tracks subscribers
+- ✅ addEventListenerRequest handler (event.handlers.ts:97)
+- ✅ eventListenerUnsubscribeRequest handler (event.handlers.ts:146)
+- ✅ Both registered in index.ts:108-109
+- ✅ channelChanged events broadcast to all subscribers
 
 #### ✅ 2.3 Implement getOrCreateChannel - COMPLETED
 **Status:** Fully implemented
