@@ -15,6 +15,7 @@ import * as eventHandlers from "./event.handlers"
 import * as appHandlers from "./app-management/app.handlers"
 import * as wcpHandlers from "./wcp.handlers"
 import * as privateChannelHandlers from "./private-channel.handlers"
+import * as heartbeatHandlers from "./heartbeat.handlers"
 
 /**
  * Routes DACP messages to appropriate handlers
@@ -117,8 +118,8 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
     // WCP handlers
     'WCP4ValidateAppIdentity': wcpHandlers.handleWCP4ValidateAppIdentity,
 
-    // TODO: Heartbeat handlers (to be implemented)
-    // 'heartbeatAcknowledgmentRequest': heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,
+    // Heartbeat handlers
+    heartbeatAcknowledgmentRequest: heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,
   }
 
   return handlerMap[messageType] || null
@@ -165,6 +166,9 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
   if (removedPrivateChannels > 0) {
     logger.info(`Removed ${removedPrivateChannels} private channels for disconnected instance`, { instanceId })
   }
+
+  // Stop heartbeat
+  heartbeatHandlers.stopHeartbeat(instanceId)
 
   // Remove instance from registries
   appInstanceRegistry.removeInstance(instanceId)
@@ -220,6 +224,9 @@ export function getDACPHandlerStats(): {
 
     // WCP handlers
     WCP4ValidateAppIdentity: true,
+
+    // Heartbeat handlers
+    heartbeatAcknowledgmentRequest: true,
   }
 
   return {
@@ -274,4 +281,4 @@ export function checkDACPHandlerHealth(): {
 }
 
 // Re-export handlers for testing and direct access
-export { contextHandlers, intentHandlers, channelHandlers, eventHandlers, appHandlers, wcpHandlers, privateChannelHandlers }
+export { contextHandlers, intentHandlers, channelHandlers, eventHandlers, appHandlers, wcpHandlers, privateChannelHandlers, heartbeatHandlers }

@@ -8,6 +8,7 @@
 
 import type { AppMetadata } from "@finos/fdc3"
 import type { DACPHandlerContext } from "../types"
+import { startHeartbeat } from "./heartbeat.handlers"
 
 /**
  * WCP4ValidateAppIdentity message from FDC3 app
@@ -175,6 +176,9 @@ export async function handleWCP4ValidateAppIdentity(
     // Get the instanceId from the response to send the message
     const responseInstanceId = response.payload.instanceId
     transport.send(responseInstanceId, response)
+
+    // Start heartbeat for this instance
+    startHeartbeat(responseInstanceId, context)
   } catch (error) {
     console.error("[WCP4] Error during validation:", error)
     sendFailureResponse(

@@ -12,11 +12,11 @@ This document tracks the implementation status of all DACP message types defined
 
 ### Implementation Status Summary
 
-- ✅ **Implemented & Working:** 26 message types
+- ✅ **Implemented & Working:** 28 message types
 - ⚠️ **Implemented but Not Registered:** 0 message types
-- ❌ **Not Implemented:** 6+ message types
+- ❌ **Not Implemented:** 4+ message types
 
-**Spec Coverage:** ~70% complete
+**Spec Coverage:** ~75% complete
 
 ---
 
@@ -466,32 +466,36 @@ This document tracks the implementation status of all DACP message types defined
 
 ## 8. Health & Monitoring
 
-### ❌ heartbeatEvent
-**Status:** Not Implemented
-**Priority:** 🟢 LOW (nice to have)
+### ✅ heartbeatEvent
+**Status:** Implemented & Working
+**Location:** `heartbeat.handlers.ts:113`
 
 **Spec Requirements:**
-- ❌ Sent periodically from DA to app
-- ❌ App responds with heartbeatAcknowledgmentRequest
-- ❌ Used to detect disconnected apps
+- ✅ Sent periodically from DA to app (30s interval)
+- ✅ App responds with heartbeatAcknowledgmentRequest
+- ✅ Used to detect disconnected apps
+- ✅ Automatic cleanup after timeout (60s)
+- ✅ Started automatically on WCP validation
+- ✅ Stopped automatically on disconnect
 
-**Implementation Plan:**
-1. Add heartbeat interval timer per instance
-2. Send heartbeatEvent periodically
-3. Track acknowledgments
-4. Mark instances as disconnected if no ack
-
-**Note:** Commented TODO at `index.ts:105`
+**Implementation:**
+- HeartbeatRegistry tracks state per instance
+- Configurable intervals (HEARTBEAT_INTERVAL, HEARTBEAT_TIMEOUT)
+- Missed heartbeat tracking
+- Automatic instance removal on timeout
 
 ---
 
-### ❌ heartbeatAcknowledgmentRequest / Response
-**Status:** Not Implemented
-**Priority:** 🟢 LOW
+### ✅ heartbeatAcknowledgmentRequest / Response
+**Status:** Implemented & Working
+**Location:** `heartbeat.handlers.ts:143`
+**Registered:** `index.ts:122`
 
 **Spec Requirements:**
-- ❌ App sends to acknowledge heartbeat
-- ❌ Resets timeout counter
+- ✅ App sends to acknowledge heartbeat
+- ✅ Resets timeout counter
+- ✅ Clears missed heartbeat count
+- ✅ Validates message schema
 
 ---
 
