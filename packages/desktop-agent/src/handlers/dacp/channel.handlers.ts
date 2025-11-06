@@ -52,14 +52,14 @@ export function handleGetCurrentChannelRequest(
  * Handles join user channel requests
  */
 export function handleJoinUserChannelRequest(message: unknown, context: DACPHandlerContext): void {
-  const { transport, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, appInstanceRegistry, userChannelRegistry } = context
 
   try {
     const request = validateDACPMessage(message, JoinuserchannelrequestSchema)
     const { channelId } = request.payload
 
-    const channelExists = validateChannelExists(channelId)
-    if (!channelExists) {
+    // Validate channel exists in user channel registry
+    if (!userChannelRegistry.has(channelId)) {
       throw new Error(`Channel ${channelId} does not exist`)
     }
 
@@ -122,14 +122,14 @@ export function handleLeaveCurrentChannelRequest(
  * Handles get user channels requests
  */
 export function handleGetUserChannelsRequest(message: unknown, context: DACPHandlerContext): void {
-  const { transport, instanceId } = context
+  const { transport, instanceId, userChannelRegistry } = context
 
   try {
     const request = validateDACPMessage(message, GetuserchannelsrequestSchema)
-    const userChannels = getUserChannelsFromContext()
+    const userChannels = userChannelRegistry.getAll()
 
     const response = createDACPSuccessResponse(request, "getUserChannelsResponse", {
-      userChannels: userChannels,
+      userChannels,
     })
     transport.send(instanceId, response)
   } catch (error) {
@@ -231,20 +231,6 @@ export function handleGetOrCreateChannelRequest(
     )
     transport.send(instanceId, errorResponse)
   }
-}
-
-// Mock/Helper functions (to be replaced with real service calls)
-function validateChannelExists(channelId: string): boolean {
-  const validChannels = ["red", "blue", "green", "yellow", "orange", "purple"]
-  return validChannels.includes(channelId)
-}
-
-function getUserChannelsFromContext(): unknown[] {
-  return [
-    { id: "red", type: "user", displayMetadata: { name: "Red" } },
-    { id: "blue", type: "user", displayMetadata: { name: "Blue" } },
-    { id: "green", type: "user", displayMetadata: { name: "Green" } },
-  ]
 }
 
 function notifyChannelChanged(

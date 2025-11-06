@@ -220,14 +220,13 @@ This document tracks the implementation status of all DACP message types defined
 
 ### ✅ getUserChannelsRequest / getUserChannelsResponse
 **Status:** Implemented & Working
-**Location:** `channel.handlers.ts:122`
-**Issues:** Mock data - needs real channel service
+**Location:** `channel.handlers.ts:124`
 
 **Spec Requirements:**
 - ✅ Returns array of user channels
-- ⚠️ Currently returns hardcoded channels
-
-**Fix Priority:** 🟡 MEDIUM - Replace mock with real channel service
+- ✅ Uses UserChannelRegistry for channel configuration
+- ✅ Supports default FDC3 channels (red, blue, green, yellow, orange, purple)
+- ✅ Configurable via constructor injection
 
 ---
 
@@ -562,9 +561,14 @@ This document tracks the implementation status of all DACP message types defined
 - ✅ Supports filtering by contextType
 - ✅ Returns most recent context or null
 
-#### 2.5 Replace Mock Channel Data
-**Estimated Effort:** 1-2 hours
-**Benefit:** Real channel configuration instead of hardcoded
+#### ✅ 2.5 Replace Mock Channel Data - COMPLETED
+**Status:** Fully implemented
+- ✅ UserChannelRegistry created for managing user channels
+- ✅ Supports default FDC3 channels (red, blue, green, yellow, orange, purple)
+- ✅ getUserChannelsRequest uses registry (channel.handlers.ts:124)
+- ✅ joinUserChannelRequest validates against registry (channel.handlers.ts:54)
+- ✅ Configurable via DesktopAgent constructor
+- ✅ Includes display metadata (name, color, glyph)
 
 ---
 

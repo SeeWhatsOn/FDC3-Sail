@@ -19,6 +19,7 @@ export { AppInstanceRegistry } from "./state/AppInstanceRegistry"
 export { IntentRegistry } from "./state/IntentRegistry"
 export { ChannelContextRegistry } from "./state/ChannelContextRegistry"
 export { AppChannelRegistry } from "./state/AppChannelRegistry"
+export { UserChannelRegistry } from "./state/UserChannelRegistry"
 export { AppDirectoryManager } from "./app-directory/appDirectoryManager"
 
 // Handler types (for advanced usage)

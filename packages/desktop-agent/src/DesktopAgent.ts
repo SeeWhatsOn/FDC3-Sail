@@ -13,6 +13,7 @@ import { AppInstanceRegistry } from "./state/AppInstanceRegistry"
 import { IntentRegistry } from "./state/IntentRegistry"
 import { ChannelContextRegistry } from "./state/ChannelContextRegistry"
 import { AppChannelRegistry } from "./state/AppChannelRegistry"
+import { UserChannelRegistry } from "./state/UserChannelRegistry"
 import { AppDirectoryManager } from "./app-directory/appDirectoryManager"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
 import type { DACPHandlerContext } from "./handlers/types"
@@ -58,6 +59,12 @@ export interface DesktopAgentConfig {
   appChannelRegistry?: AppChannelRegistry
 
   /**
+   * User channel registry for managing pre-defined user channels.
+   * OPTIONAL - defaults to new instance with standard FDC3 channels if not provided.
+   */
+  userChannelRegistry?: UserChannelRegistry
+
+  /**
    * App directory manager for querying app metadata.
    * OPTIONAL - defaults to new instance if not provided.
    */
@@ -90,6 +97,7 @@ export class DesktopAgent {
   private intentRegistry: IntentRegistry
   private channelContextRegistry: ChannelContextRegistry
   private appChannelRegistry: AppChannelRegistry
+  private userChannelRegistry: UserChannelRegistry
   private appDirectory: AppDirectoryManager
   private isStarted: boolean = false
 
@@ -102,6 +110,7 @@ export class DesktopAgent {
     this.intentRegistry = config.intentRegistry ?? new IntentRegistry()
     this.channelContextRegistry = config.channelContextRegistry ?? new ChannelContextRegistry()
     this.appChannelRegistry = config.appChannelRegistry ?? new AppChannelRegistry()
+    this.userChannelRegistry = config.userChannelRegistry ?? new UserChannelRegistry()
     this.appDirectory = config.appDirectory ?? new AppDirectoryManager()
   }
 
@@ -181,6 +190,7 @@ export class DesktopAgent {
       intentRegistry: this.intentRegistry,
       channelContextRegistry: this.channelContextRegistry,
       appChannelRegistry: this.appChannelRegistry,
+      userChannelRegistry: this.userChannelRegistry,
       appDirectory: this.appDirectory,
       appLauncher: this.appLauncher,
     }
@@ -212,6 +222,13 @@ export class DesktopAgent {
    */
   getAppChannelRegistry(): AppChannelRegistry {
     return this.appChannelRegistry
+  }
+
+  /**
+   * Get the user channel registry (for testing/inspection)
+   */
+  getUserChannelRegistry(): UserChannelRegistry {
+    return this.userChannelRegistry
   }
 
   /**

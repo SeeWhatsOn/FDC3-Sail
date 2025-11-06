@@ -4,6 +4,7 @@ import type { AppInstanceRegistry } from "../state/AppInstanceRegistry"
 import type { IntentRegistry } from "../state/IntentRegistry"
 import type { ChannelContextRegistry } from "../state/ChannelContextRegistry"
 import type { AppChannelRegistry } from "../state/AppChannelRegistry"
+import type { UserChannelRegistry } from "../state/UserChannelRegistry"
 import type { AppDirectoryManager } from "../app-directory/appDirectoryManager"
 
 // ============================================================================
@@ -32,6 +33,9 @@ export interface DACPHandlerContext {
 
   /** Registry of app channels (dynamically created channels) */
   appChannelRegistry: AppChannelRegistry
+
+  /** Registry of user channels (pre-defined channels like red, blue, green) */
+  userChannelRegistry: UserChannelRegistry
 
   /** App directory manager for app metadata lookups */
   appDirectory: AppDirectoryManager
