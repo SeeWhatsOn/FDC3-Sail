@@ -726,10 +726,15 @@ export type Heartbeatevent = z.infer<typeof HeartbeateventSchema>
 // Intentevent
 export const IntenteventSchema = z.object({
   type: z.literal('intentEvent'),
-  payload: z.unknown().optional(),
+  payload: z.object({
+    intent: z.string(),
+    context: ContextSchema,
+    originFdc3InstanceId: z.string().optional()
+  }),
   meta: z.object({
     eventUuid: z.string(),
-    timestamp: z.coerce.date()
+    timestamp: z.coerce.date(),
+    requestUuid: z.string() // Link back to the original raiseIntentRequest
   })
 })
 
@@ -766,10 +771,28 @@ export type Intentlistenerunsubscriberesponse = z.infer<typeof Intentlisteneruns
 // Intentresultrequest
 export const IntentresultrequestSchema = z.object({
   type: z.literal('intentResultRequest'),
-  payload: z.unknown().optional(),
+  payload: z.object({
+    intentResult: z.union([
+      ContextSchema,
+      z.object({
+        channel: z.object({
+          id: z.string(),
+          type: z.string(),
+          displayMetadata: z.object({
+            name: z.string().optional(),
+            color: z.string().optional(),
+            glyph: z.string().optional()
+          }).optional()
+        })
+      }),
+      z.object({ void: z.literal(true) })
+    ]).optional(),
+    error: z.string().optional()
+  }),
   meta: z.object({
     requestUuid: z.string(),
-    timestamp: z.coerce.date()
+    timestamp: z.coerce.date(),
+    responseToRequestUuid: z.string() // Link back to the intentEvent
   })
 })
 

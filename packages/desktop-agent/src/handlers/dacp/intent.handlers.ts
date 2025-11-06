@@ -2,7 +2,7 @@ import {
   validateDACPMessage,
   createDACPErrorResponse,
   createDACPSuccessResponse,
-  // createDACPEvent,
+  createIntentEvent,
   DACP_ERROR_TYPES,
   generateEventUuid,
 } from "../validation/dacp-validator"
@@ -11,6 +11,7 @@ import {
   AddintentlistenerrequestSchema,
   IntentlistenerunsubscriberequestSchema,
   FindintentrequestSchema,
+  IntentresultrequestSchema,
   ContextSchema,
 } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../types"
@@ -37,8 +38,8 @@ export async function handleRaiseIntentRequest(
       throw new Error(`Source instance ${instanceId} not found`)
     }
 
-    // The intent resolution logic is complex and will be handled by the IntentRegistry
-    const intentResolution = await intentRegistry.resolveIntent({
+    // Find intent handlers for this request
+    const handlers = intentRegistry.findIntentHandlers({
       intent: request.payload.intent,
       context: validatedContext,
       source: { appId: source.appId, instanceId: source.instanceId },
@@ -46,11 +47,65 @@ export async function handleRaiseIntentRequest(
       requestId: request.meta.requestUuid,
     })
 
-    const intentResult = await intentResolution.getResult()
+    // Check if we have any compatible handlers
+    if (handlers.compatibleApps.length === 0) {
+      throw new Error(`No apps found to handle intent: ${request.payload.intent}`)
+    }
 
+    // For now, select the first running listener or first available app
+    // TODO: Implement UI resolution when multiple handlers exist
+    let targetInstanceId: string
+    let targetAppId: string
+
+    if (handlers.runningListeners.length > 0) {
+      // Use a running listener (preferred)
+      const listener = handlers.runningListeners[0]
+      targetInstanceId = listener.instanceId
+      targetAppId = listener.appId
+    } else if (handlers.availableApps.length > 0) {
+      // Need to launch an app
+      const appCapability = handlers.availableApps[0]
+      targetAppId = appCapability.appId
+      // TODO: Implement app launching logic
+      throw new Error(`App launching not yet implemented for: ${targetAppId}`)
+    } else {
+      throw new Error(`No handler found for intent: ${request.payload.intent}`)
+    }
+
+    // Register pending intent and get promise for result
+    const resultPromise = intentRegistry.registerPendingIntent({
+      requestId: request.meta.requestUuid,
+      intentName: request.payload.intent,
+      context: validatedContext,
+      sourceInstanceId: instanceId,
+      targetInstanceId,
+      targetAppId,
+      timeoutMs: 30000,
+    })
+
+    // Send intentEvent to target app
+    const intentEvent = createIntentEvent(
+      request.payload.intent,
+      validatedContext,
+      request.meta.requestUuid,
+      instanceId
+    )
+
+    logger.info("DACP: Sending intentEvent to target app", {
+      targetInstanceId,
+      intent: request.payload.intent,
+      requestUuid: request.meta.requestUuid,
+    })
+
+    transport.send(targetInstanceId, intentEvent)
+
+    // Wait for the result from intentResultRequest handler
+    const intentResult = await resultPromise
+
+    // Send response back to source app
     const response = createDACPSuccessResponse(request, "raiseIntentResponse", {
-      intentResult: intentResult,
-      source: intentResolution.source?.appId,
+      intentResult,
+      source: targetAppId,
     })
 
     transport.send(instanceId, response)
@@ -154,6 +209,72 @@ export function handleFindIntentRequest(message: unknown, context: DACPHandlerCo
       DACP_ERROR_TYPES.NO_APPS_FOUND,
       "findIntentResponse",
       error instanceof Error ? error.message : "Failed to find apps for intent"
+    )
+    transport.send(instanceId, errorResponse)
+  }
+}
+
+export function handleIntentResultRequest(
+  message: unknown,
+  context: DACPHandlerContext
+): void {
+  const { transport, instanceId, intentRegistry } = context
+
+  try {
+    const request = validateDACPMessage(message, IntentresultrequestSchema)
+
+    logger.info("DACP: Processing intent result request", {
+      requestUuid: request.meta.requestUuid,
+      responseToRequestUuid: request.meta.responseToRequestUuid,
+    })
+
+    // Get the original request ID from meta.responseToRequestUuid
+    const originalRequestId = request.meta.responseToRequestUuid
+
+    // Check if there's a pending intent for this request
+    const pendingIntent = intentRegistry.getPendingIntent(originalRequestId)
+
+    if (!pendingIntent) {
+      throw new Error(`No pending intent found for request: ${originalRequestId}`)
+    }
+
+    // Verify that the instanceId matches the target instance
+    if (pendingIntent.targetInstanceId !== instanceId) {
+      throw new Error(
+        `Intent result from wrong instance. Expected ${pendingIntent.targetInstanceId}, got ${instanceId}`
+      )
+    }
+
+    // Check for error in the result
+    if (request.payload.error) {
+      const error = new Error(request.payload.error)
+      intentRegistry.rejectPendingIntent(originalRequestId, error)
+
+      // Send acknowledgment response
+      const response = createDACPSuccessResponse(request, "intentResultResponse")
+      transport.send(instanceId, response)
+      return
+    }
+
+    // Resolve the pending intent with the result
+    const intentResult = request.payload.intentResult
+    intentRegistry.resolvePendingIntent(originalRequestId, intentResult)
+
+    // Send acknowledgment response
+    const response = createDACPSuccessResponse(request, "intentResultResponse")
+    transport.send(instanceId, response)
+
+    logger.info("DACP: Intent result processed successfully", {
+      originalRequestId,
+      hasResult: !!intentResult,
+    })
+  } catch (error) {
+    logger.error("DACP: Intent result request failed", error)
+    const errorResponse = createDACPErrorResponse(
+      message as { meta: { requestUuid: string } },
+      DACP_ERROR_TYPES.INTENT_DELIVERY_FAILED,
+      "intentResultResponse",
+      error instanceof Error ? error.message : "Failed to process intent result"
     )
     transport.send(instanceId, errorResponse)
   }

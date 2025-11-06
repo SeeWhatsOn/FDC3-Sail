@@ -154,6 +154,28 @@ export function createDACPEvent(eventType: string, payload: Record<string, unkno
   }
 }
 
+// Intent event creator with requestUuid link
+export function createIntentEvent(
+  intent: string,
+  context: unknown,
+  requestUuid: string,
+  originFdc3InstanceId?: string
+) {
+  return {
+    type: "intentEvent",
+    payload: {
+      intent,
+      context,
+      ...(originFdc3InstanceId && { originFdc3InstanceId }),
+    },
+    meta: {
+      eventUuid: uuidv4(),
+      requestUuid, // Links back to the raiseIntentRequest
+      timestamp: new Date(),
+    },
+  }
+}
+
 // Message type guards using the generated schemas
 export function isBroadcastRequest(message: unknown): boolean {
   return safeParseDACPMessage(message, BroadcastrequestSchema).success

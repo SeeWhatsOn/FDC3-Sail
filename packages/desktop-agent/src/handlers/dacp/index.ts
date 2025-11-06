@@ -85,6 +85,7 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
     addIntentListenerRequest: intentHandlers.handleAddIntentListener,
     intentListenerUnsubscribeRequest: intentHandlers.handleIntentListenerUnsubscribe,
     findIntentRequest: intentHandlers.handleFindIntentRequest,
+    intentResultRequest: intentHandlers.handleIntentResultRequest,
 
     // Channel handlers
     getCurrentChannelRequest: channelHandlers.handleGetCurrentChannelRequest,
@@ -133,6 +134,12 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
 
   logger.info("Cleaning up DACP handlers for instance", { instanceId })
 
+  // Cancel any pending intents involving this instance
+  const cancelledIntents = intentRegistry.cancelPendingIntentsForInstance(instanceId)
+  if (cancelledIntents > 0) {
+    logger.info(`Cancelled ${cancelledIntents} pending intents for disconnected instance`, { instanceId })
+  }
+
   // Remove instance from registries
   appInstanceRegistry.removeInstance(instanceId)
   intentRegistry.removeInstanceListeners(instanceId)
@@ -158,6 +165,7 @@ export function getDACPHandlerStats(): {
     addIntentListenerRequest: true,
     intentListenerUnsubscribeRequest: true,
     findIntentRequest: true,
+    intentResultRequest: true,
 
     // Channel handlers
     getCurrentChannelRequest: true,

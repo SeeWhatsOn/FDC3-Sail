@@ -123,6 +123,41 @@ export interface IntentQuery {
 }
 
 /**
+ * Pending intent - tracks intents waiting for results
+ */
+export interface PendingIntent {
+  /** Original request ID */
+  requestId: string
+
+  /** Intent name */
+  intentName: string
+
+  /** Context passed to the intent */
+  context: Context
+
+  /** Source app that raised the intent */
+  sourceInstanceId: string
+
+  /** Target app handling the intent */
+  targetInstanceId: string
+
+  /** Target app ID */
+  targetAppId: string
+
+  /** When the intent was raised */
+  raisedAt: Date
+
+  /** Promise resolve function for returning the result */
+  resolve: (result: any) => void
+
+  /** Promise reject function for errors */
+  reject: (error: Error) => void
+
+  /** Timeout handle */
+  timeoutHandle?: NodeJS.Timeout
+}
+
+/**
  * App intent query filters
  */
 export interface AppIntentQuery {
@@ -159,6 +194,9 @@ export class IntentRegistry {
 
   // Resolution history
   private resolutionHistory = new Map<string, IntentResolutionResult>()
+
+  // Pending intents - tracks intents waiting for results
+  private pendingIntents = new Map<string, PendingIntent>()
 
   // ============================================================================
   // INTENT LISTENER MANAGEMENT
@@ -538,6 +576,128 @@ export class IntentRegistry {
   }
 
   // ============================================================================
+  // PENDING INTENT MANAGEMENT
+  // ============================================================================
+
+  /**
+   * Registers a pending intent waiting for result
+   */
+  registerPendingIntent(params: {
+    requestId: string
+    intentName: string
+    context: Context
+    sourceInstanceId: string
+    targetInstanceId: string
+    targetAppId: string
+    timeoutMs?: number
+  }): Promise<any> {
+    const { requestId, intentName, context, sourceInstanceId, targetInstanceId, targetAppId, timeoutMs = 30000 } = params
+
+    if (this.pendingIntents.has(requestId)) {
+      throw new Error(`Pending intent ${requestId} already exists`)
+    }
+
+    return new Promise((resolve, reject) => {
+      const pendingIntent: PendingIntent = {
+        requestId,
+        intentName,
+        context,
+        sourceInstanceId,
+        targetInstanceId,
+        targetAppId,
+        raisedAt: new Date(),
+        resolve,
+        reject,
+      }
+
+      // Set timeout
+      if (timeoutMs > 0) {
+        pendingIntent.timeoutHandle = setTimeout(() => {
+          this.pendingIntents.delete(requestId)
+          reject(new Error(`Intent ${intentName} timed out after ${timeoutMs}ms`))
+        }, timeoutMs)
+      }
+
+      this.pendingIntents.set(requestId, pendingIntent)
+    })
+  }
+
+  /**
+   * Resolves a pending intent with a result
+   */
+  resolvePendingIntent(requestId: string, result: any): boolean {
+    const pendingIntent = this.pendingIntents.get(requestId)
+    if (!pendingIntent) {
+      return false
+    }
+
+    // Clear timeout
+    if (pendingIntent.timeoutHandle) {
+      clearTimeout(pendingIntent.timeoutHandle)
+    }
+
+    // Resolve the promise
+    pendingIntent.resolve(result)
+
+    // Remove from pending
+    this.pendingIntents.delete(requestId)
+
+    return true
+  }
+
+  /**
+   * Rejects a pending intent with an error
+   */
+  rejectPendingIntent(requestId: string, error: Error): boolean {
+    const pendingIntent = this.pendingIntents.get(requestId)
+    if (!pendingIntent) {
+      return false
+    }
+
+    // Clear timeout
+    if (pendingIntent.timeoutHandle) {
+      clearTimeout(pendingIntent.timeoutHandle)
+    }
+
+    // Reject the promise
+    pendingIntent.reject(error)
+
+    // Remove from pending
+    this.pendingIntents.delete(requestId)
+
+    return true
+  }
+
+  /**
+   * Gets a pending intent by request ID
+   */
+  getPendingIntent(requestId: string): PendingIntent | undefined {
+    return this.pendingIntents.get(requestId)
+  }
+
+  /**
+   * Gets all pending intents for an instance
+   */
+  getPendingIntentsForInstance(instanceId: string): PendingIntent[] {
+    return Array.from(this.pendingIntents.values()).filter(
+      intent => intent.sourceInstanceId === instanceId || intent.targetInstanceId === instanceId
+    )
+  }
+
+  /**
+   * Cancels all pending intents for an instance (when app disconnects)
+   */
+  cancelPendingIntentsForInstance(instanceId: string): number {
+    const pendingIntents = this.getPendingIntentsForInstance(instanceId)
+
+    pendingIntents.forEach(intent => {
+      this.rejectPendingIntent(intent.requestId, new Error("App disconnected"))
+    })
+
+    return pendingIntents.length
+  }
+
+  // ============================================================================
   // QUERY AND DISCOVERY
   // ============================================================================
 
@@ -646,6 +806,14 @@ export class IntentRegistry {
    * Clears all data (for testing)
    */
   clear(): void {
+    // Cancel all pending intents first
+    this.pendingIntents.forEach(intent => {
+      if (intent.timeoutHandle) {
+        clearTimeout(intent.timeoutHandle)
+      }
+      intent.reject(new Error("Registry cleared"))
+    })
+
     this.listeners.clear()
     this.capabilities.clear()
     this.intentIndex.clear()
@@ -655,6 +823,7 @@ export class IntentRegistry {
     this.appIntentIndex.clear()
     this.intentCapabilityIndex.clear()
     this.resolutionHistory.clear()
+    this.pendingIntents.clear()
   }
 
   // ============================================================================
