@@ -94,7 +94,10 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
     getUserChannelsRequest: channelHandlers.handleGetUserChannelsRequest,
 
     // App management handlers
-    'getInfoRequest': appHandlers.handleGetInfoRequest,
+    getInfoRequest: appHandlers.handleGetInfoRequest,
+    openRequest: appHandlers.handleOpenRequest,
+    findInstancesRequest: appHandlers.handleFindInstancesRequest,
+    getAppMetadataRequest: appHandlers.handleGetAppMetadataRequest,
 
     // WCP handlers
     'WCP4ValidateAppIdentity': wcpHandlers.handleWCP4ValidateAppIdentity,
@@ -175,6 +178,9 @@ export function getDACPHandlerStats(): {
 
     // App management handlers
     getInfoRequest: true,
+    openRequest: true,
+    findInstancesRequest: true,
+    getAppMetadataRequest: true,
 
     // WCP handlers
     WCP4ValidateAppIdentity: true,
