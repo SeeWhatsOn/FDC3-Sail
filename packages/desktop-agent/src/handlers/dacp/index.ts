@@ -11,6 +11,7 @@ import { type DACPHandler, type DACPHandlerContext, logger } from "../types"
 import * as contextHandlers from "./context.handlers"
 import * as intentHandlers from "./intent.handlers"
 import * as channelHandlers from "./channel.handlers"
+import * as eventHandlers from "./event.handlers"
 import * as appHandlers from "./app-management/app.handlers"
 import * as wcpHandlers from "./wcp.handlers"
 
@@ -102,6 +103,10 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
     findInstancesRequest: appHandlers.handleFindInstancesRequest,
     getAppMetadataRequest: appHandlers.handleGetAppMetadataRequest,
 
+    // Event handlers
+    addEventListenerRequest: eventHandlers.handleAddEventListenerRequest,
+    eventListenerUnsubscribeRequest: eventHandlers.handleEventListenerUnsubscribeRequest,
+
     // WCP handlers
     'WCP4ValidateAppIdentity': wcpHandlers.handleWCP4ValidateAppIdentity,
 
@@ -146,6 +151,12 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
     logger.info(`Cancelled ${cancelledIntents} pending intents for disconnected instance`, { instanceId })
   }
 
+  // Remove event listeners
+  const removedEventListeners = eventHandlers.removeInstanceEventListeners(instanceId)
+  if (removedEventListeners > 0) {
+    logger.info(`Removed ${removedEventListeners} event listeners for disconnected instance`, { instanceId })
+  }
+
   // Remove instance from registries
   appInstanceRegistry.removeInstance(instanceId)
   intentRegistry.removeInstanceListeners(instanceId)
@@ -187,6 +198,10 @@ export function getDACPHandlerStats(): {
     openRequest: true,
     findInstancesRequest: true,
     getAppMetadataRequest: true,
+
+    // Event handlers
+    addEventListenerRequest: true,
+    eventListenerUnsubscribeRequest: true,
 
     // WCP handlers
     WCP4ValidateAppIdentity: true,
@@ -244,4 +259,4 @@ export function checkDACPHandlerHealth(): {
 }
 
 // Re-export handlers for testing and direct access
-export { contextHandlers, intentHandlers, channelHandlers, appHandlers, wcpHandlers }
+export { contextHandlers, intentHandlers, channelHandlers, eventHandlers, appHandlers, wcpHandlers }

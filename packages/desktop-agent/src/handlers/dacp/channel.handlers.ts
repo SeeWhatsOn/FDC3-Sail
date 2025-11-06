@@ -228,5 +228,29 @@ function notifyChannelChanged(
     },
   })
 
+  // Send to the app that changed channels
   context.transport.send(instanceId, channelChangedEvent)
+
+  // Also broadcast to all apps subscribed to channelChanged events
+  // Import getEventListeners at runtime to avoid circular dependency
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getEventListeners } = require("./event.handlers")
+    const subscribers = getEventListeners("channelChanged")
+
+    subscribers.forEach((subscriberId: string) => {
+      // Don't send duplicate to the app that changed
+      if (subscriberId !== instanceId) {
+        context.transport.send(subscriberId, channelChangedEvent)
+      }
+    })
+
+    logger.debug("Channel changed event broadcast", {
+      instanceId,
+      channelId,
+      subscribers: subscribers.size,
+    })
+  } catch (error) {
+    logger.error("Failed to broadcast channel changed event", error)
+  }
 }
