@@ -1,3 +1,23 @@
+// Core Desktop Agent class
+export { DesktopAgent } from "./DesktopAgent"
+export type { DesktopAgentConfig } from "./DesktopAgent"
+
+// Interfaces (contracts for implementations)
+export type { Transport, MessageHandler, DisconnectHandler } from "./interfaces/Transport"
+export type { AppLauncher, AppLaunchRequest, AppLaunchResult, AppMetadata } from "./interfaces/AppLauncher"
+
+// State registries
+export { AppInstanceRegistry } from "./state/AppInstanceRegistry"
+export { IntentRegistry } from "./state/IntentRegistry"
+export { AppDirectoryManager } from "./app-directory/appDirectoryManager"
+
+// Transport implementations (will be moved to sail-api later)
+export { SocketIOTransport } from "./transport/SocketIOTransport"
+
+// Handler types (for advanced usage)
+export type { DACPHandlerContext, DACPHandler } from "./handlers/types"
+
+// Legacy function-based API (deprecated, for backward compatibility)
 import type { Socket } from "socket.io"
 import { AppDirectoryManager } from "./app-directory/appDirectoryManager"
 import { AppInstanceRegistry } from "./state/AppInstanceRegistry"

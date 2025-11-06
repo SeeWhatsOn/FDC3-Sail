@@ -11,6 +11,7 @@ import {
   OpenrequestSchema,
 } from "../../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../../types"
+import type { Context } from "@finos/fdc3"
 
 /**
  * Implementation metadata constants
@@ -51,34 +52,60 @@ export function handleGetInfoRequest(message: unknown, context: DACPHandlerConte
 
 /**
  * Handles openRequest to launch an app
- * TODO: This needs integration with sail-server to actually launch apps
  */
-export function handleOpenRequest(message: unknown, context: DACPHandlerContext): void {
-  const { transport, instanceId } = context
+export async function handleOpenRequest(message: unknown, context: DACPHandlerContext): Promise<void> {
+  const { transport, instanceId, appDirectory, appLauncher } = context
 
   try {
     const request = validateDACPMessage(message, OpenrequestSchema)
+    const payload = request.payload as { app: { appId: string; instanceId?: string }; context?: Context }
 
-    // TODO: Implement actual app launching logic
-    // For now, this is a placeholder that returns an error
-    // The actual implementation will need to:
-    // 1. Query app directory for app metadata
-    // 2. Determine app type (web/desktop/native)
-    // 3. Launch app via appropriate mechanism (browser/electron/protocol)
-    // 4. Wait for app to connect and register
-    // 5. Return app instance information
+    // Check if app launcher is available
+    if (!appLauncher) {
+      throw new Error("App launching not available - no AppLauncher configured")
+    }
 
-    logger.warn("DACP: openRequest not fully implemented - app launching disabled", {
-      payload: request.payload,
+    const appId = payload.app.appId
+    const targetInstanceId = payload.app.instanceId
+    const launchContext = payload.context
+
+    // Get app metadata from directory
+    const apps = appDirectory.retrieveAppsById(appId)
+    if (apps.length === 0) {
+      throw new Error(`App not found in directory: ${appId}`)
+    }
+    const appMetadata = apps[0]
+
+    logger.info("DACP: Launching app", {
+      appId,
+      targetInstanceId,
+      hasContext: !!launchContext,
     })
 
-    throw new Error("App launching not yet implemented")
+    // Launch the app via injected launcher
+    const launchResult = await appLauncher.launch(
+      {
+        appId,
+        instanceId: targetInstanceId,
+        context: launchContext,
+      },
+      appMetadata
+    )
 
-    // When implemented, response should look like:
-    // const response = createDACPSuccessResponse(request, "openResponse", {
-    //   appIdentifier: { appId: launchedApp.appId, instanceId: launchedApp.instanceId }
-    // })
-    // transport.send(instanceId, response)
+    logger.info("DACP: App launched successfully", {
+      appId: launchResult.appId,
+      instanceId: launchResult.instanceId,
+      method: launchResult.launchMetadata?.method,
+    })
+
+    // Return app identifier to caller
+    const response = createDACPSuccessResponse(request, "openResponse", {
+      appIdentifier: {
+        appId: launchResult.appId,
+        instanceId: launchResult.instanceId,
+      },
+    })
+    transport.send(instanceId, response)
   } catch (error) {
     logger.error("DACP: openRequest failed", error)
     const errorResponse = createDACPErrorResponse(

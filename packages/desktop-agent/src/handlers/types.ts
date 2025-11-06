@@ -1,4 +1,5 @@
-import type { MessageTransport } from "../transport/MessageTransport"
+import type { Transport } from "../interfaces/Transport"
+import type { AppLauncher } from "../interfaces/AppLauncher"
 import type { AppInstanceRegistry } from "../state/AppInstanceRegistry"
 import type { IntentRegistry } from "../state/IntentRegistry"
 import type { AppDirectoryManager } from "../app-directory/appDirectoryManager"
@@ -13,7 +14,7 @@ import type { AppDirectoryManager } from "../app-directory/appDirectoryManager"
  */
 export interface DACPHandlerContext {
   /** Message transport for sending responses to this specific app instance */
-  transport: MessageTransport
+  transport: Transport
 
   /** Unique identifier for this app instance */
   instanceId: string
@@ -26,6 +27,9 @@ export interface DACPHandlerContext {
 
   /** App directory manager for app metadata lookups */
   appDirectory: AppDirectoryManager
+
+  /** App launcher for opening/launching applications (optional) */
+  appLauncher?: AppLauncher
 }
 
 /**
