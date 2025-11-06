@@ -8,6 +8,7 @@ import {
 } from "../validation/dacp-validator"
 import {
   RaiseintentrequestSchema,
+  RaiseintentforcontextrequestSchema,
   AddintentlistenerrequestSchema,
   IntentlistenerunsubscriberequestSchema,
   FindintentrequestSchema,
@@ -321,6 +322,121 @@ export function handleFindIntentsByContextRequest(
       DACP_ERROR_TYPES.NO_APPS_FOUND,
       "findIntentsByContextResponse",
       error instanceof Error ? error.message : "Failed to find intents for context type"
+    )
+    transport.send(instanceId, errorResponse)
+  }
+}
+
+export async function handleRaiseIntentForContextRequest(
+  message: unknown,
+  context: DACPHandlerContext
+): Promise<void> {
+  const { transport, instanceId, appInstanceRegistry, intentRegistry } = context
+
+  try {
+    const request = validateDACPMessage(message, RaiseintentforcontextrequestSchema)
+
+    logger.info("DACP: Processing raise intent for context request", {
+      requestUuid: request.meta.requestUuid,
+    })
+
+    const payload = request.payload as { context: Context; app?: string }
+    const validatedContext = validateDACPMessage(payload.context, ContextSchema)
+    const source = appInstanceRegistry.getInstance(instanceId)
+
+    if (!source) {
+      throw new Error(`Source instance ${instanceId} not found`)
+    }
+
+    // Find all intents that can handle this context type
+    const intentMetadata = intentRegistry.findIntentsByContext(validatedContext.type)
+
+    if (intentMetadata.length === 0) {
+      throw new Error(`No intents found to handle context type: ${validatedContext.type}`)
+    }
+
+    // For now, use the first intent found
+    // TODO: Implement UI resolution when multiple intents exist
+    const selectedIntent = intentMetadata[0].name
+
+    logger.info("DACP: Selected intent for context", {
+      intent: selectedIntent,
+      contextType: validatedContext.type,
+    })
+
+    // Find handlers for this intent
+    const handlers = intentRegistry.findIntentHandlers({
+      intent: selectedIntent,
+      context: validatedContext,
+      source: { appId: source.appId, instanceId: source.instanceId },
+      target: payload.app ? { appId: payload.app } : undefined,
+      requestId: request.meta.requestUuid,
+    })
+
+    if (handlers.compatibleApps.length === 0) {
+      throw new Error(`No apps found to handle intent: ${selectedIntent}`)
+    }
+
+    // Select target (prefer running listeners)
+    let targetInstanceId: string
+    let targetAppId: string
+
+    if (handlers.runningListeners.length > 0) {
+      const listener = handlers.runningListeners[0]
+      targetInstanceId = listener.instanceId
+      targetAppId = listener.appId
+    } else if (handlers.availableApps.length > 0) {
+      const appCapability = handlers.availableApps[0]
+      targetAppId = appCapability.appId
+      throw new Error(`App launching not yet implemented for: ${targetAppId}`)
+    } else {
+      throw new Error(`No handler found for intent: ${selectedIntent}`)
+    }
+
+    // Register pending intent
+    const resultPromise = intentRegistry.registerPendingIntent({
+      requestId: request.meta.requestUuid,
+      intentName: selectedIntent,
+      context: validatedContext,
+      sourceInstanceId: instanceId,
+      targetInstanceId,
+      targetAppId,
+      timeoutMs: 30000,
+    })
+
+    // Send intentEvent to target app
+    const intentEvent = createIntentEvent(
+      selectedIntent,
+      validatedContext,
+      request.meta.requestUuid,
+      instanceId
+    )
+
+    logger.info("DACP: Sending intentEvent for context-first intent", {
+      targetInstanceId,
+      intent: selectedIntent,
+      contextType: validatedContext.type,
+    })
+
+    transport.send(targetInstanceId, intentEvent)
+
+    // Wait for result
+    const intentResult = await resultPromise
+
+    // Send response
+    const response = createDACPSuccessResponse(request, "raiseIntentForContextResponse", {
+      intentResult,
+      source: targetAppId,
+    })
+
+    transport.send(instanceId, response)
+  } catch (error) {
+    logger.error("DACP: Raise intent for context request failed", error)
+    const errorResponse = createDACPErrorResponse(
+      message as { meta: { requestUuid: string } },
+      DACP_ERROR_TYPES.INTENT_DELIVERY_FAILED,
+      "raiseIntentForContextResponse",
+      error instanceof Error ? error.message : "Intent delivery failed"
     )
     transport.send(instanceId, errorResponse)
   }

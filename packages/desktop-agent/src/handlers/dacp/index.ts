@@ -82,6 +82,7 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
 
     // Intent handlers
     raiseIntentRequest: intentHandlers.handleRaiseIntentRequest,
+    raiseIntentForContextRequest: intentHandlers.handleRaiseIntentForContextRequest,
     addIntentListenerRequest: intentHandlers.handleAddIntentListener,
     intentListenerUnsubscribeRequest: intentHandlers.handleIntentListenerUnsubscribe,
     findIntentRequest: intentHandlers.handleFindIntentRequest,
@@ -120,7 +121,7 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
  */
 function getTimeoutForMessageType(messageType: string): number {
   // App launch operations get longer timeout
-  const appLaunchMessages = ["openRequest", "raiseIntentRequest", "findInstancesRequest"]
+  const appLaunchMessages = ["openRequest", "raiseIntentRequest", "raiseIntentForContextRequest", "findInstancesRequest"]
 
   if (appLaunchMessages.includes(messageType)) {
     return DACP_TIMEOUTS.APP_LAUNCH
@@ -167,6 +168,7 @@ export function getDACPHandlerStats(): {
 
     // Intent handlers
     raiseIntentRequest: true,
+    raiseIntentForContextRequest: true,
     addIntentListenerRequest: true,
     intentListenerUnsubscribeRequest: true,
     findIntentRequest: true,
