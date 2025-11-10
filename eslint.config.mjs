@@ -4,6 +4,7 @@ import tseslint from "typescript-eslint"
 import pluginReact from "eslint-plugin-react"
 import reactHooks from "eslint-plugin-react-hooks"
 import importPlugin from "eslint-plugin-import"
+import unicorn from "eslint-plugin-unicorn"
 import json from "@eslint/json"
 import css from "@eslint/css"
 import prettier from "eslint-config-prettier"
@@ -74,6 +75,9 @@ export default defineConfig([
       "**/webpack.config.{ts,mts,cts}",
       "**/esbuild.config.{ts,mts,cts}",
     ], // Exclude build config files from project service
+    plugins: {
+      unicorn,
+    },
     extends: [
       js.configs.recommended,
       ...tseslint.configs.recommendedTypeChecked, // Strict type checking from slt.mjs
@@ -93,6 +97,21 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-member-access": "warn",
       "@typescript-eslint/no-unsafe-call": "warn",
       "@typescript-eslint/no-unsafe-return": "warn",
+
+      // File naming convention
+      "unicorn/filename-case": [
+        "error",
+        {
+          cases: {
+            kebabCase: true,
+            pascalCase: true,
+          },
+          ignore: [
+            // Allow PascalCase for React components
+            /^[A-Z][a-zA-Z0-9]*\.tsx$/,
+          ],
+        },
+      ],
     },
   },
 
