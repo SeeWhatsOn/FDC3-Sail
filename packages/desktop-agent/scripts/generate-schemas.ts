@@ -139,8 +139,16 @@ function generateZodFromFDC3Schema(schema: PropertySchema, name: string): string
       if (typeInfo.const) {
         typeField = `type: z.literal("${typeInfo.const}")`
       } else if (typeInfo.enum) {
-        const enumValues = typeInfo.enum.map((v: string) => `"${v}"`).join(", ")
-        typeField = `type: z.enum([${enumValues}])`
+        // Zod v4 requires enums to be tuple types [string, string, ...string[]]
+        if (typeInfo.enum.length === 1) {
+          typeField = `type: z.literal("${typeInfo.enum[0]}")`
+        } else {
+          const first = `"${typeInfo.enum[0]}"`
+          const second = `"${typeInfo.enum[1]}"`
+          const rest = typeInfo.enum.slice(2).map((v: string) => `"${v}"`).join(", ")
+          const enumValues = rest ? `${first}, ${second}, ${rest}` : `${first}, ${second}`
+          typeField = `type: z.enum([${enumValues}])`
+        }
       } else {
         typeField = `type: z.string()`
       }
@@ -255,8 +263,12 @@ function generateZodForProperty(schema: PropertySchema, depth = 0): string {
     if (schema.enum.length === 1) {
       return `z.literal("${schema.enum[0]}")`
     }
-    const values = schema.enum.map(v => `"${v}"`).join(", ")
-    return `z.enum([${values}])`
+    // Zod v4 requires enums to be tuple types [string, string, ...string[]]
+    // Generate the first two values explicitly, then rest
+    const first = `"${schema.enum[0]}"`
+    const second = `"${schema.enum[1]}"`
+    const rest = schema.enum.slice(2).map(v => `"${v}"`).join(", ")
+    return rest ? `z.enum([${first}, ${second}, ${rest}])` : `z.enum([${first}, ${second}])`
   }
 
   // Handle type

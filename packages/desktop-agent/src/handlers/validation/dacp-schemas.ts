@@ -1,5 +1,5 @@
 // Auto-generated DACP schemas from @finos/fdc3-schema
-// Generated on: 2025-11-10T15:19:32.469Z
+// Generated on: 2025-11-10T16:49:55.327Z
 // DO NOT EDIT MANUALLY - Run 'npm run generate:schemas' to regenerate
 
 import { z } from "zod"
