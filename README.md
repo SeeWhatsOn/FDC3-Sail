@@ -79,6 +79,33 @@ npm run electron
 
 The desktop app should load and you should see the same screen as above.
 
+## Development
+
+### Regenerating FDC3 Schemas
+
+Sail validates all FDC3 Desktop Agent Communication Protocol (DACP) messages using Zod schemas auto-generated from the official FDC3 JSON schemas.
+
+**When to regenerate schemas:**
+- After updating the `@finos/fdc3-schema` package
+- When the FDC3 specification is updated
+- When adding support for new DACP message types
+
+**To regenerate schemas:**
+
+```bash
+npm run generate:schemas --workspace=@finos/fdc3-sail-desktop-agent
+```
+
+This will:
+1. Read official FDC3 JSON schemas from `@finos/fdc3-schema`
+2. Resolve all schema references
+3. Generate runtime Zod validation schemas
+4. Output to: `packages/desktop-agent/src/handlers/validation/dacp-schemas.ts`
+
+The generated file includes 78+ message schemas covering requests, responses, and events for the entire DACP protocol.
+
+**Note:** The generated `dacp-schemas.ts` file should not be edited manually. All changes should come from regenerating from the official FDC3 schemas.
+
 ### Opening Apps
 
 This tutorial version of Sail contains several apps that you can open. To open an app, click the plus icon in the bottom left corner of the sail window. You'll be given a choice of applications to open like so:
