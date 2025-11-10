@@ -8,7 +8,7 @@
 
 import type { AppMetadata } from "@finos/fdc3"
 import type { DACPHandlerContext } from "../types"
-import { startHeartbeat } from "./heartbeat.handlers"
+import { startHeartbeat } from "./heartbeat-handlers"
 
 /**
  * Wcp4Validateappidentity message from FDC3 app

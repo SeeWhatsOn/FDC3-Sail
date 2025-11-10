@@ -8,14 +8,14 @@ import { BaseDACPMessageSchema } from "../validation/dacp-schemas"
 import { type DACPHandler, type DACPHandlerContext, logger } from "../types"
 
 // Import all DACP handlers
-import * as contextHandlers from "./context.handlers"
-import * as intentHandlers from "./intent.handlers"
-import * as channelHandlers from "./channel.handlers"
-import * as eventHandlers from "./event.handlers"
-import * as appHandlers from "./app.handlers"
-import * as wcpHandlers from "./wcp.handlers"
-import * as privateChannelHandlers from "./private-channel.handlers"
-import * as heartbeatHandlers from "./heartbeat.handlers"
+import * as contextHandlers from "./context-handlers"
+import * as intentHandlers from "./intent-handlers"
+import * as channelHandlers from "./channel-handlers"
+import * as eventHandlers from "./event-handlers"
+import * as appHandlers from "./app-handlers"
+import * as wcpHandlers from "./wcp-handlers"
+import * as privateChannelHandlers from "./private-channel-handlers"
+import * as heartbeatHandlers from "./heartbeat-handlers"
 
 /**
  * Routes DACP messages to appropriate handlers
