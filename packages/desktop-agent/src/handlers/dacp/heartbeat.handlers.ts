@@ -3,7 +3,7 @@ import {
   createDACPEvent,
   generateEventUuid,
 } from "../validation/dacp-validator"
-import { HeartbeatacknowledgmentrequestSchema } from "../validation/dacp-schemas"
+import { HeartbeatAcknowledgmentRequestSchema } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../types"
 
 /**
@@ -155,7 +155,7 @@ export function handleHeartbeatAcknowledgmentRequest(
   const { instanceId } = context
 
   try {
-    validateDACPMessage(message, HeartbeatacknowledgmentrequestSchema)
+    validateDACPMessage(message, HeartbeatAcknowledgmentRequestSchema)
 
     // Record acknowledgment
     heartbeatRegistry.acknowledge(instanceId)

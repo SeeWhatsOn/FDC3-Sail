@@ -1,6 +1,10 @@
 // Auto-generated DACP schemas from @finos/fdc3-schema
-// Generated on: 2025-09-23T08:19:55.840Z
-import { z } from 'zod'
+// Generated on: 2025-11-10T13:45:30.748Z
+// DO NOT EDIT MANUALLY - Run 'npm run generate:schemas' to regenerate
+
+import { z } from "zod"
+
+// Custom base schemas and helpers
 
 // Base DACP message structure
 export const BaseDACPMessageSchema = z.object({
@@ -16,1301 +20,835 @@ export const BaseDACPMessageSchema = z.object({
 
 export type BaseDACPMessage = z.infer<typeof BaseDACPMessageSchema>
 
-// Context schema (simplified for now)
+// Context schema - FDC3 contexts are extensible objects with a type field
+// Using passthrough() to allow additional context-specific properties
 export const ContextSchema = z.object({
   type: z.string(),
   id: z.record(z.string(), z.unknown()).optional(),
   name: z.string().optional()
-}).catchall(z.unknown()) // Allow additional properties
+}).passthrough()
 
-// Addcontextlistenerrequest
-export const AddcontextlistenerrequestSchema = z.object({
-  type: z.literal('addContextListenerRequest'),
-  payload: z.object({
-        channelId: z.string().optional(),
-        contextType: z.string().optional()
-      }),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+export type Context = z.infer<typeof ContextSchema>
+
+// AppIdentifier schema - properly typed from FDC3 spec
+export const AppIdentifierSchema = z.object({
+  appId: z.string(),
+  instanceId: z.string().optional(),
+  desktopAgent: z.string().optional()
 })
 
-export type Addcontextlistenerrequest = z.infer<typeof AddcontextlistenerrequestSchema>
+export type AppIdentifier = z.infer<typeof AppIdentifierSchema>
 
-// Addcontextlistenerresponse
-export const AddcontextlistenerresponseSchema = z.object({
-  type: z.literal('addContextListenerResponse'),
-  payload: z.union([
-        z.object({ listenerId: z.string() }), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+// Icon schema
+export const IconSchema = z.object({
+  src: z.string(),
+  size: z.string().optional(),
+  type: z.string().optional()
 })
 
-export type Addcontextlistenerresponse = z.infer<typeof AddcontextlistenerresponseSchema>
+// DisplayMetadata schema
+export const DisplayMetadataSchema = z.object({
+  name: z.string().optional(),
+  color: z.string().optional(),
+  glyph: z.string().optional()
+})
 
-// Addeventlistenerrequest
-export const AddeventlistenerrequestSchema = z.object({
-  type: z.literal('addEventListenerRequest'),
+// WCP1Hello - Web Connection Protocol 1 Hello
+export const WCP1HelloSchema = z.object({
+  type: z.enum(["WCP1Hello", "WCP2LoadUrl", "WCP3Handshake", "WCP4ValidateAppIdentity", "WCP5ValidateAppIdentityFailedResponse", "WCP5ValidateAppIdentityResponse", "WCP6Goodbye"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Addeventlistenerrequest = z.infer<typeof AddeventlistenerrequestSchema>
+export type WCP1Hello = z.infer<typeof WCP1HelloSchema>
 
-// Addeventlistenerresponse
-export const AddeventlistenerresponseSchema = z.object({
-  type: z.literal('addEventListenerResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Addeventlistenerresponse = z.infer<typeof AddeventlistenerresponseSchema>
-
-// Addintentlistenerrequest
-export const AddintentlistenerrequestSchema = z.object({
-  type: z.literal('addIntentListenerRequest'),
-  payload: z.object({
-        intent: z.string()
-      }),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Addintentlistenerrequest = z.infer<typeof AddintentlistenerrequestSchema>
-
-// Addintentlistenerresponse
-export const AddintentlistenerresponseSchema = z.object({
-  type: z.literal('addIntentListenerResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Addintentlistenerresponse = z.infer<typeof AddintentlistenerresponseSchema>
-
-// Agentevent
-export const AgenteventSchema = z.object({
-  type: z.literal('agentEvent'),
+// WCP2LoadUrl - Web Connection Protocol 2 Load Url
+export const WCP2LoadUrlSchema = z.object({
+  type: z.enum(["WCP1Hello", "WCP2LoadUrl", "WCP3Handshake", "WCP4ValidateAppIdentity", "WCP5ValidateAppIdentityFailedResponse", "WCP5ValidateAppIdentityResponse", "WCP6Goodbye"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    eventUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Agentevent = z.infer<typeof AgenteventSchema>
+export type WCP2LoadUrl = z.infer<typeof WCP2LoadUrlSchema>
 
-// Agentresponse
-export const AgentresponseSchema = z.object({
-  type: z.literal('agentResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Agentresponse = z.infer<typeof AgentresponseSchema>
-
-// Api (generic)
-export const ApiSchema = z.object({
-  type: z.literal('api'),
+// WCP3Handshake - Web Connection Protocol 3 Handshake
+export const WCP3HandshakeSchema = z.object({
+  type: z.enum(["WCP1Hello", "WCP2LoadUrl", "WCP3Handshake", "WCP4ValidateAppIdentity", "WCP5ValidateAppIdentityFailedResponse", "WCP5ValidateAppIdentityResponse", "WCP6Goodbye"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Api = z.infer<typeof ApiSchema>
+export type WCP3Handshake = z.infer<typeof WCP3HandshakeSchema>
 
-// Apprequest
-export const ApprequestSchema = z.object({
-  type: z.literal('appRequest'),
+// WCP4ValidateAppIdentity - Web Connection Protocol 4 Validate App Identity
+export const WCP4ValidateAppIdentitySchema = z.object({
+  type: z.enum(["WCP1Hello", "WCP2LoadUrl", "WCP3Handshake", "WCP4ValidateAppIdentity", "WCP5ValidateAppIdentityFailedResponse", "WCP5ValidateAppIdentityResponse", "WCP6Goodbye"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Apprequest = z.infer<typeof ApprequestSchema>
+export type WCP4ValidateAppIdentity = z.infer<typeof WCP4ValidateAppIdentitySchema>
 
-// Broadcastevent
-export const BroadcasteventSchema = z.object({
-  type: z.literal('broadcastEvent'),
+// WCP5ValidateAppIdentityFailedResponse - Web Connection Protocol 5 Validate App Identity Failed Response
+export const WCP5ValidateAppIdentityFailedResponseSchema = z.object({
+  type: z.enum(["WCP1Hello", "WCP2LoadUrl", "WCP3Handshake", "WCP4ValidateAppIdentity", "WCP5ValidateAppIdentityFailedResponse", "WCP5ValidateAppIdentityResponse", "WCP6Goodbye"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    eventUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Broadcastevent = z.infer<typeof BroadcasteventSchema>
+export type WCP5ValidateAppIdentityFailedResponse = z.infer<typeof WCP5ValidateAppIdentityFailedResponseSchema>
 
-// Broadcastrequest
-export const BroadcastrequestSchema = z.object({
-  type: z.literal('broadcastRequest'),
-  payload: z.object({
-        channelId: z.string(),
-        context: ContextSchema
-      }),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Broadcastrequest = z.infer<typeof BroadcastrequestSchema>
-
-// Broadcastresponse
-export const BroadcastresponseSchema = z.object({
-  type: z.literal('broadcastResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Broadcastresponse = z.infer<typeof BroadcastresponseSchema>
-
-// Channelchangedevent
-export const ChannelchangedeventSchema = z.object({
-  type: z.literal('channelChangedEvent'),
+// WCP5ValidateAppIdentityResponse - Web Connection Protocol 5 Validate App Identity Success Response
+export const WCP5ValidateAppIdentityResponseSchema = z.object({
+  type: z.enum(["WCP1Hello", "WCP2LoadUrl", "WCP3Handshake", "WCP4ValidateAppIdentity", "WCP5ValidateAppIdentityFailedResponse", "WCP5ValidateAppIdentityResponse", "WCP6Goodbye"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    eventUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Channelchangedevent = z.infer<typeof ChannelchangedeventSchema>
+export type WCP5ValidateAppIdentityResponse = z.infer<typeof WCP5ValidateAppIdentityResponseSchema>
 
-// Common (generic)
-export const CommonSchema = z.object({
-  type: z.literal('common'),
+// WCP6Goodbye - Web Connection Protocol 6 Goodbye
+export const WCP6GoodbyeSchema = z.object({
+  type: z.enum(["WCP1Hello", "WCP2LoadUrl", "WCP3Handshake", "WCP4ValidateAppIdentity", "WCP5ValidateAppIdentityFailedResponse", "WCP5ValidateAppIdentityResponse", "WCP6Goodbye"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Common = z.infer<typeof CommonSchema>
+export type WCP6Goodbye = z.infer<typeof WCP6GoodbyeSchema>
 
-// Contextlistenerunsubscriberequest
-export const ContextlistenerunsubscriberequestSchema = z.object({
-  type: z.literal('contextListenerUnsubscribeRequest'),
+// WCPConnectionStep - Web Connection Protocol Message
+export const WCPConnectionStepSchema = z.object({ type: z.enum(["WCP1Hello", "WCP2LoadUrl", "WCP3Handshake", "WCP4ValidateAppIdentity", "WCP5ValidateAppIdentityFailedResponse", "WCP5ValidateAppIdentityResponse", "WCP6Goodbye"]), payload: z.record(z.unknown()).optional(), meta: z.union([z.object({ timestamp: z.coerce.date() }), z.object({ connectionAttemptUuid: z.string(), timestamp: z.coerce.date() })]) })
+
+export type WCPConnectionStep = z.infer<typeof WCPConnectionStepSchema>
+
+// AddContextListenerRequest - AddContextListener Request
+export const AddContextListenerRequestSchema = z.object({
+  type: z.literal("addContextListenerRequest"),
+  payload: z.object({ channelId: z.union([z.string(), z.null()]), contextType: z.union([z.string(), z.null()]) }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type AddContextListenerRequest = z.infer<typeof AddContextListenerRequestSchema>
+
+// AddContextListenerResponse - AddContextListener Response
+export const AddContextListenerResponseSchema = z.object({
+  type: z.literal("addContextListenerResponse"),
+  payload: z.union([z.object({ listenerUUID: z.string() }), z.object({ error: z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type AddContextListenerResponse = z.infer<typeof AddContextListenerResponseSchema>
+
+// AddEventListenerRequest - AddEventListener Request
+export const AddEventListenerRequestSchema = z.object({
+  type: z.literal("addEventListenerRequest"),
+  payload: z.object({ type: z.union([z.enum(["USER_CHANNEL_CHANGED"]), z.null()]) }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type AddEventListenerRequest = z.infer<typeof AddEventListenerRequestSchema>
+
+// AddEventListenerResponse - AddEventListener Response
+export const AddEventListenerResponseSchema = z.object({
+  type: z.literal("addEventListenerResponse"),
+  payload: z.union([z.object({ listenerUUID: z.string() }), z.object({ error: z.union([z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]), z.enum(["AppNotFound", "AppTimeout", "DesktopAgentNotFound", "ErrorOnLaunch", "MalformedContext", "ResolverUnavailable", "ApiTimeout", "InvalidArguments"]), z.enum(["DesktopAgentNotFound", "IntentDeliveryFailed", "MalformedContext", "NoAppsFound", "ResolverTimeout", "ResolverUnavailable", "TargetAppUnavailable", "TargetInstanceUnavailable", "UserCancelledResolution", "ApiTimeout", "InvalidArguments"]), z.enum(["IntentHandlerRejected", "NoResultReturned", "ApiTimeout"]), z.enum(["AgentDisconnected", "NotConnectedToBridge", "ResponseToBridgeTimedOut", "MalformedMessage"])]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type AddEventListenerResponse = z.infer<typeof AddEventListenerResponseSchema>
+
+// AddIntentListenerRequest - AddIntentListener Request
+export const AddIntentListenerRequestSchema = z.object({
+  type: z.literal("addIntentListenerRequest"),
+  payload: z.object({ intent: z.string() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type AddIntentListenerRequest = z.infer<typeof AddIntentListenerRequestSchema>
+
+// AddIntentListenerResponse - AddIntentListener Response
+export const AddIntentListenerResponseSchema = z.object({
+  type: z.literal("addIntentListenerResponse"),
+  payload: z.union([z.object({ listenerUUID: z.string() }), z.object({ error: z.enum(["DesktopAgentNotFound", "IntentDeliveryFailed", "MalformedContext", "NoAppsFound", "ResolverTimeout", "ResolverUnavailable", "TargetAppUnavailable", "TargetInstanceUnavailable", "UserCancelledResolution", "ApiTimeout", "InvalidArguments"]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type AddIntentListenerResponse = z.infer<typeof AddIntentListenerResponseSchema>
+
+// BroadcastEvent - broadcast Event
+export const BroadcastEventSchema = z.object({
+  type: z.literal("broadcastEvent"),
+  payload: z.object({ channelId: z.union([z.string(), z.null()]), context: ContextSchema, originatingApp: z.object({ appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }) }),
+  meta: z.object({ eventUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type BroadcastEvent = z.infer<typeof BroadcastEventSchema>
+
+// BroadcastRequest - Broadcast Request
+export const BroadcastRequestSchema = z.object({
+  type: z.literal("broadcastRequest"),
+  payload: z.object({ channelId: z.string(), context: ContextSchema }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type BroadcastRequest = z.infer<typeof BroadcastRequestSchema>
+
+// BroadcastResponse - Broadcast Response
+export const BroadcastResponseSchema = z.object({
+  type: z.literal("broadcastResponse"),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Contextlistenerunsubscriberequest = z.infer<typeof ContextlistenerunsubscriberequestSchema>
+export type BroadcastResponse = z.infer<typeof BroadcastResponseSchema>
 
-// Contextlistenerunsubscriberesponse
-export const ContextlistenerunsubscriberesponseSchema = z.object({
-  type: z.literal('contextListenerUnsubscribeResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+// ChannelChangedEvent - channelChanged Event
+export const ChannelChangedEventSchema = z.object({
+  type: z.literal("channelChangedEvent"),
+  payload: z.object({ newChannelId: z.union([z.string(), z.null()]) }),
+  meta: z.object({ eventUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Contextlistenerunsubscriberesponse = z.infer<typeof ContextlistenerunsubscriberesponseSchema>
+export type ChannelChangedEvent = z.infer<typeof ChannelChangedEventSchema>
 
-// Createprivatechannelrequest
-export const CreateprivatechannelrequestSchema = z.object({
-  type: z.literal('createPrivateChannelRequest'),
+// ContextListenerUnsubscribeRequest - ContextListenerUnsubscribe Request
+export const ContextListenerUnsubscribeRequestSchema = z.object({
+  type: z.literal("contextListenerUnsubscribeRequest"),
+  payload: z.object({ listenerUUID: z.string() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type ContextListenerUnsubscribeRequest = z.infer<typeof ContextListenerUnsubscribeRequestSchema>
+
+// ContextListenerUnsubscribeResponse - ContextListenerUnsubscribe Response
+export const ContextListenerUnsubscribeResponseSchema = z.object({
+  type: z.literal("contextListenerUnsubscribeResponse"),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Createprivatechannelrequest = z.infer<typeof CreateprivatechannelrequestSchema>
+export type ContextListenerUnsubscribeResponse = z.infer<typeof ContextListenerUnsubscribeResponseSchema>
 
-// Createprivatechannelresponse
-export const CreateprivatechannelresponseSchema = z.object({
-  type: z.literal('createPrivateChannelResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+// CreatePrivateChannelRequest - CreatePrivateChannel Request
+export const CreatePrivateChannelRequestSchema = z.object({
+  type: z.literal("createPrivateChannelRequest"),
+  payload: z.object({  }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Createprivatechannelresponse = z.infer<typeof CreateprivatechannelresponseSchema>
+export type CreatePrivateChannelRequest = z.infer<typeof CreatePrivateChannelRequestSchema>
 
-// Eventlistenerunsubscriberequest
-export const EventlistenerunsubscriberequestSchema = z.object({
-  type: z.literal('eventListenerUnsubscribeRequest'),
+// CreatePrivateChannelResponse - CreatePrivateChannel Response
+export const CreatePrivateChannelResponseSchema = z.object({
+  type: z.literal("createPrivateChannelResponse"),
+  payload: z.union([z.object({ privateChannel: ContextSchema }), z.object({ error: z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type CreatePrivateChannelResponse = z.infer<typeof CreatePrivateChannelResponseSchema>
+
+// EventListenerUnsubscribeRequest - EventListenerUnsubscribe Request
+export const EventListenerUnsubscribeRequestSchema = z.object({
+  type: z.literal("eventListenerUnsubscribeRequest"),
+  payload: z.object({ listenerUUID: z.string() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type EventListenerUnsubscribeRequest = z.infer<typeof EventListenerUnsubscribeRequestSchema>
+
+// EventListenerUnsubscribeResponse - EventListenerUnsubscribe Response
+export const EventListenerUnsubscribeResponseSchema = z.object({
+  type: z.literal("eventListenerUnsubscribeResponse"),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Eventlistenerunsubscriberequest = z.infer<typeof EventlistenerunsubscriberequestSchema>
+export type EventListenerUnsubscribeResponse = z.infer<typeof EventListenerUnsubscribeResponseSchema>
 
-// Eventlistenerunsubscriberesponse
-export const EventlistenerunsubscriberesponseSchema = z.object({
-  type: z.literal('eventListenerUnsubscribeResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Eventlistenerunsubscriberesponse = z.infer<typeof EventlistenerunsubscriberesponseSchema>
-
-// Fdc3userinterfacechannels (generic)
-export const Fdc3userinterfacechannelsSchema = z.object({
-  type: z.literal('fdc3UserInterfaceChannels'),
+// Fdc3UserInterfaceChannelSelected - Fdc3 UserInterface Channel Selected
+export const Fdc3UserInterfaceChannelSelectedSchema = z.object({
+  type: z.enum(["Fdc3UserInterfaceHello", "Fdc3UserInterfaceHandshake", "Fdc3UserInterfaceRestyle", "Fdc3UserInterfaceDrag", "Fdc3UserInterfaceResolve", "Fdc3UserInterfaceResolveAction", "Fdc3UserInterfaceChannels", "Fdc3UserInterfaceChannelSelected"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Fdc3userinterfacechannels = z.infer<typeof Fdc3userinterfacechannelsSchema>
+export type Fdc3UserInterfaceChannelSelected = z.infer<typeof Fdc3UserInterfaceChannelSelectedSchema>
 
-// Fdc3userinterfacechannelselected (generic)
-export const Fdc3userinterfacechannelselectedSchema = z.object({
-  type: z.literal('fdc3UserInterfaceChannelSelected'),
+// Fdc3UserInterfaceChannels - Fdc3 UserInterface Channels
+export const Fdc3UserInterfaceChannelsSchema = z.object({
+  type: z.enum(["Fdc3UserInterfaceHello", "Fdc3UserInterfaceHandshake", "Fdc3UserInterfaceRestyle", "Fdc3UserInterfaceDrag", "Fdc3UserInterfaceResolve", "Fdc3UserInterfaceResolveAction", "Fdc3UserInterfaceChannels", "Fdc3UserInterfaceChannelSelected"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Fdc3userinterfacechannelselected = z.infer<typeof Fdc3userinterfacechannelselectedSchema>
+export type Fdc3UserInterfaceChannels = z.infer<typeof Fdc3UserInterfaceChannelsSchema>
 
-// Fdc3userinterfacedrag (generic)
-export const Fdc3userinterfacedragSchema = z.object({
-  type: z.literal('fdc3UserInterfaceDrag'),
+// Fdc3UserInterfaceDrag - Fdc3 UserInterface Drag
+export const Fdc3UserInterfaceDragSchema = z.object({
+  type: z.enum(["Fdc3UserInterfaceHello", "Fdc3UserInterfaceHandshake", "Fdc3UserInterfaceRestyle", "Fdc3UserInterfaceDrag", "Fdc3UserInterfaceResolve", "Fdc3UserInterfaceResolveAction", "Fdc3UserInterfaceChannels", "Fdc3UserInterfaceChannelSelected"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Fdc3userinterfacedrag = z.infer<typeof Fdc3userinterfacedragSchema>
+export type Fdc3UserInterfaceDrag = z.infer<typeof Fdc3UserInterfaceDragSchema>
 
-// Fdc3userinterfacehandshake (generic)
-export const Fdc3userinterfacehandshakeSchema = z.object({
-  type: z.literal('fdc3UserInterfaceHandshake'),
+// Fdc3UserInterfaceHandshake - Fdc3 UserInterface Handshake
+export const Fdc3UserInterfaceHandshakeSchema = z.object({
+  type: z.enum(["Fdc3UserInterfaceHello", "Fdc3UserInterfaceHandshake", "Fdc3UserInterfaceRestyle", "Fdc3UserInterfaceDrag", "Fdc3UserInterfaceResolve", "Fdc3UserInterfaceResolveAction", "Fdc3UserInterfaceChannels", "Fdc3UserInterfaceChannelSelected"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Fdc3userinterfacehandshake = z.infer<typeof Fdc3userinterfacehandshakeSchema>
+export type Fdc3UserInterfaceHandshake = z.infer<typeof Fdc3UserInterfaceHandshakeSchema>
 
-// Fdc3userinterfacehello (generic)
-export const Fdc3userinterfacehelloSchema = z.object({
-  type: z.literal('fdc3UserInterfaceHello'),
+// Fdc3UserInterfaceHello - Fdc3 UserInterface Hello
+export const Fdc3UserInterfaceHelloSchema = z.object({
+  type: z.enum(["Fdc3UserInterfaceHello", "Fdc3UserInterfaceHandshake", "Fdc3UserInterfaceRestyle", "Fdc3UserInterfaceDrag", "Fdc3UserInterfaceResolve", "Fdc3UserInterfaceResolveAction", "Fdc3UserInterfaceChannels", "Fdc3UserInterfaceChannelSelected"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Fdc3userinterfacehello = z.infer<typeof Fdc3userinterfacehelloSchema>
+export type Fdc3UserInterfaceHello = z.infer<typeof Fdc3UserInterfaceHelloSchema>
 
-// Fdc3userinterfacemessage (generic)
-export const Fdc3userinterfacemessageSchema = z.object({
-  type: z.literal('fdc3UserInterfaceMessage'),
+// Fdc3UserInterfaceMessage - Fdc3 UserInterface Message
+export const Fdc3UserInterfaceMessageSchema = z.object({ type: z.enum(["Fdc3UserInterfaceHello", "Fdc3UserInterfaceHandshake", "Fdc3UserInterfaceRestyle", "Fdc3UserInterfaceDrag", "Fdc3UserInterfaceResolve", "Fdc3UserInterfaceResolveAction", "Fdc3UserInterfaceChannels", "Fdc3UserInterfaceChannelSelected"]), payload: z.record(z.unknown()).optional() })
+
+export type Fdc3UserInterfaceMessage = z.infer<typeof Fdc3UserInterfaceMessageSchema>
+
+// Fdc3UserInterfaceResolve - Fdc3 UserInterface Resolve
+export const Fdc3UserInterfaceResolveSchema = z.object({
+  type: z.enum(["Fdc3UserInterfaceHello", "Fdc3UserInterfaceHandshake", "Fdc3UserInterfaceRestyle", "Fdc3UserInterfaceDrag", "Fdc3UserInterfaceResolve", "Fdc3UserInterfaceResolveAction", "Fdc3UserInterfaceChannels", "Fdc3UserInterfaceChannelSelected"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Fdc3userinterfacemessage = z.infer<typeof Fdc3userinterfacemessageSchema>
+export type Fdc3UserInterfaceResolve = z.infer<typeof Fdc3UserInterfaceResolveSchema>
 
-// Fdc3userinterfaceresolve (generic)
-export const Fdc3userinterfaceresolveSchema = z.object({
-  type: z.literal('fdc3UserInterfaceResolve'),
+// Fdc3UserInterfaceResolveAction - Fdc3 UserInterface Resolve Action
+export const Fdc3UserInterfaceResolveActionSchema = z.object({
+  type: z.enum(["Fdc3UserInterfaceHello", "Fdc3UserInterfaceHandshake", "Fdc3UserInterfaceRestyle", "Fdc3UserInterfaceDrag", "Fdc3UserInterfaceResolve", "Fdc3UserInterfaceResolveAction", "Fdc3UserInterfaceChannels", "Fdc3UserInterfaceChannelSelected"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Fdc3userinterfaceresolve = z.infer<typeof Fdc3userinterfaceresolveSchema>
+export type Fdc3UserInterfaceResolveAction = z.infer<typeof Fdc3UserInterfaceResolveActionSchema>
 
-// Fdc3userinterfaceresolveaction (generic)
-export const Fdc3userinterfaceresolveactionSchema = z.object({
-  type: z.literal('fdc3UserInterfaceResolveAction'),
+// Fdc3UserInterfaceRestyle - Fdc3 UserInterface Restyle
+export const Fdc3UserInterfaceRestyleSchema = z.object({
+  type: z.enum(["Fdc3UserInterfaceHello", "Fdc3UserInterfaceHandshake", "Fdc3UserInterfaceRestyle", "Fdc3UserInterfaceDrag", "Fdc3UserInterfaceResolve", "Fdc3UserInterfaceResolveAction", "Fdc3UserInterfaceChannels", "Fdc3UserInterfaceChannelSelected"]),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ timestamp: z.coerce.date() })
 })
 
-export type Fdc3userinterfaceresolveaction = z.infer<typeof Fdc3userinterfaceresolveactionSchema>
+export type Fdc3UserInterfaceRestyle = z.infer<typeof Fdc3UserInterfaceRestyleSchema>
 
-// Fdc3userinterfacerestyle (generic)
-export const Fdc3userinterfacerestyleSchema = z.object({
-  type: z.literal('fdc3UserInterfaceRestyle'),
+// FindInstancesRequest - FindInstances Request
+export const FindInstancesRequestSchema = z.object({
+  type: z.literal("findInstancesRequest"),
+  payload: z.object({ app: z.object({ appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }) }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type FindInstancesRequest = z.infer<typeof FindInstancesRequestSchema>
+
+// FindInstancesResponse - FindInstances Response
+export const FindInstancesResponseSchema = z.object({
+  type: z.literal("findInstancesResponse"),
+  payload: z.union([z.object({ appIdentifiers: z.array(z.object({ name: z.string().optional(), version: z.string().optional(), instanceMetadata: z.record(z.unknown()).optional(), title: z.string().optional(), tooltip: z.string().optional(), description: z.string().optional(), icons: z.array(z.object({ src: z.string(), size: z.string().optional(), type: z.string().optional() })), screenshots: z.array(z.object({ src: z.string(), size: z.string().optional(), type: z.string().optional(), label: z.string().optional() })), resultType: z.unknown().optional(), appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() })) }), z.object({ error: z.string() })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type FindInstancesResponse = z.infer<typeof FindInstancesResponseSchema>
+
+// FindIntentRequest - FindIntent Request
+export const FindIntentRequestSchema = z.object({
+  type: z.literal("findIntentRequest"),
+  payload: z.object({ intent: z.string(), context: ContextSchema.optional(), resultType: z.string().optional() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type FindIntentRequest = z.infer<typeof FindIntentRequestSchema>
+
+// FindIntentResponse - FindIntent Response
+export const FindIntentResponseSchema = z.object({
+  type: z.literal("findIntentResponse"),
+  payload: z.union([z.object({ appIntent: z.object({ intent: z.object({ name: z.string(), displayName: z.string().optional() }), apps: z.array(z.object({ name: z.string().optional(), version: z.string().optional(), instanceMetadata: z.record(z.unknown()).optional(), title: z.string().optional(), tooltip: z.string().optional(), description: z.string().optional(), icons: z.array(z.unknown()).optional(), screenshots: z.array(z.unknown()).optional(), resultType: z.unknown().optional(), appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() })) }) }), z.object({ error: z.union([z.enum(["DesktopAgentNotFound", "IntentDeliveryFailed", "MalformedContext", "NoAppsFound", "ResolverTimeout", "ResolverUnavailable", "TargetAppUnavailable", "TargetInstanceUnavailable", "UserCancelledResolution", "ApiTimeout", "InvalidArguments"]), z.enum(["AgentDisconnected", "NotConnectedToBridge", "ResponseToBridgeTimedOut", "MalformedMessage"])]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type FindIntentResponse = z.infer<typeof FindIntentResponseSchema>
+
+// FindIntentsByContextRequest - FindIntentsByContext Request
+export const FindIntentsByContextRequestSchema = z.object({
+  type: z.literal("findIntentsByContextRequest"),
+  payload: z.object({ context: ContextSchema, resultType: z.string().optional() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type FindIntentsByContextRequest = z.infer<typeof FindIntentsByContextRequestSchema>
+
+// FindIntentsByContextResponse - FindIntentsByContext Response
+export const FindIntentsByContextResponseSchema = z.object({
+  type: z.literal("findIntentsByContextResponse"),
+  payload: z.union([z.object({ appIntents: z.array(z.object({ intent: z.object({ name: z.string(), displayName: z.string().optional() }), apps: z.array(z.object({ name: z.string().optional(), version: z.string().optional(), instanceMetadata: z.record(z.unknown()).optional(), title: z.string().optional(), tooltip: z.string().optional(), description: z.string().optional(), icons: z.array(z.unknown()).optional(), screenshots: z.array(z.unknown()).optional(), resultType: z.unknown().optional(), appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() })) })) }), z.object({ error: z.union([z.enum(["DesktopAgentNotFound", "IntentDeliveryFailed", "MalformedContext", "NoAppsFound", "ResolverTimeout", "ResolverUnavailable", "TargetAppUnavailable", "TargetInstanceUnavailable", "UserCancelledResolution", "ApiTimeout", "InvalidArguments"]), z.enum(["AgentDisconnected", "NotConnectedToBridge", "ResponseToBridgeTimedOut", "MalformedMessage"])]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type FindIntentsByContextResponse = z.infer<typeof FindIntentsByContextResponseSchema>
+
+// GetAppMetadataRequest - GetAppMetadata Request
+export const GetAppMetadataRequestSchema = z.object({
+  type: z.literal("getAppMetadataRequest"),
+  payload: z.object({ app: z.object({ appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }) }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type GetAppMetadataRequest = z.infer<typeof GetAppMetadataRequestSchema>
+
+// GetAppMetadataResponse - GetAppMetadata Response
+export const GetAppMetadataResponseSchema = z.object({
+  type: z.literal("getAppMetadataResponse"),
+  payload: z.union([z.object({ appMetadata: z.object({ name: z.string().optional(), version: z.string().optional(), instanceMetadata: z.record(z.unknown()).optional(), title: z.string().optional(), tooltip: z.string().optional(), description: z.string().optional(), icons: z.array(z.object({ src: z.string(), size: z.string().optional(), type: z.string().optional() })), screenshots: z.array(z.object({ src: z.string(), size: z.string().optional(), type: z.string().optional(), label: z.string().optional() })), resultType: z.unknown().optional(), appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }) }), z.object({ error: z.union([z.enum(["DesktopAgentNotFound", "IntentDeliveryFailed", "MalformedContext", "NoAppsFound", "ResolverTimeout", "ResolverUnavailable", "TargetAppUnavailable", "TargetInstanceUnavailable", "UserCancelledResolution", "ApiTimeout", "InvalidArguments"]), z.enum(["AgentDisconnected", "NotConnectedToBridge", "ResponseToBridgeTimedOut", "MalformedMessage"])]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type GetAppMetadataResponse = z.infer<typeof GetAppMetadataResponseSchema>
+
+// GetCurrentChannelRequest - GetCurrentChannel Request
+export const GetCurrentChannelRequestSchema = z.object({
+  type: z.literal("getCurrentChannelRequest"),
+  payload: z.object({  }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type GetCurrentChannelRequest = z.infer<typeof GetCurrentChannelRequestSchema>
+
+// GetCurrentChannelResponse - GetCurrentChannel Response
+export const GetCurrentChannelResponseSchema = z.object({
+  type: z.literal("getCurrentChannelResponse"),
+  payload: z.union([z.object({ channel: z.union([ContextSchema, z.null()]) }), z.object({ error: z.union([z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]), z.enum(["AppNotFound", "AppTimeout", "DesktopAgentNotFound", "ErrorOnLaunch", "MalformedContext", "ResolverUnavailable", "ApiTimeout", "InvalidArguments"]), z.enum(["DesktopAgentNotFound", "IntentDeliveryFailed", "MalformedContext", "NoAppsFound", "ResolverTimeout", "ResolverUnavailable", "TargetAppUnavailable", "TargetInstanceUnavailable", "UserCancelledResolution", "ApiTimeout", "InvalidArguments"]), z.enum(["IntentHandlerRejected", "NoResultReturned", "ApiTimeout"]), z.enum(["AgentDisconnected", "NotConnectedToBridge", "ResponseToBridgeTimedOut", "MalformedMessage"])]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type GetCurrentChannelResponse = z.infer<typeof GetCurrentChannelResponseSchema>
+
+// GetCurrentContextRequest - GetCurrentContext Request
+export const GetCurrentContextRequestSchema = z.object({
+  type: z.literal("getCurrentContextRequest"),
+  payload: z.object({ channelId: z.string(), contextType: z.union([z.string(), z.null()]) }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type GetCurrentContextRequest = z.infer<typeof GetCurrentContextRequestSchema>
+
+// GetCurrentContextResponse - GetCurrentContext Response
+export const GetCurrentContextResponseSchema = z.object({
+  type: z.literal("getCurrentContextResponse"),
+  payload: z.union([z.object({ context: z.union([ContextSchema, z.null()]) }), z.object({ error: z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type GetCurrentContextResponse = z.infer<typeof GetCurrentContextResponseSchema>
+
+// GetInfoRequest - GetInfo Request
+export const GetInfoRequestSchema = z.object({
+  type: z.literal("getInfoRequest"),
+  payload: z.object({  }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type GetInfoRequest = z.infer<typeof GetInfoRequestSchema>
+
+// GetInfoResponse - GetInfo Response
+export const GetInfoResponseSchema = z.object({
+  type: z.literal("getInfoResponse"),
+  payload: z.union([z.object({ implementationMetadata: z.object({ fdc3Version: z.unknown().optional(), provider: z.unknown().optional(), providerVersion: z.unknown().optional(), optionalFeatures: z.unknown().optional(), appMetadata: z.unknown().optional() }) }), z.object({ error: z.union([z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]), z.enum(["AppNotFound", "AppTimeout", "DesktopAgentNotFound", "ErrorOnLaunch", "MalformedContext", "ResolverUnavailable", "ApiTimeout", "InvalidArguments"]), z.enum(["DesktopAgentNotFound", "IntentDeliveryFailed", "MalformedContext", "NoAppsFound", "ResolverTimeout", "ResolverUnavailable", "TargetAppUnavailable", "TargetInstanceUnavailable", "UserCancelledResolution", "ApiTimeout", "InvalidArguments"]), z.enum(["IntentHandlerRejected", "NoResultReturned", "ApiTimeout"]), z.enum(["AgentDisconnected", "NotConnectedToBridge", "ResponseToBridgeTimedOut", "MalformedMessage"])]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type GetInfoResponse = z.infer<typeof GetInfoResponseSchema>
+
+// GetOrCreateChannelRequest - GetOrCreateChannel Request
+export const GetOrCreateChannelRequestSchema = z.object({
+  type: z.literal("getOrCreateChannelRequest"),
+  payload: z.object({ channelId: z.string() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type GetOrCreateChannelRequest = z.infer<typeof GetOrCreateChannelRequestSchema>
+
+// GetOrCreateChannelResponse - GetOrCreateChannel Response
+export const GetOrCreateChannelResponseSchema = z.object({
+  type: z.literal("getOrCreateChannelResponse"),
+  payload: z.union([z.object({ channel: ContextSchema }), z.object({ error: z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type GetOrCreateChannelResponse = z.infer<typeof GetOrCreateChannelResponseSchema>
+
+// GetUserChannelsRequest - GetUserChannels Request
+export const GetUserChannelsRequestSchema = z.object({
+  type: z.literal("getUserChannelsRequest"),
+  payload: z.object({  }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type GetUserChannelsRequest = z.infer<typeof GetUserChannelsRequestSchema>
+
+// GetUserChannelsResponse - GetUserChannels Response
+export const GetUserChannelsResponseSchema = z.object({
+  type: z.literal("getUserChannelsResponse"),
+  payload: z.union([z.object({ userChannels: z.array(ContextSchema) }), z.object({ error: z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type GetUserChannelsResponse = z.infer<typeof GetUserChannelsResponseSchema>
+
+// HeartbeatAcknowledgmentRequest - HeartbeatAcknowledgement Request
+export const HeartbeatAcknowledgmentRequestSchema = z.object({
+  type: z.literal("heartbeatAcknowledgementRequest"),
+  payload: z.object({ heartbeatEventUuid: z.string() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type HeartbeatAcknowledgmentRequest = z.infer<typeof HeartbeatAcknowledgmentRequestSchema>
+
+// HeartbeatEvent - Heartbeat Event
+export const HeartbeatEventSchema = z.object({
+  type: z.literal("heartbeatEvent"),
+  payload: z.object({  }),
+  meta: z.object({ eventUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type HeartbeatEvent = z.infer<typeof HeartbeatEventSchema>
+
+// IntentEvent - intent Event
+export const IntentEventSchema = z.object({
+  type: z.literal("intentEvent"),
+  payload: z.object({ intent: z.string(), context: ContextSchema, originatingApp: z.object({ appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }), raiseIntentRequestUuid: z.string() }),
+  meta: z.object({ eventUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type IntentEvent = z.infer<typeof IntentEventSchema>
+
+// IntentListenerUnsubscribeRequest - IntentListenerUnsubscribe Request
+export const IntentListenerUnsubscribeRequestSchema = z.object({
+  type: z.literal("intentListenerUnsubscribeRequest"),
+  payload: z.object({ listenerUUID: z.string() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type IntentListenerUnsubscribeRequest = z.infer<typeof IntentListenerUnsubscribeRequestSchema>
+
+// IntentListenerUnsubscribeResponse - IntentListenerUnsubscribe Response
+export const IntentListenerUnsubscribeResponseSchema = z.object({
+  type: z.literal("intentListenerUnsubscribeResponse"),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Fdc3userinterfacerestyle = z.infer<typeof Fdc3userinterfacerestyleSchema>
+export type IntentListenerUnsubscribeResponse = z.infer<typeof IntentListenerUnsubscribeResponseSchema>
 
-// Findinstancesrequest
-export const FindinstancesrequestSchema = z.object({
-  type: z.literal('findInstancesRequest'),
-  payload: z.object({
-        app: z.string()
-      }),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+// IntentResultRequest - IntentResult Request
+export const IntentResultRequestSchema = z.object({
+  type: z.literal("intentResultRequest"),
+  payload: z.object({ intentEventUuid: z.string(), raiseIntentRequestUuid: z.string(), intentResult: z.unknown() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Findinstancesrequest = z.infer<typeof FindinstancesrequestSchema>
+export type IntentResultRequest = z.infer<typeof IntentResultRequestSchema>
 
-// Findinstancesresponse
-export const FindinstancesresponseSchema = z.object({
-  type: z.literal('findInstancesResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Findinstancesresponse = z.infer<typeof FindinstancesresponseSchema>
-
-// Findintentrequest
-export const FindintentrequestSchema = z.object({
-  type: z.literal('findIntentRequest'),
+// IntentResultResponse - IntentResult Response
+export const IntentResultResponseSchema = z.object({
+  type: z.literal("intentResultResponse"),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Findintentrequest = z.infer<typeof FindintentrequestSchema>
+export type IntentResultResponse = z.infer<typeof IntentResultResponseSchema>
 
-// Findintentresponse
-export const FindintentresponseSchema = z.object({
-  type: z.literal('findIntentResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+// JoinUserChannelRequest - JoinUserChannel Request
+export const JoinUserChannelRequestSchema = z.object({
+  type: z.literal("joinUserChannelRequest"),
+  payload: z.object({ channelId: z.string() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Findintentresponse = z.infer<typeof FindintentresponseSchema>
+export type JoinUserChannelRequest = z.infer<typeof JoinUserChannelRequestSchema>
 
-// Findintentsbycontextrequest
-export const FindintentsbycontextrequestSchema = z.object({
-  type: z.literal('findIntentsByContextRequest'),
+// JoinUserChannelResponse - JoinUserChannel Response
+export const JoinUserChannelResponseSchema = z.object({
+  type: z.literal("joinUserChannelResponse"),
+  payload: z.union([z.object({  }), z.object({ error: z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type JoinUserChannelResponse = z.infer<typeof JoinUserChannelResponseSchema>
+
+// LeaveCurrentChannelRequest - LeaveCurrentChannel Request
+export const LeaveCurrentChannelRequestSchema = z.object({
+  type: z.literal("leaveCurrentChannelRequest"),
+  payload: z.object({  }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type LeaveCurrentChannelRequest = z.infer<typeof LeaveCurrentChannelRequestSchema>
+
+// LeaveCurrentChannelResponse - LeaveCurrentChannel Response
+export const LeaveCurrentChannelResponseSchema = z.object({
+  type: z.literal("leaveCurrentChannelResponse"),
+  payload: z.union([z.object({  }), z.object({ error: z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type LeaveCurrentChannelResponse = z.infer<typeof LeaveCurrentChannelResponseSchema>
+
+// OpenRequest - Open Request
+export const OpenRequestSchema = z.object({
+  type: z.literal("openRequest"),
+  payload: z.object({ app: z.object({ appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }), context: ContextSchema.optional() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type OpenRequest = z.infer<typeof OpenRequestSchema>
+
+// OpenResponse - Open Response
+export const OpenResponseSchema = z.object({
+  type: z.literal("openResponse"),
+  payload: z.union([z.object({ appIdentifier: z.object({ appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }) }), z.object({ error: z.union([z.enum(["AppNotFound", "AppTimeout", "DesktopAgentNotFound", "ErrorOnLaunch", "MalformedContext", "ResolverUnavailable", "ApiTimeout", "InvalidArguments"]), z.enum(["AgentDisconnected", "NotConnectedToBridge", "ResponseToBridgeTimedOut", "MalformedMessage"])]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type OpenResponse = z.infer<typeof OpenResponseSchema>
+
+// PrivateChannelAddEventListenerRequest - PrivateChannelAddEventListener Request
+export const PrivateChannelAddEventListenerRequestSchema = z.object({
+  type: z.literal("privateChannelAddEventListenerRequest"),
+  payload: z.object({ privateChannelId: z.string(), listenerType: z.union([z.enum(["addContextListener", "unsubscribe", "disconnect"]), z.null()]) }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type PrivateChannelAddEventListenerRequest = z.infer<typeof PrivateChannelAddEventListenerRequestSchema>
+
+// PrivateChannelAddEventListenerResponse - PrivateChannelAddEventListener Response
+export const PrivateChannelAddEventListenerResponseSchema = z.object({
+  type: z.literal("privateChannelAddEventListenerResponse"),
+  payload: z.union([z.object({ listenerUUID: z.string() }), z.object({ error: z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type PrivateChannelAddEventListenerResponse = z.infer<typeof PrivateChannelAddEventListenerResponseSchema>
+
+// PrivateChannelDisconnectRequest - PrivateChannelDisconnect Request
+export const PrivateChannelDisconnectRequestSchema = z.object({
+  type: z.literal("privateChannelDisconnectRequest"),
+  payload: z.object({ channelId: z.string() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type PrivateChannelDisconnectRequest = z.infer<typeof PrivateChannelDisconnectRequestSchema>
+
+// PrivateChannelDisconnectResponse - PrivateChannelDisconnect Response
+export const PrivateChannelDisconnectResponseSchema = z.object({
+  type: z.literal("privateChannelDisconnectResponse"),
+  payload: z.union([z.object({  }), z.object({ error: z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type PrivateChannelDisconnectResponse = z.infer<typeof PrivateChannelDisconnectResponseSchema>
+
+// PrivateChannelOnAddContextListenerEvent - privateChannelOnAddContextListener Event
+export const PrivateChannelOnAddContextListenerEventSchema = z.object({
+  type: z.literal("privateChannelOnAddContextListenerEvent"),
+  payload: z.object({ privateChannelId: z.string(), contextType: z.union([z.string(), z.null()]) }),
+  meta: z.object({ eventUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type PrivateChannelOnAddContextListenerEvent = z.infer<typeof PrivateChannelOnAddContextListenerEventSchema>
+
+// PrivateChannelOnDisconnectEvent - privateChannelOnDisconnect Event
+export const PrivateChannelOnDisconnectEventSchema = z.object({
+  type: z.literal("privateChannelOnDisconnectEvent"),
+  payload: z.object({ privateChannelId: z.string() }),
+  meta: z.object({ eventUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type PrivateChannelOnDisconnectEvent = z.infer<typeof PrivateChannelOnDisconnectEventSchema>
+
+// PrivateChannelOnUnsubscribeEvent - PrivateChannelOnUnsubscribe Event
+export const PrivateChannelOnUnsubscribeEventSchema = z.object({
+  type: z.literal("privateChannelOnUnsubscribeEvent"),
+  payload: z.object({ privateChannelId: z.string(), contextType: z.union([z.string(), z.null()]) }),
+  meta: z.object({ eventUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type PrivateChannelOnUnsubscribeEvent = z.infer<typeof PrivateChannelOnUnsubscribeEventSchema>
+
+// PrivateChannelUnsubscribeEventListenerRequest - PrivateChannelUnsubscribeEventListener Request
+export const PrivateChannelUnsubscribeEventListenerRequestSchema = z.object({
+  type: z.literal("privateChannelUnsubscribeEventListenerRequest"),
+  payload: z.object({ listenerUUID: z.string() }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
+})
+
+export type PrivateChannelUnsubscribeEventListenerRequest = z.infer<typeof PrivateChannelUnsubscribeEventListenerRequestSchema>
+
+// PrivateChannelUnsubscribeEventListenerResponse - PrivateChannelUnsubscribeEventListener Response
+export const PrivateChannelUnsubscribeEventListenerResponseSchema = z.object({
+  type: z.literal("privateChannelUnsubscribeEventListenerResponse"),
   payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Findintentsbycontextrequest = z.infer<typeof FindintentsbycontextrequestSchema>
+export type PrivateChannelUnsubscribeEventListenerResponse = z.infer<typeof PrivateChannelUnsubscribeEventListenerResponseSchema>
 
-// Findintentsbycontextresponse
-export const FindintentsbycontextresponseSchema = z.object({
-  type: z.literal('findIntentsByContextResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+// RaiseIntentForContextRequest - RaiseIntentForContext Request
+export const RaiseIntentForContextRequestSchema = z.object({
+  type: z.literal("raiseIntentForContextRequest"),
+  payload: z.object({ context: ContextSchema, app: z.object({ appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }) }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Findintentsbycontextresponse = z.infer<typeof FindintentsbycontextresponseSchema>
+export type RaiseIntentForContextRequest = z.infer<typeof RaiseIntentForContextRequestSchema>
 
-// Getappmetadatarequest
-export const GetappmetadatarequestSchema = z.object({
-  type: z.literal('getAppMetadataRequest'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+// RaiseIntentForContextResponse - RaiseIntentForContext Response
+export const RaiseIntentForContextResponseSchema = z.object({
+  type: z.literal("raiseIntentForContextResponse"),
+  payload: z.union([z.object({ intentResolution: z.object({ source: z.object({ appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }), intent: z.string() }) }), z.object({ appIntents: z.array(z.object({ intent: z.object({ name: z.string(), displayName: z.string().optional() }), apps: z.array(z.object({ name: z.string().optional(), version: z.string().optional(), instanceMetadata: z.record(z.unknown()).optional(), title: z.string().optional(), tooltip: z.string().optional(), description: z.string().optional(), icons: z.array(z.unknown()).optional(), screenshots: z.array(z.unknown()).optional(), resultType: z.unknown().optional(), appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() })) })) }), z.object({ error: z.union([z.enum(["DesktopAgentNotFound", "IntentDeliveryFailed", "MalformedContext", "NoAppsFound", "ResolverTimeout", "ResolverUnavailable", "TargetAppUnavailable", "TargetInstanceUnavailable", "UserCancelledResolution", "ApiTimeout", "InvalidArguments"]), z.enum(["AgentDisconnected", "NotConnectedToBridge", "ResponseToBridgeTimedOut", "MalformedMessage"])]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Getappmetadatarequest = z.infer<typeof GetappmetadatarequestSchema>
+export type RaiseIntentForContextResponse = z.infer<typeof RaiseIntentForContextResponseSchema>
 
-// Getappmetadataresponse
-export const GetappmetadataresponseSchema = z.object({
-  type: z.literal('getAppMetadataResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+// RaiseIntentRequest - RaiseIntent Request
+export const RaiseIntentRequestSchema = z.object({
+  type: z.literal("raiseIntentRequest"),
+  payload: z.object({ intent: z.string(), context: ContextSchema, app: z.object({ appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }) }),
+  meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Getappmetadataresponse = z.infer<typeof GetappmetadataresponseSchema>
+export type RaiseIntentRequest = z.infer<typeof RaiseIntentRequestSchema>
 
-// Getcurrentchannelrequest
-export const GetcurrentchannelrequestSchema = z.object({
-  type: z.literal('getCurrentChannelRequest'),
-  payload: z.object({}).optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+// RaiseIntentResponse - RaiseIntent Response
+export const RaiseIntentResponseSchema = z.object({
+  type: z.literal("raiseIntentResponse"),
+  payload: z.union([z.object({ intentResolution: z.object({ source: z.object({ appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }), intent: z.string() }) }), z.object({ appIntent: z.object({ intent: z.object({ name: z.string(), displayName: z.string().optional() }), apps: z.array(z.object({ name: z.string().optional(), version: z.string().optional(), instanceMetadata: z.record(z.unknown()).optional(), title: z.string().optional(), tooltip: z.string().optional(), description: z.string().optional(), icons: z.array(z.unknown()).optional(), screenshots: z.array(z.unknown()).optional(), resultType: z.unknown().optional(), appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() })) }) }), z.object({ error: z.union([z.enum(["DesktopAgentNotFound", "IntentDeliveryFailed", "MalformedContext", "NoAppsFound", "ResolverTimeout", "ResolverUnavailable", "TargetAppUnavailable", "TargetInstanceUnavailable", "UserCancelledResolution", "ApiTimeout", "InvalidArguments"]), z.enum(["AgentDisconnected", "NotConnectedToBridge", "ResponseToBridgeTimedOut", "MalformedMessage"])]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Getcurrentchannelrequest = z.infer<typeof GetcurrentchannelrequestSchema>
+export type RaiseIntentResponse = z.infer<typeof RaiseIntentResponseSchema>
 
-// Getcurrentchannelresponse
-export const GetcurrentchannelresponseSchema = z.object({
-  type: z.literal('getCurrentChannelResponse'),
-  payload: z.union([
-        z.object({ channel: z.string().nullable() }), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
+// RaiseIntentResultResponse - RaiseIntentResult Response
+export const RaiseIntentResultResponseSchema = z.object({
+  type: z.literal("raiseIntentResultResponse"),
+  payload: z.union([z.object({ intentResult: z.unknown() }), z.object({ error: z.union([z.enum(["AccessDenied", "CreationFailed", "MalformedContext", "NoChannelFound", "ApiTimeout", "InvalidArguments"]), z.enum(["AppNotFound", "AppTimeout", "DesktopAgentNotFound", "ErrorOnLaunch", "MalformedContext", "ResolverUnavailable", "ApiTimeout", "InvalidArguments"]), z.enum(["DesktopAgentNotFound", "IntentDeliveryFailed", "MalformedContext", "NoAppsFound", "ResolverTimeout", "ResolverUnavailable", "TargetAppUnavailable", "TargetInstanceUnavailable", "UserCancelledResolution", "ApiTimeout", "InvalidArguments"]), z.enum(["IntentHandlerRejected", "NoResultReturned", "ApiTimeout"]), z.enum(["AgentDisconnected", "NotConnectedToBridge", "ResponseToBridgeTimedOut", "MalformedMessage"])]) })]),
+  meta: z.object({ responseUuid: z.string(), requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
-export type Getcurrentchannelresponse = z.infer<typeof GetcurrentchannelresponseSchema>
-
-// Getcurrentcontextrequest
-export const GetcurrentcontextrequestSchema = z.object({
-  type: z.literal('getCurrentContextRequest'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Getcurrentcontextrequest = z.infer<typeof GetcurrentcontextrequestSchema>
-
-// Getcurrentcontextresponse
-export const GetcurrentcontextresponseSchema = z.object({
-  type: z.literal('getCurrentContextResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Getcurrentcontextresponse = z.infer<typeof GetcurrentcontextresponseSchema>
-
-// Getinforequest
-export const GetinforequestSchema = z.object({
-  type: z.literal('getInfoRequest'),
-  payload: z.object({}).optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Getinforequest = z.infer<typeof GetinforequestSchema>
-
-// Getinforesponse
-export const GetinforesponseSchema = z.object({
-  type: z.literal('getInfoResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Getinforesponse = z.infer<typeof GetinforesponseSchema>
-
-// Getorcreatechannelrequest
-export const GetorcreatechannelrequestSchema = z.object({
-  type: z.literal('getOrCreateChannelRequest'),
-  payload: z.object({
-    channelId: z.string()
-  }),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Getorcreatechannelrequest = z.infer<typeof GetorcreatechannelrequestSchema>
-
-// Getorcreatechannelresponse
-export const GetorcreatechannelresponseSchema = z.object({
-  type: z.literal('getOrCreateChannelResponse'),
-  payload: z.object({
-    channel: z.object({
-      id: z.string(),
-      type: z.literal('app'),
-      displayMetadata: z.object({
-        name: z.string().optional(),
-        color: z.string().optional(),
-        glyph: z.string().optional()
-      }).optional()
-    })
-  }),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Getorcreatechannelresponse = z.infer<typeof GetorcreatechannelresponseSchema>
-
-// Getuserchannelsrequest
-export const GetuserchannelsrequestSchema = z.object({
-  type: z.literal('getUserChannelsRequest'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Getuserchannelsrequest = z.infer<typeof GetuserchannelsrequestSchema>
-
-// Getuserchannelsresponse
-export const GetuserchannelsresponseSchema = z.object({
-  type: z.literal('getUserChannelsResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Getuserchannelsresponse = z.infer<typeof GetuserchannelsresponseSchema>
-
-// Heartbeatacknowledgmentrequest
-export const HeartbeatacknowledgmentrequestSchema = z.object({
-  type: z.literal('heartbeatAcknowledgmentRequest'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Heartbeatacknowledgmentrequest = z.infer<typeof HeartbeatacknowledgmentrequestSchema>
-
-// Heartbeatevent
-export const HeartbeateventSchema = z.object({
-  type: z.literal('heartbeatEvent'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    eventUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Heartbeatevent = z.infer<typeof HeartbeateventSchema>
-
-// Intentevent
-export const IntenteventSchema = z.object({
-  type: z.literal('intentEvent'),
-  payload: z.object({
-    intent: z.string(),
-    context: ContextSchema,
-    originFdc3InstanceId: z.string().optional()
-  }),
-  meta: z.object({
-    eventUuid: z.string(),
-    timestamp: z.coerce.date(),
-    requestUuid: z.string() // Link back to the original raiseIntentRequest
-  })
-})
-
-export type Intentevent = z.infer<typeof IntenteventSchema>
-
-// Intentlistenerunsubscriberequest
-export const IntentlistenerunsubscriberequestSchema = z.object({
-  type: z.literal('intentListenerUnsubscribeRequest'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Intentlistenerunsubscriberequest = z.infer<typeof IntentlistenerunsubscriberequestSchema>
-
-// Intentlistenerunsubscriberesponse
-export const IntentlistenerunsubscriberesponseSchema = z.object({
-  type: z.literal('intentListenerUnsubscribeResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Intentlistenerunsubscriberesponse = z.infer<typeof IntentlistenerunsubscriberesponseSchema>
-
-// Intentresultrequest
-export const IntentresultrequestSchema = z.object({
-  type: z.literal('intentResultRequest'),
-  payload: z.object({
-    intentResult: z.union([
-      ContextSchema,
-      z.object({
-        channel: z.object({
-          id: z.string(),
-          type: z.string(),
-          displayMetadata: z.object({
-            name: z.string().optional(),
-            color: z.string().optional(),
-            glyph: z.string().optional()
-          }).optional()
-        })
-      }),
-      z.object({ void: z.literal(true) })
-    ]).optional(),
-    error: z.string().optional()
-  }),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date(),
-    responseToRequestUuid: z.string() // Link back to the intentEvent
-  })
-})
-
-export type Intentresultrequest = z.infer<typeof IntentresultrequestSchema>
-
-// Intentresultresponse
-export const IntentresultresponseSchema = z.object({
-  type: z.literal('intentResultResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Intentresultresponse = z.infer<typeof IntentresultresponseSchema>
-
-// Joinuserchannelrequest
-export const JoinuserchannelrequestSchema = z.object({
-  type: z.literal('joinUserChannelRequest'),
-  payload: z.object({
-        channelId: z.string()
-      }),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Joinuserchannelrequest = z.infer<typeof JoinuserchannelrequestSchema>
-
-// Joinuserchannelresponse
-export const JoinuserchannelresponseSchema = z.object({
-  type: z.literal('joinUserChannelResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Joinuserchannelresponse = z.infer<typeof JoinuserchannelresponseSchema>
-
-// Leavecurrentchannelrequest
-export const LeavecurrentchannelrequestSchema = z.object({
-  type: z.literal('leaveCurrentChannelRequest'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Leavecurrentchannelrequest = z.infer<typeof LeavecurrentchannelrequestSchema>
-
-// Leavecurrentchannelresponse
-export const LeavecurrentchannelresponseSchema = z.object({
-  type: z.literal('leaveCurrentChannelResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Leavecurrentchannelresponse = z.infer<typeof LeavecurrentchannelresponseSchema>
-
-// Openrequest
-export const OpenrequestSchema = z.object({
-  type: z.literal('openRequest'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Openrequest = z.infer<typeof OpenrequestSchema>
-
-// Openresponse
-export const OpenresponseSchema = z.object({
-  type: z.literal('openResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Openresponse = z.infer<typeof OpenresponseSchema>
-
-// Privatechanneladdeventlistenerrequest
-export const PrivatechanneladdeventlistenerrequestSchema = z.object({
-  type: z.literal('privateChannelAddEventListenerRequest'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Privatechanneladdeventlistenerrequest = z.infer<typeof PrivatechanneladdeventlistenerrequestSchema>
-
-// Privatechanneladdeventlistenerresponse
-export const PrivatechanneladdeventlistenerresponseSchema = z.object({
-  type: z.literal('privateChannelAddEventListenerResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Privatechanneladdeventlistenerresponse = z.infer<typeof PrivatechanneladdeventlistenerresponseSchema>
-
-// Privatechanneldisconnectrequest
-export const PrivatechanneldisconnectrequestSchema = z.object({
-  type: z.literal('privateChannelDisconnectRequest'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Privatechanneldisconnectrequest = z.infer<typeof PrivatechanneldisconnectrequestSchema>
-
-// Privatechanneldisconnectresponse
-export const PrivatechanneldisconnectresponseSchema = z.object({
-  type: z.literal('privateChannelDisconnectResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Privatechanneldisconnectresponse = z.infer<typeof PrivatechanneldisconnectresponseSchema>
-
-// Privatechannelonaddcontextlistenerevent
-export const PrivatechannelonaddcontextlistenereventSchema = z.object({
-  type: z.literal('privateChannelOnAddContextListenerEvent'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    eventUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Privatechannelonaddcontextlistenerevent = z.infer<typeof PrivatechannelonaddcontextlistenereventSchema>
-
-// Privatechannelondisconnectevent
-export const PrivatechannelondisconnecteventSchema = z.object({
-  type: z.literal('privateChannelOnDisconnectEvent'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    eventUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Privatechannelondisconnectevent = z.infer<typeof PrivatechannelondisconnecteventSchema>
-
-// Privatechannelonunsubscribeevent
-export const PrivatechannelonunsubscribeeventSchema = z.object({
-  type: z.literal('privateChannelOnUnsubscribeEvent'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    eventUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Privatechannelonunsubscribeevent = z.infer<typeof PrivatechannelonunsubscribeeventSchema>
-
-// Privatechannelunsubscribeeventlistenerrequest
-export const PrivatechannelunsubscribeeventlistenerrequestSchema = z.object({
-  type: z.literal('privateChannelUnsubscribeEventListenerRequest'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Privatechannelunsubscribeeventlistenerrequest = z.infer<typeof PrivatechannelunsubscribeeventlistenerrequestSchema>
-
-// Privatechannelunsubscribeeventlistenerresponse
-export const PrivatechannelunsubscribeeventlistenerresponseSchema = z.object({
-  type: z.literal('privateChannelUnsubscribeEventListenerResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Privatechannelunsubscribeeventlistenerresponse = z.infer<typeof PrivatechannelunsubscribeeventlistenerresponseSchema>
-
-// Raiseintentforcontextrequest
-export const RaiseintentforcontextrequestSchema = z.object({
-  type: z.literal('raiseIntentForContextRequest'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Raiseintentforcontextrequest = z.infer<typeof RaiseintentforcontextrequestSchema>
-
-// Raiseintentforcontextresponse
-export const RaiseintentforcontextresponseSchema = z.object({
-  type: z.literal('raiseIntentForContextResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Raiseintentforcontextresponse = z.infer<typeof RaiseintentforcontextresponseSchema>
-
-// Raiseintentrequest
-export const RaiseintentrequestSchema = z.object({
-  type: z.literal('raiseIntentRequest'),
-  payload: z.object({
-        intent: z.string(),
-        context: ContextSchema,
-        app: z.string().optional()
-      }),
-  meta: z.object({
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Raiseintentrequest = z.infer<typeof RaiseintentrequestSchema>
-
-// Raiseintentresponse
-export const RaiseintentresponseSchema = z.object({
-  type: z.literal('raiseIntentResponse'),
-  payload: z.union([
-        z.object({
-          intentResult: z.unknown().optional(),
-          source: z.string().optional()
-        }), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Raiseintentresponse = z.infer<typeof RaiseintentresponseSchema>
-
-// Raiseintentresultresponse
-export const RaiseintentresultresponseSchema = z.object({
-  type: z.literal('raiseIntentResultResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Raiseintentresultresponse = z.infer<typeof RaiseintentresultresponseSchema>
-
-// Wcp1hello (generic)
-export const Wcp1helloSchema = z.object({
-  type: z.literal('WCP1Hello'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Wcp1hello = z.infer<typeof Wcp1helloSchema>
-
-// Wcp2loadurl (generic)
-export const Wcp2loadurlSchema = z.object({
-  type: z.literal('WCP2LoadUrl'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Wcp2loadurl = z.infer<typeof Wcp2loadurlSchema>
-
-// Wcp3handshake (generic)
-export const Wcp3handshakeSchema = z.object({
-  type: z.literal('WCP3Handshake'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Wcp3handshake = z.infer<typeof Wcp3handshakeSchema>
-
-// Wcp4validateappidentity (generic)
-export const Wcp4validateappidentitySchema = z.object({
-  type: z.literal('WCP4ValidateAppIdentity'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Wcp4validateappidentity = z.infer<typeof Wcp4validateappidentitySchema>
-
-// Wcp5validateappidentityfailedresponse
-export const Wcp5validateappidentityfailedresponseSchema = z.object({
-  type: z.literal('WCP5ValidateAppIdentityFailedResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Wcp5validateappidentityfailedresponse = z.infer<typeof Wcp5validateappidentityfailedresponseSchema>
-
-// Wcp5validateappidentityresponse
-export const Wcp5validateappidentityresponseSchema = z.object({
-  type: z.literal('WCP5ValidateAppIdentityResponse'),
-  payload: z.union([
-        z.object({}), // Success
-        z.object({ error: z.string() }) // Error
-      ]),
-  meta: z.object({
-    responseUuid: z.string(),
-    requestUuid: z.string(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Wcp5validateappidentityresponse = z.infer<typeof Wcp5validateappidentityresponseSchema>
-
-// Wcp6goodbye (generic)
-export const Wcp6goodbyeSchema = z.object({
-  type: z.literal('WCP6Goodbye'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Wcp6goodbye = z.infer<typeof Wcp6goodbyeSchema>
-
-// Wcpconnectionstep (generic)
-export const WcpconnectionstepSchema = z.object({
-  type: z.literal('WCPConnectionStep'),
-  payload: z.unknown().optional(),
-  meta: z.object({
-    requestUuid: z.string().optional(),
-    responseUuid: z.string().optional(),
-    eventUuid: z.string().optional(),
-    timestamp: z.coerce.date()
-  })
-})
-
-export type Wcpconnectionstep = z.infer<typeof WcpconnectionstepSchema>
+export type RaiseIntentResultResponse = z.infer<typeof RaiseIntentResultResponseSchema>
 
 // Union of all DACP message schemas
 export const DACPMessageSchema = z.union([
-  AddcontextlistenerrequestSchema,
-  AddcontextlistenerresponseSchema,
-  AddeventlistenerrequestSchema,
-  AddeventlistenerresponseSchema,
-  AddintentlistenerrequestSchema,
-  AddintentlistenerresponseSchema,
-  AgenteventSchema,
-  AgentresponseSchema,
-  ApiSchema,
-  ApprequestSchema,
-  BroadcasteventSchema,
-  BroadcastrequestSchema,
-  BroadcastresponseSchema,
-  ChannelchangedeventSchema,
-  CommonSchema,
-  ContextlistenerunsubscriberequestSchema,
-  ContextlistenerunsubscriberesponseSchema,
-  CreateprivatechannelrequestSchema,
-  CreateprivatechannelresponseSchema,
-  EventlistenerunsubscriberequestSchema,
-  EventlistenerunsubscriberesponseSchema,
-  Fdc3userinterfacechannelsSchema,
-  Fdc3userinterfacechannelselectedSchema,
-  Fdc3userinterfacedragSchema,
-  Fdc3userinterfacehandshakeSchema,
-  Fdc3userinterfacehelloSchema,
-  Fdc3userinterfacemessageSchema,
-  Fdc3userinterfaceresolveSchema,
-  Fdc3userinterfaceresolveactionSchema,
-  Fdc3userinterfacerestyleSchema,
-  FindinstancesrequestSchema,
-  FindinstancesresponseSchema,
-  FindintentrequestSchema,
-  FindintentresponseSchema,
-  FindintentsbycontextrequestSchema,
-  FindintentsbycontextresponseSchema,
-  GetappmetadatarequestSchema,
-  GetappmetadataresponseSchema,
-  GetcurrentchannelrequestSchema,
-  GetcurrentchannelresponseSchema,
-  GetcurrentcontextrequestSchema,
-  GetcurrentcontextresponseSchema,
-  GetinforequestSchema,
-  GetinforesponseSchema,
-  GetorcreatechannelrequestSchema,
-  GetorcreatechannelresponseSchema,
-  GetuserchannelsrequestSchema,
-  GetuserchannelsresponseSchema,
-  HeartbeatacknowledgmentrequestSchema,
-  HeartbeateventSchema,
-  IntenteventSchema,
-  IntentlistenerunsubscriberequestSchema,
-  IntentlistenerunsubscriberesponseSchema,
-  IntentresultrequestSchema,
-  IntentresultresponseSchema,
-  JoinuserchannelrequestSchema,
-  JoinuserchannelresponseSchema,
-  LeavecurrentchannelrequestSchema,
-  LeavecurrentchannelresponseSchema,
-  OpenrequestSchema,
-  OpenresponseSchema,
-  PrivatechanneladdeventlistenerrequestSchema,
-  PrivatechanneladdeventlistenerresponseSchema,
-  PrivatechanneldisconnectrequestSchema,
-  PrivatechanneldisconnectresponseSchema,
-  PrivatechannelonaddcontextlistenereventSchema,
-  PrivatechannelondisconnecteventSchema,
-  PrivatechannelonunsubscribeeventSchema,
-  PrivatechannelunsubscribeeventlistenerrequestSchema,
-  PrivatechannelunsubscribeeventlistenerresponseSchema,
-  RaiseintentforcontextrequestSchema,
-  RaiseintentforcontextresponseSchema,
-  RaiseintentrequestSchema,
-  RaiseintentresponseSchema,
-  RaiseintentresultresponseSchema,
-  Wcp1helloSchema,
-  Wcp2loadurlSchema,
-  Wcp3handshakeSchema,
-  Wcp4validateappidentitySchema,
-  Wcp5validateappidentityfailedresponseSchema,
-  Wcp5validateappidentityresponseSchema,
-  Wcp6goodbyeSchema,
-  WcpconnectionstepSchema
+  WCP1HelloSchema,
+  WCP2LoadUrlSchema,
+  WCP3HandshakeSchema,
+  WCP4ValidateAppIdentitySchema,
+  WCP5ValidateAppIdentityFailedResponseSchema,
+  WCP5ValidateAppIdentityResponseSchema,
+  WCP6GoodbyeSchema,
+  WCPConnectionStepSchema,
+  AddContextListenerRequestSchema,
+  AddContextListenerResponseSchema,
+  AddEventListenerRequestSchema,
+  AddEventListenerResponseSchema,
+  AddIntentListenerRequestSchema,
+  AddIntentListenerResponseSchema,
+  BroadcastEventSchema,
+  BroadcastRequestSchema,
+  BroadcastResponseSchema,
+  ChannelChangedEventSchema,
+  ContextListenerUnsubscribeRequestSchema,
+  ContextListenerUnsubscribeResponseSchema,
+  CreatePrivateChannelRequestSchema,
+  CreatePrivateChannelResponseSchema,
+  EventListenerUnsubscribeRequestSchema,
+  EventListenerUnsubscribeResponseSchema,
+  Fdc3UserInterfaceChannelSelectedSchema,
+  Fdc3UserInterfaceChannelsSchema,
+  Fdc3UserInterfaceDragSchema,
+  Fdc3UserInterfaceHandshakeSchema,
+  Fdc3UserInterfaceHelloSchema,
+  Fdc3UserInterfaceMessageSchema,
+  Fdc3UserInterfaceResolveSchema,
+  Fdc3UserInterfaceResolveActionSchema,
+  Fdc3UserInterfaceRestyleSchema,
+  FindInstancesRequestSchema,
+  FindInstancesResponseSchema,
+  FindIntentRequestSchema,
+  FindIntentResponseSchema,
+  FindIntentsByContextRequestSchema,
+  FindIntentsByContextResponseSchema,
+  GetAppMetadataRequestSchema,
+  GetAppMetadataResponseSchema,
+  GetCurrentChannelRequestSchema,
+  GetCurrentChannelResponseSchema,
+  GetCurrentContextRequestSchema,
+  GetCurrentContextResponseSchema,
+  GetInfoRequestSchema,
+  GetInfoResponseSchema,
+  GetOrCreateChannelRequestSchema,
+  GetOrCreateChannelResponseSchema,
+  GetUserChannelsRequestSchema,
+  GetUserChannelsResponseSchema,
+  HeartbeatAcknowledgmentRequestSchema,
+  HeartbeatEventSchema,
+  IntentEventSchema,
+  IntentListenerUnsubscribeRequestSchema,
+  IntentListenerUnsubscribeResponseSchema,
+  IntentResultRequestSchema,
+  IntentResultResponseSchema,
+  JoinUserChannelRequestSchema,
+  JoinUserChannelResponseSchema,
+  LeaveCurrentChannelRequestSchema,
+  LeaveCurrentChannelResponseSchema,
+  OpenRequestSchema,
+  OpenResponseSchema,
+  PrivateChannelAddEventListenerRequestSchema,
+  PrivateChannelAddEventListenerResponseSchema,
+  PrivateChannelDisconnectRequestSchema,
+  PrivateChannelDisconnectResponseSchema,
+  PrivateChannelOnAddContextListenerEventSchema,
+  PrivateChannelOnDisconnectEventSchema,
+  PrivateChannelOnUnsubscribeEventSchema,
+  PrivateChannelUnsubscribeEventListenerRequestSchema,
+  PrivateChannelUnsubscribeEventListenerResponseSchema,
+  RaiseIntentForContextRequestSchema,
+  RaiseIntentForContextResponseSchema,
+  RaiseIntentRequestSchema,
+  RaiseIntentResponseSchema,
+  RaiseIntentResultResponseSchema
 ])
 
 export type DACPMessage = z.infer<typeof DACPMessageSchema>
 
+// Message type guards
+export function isDACPRequest(message: unknown): message is BaseDACPMessage {
+  const result = BaseDACPMessageSchema.safeParse(message)
+  return result.success && typeof message === "object" && message !== null &&
+         "type" in message && typeof message.type === "string" &&
+         message.type.endsWith("Request")
+}
 
+export function isDACPResponse(message: unknown): message is BaseDACPMessage {
+  const result = BaseDACPMessageSchema.safeParse(message)
+  return result.success && typeof message === "object" && message !== null &&
+         "type" in message && typeof message.type === "string" &&
+         message.type.endsWith("Response")
+}
+
+export function isDACPEvent(message: unknown): message is BaseDACPMessage {
+  const result = BaseDACPMessageSchema.safeParse(message)
+  return result.success && typeof message === "object" && message !== null &&
+         "type" in message && typeof message.type === "string" &&
+         message.type.endsWith("Event")
+}

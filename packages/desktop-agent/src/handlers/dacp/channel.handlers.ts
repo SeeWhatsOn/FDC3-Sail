@@ -6,12 +6,12 @@ import {
   DACP_ERROR_TYPES,
 } from "../validation/dacp-validator"
 import {
-  GetcurrentchannelrequestSchema,
-  GetcurrentcontextrequestSchema,
-  JoinuserchannelrequestSchema,
-  LeavecurrentchannelrequestSchema,
-  GetuserchannelsrequestSchema,
-  GetorcreatechannelrequestSchema,
+  GetCurrentChannelRequestSchema,
+  GetCurrentContextRequestSchema,
+  JoinUserChannelRequestSchema,
+  LeaveCurrentChannelRequestSchema,
+  GetUserChannelsRequestSchema,
+  GetOrCreateChannelRequestSchema,
 } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../types"
 
@@ -25,7 +25,7 @@ export function handleGetCurrentChannelRequest(
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, GetcurrentchannelrequestSchema)
+    const request = validateDACPMessage(message, GetCurrentChannelRequestSchema)
     const instance = appInstanceRegistry.getInstance(instanceId)
     const currentChannel = instance?.currentChannel ?? null
 
@@ -55,7 +55,7 @@ export function handleJoinUserChannelRequest(message: unknown, context: DACPHand
   const { transport, instanceId, appInstanceRegistry, userChannelRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, JoinuserchannelrequestSchema)
+    const request = validateDACPMessage(message, JoinUserChannelRequestSchema)
     const { channelId } = request.payload
 
     // Validate channel exists in user channel registry
@@ -96,7 +96,7 @@ export function handleLeaveCurrentChannelRequest(
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, LeavecurrentchannelrequestSchema)
+    const request = validateDACPMessage(message, LeaveCurrentChannelRequestSchema)
     appInstanceRegistry.setInstanceChannel(instanceId, null)
 
     const response = createDACPSuccessResponse(request, "leaveCurrentChannelResponse")
@@ -125,7 +125,7 @@ export function handleGetUserChannelsRequest(message: unknown, context: DACPHand
   const { transport, instanceId, userChannelRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, GetuserchannelsrequestSchema)
+    const request = validateDACPMessage(message, GetUserChannelsRequestSchema)
     const userChannels = userChannelRegistry.getAll()
 
     const response = createDACPSuccessResponse(request, "getUserChannelsResponse", {
@@ -154,7 +154,7 @@ export function handleGetCurrentContextRequest(message: unknown, context: DACPHa
   const { transport, instanceId, appInstanceRegistry, channelContextRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, GetcurrentcontextrequestSchema)
+    const request = validateDACPMessage(message, GetCurrentContextRequestSchema)
     const payload = request.payload as { channelId?: string; contextType?: string }
 
     const instance = appInstanceRegistry.getInstance(instanceId)
@@ -203,7 +203,7 @@ export function handleGetOrCreateChannelRequest(
   const { transport, instanceId, appChannelRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, GetorcreatechannelrequestSchema)
+    const request = validateDACPMessage(message, GetOrCreateChannelRequestSchema)
     const { channelId } = request.payload
 
     // Get or create the app channel

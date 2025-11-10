@@ -2,7 +2,7 @@
  * WCP (Web Connection Protocol) Handlers
  *
  * Handles FDC3 Web Connection Protocol messages for app identity validation.
- * Per FDC3 spec, after receiving WCP3Handshake, apps send WCP4ValidateAppIdentity
+ * Per FDC3 spec, after receiving WCP3Handshake, apps send Wcp4Validateappidentity
  * to validate their identity before sending DACP messages.
  */
 
@@ -11,10 +11,10 @@ import type { DACPHandlerContext } from "../types"
 import { startHeartbeat } from "./heartbeat.handlers"
 
 /**
- * WCP4ValidateAppIdentity message from FDC3 app
+ * Wcp4Validateappidentity message from FDC3 app
  */
-interface WCP4ValidateAppIdentity {
-  type: "WCP4ValidateAppIdentity"
+interface Wcp4Validateappidentity {
+  type: "Wcp4Validateappidentity"
   payload: {
     identityUrl: string
     actualUrl: string
@@ -60,21 +60,21 @@ interface WCP5ValidateAppIdentityFailedResponse {
 }
 
 /**
- * Handles WCP4ValidateAppIdentity messages from FDC3 apps.
+ * Handles Wcp4Validateappidentity messages from FDC3 apps.
  *
  * Per FDC3 spec:
  * - This is the first message sent by app after receiving WCP3Handshake
  * - Desktop Agent MUST validate the app identity before accepting DACP messages
  * - Origin of identityUrl, actualUrl, and MessageEvent.origin MUST all match
  *
- * @param message - WCP4ValidateAppIdentity message
+ * @param message - Wcp4Validateappidentity message
  * @param context - Handler context with desktop agent access
  */
-export async function handleWCP4ValidateAppIdentity(
+export async function handleWcp4Validateappidentity(
   message: unknown,
   context: DACPHandlerContext
 ): Promise<void> {
-  const wcp4Message = message as WCP4ValidateAppIdentity
+  const wcp4Message = message as Wcp4Validateappidentity
   const { transport, appInstanceRegistry, appDirectory } = context
 
   console.log("[WCP4] Received app identity validation request:", wcp4Message.payload)

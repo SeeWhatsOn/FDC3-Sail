@@ -6,8 +6,8 @@ import {
   generateEventUuid,
 } from "../validation/dacp-validator"
 import {
-  AddeventlistenerrequestSchema,
-  EventlistenerunsubscriberequestSchema,
+  AddEventListenerRequestSchema,
+  EventListenerUnsubscribeRequestSchema,
 } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../types"
 
@@ -101,7 +101,7 @@ export function handleAddEventListenerRequest(
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, AddeventlistenerrequestSchema)
+    const request = validateDACPMessage(message, AddEventListenerRequestSchema)
     const instance = appInstanceRegistry.getInstance(instanceId)
 
     if (!instance) {
@@ -150,7 +150,7 @@ export function handleEventListenerUnsubscribeRequest(
   const { transport, instanceId } = context
 
   try {
-    const request = validateDACPMessage(message, EventlistenerunsubscriberequestSchema)
+    const request = validateDACPMessage(message, EventListenerUnsubscribeRequestSchema)
     const payload = request.payload as { listenerId: string }
     const listenerId = payload.listenerId
 

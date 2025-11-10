@@ -6,10 +6,10 @@ import {
   DACP_ERROR_TYPES,
 } from "../validation/dacp-validator"
 import {
-  BroadcastrequestSchema,
-  AddcontextlistenerrequestSchema,
+  BroadcastRequestSchema,
+  AddContextListenerRequestSchema,
   ContextSchema,
-  ContextlistenerunsubscriberequestSchema,
+  ContextListenerUnsubscribeRequestSchema,
 } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../types"
 import type { Context } from "@finos/fdc3"
@@ -25,7 +25,7 @@ export async function handleBroadcastRequest(
   const { transport, instanceId, channelContextRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, BroadcastrequestSchema)
+    const request = validateDACPMessage(message, BroadcastRequestSchema)
 
     logger.info("DACP: Processing broadcast request", {
       channelId: request.payload.channelId,
@@ -78,7 +78,7 @@ export function handleAddContextListener(message: unknown, context: DACPHandlerC
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, AddcontextlistenerrequestSchema)
+    const request = validateDACPMessage(message, AddContextListenerRequestSchema)
     const contextType = request.payload.contextType ?? "*" // Default to all contexts if not specified
 
     logger.info("DACP: Adding context listener", {
@@ -132,7 +132,7 @@ export function handleContextListenerUnsubscribe(
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, ContextlistenerunsubscriberequestSchema)
+    const request = validateDACPMessage(message, ContextListenerUnsubscribeRequestSchema)
     const listenerId = (request.payload as any).listenerId
 
     logger.info("DACP: Unsubscribing context listener", {

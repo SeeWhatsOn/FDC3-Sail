@@ -12,7 +12,7 @@ import * as contextHandlers from "./context.handlers"
 import * as intentHandlers from "./intent.handlers"
 import * as channelHandlers from "./channel.handlers"
 import * as eventHandlers from "./event.handlers"
-import * as appHandlers from "./app-management/app.handlers"
+import * as appHandlers from "./app.handlers"
 import * as wcpHandlers from "./wcp.handlers"
 import * as privateChannelHandlers from "./private-channel.handlers"
 import * as heartbeatHandlers from "./heartbeat.handlers"
@@ -20,7 +20,10 @@ import * as heartbeatHandlers from "./heartbeat.handlers"
 /**
  * Routes DACP messages to appropriate handlers
  */
-export async function routeDACPMessage(message: unknown, context: DACPHandlerContext): Promise<void> {
+export async function routeDACPMessage(
+  message: unknown,
+  context: DACPHandlerContext
+): Promise<void> {
   try {
     // Log incoming message (with sensitive data filtering)
     logDACPMessage("incoming", message, "DACP Router")
@@ -113,10 +116,11 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
     // Private channel handlers
     createPrivateChannelRequest: privateChannelHandlers.handleCreatePrivateChannelRequest,
     privateChannelDisconnectRequest: privateChannelHandlers.handlePrivateChannelDisconnectRequest,
-    privateChannelAddContextListenerRequest: privateChannelHandlers.handlePrivateChannelAddContextListenerRequest,
+    privateChannelAddContextListenerRequest:
+      privateChannelHandlers.handlePrivateChannelAddContextListenerRequest,
 
     // WCP handlers
-    'WCP4ValidateAppIdentity': wcpHandlers.handleWCP4ValidateAppIdentity,
+    Wcp4Validateappidentity: wcpHandlers.handleWcp4Validateappidentity,
 
     // Heartbeat handlers
     heartbeatAcknowledgmentRequest: heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,
@@ -130,7 +134,12 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
  */
 function getTimeoutForMessageType(messageType: string): number {
   // App launch operations get longer timeout
-  const appLaunchMessages = ["openRequest", "raiseIntentRequest", "raiseIntentForContextRequest", "findInstancesRequest"]
+  const appLaunchMessages = [
+    "openRequest",
+    "raiseIntentRequest",
+    "raiseIntentForContextRequest",
+    "findInstancesRequest",
+  ]
 
   if (appLaunchMessages.includes(messageType)) {
     return DACP_TIMEOUTS.APP_LAUNCH
@@ -152,19 +161,25 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
   // Cancel any pending intents involving this instance
   const cancelledIntents = intentRegistry.cancelPendingIntentsForInstance(instanceId)
   if (cancelledIntents > 0) {
-    logger.info(`Cancelled ${cancelledIntents} pending intents for disconnected instance`, { instanceId })
+    logger.info(`Cancelled ${cancelledIntents} pending intents for disconnected instance`, {
+      instanceId,
+    })
   }
 
   // Remove event listeners
   const removedEventListeners = eventHandlers.removeInstanceEventListeners(instanceId)
   if (removedEventListeners > 0) {
-    logger.info(`Removed ${removedEventListeners} event listeners for disconnected instance`, { instanceId })
+    logger.info(`Removed ${removedEventListeners} event listeners for disconnected instance`, {
+      instanceId,
+    })
   }
 
   // Remove private channels
   const removedPrivateChannels = privateChannelHandlers.removeInstancePrivateChannels(instanceId)
   if (removedPrivateChannels > 0) {
-    logger.info(`Removed ${removedPrivateChannels} private channels for disconnected instance`, { instanceId })
+    logger.info(`Removed ${removedPrivateChannels} private channels for disconnected instance`, {
+      instanceId,
+    })
   }
 
   // Stop heartbeat
@@ -223,7 +238,7 @@ export function getDACPHandlerStats(): {
     privateChannelAddContextListenerRequest: true,
 
     // WCP handlers
-    WCP4ValidateAppIdentity: true,
+    Wcp4Validateappidentity: true,
 
     // Heartbeat handlers
     heartbeatAcknowledgmentRequest: true,
@@ -257,7 +272,7 @@ export function checkDACPHandlerHealth(): {
       "raiseIntentRequest",
       "getCurrentChannelRequest",
       "joinUserChannelRequest",
-      "WCP4ValidateAppIdentity",
+      "Wcp4Validateappidentity",
     ]
 
     const missingHandlers = requiredHandlers.filter(
@@ -281,4 +296,13 @@ export function checkDACPHandlerHealth(): {
 }
 
 // Re-export handlers for testing and direct access
-export { contextHandlers, intentHandlers, channelHandlers, eventHandlers, appHandlers, wcpHandlers, privateChannelHandlers, heartbeatHandlers }
+export {
+  contextHandlers,
+  intentHandlers,
+  channelHandlers,
+  eventHandlers,
+  appHandlers,
+  wcpHandlers,
+  privateChannelHandlers,
+  heartbeatHandlers,
+}

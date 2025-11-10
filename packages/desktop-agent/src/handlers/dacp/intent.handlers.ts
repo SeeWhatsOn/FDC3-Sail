@@ -7,13 +7,13 @@ import {
   generateEventUuid,
 } from "../validation/dacp-validator"
 import {
-  RaiseintentrequestSchema,
-  RaiseintentforcontextrequestSchema,
-  AddintentlistenerrequestSchema,
-  IntentlistenerunsubscriberequestSchema,
-  FindintentrequestSchema,
-  FindintentsbycontextrequestSchema,
-  IntentresultrequestSchema,
+  RaiseIntentRequestSchema,
+  RaiseIntentForContextRequestSchema,
+  AddIntentListenerRequestSchema,
+  IntentListenerUnsubscribeRequestSchema,
+  FindIntentRequestSchema,
+  FindIntentsByContextRequestSchema,
+  IntentResultRequestSchema,
   ContextSchema,
 } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../types"
@@ -26,7 +26,7 @@ export async function handleRaiseIntentRequest(
   const { transport, instanceId, appInstanceRegistry, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, RaiseintentrequestSchema)
+    const request = validateDACPMessage(message, RaiseIntentRequestSchema)
 
     logger.info("DACP: Processing raise intent request", {
       intent: request.payload.intent,
@@ -127,7 +127,7 @@ export function handleAddIntentListener(message: unknown, context: DACPHandlerCo
   const { transport, instanceId, appInstanceRegistry, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, AddintentlistenerrequestSchema)
+    const request = validateDACPMessage(message, AddIntentListenerRequestSchema)
     const instance = appInstanceRegistry.getInstance(instanceId)
 
     if (!instance) {
@@ -167,7 +167,7 @@ export function handleIntentListenerUnsubscribe(
   const { transport, instanceId, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, IntentlistenerunsubscriberequestSchema)
+    const request = validateDACPMessage(message, IntentListenerUnsubscribeRequestSchema)
     const listenerId = (request.payload as { listenerId: string }).listenerId
 
     const unregistered = intentRegistry.unregisterListener(listenerId)
@@ -193,7 +193,7 @@ export function handleFindIntentRequest(message: unknown, context: DACPHandlerCo
   const { transport, instanceId, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, FindintentrequestSchema)
+    const request = validateDACPMessage(message, FindIntentRequestSchema)
     const intent = (request.payload as { intent: string }).intent
     const contextType = (request.payload as { context: Context })?.context?.type
 
@@ -223,7 +223,7 @@ export function handleIntentResultRequest(
   const { transport, instanceId, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, IntentresultrequestSchema)
+    const request = validateDACPMessage(message, IntentResultRequestSchema)
 
     logger.info("DACP: Processing intent result request", {
       requestUuid: request.meta.requestUuid,
@@ -289,7 +289,7 @@ export function handleFindIntentsByContextRequest(
   const { transport, instanceId, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, FindintentsbycontextrequestSchema)
+    const request = validateDACPMessage(message, FindIntentsByContextRequestSchema)
     const contextType = (request.payload as { context: Context }).context?.type
 
     if (!contextType) {
@@ -334,7 +334,7 @@ export async function handleRaiseIntentForContextRequest(
   const { transport, instanceId, appInstanceRegistry, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, RaiseintentforcontextrequestSchema)
+    const request = validateDACPMessage(message, RaiseIntentForContextRequestSchema)
 
     logger.info("DACP: Processing raise intent for context request", {
       requestUuid: request.meta.requestUuid,

@@ -3,14 +3,14 @@ import {
   createDACPSuccessResponse,
   createDACPErrorResponse,
   DACP_ERROR_TYPES,
-} from "../../validation/dacp-validator"
+} from "../validation/dacp-validator"
 import {
-  FindinstancesrequestSchema,
-  GetappmetadatarequestSchema,
-  GetinforequestSchema,
-  OpenrequestSchema,
-} from "../../validation/dacp-schemas"
-import { type DACPHandlerContext, logger } from "../../types"
+  FindInstancesRequestSchema,
+  GetAppMetadataRequestSchema,
+  GetInfoRequestSchema,
+  OpenRequestSchema,
+} from "../validation/dacp-schemas"
+import { type DACPHandlerContext, logger } from "../types"
 import type { Context } from "@finos/fdc3"
 
 /**
@@ -33,7 +33,7 @@ export function handleGetInfoRequest(message: unknown, context: DACPHandlerConte
   const { transport, instanceId } = context
 
   try {
-    const request = validateDACPMessage(message, GetinforequestSchema)
+    const request = validateDACPMessage(message, GetInfoRequestSchema)
 
     const response = createDACPSuccessResponse(request, "getInfoResponse", IMPLEMENTATION_METADATA)
 
@@ -53,12 +53,18 @@ export function handleGetInfoRequest(message: unknown, context: DACPHandlerConte
 /**
  * Handles openRequest to launch an app
  */
-export async function handleOpenRequest(message: unknown, context: DACPHandlerContext): Promise<void> {
+export async function handleOpenRequest(
+  message: unknown,
+  context: DACPHandlerContext
+): Promise<void> {
   const { transport, instanceId, appDirectory, appLauncher } = context
 
   try {
-    const request = validateDACPMessage(message, OpenrequestSchema)
-    const payload = request.payload as { app: { appId: string; instanceId?: string }; context?: Context }
+    const request = validateDACPMessage(message, OpenRequestSchema)
+    const payload = request.payload as {
+      app: { appId: string; instanceId?: string }
+      context?: Context
+    }
 
     // Check if app launcher is available
     if (!appLauncher) {
@@ -125,7 +131,7 @@ export function handleFindInstancesRequest(message: unknown, context: DACPHandle
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, FindinstancesrequestSchema)
+    const request = validateDACPMessage(message, FindInstancesRequestSchema)
     const appId = request.payload.app
 
     logger.info("DACP: Finding instances for app", { appId })
@@ -164,7 +170,7 @@ export function handleGetAppMetadataRequest(message: unknown, context: DACPHandl
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, GetappmetadatarequestSchema)
+    const request = validateDACPMessage(message, GetAppMetadataRequestSchema)
 
     // TODO: Integrate with AppDirectoryManager to get full app metadata
     // For now, check if we have a running instance and return basic metadata

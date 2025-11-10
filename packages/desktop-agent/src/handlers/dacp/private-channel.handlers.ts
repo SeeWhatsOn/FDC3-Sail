@@ -7,8 +7,8 @@ import {
   generateEventUuid,
 } from "../validation/dacp-validator"
 import {
-  CreateprivatechannelrequestSchema,
-  PrivatechanneldisconnectrequestSchema,
+  CreateprivatechannelRequestSchema,
+  PrivatechanneldisconnectRequestSchema,
 } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../types"
 import { PrivateChannelRegistry } from "../../state/PrivateChannelRegistry"
@@ -27,7 +27,7 @@ export function handleCreatePrivateChannelRequest(
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, CreateprivatechannelrequestSchema)
+    const request = validateDACPMessage(message, CreateprivatechannelRequestSchema)
     const instance = appInstanceRegistry.getInstance(instanceId)
 
     if (!instance) {
@@ -75,7 +75,7 @@ export function handlePrivateChannelDisconnectRequest(
   const { transport, instanceId } = context
 
   try {
-    const request = validateDACPMessage(message, PrivatechanneldisconnectrequestSchema)
+    const request = validateDACPMessage(message, PrivatechanneldisconnectRequestSchema)
     const payload = request.payload as { channelId: string }
     const channelId = payload.channelId
 
