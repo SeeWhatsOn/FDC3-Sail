@@ -5,7 +5,7 @@
  * and FDC3 capabilities. Provides centralized state management for the desktop agent.
  */
 import type { AppMetadata } from "@finos/fdc3"
-import type { Transport } from "../interfaces/Transport"
+import type { Transport } from "../interfaces/transport"
 
 // ============================================================================
 // TYPES AND INTERFACES

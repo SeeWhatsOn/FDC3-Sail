@@ -1,11 +1,11 @@
-import type { Transport } from "../interfaces/Transport"
-import type { AppLauncher } from "../interfaces/AppLauncher"
-import type { AppInstanceRegistry } from "../state/AppInstanceRegistry"
-import type { IntentRegistry } from "../state/IntentRegistry"
-import type { ChannelContextRegistry } from "../state/ChannelContextRegistry"
-import type { AppChannelRegistry } from "../state/AppChannelRegistry"
-import type { UserChannelRegistry } from "../state/UserChannelRegistry"
-import type { AppDirectoryManager } from "../app-directory/appDirectoryManager"
+import type { Transport } from "../interfaces/transport"
+import type { AppLauncher } from "../interfaces/app-launcher"
+import type { AppInstanceRegistry } from "../state/app-instance-registry"
+import type { IntentRegistry } from "../state/intent-registry"
+import type { ChannelContextRegistry } from "../state/channel-context-registry"
+import type { AppChannelRegistry } from "../state/app-channel-registry"
+import type { UserChannelRegistry } from "../state/user-channel-registry"
+import type { AppDirectoryManager } from "../app-directory/app-directory-manager"
 
 // ============================================================================
 // DACP HANDLER CONTEXT

@@ -6,5 +6,5 @@
  * implementations, allowing it to remain pure and portable.
  */
 
-export type { Transport } from "./Transport"
-export type { AppLauncher, AppLaunchRequest, AppLaunchResult } from "./AppLauncher"
+export type { Transport } from "./transport"
+export type { AppLauncher, AppLaunchRequest, AppLaunchResult } from "./app-launcher"

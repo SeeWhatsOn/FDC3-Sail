@@ -7,20 +7,20 @@
  */
 
 // Core Desktop Agent class
-export { DesktopAgent } from "./DesktopAgent"
-export type { DesktopAgentConfig } from "./DesktopAgent"
+export { DesktopAgent } from "./desktop-agent"
+export type { DesktopAgentConfig } from "./desktop-agent"
 
 // Interfaces (contracts for implementations)
-export type { Transport, MessageHandler, DisconnectHandler } from "./interfaces/Transport"
-export type { AppLauncher, AppLaunchRequest, AppLaunchResult } from "./interfaces/AppLauncher"
+export type { Transport, MessageHandler, DisconnectHandler } from "./interfaces/transport"
+export type { AppLauncher, AppLaunchRequest, AppLaunchResult } from "./interfaces/app-launcher"
 
 // State registries
-export { AppInstanceRegistry } from "./state/AppInstanceRegistry"
-export { IntentRegistry } from "./state/IntentRegistry"
-export { ChannelContextRegistry } from "./state/ChannelContextRegistry"
-export { AppChannelRegistry } from "./state/AppChannelRegistry"
-export { UserChannelRegistry } from "./state/UserChannelRegistry"
-export { AppDirectoryManager } from "./app-directory/appDirectoryManager"
+export { AppInstanceRegistry } from "./state/app-instance-registry"
+export { IntentRegistry } from "./state/intent-registry"
+export { ChannelContextRegistry } from "./state/channel-context-registry"
+export { AppChannelRegistry } from "./state/app-channel-registry"
+export { UserChannelRegistry } from "./state/user-channel-registry"
+export { AppDirectoryManager } from "./app-directory/app-directory-manager"
 
 // Handler types (for advanced usage)
 export type { DACPHandlerContext, DACPHandler } from "./handlers/types"

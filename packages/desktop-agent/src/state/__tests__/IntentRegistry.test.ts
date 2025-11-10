@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest"
 import type { AppIdentifier, AppMetadata, Context } from "@finos/fdc3"
-import { IntentRegistry, type IntentResolutionRequest, type IntentQuery } from "../IntentRegistry"
+import { IntentRegistry, type IntentResolutionRequest, type IntentQuery } from "../intent-registry"
 
 describe("IntentRegistry", () => {
   let registry: IntentRegistry

@@ -13,7 +13,7 @@ import {
   AppInstanceState,
   type CreateAppInstanceParams,
   type AppInstanceQuery,
-} from "../AppInstanceRegistry"
+} from "../app-instance-registry"
 
 describe("AppInstanceRegistry", () => {
   let registry: AppInstanceRegistry

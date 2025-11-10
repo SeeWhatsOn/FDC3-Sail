@@ -11,7 +11,7 @@ import {
   PrivateChannelDisconnectRequestSchema,
 } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../types"
-import { PrivateChannelRegistry } from "../../state/PrivateChannelRegistry"
+import { PrivateChannelRegistry } from "../../state/private-channel-registry"
 
 // Singleton registry instance
 const privateChannelRegistry = new PrivateChannelRegistry()

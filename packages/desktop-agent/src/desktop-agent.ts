@@ -7,14 +7,14 @@
  * (browser, Node.js, Electron, etc.)
  */
 
-import type { Transport } from "./interfaces/Transport"
-import type { AppLauncher } from "./interfaces/AppLauncher"
-import { AppInstanceRegistry } from "./state/AppInstanceRegistry"
-import { IntentRegistry } from "./state/IntentRegistry"
-import { ChannelContextRegistry } from "./state/ChannelContextRegistry"
-import { AppChannelRegistry } from "./state/AppChannelRegistry"
-import { UserChannelRegistry } from "./state/UserChannelRegistry"
-import { AppDirectoryManager } from "./app-directory/appDirectoryManager"
+import type { Transport } from "./interfaces/transport"
+import type { AppLauncher } from "./interfaces/app-launcher"
+import { AppInstanceRegistry } from "./state/app-instance-registry"
+import { IntentRegistry } from "./state/intent-registry"
+import { ChannelContextRegistry } from "./state/channel-context-registry"
+import { AppChannelRegistry } from "./state/app-channel-registry"
+import { UserChannelRegistry } from "./state/user-channel-registry"
+import { AppDirectoryManager } from "./app-directory/app-directory-manager"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
 import type { DACPHandlerContext } from "./handlers/types"
 
