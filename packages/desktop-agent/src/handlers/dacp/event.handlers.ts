@@ -151,18 +151,17 @@ export function handleEventListenerUnsubscribeRequest(
 
   try {
     const request = validateDACPMessage(message, EventListenerUnsubscribeRequestSchema)
-    const payload = request.payload as { listenerId: string }
-    const listenerId = payload.listenerId
+    const listenerUUID = request.payload.listenerUUID
 
-    const unregistered = eventListenerRegistry.unregister(listenerId)
+    const unregistered = eventListenerRegistry.unregister(listenerUUID)
     if (!unregistered) {
-      throw new Error(`Event listener ${listenerId} not found`)
+      throw new Error(`Event listener ${listenerUUID} not found`)
     }
 
     const response = createDACPSuccessResponse(request, "eventListenerUnsubscribeResponse")
     transport.send(instanceId, response)
 
-    logger.info("DACP: Event listener unsubscribed", { instanceId, listenerId })
+    logger.info("DACP: Event listener unsubscribed", { instanceId, listenerUUID })
   } catch (error) {
     logger.error("DACP: Event listener unsubscribe failed", error)
     const errorResponse = createDACPErrorResponse(

@@ -6,8 +6,8 @@ import {
   BroadcastRequestSchema,
   AddContextListenerRequestSchema,
   RaiseIntentRequestSchema,
-  GetcurrentchannelrequestSchema,
-  JoinuserchannelrequestSchema,
+  GetCurrentChannelRequestSchema,
+  JoinUserChannelRequestSchema,
 } from "./dacp-schemas"
 
 // Custom error types
@@ -190,11 +190,11 @@ export function isRaiseIntentRequest(message: unknown): boolean {
 }
 
 export function isGetCurrentChannelRequest(message: unknown): boolean {
-  return safeParseDACPMessage(message, GetcurrentchannelrequestSchema).success
+  return safeParseDACPMessage(message, GetCurrentChannelRequestSchema).success
 }
 
 export function isJoinUserChannelRequest(message: unknown): boolean {
-  return safeParseDACPMessage(message, JoinuserchannelrequestSchema).success
+  return safeParseDACPMessage(message, JoinUserChannelRequestSchema).success
 }
 
 // Generic type guards from base schema

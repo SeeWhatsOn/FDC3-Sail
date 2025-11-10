@@ -168,11 +168,11 @@ export function handleIntentListenerUnsubscribe(
 
   try {
     const request = validateDACPMessage(message, IntentListenerUnsubscribeRequestSchema)
-    const listenerId = (request.payload as { listenerId: string }).listenerId
+    const listenerUUID = request.payload.listenerUUID
 
-    const unregistered = intentRegistry.unregisterListener(listenerId)
+    const unregistered = intentRegistry.unregisterListener(listenerUUID)
     if (!unregistered) {
-      throw new Error(`Intent listener ${listenerId} not found`)
+      throw new Error(`Intent listener ${listenerUUID} not found`)
     }
 
     const response = createDACPSuccessResponse(request, "intentListenerUnsubscribeResponse")
@@ -227,11 +227,11 @@ export function handleIntentResultRequest(
 
     logger.info("DACP: Processing intent result request", {
       requestUuid: request.meta.requestUuid,
-      responseToRequestUuid: request.meta.responseToRequestUuid,
+      raiseIntentRequestUuid: request.payload.raiseIntentRequestUuid,
     })
 
-    // Get the original request ID from meta.responseToRequestUuid
-    const originalRequestId = request.meta.responseToRequestUuid
+    // Get the original request ID from payload.raiseIntentRequestUuid
+    const originalRequestId = request.payload.raiseIntentRequestUuid
 
     // Check if there's a pending intent for this request
     const pendingIntent = intentRegistry.getPendingIntent(originalRequestId)
@@ -247,16 +247,9 @@ export function handleIntentResultRequest(
       )
     }
 
-    // Check for error in the result
-    if (request.payload.error) {
-      const error = new Error(request.payload.error)
-      intentRegistry.rejectPendingIntent(originalRequestId, error)
-
-      // Send acknowledgment response
-      const response = createDACPSuccessResponse(request, "intentResultResponse")
-      transport.send(instanceId, response)
-      return
-    }
+    // Note: Errors are communicated via error responses, not via request.payload.error
+    // If the intent handler failed, it would send an error response directly,
+    // not an intentResultRequest with an error field
 
     // Resolve the pending intent with the result
     const intentResult = request.payload.intentResult
