@@ -16,9 +16,9 @@ import {
 } from '../dacp-validator'
 import {
   BaseDACPMessageSchema,
-  BroadcastrequestSchema,
-  AddcontextlistenerrequestSchema,
-  RaiseintentrequestSchema,
+  BroadcastRequestSchema,
+  AddContextListenerRequestSchema,
+  RaiseIntentRequestSchema,
   ContextSchema
 } from '../dacp-schemas'
 
@@ -85,7 +85,7 @@ describe('DACP Schema Validation', () => {
         }
       }
 
-      const result = validateDACPMessage(validRequest, BroadcastrequestSchema)
+      const result = validateDACPMessage(validRequest, BroadcastRequestSchema)
       expect(result.type).toBe('broadcastRequest')
       expect(result.payload.channelId).toBe('red')
       expect(result.payload.context.type).toBe('fdc3.instrument')
@@ -105,7 +105,7 @@ describe('DACP Schema Validation', () => {
       }
 
       expect(() =>
-        validateDACPMessage(invalidRequest, BroadcastrequestSchema)
+        validateDACPMessage(invalidRequest, BroadcastRequestSchema)
       ).toThrow(DACPValidationError)
     })
 
@@ -123,7 +123,7 @@ describe('DACP Schema Validation', () => {
       }
 
       expect(() =>
-        validateDACPMessage(invalidRequest, BroadcastrequestSchema)
+        validateDACPMessage(invalidRequest, BroadcastRequestSchema)
       ).toThrow(DACPValidationError)
     })
   })
@@ -181,7 +181,7 @@ describe('DACP Schema Validation', () => {
       }
 
       expect(() =>
-        validateDACPMessage(validRequest, AddcontextlistenerrequestSchema)
+        validateDACPMessage(validRequest, AddContextListenerRequestSchema)
       ).not.toThrow()
     })
 
@@ -196,7 +196,7 @@ describe('DACP Schema Validation', () => {
       }
 
       expect(() =>
-        validateDACPMessage(validRequest, AddcontextlistenerrequestSchema)
+        validateDACPMessage(validRequest, AddContextListenerRequestSchema)
       ).not.toThrow()
     })
   })
@@ -217,7 +217,7 @@ describe('DACP Schema Validation', () => {
       }
 
       expect(() =>
-        validateDACPMessage(validRequest, RaiseintentrequestSchema)
+        validateDACPMessage(validRequest, RaiseIntentRequestSchema)
       ).not.toThrow()
     })
 
@@ -235,7 +235,7 @@ describe('DACP Schema Validation', () => {
       }
 
       expect(() =>
-        validateDACPMessage(invalidRequest, RaiseintentrequestSchema)
+        validateDACPMessage(invalidRequest, RaiseIntentRequestSchema)
       ).toThrow(DACPValidationError)
     })
   })
@@ -255,7 +255,7 @@ describe('Safe Parsing', () => {
       }
     }
 
-    const result = safeParseDACPMessage(validMessage, BroadcastrequestSchema)
+    const result = safeParseDACPMessage(validMessage, BroadcastRequestSchema)
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.type).toBe('broadcastRequest')
@@ -271,7 +271,7 @@ describe('Safe Parsing', () => {
       }
     }
 
-    const result = safeParseDACPMessage(invalidMessage, BroadcastrequestSchema)
+    const result = safeParseDACPMessage(invalidMessage, BroadcastRequestSchema)
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.error).toBeInstanceOf(DACPValidationError)

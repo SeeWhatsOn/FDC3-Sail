@@ -251,6 +251,10 @@ function generateZodForProperty(schema: PropertySchema, depth = 0): string {
 
   // Handle enum
   if (schema.enum) {
+    // If only one value, use z.literal instead of z.enum (Zod requires 2+ for enum)
+    if (schema.enum.length === 1) {
+      return `z.literal("${schema.enum[0]}")`
+    }
     const values = schema.enum.map(v => `"${v}"`).join(", ")
     return `z.enum([${values}])`
   }

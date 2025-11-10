@@ -45,7 +45,7 @@ export async function handleRaiseIntentRequest(
       intent: request.payload.intent,
       context: validatedContext,
       source: { appId: source.appId, instanceId: source.instanceId },
-      target: request.payload.app ? { appId: request.payload.app } : undefined,
+      target: request.payload.app, // app is already an AppIdentifier object
       requestId: request.meta.requestUuid,
     })
 
@@ -340,8 +340,8 @@ export async function handleRaiseIntentForContextRequest(
       requestUuid: request.meta.requestUuid,
     })
 
-    const payload = request.payload as { context: Context; app?: string }
-    const validatedContext = validateDACPMessage(payload.context, ContextSchema)
+    // app is an AppIdentifier object (with appId, instanceId, desktopAgent)
+    const validatedContext = validateDACPMessage(request.payload.context, ContextSchema)
     const source = appInstanceRegistry.getInstance(instanceId)
 
     if (!source) {
@@ -369,7 +369,7 @@ export async function handleRaiseIntentForContextRequest(
       intent: selectedIntent,
       context: validatedContext,
       source: { appId: source.appId, instanceId: source.instanceId },
-      target: payload.app ? { appId: payload.app } : undefined,
+      target: request.payload.app, // app is already an AppIdentifier object
       requestId: request.meta.requestUuid,
     })
 

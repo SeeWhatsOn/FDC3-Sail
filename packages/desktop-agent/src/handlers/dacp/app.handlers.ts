@@ -132,12 +132,12 @@ export function handleFindInstancesRequest(message: unknown, context: DACPHandle
 
   try {
     const request = validateDACPMessage(message, FindInstancesRequestSchema)
-    const appId = request.payload.app
+    const appIdentifier = request.payload.app
 
-    logger.info("DACP: Finding instances for app", { appId })
+    logger.info("DACP: Finding instances for app", { appId: appIdentifier.appId })
 
     // Query for all instances of this app
-    const instances = appInstanceRegistry.queryInstances({ appId })
+    const instances = appInstanceRegistry.queryInstances({ appId: appIdentifier.appId })
 
     // Convert to FDC3 AppIdentifier format
     const appIdentifiers = instances.map(instance => ({

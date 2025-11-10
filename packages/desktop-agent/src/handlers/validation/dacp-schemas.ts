@@ -1,5 +1,5 @@
 // Auto-generated DACP schemas from @finos/fdc3-schema
-// Generated on: 2025-11-10T13:45:30.748Z
+// Generated on: 2025-11-10T15:19:32.469Z
 // DO NOT EDIT MANUALLY - Run 'npm run generate:schemas' to regenerate
 
 import { z } from "zod"
@@ -142,7 +142,7 @@ export type AddContextListenerResponse = z.infer<typeof AddContextListenerRespon
 // AddEventListenerRequest - AddEventListener Request
 export const AddEventListenerRequestSchema = z.object({
   type: z.literal("addEventListenerRequest"),
-  payload: z.object({ type: z.union([z.enum(["USER_CHANNEL_CHANGED"]), z.null()]) }),
+  payload: z.object({ type: z.union([z.literal("USER_CHANNEL_CHANGED"), z.null()]) }),
   meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 

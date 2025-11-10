@@ -3,9 +3,9 @@ import { v4 as uuidv4 } from "uuid"
 import {
   BaseDACPMessageSchema,
   type BaseDACPMessage,
-  BroadcastrequestSchema,
-  AddcontextlistenerrequestSchema,
-  RaiseintentrequestSchema,
+  BroadcastRequestSchema,
+  AddContextListenerRequestSchema,
+  RaiseIntentRequestSchema,
   GetcurrentchannelrequestSchema,
   JoinuserchannelrequestSchema,
 } from "./dacp-schemas"
@@ -178,15 +178,15 @@ export function createIntentEvent(
 
 // Message type guards using the generated schemas
 export function isBroadcastRequest(message: unknown): boolean {
-  return safeParseDACPMessage(message, BroadcastrequestSchema).success
+  return safeParseDACPMessage(message, BroadcastRequestSchema).success
 }
 
 export function isAddContextListenerRequest(message: unknown): boolean {
-  return safeParseDACPMessage(message, AddcontextlistenerrequestSchema).success
+  return safeParseDACPMessage(message, AddContextListenerRequestSchema).success
 }
 
 export function isRaiseIntentRequest(message: unknown): boolean {
-  return safeParseDACPMessage(message, RaiseintentrequestSchema).success
+  return safeParseDACPMessage(message, RaiseIntentRequestSchema).success
 }
 
 export function isGetCurrentChannelRequest(message: unknown): boolean {
