@@ -16,7 +16,7 @@ import { LogoSail } from "sail-ui"
 import React from "react"
 
 import { ModeToggle } from "../theme/ModeToggle"
-import { useUIStore } from "../../stores/uiStore"
+import { useUIStore } from "../../stores/ui-store"
 
 interface SidebarItem {
   title: string

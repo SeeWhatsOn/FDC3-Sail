@@ -2,7 +2,7 @@ import { Sheet, SheetContent } from "sail-ui"
 
 import { AppDirectory } from "../app-directory/AppDirectory"
 import { WorkspaceDirectory } from "../workspace-directory/WorkspaceDirectory"
-import { useUIStore, type QuickAccessPanelContent } from "../../stores/uiStore"
+import { useUIStore, type QuickAccessPanelContent } from "../../stores/ui-store"
 
 const QuickAccessContent = ({ content }: { content: QuickAccessPanelContent }) => {
   switch (content) {

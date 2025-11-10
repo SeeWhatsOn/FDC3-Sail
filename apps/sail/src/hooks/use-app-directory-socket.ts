@@ -1,8 +1,8 @@
 import { useEffect } from "react"
 
 import type { DirectoryApp } from "../types/common"
-import { useDesktopAgent } from "./useDesktopAgent"
-import { useAppDirectoryStore } from "../stores/appDirectoryStore"
+import { useDesktopAgent } from "./use-desktop-agent"
+import { useAppDirectoryStore } from "../stores/app-directory-store"
 
 interface AppDirectoryEvent {
   type: "APP_ADDED" | "APP_REMOVED" | "APP_UPDATED" | "DIRECTORY_REFRESH"

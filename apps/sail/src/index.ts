@@ -18,12 +18,12 @@ export { Workspace } from "./components/workspace/Workspace"
 export { QuickAccessPanel } from "./components/quick-access-panel"
 
 // Stores
-export * from "./stores/appDirectoryStore"
+export * from "./stores/app-directory-store"
 
 // Hooks
-export * from "./hooks/useAppDirectorySocket"
-export * from "./hooks/useDesktopAgent"
-export * from "./hooks/useFDC3Connection"
+export * from "./hooks/use-app-directory-socket"
+export * from "./hooks/use-desktop-agent"
+export * from "./hooks/use-fdc3-connection"
 
 // Types
 export type { AppPanel } from "./components/layout-grid/Layout"

@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, vi } from "vitest"
-import { createFDC3Store } from "../../stores/fdc3Store"
+import { createFDC3Store } from "../../stores/fdc3-store"
 
 let store: ReturnType<typeof createFDC3Store>
 

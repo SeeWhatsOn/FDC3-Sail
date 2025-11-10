@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "sail-ui"
 import { LayoutGrid, ExternalLink, Play } from "lucide-react"
 
-import type { Panel } from "../../stores/workspaceStore"
+import type { Panel } from "../../stores/workspace-store"
 
 interface WorkspaceLayout {
   id: string

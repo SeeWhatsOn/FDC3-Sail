@@ -14,7 +14,7 @@ import {
   IntentRegistry,
   AppDirectoryManager,
 } from "@finos/fdc3-sail-desktop-agent"
-import { SocketIOTransport } from "./adapters/SocketIOTransport"
+import { SocketIOTransport } from "./adapters/socket-io-transport"
 import { SailAppLauncher, type SailAppLauncherConfig } from "./adapters/SailAppLauncher"
 
 /**

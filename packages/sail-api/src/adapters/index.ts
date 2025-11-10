@@ -6,5 +6,5 @@
  * Socket.IO transport and browser-based app launching.
  */
 
-export { SocketIOTransport } from "./SocketIOTransport"
+export { SocketIOTransport } from "./socket-io-transport"
 export { SailAppLauncher, type SailAppLauncherConfig } from "./SailAppLauncher"

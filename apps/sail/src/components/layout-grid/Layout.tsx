@@ -2,8 +2,8 @@ import { DockviewReact, type DockviewReadyEvent, DockviewApi } from "dockview-re
 import { useState, useEffect, useRef, useMemo } from "react"
 
 import "./styles.css"
-import { useDesktopAgent } from "../../hooks/useDesktopAgent"
-import { useWorkspaceStore } from "../../stores/workspaceStore"
+import { useDesktopAgent } from "../../hooks/use-desktop-agent"
+import { useWorkspaceStore } from "../../stores/workspace-store"
 
 import type { FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
 import { LeftControls, PrefixToolbarControls, RightControls } from "./toolbar/controls/index"
@@ -13,7 +13,7 @@ import { WatermarkPanel } from "./panel-templates/WatermarkPanel"
 
 // Re-export types for backward compatibility
 export type { DockviewSailProps } from "./types"
-export type { Panel as WorkspacePanel } from "../../stores/workspaceStore"
+export type { Panel as WorkspacePanel } from "../../stores/workspace-store"
 
 const Layout = (props: DockviewSailProps) => {
   const api = useRef<DockviewApi | undefined>(undefined)

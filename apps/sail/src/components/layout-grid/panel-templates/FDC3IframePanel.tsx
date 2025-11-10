@@ -1,7 +1,7 @@
 import type { IDockviewPanelProps } from "dockview"
 import { useCallback, useEffect, useRef } from "react"
 
-import { useFDC3Connection } from "../../../hooks/useFDC3Connection"
+import { useFDC3Connection } from "../../../hooks/use-fdc3-connection"
 
 /**
  * In this component we create the iframe to insert the FDC3 App.

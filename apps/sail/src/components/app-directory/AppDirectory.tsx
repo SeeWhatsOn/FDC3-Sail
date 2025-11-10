@@ -6,9 +6,9 @@ import type { IDockviewPanelProps } from "dockview-react"
 import type { AppMetadata } from "@finos/fdc3-standard"
 import {} from "@finos/fdc3"
 
-import { useAppDirectoryStore } from "../../stores/appDirectoryStore"
-import { useAppDirectorySocket } from "../../hooks/useAppDirectorySocket"
-import { useWorkspaceStore } from "../../stores/workspaceStore"
+import { useAppDirectoryStore } from "../../stores/app-directory-store"
+import { useAppDirectorySocket } from "../../hooks/use-app-directory-socket"
+import { useWorkspaceStore } from "../../stores/workspace-store"
 
 import { ChooseAppIcon } from "./ChooseAppIcon"
 

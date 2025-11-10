@@ -9,7 +9,7 @@ import {
 } from "../types/common"
 import { BrowserTypes } from "@finos/fdc3"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import { useDesktopAgent, type SessionInfo } from "./useDesktopAgent"
+import { useDesktopAgent, type SessionInfo } from "./use-desktop-agent"
 
 /**
  * Links socket and MessageChannel for bidirectional FDC3 communication
