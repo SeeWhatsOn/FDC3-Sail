@@ -6,21 +6,17 @@
  * native processes, etc.)
  */
 
-import type { Context } from "@finos/fdc3"
+import type { Context, AppMetadata, AppIdentifier } from "@finos/fdc3"
 
 /**
  * Request to launch an application
+ * Extends FDC3 OpenRequestPayload with targetChannelId
  */
 export interface AppLaunchRequest {
   /**
-   * FDC3 App ID from the app directory
+   * App identifier (FDC3 standard structure)
    */
-  appId: string
-
-  /**
-   * Optional specific instance to target (for bringing existing instance to front)
-   */
-  instanceId?: string
+  app: AppIdentifier
 
   /**
    * Optional context to pass to the app on launch
@@ -35,17 +31,13 @@ export interface AppLaunchRequest {
 
 /**
  * Result of a successful app launch
+ * Extends FDC3 OpenResponsePayload with required appIdentifier and launchMetadata
  */
 export interface AppLaunchResult {
   /**
-   * FDC3 App ID of the launched app
+   * App identifier (required, from FDC3 OpenResponsePayload)
    */
-  appId: string
-
-  /**
-   * Unique instance ID for this launch
-   */
-  instanceId: string
+  appIdentifier: AppIdentifier
 
   /**
    * Optional metadata about how/where the app was launched
@@ -69,22 +61,6 @@ export interface AppLaunchResult {
 }
 
 /**
- * Minimal app metadata from directory needed for launching
- */
-export interface AppMetadata {
-  appId: string
-  name?: string
-  title?: string
-  type?: string
-  details?: {
-    url?: string
-    path?: string
-    [key: string]: unknown
-  }
-  [key: string]: unknown
-}
-
-/**
  * AppLauncher interface for launching FDC3 applications.
  * Implementations handle environment-specific app launching logic.
  */
@@ -104,7 +80,7 @@ export interface AppLauncher {
    * - Delivering launch context (if specified)
    * - Sending the FDC3 response
    *
-   * @param request - Launch request with app ID, context, target channel
+   * @param request - Launch request with app identifier, context, target channel
    * @param appMetadata - App metadata from directory (for launch details)
    * @returns Promise resolving to launch result
    * @throws Error if launch fails (Desktop Agent will convert to FDC3 error response)

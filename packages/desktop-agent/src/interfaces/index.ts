@@ -7,4 +7,4 @@
  */
 
 export type { Transport } from "./Transport"
-export type { AppLauncher, AppLaunchRequest, AppLaunchResult, AppMetadata } from "./AppLauncher"
+export type { AppLauncher, AppLaunchRequest, AppLaunchResult } from "./AppLauncher"

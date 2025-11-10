@@ -148,7 +148,7 @@ export interface PendingIntent {
   raisedAt: Date
 
   /** Promise resolve function for returning the result */
-  resolve: (result: any) => void
+  resolve: (result: unknown) => void
 
   /** Promise reject function for errors */
   reject: (error: Error) => void
@@ -456,7 +456,7 @@ export class IntentRegistry {
    * Resolves an intent request, finding and launching apps if necessary.
    * This is a placeholder for the logic being moved from sailAppInstanceManager.
    */
-  async resolveIntent(request: IntentResolutionRequest): Promise<any> {
+  async resolveIntent(request: IntentResolutionRequest): Promise<unknown> {
     // TODO: Implement the logic from sailAppInstanceManager.narrowIntents here.
     // This will involve:
     // 1. Finding compatible handlers (findIntentHandlers).
@@ -464,7 +464,7 @@ export class IntentRegistry {
     // 3. If multiple handlers, calling a UI resolver function passed in during initialization.
     // 4. If no handlers, deciding whether to launch a new app.
     console.log("IntentRegistry.resolveIntent called with:", request)
-    return Promise.resolve({} as any)
+    return Promise.resolve({} as unknown)
   }
 
   /**
@@ -590,8 +590,16 @@ export class IntentRegistry {
     targetInstanceId: string
     targetAppId: string
     timeoutMs?: number
-  }): Promise<any> {
-    const { requestId, intentName, context, sourceInstanceId, targetInstanceId, targetAppId, timeoutMs = 30000 } = params
+  }): Promise<unknown> {
+    const {
+      requestId,
+      intentName,
+      context,
+      sourceInstanceId,
+      targetInstanceId,
+      targetAppId,
+      timeoutMs = 30000,
+    } = params
 
     if (this.pendingIntents.has(requestId)) {
       throw new Error(`Pending intent ${requestId} already exists`)
@@ -625,7 +633,7 @@ export class IntentRegistry {
   /**
    * Resolves a pending intent with a result
    */
-  resolvePendingIntent(requestId: string, result: any): boolean {
+  resolvePendingIntent(requestId: string, result: unknown): boolean {
     const pendingIntent = this.pendingIntents.get(requestId)
     if (!pendingIntent) {
       return false

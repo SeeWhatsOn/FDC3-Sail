@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from "uuid"
-import type { Context } from "@finos/fdc3"
+import type { BrowserTypes, Context } from "@finos/fdc3"
 
 /**
  * Private Channel metadata (internal registry representation)
  * This tracks the server-side state of a private channel
  */
-export interface PrivateChannelMetadata {
+export interface PrivateChannelMetadata extends BrowserTypes.Channel {
   /** Unique channel ID */
   id: string
 
@@ -132,7 +132,10 @@ export class PrivateChannelRegistry {
     }
 
     // If no more connections and creator disconnected, remove channel
-    if (channel.connectedInstances.size === 0 || !channel.connectedInstances.has(channel.creatorInstanceId)) {
+    if (
+      channel.connectedInstances.size === 0 ||
+      !channel.connectedInstances.has(channel.creatorInstanceId)
+    ) {
       this.channels.delete(channelId)
     }
 

@@ -521,7 +521,6 @@ export class AppInstanceRegistry {
       }
     }
   }
-
 }
 
 // Note: No singleton export - instances should be created via dependency injection

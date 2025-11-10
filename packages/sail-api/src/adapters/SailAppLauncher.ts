@@ -45,12 +45,12 @@ export class SailAppLauncher implements AppLauncher {
 
   async launch(request: AppLaunchRequest, appMetadata: AppMetadata): Promise<AppLaunchResult> {
     // Generate instance ID if not targeting existing instance
-    const instanceId = request.instanceId || uuidv4()
+    const instanceId = request.app.instanceId || uuidv4()
 
     // Determine launch URL from app metadata
     const url = this.extractAppUrl(appMetadata)
     if (!url) {
-      throw new Error(`Cannot launch app ${request.appId}: no URL found in app metadata`)
+      throw new Error(`Cannot launch app ${request.app.appId}: no URL found in app metadata`)
     }
 
     // Notify Sail UI to open the app
@@ -58,8 +58,10 @@ export class SailAppLauncher implements AppLauncher {
 
     // Return launch result
     return {
-      appId: request.appId,
-      instanceId,
+      appIdentifier: {
+        appId: request.app.appId,
+        instanceId,
+      },
       launchMetadata: {
         url,
         method: "iframe", // TODO: Determine from app metadata or config

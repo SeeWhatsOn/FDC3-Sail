@@ -12,7 +12,7 @@ export type { DesktopAgentConfig } from "./DesktopAgent"
 
 // Interfaces (contracts for implementations)
 export type { Transport, MessageHandler, DisconnectHandler } from "./interfaces/Transport"
-export type { AppLauncher, AppLaunchRequest, AppLaunchResult, AppMetadata } from "./interfaces/AppLauncher"
+export type { AppLauncher, AppLaunchRequest, AppLaunchResult } from "./interfaces/AppLauncher"
 
 // State registries
 export { AppInstanceRegistry } from "./state/AppInstanceRegistry"
@@ -26,4 +26,4 @@ export { AppDirectoryManager } from "./app-directory/appDirectoryManager"
 export type { DACPHandlerContext, DACPHandler } from "./handlers/types"
 
 // Re-export common FDC3 types for convenience
-export type { AppMetadata as FDC3AppMetadata, Context, AppIntent, AppIdentifier } from "@finos/fdc3"
+export type { AppMetadata, Context, AppIntent, AppIdentifier } from "@finos/fdc3"

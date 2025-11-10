@@ -91,25 +91,21 @@ export async function handleOpenRequest(
     // Launch the app via injected launcher
     const launchResult = await appLauncher.launch(
       {
-        appId,
-        instanceId: targetInstanceId,
+        app: payload.app,
         context: launchContext,
       },
       appMetadata
     )
 
     logger.info("DACP: App launched successfully", {
-      appId: launchResult.appId,
-      instanceId: launchResult.instanceId,
+      appId: launchResult.appIdentifier.appId,
+      instanceId: launchResult.appIdentifier.instanceId,
       method: launchResult.launchMetadata?.method,
     })
 
     // Return app identifier to caller
     const response = createDACPSuccessResponse(request, "openResponse", {
-      appIdentifier: {
-        appId: launchResult.appId,
-        instanceId: launchResult.instanceId,
-      },
+      appIdentifier: launchResult.appIdentifier,
     })
     transport.send(instanceId, response)
   } catch (error) {

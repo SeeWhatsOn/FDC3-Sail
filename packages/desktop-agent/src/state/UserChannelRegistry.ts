@@ -4,16 +4,9 @@
  * that users can select via the channel selector UI.
  */
 
-export interface UserChannel {
-  id: string
-  type: "user"
-  displayMetadata: {
-    name?: string
-    color?: string
-    glyph?: string
-  }
-}
+import type { BrowserTypes } from "@finos/fdc3"
 
+type UserChannel = BrowserTypes.Channel
 /**
  * Default FDC3 user channels based on the spec
  */

@@ -3,27 +3,19 @@
  * App channels are programmatically created channels (as opposed to user channels
  * which are pre-defined like red/blue/green).
  */
+import type { BrowserTypes } from "@finos/fdc3-schema"
 
-export interface AppChannel {
-  id: string
-  type: "app"
-  displayMetadata?: {
-    name?: string
-    color?: string
-    glyph?: string
-  }
-}
-
+type Channel = BrowserTypes.Channel
 /**
  * Registry for managing app channels
  */
 export class AppChannelRegistry {
-  private channels: Map<string, AppChannel> = new Map()
+  private channels: Map<string, Channel> = new Map()
 
   /**
    * Get or create an app channel by ID
    */
-  getOrCreate(channelId: string): AppChannel {
+  getOrCreate(channelId: string): Channel {
     let channel = this.channels.get(channelId)
 
     if (!channel) {
@@ -43,7 +35,7 @@ export class AppChannelRegistry {
   /**
    * Get an app channel by ID (returns undefined if doesn't exist)
    */
-  get(channelId: string): AppChannel | undefined {
+  get(channelId: string): Channel | undefined {
     return this.channels.get(channelId)
   }
 
@@ -57,7 +49,7 @@ export class AppChannelRegistry {
   /**
    * Get all app channels
    */
-  getAll(): AppChannel[] {
+  getAll(): Channel[] {
     return Array.from(this.channels.values())
   }
 
