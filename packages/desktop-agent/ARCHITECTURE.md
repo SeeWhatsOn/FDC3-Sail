@@ -2,556 +2,723 @@
 
 ## Overview
 
-This package implements a **pure, spec-compliant FDC3 Desktop Agent Engine**. Its sole responsibility is to manage the state of an FDC3-enabled environment (applications, channels, intents, context data) and handle interoperability by processing messages that conform to the **Desktop Agent Communication Protocol (DACP)**.
+This package implements a **pure, spec-compliant FDC3 Desktop Agent Engine** (~75% DACP compliant). Its sole responsibility is to manage the state of an FDC3-enabled environment (applications, channels, intents, context data) and handle interoperability by processing messages that conform to the **Desktop Agent Communication Protocol (DACP)**.
 
-This package is designed as a reusable library using **Socket.IO** as the transport layer. It is consumed by a server application (in our case, `@apps/sail-server`) which initializes the desktop agent and wires up Socket.IO connections.
+This package is designed as a **reusable, transport-agnostic library** with dependency injection. It can run in any JavaScript environment (Node.js, browser, Electron) when provided with an appropriate transport implementation.
 
-## Architectural Principles
+## Core Design Principles
 
-### 2. Separation of Concerns
+### 1. Transport Abstraction
 
-The system is designed as a two-part architecture to maintain a clean separation between FDC3-standard logic and platform-specific logic.
+The desktop agent is **completely decoupled from Socket.IO** through the `Transport` interface. This allows the same FDC3 engine to work in:
+- **Server environments** (Node.js + Socket.IO)
+- **Browser environments** (MessagePort, BroadcastChannel)
+- **Electron environments** (IPC)
+- **Testing environments** (Mock transport)
 
-*   `@packages/desktop-agent` (this package): The FDC3 Engine.
-*   `@apps/sail-server`: The Server Application that uses this engine.
+```typescript
+interface Transport {
+  send(message: DACPMessage): Promise<void>
+  onMessage(handler: (message: DACPMessage) => Promise<void>): void
+  onDisconnect(handler: () => void): void
+  getInstanceId(): string | null
+  setInstanceId(id: string): void
+  isConnected(): boolean
+  disconnect(): void
+}
+```
+
+### 2. Dependency Injection
+
+All handlers receive dependencies via `DACPHandlerContext`:
+
+```typescript
+interface DACPHandlerContext {
+  transport: Transport                          // Message transport layer
+  appInstanceRegistry: AppInstanceRegistry      // Connected app instances
+  intentRegistry: IntentRegistry                // Intent handlers and pending intents
+  channelContextRegistry: ChannelContextRegistry // Channel context storage
+  userChannelRegistry: UserChannelRegistry      // User channels (red, blue, green, etc.)
+  appChannelRegistry: AppChannelRegistry        // Dynamically created app channels
+  privateChannelRegistry: PrivateChannelRegistry // Private channels
+  appDirectory: AppDirectoryManager             // App metadata and capabilities
+  appLauncher?: AppLauncher                     // Optional app launcher
+  middlewares?: Middleware[]                    // Optional request/response middleware
+  logger: Logger                                // Structured logging
+}
+```
+
+**No singletons, no global state** - all dependencies are explicitly passed.
+
+### 3. Handler Organization
+
+Handlers are organized by FDC3 domain in a flat, discoverable structure:
+
+```
+src/handlers/dacp/
+├── index.ts                      # Message router and handler registry (28 handlers)
+├── context-handlers.ts           # Context operations (broadcast, addContextListener)
+├── intent-handlers.ts            # Intent operations (raiseIntent, addIntentListener)
+├── channel-handlers.ts           # Channel operations (join, leave, getCurrentChannel)
+├── app-handlers.ts               # App management (getInfo, open, findInstances)
+├── event-handlers.ts             # Desktop Agent events (addEventListener)
+├── private-channel-handlers.ts   # Private channel operations
+├── wcp-handlers.ts               # Web Connection Protocol (handshake)
+└── heartbeat-handlers.ts         # Health monitoring (30s heartbeat)
+```
+
+Each handler follows the pattern:
+1. **Validate** message using generated Zod schema
+2. **Execute** business logic using injected registries
+3. **Respond** via transport (success/error response)
+4. **Emit events** to other instances if needed (broadcast pattern)
+
+### 4. Schema-First Validation
+
+All DACP messages are validated using **78 auto-generated Zod schemas** derived from official FDC3 JSON Schema definitions:
+
+```bash
+npm run generate:schemas --workspace=@finos/fdc3-sail-desktop-agent
+```
+
+- **Source**: `@finos/fdc3-schema` package (official FDC3 schemas)
+- **Generator**: `scripts/generate-schemas.ts` (custom FDC3-aware generator)
+- **Output**: `src/handlers/validation/dacp-schemas.ts` (DO NOT EDIT MANUALLY)
+- **Usage**: Runtime validation + TypeScript type inference
+
+**Benefits:**
+- Single source of truth from FDC3 specification
+- Future-proof - regenerate when spec updates
+- Type safety across entire stack
+- Runtime protection against malformed messages
+
+## System Architecture
+
+### High-Level Message Flow
 
 ```mermaid
 flowchart TD
-    subgraph Browser
-        FDC3App["FDC3 Web App (uses @finos/fdc3)"]
-        SailUI["Sail UI Shell (@apps/sail)"]
+    subgraph Browser["Browser Environment"]
+        FDC3App["FDC3 Web App<br/>(uses @finos/fdc3)"]
+        SailUI["Sail UI Shell"]
     end
 
-    subgraph Backend Server
-        SailServer["@apps/sail-server (Server Application)"]
-        DesktopAgent["@packages/desktop-agent (FDC3 Engine Library)"]
+    subgraph Server["Server Environment (Node.js)"]
+        SocketIO["Socket.IO Server"]
+        SailDA["SailDesktopAgent<br/>(Environment wrapper)"]
+        Transport["SocketIOTransport<br/>(Transport implementation)"]
+        DesktopAgent["DesktopAgent<br/>(Pure FDC3 engine)"]
     end
 
-    FDC3App -- "1. Socket.IO Connection" --> SailServer
-    FDC3App -- "2. WCP4ValidateAppIdentity" --> DesktopAgent
-    FDC3App -- "3. DACP Messages (fdc3_message event)" --> DesktopAgent
-    DesktopAgent -- "4. DACP Responses (socket.emit)" --> FDC3App
-    SailUI -- "Socket.IO" --> SailServer
+    subgraph State["State Management"]
+        AppReg["AppInstanceRegistry"]
+        IntentReg["IntentRegistry"]
+        ChannelReg["Channel Registries"]
+    end
 
-    SailServer --> |Delegates Connections| DesktopAgent
+    FDC3App -->|"1. Socket.IO connection"| SocketIO
+    FDC3App -->|"2. fdc3_message event<br/>(DACP/WCP)"| SocketIO
+    SocketIO -->|"3. Emit to handler"| SailDA
+    SailDA -->|"4. Delegate"| Transport
+    Transport -->|"5. Route message"| DesktopAgent
+    DesktopAgent -->|"6. Process with"| State
+    DesktopAgent -->|"7. Response"| Transport
+    Transport -->|"8. socket.emit"| SocketIO
+    SocketIO -->|"9. fdc3_message event"| FDC3App
+
+    SailUI -.->|"Admin/UI commands"| SocketIO
 ```
 
-### 3. Protocol Definitions
-
-*   **DACP (Desktop Agent Communication Protocol)**: The FDC3-standard wire protocol that defines the JSON message format for all FDC3 API operations. This package is the engine for processing these messages.
-*   **WCP (Web Connection Protocol)**: The FDC3-standard handshake protocol for establishing a trusted connection between a web app and the desktop agent. We handle `WCP4ValidateAppIdentity` to validate app identity.
-*   **Socket.IO**: The transport layer used for all communication between FDC3 apps and the desktop agent.
-
-### 4. Handler Organization
-
-This package organizes its DACP handlers by FDC3 domain, promoting testability and maintainability.
-
-```typescript
-// packages/desktop-agent/src/
-├── index.ts                       // startDesktopAgent() entry point
-├── handlers/
-│   ├── types.ts                   // DACPHandlerContext, DACPHandler types
-│   ├── dacp/                      // FDC3 Standard (DACP compliant)
-│   │   ├── context.handlers.ts    // Broadcast/listen functions
-│   │   ├── intent.handlers.ts     // Intent resolution functions
-│   │   ├── channel.handlers.ts    // Channel management functions
-│   │   ├── wcp.handlers.ts        // WCP handshake handler
-│   │   ├── app-management/        // App lifecycle handlers
-│   │   │   └── app.handlers.ts    // getInfo
-│   │   └── index.ts               // DACP message router
-│   │
-│   └── validation/
-│       ├── dacp-schemas.ts        // Auto-generated Zod schemas
-│       └── dacp-validator.ts      // Validation utilities
-│
-├── state/                         // Core FDC3 state management
-│   ├── AppInstanceRegistry.ts     // App instance lifecycle
-│   ├── IntentRegistry.ts          // Intent handler registration
-│   └── PrivateChannelRegistry.ts  // Private channel management
-│
-└── app-directory/                 // FDC3 app directory
-    └── appDirectoryManager.ts
-```
-
-### 5. Dependency Injection Pattern
-
-All handlers use dependency injection via `DACPHandlerContext`:
-
-```typescript
-export interface DACPHandlerContext {
-  /** The Socket.IO socket connected to this specific app instance */
-  socket: Socket
-  /** Unique identifier for this app instance */
-  instanceId: string
-  /** Registry of all app instances and their state */
-  appInstanceRegistry: AppInstanceRegistry
-  /** Registry of intent listeners and capabilities */
-  intentRegistry: IntentRegistry
-  /** App directory manager for app metadata lookups */
-  appDirectory: AppDirectoryManager
-}
-
-export type DACPHandler = (message: unknown, context: DACPHandlerContext) => void | Promise<void>
-```
-
-**No Singletons**: State registries are created once by `startDesktopAgent()` and passed to handlers via context.
-
-### 6. Schema-First Validation
-
-All incoming DACP messages are validated against auto-generated Zod schemas derived from the official FDC3 JSON Schema definitions.
-
-*   **Single Source of Truth**: TypeScript types are inferred from the validation schemas.
-*   **Future-Proof**: FDC3 specification updates can be easily integrated by re-running the generation script.
-*   **Runtime Safety**: Ensures all messages processed by the engine are compliant.
-
-## Message Flow Architecture
-
-### Socket.IO Transport
-
-The desktop agent uses Socket.IO directly for all communication:
-
-1.  **Connection**: FDC3 app connects to Socket.IO server
-2.  **WCP Handshake**: App sends `WCP4ValidateAppIdentity` to validate its identity
-3.  **App Registration**: Desktop agent validates app against app directory and registers instance
-4.  **DACP Messages**: App sends DACP messages via `fdc3_message` event
-5.  **DACP Responses**: Handlers respond via `socket.emit('fdc3_message', response)`
-6.  **Cleanup**: On disconnect, instance is removed from registries
-
-### Initialization Flow
-
-```typescript
-// 1. Server starts desktop agent
-const desktopAgent = startDesktopAgent()
-
-// 2. Server wires up Socket.IO connections
-io.on('connection', (socket) => {
-  desktopAgent.handleConnection(socket)
-})
-
-// 3. Desktop agent handles each connection
-handleConnection: (socket: Socket) => {
-  // Listen for FDC3 messages
-  socket.on('fdc3_message', async (message) => {
-    // Create handler context with DI
-    const context: DACPHandlerContext = {
-      socket,
-      instanceId,
-      appInstanceRegistry,
-      intentRegistry,
-      appDirectory
-    }
-
-    // Route to appropriate handler
-    await routeDACPMessage(message, context)
-  })
-
-  // Cleanup on disconnect
-  socket.on('disconnect', () => {
-    cleanupDACPHandlers(context)
-  })
-}
-```
-
-### Handler Example
-
-```typescript
-// Simplified handler showing DI pattern
-async function handleBroadcastRequest(
-  message: unknown,
-  context: DACPHandlerContext
-): Promise<void> {
-  const { socket, instanceId, appInstanceRegistry } = context
-
-  // 1. Validate message
-  const request = validateDACPMessage(message, BroadcastRequestSchema)
-
-  // 2. Execute logic using injected dependencies
-  const instancesOnChannel = appInstanceRegistry.getInstancesOnChannel(
-    request.payload.channelId
-  )
-
-  // 3. Broadcast to listeners
-  instancesOnChannel.forEach(instance => {
-    if (instance.socket) {
-      instance.socket.emit('fdc3_message', contextEvent)
-    }
-  })
-
-  // 4. Send response to sender
-  const response = createDACPSuccessResponse(request, 'broadcastResponse')
-  socket.emit('fdc3_message', response)
-}
-```
-
-## Core State Management
-
-The desktop agent maintains three core registries for FDC3 compliance:
-
-**AppInstanceRegistry**: Tracks all connected applications, their state, channel membership, active listeners, and **Socket.IO socket reference**.
-
-**IntentRegistry**: Manages intent handlers across all applications, enabling intent resolution and routing.
-
-**PrivateChannelRegistry**: Manages private channels and their participants for secure app-to-app communication.
-
-These registries are created once by `startDesktopAgent()` and passed to all handlers via dependency injection. **No singleton exports** - all state is explicitly passed through the call chain.
-
-## Key Architectural Decisions
-
-### Socket Reference in AppInstance
-
-Each `AppInstance` stores its Socket.IO socket reference:
-
-```typescript
-export interface AppInstance {
-  instanceId: string
-  appId: string
-  socket?: Socket  // The specific socket for this app instance
-  metadata: AppMetadata
-  state: AppInstanceState
-  // ...
-}
-```
-
-This allows handlers to send messages directly to specific app instances without needing a separate socket mapping.
-
----
-
-## Hybrid Architecture Strategy (2025-10-29)
-
-**Goal:** Combine our superior engineering practices with proven FDC3 patterns while adding transport abstraction
-
-### Strategic Decisions
-
-#### 1. Code Duplication, Not Dependency
-- **Copy** useful patterns from `@finos/fdc3-web-impl` into our repo
-- **Do not** use as npm dependency
-- Maintain Apache 2.0 license attribution
-
-#### 2. Transport Abstraction via Constructor Injection
-- Support both **browser** (MessagePort) and **server** (Socket.IO) usage
-- Transport specified in constructor, not hardcoded
-- Single codebase for both environments
-
-#### 3. Keep What Works
-- ✅ **Keep:** Zod schema validation (superior to duck typing)
-- ✅ **Keep:** Registry-based state with indexed lookups (superior to array filtering)
-- ✅ **Keep:** Structured error handling with typed errors
-- ✅ **Keep:** Comprehensive logging
-
-#### 4. Adopt Proven Patterns
-- ✅ **Adopt:** PendingApp state machine for context delivery to launching apps
-- ✅ **Adopt:** PendingIntent pattern for queuing intents to apps being launched
-- ✅ **Adopt:** MessageHandler interface (optional, later)
-
----
-
-### Transport Abstraction Design
-
-#### MessageTransport Interface
-
-```typescript
-interface MessageTransport {
-  send(instanceId: string, message: object): Promise<void>
-  onMessage(handler: (message: object) => Promise<void>): void
-  onDisconnect(handler: (instanceId: string) => void): void
-}
-```
-
-#### SocketIOTransport (Server-Side)
-
-```typescript
-class SocketIOTransport implements MessageTransport {
-  constructor(private socket: Socket) {}
-
-  async send(instanceId: string, message: object): Promise<void> {
-    this.socket.emit('fdc3_message', message)
-  }
-
-  onMessage(handler: (message: object) => Promise<void>): void {
-    this.socket.on('fdc3_message', handler)
-  }
-
-  onDisconnect(handler: (instanceId: string) => void): void {
-    this.socket.on('disconnect', () => handler(this.getInstanceId()))
-  }
-}
-```
-
-#### MessagePortTransport (Browser-Side)
-
-```typescript
-class MessagePortTransport implements MessageTransport {
-  constructor(private port: MessagePort) {}
-
-  async send(instanceId: string, message: object): Promise<void> {
-    this.port.postMessage(message)
-  }
-
-  onMessage(handler: (message: object) => Promise<void>): void {
-    this.port.onmessage = (event) => handler(event.data)
-  }
-
-  onDisconnect(handler: (instanceId: string) => void): void {
-    // MessagePort lifecycle tracking
-  }
-}
-```
-
-#### DesktopAgent with Transport Injection
-
-```typescript
-class DesktopAgent {
-  constructor(
-    private transport?: MessageTransport,
-    private config?: DesktopAgentConfig
-  ) {
-    // If no transport, create registries for manual instance management
-    // If transport provided, setup message routing automatically
-  }
-
-  // For server: register instance with transport
-  registerInstance(transport: MessageTransport): void {
-    transport.onMessage(async (message) => {
-      await this.routeMessage(message, transport)
-    })
-
-    transport.onDisconnect((instanceId) => {
-      this.cleanup(instanceId)
-    })
-  }
-}
-```
-
----
-
-### Package Dual Entry Points
-
-```json
-{
-  "name": "@finos/fdc3-sail-desktop-agent",
-  "exports": {
-    ".": "./dist/index.js",
-    "./server": "./dist/server.js",
-    "./browser": "./dist/browser.js"
-  }
-}
-```
-
-#### Server Usage
-
-```typescript
-import { DesktopAgent, SocketIOTransport } from '@finos/fdc3-sail-desktop-agent/server'
-
-const agent = new DesktopAgent()
-
-io.on('connection', (socket) => {
-  const transport = new SocketIOTransport(socket)
-  agent.registerInstance(transport)
-})
-```
-
-#### Browser Usage
-
-```typescript
-import { DesktopAgent, MessagePortTransport } from '@finos/fdc3-sail-desktop-agent/browser'
-
-const transport = new MessagePortTransport(messagePort)
-const agent = new DesktopAgent(transport)
-```
-
----
-
-### Patterns from fdc3-web-impl
-
-#### PendingApp State Machine
-
-**Purpose:** Deliver context to apps after they launch and register listeners
-
-```typescript
-enum AppState {
-  Opening = "opening",
-  DeliveringContext = "delivering",
-  Done = "done"
-}
-
-class PendingApp {
-  private state: AppState = AppState.Opening
-  private timeoutHandle?: NodeJS.Timeout
-
-  constructor(
-    private appId: string,
-    private context: Context,
-    private timeoutMs: number,
-    private onSuccess: (instanceId: string) => void,
-    private onError: (error: Error) => void
-  ) {
-    this.startTimeout()
-  }
-
-  onAppConnected(instanceId: string): void {
-    if (this.state === AppState.Opening) {
-      this.state = AppState.DeliveringContext
-    }
-  }
-
-  onContextListenerRegistered(instanceId: string): void {
-    if (this.state === AppState.DeliveringContext) {
-      this.deliverContext(instanceId)
-      this.state = AppState.Done
-      this.onSuccess(instanceId)
-    }
-  }
-}
-```
-
-**Integration Points:**
-- `openRequest` handler creates PendingApp
-- `WCP4ValidateAppIdentity` calls `onAppConnected()`
-- `addContextListenerRequest` calls `onContextListenerRegistered()`
-
----
-
-#### PendingIntent Pattern
-
-**Purpose:** Queue intents for apps that haven't registered listeners yet
-
-```typescript
-class PendingIntent {
-  constructor(
-    private intent: string,
-    private context: Context,
-    private targetAppId: string,
-    private requestId: string,
-    private onResolved: (result: IntentResult) => void,
-    private onError: (error: Error) => void
-  ) {
-    this.startTimeout()
-  }
-
-  onListenerRegistered(instanceId: string): void {
-    // Send intentEvent to target
-    this.sendIntentEvent(instanceId)
-  }
-
-  onResultReceived(result: IntentResult): void {
-    this.onResolved(result)
-  }
-}
-```
-
-**Integration Points:**
-- `raiseIntentRequest` creates PendingIntent if target not ready
-- `addIntentListenerRequest` checks for pending intents
-- `intentResultRequest` completes pending intent
-
----
-
-### Implementation Phases
-
-#### Phase 1: Transport Abstraction (2-3 hours)
-1. Create `MessageTransport` interface
-2. Implement `SocketIOTransport` and `MessagePortTransport`
-3. Refactor handlers to use transport instead of direct socket
-4. Create server.ts and browser.ts entry points
-5. Update package.json exports
-
-#### Phase 2: Critical Bug Fixes (1 hour)
-1. Register missing handlers (openRequest, findInstancesRequest, getAppMetadataRequest)
-2. Fix copy-paste errors in app.handlers.ts
-3. Fix findInstancesRequest logic
-4. Add to app launch timeout list
-
-#### Phase 3: Adopt PendingApp (2-3 hours)
-1. Copy and adapt PendingApp from fdc3-web-impl
-2. Integrate with openRequest
-3. Integrate with WCP4ValidateAppIdentity
-4. Integrate with addContextListenerRequest
-
-#### Phase 4: Fix Intent Flow (3-4 hours)
-1. Create intentEvent and intentResultRequest schemas
-2. Implement PendingIntent pattern
-3. Update raiseIntentRequest to use PendingIntent
-4. Implement intentResultRequest handler
-5. Complete intent event flow
-
-#### Phase 5: Desktop Agent Events (2-3 hours)
-1. Add event listener tracking to AppInstanceRegistry
-2. Implement addEventListener/eventListenerUnsubscribe
-3. Update channelChangedEvent to broadcast to subscribers
-
-#### Phase 6: Additional Features (4-6 hours)
-1. Implement findIntentsByContextRequest
-2. Implement private channels
-3. Implement heartbeat mechanism
-4. Replace mock channel data
-
-**Total Estimated Time:** 14-20 hours
-
----
-
-### File Structure Changes
+### Package Structure
 
 ```
 packages/desktop-agent/
 ├── src/
-│   ├── index.ts                    # Main exports (both environments)
-│   ├── server.ts                   # Server-specific exports
-│   ├── browser.ts                  # Browser-specific exports
-│   ├── DesktopAgent.ts             # Main class with transport injection
-│   ├── transport/
-│   │   ├── MessageTransport.ts     # Interface
-│   │   ├── SocketIOTransport.ts    # Server implementation
-│   │   └── MessagePortTransport.ts # Browser implementation
-│   ├── state/
-│   │   ├── AppInstanceRegistry.ts  # (no changes)
-│   │   ├── IntentRegistry.ts       # (enhance with PendingIntent)
-│   │   ├── PendingApp.ts           # NEW: from fdc3-web-impl
-│   │   └── PendingIntent.ts        # NEW: from fdc3-web-impl
+│   ├── index.ts                         # Public API exports
+│   ├── desktop-agent.ts                 # Main DesktopAgent class
+│   │
+│   ├── interfaces/                      # Dependency injection interfaces
+│   │   ├── transport.ts                 # Transport abstraction
+│   │   ├── app-launcher.ts              # App launcher abstraction
+│   │   └── index.ts
+│   │
+│   ├── state/                           # State management registries
+│   │   ├── app-instance-registry.ts     # App instances and listeners
+│   │   ├── intent-registry.ts           # Intent handlers and pending intents
+│   │   ├── channel-context-registry.ts  # Channel context storage
+│   │   ├── user-channel-registry.ts     # User channels (red, blue, etc.)
+│   │   ├── app-channel-registry.ts      # Dynamically created channels
+│   │   └── private-channel-registry.ts  # Private channels
+│   │
 │   ├── handlers/
-│   │   ├── dacp/
-│   │   │   ├── index.ts            # (update for transport)
-│   │   │   ├── context.handlers.ts # (no changes)
-│   │   │   ├── intent.handlers.ts  # (enhance with PendingIntent)
-│   │   │   ├── channel.handlers.ts # (no changes)
-│   │   │   ├── app-management/
-│   │   │   │   └── app.handlers.ts # (fix bugs)
-│   │   │   ├── private-channel.handlers.ts # NEW
-│   │   │   ├── event.handlers.ts   # NEW: addEventListener
-│   │   │   └── wcp.handlers.ts     # (enhance with PendingApp)
+│   │   ├── types.ts                     # Handler context and types
+│   │   ├── dacp/                        # DACP protocol handlers
+│   │   │   ├── index.ts                 # Message router (28 handlers)
+│   │   │   ├── context-handlers.ts
+│   │   │   ├── intent-handlers.ts
+│   │   │   ├── channel-handlers.ts
+│   │   │   ├── app-handlers.ts
+│   │   │   ├── event-handlers.ts
+│   │   │   ├── private-channel-handlers.ts
+│   │   │   ├── wcp-handlers.ts
+│   │   │   ├── heartbeat-handlers.ts
+│   │   │   └── DACP-COMPLIANCE.md       # Implementation status
 │   │   └── validation/
-│   │       └── dacp-schemas.ts     # (add missing schemas)
-│   └── fdc3-patterns/              # Code copied from fdc3-web-impl
-│       ├── README.md               # Attribution
-│       └── [reference files]
+│   │       ├── dacp-validator.ts        # Validation logic
+│   │       └── dacp-schemas.ts          # 78 auto-generated Zod schemas
+│   │
+│   ├── app-directory/
+│   │   └── app-directory-manager.ts     # Load/query app directories
+│   │
+│   ├── protocol/
+│   │   └── dacp-messages.ts             # DACP message type definitions
+│   │
+│   └── __tests__/                       # Test utilities and helpers
+│
+├── scripts/
+│   └── generate-schemas.ts              # Schema generator from FDC3 JSON
+│
+├── ARCHITECTURE.md                      # This file
+├── README.md
+└── package.json
 ```
 
----
+## Initialization Flow
 
-### Success Criteria
+```mermaid
+sequenceDiagram
+    participant Server as sail-server
+    participant SailDA as SailDesktopAgent
+    participant Transport as SocketIOTransport
+    participant DA as DesktopAgent
+    participant Registries as State Registries
 
-**Functionality:**
-- [ ] Works with Socket.IO transport (server)
-- [ ] Works with MessagePort transport (browser)
-- [ ] PendingApp pattern delivers context to launching apps
-- [ ] PendingIntent queues intents for launching apps
-- [ ] ~90% DACP spec compliance
+    Server->>Server: Start Socket.IO server
+    Server->>SailDA: new SailDesktopAgent(socket)
+    SailDA->>Transport: new SocketIOTransport(socket)
+    SailDA->>Registries: Create all registries
+    SailDA->>DA: new DesktopAgent(transport, registries)
+    SailDA->>DA: agent.start()
+    DA->>Transport: transport.onMessage(routeDACPMessage)
+    DA->>Transport: transport.onDisconnect(cleanup)
+    DA->>DA: Start heartbeat monitor (30s)
+    Note over DA: Desktop Agent ready
+```
 
-**Code Quality:**
-- [ ] TypeScript strict mode passes
-- [ ] All tests pass
-- [ ] Zero linting errors
-- [ ] Proper Apache 2.0 attribution for copied code
+## Message Handling Flow
 
-**Performance:**
-- [ ] Handler lookup O(1)
-- [ ] Instance lookup O(1)
-- [ ] Handles 100+ concurrent connections
+### Request-Response Pattern
 
----
+```mermaid
+sequenceDiagram
+    participant App as FDC3 App
+    participant Transport as Transport
+    participant Router as Message Router
+    participant Handler as DACP Handler
+    participant Registry as Registry
+    participant OtherApp as Other App
 
-### References
+    App->>Transport: fdc3_message (broadcastRequest)
+    Transport->>Router: routeDACPMessage()
+    Router->>Router: Validate schema
+    Router->>Handler: handleBroadcastRequest(msg, ctx)
+    Handler->>Registry: getInstancesOnChannel(channelId)
+    Registry-->>Handler: [instance1, instance2]
 
-- [FDC3 DACP Spec](https://fdc3.finos.org/docs/api/specs/desktopAgentCommunicationProtocol)
-- [fdc3-web-impl source](https://github.com/finos/FDC3/tree/main/toolbox/fdc3-for-web/fdc3-web-impl)
-- [DACP-COMPLIANCE.md](./src/handlers/dacp/DACP-COMPLIANCE.md)
+    par Broadcast to listeners
+        Handler->>Transport: send(contextEvent) to instance1
+        Transport->>OtherApp: fdc3_message (contextEvent)
+    and
+        Handler->>Transport: send(contextEvent) to instance2
+    end
+
+    Handler->>Transport: send(broadcastResponse) to sender
+    Transport->>App: fdc3_message (broadcastResponse)
+```
+
+### Intent Resolution Flow
+
+```mermaid
+sequenceDiagram
+    participant App as FDC3 App
+    participant DA as DesktopAgent
+    participant IntentReg as IntentRegistry
+    participant TargetApp as Target App
+
+    App->>DA: raiseIntentRequest
+    DA->>IntentReg: findIntentHandlers(intent, context)
+    IntentReg-->>DA: [handler1, handler2]
+
+    alt Single handler
+        DA->>DA: Auto-resolve to handler
+    else Multiple handlers
+        DA->>App: raiseIntentResponse (needsResolution)
+        App->>DA: User selects handler
+    end
+
+    DA->>IntentReg: createPendingIntent(requestId)
+    DA->>TargetApp: intentEvent
+    TargetApp->>TargetApp: Process intent
+    TargetApp->>DA: intentResultRequest
+    DA->>IntentReg: resolvePendingIntent(requestId)
+    DA->>App: intentResultResponse
+```
+
+## State Management
+
+### AppInstanceRegistry
+
+Tracks all connected application instances with:
+
+**Core Data:**
+- `instanceId` (UUID)
+- `appId` (from app directory)
+- `metadata` (AppMetadata from directory)
+- `connectionState` (PENDING, CONNECTED, NOT_RESPONDING, DISCONNECTING, TERMINATED)
+- `transport` (for sending messages)
+- `currentChannelId` (user/app/private channel)
+
+**Indexes for Performance:**
+- By `instanceId` (O(1) lookup)
+- By `appId` (O(1) lookup of all instances of an app)
+- By `channelId` (O(1) lookup of all instances on a channel)
+- By `contextType` (O(1) lookup of all context listeners for a type)
+
+**Listener Tracking:**
+- Context listeners per instance (type filter, channelId)
+- Intent listeners per instance (intent name)
+- Event listeners per instance (event type: userChannelChanged, etc.)
+
+**Private Channel Access:**
+- Which private channels an instance can access
+- Validated on every private channel operation
+
+### IntentRegistry
+
+Manages intent resolution and routing:
+
+**Intent Listeners (Runtime):**
+- Registered via `addIntentListenerRequest`
+- Indexed by: intentName, appId, instanceId
+- Unsubscribed automatically on disconnect
+
+**Intent Capabilities (From App Directory):**
+- Loaded from app directory on startup
+- Defines which apps can handle which intents
+- Context type filters (e.g., ViewChart handles fdc3.instrument)
+
+**Pending Intents:**
+- Tracks async intent flow (raiseIntent → intentEvent → intentResult)
+- Maps `requestId` to pending intent details
+- Timeout handling (30s default)
+- Stores result for retrieval by sender
+
+**Resolution Logic:**
+- `findIntentHandlers(intent, context)` → list of capable instances
+- Checks: intent name match + context type compatibility + instance connected
+- Returns resolved list for user selection or auto-routing
+
+### Channel Registries
+
+**UserChannelRegistry:**
+- Pre-defined channels: red, blue, green, yellow, orange, purple
+- Display metadata (displayName, color, glyph)
+- System channels (non-dynamic)
+
+**AppChannelRegistry:**
+- Dynamically created via `getOrCreateChannelRequest`
+- App-specific channels for private communication groups
+- Created on-demand, tracked by channelId
+
+**PrivateChannelRegistry:**
+- Created via `createPrivateChannelRequest`
+- Two-party secure communication
+- Tracks connected instances per channel
+- Automatic cleanup on disconnect
+
+**ChannelContextRegistry:**
+- Stores last broadcast context per channel
+- Enables `getCurrentContextRequest` retrieval
+- Filtered by context type
+
+## Handler Implementation Pattern
+
+### Example: Broadcast Handler
+
+```typescript
+async function handleBroadcastRequest(
+  message: unknown,
+  context: DACPHandlerContext
+): Promise<void> {
+  const { transport, appInstanceRegistry, channelContextRegistry, logger } = context
+
+  // 1. Validate message against generated schema
+  const request = validateDACPMessage(message, BroadcastRequestSchema)
+  const { channelId, context: contextData } = request.payload
+
+  // 2. Get current instance and channel membership
+  const instanceId = transport.getInstanceId()
+  if (!instanceId) {
+    throw new Error("Instance not registered")
+  }
+
+  const instance = appInstanceRegistry.getInstanceById(instanceId)
+  if (!instance || instance.currentChannelId !== channelId) {
+    throw new Error("Not a member of channel")
+  }
+
+  // 3. Store context in channel
+  channelContextRegistry.setContext(channelId, contextData)
+
+  // 4. Get all instances with matching context listeners
+  const listeners = appInstanceRegistry.getContextListeners(
+    channelId,
+    contextData.type
+  )
+
+  // 5. Broadcast contextEvent to listeners (excluding sender)
+  const contextEvent = createContextEvent(contextData, channelId)
+
+  for (const listener of listeners) {
+    if (listener.instanceId !== instanceId) {
+      const targetInstance = appInstanceRegistry.getInstanceById(listener.instanceId)
+      if (targetInstance?.transport) {
+        await targetInstance.transport.send(contextEvent)
+      }
+    }
+  }
+
+  // 6. Send success response to sender
+  const response = createDACPResponse(request, "broadcastResponse", {})
+  await transport.send(response)
+
+  logger.debug("Broadcast completed", { channelId, contextType: contextData.type })
+}
+```
+
+### Handler Registration
+
+All handlers are registered in `src/handlers/dacp/index.ts`:
+
+```typescript
+export const dacpHandlers: Record<string, DACPHandler> = {
+  // Context operations
+  broadcastRequest: handleBroadcastRequest,
+  addContextListenerRequest: handleAddContextListenerRequest,
+  contextListenerUnsubscribeRequest: handleContextListenerUnsubscribeRequest,
+
+  // Intent operations
+  raiseIntentRequest: handleRaiseIntentRequest,
+  raiseIntentForContextRequest: handleRaiseIntentForContextRequest,
+  addIntentListenerRequest: handleAddIntentListenerRequest,
+  intentListenerUnsubscribeRequest: handleIntentListenerUnsubscribeRequest,
+  findIntentRequest: handleFindIntentRequest,
+  findIntentsByContextRequest: handleFindIntentsByContextRequest,
+  intentResultRequest: handleIntentResultRequest,
+
+  // Channel operations
+  joinUserChannelRequest: handleJoinUserChannelRequest,
+  leaveCurrentChannelRequest: handleLeaveCurrentChannelRequest,
+  getCurrentChannelRequest: handleGetCurrentChannelRequest,
+  getUserChannelsRequest: handleGetUserChannelsRequest,
+  getCurrentContextRequest: handleGetCurrentContextRequest,
+  getOrCreateChannelRequest: handleGetOrCreateChannelRequest,
+
+  // App management
+  getInfoRequest: handleGetInfoRequest,
+  openRequest: handleOpenRequest,
+  findInstancesRequest: handleFindInstancesRequest,
+  getAppMetadataRequest: handleGetAppMetadataRequest,
+
+  // Desktop Agent events
+  addEventListenerRequest: handleAddEventListenerRequest,
+  eventListenerUnsubscribeRequest: handleEventListenerUnsubscribeRequest,
+
+  // Private channels
+  createPrivateChannelRequest: handleCreatePrivateChannelRequest,
+  privateChannelDisconnectRequest: handlePrivateChannelDisconnectRequest,
+  privateChannelAddContextListenerRequest: handlePrivateChannelAddContextListenerRequest,
+
+  // Web Connection Protocol
+  Wcp4Validateappidentity: handleWcp4Validateappidentity,
+
+  // Health monitoring
+  heartbeatAcknowledgmentRequest: handleHeartbeatAcknowledgmentRequest,
+}
+```
+
+## Web Connection Protocol (WCP) Handshake
+
+The WCP handshake establishes app identity and registers the instance:
+
+```mermaid
+sequenceDiagram
+    participant App as FDC3 App
+    participant DA as DesktopAgent
+    participant AppDir as AppDirectory
+    participant AppReg as AppInstanceRegistry
+
+    App->>DA: Wcp4Validateappidentity
+    DA->>AppDir: lookupApp(appId, instanceId)
+
+    alt App found in directory
+        AppDir-->>DA: AppMetadata
+        DA->>AppReg: registerInstance(metadata, transport)
+        DA->>DA: transport.setInstanceId(instanceId)
+        DA->>DA: Start heartbeat for instance
+        DA->>App: Wcp5ValidateAppIdentityResponse (success)
+        Note over DA,App: Instance ready for DACP messages
+    else App not found
+        AppDir-->>DA: null
+        DA->>App: Wcp5ValidateAppIdentityResponse (error)
+        DA->>DA: Disconnect transport
+    end
+```
+
+## Health Monitoring
+
+The desktop agent automatically monitors connection health:
+
+- **Heartbeat interval**: 30 seconds
+- **Heartbeat timeout**: Configurable (default 60s)
+- **Mechanism**: Desktop agent sends `heartbeatEvent`, expects `heartbeatAcknowledgmentRequest`
+
+```mermaid
+sequenceDiagram
+    participant DA as DesktopAgent
+    participant App as FDC3 App
+    participant AppReg as AppInstanceRegistry
+
+    loop Every 30 seconds
+        DA->>App: heartbeatEvent
+
+        alt App responds
+            App->>DA: heartbeatAcknowledgmentRequest
+            DA->>AppReg: updateLastHeartbeat(instanceId)
+            Note over DA: Instance healthy
+        else No response (timeout)
+            DA->>AppReg: markInstanceNotResponding(instanceId)
+            DA->>DA: Attempt reconnection or cleanup
+        end
+    end
+```
+
+## Middleware System
+
+The desktop agent supports optional middleware for cross-cutting concerns:
+
+```typescript
+interface Middleware {
+  onRequest?: (message: DACPMessage, context: DACPHandlerContext) => Promise<void>
+  onResponse?: (message: DACPMessage, context: DACPHandlerContext) => Promise<void>
+  onError?: (error: Error, context: DACPHandlerContext) => Promise<void>
+}
+```
+
+**Example use cases:**
+- Logging (request/response tracing)
+- Authentication (validate permissions)
+- Metrics (track message counts, latency)
+- Rate limiting
+- Audit trails
+
+## Testing Strategy
+
+### Unit Tests
+
+Each registry and handler has isolated unit tests:
+
+```typescript
+describe("AppInstanceRegistry", () => {
+  it("should register instance with metadata", () => {
+    const registry = new AppInstanceRegistry()
+    const instance = registry.registerInstance(metadata, transport)
+    expect(instance.appId).toBe("test-app")
+  })
+
+  it("should track channel membership", () => {
+    const registry = new AppInstanceRegistry()
+    registry.registerInstance(metadata, transport)
+    registry.setChannel(instanceId, "red")
+    const instances = registry.getInstancesOnChannel("red")
+    expect(instances).toHaveLength(1)
+  })
+})
+```
+
+### Integration Tests
+
+Test full message flows with mock transport:
+
+```typescript
+describe("Broadcast flow", () => {
+  it("should deliver context to channel listeners", async () => {
+    const mockTransport = new MockTransport()
+    const agent = new DesktopAgent(mockTransport, registries)
+    agent.start()
+
+    // Register two apps on same channel
+    await sendMessage(mockTransport, addContextListenerRequest)
+    await sendMessage(mockTransport, broadcastRequest)
+
+    expect(mockTransport.sent).toContainMessageType("contextEvent")
+  })
+})
+```
+
+## DACP Compliance Status
+
+**Current implementation: ~75% DACP compliant**
+
+See [DACP-COMPLIANCE.md](./src/handlers/dacp/DACP-COMPLIANCE.md) for detailed status.
+
+**Fully Implemented:**
+- ✅ Context operations (broadcast, addContextListener)
+- ✅ Intent operations (raiseIntent, addIntentListener, findIntent, intentResult flow)
+- ✅ Channel operations (join, leave, getCurrentChannel, getUserChannels)
+- ✅ App management (getInfo, open, findInstances, getAppMetadata)
+- ✅ Desktop Agent events (addEventListener)
+- ✅ Private channels (create, disconnect, addListener)
+- ✅ WCP handshake (Wcp4ValidateAppidentity)
+- ✅ Health monitoring (heartbeat)
+
+**Not Implemented:**
+- ❌ UI control messages (Fdc3UserInterfaceRaise, Fdc3UserInterfaceResolve, etc.)
+  - **Reason**: Server architecture doesn't need these - UI is separate concern
+
+**In Progress:**
+- 🔄 App management handlers need deeper integration with app launcher
+
+## Key Architectural Decisions
+
+### Why Transport Abstraction?
+
+**Goal**: Make the FDC3 engine reusable across environments.
+
+**Benefits:**
+- Same engine works in Node.js (Socket.IO), browser (MessagePort), Electron (IPC)
+- Easier testing with mock transport
+- No vendor lock-in to Socket.IO
+- Future-proof for new transport mechanisms
+
+### Why Dependency Injection?
+
+**Goal**: Avoid singletons, enable testability, support multiple instances.
+
+**Benefits:**
+- Pure functions with explicit dependencies
+- Easy to test (inject mocks)
+- No hidden global state
+- Can run multiple desktop agents in same process (for testing)
+
+### Why Schema-First Validation?
+
+**Goal**: Maintain compliance with FDC3 specification automatically.
+
+**Benefits:**
+- Single source of truth (official FDC3 JSON schemas)
+- TypeScript types inferred from runtime schemas (no drift)
+- Easy to update when FDC3 spec changes (regenerate)
+- Runtime safety against malformed messages
+
+### Why Separate Registries?
+
+**Goal**: Single Responsibility Principle, efficient indexing.
+
+**Benefits:**
+- Each registry manages one concern (apps, intents, channels)
+- Multiple indexes for O(1) lookups (by id, by channel, by type)
+- Easier to reason about state changes
+- Testable in isolation
+
+## Environment Integration
+
+### Server Environment (Production)
+
+```typescript
+// apps/sail-server/src/main.ts
+import { SailDesktopAgent } from "@finos/fdc3-sail-api"
+
+const io = new Server(httpServer)
+
+io.on("connection", (socket) => {
+  const agent = new SailDesktopAgent(socket, {
+    appDirectories: [trainingAppD, workbenchAppD],
+    middlewares: [loggingMiddleware, metricsMiddleware]
+  })
+  agent.start()
+})
+```
+
+The `SailDesktopAgent` is a thin wrapper that:
+1. Creates `SocketIOTransport` from socket
+2. Instantiates all registries
+3. Loads app directories
+4. Creates pure `DesktopAgent` with injected dependencies
+5. Applies middleware
+
+### Browser Environment (Future)
+
+```typescript
+// Hypothetical browser usage
+import { DesktopAgent, MessagePortTransport } from "@finos/fdc3-sail-desktop-agent/browser"
+
+const transport = new MessagePortTransport(messagePort)
+const agent = new DesktopAgent(transport, {
+  appDirectories: [localAppD]
+})
+agent.start()
+```
+
+## Performance Characteristics
+
+**Registry Lookups:**
+- By instanceId: O(1) - direct Map lookup
+- By appId: O(1) - indexed Map
+- By channelId: O(1) - indexed Set
+- By contextType: O(1) - indexed Set
+
+**Message Routing:**
+- Schema validation: O(1) - direct schema lookup
+- Handler dispatch: O(1) - direct handler map lookup
+
+**Broadcast Performance:**
+- Context broadcast: O(n) where n = listeners on channel
+- Intent resolution: O(m) where m = capable handlers
+
+**Target Performance:**
+- Support 100+ concurrent app instances
+- Sub-millisecond message routing
+- Sub-10ms broadcast to 50 listeners
+
+## Future Enhancements
+
+### Short Term
+- [ ] Complete app launcher integration
+- [ ] Add performance metrics middleware
+- [ ] Add request tracing (correlation IDs)
+- [ ] Implement rate limiting middleware
+
+### Medium Term
+- [ ] Browser MessagePort transport implementation
+- [ ] Electron IPC transport implementation
+- [ ] Persistent intent registry (survive restarts)
+- [ ] Intent resolution UI customization
+
+### Long Term
+- [ ] Distributed desktop agent (multi-server)
+- [ ] Intent routing across desktop agents
+- [ ] Channel federation
+- [ ] App directory hot-reloading
+
+## References
+
 - [FDC3 Standard](https://fdc3.finos.org/)
+- [DACP Specification](https://fdc3.finos.org/docs/api/specs/desktopAgentCommunicationProtocol)
+- [FDC3 For The Web](https://github.com/finos/FDC3/issues?q=label%3A%22FDC3+for+Web+Browsers%22)
+- [DACP-COMPLIANCE.md](./src/handlers/dacp/DACP-COMPLIANCE.md) - Implementation status tracker
+- [Official FDC3 JSON Schemas](https://github.com/finos/FDC3/tree/main/schemas)
+
+## License
+
+Apache License 2.0 - See LICENSE file for details
