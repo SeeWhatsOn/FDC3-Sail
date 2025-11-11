@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+/* 
+  Import the UI library's base styles, which include
+  CSS variables (@theme) and base layer styles (@layer).
+*/
+@import "../../../packages/sail-ui/src/index.css";
+/* 
+  Tell Tailwind where to scan for classes.
+  This is crucial for a monorepo setup.
+  NOTE: We must use relative paths here because the Tailwind compiler
+  processes @source and @import before Vite's path aliases are applied.
+*/
+@source "./**/*.{js,ts,jsx,tsx}";
+@source "../../../packages/sail-ui/src/**/*.{js,ts,jsx,tsx}";

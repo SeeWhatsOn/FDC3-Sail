@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.root.json",
+  "files": [],
+  "references": [
+    { "path": "./packages/desktop-agent" },
+    { "path": "./packages/sail-api" },
+    { "path": "./packages/app-directories" },
+    { "path": "./packages/sail-ui" },
+    { "path": "./apps/sail" },
+    { "path": "./apps/sail-electron" },
+    { "path": "./apps/sail-server" },
+    { "path": "./apps/example-fdc3-apps" }
+  ]
+}

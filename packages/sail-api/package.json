@@ -1,0 +1,27 @@
+{
+  "name": "@finos/sail-api",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Client and Server API for the FDC3 Sail platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "@types/uuid": "^10.0.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.3.2"
+  },
+  "dependencies": {
+    "@finos/fdc3": "^2.2.0",
+    "@finos/fdc3-sail-desktop-agent": "0.0.1",
+    "@finos/fdc3-web-impl": "^2.2.1-beta.3",
+    "socket.io": "^4.7.5",
+    "uuid": "^11.1.0"
+  }
+}
