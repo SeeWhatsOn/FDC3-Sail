@@ -8,9 +8,11 @@ This document provides a comprehensive architectural overview of the FDC3-Sail p
 
 The system is designed around several core principles:
 
--   **FDC3 Compliance**: Strictly adhere to the FDC3 2.0+ standards, particularly the Desktop Agent Communication Protocol (DACP).
+-   **FDC3 Compliance**: Strictly adhere to the FDC3 2.2 standards, particularly the Desktop Agent Communication Protocol (DACP) and Web Connection Protocol (WCP).
 -   **Separation of Concerns**: A clear division between the FDC3-standard "Desktop Agent" engine and the proprietary "Sail" platform services (UI, layouts, workspaces).
 -   **Transport Agnosticism**: The core desktop agent is decoupled from the underlying transport layer, allowing it to communicate over Socket.IO, MessagePorts, or other mechanisms.
+-   **Environment Independence**: The desktop-agent package has no browser or Node.js dependencies - it's pure TypeScript that can run anywhere.
+-   **Single Desktop Agent Instance**: ONE shared Desktop Agent instance manages ALL app connections, with transports stored per app instance.
 -   **Extensibility**: The architecture is designed to be modular, allowing for the addition of new apps, services, and features with minimal friction.
 
 ## 3. Architecture Diagram
@@ -52,17 +54,163 @@ flowchart TD
     C1 -- "Queries/Commands" --> D3
 ```
 
-## 4. Component Breakdown
+## 4. Three-Layer Architecture
 
-The platform is a monorepo composed of several `apps` and `packages`.
+The FDC3-Sail system follows a three-layer architecture that cleanly separates connection handling, transport abstraction, and FDC3 business logic:
 
--   **`apps/sail-server`**: The central NodeJS backend that orchestrates the entire system. It hosts the Socket.IO server, manages client connections, and initializes the FDC3 Desktop Agent.
--   **`apps/sail`**: The primary frontend application, built with React. It provides the main Sail shell interface, including workspace management, layouts, and the app launcher. It communicates with `sail-server` using the protocols defined below.
--   **`apps/sail-electron`**: An Electron wrapper that packages the `sail` frontend application into a distributable desktop application.
--   **`packages/desktop-agent`**: The heart of FDC3 compliance. This package implements the FDC3 Desktop Agent specification. It is transport-agnostic and responsible for all FDC3 state management (apps, intents, channels) and message processing.
--   **`packages/sail-api`**: Defines the programmatic API for the Sail server. It provides a clear interface for proprietary Sail functionality, separating it from the core FDC3 logic.
--   **`packages/sail-ui`**: A shared React component library that provides a consistent look and feel across all Sail applications.
--   **`packages/app-directories`**: Contains JSON-based app directories that define the applications available to be launched by the desktop agent.
+### Layer 1: WCP Gateway (Connection Layer)
+
+**Location**: `packages/sail-api/src/gateway/`
+
+**Responsibilities**:
+- Listens for WCP1Hello messages from FDC3 apps
+- Creates MessageChannel per connection
+- Sends WCP3Handshake with MessagePort port1
+- Wraps port2 as Transport implementation
+- Passes Transport to Desktop Agent for registration
+
+**Key Point**: WCP1-3 are browser-specific (use `window.postMessage`, `MessageChannel`) and MUST live in sail-api. These cannot run in Node.js environments.
+
+**Browser-Specific Implementation**:
+```typescript
+// WCP Gateway listens for WCP1Hello from iframes
+window.addEventListener("message", (event) => {
+  if (isWCP1Hello(event.data)) {
+    const channel = new MessageChannel()
+    const transport = new MessagePortTransport(channel.port2)
+
+    // Send WCP3Handshake to app
+    event.source.postMessage(handshakeResponse, "*", [channel.port1])
+
+    // Register connection with Desktop Agent
+    desktopAgent.registerConnection({ transport, wcpPayload })
+  }
+})
+```
+
+### Layer 2: Transport Abstraction (Communication Layer)
+
+**Location**: `packages/sail-api/src/transports/` and `packages/desktop-agent/src/interfaces/transport.ts`
+
+**Responsibilities**:
+- Abstract send/receive operations
+- Handle connection lifecycle (connect, disconnect, reconnect)
+- Provide 1:1 mapping between Transport and app instance
+- Support multiple transport types (MessagePort, Socket.IO, Worker)
+
+**Transport Interface** (defined in desktop-agent, implemented in sail-api):
+```typescript
+interface Transport {
+  send(message: unknown): void
+  onMessage(handler: MessageHandler): void
+  onDisconnect(handler: DisconnectHandler): void
+  getInstanceId(): string
+  setInstanceId(instanceId: string): void
+  isConnected(): boolean
+  disconnect(): void
+}
+```
+
+**Key Implementations**:
+- **MessagePortTransport**: Direct browser-to-browser communication
+- **SocketIOTransport**: Remote Desktop Agent over WebSocket
+- **WorkerTransport**: Shared worker communication (future)
+
+### Layer 3: Desktop Agent Core (Business Logic Layer)
+
+**Location**: `packages/desktop-agent/`
+
+**Responsibilities**:
+- Process DACP messages (FDC3 protocol)
+- Manage state registries (apps, intents, channels)
+- Validate app identity (WCP4-5 handlers)
+- Route messages between app instances
+- Emit events for UI synchronization
+
+**Key Characteristics**:
+- **Environment-agnostic**: No browser or Node.js dependencies
+- **Single instance**: ONE Desktop Agent manages ALL connections
+- **Transport-agnostic**: Only knows the Transport interface
+- **Pure TypeScript**: Can run in any JavaScript environment
+
+**Desktop Agent API**:
+```typescript
+class DesktopAgent {
+  constructor(config: {
+    appInstanceRegistry: AppInstanceRegistry,
+    intentRegistry: IntentRegistry,
+    channelContextRegistry: ChannelContextRegistry,
+    // ... NO transport parameter
+  })
+
+  // Called by WCP Gateway for each new app connection
+  registerConnection(params: {
+    transport: Transport,
+    wcpPayload: WCP4ValidateAppIdentityPayload
+  }): Promise<string>  // Returns instanceId
+
+  // Public API for UI event subscriptions
+  on(event: string, callback: Function): void
+}
+```
+
+### Layer Interaction Flow
+
+```
+FDC3 App (iframe)
+    ↓ WCP1Hello (postMessage)
+WCP Gateway (sail-api)
+    ↓ Creates MessageChannel
+    ↓ WCP3Handshake (transfers port1)
+    ↓ Wraps port2 as MessagePortTransport
+Desktop Agent (desktop-agent)
+    ↓ Validates identity (WCP4-5)
+    ↓ Stores transport in AppInstanceRegistry
+    ↓ Routes DACP messages via transport
+```
+
+### Package Responsibilities
+
+**`packages/desktop-agent`** (Pure FDC3 Engine):
+- DesktopAgent class
+- DACP message handlers
+- State registries
+- WCP4-5 validation handlers (pure logic)
+- Transport interface definition (types only)
+- **Exports**: NO transport implementations, NO WCP Gateway
+
+**`packages/sail-api`** (Environment Adapters):
+- WCP Gateway (WCP1-3 browser handlers)
+- Transport implementations (MessagePort, Socket.IO, Worker)
+- createDesktopAgent() factory
+- Browser Proxy for server/worker modes
+- **Exports**: Complete toolkit for building Desktop Agent in any environment
+
+**`apps/sail-server`** (Server Runtime):
+- Socket.IO server setup
+- ONE shared Desktop Agent instance
+- Registers SocketIOTransport per connection
+- Routes fdc3_event and sail_event messages
+
+**`apps/sail`** (Browser UI):
+- React application shell
+- WCP Gateway integration
+- Sail-controlled UI components (channel selector, intent resolver)
+- Desktop Agent event subscriptions
+- Iframe management for FDC3 apps
+
+**`apps/sail-electron`** (Electron Wrapper):
+- Packages sail UI as desktop application
+- May use MessagePort transport for local Desktop Agent
+- Optional: Embed Desktop Agent in main process
+
+**`packages/sail-ui`** (Shared Components):
+- React component library
+- Consistent styling across Sail applications
+
+**`packages/app-directories`** (App Metadata):
+- JSON-based FDC3 app directories
+- Loaded by AppDirectoryManager in Desktop Agent
 
 ## 5. Communication Protocols
 
@@ -139,7 +287,137 @@ This separation ensures:
 - FDC3 apps remain **unmodified** (use standard `@finos/fdc3` library)
 - Transport choice is **runtime configurable** (Socket.IO vs MessagePort vs future options)
 
-## 6. Message & Data Flow
+## 6. UI Component Architecture
+
+FDC3 Sail uses **Option 2: Sail-Controlled UI** from the FDC3 specification for UI component provisioning.
+
+### Key Characteristics
+
+**No Injected UI Components**:
+- Sail does NOT use injected iframes for channel selector or intent resolver
+- WCP3Handshake returns `channelSelectorUrl: false` and `intentResolverUrl: false`
+- Apps do NOT receive Fdc3UserInterface messages
+
+**Sail-Controlled React Components**:
+- Channel selector and intent resolver are external React components in the Sail parent window
+- These components have direct access to the Desktop Agent API
+- Desktop Agent emits events for UI synchronization
+
+**EventEmitter Pattern**:
+```typescript
+class DesktopAgent {
+  private eventEmitter = new EventEmitter()
+
+  async joinUserChannel(instanceId: string, channelId: string) {
+    // Update registry
+    this.appInstanceRegistry.setChannel(instanceId, channelId)
+
+    // Send DACP event to app
+    await this.sendToInstance(instanceId, {
+      type: "userChannelChangedEvent",
+      payload: { channel: { id: channelId, type: "user", displayMetadata: {...} } },
+      meta: { timestamp: Date.now() }
+    })
+
+    // Emit event for Sail UI synchronization
+    this.eventEmitter.emit("app:channelChanged", {
+      instanceId, channelId, timestamp: Date.now()
+    })
+  }
+
+  on(event: string, callback: Function) {
+    this.eventEmitter.on(event, callback)
+  }
+}
+```
+
+**Sail UI React Component Example**:
+```typescript
+function ChannelSelector() {
+  const [appChannels, setAppChannels] = useState<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    // Subscribe to Desktop Agent events
+    desktopAgent.on("app:channelChanged", (event) => {
+      setAppChannels(prev => new Map(prev).set(event.instanceId, event.channelId))
+    })
+
+    desktopAgent.on("app:registered", (event) => {
+      setAppChannels(prev => new Map(prev).set(event.instanceId, null))
+    })
+
+    desktopAgent.on("app:unregistered", (event) => {
+      setAppChannels(prev => {
+        const next = new Map(prev)
+        next.delete(event.instanceId)
+        return next
+      })
+    })
+  }, [])
+
+  function handleChannelClick(appInstanceId: string, channelId: string) {
+    // Direct Desktop Agent API call
+    desktopAgent.joinUserChannel(appInstanceId, channelId)
+  }
+
+  return (
+    <div className="channel-selector">
+      {Array.from(appChannels).map(([instanceId, currentChannel]) => (
+        <AppChannelControl
+          key={instanceId}
+          instanceId={instanceId}
+          currentChannel={currentChannel}
+          onChannelSelect={(channelId) => handleChannelClick(instanceId, channelId)}
+        />
+      ))}
+    </div>
+  )
+}
+```
+
+### Desktop Agent Event Types
+
+**App Lifecycle Events**:
+- `app:registered` - App completed WCP validation and is registered
+- `app:unregistered` - App disconnected or was explicitly closed
+- `app:channelChanged` - App joined/left a user channel
+
+**Intent Events**:
+- `intent:raised` - raiseIntent was called (for intent resolver UI)
+- `intent:resolved` - User selected app to handle intent
+- `intent:cancelled` - User cancelled intent resolution
+
+**Context Events**:
+- `context:broadcast` - Context was broadcast on a channel (for debugging/monitoring)
+- `listener:added` - App added a context listener
+- `listener:removed` - App removed a context listener
+
+### Benefits of Sail-Controlled UI
+
+1. **Full React Integration**: UI components are first-class React components, not iframes
+2. **Shared State Management**: Can use Zustand or other state managers
+3. **Performance**: No iframe overhead, direct DOM rendering
+4. **Consistent Styling**: Uses Sail UI component library and Tailwind
+5. **Simplified Testing**: Test React components directly, no iframe mocking
+
+### WCP3Handshake Response
+
+```typescript
+const handshakeResponse = {
+  type: "WCP3Handshake",
+  meta: {
+    connectionAttemptUuid: messageData.meta.connectionAttemptUuid,
+    timestamp: new Date(),
+  },
+  payload: {
+    fdc3Version: "2.2",
+    channelSelectorUrl: false,  // ← Sail-controlled UI
+    intentResolverUrl: false,   // ← Sail-controlled UI
+  },
+} as BrowserTypes.WebConnectionProtocol3Handshake
+```
+
+## 7. Message & Data Flow
 
 ### Sequence Diagram: Sail UI Opening an App
 
@@ -225,8 +503,22 @@ This architecture is partially implemented. Based on the analysis of `@packages/
 
 ## 8. Related Documents
 
-For more granular details on specific aspects of the architecture and implementation, please refer to the original documents:
+For more granular details on specific aspects of the architecture and implementation, please refer to the following documents:
+
+### Architecture Documentation
+
+-   [**Transport Architecture Planning (`docs/TRANSPORT_ARCHITECTURE_PLANNING.md`)**](./TRANSPORT_ARCHITECTURE_PLANNING.md): Detailed discussion of the three-layer architecture, transport interface design, WCP Gateway placement, and all architectural decisions made during the v4 refactoring.
+-   [**Architecture Summary (`docs/ARCHITECTURE_SUMMARY.md`)**](./ARCHITECTURE_SUMMARY.md): Comprehensive architecture documentation including message flows, sequence diagrams, Browser Proxy pattern, and deployment modes.
+-   [**Initial Architecture Analysis (`ARCHITECTURE_ANALYSIS.md`)**](../ARCHITECTURE_ANALYSIS.md): The original analysis document that identified architectural gaps and proposed the foundational changes.
+
+### Implementation Documentation
 
 -   [**Implementation Plan (`@packages/desktop-agent/IMPLEMENTATION_PLAN.md`)**](../packages/desktop-agent/IMPLEMENTATION_PLAN.md): A detailed, phased plan for implementing the FDC3 Desktop Agent, including specific code structures and handler logic.
+-   [**DACP Compliance (`@packages/desktop-agent/src/handlers/dacp/DACP-COMPLIANCE.md`)**](../packages/desktop-agent/src/handlers/dacp/DACP-COMPLIANCE.md): Tracks implementation status of all DACP message handlers.
+-   [**Desktop Agent Architecture (`@packages/desktop-agent/ARCHITECTURE.md`)**](../packages/desktop-agent/ARCHITECTURE.md): In-depth look at the Desktop Agent package structure and handler architecture.
+
+### Protocol Documentation
+
 -   [**Protocol Convention (`@packages/desktop-agent/PROTOCOL.md`)**](../packages/desktop-agent/PROTOCOL.md): A focused look at the two-channel (`fdc3_event` and `sail_event`) Socket.IO messaging protocol.
--   [**Initial Architecture Analysis (`ARCHITECTURE_ANALYSIS.md`)**](../ARCHITECTURE_ANALYSIS.md): The original analysis document that identified architectural gaps and proposed the foundational changes.
+-   [**FDC3 Web Connection Protocol (WCP)**](https://fdc3.finos.org/docs/next/api/specs/webConnectionProtocol): Official FDC3 specification for browser-based Desktop Agent connections.
+-   [**FDC3 Desktop Agent Communication Protocol (DACP)**](https://fdc3.finos.org/docs/next/api/specs/desktopAgentCommunicationProtocol): Official FDC3 wire protocol for Desktop Agent operations.

@@ -14,7 +14,8 @@ import { type DACPHandlerContext, logger } from "../types"
 import type { Context } from "@finos/fdc3"
 
 /**
- * Implementation metadata constants
+ * Implementation metadata constants.
+ * TODO: Get this from the env or move to a config file.
  */
 const IMPLEMENTATION_METADATA = {
   fdc3Version: "2.2",
