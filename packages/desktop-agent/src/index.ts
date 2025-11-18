@@ -1,29 +1,50 @@
 /**
- * FDC3 Desktop Agent - Pure, Environment-Agnostic Implementation
+ * FDC3 Desktop Agent - Core Package
  *
- * This package provides a pure FDC3 Desktop Agent with dependency injection.
- * All environment-specific concerns (transport, app launching) are injected
- * via constructor, making this portable across any runtime.
+ * This is the main entry point for the FDC3 Desktop Agent core.
+ * It exports only environment-agnostic components.
+ *
+ * ## Tree-Shaking
+ *
+ * Browser-specific code is NOT exported from this entry point.
+ * To use browser functionality, import from the /browser submodule:
+ *
+ * ```typescript
+ * // ✅ Core only (no browser code in bundle)
+ * import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
+ *
+ * // ✅ Browser module (includes WCP connector)
+ * import { createBrowserDesktopAgent } from '@finos/fdc3-sail-desktop-agent/browser'
+ *
+ * // ✅ Transports module
+ * import { createInMemoryTransportPair } from '@finos/fdc3-sail-desktop-agent/transports'
+ * ```
+ *
+ * ## What's Exported
+ *
+ * - **DesktopAgent** - Core Desktop Agent class
+ * - **Interfaces** - Transport, AppLauncher
+ * - **State Registries** - App, Intent, Channel registries
+ * - **App Directory** - App directory manager
+ * - **Types** - TypeScript types and interfaces
+ *
+ * ## What's NOT Exported (Tree-Shakeable)
+ *
+ * - Browser WCP connector → Use `/browser` submodule
+ * - MessagePort transport → Use `/browser` submodule
+ * - InMemory transport → Use `/transports` submodule
  */
 
-// Core Desktop Agent class
-export { DesktopAgent } from "./desktop-agent"
-export type { DesktopAgentConfig } from "./desktop-agent"
+// Re-export everything from core
+export * from "./core"
 
-// Interfaces (contracts for implementations)
-export type { Transport, MessageHandler, DisconnectHandler } from "./interfaces/transport"
-export type { AppLauncher, AppLaunchRequest, AppLaunchResult } from "./interfaces/app-launcher"
+// NOTE: Browser-specific code is NOT exported here
+// Import from @finos/fdc3-sail-desktop-agent/browser for:
+// - createBrowserDesktopAgent()
+// - WCPConnector
+// - MessagePortTransport
 
-// State registries
-export { AppInstanceRegistry } from "./state/app-instance-registry"
-export { IntentRegistry } from "./state/intent-registry"
-export { ChannelContextRegistry } from "./state/channel-context-registry"
-export { AppChannelRegistry } from "./state/app-channel-registry"
-export { UserChannelRegistry } from "./state/user-channel-registry"
-export { AppDirectoryManager } from "./app-directory/app-directory-manager"
-
-// Handler types (for advanced usage)
-export type { DACPHandlerContext, DACPHandler } from "./handlers/types"
-
-// Re-export common FDC3 types for convenience
-export type { AppMetadata, Context, AppIntent, AppIdentifier } from "@finos/fdc3"
+// NOTE: Transport implementations are NOT exported here
+// Import from @finos/fdc3-sail-desktop-agent/transports for:
+// - InMemoryTransport
+// - createInMemoryTransportPair()

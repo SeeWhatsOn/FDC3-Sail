@@ -4,22 +4,21 @@
  * Simple, synchronous transport for testing Desktop Agent without Socket.IO
  */
 
-import type { Transport, MessageHandler, DisconnectHandler } from "../../interfaces/transport"
+import type { Transport, MessageHandler, DisconnectHandler } from "../../core/interfaces/transport"
 
 /**
  * Mock transport - fully synchronous, no Socket.IO needed
  */
 export class MockTransport implements Transport {
-  private instanceId: string = ""
   private messageHandler?: MessageHandler
   private disconnectHandler?: DisconnectHandler
   private connected: boolean = true
 
   // Sent messages history for assertions
-  public sentMessages: Array<{ instanceId: string; message: unknown }> = []
+  public sentMessages: unknown[] = []
 
-  send(instanceId: string, message: unknown): void {
-    this.sentMessages.push({ instanceId, message })
+  send(message: unknown): void {
+    this.sentMessages.push(message)
   }
 
   onMessage(handler: MessageHandler): void {
@@ -28,14 +27,6 @@ export class MockTransport implements Transport {
 
   onDisconnect(handler: DisconnectHandler): void {
     this.disconnectHandler = handler
-  }
-
-  getInstanceId(): string {
-    return this.instanceId
-  }
-
-  setInstanceId(instanceId: string): void {
-    this.instanceId = instanceId
   }
 
   isConnected(): boolean {
@@ -57,7 +48,7 @@ export class MockTransport implements Transport {
 
   // Test helper: Get last sent message
   getLastMessage(): unknown {
-    return this.sentMessages[this.sentMessages.length - 1]?.message
+    return this.sentMessages[this.sentMessages.length - 1]
   }
 
   // Test helper: Clear history
