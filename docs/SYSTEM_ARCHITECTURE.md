@@ -60,71 +60,93 @@ The FDC3-Sail system follows a three-layer architecture that cleanly separates c
 
 ### Layer 1: WCP Gateway (Connection Layer)
 
-**Location**: `packages/sail-api/src/gateway/`
+**Location**: `packages/desktop-agent/src/browser/wcp-connector.ts`
 
 **Responsibilities**:
 - Listens for WCP1Hello messages from FDC3 apps
 - Creates MessageChannel per connection
 - Sends WCP3Handshake with MessagePort port1
-- Wraps port2 as Transport implementation
-- Passes Transport to Desktop Agent for registration
+- Wraps port2 as MessagePortTransport
+- Bridges app MessagePorts to Desktop Agent via InMemoryTransport
 
-**Key Point**: WCP1-3 are browser-specific (use `window.postMessage`, `MessageChannel`) and MUST live in sail-api. These cannot run in Node.js environments.
+**Key Point**: WCP1-3 are browser-specific (use `window.postMessage`, `MessageChannel`). The WCPConnector is in the desktop-agent's `/browser` submodule, making it tree-shakeable for server-side bundles.
 
 **Browser-Specific Implementation**:
 ```typescript
-// WCP Gateway listens for WCP1Hello from iframes
-window.addEventListener("message", (event) => {
-  if (isWCP1Hello(event.data)) {
-    const channel = new MessageChannel()
-    const transport = new MessagePortTransport(channel.port2)
+// WCPConnector (desktop-agent/src/browser/wcp-connector.ts)
+import { createBrowserDesktopAgent } from '@finos/fdc3-sail-desktop-agent/browser'
 
-    // Send WCP3Handshake to app
-    event.source.postMessage(handshakeResponse, "*", [channel.port1])
-
-    // Register connection with Desktop Agent
-    desktopAgent.registerConnection({ transport, wcpPayload })
+// Creates Desktop Agent + WCP Connector with InMemoryTransport bridge
+const { desktopAgent, wcpConnector, start } = createBrowserDesktopAgent({
+  wcpOptions: {
+    getIntentResolverUrl: () => false,  // Sail-controlled UI
+    getChannelSelectorUrl: () => false
   }
 })
+
+start()
+
+// WCPConnector internally handles:
+// 1. Listen for WCP1Hello via window.addEventListener("message")
+// 2. Create MessageChannel per app
+// 3. Send WCP3Handshake with port1 to app
+// 4. Wrap port2 as MessagePortTransport
+// 5. Bridge to Desktop Agent via InMemoryTransport
+```
+
+**Architecture**:
+```
+FDC3 App (iframe)
+    ↓ WCP1Hello (window.postMessage)
+WCPConnector (desktop-agent/browser)
+    ↓ Creates MessageChannel
+    ↓ Sends WCP3Handshake (transfers port1)
+    ↓ Wraps port2 as MessagePortTransport
+    ↓ Bridges via InMemoryTransport
+Desktop Agent Core (desktop-agent/core)
+    ↓ Validates identity (WCP4-5)
+    ↓ Routes DACP messages
 ```
 
 ### Layer 2: Transport Abstraction (Communication Layer)
 
-**Location**: `packages/sail-api/src/transports/` and `packages/desktop-agent/src/interfaces/transport.ts`
+**Locations**:
+- `packages/desktop-agent/src/core/interfaces/transport.ts` (interface definition)
+- `packages/desktop-agent/src/browser/message-port-transport.ts` (MessagePort implementation)
+- `packages/desktop-agent/src/transports/in-memory-transport.ts` (InMemory implementation)
+- `packages/sail-api/src/transports/` (Socket.IO and other implementations)
 
 **Responsibilities**:
 - Abstract send/receive operations
-- Handle connection lifecycle (connect, disconnect, reconnect)
-- Provide 1:1 mapping between Transport and app instance
-- Support multiple transport types (MessagePort, Socket.IO, Worker)
+- Handle connection lifecycle (connect, disconnect)
+- Support multiple transport types (MessagePort, InMemory, Socket.IO)
 
-**Transport Interface** (defined in desktop-agent, implemented in sail-api):
+**Transport Interface** (defined in desktop-agent/core):
 ```typescript
 interface Transport {
   send(message: unknown): void
   onMessage(handler: MessageHandler): void
   onDisconnect(handler: DisconnectHandler): void
-  getInstanceId(): string
-  setInstanceId(instanceId: string): void
   isConnected(): boolean
   disconnect(): void
 }
 ```
 
 **Key Implementations**:
-- **MessagePortTransport**: Direct browser-to-browser communication
-- **SocketIOTransport**: Remote Desktop Agent over WebSocket
-- **WorkerTransport**: Shared worker communication (future)
+- **MessagePortTransport** (`desktop-agent/browser`): Browser iframe-to-parent communication via MessageChannel
+- **InMemoryTransport** (`desktop-agent/transports`): Same-process communication (Desktop Agent ↔ WCP Connector)
+- **SocketIOTransport** (`sail-api`): Remote Desktop Agent over WebSocket
+- **WorkerTransport** (future): Shared worker communication
 
 ### Layer 3: Desktop Agent Core (Business Logic Layer)
 
-**Location**: `packages/desktop-agent/`
+**Location**: `packages/desktop-agent/src/core/`
 
 **Responsibilities**:
 - Process DACP messages (FDC3 protocol)
 - Manage state registries (apps, intents, channels)
 - Validate app identity (WCP4-5 handlers)
-- Route messages between app instances
+- Route messages via transport interface
 - Emit events for UI synchronization
 
 **Key Characteristics**:
@@ -132,26 +154,39 @@ interface Transport {
 - **Single instance**: ONE Desktop Agent manages ALL connections
 - **Transport-agnostic**: Only knows the Transport interface
 - **Pure TypeScript**: Can run in any JavaScript environment
+- **Tree-shakeable**: Separate from browser-specific code
 
 **Desktop Agent API**:
 ```typescript
 class DesktopAgent {
   constructor(config: {
-    appInstanceRegistry: AppInstanceRegistry,
-    intentRegistry: IntentRegistry,
-    channelContextRegistry: ChannelContextRegistry,
-    // ... NO transport parameter
+    transport: Transport,
+    appInstanceRegistry?: AppInstanceRegistry,
+    intentRegistry?: IntentRegistry,
+    channelContextRegistry?: ChannelContextRegistry,
+    appLauncher?: AppLauncher
+    // ... registries are optional, will use defaults
   })
 
-  // Called by WCP Gateway for each new app connection
-  registerConnection(params: {
-    transport: Transport,
-    wcpPayload: WCP4ValidateAppIdentityPayload
-  }): Promise<string>  // Returns instanceId
+  start(): void
+  stop(): void
 
   // Public API for UI event subscriptions
   on(event: string, callback: Function): void
 }
+```
+
+**Usage**:
+```typescript
+// Browser: with WCP connector
+import { createBrowserDesktopAgent } from '@finos/fdc3-sail-desktop-agent/browser'
+const { desktopAgent, wcpConnector, start } = createBrowserDesktopAgent()
+start()
+
+// Server: with Socket.IO transport
+import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
+const da = new DesktopAgent({ transport: socketIOTransport })
+da.start()
 ```
 
 ### Layer Interaction Flow
@@ -171,20 +206,47 @@ Desktop Agent (desktop-agent)
 
 ### Package Responsibilities
 
-**`packages/desktop-agent`** (Pure FDC3 Engine):
-- DesktopAgent class
-- DACP message handlers
-- State registries
-- WCP4-5 validation handlers (pure logic)
-- Transport interface definition (types only)
-- **Exports**: NO transport implementations, NO WCP Gateway
+**`packages/desktop-agent`** (Pure FDC3 Engine + Browser Support):
 
-**`packages/sail-api`** (Environment Adapters):
-- WCP Gateway (WCP1-3 browser handlers)
-- Transport implementations (MessagePort, Socket.IO, Worker)
-- createDesktopAgent() factory
-- Browser Proxy for server/worker modes
-- **Exports**: Complete toolkit for building Desktop Agent in any environment
+The desktop-agent package is organized into three main modules:
+
+- **`src/core/`** (Pure FDC3 Engine - Environment Agnostic):
+  - DesktopAgent class
+  - DACP message handlers
+  - State registries (apps, intents, channels)
+  - WCP4-5 validation handlers (pure logic)
+  - Transport interface definition (types only)
+  - **Zero browser or Node.js dependencies**
+
+- **`src/browser/`** (Browser-Specific Module - Tree-Shakeable):
+  - WCPConnector (WCP1-3 handshake handler)
+  - MessagePortTransport implementation
+  - createBrowserDesktopAgent() factory
+  - Browser types and interfaces
+  - **Only included when explicitly imported via `/browser` submodule**
+
+- **`src/transports/`** (Transport Implementations):
+  - InMemoryTransport (same-process communication)
+  - createInMemoryTransportPair() helper
+  - **Tree-shakeable, imported via `/transports` submodule**
+
+**Package Exports**:
+```typescript
+// Core only (tree-shakes out browser code)
+import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
+
+// Browser module (includes WCP connector)
+import { createBrowserDesktopAgent } from '@finos/fdc3-sail-desktop-agent/browser'
+
+// Transports module
+import { createInMemoryTransportPair } from '@finos/fdc3-sail-desktop-agent/transports'
+```
+
+**`packages/sail-api`** (Sail Platform Services):
+- Sail Server API wrapper
+- Socket.IO transport (for remote Desktop Agent)
+- Browser Proxy for server/worker modes (if needed)
+- **Exports**: Sail-specific services and utilities
 
 **`apps/sail-server`** (Server Runtime):
 - Socket.IO server setup
