@@ -346,6 +346,49 @@ export class AppInstanceRegistry {
   }
 
   // ============================================================================
+  // INTENT LISTENER MANAGEMENT
+  // ============================================================================
+
+  /**
+   * Adds an intent listener for an app instance
+   */
+  addIntentListener(instanceId: string, intentName: string): boolean {
+    const instance = this.instances.get(instanceId)
+    if (!instance) {
+      return false
+    }
+
+    instance.intentListeners.add(intentName)
+    instance.lastActivity = new Date()
+
+    return true
+  }
+
+  /**
+   * Removes an intent listener for an app instance
+   */
+  removeIntentListener(instanceId: string, intentName: string): boolean {
+    const instance = this.instances.get(instanceId)
+    if (!instance) {
+      return false
+    }
+
+    const removed = instance.intentListeners.delete(intentName)
+    if (removed) {
+      instance.lastActivity = new Date()
+    }
+
+    return removed
+  }
+
+  /**
+   * Gets all instances listening for a specific intent
+   */
+  getIntentListeners(intentName: string): AppInstance[] {
+    return this.getAllInstances().filter(instance => instance.intentListeners.has(intentName))
+  }
+
+  // ============================================================================
   // PRIVATE CHANNEL MANAGEMENT
   // ============================================================================
 
@@ -448,6 +491,7 @@ export class AppInstanceRegistry {
         this.updateContextListenerIndex(contextType, instance.instanceId, "remove")
       })
       instance.contextListeners.clear()
+      instance.intentListeners.clear()
 
       // Clear private channel access
       instance.privateChannels.clear()

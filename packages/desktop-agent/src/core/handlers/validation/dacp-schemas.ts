@@ -124,7 +124,10 @@ export type WCPConnectionStep = z.infer<typeof WCPConnectionStepSchema>
 // AddContextListenerRequest - AddContextListener Request
 export const AddContextListenerRequestSchema = z.object({
   type: z.literal("addContextListenerRequest"),
-  payload: z.object({ channelId: z.union([z.string(), z.null()]), contextType: z.union([z.string(), z.null()]) }),
+  payload: z.object({
+    channelId: z.union([z.string(), z.null()]).optional(),
+    contextType: z.union([z.string(), z.null()]).optional()
+  }),
   meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
@@ -723,7 +726,14 @@ export type RaiseIntentForContextResponse = z.infer<typeof RaiseIntentForContext
 // RaiseIntentRequest - RaiseIntent Request
 export const RaiseIntentRequestSchema = z.object({
   type: z.literal("raiseIntentRequest"),
-  payload: z.object({ intent: z.string(), context: ContextSchema, app: z.object({ appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }) }),
+  payload: z.object({
+    intent: z.string(),
+    context: ContextSchema,
+    app: z.union([
+      z.string(), // App ID as string
+      z.object({ appId: z.string(), instanceId: z.string().optional(), desktopAgent: z.string().optional() }) // AppIdentifier object
+    ]).optional()
+  }),
   meta: z.object({ requestUuid: z.string(), timestamp: z.coerce.date() })
 })
 
