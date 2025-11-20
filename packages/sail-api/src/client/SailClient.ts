@@ -8,6 +8,7 @@ import {
   type DesktopAgentDirectoryListingPayload,
   type DirectoryApp,
 } from ".."
+import { MiddlewarePipeline, type Middleware } from "../middleware"
 
 /**
  * A typed client for interacting with the Sail server via Socket.IO.
@@ -15,6 +16,7 @@ import {
  */
 export class SailClient {
   private socket: Socket
+  private pipeline: MiddlewarePipeline<unknown>
 
   /**
    * Creates an instance of SailClient.
@@ -25,6 +27,16 @@ export class SailClient {
       throw new Error("Socket instance is required for SailClient.")
     }
     this.socket = socket
+    this.pipeline = new MiddlewarePipeline()
+  }
+
+  /**
+   * Add middleware to the message processing pipeline.
+   * @param middleware The middleware function to add
+   */
+  use(middleware: Middleware<unknown>): this {
+    this.pipeline.use(middleware)
+    return this
   }
 
   /**
@@ -33,12 +45,29 @@ export class SailClient {
    * @param payload The data to send.
    * @returns A promise that resolves with the server's response.
    */
-  private async emitWithAck<T>(type: keyof typeof SailMessages, payload: unknown): Promise<T> {
+  private async emitWithAck<T>(
+    type: keyof typeof SailMessages | string,
+    payload: unknown
+  ): Promise<T> {
     const message: Partial<SailMessage> = {
-      type,
-      payload,
+      type: type as any,
+      payload: payload as any,
     }
-    return this.socket.emitWithAck(SailMessages.SAIL_EVENT, message)
+
+    let result: T | undefined
+
+    // Execute middleware pipeline
+    await this.pipeline.execute({ message }, async ctx => {
+      // Final step: Emit message
+      const msg = ctx.message as Partial<SailMessage>
+      result = await this.socket.emitWithAck(SailMessages.SAIL_EVENT, msg)
+    })
+
+    if (result === undefined) {
+      throw new Error("Message processing failed or no response received")
+    }
+
+    return result
   }
 
   /**
@@ -47,7 +76,7 @@ export class SailClient {
    * @returns A promise that resolves to true on success.
    */
   public desktopAgentHello(payload: DesktopAgentHelloPayload): Promise<boolean> {
-    return this.emitWithAck<boolean>("daHello", payload)
+    return this.emitWithAck<boolean>(SailMessages.DA_HELLO, payload)
   }
 
   /**
@@ -56,7 +85,7 @@ export class SailClient {
    * @returns A promise that resolves to true on success.
    */
   public updateClientState(payload: SailClientStatePayload): Promise<boolean> {
-    return this.emitWithAck<boolean>("sailClientState", payload)
+    return this.emitWithAck<boolean>(SailMessages.SAIL_CLIENT_STATE, payload)
   }
 
   /**
@@ -65,7 +94,7 @@ export class SailClient {
    * @returns A promise that resolves with the new instanceId for the app.
    */
   public registerAppLaunch(payload: DesktopAgentRegisterAppLaunchPayload): Promise<string> {
-    return this.emitWithAck<string>("daRegisterAppLaunch", payload)
+    return this.emitWithAck<string>(SailMessages.DA_REGISTER_APP_LAUNCH, payload)
   }
 
   /**
@@ -73,7 +102,9 @@ export class SailClient {
    * @returns A promise that resolves with an array of DirectoryApp objects.
    */
   public getDirectoryListing(): Promise<DirectoryApp[]> {
-    const payload: Partial<DesktopAgentDirectoryListingPayload> = { type: "daDirectoryListing" }
-    return this.emitWithAck<DirectoryApp[]>("daDirectoryListing", payload)
+    const payload: Partial<DesktopAgentDirectoryListingPayload> = {
+      type: SailMessages.DA_DIRECTORY_LISTING as any,
+    }
+    return this.emitWithAck<DirectoryApp[]>(SailMessages.DA_DIRECTORY_LISTING, payload)
   }
 }

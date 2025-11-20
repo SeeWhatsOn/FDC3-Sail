@@ -1,11 +1,3 @@
-/**
- * Sail Desktop Agent
- *
- * Sail-specific wrapper around the pure FDC3 Desktop Agent.
- * Adds Sail-specific features like middleware, logging, authentication, etc.
- * Uses composition (not inheritance) to wrap the core DesktopAgent.
- */
-
 import type { Socket } from "socket.io"
 import {
   DesktopAgent,
@@ -13,35 +5,22 @@ import {
   AppInstanceRegistry,
   IntentRegistry,
   AppDirectoryManager,
+  type Transport,
 } from "@finos/fdc3-sail-desktop-agent"
 import { SocketIOTransport } from "./adapters/socket-io-transport"
 import { SailAppLauncher, type SailAppLauncherConfig } from "./adapters/SailAppLauncher"
-
-/**
- * Middleware function for processing messages
- */
-export type MiddlewareFunction = (
-  message: unknown,
-  phase: "before" | "after" | "error"
-) => void | Promise<void>
-
-/**
- * Middleware configuration
- */
-export interface Middleware {
-  name: string
-  phase: "before" | "after" | "error"
-  handler: MiddlewareFunction
-}
+import { MiddlewarePipeline, type Middleware } from "./middleware"
+export type { Middleware }
 
 /**
  * Configuration for Sail Desktop Agent
  */
 export interface SailDesktopAgentConfig {
   /**
-   * Socket.IO socket for this connection
+   * Transport implementation for message communication.
+   * Can be provided directly (recommended) or via legacy 'socket' property.
    */
-  socket: Socket
+  transport?: Transport
 
   /**
    * App launcher configuration
@@ -56,11 +35,6 @@ export interface SailDesktopAgentConfig {
   appDirectory?: AppDirectoryManager
 
   /**
-   * Middleware functions to apply
-   */
-  middleware?: Middleware[]
-
-  /**
    * Enable debug logging
    */
   debug?: boolean
@@ -70,43 +44,45 @@ export interface SailDesktopAgentConfig {
  * Sail Desktop Agent - environment-specific wrapper.
  *
  * This class wraps the pure DesktopAgent with Sail-specific features:
- * - Socket.IO transport
+ * - Transport-agnostic (works with Socket.IO, InMemory, etc.)
  * - Browser-based app launching
  * - Middleware for logging, auth, metrics
  * - Connection lifecycle management
  *
  * @example
  * ```typescript
+ * // With Socket.IO (Client/Server)
  * const agent = new SailDesktopAgent({
- *   socket: socket,
- *   appLauncher: {
- *     onLaunchApp: async (metadata, instanceId, context) => {
- *       // Notify UI to open app
- *     }
- *   },
- *   middleware: [loggingMiddleware, authMiddleware],
+ *   transport: new SocketIOTransport(socket)
  * })
  *
- * agent.start()
+ * // With InMemory (Browser/Test)
+ * const agent = new SailDesktopAgent({
+ *   transport: new InMemoryTransport()
+ * })
  * ```
  */
 export class SailDesktopAgent {
   private agent: DesktopAgent
-  private transport: SocketIOTransport
-  private middleware: Middleware[]
+  private transport: Transport
+  private pipeline: MiddlewarePipeline<unknown>
   private debug: boolean
 
   constructor(config: SailDesktopAgentConfig) {
-    this.middleware = config.middleware ?? []
     this.debug = config.debug ?? false
+    this.pipeline = new MiddlewarePipeline()
 
-    // Create Socket.IO transport
-    this.transport = new SocketIOTransport(config.socket)
+    // Resolve transport
+    if (config.transport) {
+      this.transport = config.transport
+    } else if (config.socket) {
+      this.transport = new SocketIOTransport(config.socket)
+    } else {
+      throw new Error("SailDesktopAgent requires either 'transport' or 'socket' in config")
+    }
 
     // Create app launcher if config provided
-    const appLauncher = config.appLauncher
-      ? new SailAppLauncher(config.appLauncher)
-      : undefined
+    const appLauncher = config.appLauncher ? new SailAppLauncher(config.appLauncher) : undefined
 
     // Create pure desktop agent with injected dependencies
     const agentConfig: DesktopAgentConfig = {
@@ -121,6 +97,15 @@ export class SailDesktopAgent {
   }
 
   /**
+   * Add middleware to the message processing pipeline.
+   * @param middleware The middleware function to add
+   */
+  use(middleware: Middleware<unknown>): this {
+    this.pipeline.use(middleware)
+    return this
+  }
+
+  /**
    * Start the Desktop Agent.
    * Sets up message handlers with middleware wrapping.
    */
@@ -129,23 +114,18 @@ export class SailDesktopAgent {
     const originalOnMessage = this.transport.onMessage.bind(this.transport)
 
     // Override onMessage to apply middleware
-    this.transport.onMessage = (handler) => {
-      originalOnMessage(async (message) => {
+    this.transport.onMessage = (handler: (msg: unknown) => Promise<void> | void) => {
+      originalOnMessage(async (message: unknown) => {
         try {
-          // Run "before" middleware
-          await this.runMiddleware(message, "before")
-
-          // Call original handler (routes to DesktopAgent)
-          await handler(message)
-
-          // Run "after" middleware
-          await this.runMiddleware(message, "after")
+          // Execute middleware pipeline
+          await this.pipeline.execute({ message }, async ctx => {
+            // Final step: Call original handler (routes to DesktopAgent)
+            await handler(ctx.message)
+          })
         } catch (error) {
-          // Run "error" middleware
-          await this.runMiddleware({ error, message }, "error")
-
-          // Re-throw to let handler deal with it
-          throw error
+          console.error("[SailDesktopAgent] Error processing message:", error)
+          // We don't re-throw here to prevent crashing the socket connection,
+          // but middleware should handle errors if needed.
         }
       })
     }
@@ -156,7 +136,6 @@ export class SailDesktopAgent {
     if (this.debug) {
       console.log("[SailDesktopAgent] Started", {
         instanceId: this.transport.getInstanceId(),
-        middleware: this.middleware.map((m) => m.name),
       })
     }
   }
@@ -182,23 +161,7 @@ export class SailDesktopAgent {
   /**
    * Get the transport (for testing/inspection)
    */
-  getTransport(): SocketIOTransport {
+  getTransport(): Transport {
     return this.transport
-  }
-
-  /**
-   * Run middleware for a specific phase
-   */
-  private async runMiddleware(data: unknown, phase: "before" | "after" | "error"): Promise<void> {
-    const middlewareForPhase = this.middleware.filter((m) => m.phase === phase)
-
-    for (const mw of middlewareForPhase) {
-      try {
-        await mw.handler(data, phase)
-      } catch (error) {
-        console.error(`[SailDesktopAgent] Middleware "${mw.name}" failed:`, error)
-        // Continue running other middleware
-      }
-    }
   }
 }

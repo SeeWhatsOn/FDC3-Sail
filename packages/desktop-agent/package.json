@@ -3,20 +3,20 @@
   "version": "0.0.1",
   "type": "module",
   "description": "FDC3 Desktop Agent implementation for Sail",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
     },
     "./browser": {
-      "import": "./dist/browser/index.js",
-      "types": "./dist/browser/index.d.ts"
+      "import": "./dist/src/browser/index.js",
+      "types": "./dist/src/browser/index.d.ts"
     },
     "./transports": {
-      "import": "./dist/transports/index.js",
-      "types": "./dist/transports/index.d.ts"
+      "import": "./dist/src/transports/index.js",
+      "types": "./dist/src/transports/index.d.ts"
     }
   },
   "sideEffects": false,

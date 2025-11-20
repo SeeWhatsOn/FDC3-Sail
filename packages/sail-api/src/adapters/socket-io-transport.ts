@@ -16,13 +16,11 @@ import type { Transport, MessageHandler, DisconnectHandler } from "@finos/fdc3-s
  * Used for server-side Desktop Agent with Node.js
  */
 export class SocketIOTransport implements Transport {
-  private instanceId: string = ""
-
   constructor(private socket: Socket) {}
 
-  send(instanceId: string, message: unknown): void {
+  send(message: unknown): void {
     if (!this.socket.connected) {
-      throw new Error(`Cannot send message: socket disconnected (instance: ${instanceId})`)
+      throw new Error("Cannot send message: socket disconnected")
     }
 
     this.socket.emit("fdc3_message", message)
@@ -44,12 +42,8 @@ export class SocketIOTransport implements Transport {
     })
   }
 
-  getInstanceId(): string {
-    return this.instanceId
-  }
-
-  setInstanceId(instanceId: string): void {
-    this.instanceId = instanceId
+  getInstanceId(): string | null {
+    return null
   }
 
   isConnected(): boolean {

@@ -54,7 +54,7 @@ export const SailMessages = {
  */
 export interface SailMessage<TPayload = Record<string, unknown>> {
   /** Message type - matches Sail protocol event name */
-  type: keyof typeof SailMessages
+  type: (typeof SailMessages)[keyof typeof SailMessages]
   /** Message payload containing actual data */
   payload: TPayload
   /** Message metadata */

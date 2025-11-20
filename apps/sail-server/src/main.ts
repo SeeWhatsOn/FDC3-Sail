@@ -12,6 +12,8 @@ dotenv.config()
 
 const port = process.env.PORT || APP_CONFIG.DEFAULT_PORT
 
+import { SocketIOServerTransport } from "@finos/sail-api/dist/adapters/socket-io-server-transport"
+
 // Create Socket.IO server
 const io = new Server(Number(port), {
   cors: {
@@ -21,46 +23,32 @@ const io = new Server(Number(port), {
   },
 })
 
-// Map to track desktop agent instances per connection
-const agentInstances = new Map<string, SailDesktopAgent>()
+// Create Global Desktop Agent
+const transport = new SocketIOServerTransport(io)
+const agent = new SailDesktopAgent({
+  transport,
+  appLauncher: {
+    // TODO: Implement app launching via socket messages to UI
+    onLaunchApp: async (appMetadata, instanceId, context) => {
+      console.log("🚀 App launch requested:", {
+        appId: appMetadata.appId,
+        instanceId,
+        hasContext: !!context,
+      })
+    },
+  },
+  debug: process.env.DEBUG === "true",
+})
+
+// Start the global agent
+agent.start()
 
 // Socket.IO connection handling
 io.on("connection", socket => {
   console.log("🔌 FDC3 Client connected:", socket.id)
 
-  // Create Sail Desktop Agent for this connection
-  const agent = new SailDesktopAgent({
-    socket,
-    appLauncher: {
-      // TODO: Implement app launching via socket messages to UI
-      onLaunchApp: async (appMetadata, instanceId, context) => {
-        console.log("🚀 App launch requested:", {
-          appId: appMetadata.appId,
-          instanceId,
-          hasContext: !!context,
-        })
-        // Future: Send message to Sail UI to open app
-        // socket.emit('sail_app_open', { appMetadata, instanceId, context })
-      },
-    },
-    debug: process.env.DEBUG === "true",
-  })
-
-  // Start the agent
-  agent.start()
-
-  // Track the instance
-  agentInstances.set(socket.id, agent)
-
   socket.on("disconnect", () => {
     console.log("🔌 FDC3 Client disconnected:", socket.id)
-
-    // Stop and cleanup agent
-    const instance = agentInstances.get(socket.id)
-    if (instance) {
-      instance.stop()
-      agentInstances.delete(socket.id)
-    }
   })
 })
 

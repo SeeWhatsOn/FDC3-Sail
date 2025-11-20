@@ -25,6 +25,7 @@ export * from "./interfaces"
 
 // State Registries
 export { AppInstanceRegistry } from "./state/app-instance-registry"
+export type { AppInstance, AppInstanceState } from "./state/app-instance-registry"
 export { IntentRegistry } from "./state/intent-registry"
 export { ChannelContextRegistry } from "./state/channel-context-registry"
 export { AppChannelRegistry } from "./state/app-channel-registry"

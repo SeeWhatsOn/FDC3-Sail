@@ -5,7 +5,7 @@
  * Provides clean business logic for Sail UI operations.
  */
 
-import type { AppInstance, TransportAdapter } from "@finos/fdc3-sail-desktop-agent"
+import type { AppInstance, DesktopAgent, AppInstanceState } from "@finos/fdc3-sail-desktop-agent"
 import type { DirectoryApp } from "../types/sail-types"
 
 // ============================================================================
@@ -13,7 +13,7 @@ import type { DirectoryApp } from "../types/sail-types"
 // ============================================================================
 
 export interface SailServerConfig {
-  desktopAgent: DesktopAgentSingleton
+  desktopAgent: DesktopAgent
 }
 
 export interface DirectoryResponse {
@@ -25,15 +25,15 @@ export interface ConnectedAppsResponse {
 }
 
 // ============================================================================
-// KISS SAIL SERVER - Uses Desktop Agent Singleton
+// KISS SAIL SERVER - Uses Desktop Agent
 // ============================================================================
 
 /**
- * Simple Sail Server that uses the DesktopAgentSingleton
- * All FDC3 operations are delegated to the singleton
+ * Simple Sail Server that uses the DesktopAgent
+ * All FDC3 operations are delegated to the agent
  */
 export class SailServer {
-  private desktopAgent: DesktopAgentSingleton
+  private desktopAgent: DesktopAgent
 
   constructor(config: SailServerConfig) {
     this.desktopAgent = config.desktopAgent
@@ -48,7 +48,7 @@ export class SailServer {
    */
   getDirectoryApps(): DirectoryResponse {
     return {
-      apps: this.desktopAgent.getDirectoryApps(),
+      apps: this.desktopAgent.getAppDirectory().retrieveAllApps(),
     }
   }
 
@@ -56,7 +56,11 @@ export class SailServer {
    * Reload directories from URLs
    */
   async reloadDirectories(urls: string[], customApps: DirectoryApp[] = []): Promise<void> {
-    await this.desktopAgent.reloadDirectories(urls, customApps)
+    await this.desktopAgent.getAppDirectory().replace(urls)
+    // Add custom apps
+    for (const app of customApps) {
+      this.desktopAgent.getAppDirectory().add(app)
+    }
   }
 
   // ============================================================================
@@ -68,7 +72,7 @@ export class SailServer {
    */
   getConnectedApps(): ConnectedAppsResponse {
     return {
-      apps: this.desktopAgent.getConnectedApps(),
+      apps: this.desktopAgent.getAppInstanceRegistry().getAllInstances(),
     }
   }
 
@@ -76,14 +80,24 @@ export class SailServer {
    * Get apps on specific channel
    */
   getAppsOnChannel(channelId: string): AppInstance[] {
-    return this.desktopAgent.getAppsOnChannel(channelId)
+    return this.desktopAgent.getAppInstanceRegistry().getInstancesOnChannel(channelId)
   }
 
   /**
    * Get channel to apps mapping
    */
   getChannelMap(): Record<string, string[]> {
-    return this.desktopAgent.getChannelMap()
+    const map: Record<string, string[]> = {}
+    const instances = this.desktopAgent.getAppInstanceRegistry().getAllInstances()
+    for (const instance of instances) {
+      if (instance.currentChannel) {
+        if (!map[instance.currentChannel]) {
+          map[instance.currentChannel] = []
+        }
+        map[instance.currentChannel].push(instance.instanceId)
+      }
+    }
+    return map
   }
 
   // ============================================================================
@@ -102,7 +116,7 @@ export class SailServer {
     userId: string
   }): Promise<boolean> {
     try {
-      await this.desktopAgent.reloadDirectories(params.directories, params.customApps)
+      await this.reloadDirectories(params.directories, params.customApps)
       return true
     } catch (error) {
       console.error("Failed to handle desktop agent hello:", error)
@@ -138,15 +152,22 @@ export class SailServer {
     const instanceId = `instance-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
     // Register with desktop agent
-    const success = this.desktopAgent.registerAppInstance({
+    // We need to fetch metadata first or create a placeholder
+    const apps = this.desktopAgent.getAppDirectory().retrieveAllApps()
+    const app = apps.find(a => a.appId === params.appId)
+    if (!app) {
+      throw new Error(`App ${params.appId} not found in directory`)
+    }
+
+    this.desktopAgent.getAppInstanceRegistry().createInstance({
       instanceId,
       appId: params.appId,
-      hosting: params.hosting,
+      metadata: app as any, // Cast if needed
+      instanceMetadata: {
+        hosting: params.hosting as any,
+        title: params.instanceTitle,
+      },
     })
-
-    if (!success) {
-      throw new Error("Failed to register app instance")
-    }
 
     return { instanceId }
   }
@@ -161,12 +182,14 @@ export class SailServer {
     userId: string
   }): Promise<string> {
     // Get the app instance from desktop agent
-    const instance = this.desktopAgent.getAppInstance(params.instanceId)
+    const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(params.instanceId)
 
     if (instance && instance.state === "pending") {
       // Update to connected
-      this.desktopAgent.updateAppInstanceState(params.instanceId, "connected" as any)
-      return instance.instanceMetadata?.hosting || "frame"
+      this.desktopAgent
+        .getAppInstanceRegistry()
+        .updateInstanceState(params.instanceId, "connected" as AppInstanceState)
+      return (instance.instanceMetadata?.hosting as string) || "frame"
     }
 
     throw new Error("Invalid instance ID")
@@ -181,7 +204,9 @@ export class SailServer {
     userId: string
   }): Promise<boolean> {
     try {
-      return this.desktopAgent.setAppInstanceChannel(params.instanceId, params.channel)
+      return this.desktopAgent
+        .getAppInstanceRegistry()
+        .setInstanceChannel(params.instanceId, params.channel)
     } catch (error) {
       console.error("Failed to change channel:", error)
       return false
@@ -195,28 +220,28 @@ export class SailServer {
   /**
    * Set up simple event forwarding to Socket.IO
    */
-  setupEventForwarding(io: any): void {
+  setupEventForwarding(_io: any): void {
     // Simple event forwarding - no complex abstractions
     // This could be enhanced to listen to actual FDC3 events when available
 
     // For now, just provide the interface for manual event triggering
-    this.onAppConnected = callback => {
+    this.onAppConnected = _callback => {
       // TODO: Hook into actual FDC3 events
       console.log("App connected callback registered")
     }
 
-    this.onChannelChanged = callback => {
+    this.onChannelChanged = _callback => {
       // TODO: Hook into actual FDC3 events
       console.log("Channel changed callback registered")
     }
   }
 
   // Placeholder event methods - keep it simple
-  onAppConnected(callback: (instance: AppInstance) => void): void {
+  onAppConnected(_callback: (instance: AppInstance) => void): void {
     // Simple implementation
   }
 
-  onChannelChanged(callback: (instanceId: string, channelId: string | null) => void): void {
+  onChannelChanged(_callback: (instanceId: string, channelId: string | null) => void): void {
     // Simple implementation
   }
 
@@ -270,41 +295,6 @@ export class SailServer {
       default:
         throw new Error(`Unknown Sail message type: ${message.type}`)
     }
-  }
-
-  /**
-   * Route FDC3 messages to the desktop agent
-   * This forwards FDC3 protocol messages to the actual FDC3 engine
-   */
-  async handleFDC3Message(
-    message: any,
-    sourceId: string,
-    replyCallback: (response: any) => void
-  ): Promise<void> {
-    // Forward to desktop agent singleton for processing
-    await this.desktopAgent.processFDC3Message(message, sourceId, replyCallback)
-  }
-
-  /**
-   * Initialize DACP MessagePort for a client
-   */
-  initializeDACPMessagePort(instanceId: string, messagePort: MessagePort): void {
-    this.desktopAgent.initializeDACPMessagePort(instanceId, messagePort)
-  }
-
-  /**
-   * Register a transport adapter for an instance
-   * This enables transport-agnostic FDC3 communication
-   */
-  registerTransport(instanceId: string, transport: TransportAdapter): void {
-    this.desktopAgent.registerTransport(instanceId, transport)
-  }
-
-  /**
-   * Cleanup transport for an instance
-   */
-  cleanupTransport(instanceId: string): void {
-    this.desktopAgent.cleanupTransport(instanceId)
   }
 
   // ============================================================================

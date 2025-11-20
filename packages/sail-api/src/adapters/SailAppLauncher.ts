@@ -6,12 +6,8 @@
  * iframes, tabs, or windows.
  */
 
-import type {
-  AppLauncher,
-  AppLaunchRequest,
-  AppLaunchResult,
-  AppMetadata,
-} from "@finos/fdc3-sail-desktop-agent"
+import type { AppLauncher, AppLaunchRequest, AppLaunchResult } from "@finos/fdc3-sail-desktop-agent"
+import type { AppMetadata } from "@finos/fdc3"
 import { v4 as uuidv4 } from "uuid"
 
 /**
@@ -27,11 +23,7 @@ export interface SailAppLauncherConfig {
    * @param context - Optional launch context
    * @returns Promise that resolves when UI has initiated the launch
    */
-  onLaunchApp: (
-    appMetadata: AppMetadata,
-    instanceId: string,
-    context?: unknown
-  ) => Promise<void>
+  onLaunchApp: (appMetadata: AppMetadata, instanceId: string, context?: unknown) => Promise<void>
 }
 
 /**
@@ -74,8 +66,9 @@ export class SailAppLauncher implements AppLauncher {
    */
   private extractAppUrl(appMetadata: AppMetadata): string | undefined {
     // Try common locations for URL in app metadata
-    if (appMetadata.details?.url) {
-      return appMetadata.details.url as string
+    const metadata = appMetadata as any
+    if (metadata.details?.url) {
+      return metadata.details.url as string
     }
 
     // Future: support other URL locations or formats
