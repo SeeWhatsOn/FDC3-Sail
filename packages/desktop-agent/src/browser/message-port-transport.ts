@@ -123,6 +123,14 @@ export class MessagePortTransport implements Transport {
   }
 
   /**
+   * Get the instance ID associated with this transport connection.
+   * For MessagePortTransport, this is not applicable as it's not a per-instance connection.
+   */
+  getInstanceId(): string | null {
+    return null
+  }
+
+  /**
    * Disconnect the transport and clean up resources
    */
   disconnect(): void {

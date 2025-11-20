@@ -31,11 +31,7 @@ class HeartbeatRegistry {
   /**
    * Start heartbeat for an instance
    */
-  start(
-    instanceId: string,
-    sendHeartbeat: () => void,
-    onTimeout: () => void
-  ): void {
+  start(instanceId: string, sendHeartbeat: () => void, onTimeout: () => void): void {
     // Clear any existing heartbeat
     this.stop(instanceId)
 
@@ -133,7 +129,17 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
     const heartbeatEvent = createDACPEvent("heartbeatEvent", {
       eventId: generateEventUuid(),
     })
-    transport.send(instanceId, heartbeatEvent)
+
+    // Add routing metadata
+    const heartbeatEventWithRouting = {
+      ...heartbeatEvent,
+      meta: {
+        ...heartbeatEvent.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(heartbeatEventWithRouting)
   }
 
   const onTimeout = () => {

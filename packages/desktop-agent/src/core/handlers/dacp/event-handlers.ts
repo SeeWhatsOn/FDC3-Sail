@@ -94,10 +94,7 @@ const eventListenerRegistry = new EventListenerRegistry()
 /**
  * Handles addEventListenerRequest for DA-level events
  */
-export function handleAddEventListenerRequest(
-  message: unknown,
-  context: DACPHandlerContext
-): void {
+export function handleAddEventListenerRequest(message: unknown, context: DACPHandlerContext): void {
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
@@ -125,7 +122,16 @@ export function handleAddEventListenerRequest(
       listenerId,
     })
 
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
 
     logger.info("DACP: Event listener added", { instanceId, eventType, listenerId })
   } catch (error) {
@@ -136,7 +142,17 @@ export function handleAddEventListenerRequest(
       "addEventListenerResponse",
       error instanceof Error ? error.message : "Failed to add event listener"
     )
-    transport.send(instanceId, errorResponse)
+
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -159,7 +175,17 @@ export function handleEventListenerUnsubscribeRequest(
     }
 
     const response = createDACPSuccessResponse(request, "eventListenerUnsubscribeResponse")
-    transport.send(instanceId, response)
+
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
 
     logger.info("DACP: Event listener unsubscribed", { instanceId, listenerUUID })
   } catch (error) {
@@ -170,7 +196,17 @@ export function handleEventListenerUnsubscribeRequest(
       "eventListenerUnsubscribeResponse",
       error instanceof Error ? error.message : "Failed to unsubscribe event listener"
     )
-    transport.send(instanceId, errorResponse)
+
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 

@@ -32,7 +32,16 @@ export function handleGetCurrentChannelRequest(
     const response = createDACPSuccessResponse(request, "getCurrentChannelResponse", {
       channel: currentChannel,
     })
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     const errorResponse = createDACPErrorResponse(
       {
@@ -44,7 +53,16 @@ export function handleGetCurrentChannelRequest(
       "getCurrentChannelResponse",
       error instanceof Error ? error.message : "Failed to get current channel"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -66,7 +84,16 @@ export function handleJoinUserChannelRequest(message: unknown, context: DACPHand
     appInstanceRegistry.setInstanceChannel(instanceId, channelId)
 
     const response = createDACPSuccessResponse(request, "joinUserChannelResponse")
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
 
     notifyChannelChanged(instanceId, channelId, context)
   } catch (error) {
@@ -82,7 +109,16 @@ export function handleJoinUserChannelRequest(message: unknown, context: DACPHand
       "joinUserChannelResponse",
       error instanceof Error ? error.message : "Failed to join user channel"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -100,7 +136,16 @@ export function handleLeaveCurrentChannelRequest(
     appInstanceRegistry.setInstanceChannel(instanceId, null)
 
     const response = createDACPSuccessResponse(request, "leaveCurrentChannelResponse")
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
 
     notifyChannelChanged(instanceId, null, context)
   } catch (error) {
@@ -114,7 +159,16 @@ export function handleLeaveCurrentChannelRequest(
       "leaveCurrentChannelResponse",
       error instanceof Error ? error.message : "Failed to leave current channel"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -131,7 +185,16 @@ export function handleGetUserChannelsRequest(message: unknown, context: DACPHand
     const response = createDACPSuccessResponse(request, "getUserChannelsResponse", {
       userChannels,
     })
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     const errorResponse = createDACPErrorResponse(
       {
@@ -143,14 +206,26 @@ export function handleGetUserChannelsRequest(message: unknown, context: DACPHand
       "getUserChannelsResponse",
       error instanceof Error ? error.message : "Failed to get user channels"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
 /**
  * Handles get current context requests
  */
-export function handleGetCurrentContextRequest(message: unknown, context: DACPHandlerContext): void {
+export function handleGetCurrentContextRequest(
+  message: unknown,
+  context: DACPHandlerContext
+): void {
   const { transport, instanceId, appInstanceRegistry, channelContextRegistry } = context
 
   try {
@@ -176,7 +251,16 @@ export function handleGetCurrentContextRequest(message: unknown, context: DACPHa
     const response = createDACPSuccessResponse(request, "getCurrentContextResponse", {
       context: storedContext,
     })
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     const errorResponse = createDACPErrorResponse(
       {
@@ -188,7 +272,16 @@ export function handleGetCurrentContextRequest(message: unknown, context: DACPHa
       "getCurrentContextResponse",
       error instanceof Error ? error.message : "Failed to get current context"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -217,7 +310,16 @@ export function handleGetOrCreateChannelRequest(
     const response = createDACPSuccessResponse(request, "getOrCreateChannelResponse", {
       channel,
     })
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     const errorResponse = createDACPErrorResponse(
       {
@@ -229,7 +331,16 @@ export function handleGetOrCreateChannelRequest(
       "getOrCreateChannelResponse",
       error instanceof Error ? error.message : "Failed to get or create channel"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -252,20 +363,38 @@ function notifyChannelChanged(
     },
   })
 
+  // Add routing metadata
+  const channelChangedEventWithRouting = {
+    ...channelChangedEvent,
+    meta: {
+      ...channelChangedEvent.meta,
+      destination: { instanceId },
+    },
+  }
+
   // Send to the app that changed channels
-  context.transport.send(instanceId, channelChangedEvent)
+  context.transport.send(channelChangedEventWithRouting)
 
   // Also broadcast to all apps subscribed to channelChanged events
   // Import getEventListeners at runtime to avoid circular dependency
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getEventListeners } = require("./event.handlers")
+    const { getEventListeners } = require("./event-handlers")
     const subscribers = getEventListeners("channelChanged")
 
     subscribers.forEach((subscriberId: string) => {
       // Don't send duplicate to the app that changed
       if (subscriberId !== instanceId) {
-        context.transport.send(subscriberId, channelChangedEvent)
+        // Add routing metadata
+        const channelChangedEventWithRouting = {
+          ...channelChangedEvent,
+          meta: {
+            ...channelChangedEvent.meta,
+            destination: { instanceId: subscriberId },
+          },
+        }
+
+        context.transport.send(channelChangedEventWithRouting)
       }
     })
 

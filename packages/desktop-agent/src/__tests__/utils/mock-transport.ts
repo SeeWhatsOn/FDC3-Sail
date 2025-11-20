@@ -33,6 +33,10 @@ export class MockTransport implements Transport {
     return this.connected
   }
 
+  getInstanceId(): string | null {
+    return null
+  }
+
   disconnect(): void {
     this.connected = false
     this.disconnectHandler?.()

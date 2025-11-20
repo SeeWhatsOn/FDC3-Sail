@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { InMemoryTransport, createInMemoryTransportPair } from "../in-memory-transport"
 
 describe("InMemoryTransport", () => {
@@ -28,7 +28,7 @@ describe("InMemoryTransport", () => {
       transport1.send(message2)
 
       // Wait for async delivery
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await new Promise(resolve => setTimeout(resolve, 10))
 
       expect(handler1).toHaveBeenCalledWith(message1)
       expect(handler2).toHaveBeenCalledWith(message2)
@@ -38,14 +38,14 @@ describe("InMemoryTransport", () => {
       const [transport1, transport2] = createInMemoryTransportPair()
 
       let receivedMessage: any
-      transport2.onMessage((msg) => {
+      transport2.onMessage(msg => {
         receivedMessage = msg
       })
 
       const originalMessage = { nested: { value: "original" } }
       transport1.send(originalMessage)
 
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await new Promise(resolve => setTimeout(resolve, 10))
 
       // Modify original message
       originalMessage.nested.value = "modified"
@@ -57,7 +57,7 @@ describe("InMemoryTransport", () => {
 
   describe("send", () => {
     it("should throw if transport is disconnected", () => {
-      const [transport1, transport2] = createInMemoryTransportPair()
+      const [transport1, _transport2] = createInMemoryTransportPair()
       transport1.disconnect()
 
       expect(() => transport1.send({ type: "test" })).toThrow(
@@ -86,13 +86,13 @@ describe("InMemoryTransport", () => {
       expect(handler).not.toHaveBeenCalled()
 
       // Wait for async delivery
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await new Promise(resolve => setTimeout(resolve, 10))
 
       expect(handler).toHaveBeenCalledTimes(1)
     })
 
     it("should handle structuredClone errors gracefully", async () => {
-      const [transport1, transport2] = createInMemoryTransportPair()
+      const [transport1, _transport2] = createInMemoryTransportPair()
 
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 
@@ -102,7 +102,7 @@ describe("InMemoryTransport", () => {
       expect(() => transport1.send(messageWithFunction)).not.toThrow()
 
       // Should log error but not crash
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await new Promise(resolve => setTimeout(resolve, 10))
 
       consoleErrorSpy.mockRestore()
     })
@@ -117,7 +117,7 @@ describe("InMemoryTransport", () => {
 
       transport1.send({ type: "test" })
 
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await new Promise(resolve => setTimeout(resolve, 10))
 
       expect(handler).toHaveBeenCalledWith({ type: "test" })
     })
@@ -133,7 +133,7 @@ describe("InMemoryTransport", () => {
 
       transport1.send({ type: "test" })
 
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await new Promise(resolve => setTimeout(resolve, 10))
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Error in peer message handler:",
@@ -242,14 +242,14 @@ describe("InMemoryTransport", () => {
       let count2 = 0
       const maxMessages = 100
 
-      transport1.onMessage((msg: any) => {
+      transport1.onMessage((_msg: any) => {
         count1++
         if (count1 < maxMessages) {
           transport1.send({ type: "ping", count: count1 })
         }
       })
 
-      transport2.onMessage((msg: any) => {
+      transport2.onMessage((_msg: any) => {
         count2++
         if (count2 < maxMessages) {
           transport2.send({ type: "pong", count: count2 })
@@ -260,7 +260,7 @@ describe("InMemoryTransport", () => {
       transport1.send({ type: "ping", count: 0 })
 
       // Wait for messages to complete
-      await new Promise((resolve) => setTimeout(resolve, 200))
+      await new Promise(resolve => setTimeout(resolve, 200))
 
       // Both should have received many messages without crashing
       expect(count1).toBeGreaterThan(0)

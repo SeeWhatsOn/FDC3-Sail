@@ -38,7 +38,16 @@ export function handleGetInfoRequest(message: unknown, context: DACPHandlerConte
 
     const response = createDACPSuccessResponse(request, "getInfoResponse", IMPLEMENTATION_METADATA)
 
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: getInfoRequest failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -47,7 +56,16 @@ export function handleGetInfoRequest(message: unknown, context: DACPHandlerConte
       "getInfoResponse",
       error instanceof Error ? error.message : "Failed to get implementation info"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -108,7 +126,16 @@ export async function handleOpenRequest(
     const response = createDACPSuccessResponse(request, "openResponse", {
       appIdentifier: launchResult.appIdentifier,
     })
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: openRequest failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -117,7 +144,16 @@ export async function handleOpenRequest(
       "openResponse",
       error instanceof Error ? error.message : "Failed to open app"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -146,7 +182,16 @@ export function handleFindInstancesRequest(message: unknown, context: DACPHandle
       appIdentifiers,
     })
 
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: findInstancesRequest failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -155,7 +200,16 @@ export function handleFindInstancesRequest(message: unknown, context: DACPHandle
       "findInstancesResponse",
       error instanceof Error ? error.message : "Failed to find app instances"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -203,7 +257,16 @@ export function handleGetAppMetadataRequest(message: unknown, context: DACPHandl
       },
     })
 
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: getAppMetadataRequest failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -212,6 +275,15 @@ export function handleGetAppMetadataRequest(message: unknown, context: DACPHandl
       "getAppMetadataResponse",
       error instanceof Error ? error.message : "Failed to get app metadata"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }

@@ -115,6 +115,14 @@ export class InMemoryTransport implements Transport {
   }
 
   /**
+   * Get the instance ID associated with this transport connection.
+   * For InMemoryTransport, this is not applicable as it's not a per-instance connection.
+   */
+  getInstanceId(): string | null {
+    return null
+  }
+
+  /**
    * Disconnect the transport
    *
    * This will also notify the peer transport of the disconnection.

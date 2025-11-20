@@ -51,7 +51,16 @@ export function handleCreatePrivateChannelRequest(
       },
     })
 
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: Create private channel failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -60,7 +69,16 @@ export function handleCreatePrivateChannelRequest(
       "createPrivateChannelResponse",
       error instanceof Error ? error.message : "Failed to create private channel"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -97,7 +115,16 @@ export function handlePrivateChannelDisconnectRequest(
           channelId,
           instanceId, // The instance that is disconnecting
         })
-        transport.send(listener.instanceId, disconnectEvent)
+        // Add routing metadata
+        const disconnectEventWithRouting = {
+          ...disconnectEvent,
+          meta: {
+            ...disconnectEvent.meta,
+            destination: { instanceId: listener.instanceId },
+          },
+        }
+
+        transport.send(disconnectEventWithRouting)
       }
     })
 
@@ -115,7 +142,16 @@ export function handlePrivateChannelDisconnectRequest(
 
       channel.connectedInstances.forEach(connectedInstanceId => {
         if (connectedInstanceId !== instanceId) {
-          transport.send(connectedInstanceId, unsubscribeEvent)
+          // Add routing metadata
+          const unsubscribeEventWithRouting = {
+            ...unsubscribeEvent,
+            meta: {
+              ...unsubscribeEvent.meta,
+              destination: { instanceId: connectedInstanceId },
+            },
+          }
+
+          transport.send(unsubscribeEventWithRouting)
         }
       })
     })
@@ -131,7 +167,16 @@ export function handlePrivateChannelDisconnectRequest(
 
     // Send success response
     const response = createDACPSuccessResponse(request, "privateChannelDisconnectResponse")
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: Private channel disconnect failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -140,7 +185,16 @@ export function handlePrivateChannelDisconnectRequest(
       "privateChannelDisconnectResponse",
       error instanceof Error ? error.message : "Failed to disconnect from private channel"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -156,7 +210,10 @@ export function handlePrivateChannelAddContextListenerRequest(
 
   try {
     // TODO: Validate with proper schema when available
-    const request = message as { meta: { requestUuid: string }; payload: { channelId: string; contextType?: string } }
+    const request = message as {
+      meta: { requestUuid: string }
+      payload: { channelId: string; contextType?: string }
+    }
     const { channelId, contextType } = request.payload
 
     const channel = privateChannelRegistry.getChannel(channelId)
@@ -171,7 +228,12 @@ export function handlePrivateChannelAddContextListenerRequest(
     const listenerId = generateEventUuid()
 
     // Add the listener
-    privateChannelRegistry.addContextListener(channelId, listenerId, instanceId, contextType || null)
+    privateChannelRegistry.addContextListener(
+      channelId,
+      listenerId,
+      instanceId,
+      contextType || null
+    )
 
     logger.info("DACP: Context listener added to private channel", {
       channelId,
@@ -188,16 +250,38 @@ export function handlePrivateChannelAddContextListenerRequest(
 
     channel.connectedInstances.forEach(connectedInstanceId => {
       if (connectedInstanceId !== instanceId) {
-        transport.send(connectedInstanceId, addListenerEvent)
+        // Add routing metadata
+        const addListenerEventWithRouting = {
+          ...addListenerEvent,
+          meta: {
+            ...addListenerEvent.meta,
+            destination: { instanceId: connectedInstanceId },
+          },
+        }
+
+        transport.send(addListenerEventWithRouting)
       }
     })
 
     // Send success response
-    const response = createDACPSuccessResponse(request, "privateChannelAddContextListenerResponse", {
-      listenerId,
-    })
+    const response = createDACPSuccessResponse(
+      request,
+      "privateChannelAddContextListenerResponse",
+      {
+        listenerId,
+      }
+    )
 
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: Private channel add context listener failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -206,7 +290,16 @@ export function handlePrivateChannelAddContextListenerRequest(
       "privateChannelAddContextListenerResponse",
       error instanceof Error ? error.message : "Failed to add context listener to private channel"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 

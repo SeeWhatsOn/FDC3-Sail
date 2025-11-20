@@ -94,5 +94,19 @@ export interface Transport {
    * This disconnects the entire Desktop Agent from the transport layer.
    * All connected apps will be disconnected as a result.
    */
+  /**
+   * Get the instance ID associated with this transport connection, if any.
+   *
+   * This is used when the transport represents a direct connection to a specific
+   * app instance (e.g. Socket.IO socket).
+   */
+  getInstanceId(): string | null
+
+  /**
+   * Close the transport connection and clean up resources.
+   *
+   * This disconnects the entire Desktop Agent from the transport layer.
+   * All connected apps will be disconnected as a result.
+   */
   disconnect(): void
 }

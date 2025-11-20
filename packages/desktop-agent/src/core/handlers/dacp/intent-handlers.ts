@@ -45,7 +45,10 @@ export async function handleRaiseIntentRequest(
       intent: request.payload.intent,
       context: validatedContext,
       source: { appId: source.appId, instanceId: source.instanceId },
-      target: request.payload.app, // app is already an AppIdentifier object
+      target:
+        typeof request.payload.app === "string"
+          ? { appId: request.payload.app }
+          : request.payload.app,
       requestId: request.meta.requestUuid,
     })
 
@@ -99,7 +102,16 @@ export async function handleRaiseIntentRequest(
       requestUuid: request.meta.requestUuid,
     })
 
-    transport.send(targetInstanceId, intentEvent)
+    // Add routing metadata
+    const intentEventWithRouting = {
+      ...intentEvent,
+      meta: {
+        ...intentEvent.meta,
+        destination: { instanceId: targetInstanceId },
+      },
+    }
+
+    transport.send(intentEventWithRouting)
 
     // Wait for the result from intentResultRequest handler
     const intentResult = await resultPromise
@@ -110,7 +122,16 @@ export async function handleRaiseIntentRequest(
       source: targetAppId,
     })
 
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: Raise intent request failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -119,7 +140,16 @@ export async function handleRaiseIntentRequest(
       "raiseIntentResponse",
       error instanceof Error ? error.message : "Intent delivery failed"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -147,7 +177,16 @@ export function handleAddIntentListener(message: unknown, context: DACPHandlerCo
       listenerId,
     })
 
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: Add intent listener failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -156,7 +195,16 @@ export function handleAddIntentListener(message: unknown, context: DACPHandlerCo
       "addIntentListenerResponse",
       error instanceof Error ? error.message : "Failed to add intent listener"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -176,7 +224,16 @@ export function handleIntentListenerUnsubscribe(
     }
 
     const response = createDACPSuccessResponse(request, "intentListenerUnsubscribeResponse")
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: Intent listener unsubscribe failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -185,7 +242,16 @@ export function handleIntentListenerUnsubscribe(
       "intentListenerUnsubscribeResponse",
       error instanceof Error ? error.message : "Failed to unsubscribe intent listener"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -203,7 +269,16 @@ export function handleFindIntentRequest(message: unknown, context: DACPHandlerCo
       appIntent: appIntents[0] ?? { intent: { name: intent, displayName: intent }, apps: [] },
     })
 
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: Find intent request failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -212,14 +287,20 @@ export function handleFindIntentRequest(message: unknown, context: DACPHandlerCo
       "findIntentResponse",
       error instanceof Error ? error.message : "Failed to find apps for intent"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
-export function handleIntentResultRequest(
-  message: unknown,
-  context: DACPHandlerContext
-): void {
+export function handleIntentResultRequest(message: unknown, context: DACPHandlerContext): void {
   const { transport, instanceId, intentRegistry } = context
 
   try {
@@ -257,7 +338,16 @@ export function handleIntentResultRequest(
 
     // Send acknowledgment response
     const response = createDACPSuccessResponse(request, "intentResultResponse")
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
 
     logger.info("DACP: Intent result processed successfully", {
       originalRequestId,
@@ -271,7 +361,16 @@ export function handleIntentResultRequest(
       "intentResultResponse",
       error instanceof Error ? error.message : "Failed to process intent result"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -297,17 +396,28 @@ export function handleFindIntentsByContextRequest(
     // Convert to AppIntent[] format
     const appIntents = intentMetadata.map(metadata => {
       const appIntentsForIntent = intentRegistry.createAppIntents(metadata.name, contextType)
-      return appIntentsForIntent[0] || {
-        intent: { name: metadata.name, displayName: metadata.displayName || metadata.name },
-        apps: [],
-      }
+      return (
+        appIntentsForIntent[0] || {
+          intent: { name: metadata.name, displayName: metadata.displayName || metadata.name },
+          apps: [],
+        }
+      )
     })
 
     const response = createDACPSuccessResponse(request, "findIntentsByContextResponse", {
       appIntents,
     })
 
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: Find intents by context request failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -316,7 +426,16 @@ export function handleFindIntentsByContextRequest(
       "findIntentsByContextResponse",
       error instanceof Error ? error.message : "Failed to find intents for context type"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }
 
@@ -411,7 +530,16 @@ export async function handleRaiseIntentForContextRequest(
       contextType: validatedContext.type,
     })
 
-    transport.send(targetInstanceId, intentEvent)
+    // Add routing metadata
+    const intentEventWithRouting = {
+      ...intentEvent,
+      meta: {
+        ...intentEvent.meta,
+        destination: { instanceId: targetInstanceId },
+      },
+    }
+
+    transport.send(intentEventWithRouting)
 
     // Wait for result
     const intentResult = await resultPromise
@@ -422,7 +550,16 @@ export async function handleRaiseIntentForContextRequest(
       source: targetAppId,
     })
 
-    transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: Raise intent for context request failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -431,6 +568,15 @@ export async function handleRaiseIntentForContextRequest(
       "raiseIntentForContextResponse",
       error instanceof Error ? error.message : "Intent delivery failed"
     )
-    transport.send(instanceId, errorResponse)
+    // Add routing metadata
+    const errorResponseWithRouting = {
+      ...errorResponse,
+      meta: {
+        ...errorResponse.meta,
+        destination: { instanceId },
+      },
+    }
+
+    transport.send(errorResponseWithRouting)
   }
 }

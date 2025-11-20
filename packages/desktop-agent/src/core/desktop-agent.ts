@@ -124,7 +124,7 @@ export class DesktopAgent {
     }
 
     // Set up message handler
-    this.transport.onMessage(async (message) => {
+    this.transport.onMessage(async message => {
       await this.handleMessage(message)
     })
 
@@ -185,7 +185,7 @@ export class DesktopAgent {
   private createHandlerContext(): DACPHandlerContext {
     return {
       transport: this.transport,
-      instanceId: this.transport.getInstanceId(),
+      instanceId: this.transport.getInstanceId() || "",
       appInstanceRegistry: this.appInstanceRegistry,
       intentRegistry: this.intentRegistry,
       channelContextRegistry: this.channelContextRegistry,

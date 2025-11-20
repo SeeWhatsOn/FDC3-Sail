@@ -56,6 +56,8 @@ interface WCP5ValidateAppIdentityFailedResponse {
   }
   meta: {
     timestamp: string
+    requestUuid: string
+    responseUuid: string
   }
 }
 
@@ -175,7 +177,17 @@ export async function handleWcp4Validateappidentity(
 
     // Get the instanceId from the response to send the message
     const responseInstanceId = response.payload.instanceId
-    transport.send(responseInstanceId, response)
+
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId: responseInstanceId },
+      },
+    }
+
+    transport.send(responseWithRouting)
 
     // Start heartbeat for this instance
     startHeartbeat(responseInstanceId, context)
@@ -232,17 +244,29 @@ function sendFailureResponse(context: DACPHandlerContext, error: string): void {
     },
     meta: {
       timestamp: new Date().toISOString(),
+      // We need requestUuid/responseUuid but don't have them easily here without the request message
+      // For now, generating new ones or using empty strings if allowed by schema
+      requestUuid: "",
+      responseUuid: crypto.randomUUID(),
     },
   }
 
   console.log("[WCP4] Validation failed, sending WCP5 failure response:", error)
 
-  // For failure responses, we need to send to the transport's current instance
-  // Since we don't have a validated instanceId yet, we use the transport's getInstanceId()
+  // Try to get the instance ID from the transport (e.g. socket ID)
   const instanceId = context.transport.getInstanceId()
+
   if (instanceId) {
-    context.transport.send(instanceId, response)
+    // Add routing metadata
+    const responseWithRouting = {
+      ...response,
+      meta: {
+        ...response.meta,
+        destination: { instanceId },
+      },
+    }
+    context.transport.send(responseWithRouting)
   } else {
-    console.error("[WCP4] Cannot send failure response: no instanceId available")
+    console.error("[WCP4] Cannot send failure response: instanceId not established")
   }
 }
