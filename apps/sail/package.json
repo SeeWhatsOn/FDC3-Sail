@@ -3,32 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "main": "./dist/sail-app.umd.cjs",
-  "module": "./dist/sail-app.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "development": {
-        "types": "./src/index.ts",
-        "import": "./src/index.ts"
-      },
-      "types": "./dist/index.d.ts",
-      "import": "./dist/sail-app.js",
-      "require": "./dist/sail-app.umd.cjs"
-    },
-    "./style.css": {
-      "development": "./src/index.css",
-      "default": "./dist/sail-app.css"
-    }
-  },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "dev": "vite",
-    "dev:lib": "vite build --mode lib --watch",
     "build": "tsc -b && vite build",
-    "build:lib": "vite build --mode lib",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
@@ -40,6 +17,7 @@
     "@finos/fdc3-agent-proxy": "^2.2.1-beta.3",
     "@finos/fdc3-schema": "^2.2.1-beta.3",
     "@finos/fdc3-web-impl": "^2.2.1-beta.3",
+    "@finos/sail-api": "*",
     "@radix-ui/react-slot": "^1.2.3",
     "@tailwindcss/vite": "^4.1.12",
     "class-variance-authority": "^0.7.1",
@@ -82,7 +60,6 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
     "vite": "^7.1.2",
-    "vite-plugin-dts": "^4.5.4",
     "vitest": "^3.2.4"
   }
 }
