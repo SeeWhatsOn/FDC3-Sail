@@ -12,83 +12,70 @@ interface AppDirectoryEvent {
 }
 
 /**
- * Hook for listening to app directory changes from the desktop agent via WebSocket
+ * Hook for fetching app directory from the desktop agent once on mount
  */
 export const useAppDirectorySocket = () => {
   const { getSocket } = useDesktopAgent()
-  const { addApp, removeApp, updateApp, setApps } = useAppDirectoryStore()
-
-  const isAppAllowed = (appId: string) => {
-    const allowedAppIds = ["fdc3-wcp-test", "sail-training-broadcaster", "sail-training-receiver"]
-    return (
-      allowedAppIds.includes(appId) ||
-      appId.startsWith("sail-training-") ||
-      appId.startsWith("fdc3-")
-    )
-  }
+  const { setApps, setLoading, setError } = useAppDirectoryStore()
 
   useEffect(() => {
     const socket = getSocket()
+    let isMounted = true
 
-    const handleAppDirectoryChange = (event: AppDirectoryEvent) => {
-      console.log("App directory event received:", event)
+    const fetchAppDirectory = async () => {
+      try {
+        setLoading(true)
+        setError(null)
 
-      switch (event.type) {
-        case "APP_ADDED":
-          if (event.app && typeof event.app.appId === "string" && isAppAllowed(event.app.appId)) {
-            addApp(event.app)
-          } else if (event.app) {
-            console.log(`Filtering out unwanted app: ${event.app.appId}`)
+        console.log("[AppDirectory] Fetching apps from desktop agent...")
+
+        // Request app directory from server with acknowledgment
+        socket.emit("app-directory:get", (response: { apps: DirectoryApp[] }) => {
+          if (!isMounted) return
+
+          console.log("[AppDirectory] Received apps:", response.apps.length)
+          setApps(response.apps)
+          setLoading(false)
+        })
+
+        // Timeout fallback in case server doesn't respond
+        setTimeout(() => {
+          if (isMounted) {
+            console.error("[AppDirectory] Timeout waiting for app directory response")
+            setError("Timeout loading app directory")
+            setLoading(false)
           }
-          break
-
-        case "APP_REMOVED":
-          if (event.appId) {
-            removeApp(event.appId)
-          }
-          break
-
-        case "APP_UPDATED":
-          if (event.app && event.appId && isAppAllowed(event.appId)) {
-            updateApp(event.appId, event.app)
-          } else if (event.app) {
-            console.log(`Filtering out unwanted app update: ${event.appId}`)
-          }
-          break
-
-        case "DIRECTORY_REFRESH":
-          if (event.apps) {
-            // Filter apps in directory refresh
-            const filteredApps = event.apps.filter(app => isAppAllowed(app.appId))
-            console.log(
-              `Directory refresh: filtered ${event.apps.length} apps down to ${filteredApps.length}`
-            )
-            setApps(filteredApps)
-          }
-          break
-
-        default:
-          console.warn("Unknown app directory event type:", event.type)
+        }, 5000)
+      } catch (error) {
+        if (isMounted) {
+          console.error("[AppDirectory] Error fetching apps:", error)
+          setError(error instanceof Error ? error.message : "Failed to load apps")
+          setLoading(false)
+        }
       }
     }
 
-    // Listen for app directory events from desktop agent
-    socket.on("app-directory:change", handleAppDirectoryChange)
-
-    // Request initial app directory load
-    socket.emit("app-directory:request-apps")
-
-    // Cleanup on unmount
-    return () => {
-      socket.off("app-directory:change", handleAppDirectoryChange)
+    // Fetch once on mount when socket is connected
+    if (socket.connected) {
+      fetchAppDirectory()
+    } else {
+      socket.once("connect", fetchAppDirectory)
     }
-  }, [addApp, removeApp, updateApp, setApps, getSocket])
+
+    // Cleanup
+    return () => {
+      isMounted = false
+    }
+  }, [getSocket, setApps, setLoading, setError])
 
   return {
-    // Could add manual refresh trigger here if needed
+    // Manual refresh trigger if needed
     requestRefresh: () => {
       const socket = getSocket()
-      socket.emit("app-directory:request-apps")
+      socket.emit("app-directory:get", (response: { apps: DirectoryApp[] }) => {
+        console.log("[AppDirectory] Refresh - received apps:", response.apps.length)
+        setApps(response.apps)
+      })
     },
   }
 }

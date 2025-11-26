@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Channel, DesktopAgent } from "@finos/fdc3"
+import { type Channel, type DesktopAgent } from "@finos/fdc3"
 import { getAgent } from "@finos/fdc3-get-agent"
 import { createRoot } from "react-dom/client"
 

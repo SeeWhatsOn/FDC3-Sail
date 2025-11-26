@@ -7,7 +7,7 @@
       "description": "Benzinga Finance News",
       "type": "web",
       "details": {
-        "url": "/html/example-apps/benzinga/news/news.html"
+        "url": "http://localhost:3002/apps/benzinga/"
       },
       "screenshots": [
         {

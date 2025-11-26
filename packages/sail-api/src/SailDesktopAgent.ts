@@ -1,4 +1,3 @@
-import type { Socket } from "socket.io"
 import {
   DesktopAgent,
   type DesktopAgentConfig,
@@ -7,20 +6,18 @@ import {
   AppDirectoryManager,
   type Transport,
 } from "@finos/fdc3-sail-desktop-agent"
-import { SocketIOTransport } from "./adapters/socket-io-transport"
 import { SailAppLauncher, type SailAppLauncherConfig } from "./adapters/SailAppLauncher"
 import { MiddlewarePipeline, type Middleware } from "./middleware"
 export type { Middleware }
 
 /**
- * Configuration for Sail Desktop Agent
+ * Configuration for Sail Server Desktop Agent
  */
-export interface SailDesktopAgentConfig {
+export interface SailServerDesktopAgentConfig {
   /**
    * Transport implementation for message communication.
-   * Can be provided directly (recommended) or via legacy 'socket' property.
    */
-  transport?: Transport
+  transport: Transport
 
   /**
    * App launcher configuration
@@ -41,9 +38,9 @@ export interface SailDesktopAgentConfig {
 }
 
 /**
- * Sail Desktop Agent - environment-specific wrapper.
+ * Sail Server Desktop Agent - server-side wrapper.
  *
- * This class wraps the pure DesktopAgent with Sail-specific features:
+ * This class wraps the pure DesktopAgent with Sail-specific features for server-side use:
  * - Transport-agnostic (works with Socket.IO, InMemory, etc.)
  * - Browser-based app launching
  * - Middleware for logging, auth, metrics
@@ -51,35 +48,33 @@ export interface SailDesktopAgentConfig {
  *
  * @example
  * ```typescript
- * // With Socket.IO (Client/Server)
- * const agent = new SailDesktopAgent({
+ * // With Socket.IO (Server)
+ * const agent = new SailServerDesktopAgent({
  *   transport: new SocketIOTransport(socket)
  * })
  *
- * // With InMemory (Browser/Test)
- * const agent = new SailDesktopAgent({
+ * // With InMemory (Test)
+ * const agent = new SailServerDesktopAgent({
  *   transport: new InMemoryTransport()
  * })
  * ```
  */
-export class SailDesktopAgent {
+export class SailServerDesktopAgent {
   private agent: DesktopAgent
   private transport: Transport
   private pipeline: MiddlewarePipeline<unknown>
   private debug: boolean
+  private appDirectory?: AppDirectoryManager
 
-  constructor(config: SailDesktopAgentConfig) {
+  constructor(config: SailServerDesktopAgentConfig) {
     this.debug = config.debug ?? false
     this.pipeline = new MiddlewarePipeline()
 
-    // Resolve transport
-    if (config.transport) {
-      this.transport = config.transport
-    } else if (config.socket) {
-      this.transport = new SocketIOTransport(config.socket)
-    } else {
-      throw new Error("SailDesktopAgent requires either 'transport' or 'socket' in config")
-    }
+    // Set transport
+    this.transport = config.transport
+
+    // Store app directory reference
+    this.appDirectory = config.appDirectory
 
     // Create app launcher if config provided
     const appLauncher = config.appLauncher ? new SailAppLauncher(config.appLauncher) : undefined
@@ -123,7 +118,7 @@ export class SailDesktopAgent {
             await handler(ctx.message)
           })
         } catch (error) {
-          console.error("[SailDesktopAgent] Error processing message:", error)
+          console.error("[SailServerDesktopAgent] Error processing message:", error)
           // We don't re-throw here to prevent crashing the socket connection,
           // but middleware should handle errors if needed.
         }
@@ -134,7 +129,7 @@ export class SailDesktopAgent {
     this.agent.start()
 
     if (this.debug) {
-      console.log("[SailDesktopAgent] Started", {
+      console.log("[SailServerDesktopAgent] Started", {
         instanceId: this.transport.getInstanceId(),
       })
     }
@@ -147,7 +142,7 @@ export class SailDesktopAgent {
     this.agent.stop()
 
     if (this.debug) {
-      console.log("[SailDesktopAgent] Stopped")
+      console.log("[SailServerDesktopAgent] Stopped")
     }
   }
 
@@ -163,5 +158,12 @@ export class SailDesktopAgent {
    */
   getTransport(): Transport {
     return this.transport
+  }
+
+  /**
+   * Get the app directory manager
+   */
+  getAppDirectory(): AppDirectoryManager | undefined {
+    return this.appDirectory
   }
 }

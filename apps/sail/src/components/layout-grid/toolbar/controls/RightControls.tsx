@@ -97,9 +97,9 @@ export const RightControls = (props: IDockviewHeaderActionsProps) => {
   // Check if panel is in popout mode for conditional rendering
   const isPopout = props.api.location.type === "popout"
 
-  const { activePanel } = props
+  // const { activePanel } = props
 
-  const isFocused = activePanel?.api.isActive
+  // const isFocused = activePanel?.api.isActive
 
   return (
     <div className="group-control">

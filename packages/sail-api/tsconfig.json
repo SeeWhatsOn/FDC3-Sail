@@ -5,6 +5,7 @@
     "rootDir": "src",
     "paths": {
       "@finos/fdc3-sail-desktop-agent": ["../desktop-agent/dist/src/index.d.ts"],
+      "@finos/fdc3-sail-desktop-agent/browser": ["../desktop-agent/dist/src/browser/index.d.ts"],
       "@finos/fdc3-sail-desktop-agent/transports": ["../desktop-agent/dist/src/transports/index.d.ts"]
     }
   },

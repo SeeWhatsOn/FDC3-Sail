@@ -4,7 +4,7 @@ import { useEffect, useRef, memo, useState } from "react"
 
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 
-import { TradingViewMode } from "./common"
+import { type TradingViewMode } from "./common"
 import { chartMode } from "./modes/chart"
 import { symbolInfoMode } from "./modes/symbol-info"
 import { fundamentalsMode } from "./modes/fundamentals"

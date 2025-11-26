@@ -1,6 +1,6 @@
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 
-import { PolygonMode } from "../common"
+import { type PolygonMode } from "../common"
 import NewsComponent from "../components/news/NewsComponent"
 
 import styles from "./styles.module.css"

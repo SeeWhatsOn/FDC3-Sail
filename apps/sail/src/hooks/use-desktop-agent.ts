@@ -36,7 +36,23 @@ export interface SessionInfo {
 export const useDesktopAgent = () => {
   const getSocket = (): Socket => {
     if (!sharedSocket) {
-      sharedSocket = io()
+      // Connect to sail-server on port 8091 with session authentication
+      const serverUrl = import.meta.env.VITE_SAIL_SERVER_URL || "http://localhost:8091"
+      const sessionId = `sail-ui-${Date.now()}`
+
+      sharedSocket = io(serverUrl, {
+        auth: {
+          sessionId,
+        },
+      })
+
+      sharedSocket.on("connect", () => {
+        console.log("[DesktopAgent] Connected to sail-server:", sharedSocket?.id)
+      })
+
+      sharedSocket.on("connect_error", (error) => {
+        console.error("[DesktopAgent] Connection error:", error)
+      })
     }
     return sharedSocket
   }

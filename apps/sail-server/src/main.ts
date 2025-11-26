@@ -9,10 +9,15 @@ import { Server } from "socket.io"
 import { SailDesktopAgent } from "@finos/sail-api"
 import { APP_CONFIG } from "./constants"
 import dotenv from "dotenv"
+import { AppDirectoryManager } from "@finos/fdc3-sail-desktop-agent"
+import { fileURLToPath } from "url"
+import { dirname, resolve } from "path"
 
 dotenv.config()
 
 const port = process.env.PORT || APP_CONFIG.DEFAULT_PORT
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 import { SocketIOServerTransport } from "@finos/sail-api/dist/adapters/socket-io-server-transport"
 
@@ -38,6 +43,25 @@ const userAgents = new Map<string, UserAgentInfo>()
 // Configuration
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes of inactivity
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000 // Check every 5 minutes
+
+// Load app directories
+const appDirectory = new AppDirectoryManager()
+const appDirectorySources = [
+  resolve(__dirname, "../../../packages/app-directories/examples/training.json"),
+  resolve(__dirname, "../../../packages/app-directories/examples/polygon.json"),
+  resolve(__dirname, "../../../packages/app-directories/examples/trading-view.json"),
+  resolve(__dirname, "../../../packages/app-directories/examples/benzinga.json"),
+]
+
+// Load app directories on startup
+;(async () => {
+  try {
+    await appDirectory.replace(appDirectorySources)
+    console.log(`📚 Loaded ${appDirectory.retrieveAllApps().length} apps from directories`)
+  } catch (error) {
+    console.error("❌ Failed to load app directories:", error)
+  }
+})()
 
 /**
  * Get userId from socket authentication
@@ -93,6 +117,7 @@ function getOrCreateUserAgent(userId: string): UserAgentInfo {
           // TODO: Implement app launching via socket messages to UI
         },
       },
+      appDirectory,
       debug: process.env.DEBUG === "true",
     })
 
@@ -193,6 +218,20 @@ io.on("connection", (socket) => {
   // Log transport stats
   const stats = agentInfo.transport.getStats()
   console.log(`📊 User ${userId} now has ${stats.connectedSockets} connected socket(s)`)
+
+  // Handle app directory requests - send current directory state
+  socket.on("app-directory:get", (callback) => {
+    console.log(`📚 User ${userId} requesting app directory`)
+    const apps = agentInfo.agent.getAppDirectory()?.retrieveAllApps() || []
+    console.log(`📚 Sending ${apps.length} apps to user ${userId}`)
+
+    if (typeof callback === "function") {
+      callback({ apps })
+    } else {
+      // Fallback to emit if no callback provided
+      socket.emit("app-directory:apps", { apps })
+    }
+  })
 
   socket.on("disconnect", () => {
     console.log(`🔌 User ${userId} disconnected: ${socket.id}`)

@@ -1,4 +1,4 @@
-import { TradingViewMode } from "../common"
+import { type TradingViewMode } from "../common"
 
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 

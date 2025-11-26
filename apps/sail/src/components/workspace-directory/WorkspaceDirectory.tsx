@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "sail-ui"
 import { LayoutGrid, ExternalLink, Play } from "lucide-react"
 
-import type { Panel } from "../../stores/workspace-store"
+import type { AppPanel } from "../layout-grid/types"
 
 interface WorkspaceLayout {
   id: string
@@ -10,7 +10,7 @@ interface WorkspaceLayout {
   tabs: {
     tabId: string
     name: string
-    panels: Panel[]
+    panels: AppPanel[]
   }[]
   createdAt: Date
   lastModified: Date
@@ -22,8 +22,8 @@ interface WorkspaceCardProps {
 }
 
 const WorkspaceCard = ({ workspace, onWorkspaceClick }: WorkspaceCardProps) => {
-  
-  const uniqueApps = new Set(workspace.tabs.flatMap(tab => tab.panels.map(panel => panel.appId))).size
+  const uniqueApps = new Set(workspace.tabs.flatMap(tab => tab.panels.map(panel => panel.appId)))
+    .size
 
   return (
     <Card
@@ -41,10 +41,10 @@ const WorkspaceCard = ({ workspace, onWorkspaceClick }: WorkspaceCardProps) => {
             <CardTitle className="line-clamp-1 text-sm font-medium">{workspace.name}</CardTitle>
             <div className="mt-1 flex items-center gap-2">
               <span className="bg-secondary text-secondary-foreground inline-flex items-center rounded-md px-2 py-1 text-xs">
-                {workspace.tabs.length} tab{workspace.tabs.length !== 1 ? 's' : ''}
+                {workspace.tabs.length} tab{workspace.tabs.length !== 1 ? "s" : ""}
               </span>
               <span className="inline-flex items-center rounded-md border px-2 py-1 text-xs">
-                {uniqueApps} app{uniqueApps !== 1 ? 's' : ''}
+                {uniqueApps} app{uniqueApps !== 1 ? "s" : ""}
               </span>
             </div>
           </div>
@@ -75,14 +75,12 @@ const WorkspaceCard = ({ workspace, onWorkspaceClick }: WorkspaceCardProps) => {
                         className="size-3 rounded-sm"
                         onError={e => {
                           const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
+                          target.style.display = "none"
                         }}
                       />
                     )}
                     <span className="max-w-[80px] truncate">{panel.title}</span>
-                    {panel.url && (
-                      <ExternalLink className="text-muted-foreground size-2" />
-                    )}
+                    {panel.url && <ExternalLink className="text-muted-foreground size-2" />}
                   </div>
                 ))}
                 {tab.panels.length > 3 && (
@@ -95,7 +93,7 @@ const WorkspaceCard = ({ workspace, onWorkspaceClick }: WorkspaceCardProps) => {
           ))}
           {workspace.tabs.length > 2 && (
             <div className="text-muted-foreground text-xs">
-              +{workspace.tabs.length - 2} more tab{workspace.tabs.length - 2 !== 1 ? 's' : ''}
+              +{workspace.tabs.length - 2} more tab{workspace.tabs.length - 2 !== 1 ? "s" : ""}
             </div>
           )}
         </div>
@@ -133,8 +131,8 @@ const MOCK_WORKSPACES: WorkspaceLayout[] = [
             panelId: "polygon-1",
             appId: "polygon",
             icon: null,
-          }
-        ]
+          },
+        ],
       },
       {
         tabId: "analysis",
@@ -147,12 +145,12 @@ const MOCK_WORKSPACES: WorkspaceLayout[] = [
             panelId: "benzinga-1",
             appId: "benzinga",
             icon: null,
-          }
-        ]
-      }
+          },
+        ],
+      },
     ],
-    createdAt: new Date('2024-01-15'),
-    lastModified: new Date('2024-01-20'),
+    createdAt: new Date("2024-01-15"),
+    lastModified: new Date("2024-01-20"),
   },
   {
     id: "research-workspace",
@@ -186,12 +184,12 @@ const MOCK_WORKSPACES: WorkspaceLayout[] = [
             panelId: "calendar-1",
             appId: "economic-calendar",
             icon: null,
-          }
-        ]
-      }
+          },
+        ],
+      },
     ],
-    createdAt: new Date('2024-01-10'),
-    lastModified: new Date('2024-01-18'),
+    createdAt: new Date("2024-01-10"),
+    lastModified: new Date("2024-01-18"),
   },
   {
     id: "portfolio-management",
@@ -209,8 +207,8 @@ const MOCK_WORKSPACES: WorkspaceLayout[] = [
             panelId: "portfolio-1",
             appId: "portfolio-tracker",
             icon: null,
-          }
-        ]
+          },
+        ],
       },
       {
         tabId: "risk",
@@ -231,13 +229,13 @@ const MOCK_WORKSPACES: WorkspaceLayout[] = [
             panelId: "compliance-1",
             appId: "compliance",
             icon: null,
-          }
-        ]
-      }
+          },
+        ],
+      },
     ],
-    createdAt: new Date('2024-01-12'),
-    lastModified: new Date('2024-01-22'),
-  }
+    createdAt: new Date("2024-01-12"),
+    lastModified: new Date("2024-01-22"),
+  },
 ]
 
 export function WorkspaceDirectory() {

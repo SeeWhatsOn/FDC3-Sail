@@ -18,7 +18,7 @@
       ],
       "type": "web",
       "details": {
-        "url": "/html/example-apps/training/pricer/index.html"
+        "url": "http://localhost:3002/apps/training-pricer/"
       },
       "interop": {
         "intents": {
@@ -58,7 +58,7 @@
       ],
       "type": "web",
       "details": {
-        "url": "/html/example-apps/training/tradelist/index.html"
+        "url": "http://localhost:3002/apps/training-tradelist/"
       },
       "interop": {},
       "hostManifests": {
@@ -74,7 +74,7 @@
       "description": "App will connect to the desktop agent and broadcast on the user channel when you hit the button",
       "type": "web",
       "details": {
-        "url": "/html/example-apps/training/broadcast/index.html"
+        "url": "http://localhost:3002/apps/training-broadcast/"
       },
       "hostManifests": {},
       "version": "1.0.0",
@@ -98,7 +98,7 @@
       "description": "App will connect to the desktop agent on startup and listen to messages",
       "type": "web",
       "details": {
-        "url": "/html/example-apps/training/receive/index.html"
+        "url": "http://localhost:3002/apps/training-receive/"
       },
       "icons": [
         {

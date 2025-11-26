@@ -11,20 +11,35 @@ import {
 import { MiddlewarePipeline, type Middleware } from "../middleware"
 
 /**
- * A typed client for interacting with the Sail server via Socket.IO.
- * This class wraps the proprietary 'sail_event' messages into a clean, async/await API.
+ * Client API for connecting to Sail Server Desktop Agent.
+ * 
+ * This class provides FDC3 Desktop Agent operations via Socket.IO connection
+ * to a remote Server Desktop Agent. It handles all FDC3 protocol messages.
+ * 
+ * @example
+ * ```typescript
+ * import { io } from "socket.io-client"
+ * import { SailServerClientAPI } from "@finos/sail-api"
+ * 
+ * const socket = io("http://localhost:8091")
+ * const client = new SailServerClientAPI(socket)
+ * 
+ * // FDC3 operations
+ * const apps = await client.getDirectoryListing()
+ * await client.desktopAgentHello({ directories: [], channels: [], panels: [], customApps: [], contextHistory: {} })
+ * ```
  */
-export class SailClient {
+export class SailServerClientAPI {
   private socket: Socket
   private pipeline: MiddlewarePipeline<unknown>
 
   /**
-   * Creates an instance of SailClient.
+   * Creates an instance of SailServerClientAPI.
    * @param socket The connected socket.io-client instance.
    */
   constructor(socket: Socket) {
     if (!socket) {
-      throw new Error("Socket instance is required for SailClient.")
+      throw new Error("Socket instance is required for SailServerClientAPI.")
     }
     this.socket = socket
     this.pipeline = new MiddlewarePipeline()
@@ -107,4 +122,14 @@ export class SailClient {
     }
     return this.emitWithAck<DirectoryApp[]>(SailMessages.DA_DIRECTORY_LISTING, payload)
   }
+
+  /**
+   * Get the underlying socket for FDC3 DACP messages.
+   * Use this to listen to FDC3_DA_EVENT and emit FDC3_APP_EVENT.
+   * @returns The Socket.IO client instance
+   */
+  public getSocket(): Socket {
+    return this.socket
+  }
 }
+

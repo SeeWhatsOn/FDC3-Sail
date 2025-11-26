@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from "vitest"
 import { createMockAppPanel } from "../utils/test-utils"
-import { createPanelStore } from "../../stores/panelStore"
+import { createPanelStore } from "../../stores"
 
 let store: ReturnType<typeof createPanelStore>
 

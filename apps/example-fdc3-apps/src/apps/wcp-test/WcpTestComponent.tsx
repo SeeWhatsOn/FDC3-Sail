@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react"
 import { getAgent } from "@finos/fdc3-get-agent"
-import { DesktopAgent, Listener, Context } from "@finos/fdc3"
+import { type DesktopAgent, type Listener, type Context } from "@finos/fdc3"
 import { createRoot } from "react-dom/client"
 
 import styles from "./wcp-test.module.css"
 
 interface WcpMessage {
   id: string
-  type: 'send' | 'receive'
+  type: "send" | "receive"
   timestamp: Date
   payload: any
   success: boolean
@@ -24,32 +24,34 @@ export const WcpTestComponent = () => {
 
   useEffect(() => {
     console.log("WCP Test Component: Starting...")
-    getAgent().then(agent => {
-      console.log("WCP Test Component: Got FDC3 agent")
-      setFdc3(agent)
-      setIsConnected(true)
-      handleChannelChanged(agent)
-      agent.addEventListener("userChannelChanged", () => handleChannelChanged(agent))
+    getAgent()
+      .then(agent => {
+        console.log("WCP Test Component: Got FDC3 agent")
+        setFdc3(agent)
+        setIsConnected(true)
+        handleChannelChanged(agent)
+        agent.addEventListener("userChannelChanged", () => handleChannelChanged(agent))
 
-      addMessage({
-        id: generateId(),
-        type: 'receive',
-        timestamp: new Date(),
-        payload: { message: 'FDC3 Agent Connected' },
-        success: true
+        addMessage({
+          id: generateId(),
+          type: "receive",
+          timestamp: new Date(),
+          payload: { message: "FDC3 Agent Connected" },
+          success: true,
+        })
       })
-    }).catch(error => {
-      console.error("WCP Test Component: Failed to get FDC3 agent", error)
-      setIsConnected(false)
-      addMessage({
-        id: generateId(),
-        type: 'receive',
-        timestamp: new Date(),
-        payload: { message: 'Failed to connect to FDC3 Agent' },
-        success: false,
-        error: error.message
+      .catch(error => {
+        console.error("WCP Test Component: Failed to get FDC3 agent", error)
+        setIsConnected(false)
+        addMessage({
+          id: generateId(),
+          type: "receive",
+          timestamp: new Date(),
+          payload: { message: "Failed to connect to FDC3 Agent" },
+          success: false,
+          error: error.message,
+        })
       })
-    })
   }, [])
 
   const generateId = () => Math.random().toString(36).substr(2, 9)
@@ -76,10 +78,10 @@ export const WcpTestComponent = () => {
           console.log("WCP Test Component: Context received", context)
           addMessage({
             id: generateId(),
-            type: 'receive',
+            type: "receive",
             timestamp: new Date(),
             payload: context,
-            success: true
+            success: true,
           })
         })
         setListener(newListener)
@@ -88,11 +90,11 @@ export const WcpTestComponent = () => {
       console.error("WCP Test Component: Error handling channel change", error)
       addMessage({
         id: generateId(),
-        type: 'receive',
+        type: "receive",
         timestamp: new Date(),
-        payload: { message: 'Channel change error' },
+        payload: { message: "Channel change error" },
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : "Unknown error",
       })
     }
   }
@@ -106,8 +108,8 @@ export const WcpTestComponent = () => {
         id: {
           message: testMessage,
           timestamp: new Date().toISOString(),
-          sender: "wcp-test-component"
-        }
+          sender: "wcp-test-component",
+        },
       }
 
       const channel = await fdc3.getCurrentChannel()
@@ -116,10 +118,10 @@ export const WcpTestComponent = () => {
         console.log("WCP Test Component: Message sent", context)
         addMessage({
           id: generateId(),
-          type: 'send',
+          type: "send",
           timestamp: new Date(),
           payload: context,
-          success: true
+          success: true,
         })
         setTestMessage("")
       } else {
@@ -129,11 +131,11 @@ export const WcpTestComponent = () => {
       console.error("WCP Test Component: Error sending message", error)
       addMessage({
         id: generateId(),
-        type: 'send',
+        type: "send",
         timestamp: new Date(),
         payload: { message: testMessage },
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : "Unknown error",
       })
     }
   }
@@ -147,8 +149,8 @@ export const WcpTestComponent = () => {
         id: {
           requestId: generateId(),
           timestamp: new Date().toISOString(),
-          version: "2.0"
-        }
+          version: "2.0",
+        },
       }
 
       const channel = await fdc3.getCurrentChannel()
@@ -157,21 +159,21 @@ export const WcpTestComponent = () => {
         console.log("WCP Test Component: Handshake sent", handshakeContext)
         addMessage({
           id: generateId(),
-          type: 'send',
+          type: "send",
           timestamp: new Date(),
           payload: handshakeContext,
-          success: true
+          success: true,
         })
       }
     } catch (error) {
       console.error("WCP Test Component: Error sending handshake", error)
       addMessage({
         id: generateId(),
-        type: 'send',
+        type: "send",
         timestamp: new Date(),
-        payload: { message: 'WCP Handshake' },
+        payload: { message: "WCP Handshake" },
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : "Unknown error",
       })
     }
   }
@@ -187,14 +189,13 @@ export const WcpTestComponent = () => {
 
       <div className={styles.statusSection}>
         <div className={styles.connectionStatus}>
-          Status: <span className={isConnected ? styles.connected : styles.disconnected}>
-            {isConnected ? 'Connected' : 'Disconnected'}
+          Status:{" "}
+          <span className={isConnected ? styles.connected : styles.disconnected}>
+            {isConnected ? "Connected" : "Disconnected"}
           </span>
         </div>
         <div className={styles.channelInfo}>
-          Current Channel: <span className={styles.channelName}>
-            {currentChannel || 'None'}
-          </span>
+          Current Channel: <span className={styles.channelName}>{currentChannel || "None"}</span>
         </div>
       </div>
 
@@ -203,7 +204,7 @@ export const WcpTestComponent = () => {
           <input
             type="text"
             value={testMessage}
-            onChange={(e) => setTestMessage(e.target.value)}
+            onChange={e => setTestMessage(e.target.value)}
             placeholder="Enter test message..."
             className={styles.input}
           />
@@ -216,37 +217,25 @@ export const WcpTestComponent = () => {
           <button onClick={sendWcpHandshake} disabled={!fdc3}>
             Send WCP Handshake
           </button>
-          <button onClick={clearMessages}>
-            Clear Messages
-          </button>
+          <button onClick={clearMessages}>Clear Messages</button>
         </div>
       </div>
 
       <div className={styles.messagesSection}>
         <h3>Message Log ({messages.length})</h3>
         <div className={styles.messageList}>
-          {messages.map((msg) => (
+          {messages.map(msg => (
             <div
               key={msg.id}
               className={`${styles.message} ${styles[msg.type]} ${msg.success ? styles.success : styles.error}`}
             >
               <div className={styles.messageHeader}>
                 <span className={styles.messageType}>{msg.type.toUpperCase()}</span>
-                <span className={styles.timestamp}>
-                  {msg.timestamp.toLocaleTimeString()}
-                </span>
-                <span className={styles.status}>
-                  {msg.success ? '✓' : '✗'}
-                </span>
+                <span className={styles.timestamp}>{msg.timestamp.toLocaleTimeString()}</span>
+                <span className={styles.status}>{msg.success ? "✓" : "✗"}</span>
               </div>
-              <div className={styles.messagePayload}>
-                {JSON.stringify(msg.payload, null, 2)}
-              </div>
-              {msg.error && (
-                <div className={styles.messageError}>
-                  Error: {msg.error}
-                </div>
-              )}
+              <div className={styles.messagePayload}>{JSON.stringify(msg.payload, null, 2)}</div>
+              {msg.error && <div className={styles.messageError}>Error: {msg.error}</div>}
             </div>
           ))}
         </div>

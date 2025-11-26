@@ -75,9 +75,9 @@ export interface WorkspaceStore extends WorkspaceState, WorkspaceActions {}
 
 // Helper function to generate UUIDs
 const generateUUID = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0
-    const v = c == 'x' ? r : (r & 0x3 | 0x8)
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0
+    const v = c == "x" ? r : (r & 0x3) | 0x8
     return v.toString(16)
   })
 }
@@ -93,30 +93,39 @@ const createDefaultWorkspace = (): Workspace => {
     timeLastSaved: Date.now(),
     layout: {
       tabs: new Map([
-        [defaultTabId, {
-          tabId: defaultTabId,
-          name: "Main",
-          panels: new Map([
-            ["tradingview-1", {
-              panelId: "tradingview-1",
-              appId: "tradingview",
-              title: "Trading Terminal",
-              url: "https://tradingview.com/chart/",
-              icon: null,
-            }],
-            ["polygon-1", {
-              panelId: "polygon-1",
-              appId: "polygon",
-              title: "Market Data",
-              url: "https://polygon.io/dashboard",
-              icon: null,
-            }],
-          ])
-        }]
+        [
+          defaultTabId,
+          {
+            tabId: defaultTabId,
+            name: "Main",
+            panels: new Map([
+              [
+                "tradingview-1",
+                {
+                  panelId: "tradingview-1",
+                  appId: "tradingview",
+                  title: "Trading Terminal",
+                  url: "https://tradingview.com/chart/",
+                  icon: null,
+                },
+              ],
+              [
+                "polygon-1",
+                {
+                  panelId: "polygon-1",
+                  appId: "polygon",
+                  title: "Market Data",
+                  url: "https://polygon.io/dashboard",
+                  icon: null,
+                },
+              ],
+            ]),
+          },
+        ],
       ]),
       activeTabId: defaultTabId,
       dockviewLayout: null,
-    }
+    },
   }
 }
 
@@ -126,13 +135,13 @@ const mapStorage = {
     const str = localStorage.getItem(name)
     if (!str) return null
     try {
-      const parsed = JSON.parse(str)
+      const parsed = JSON.parse(str) as { state: { workspaces: Map<string, Workspace> } }
       const deserializedState = {
         ...parsed,
         state: {
           ...parsed.state,
-          workspaces: new Map()
-        }
+          workspaces: new Map(),
+        },
       }
 
       // Deserialize workspaces
@@ -142,8 +151,8 @@ const mapStorage = {
             ...workspace,
             layout: {
               ...workspace.layout,
-              tabs: new Map()
-            }
+              tabs: new Map(),
+            },
           }
 
           // Deserialize tabs
@@ -151,7 +160,7 @@ const mapStorage = {
             for (const [tabId, tab] of workspace.layout.tabs) {
               deserializedWorkspace.layout.tabs.set(tabId, {
                 ...tab,
-                panels: new Map(tab.panels || [])
+                panels: new Map(tab.panels || []),
               })
             }
           }
@@ -165,34 +174,43 @@ const mapStorage = {
       return null
     }
   },
-  setItem: (name: string, value: any) => {
-    const serializedState = {
-      ...value,
+  setItem: (name: string, value: unknown) => {
+    const serializedState = value as { state: { workspaces: Map<string, Workspace> } }
+    const newSerializedState: { state: { workspaces: Map<string, Workspace> } } = {
+      ...serializedState,
       state: {
-        ...value.state,
-        workspaces: []
-      }
+        ...serializedState.state,
+        workspaces: new Map(
+          Array.from(serializedState.state.workspaces.entries()).map(([workspaceId, workspace]) => [
+            workspaceId,
+            {
+              ...workspace,
+              layout: {
+                ...workspace.layout,
+                tabs: new Map(
+                  Array.from(workspace.layout.tabs.entries()).map(([tabId, tab]) => [
+                    tabId,
+                    {
+                      ...tab,
+                      panels: new Map(
+                        Array.from(tab.panels.entries()).map(([panelId, panel]) => [
+                          panelId,
+                          {
+                            ...panel,
+                          },
+                        ])
+                      ),
+                    },
+                  ])
+                ),
+              },
+            },
+          ])
+        ),
+      },
     }
 
-    // Serialize workspaces
-    if (value.state.workspaces) {
-      serializedState.state.workspaces = Array.from(value.state.workspaces.entries()).map(([workspaceId, workspace]) => {
-        return [workspaceId, {
-          ...workspace,
-          layout: {
-            ...workspace.layout,
-            tabs: Array.from(workspace.layout.tabs.entries()).map(([tabId, tab]) => {
-              return [tabId, {
-                ...tab,
-                panels: Array.from(tab.panels.entries())
-              }]
-            })
-          }
-        }]
-      })
-    }
-
-    localStorage.setItem(name, JSON.stringify(serializedState))
+    localStorage.setItem(name, JSON.stringify(newSerializedState))
   },
   removeItem: (name: string) => {
     localStorage.removeItem(name)
@@ -205,7 +223,7 @@ enableMapSet()
 export const createWorkspaceStore = () =>
   create<WorkspaceStore>()(
     persist(
-      immer((set, get) => {
+      immer<WorkspaceStore>((set, get) => {
         const defaultWorkspace = createDefaultWorkspace()
 
         return {
@@ -223,7 +241,7 @@ export const createWorkspaceStore = () =>
                 tabs: new Map(),
                 activeTabId: "",
                 dockviewLayout: null,
-              }
+              },
             }
 
             set(state => {

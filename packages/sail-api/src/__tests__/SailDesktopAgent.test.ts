@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from "vitest"
-import { SailDesktopAgent } from "../SailDesktopAgent"
+import { SailServerDesktopAgent } from "../SailDesktopAgent"
 import { InMemoryTransport } from "@finos/fdc3-sail-desktop-agent/transports"
 
-describe("SailDesktopAgent", () => {
+describe("SailServerDesktopAgent", () => {
   it("should support InMemoryTransport", async () => {
     const transport = new InMemoryTransport()
-    const agent = new SailDesktopAgent({ transport })
+    const agent = new SailServerDesktopAgent({ transport })
 
     expect(agent.getTransport()).toBe(transport)
     expect(agent.getAgent()).toBeDefined()
@@ -13,7 +13,7 @@ describe("SailDesktopAgent", () => {
 
   it("should apply middleware", async () => {
     const transport = new InMemoryTransport()
-    const agent = new SailDesktopAgent({ transport })
+    const agent = new SailServerDesktopAgent({ transport })
 
     const middleware = vi.fn(async (_ctx, next) => {
       await next()

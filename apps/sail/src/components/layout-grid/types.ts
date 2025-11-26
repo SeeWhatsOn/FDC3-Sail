@@ -1,4 +1,4 @@
-import { FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
+import { type FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
 
 // Simple panel interface for Zustand integration
 export interface AppPanel {

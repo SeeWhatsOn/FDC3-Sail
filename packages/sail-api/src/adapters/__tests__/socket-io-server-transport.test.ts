@@ -19,7 +19,7 @@ describe("SocketIOServerTransport", () => {
     // @ts-ignore
     mockIo.sockets.sockets.set("socket-1", mockSocket)
 
-    const transport = new SocketIOServerTransport(mockIo)
+    const transport = new SocketIOServerTransport(mockIo, "test-user")
 
     const message = {
       meta: {
@@ -39,7 +39,7 @@ describe("SocketIOServerTransport", () => {
     const mockIo = {
       on: vi.fn(),
     } as unknown as Server
-    const transport = new SocketIOServerTransport(mockIo)
+    const transport = new SocketIOServerTransport(mockIo, "test-user")
     expect(transport.getInstanceId()).toBeNull()
   })
 })

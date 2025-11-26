@@ -2,7 +2,7 @@
 import { getAgent } from "@finos/fdc3"
 import { useEffect, useRef, memo, useState } from "react"
 
-import { PolygonMode } from "./common"
+import { type PolygonMode } from "./common"
 import { newsMode } from "./modes/news"
 
 /* eslint-disable  @typescript-eslint/no-explicit-any */

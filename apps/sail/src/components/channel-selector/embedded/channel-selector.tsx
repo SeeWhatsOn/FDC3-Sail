@@ -5,7 +5,7 @@ import {
   isFdc3UserInterfaceHandshake,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 
-import { TabDetail } from "../../../types/common"
+import { type TabDetail } from "../../../types/common"
 
 import { ChannelPicker } from "./channel"
 import { handleChannelUpdates, channels } from "./util"

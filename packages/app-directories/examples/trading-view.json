@@ -7,7 +7,7 @@
       "description": "Displays a symbol info of a given stock, using the TradingView applications",
       "type": "web",
       "details": {
-        "url": "/html/example-apps/tradingview/index.html?mode=symbol-info"
+        "url": "http://localhost:3002/apps/tradingview/?mode=symbol-info"
       },
       "screenshots": [
         {
@@ -41,7 +41,7 @@
       "description": "Displays a chart of a given stock, using the TradingView applications",
       "type": "web",
       "details": {
-        "url": "/html/example-apps/tradingview/index.html?mode=chart"
+        "url": "http://localhost:3002/apps/tradingview/?mode=chart"
       },
       "screenshots": [
         {
@@ -75,7 +75,7 @@
       "description": "Displays fundamentals of a given stock, using the TradingView applications",
       "type": "web",
       "details": {
-        "url": "/html/example-apps/tradingview/index.html?mode=fundamentals"
+        "url": "http://localhost:3002/apps/tradingview/?mode=fundamentals"
       },
       "screenshots": [
         {
@@ -109,7 +109,7 @@
       "description": "Displays tickers of a given stock, using the TradingView applications",
       "type": "web",
       "details": {
-        "url": "/html/example-apps/tradingview/index.html?mode=tickers"
+        "url": "http://localhost:3002/apps/tradingview/?mode=tickers"
       },
       "screenshots": [
         {
@@ -143,7 +143,7 @@
       "description": "Displays market data of a given stock, using the TradingView applications",
       "type": "web",
       "details": {
-        "url": "/html/example-apps/tradingview/index.html?mode=market-data"
+        "url": "http://localhost:3002/apps/tradingview/?mode=market-data"
       },
       "screenshots": [
         {

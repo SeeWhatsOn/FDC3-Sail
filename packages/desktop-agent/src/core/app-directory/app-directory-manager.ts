@@ -6,25 +6,57 @@
  * provide additional features like parallel loading and error handling.
  */
 
-import fs from "node:fs/promises"
-import { constants } from "node:fs"
 import { BasicDirectory } from "@finos/fdc3-web-impl/dist/src/directory/BasicDirectory"
+
+// Helper to check if we're in a Node.js environment
+function isNodeEnvironment(): boolean {
+  return typeof process !== "undefined" && process.versions != null && process.versions.node != null
+}
+
+// Lazy-load Node.js fs modules only when needed in Node.js environments
+// Uses dynamic import to prevent browser bundlers from including Node.js code
+async function getFsModules(): Promise<{
+  fs: typeof import("node:fs/promises")
+  constants: typeof import("node:fs").constants
+} | null> {
+  if (!isNodeEnvironment()) {
+    return null
+  }
+
+  try {
+    // Use Function constructor to prevent static analysis by bundlers
+    const fsModule = await import("node:fs/promises").default
+    const constantsModule = await import("node:fs").constants
+    return {
+      fs: fsModule.default || fsModule,
+      constants: constantsModule,
+    }
+  } catch {
+    return null
+  }
+}
 // TODO: Import DirectoryApp from @apps/sail-socket when implementing
 // For now, using a minimal interface to avoid circular dependencies
 interface DirectoryApp {
-  appId: string;
-  title?: string;
-  name?: string;
-  type?: string;
-  details?: { url?: string; path?: string; alias?: string; arguments?: string; [key: string]: unknown };
-  icons?: { src: string }[];
+  appId: string
+  title?: string
+  name?: string
+  type?: string
+  details?: {
+    url?: string
+    path?: string
+    alias?: string
+    arguments?: string
+    [key: string]: unknown
+  }
+  icons?: { src: string }[]
   interop?: {
     intents?: {
-      listensFor?: Record<string, { contexts: string[] }>;
-      [key: string]: unknown;
-    };
-    [key: string]: unknown;
-  };
+      listensFor?: Record<string, { contexts: string[] }>
+      [key: string]: unknown
+    }
+    [key: string]: unknown
+  }
 }
 
 /** Type definition for web application details in directory entries */
@@ -92,9 +124,16 @@ export class AppDirectoryManager extends BasicDirectory {
    * @throws Error if file cannot be read or data format is invalid
    */
   private async readLocalAppDirectory(filePath: string): Promise<DirectoryApp[]> {
+    const fsModules = await getFsModules()
+    if (!fsModules) {
+      throw new Error(
+        `File system operations are not available in browser environments. Cannot read local file: ${filePath}`
+      )
+    }
+
     try {
       // Read file contents as UTF-8 string
-      const data = await fs.readFile(filePath, { encoding: "utf8" })
+      const data = await fsModules.fs.readFile(filePath, { encoding: "utf8" })
 
       // Parse JSON and validate structure
       const parsed: DirectoryData = JSON.parse(data) as DirectoryData
@@ -136,9 +175,15 @@ export class AppDirectoryManager extends BasicDirectory {
    * @returns Promise resolving to true if file exists and is accessible
    */
   private async isValidFilePath(filePath: string): Promise<boolean> {
+    const fsModules = await getFsModules()
+    if (!fsModules) {
+      // In browser environments, file paths are not valid
+      return false
+    }
+
     try {
-      await fs.access(filePath, constants.R_OK)
-      const stats = await fs.stat(filePath)
+      await fsModules.fs.access(filePath, fsModules.constants.R_OK)
+      const stats = await fsModules.fs.stat(filePath)
       return stats.isFile()
     } catch {
       return false

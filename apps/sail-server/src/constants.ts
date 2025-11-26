@@ -10,7 +10,16 @@ export const APP_CONFIG = {
   PROVIDER_NAME: "FDC3 Sail",
   DEFAULT_PORT: 8091,
   DEFAULT_ICON: "/icons/control/choose-app.svg",
-  CORS_ORIGINS: ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
+  CORS_ORIGINS: [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:3002",
+  ],
 } as const
 
 /** Socket Handler Configuration */

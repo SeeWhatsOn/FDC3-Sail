@@ -1,4 +1,4 @@
-import { TabDetail } from "../../../types/common"
+import { type TabDetail } from "../../../types/common"
 
 import styles from "./styles.module.css"
 
@@ -47,14 +47,14 @@ export const ChannelPicker = ({
   if (open) {
     return (
       <div className={styles.channelBox}>
-        {channels.map(c => {
+        {channels.map(channel => {
           return (
             <Channel
-              key={c.id}
-              channel={c}
-              active={c.id == selected}
+              key={channel.id}
+              channel={channel}
+              active={channel.id == selected}
               onClick={() => {
-                activate(c.id)
+                activate(channel.id)
                 changeSize()
               }}
             />

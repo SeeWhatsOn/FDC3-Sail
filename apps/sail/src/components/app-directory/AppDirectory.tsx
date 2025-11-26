@@ -3,28 +3,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "sail-
 import { Skeleton } from "sail-ui"
 import { ExternalLink } from "lucide-react"
 import type { IDockviewPanelProps } from "dockview-react"
-import type { AppMetadata } from "@finos/fdc3-standard"
-import {} from "@finos/fdc3"
 
 import { useAppDirectoryStore } from "../../stores/app-directory-store"
 import { useAppDirectorySocket } from "../../hooks/use-app-directory-socket"
 import { useWorkspaceStore } from "../../stores/workspace-store"
+import type { DirectoryApp, WebAppDetails } from "../../types/common"
 
 import { ChooseAppIcon } from "./ChooseAppIcon"
 
-interface WebAppDetails {
-  url: string
-}
-
 interface AppCardProps {
-  app: AppMetadata
-  onAppClick: (app: AppMetadata) => void
+  app: DirectoryApp
+  onAppClick: (app: DirectoryApp) => void
 }
 
 const AppCard = ({ app, onAppClick }: AppCardProps) => {
   const [imageError, setImageError] = useState(false)
 
-  const getAppIconUrl = (app: AppMetadata): string | null => {
+  const getAppIconUrl = (app: DirectoryApp): string | null => {
     if (app.icons && app.icons.length > 0 && app.icons[0].src) {
       return app.icons[0].src
     }
@@ -34,7 +29,7 @@ const AppCard = ({ app, onAppClick }: AppCardProps) => {
   const iconUrl = getAppIconUrl(app)
   const showFallback = !iconUrl || imageError
 
-  const getAppUrl = (app: AppMetadata) => {
+  const getAppUrl = (app: DirectoryApp) => {
     if (app.type === "web" && app.details) {
       return (app.details as WebAppDetails).url
     }
@@ -61,7 +56,9 @@ const AppCard = ({ app, onAppClick }: AppCardProps) => {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <CardTitle className="line-clamp-1 text-sm font-medium">{app.title}</CardTitle>
+            <CardTitle className="line-clamp-1 text-sm font-medium">
+              {app.title || app.name || app.appId}
+            </CardTitle>
             {app.type === "web" && getAppUrl(app) && (
               <div className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
                 <ExternalLink className="size-3" />
@@ -112,18 +109,13 @@ interface AppDirectoryProps {
 }
 
 export function AppDirectory({ panelProps }: AppDirectoryProps) {
-  const { apps, isLoading, error, loadApps } = useAppDirectoryStore()
+  const { apps, isLoading, error } = useAppDirectoryStore()
   const { addPanel, workspaces, activeWorkspaceId } = useWorkspaceStore()
   const activeWorkspace = workspaces.get(activeWorkspaceId)
   const activeTabId = activeWorkspace?.layout.activeTabId || ""
 
-  // Set up WebSocket listener for real-time updates
-  useAppDirectorySocket()
-
-  // Load apps on component mount
-  useEffect(() => {
-    loadApps()
-  }, [loadApps])
+  // Fetch app directory from desktop agent once on mount
+  const { requestRefresh } = useAppDirectorySocket()
 
   const handleAppClick = (app: DirectoryApp) => {
     console.log("App clicked:", app)
@@ -133,7 +125,7 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
 
       // Generate unique panel ID and instance title
       const instanceId = `${app.appId}-${Date.now()}`
-      const instanceTitle = `${app.title}`
+      const instanceTitle = app.title || app.name || app.appId
 
       // Create FDC3 app panel in the same group as this directory panel
       const fdc3Panel = {
@@ -146,13 +138,14 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
       }
 
       // Add the new FDC3 panel as a tab in the same group
+      const currentGroup = panelProps.api.group
       panelProps.containerApi.addPanel({
         id: instanceId,
         component: "fdc3",
         title: instanceTitle,
         params: { panel: fdc3Panel },
         position: {
-          referenceGroup: panelProps.group,
+          referenceGroup: currentGroup,
         },
       })
 
@@ -187,7 +180,7 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
           <CardContent>
             <CardDescription className="text-sm">{error}</CardDescription>
             <button
-              onClick={loadApps}
+              onClick={requestRefresh}
               className="bg-primary text-primary-foreground hover:bg-primary/90 mt-4 rounded-md px-4 py-2 text-sm"
             >
               Retry
@@ -214,7 +207,7 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
               No applications are currently available in the directory.
             </CardDescription>
             <button
-              onClick={loadApps}
+              onClick={requestRefresh}
               className="bg-primary text-primary-foreground hover:bg-primary/90 mt-4 rounded-md px-4 py-2 text-sm"
             >
               Refresh
@@ -236,7 +229,7 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {apps.map(app => (
-          <AppCard key={app.appId} app={app} onAppClick={handleAppClick} />
+          <AppCard key={String(app.appId)} app={app} onAppClick={handleAppClick} />
         ))}
       </div>
     </div>

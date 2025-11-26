@@ -1,4 +1,4 @@
-import { Channel, DesktopAgent, getAgent } from "@finos/fdc3"
+import { type Channel, type DesktopAgent, getAgent } from "@finos/fdc3"
 
 let fdc3: DesktopAgent | undefined = undefined
 
