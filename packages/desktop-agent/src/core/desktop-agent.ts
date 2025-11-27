@@ -68,7 +68,7 @@ export interface DesktopAgentConfig {
    * App directory manager for querying app metadata.
    * OPTIONAL - defaults to new instance if not provided.
    */
-  appDirectory?: AppDirectoryManager
+  appDirectoryManager?: AppDirectoryManager
 }
 
 /**
@@ -111,7 +111,7 @@ export class DesktopAgent {
     this.channelContextRegistry = config.channelContextRegistry ?? new ChannelContextRegistry()
     this.appChannelRegistry = config.appChannelRegistry ?? new AppChannelRegistry()
     this.userChannelRegistry = config.userChannelRegistry ?? new UserChannelRegistry()
-    this.appDirectory = config.appDirectory ?? new AppDirectoryManager()
+    this.appDirectory = config.appDirectoryManager ?? new AppDirectoryManager()
   }
 
   /**

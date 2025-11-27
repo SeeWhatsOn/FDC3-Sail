@@ -1,4 +1,4 @@
-import type { ISailPlatformApi } from "./ISailPlatformApi"
+import type { SailPlatformApi } from "./SailPlatformApi"
 
 /**
  * Configuration for LocalStorage-based Platform API
@@ -32,7 +32,7 @@ export interface LocalStoragePlatformApiConfig {
  * await platformApi.saveWorkspaceLayout(workspaceId, layout)
  * ```
  */
-export class LocalStoragePlatformApi implements ISailPlatformApi {
+export class LocalStoragePlatformApi implements SailPlatformApi {
   private keyPrefix: string
   private debug: boolean
 

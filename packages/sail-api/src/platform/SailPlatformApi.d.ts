@@ -1,13 +1,13 @@
 /**
  * Interface for Sail Platform API operations.
- * 
+ *
  * This interface defines Sail-specific features (workspaces, layouts, config)
  * that can be implemented with different storage backends:
  * - LocalStorage (default, client-side)
  * - IndexedDB (client-side, larger storage)
  * - REST/WebSocket (remote, server-side)
  */
-export interface ISailPlatformApi {
+export interface SailPlatformApi {
   /**
    * Get all workspaces for the current user.
    * @returns A promise that resolves with an array of workspace objects.
@@ -64,4 +64,3 @@ export interface ISailPlatformApi {
    */
   updateConfig(config: unknown): Promise<boolean>
 }
-

@@ -1,5 +1,5 @@
 import type { Socket } from "socket.io-client"
-import type { ISailPlatformApi } from "./ISailPlatformApi"
+import type { SailPlatformApi } from "./SailPlatformApi"
 import { SailMessages, type SailMessage } from "../protocol/sail-messages"
 import { MiddlewarePipeline, type Middleware } from "../middleware"
 
@@ -25,10 +25,10 @@ export interface RemotePlatformApiConfig {
 
 /**
  * Remote implementation of Sail Platform API.
- * 
+ *
  * This implementation stores workspaces, layouts, and config on a remote server
  * via REST API or WebSocket (Socket.IO). Suitable for multi-user, server-side storage.
- * 
+ *
  * @example
  * ```typescript
  * // Using WebSocket (Socket.IO)
@@ -36,7 +36,7 @@ export interface RemotePlatformApiConfig {
  *   socket: socket,
  *   debug: true
  * })
- * 
+ *
  * // Using REST API
  * const platformApi = new RemotePlatformApi({
  *   restApiUrl: "https://api.example.com",
@@ -44,7 +44,7 @@ export interface RemotePlatformApiConfig {
  * })
  * ```
  */
-export class RemotePlatformApi implements ISailPlatformApi {
+export class RemotePlatformApi implements SailPlatformApi {
   private socket?: Socket
   private restApiUrl?: string
   private pipeline: MiddlewarePipeline<unknown>
@@ -137,4 +137,3 @@ export class RemotePlatformApi implements ISailPlatformApi {
     return this.emitWithAck<boolean>("sailUpdateConfig", { config })
   }
 }
-

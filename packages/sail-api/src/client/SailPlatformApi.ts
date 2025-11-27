@@ -1,5 +1,8 @@
-import type { ISailPlatformApi } from "../platform/ISailPlatformApi"
-import { LocalStoragePlatformApi, type LocalStoragePlatformApiConfig } from "../platform/LocalStoragePlatformApi"
+import type { SailPlatformApi } from "../platform/SailPlatformApi"
+import {
+  LocalStoragePlatformApi,
+  type LocalStoragePlatformApiConfig,
+} from "../platform/LocalStoragePlatformApi"
 import { RemotePlatformApi, type RemotePlatformApiConfig } from "../platform/RemotePlatformApi"
 
 /**
@@ -26,41 +29,41 @@ export interface SailPlatformApiConfig {
 
 /**
  * Sail Platform API - High-level API for Sail-specific features.
- * 
+ *
  * This class provides a unified interface for Sail Platform features (workspaces,
  * layouts, config) with pluggable storage backends. Defaults to localStorage
  * for client-side storage, but can be configured to use remote storage.
- * 
+ *
  * @example
  * ```typescript
  * // Default: localStorage (client-side)
  * const platformApi = new SailPlatformApi()
- * 
+ *
  * // Explicit localStorage
  * const platformApi = new SailPlatformApi({
  *   storage: "localStorage",
  *   localStorage: { keyPrefix: "sail_", debug: true }
  * })
- * 
+ *
  * // Remote via WebSocket
  * const platformApi = new SailPlatformApi({
  *   storage: "remote",
  *   remote: { socket: socket, debug: true }
  * })
- * 
+ *
  * // Remote via REST
  * const platformApi = new SailPlatformApi({
  *   storage: "remote",
  *   remote: { restApiUrl: "https://api.example.com" }
  * })
- * 
+ *
  * // Usage
  * const workspaces = await platformApi.getWorkspaces()
  * await platformApi.saveWorkspaceLayout(workspaceId, layout)
  * ```
  */
 export class SailPlatformApi {
-  private api: ISailPlatformApi
+  private api: SailPlatformApi
 
   constructor(config?: SailPlatformApiConfig) {
     const storageType = config?.storage ?? "localStorage"
@@ -132,4 +135,3 @@ export class SailPlatformApi {
     return this.api.updateConfig(config)
   }
 }
-
