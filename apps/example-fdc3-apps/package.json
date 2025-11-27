@@ -14,8 +14,12 @@
     "typecheck": "tsc --noEmit",
     "typecheck:watch": "tsc --noEmit --watch"
   },
-  "main": "src/server/main.js",
-  "types": "src/server/main.d.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./manifests": "./src/manifests/index.ts"
+  },
   "files": [
     "dist"
   ],

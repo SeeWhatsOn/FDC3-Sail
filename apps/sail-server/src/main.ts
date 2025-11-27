@@ -47,10 +47,14 @@ const CLEANUP_INTERVAL_MS = 5 * 60 * 1000 // Check every 5 minutes
 // Load app directories
 const appDirectory = new AppDirectoryManager()
 const appDirectorySources = [
-  resolve(__dirname, "../../../packages/app-directories/examples/training.json"),
-  resolve(__dirname, "../../../packages/app-directories/examples/polygon.json"),
-  resolve(__dirname, "../../../packages/app-directories/examples/trading-view.json"),
-  resolve(__dirname, "../../../packages/app-directories/examples/benzinga.json"),
+  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/training-broadcast/manifest.json"),
+  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/training-receive/manifest.json"),
+  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/training-pricer/manifest.json"),
+  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/training-tradelist/manifest.json"),
+  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/polygon/manifest.json"),
+  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/tradingview/manifest.json"),
+  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/benzinga/manifest.json"),
+  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/wcp-test/manifest.json"),
 ]
 
 // Load app directories on startup

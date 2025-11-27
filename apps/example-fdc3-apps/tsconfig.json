@@ -11,6 +11,6 @@
     "outDir": "dist",
     "rootDirs": ["src"]
   },
-  "include": ["src/**/*.tsx", "src/**/*.ts", "types.d.ts", "src/**/*.css"],
+  "include": ["src/**/*.tsx", "src/**/*.ts", "types.d.ts", "src/**/*.css", "src/**/*.json"],
   "exclude": ["node_modules", "dist", "vite.config.ts", "vitest.config.ts", "rollup.config.*"]
 }
