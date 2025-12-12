@@ -1,9 +1,5 @@
 import { io, Socket } from "socket.io-client"
-import {
-  type DirectoryApp,
-  AppManagementMessages,
-  type DesktopAgentDirectoryListingArgs,
-} from "../types/common"
+import { SailServerClientAPI, type DirectoryApp } from "@finos/sail-api"
 
 // Utility functions for extracting URL parameters
 function getQueryParam(variable: string): string {
@@ -19,8 +15,9 @@ function getAppId(): string {
   return getQueryParam("appId")
 }
 
-// Singleton socket instance
+// Singleton instances
 let sharedSocket: Socket | null = null
+let sailClient: SailServerClientAPI | null = null
 
 export interface SessionInfo {
   userSessionId: string
@@ -29,9 +26,8 @@ export interface SessionInfo {
 }
 
 /**
- * Hook for managing the shared desktop agent socket connection and session information.
- * This should be used at the top level (DockView) to provide a singleton socket
- * that can be shared across all FDC3 panels.
+ * Hook for managing the shared desktop agent connection using SailServerClientAPI.
+ * This provides a singleton socket and client that can be shared across all FDC3 panels.
  */
 export const useDesktopAgent = () => {
   const getSocket = (): Socket => {
@@ -53,8 +49,18 @@ export const useDesktopAgent = () => {
       sharedSocket.on("connect_error", (error) => {
         console.error("[DesktopAgent] Connection error:", error)
       })
+
+      // Create SailServerClientAPI instance
+      sailClient = new SailServerClientAPI(sharedSocket)
     }
     return sharedSocket
+  }
+
+  const getClient = (): SailServerClientAPI => {
+    if (!sailClient) {
+      getSocket() // Ensure socket and client are initialized
+    }
+    return sailClient!
   }
 
   const getSessionInfo = (): SessionInfo => ({
@@ -67,24 +73,17 @@ export const useDesktopAgent = () => {
     if (sharedSocket) {
       sharedSocket.disconnect()
       sharedSocket = null
+      sailClient = null
     }
   }
 
   const getAppDirectories = async (): Promise<DirectoryApp[]> => {
-    const socket = getSocket()
-    const { userSessionId } = getSessionInfo()
-
-    if (!userSessionId) {
-      throw new Error("No user session ID available")
-    }
+    const client = getClient()
 
     try {
-      const response = await socket.emitWithAck(AppManagementMessages.DA_DIRECTORY_LISTING, {
-        userSessionId,
-      } as DesktopAgentDirectoryListingArgs)
+      const allApps = await client.getDirectoryListing()
 
       // Filter out unwanted apps
-      const allApps = response as DirectoryApp[]
       const allowedAppIds = ["fdc3-wcp-test", "sail-training-broadcaster", "sail-training-receiver"]
       const filteredApps = allApps.filter(
         app =>
@@ -103,6 +102,7 @@ export const useDesktopAgent = () => {
 
   return {
     getSocket,
+    getClient,
     getSessionInfo,
     disconnectSocket,
     getAppDirectories,

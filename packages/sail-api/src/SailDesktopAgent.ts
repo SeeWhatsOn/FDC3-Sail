@@ -85,7 +85,7 @@ export class SailServerDesktopAgent {
       appLauncher,
       appInstanceRegistry: config.appInstanceRegistry,
       intentRegistry: config.intentRegistry,
-      appDirectory: config.appDirectory,
+      appDirectoryManager: config.appDirectory,
     }
 
     this.agent = new DesktopAgent(agentConfig)

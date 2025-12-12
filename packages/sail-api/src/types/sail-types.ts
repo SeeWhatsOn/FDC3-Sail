@@ -68,6 +68,8 @@ export interface DirectoryApp {
   tooltip?: string
   /** Description of the application */
   description?: string
+  /** Publisher/vendor of the application */
+  publisher?: string
   /** Application type */
   type?: "web" | "native" | "citrix" | "onlineNative" | "other"
   /** Launch details specific to the application type */

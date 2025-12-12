@@ -69,18 +69,16 @@ export function createSailBrowserDesktopAgent(
     wcpOptions,
   })
 
-  // Create middleware pipeline
+  // Create middleware pipeline for future use
   const pipeline = new MiddlewarePipeline<unknown>()
-
-  // Wrap the desktop agent's transport to inject middleware
-  // Note: This is a simplified approach - in practice, you might need
-  // to intercept messages at the transport level
-  const originalDesktopAgent = browserAgent.desktopAgent
 
   // Add middleware support
   const use = (middleware: Middleware<unknown>) => {
     pipeline.use(middleware)
   }
+
+  // TODO: Wire up middleware pipeline to intercept messages at the transport level
+  // This will require wrapping browserAgent.desktopAgent's transport with middleware
 
   if (config?.debug) {
     console.log("[SailBrowserDesktopAgent] Created with Sail-specific defaults")

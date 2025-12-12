@@ -1,9 +1,16 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { createBrowserDesktopAgent } from "@finos/sail-api"
+import { createBrowserDesktopAgent } from "@finos/fdc3-sail-desktop-agent/browser"
 
 import "./index.css"
 import App from "./App"
+
+// Global type declarations
+declare global {
+  interface Window {
+    __sailDesktopAgent?: ReturnType<typeof createBrowserDesktopAgent>
+  }
+}
 
 // Initialize the FDC3 Desktop Agent BEFORE React renders
 // This ensures the agent is listening for WCP1Hello messages when getAgent() is called
@@ -23,7 +30,7 @@ browserAgent.start()
 
 console.log("[Sail] FDC3 Browser Desktop Agent started and listening for connections")
 // Store reference globally for debugging/access
-;(window as Window).__sailDesktopAgent = browserAgent
+window.__sailDesktopAgent = browserAgent
 console.log(browserAgent.desktopAgent.getAppDirectory())
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

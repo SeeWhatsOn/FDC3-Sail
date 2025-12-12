@@ -1,15 +1,8 @@
 import { useEffect } from "react"
 
-import type { DirectoryApp } from "../types/common"
+import type { DirectoryApp } from "@finos/sail-api"
 import { useDesktopAgent } from "./use-desktop-agent"
 import { useAppDirectoryStore } from "../stores/app-directory-store"
-
-interface AppDirectoryEvent {
-  type: "APP_ADDED" | "APP_REMOVED" | "APP_UPDATED" | "DIRECTORY_REFRESH"
-  app?: DirectoryApp
-  appId?: string
-  apps?: DirectoryApp[]
-}
 
 /**
  * Hook for fetching app directory from the desktop agent once on mount

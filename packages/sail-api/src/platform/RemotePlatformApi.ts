@@ -48,7 +48,6 @@ export class RemotePlatformApi implements SailPlatformApi {
   private socket?: Socket
   private restApiUrl?: string
   private pipeline: MiddlewarePipeline<unknown>
-  private debug: boolean
 
   constructor(config: RemotePlatformApiConfig) {
     if (!config.socket && !config.restApiUrl) {
@@ -57,7 +56,7 @@ export class RemotePlatformApi implements SailPlatformApi {
     this.socket = config.socket
     this.restApiUrl = config.restApiUrl
     this.pipeline = new MiddlewarePipeline()
-    this.debug = config.debug ?? false
+    // Debug logging handled by middleware if needed
   }
 
   /**

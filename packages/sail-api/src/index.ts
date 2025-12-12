@@ -23,8 +23,11 @@ export {
 // Adapters
 export * from "./adapters";
 
-// Platform API
-export * from "./platform";
+// Platform API implementations (interface is exported from client)
+export { LocalStoragePlatformApi } from "./platform/LocalStoragePlatformApi";
+export type { LocalStoragePlatformApiConfig } from "./platform/LocalStoragePlatformApi";
+export { RemotePlatformApi } from "./platform/RemotePlatformApi";
+export type { RemotePlatformApiConfig } from "./platform/RemotePlatformApi";
 
 // Browser Desktop Agent (re-export from @finos/fdc3-sail-desktop-agent/browser)
 export {

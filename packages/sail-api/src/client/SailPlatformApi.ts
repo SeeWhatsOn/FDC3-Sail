@@ -1,4 +1,4 @@
-import type { SailPlatformApi } from "../platform/SailPlatformApi"
+import type { SailPlatformApi as ISailPlatformApi } from "../platform/SailPlatformApi"
 import {
   LocalStoragePlatformApi,
   type LocalStoragePlatformApiConfig,
@@ -63,7 +63,7 @@ export interface SailPlatformApiConfig {
  * ```
  */
 export class SailPlatformApi {
-  private api: SailPlatformApi
+  private api: ISailPlatformApi
 
   constructor(config?: SailPlatformApiConfig) {
     const storageType = config?.storage ?? "localStorage"

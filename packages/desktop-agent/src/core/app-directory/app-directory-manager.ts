@@ -25,11 +25,11 @@ async function getFsModules(): Promise<{
 
   try {
     // Use Function constructor to prevent static analysis by bundlers
-    const fsModule = await import("node:fs/promises").default
-    const constantsModule = await import("node:fs").constants
+    const fsModule = await import("node:fs/promises")
+    const constantsModule = await import("node:fs")
     return {
       fs: fsModule.default || fsModule,
-      constants: constantsModule,
+      constants: constantsModule.constants,
     }
   } catch {
     return null

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "sail-ui"
 import { Skeleton } from "sail-ui"
 import { ExternalLink } from "lucide-react"
