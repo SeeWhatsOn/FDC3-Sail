@@ -1,12 +1,16 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
 import type { DirectoryApp } from "../types/common"
+import type { createSailBrowserDesktopAgent } from "@finos/sail-api"
+
+type SailDesktopAgentInstance = ReturnType<typeof createSailBrowserDesktopAgent>
 
 interface AppDirectoryState {
   apps: DirectoryApp[]
   isLoading: boolean
   error: string | null
   lastUpdated: Date | null
+  directoryUrls: string[]
 }
 
 interface AppDirectoryActions {
@@ -17,13 +21,15 @@ interface AppDirectoryActions {
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   clearApps: () => void
-  loadApps: () => Promise<void>
+  loadApps: () => void
   refreshApps: () => Promise<void>
+  setDirectoryUrls: (urls: string[]) => void
+  loadDirectoriesFromUrls: (urls: string[]) => Promise<void>
 }
 
 export interface AppDirectoryStore extends AppDirectoryState, AppDirectoryActions {}
 
-export const createAppDirectoryStore = (getAppDirectories?: () => Promise<DirectoryApp[]>) =>
+export const createAppDirectoryStore = (sailAgent: SailDesktopAgentInstance) =>
   create<AppDirectoryStore>()(
     immer((set, get) => ({
       // Initial state
@@ -31,6 +37,7 @@ export const createAppDirectoryStore = (getAppDirectories?: () => Promise<Direct
       isLoading: false as boolean,
       error: null as string | null,
       lastUpdated: null as Date | null,
+      directoryUrls: [] as string[],
 
       // Actions
       setApps: (apps: DirectoryApp[]) =>
@@ -86,110 +93,22 @@ export const createAppDirectoryStore = (getAppDirectories?: () => Promise<Direct
           state.error = null
         }),
 
-      // Async actions for loading apps
-      loadApps: async () => {
+      setDirectoryUrls: (urls: string[]) =>
+        set(state => {
+          state.directoryUrls = urls
+        }),
+
+      // Load apps from the browser desktop agent's app directory
+      loadApps: () => {
         const { setLoading, setError, setApps } = get()
 
         try {
           setLoading(true)
           setError(null)
 
-          // Try to load from desktop agent via WebSocket
-          let apps: DirectoryApp[] = []
-
-          try {
-            // Use the desktop agent WebSocket connection
-            if (getAppDirectories) {
-              apps = await getAppDirectories()
-            } else {
-              throw new Error("No getAppDirectories function provided")
-            }
-          } catch (wsError) {
-            console.warn("Failed to load from desktop agent WebSocket, using fallback:", wsError)
-
-            // Fallback to essential training apps only
-            apps = [
-              {
-                appId: "fdc3-wcp-test",
-                name: "FDC3 WCP Test",
-                title: "FDC3 WCP Test",
-                description: "Test application for FDC3 Web Connection Protocol debugging and message testing",
-                version: "1.0.0",
-                type: "web",
-                publisher: "FINOS",
-                details: {
-                  url: "/html/example-apps/wcp-test/index.html",
-                },
-                icons: [
-                  {
-                    src: "https://via.placeholder.com/64/dc2626/ffffff?text=WCP",
-                    size: "64x64",
-                  },
-                ],
-                hostManifests: {
-                  sail: {
-                    injectApi: "2.0"
-                  }
-                },
-                interop: {
-                  intents: {
-                    listensFor: {
-                      "fdc3.wcp-test": {
-                        displayName: "WCP Test Message",
-                        contexts: ["fdc3.wcp-test"]
-                      }
-                    }
-                  }
-                }
-              },
-              {
-                appId: "sail-training-broadcaster",
-                name: "Sail Broadcaster",
-                title: "Sail Broadcaster",
-                description: "App will connect to the desktop agent and broadcast on the user channel when you hit the button",
-                version: "1.0.0",
-                type: "web",
-                publisher: "FINOS",
-                details: {
-                  url: "/html/example-apps/training-broadcast/index.html",
-                },
-                icons: [
-                  {
-                    src: "https://via.placeholder.com/64/059669/ffffff?text=📡",
-                    size: "64x64",
-                  },
-                ],
-                hostManifests: {
-                  sail: {
-                    injectApi: "2.0"
-                  }
-                }
-              },
-              {
-                appId: "sail-training-receiver",
-                name: "Sail Receiver",
-                title: "Sail Receiver",
-                description: "App will connect to the desktop agent on startup and listen to messages",
-                version: "1.0.0",
-                type: "web",
-                publisher: "FINOS",
-                details: {
-                  url: "/html/example-apps/training-receive/index.html",
-                },
-                icons: [
-                  {
-                    src: "https://via.placeholder.com/64/2563eb/ffffff?text=📨",
-                    size: "64x64",
-                  },
-                ],
-                hostManifests: {
-                  sail: {
-                    injectApi: "2.0"
-                  }
-                }
-              }
-            ] as DirectoryApp[]
-          }
+          // Get all apps from the desktop agent's app directory
+          const appDirectory = sailAgent.desktopAgent.getAppDirectory()
+          const apps = appDirectory.retrieveAllApps()
 
           setApps(apps)
         } catch (error) {
@@ -201,12 +120,35 @@ export const createAppDirectoryStore = (getAppDirectories?: () => Promise<Direct
         }
       },
 
+      // Load directories from URLs into the desktop agent
+      loadDirectoriesFromUrls: async (urls: string[]) => {
+        const { setLoading, setError, loadApps, setDirectoryUrls } = get()
+
+        try {
+          setLoading(true)
+          setError(null)
+          setDirectoryUrls(urls)
+
+          // Get the app directory manager
+          const appDirectory = sailAgent.desktopAgent.getAppDirectory()
+
+          // Replace all directories with the new URLs
+          await appDirectory.replace(urls)
+
+          // Reload apps from the desktop agent
+          await loadApps()
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "Failed to load directories from URLs"
+          setError(errorMessage)
+          console.error("Failed to load directories from URLs:", error)
+        } finally {
+          setLoading(false)
+        }
+      },
+
       refreshApps: async () => {
         const { loadApps } = get()
         await loadApps()
       },
     }))
   )
-
-// This will be initialized in a React component where useDesktopAgent can be called
-export const useAppDirectoryStore = createAppDirectoryStore(undefined)

@@ -13,10 +13,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@finos/fdc3": "^2.2.0",
-    "@finos/fdc3-agent-proxy": "^2.2.1-beta.3",
-    "@finos/fdc3-schema": "^2.2.1-beta.3",
-    "@finos/fdc3-web-impl": "^2.2.1-beta.3",
     "@finos/sail-api": "*",
     "@radix-ui/react-slot": "^1.2.3",
     "@tailwindcss/vite": "^4.1.12",
@@ -28,7 +24,6 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "sail-ui": "*",
-    "socket.io-client": "^4.7.5",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.12",
     "tw-animate-css": "^1.3.7",
@@ -39,7 +34,6 @@
     "react-dom": ">=18.0.0",
     "tailwindcss": "^4.0.0",
     "dockview-react": "^4.7.0",
-    "socket.io-client": "^4.7.0",
     "zustand": "^5.0.0",
     "sail-ui": "*"
   },

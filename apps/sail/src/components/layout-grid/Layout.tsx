@@ -2,7 +2,6 @@ import { DockviewReact, type DockviewReadyEvent, DockviewApi } from "dockview-re
 import { useState, useEffect, useRef, useMemo } from "react"
 
 import "./styles.css"
-import { useDesktopAgent } from "../../hooks/use-desktop-agent"
 import { useWorkspaceStore } from "../../stores/workspace-store"
 
 import type { FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
@@ -32,7 +31,6 @@ const Layout = (props: DockviewSailProps) => {
     setDockviewLayout,
     getDockviewLayout,
   } = useWorkspaceStore()
-  const { disconnectSocket } = useDesktopAgent()
 
   const activeWorkspace = workspaces.get(activeWorkspaceId)
   const activeTabId = activeWorkspace?.layout.activeTabId || ""
@@ -40,13 +38,6 @@ const Layout = (props: DockviewSailProps) => {
     () => (activeWorkspace ? getPanelsForTab(activeWorkspaceId, activeTabId) : []),
     [activeWorkspace, activeWorkspaceId, activeTabId, getPanelsForTab]
   )
-
-  // Cleanup socket on unmount
-  useEffect(() => {
-    return () => {
-      disconnectSocket()
-    }
-  }, [disconnectSocket])
 
   const onReady = (event: DockviewReadyEvent) => {
     api.current = event.api

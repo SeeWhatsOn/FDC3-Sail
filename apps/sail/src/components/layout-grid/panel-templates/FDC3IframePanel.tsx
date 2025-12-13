@@ -1,4 +1,6 @@
+import { useEffect } from "react"
 import type { IDockviewPanelProps } from "dockview"
+import { useConnectionStore } from "../../../contexts/SailDesktopAgentContext"
 
 /**
  * FDC3 Iframe Panel Component
@@ -39,8 +41,37 @@ interface FDC3PanelProps extends IDockviewPanelProps {
   panel: FDC3AppPanel
 }
 
-export const FDC3Panel = ({ panel }: FDC3PanelProps) => {
+export const FDC3Panel = ({ api, panel }: FDC3PanelProps) => {
+  const { getConnectionByPanelId, registerPanel } = useConnectionStore()
+  const connection = getConnectionByPanelId(panel.panelId)
+
   console.log(`[FDC3Panel] Rendering panel: ${panel.panelId} with URL: ${panel.url}`)
+
+  // Register this panel with the connection store on mount
+  useEffect(() => {
+    registerPanel(panel.panelId, panel.appId)
+  }, [registerPanel, panel.panelId, panel.appId])
+
+  // Update panel title with connection status indicator
+  useEffect(() => {
+    if (!connection) {
+      // No connection yet - show connecting indicator
+      api.setTitle(`${panel.title} ⏳`)
+      return
+    }
+
+    switch (connection.status) {
+      case "connected":
+        api.setTitle(`${panel.title} 🟢`)
+        break
+      case "connecting":
+        api.setTitle(`${panel.title} ⏳`)
+        break
+      case "disconnected":
+        api.setTitle(`${panel.title} 🔴`)
+        break
+    }
+  }, [connection?.status, panel.title, api])
 
   return (
     <iframe

@@ -1,11 +1,10 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "sail-ui"
 import { Skeleton } from "sail-ui"
 import { ExternalLink } from "lucide-react"
 import type { IDockviewPanelProps } from "dockview-react"
 
-import { useAppDirectoryStore } from "../../stores/app-directory-store"
-import { useAppDirectorySocket } from "../../hooks/use-app-directory-socket"
+import { useAppDirectoryStore } from "../../contexts/SailDesktopAgentContext"
 import { useWorkspaceStore } from "../../stores/workspace-store"
 import type { DirectoryApp, WebAppDetails } from "../../types/common"
 
@@ -109,13 +108,15 @@ interface AppDirectoryProps {
 }
 
 export function AppDirectory({ panelProps }: AppDirectoryProps) {
-  const { apps, isLoading, error } = useAppDirectoryStore()
+  const { apps, isLoading, error, loadApps, refreshApps } = useAppDirectoryStore()
   const { addPanel, workspaces, activeWorkspaceId } = useWorkspaceStore()
   const activeWorkspace = workspaces.get(activeWorkspaceId)
   const activeTabId = activeWorkspace?.layout.activeTabId || ""
 
   // Fetch app directory from desktop agent once on mount
-  const { requestRefresh } = useAppDirectorySocket()
+  useEffect(() => {
+    void loadApps()
+  }, [loadApps])
 
   const handleAppClick = (app: DirectoryApp) => {
     console.log("App clicked:", app)
@@ -180,7 +181,7 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
           <CardContent>
             <CardDescription className="text-sm">{error}</CardDescription>
             <button
-              onClick={requestRefresh}
+              onClick={() => void refreshApps()}
               className="bg-primary text-primary-foreground hover:bg-primary/90 mt-4 rounded-md px-4 py-2 text-sm"
             >
               Retry
@@ -207,7 +208,7 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
               No applications are currently available in the directory.
             </CardDescription>
             <button
-              onClick={requestRefresh}
+              onClick={() => void refreshApps()}
               className="bg-primary text-primary-foreground hover:bg-primary/90 mt-4 rounded-md px-4 py-2 text-sm"
             >
               Refresh
