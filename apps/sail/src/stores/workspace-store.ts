@@ -82,14 +82,14 @@ const generateUUID = (): string => {
   })
 }
 
-// Mock data for initial state
+// Create default empty workspace
 const createDefaultWorkspace = (): Workspace => {
   const workspaceId = generateUUID()
   const defaultTabId = generateUUID()
 
   return {
     uuid: workspaceId,
-    name: "My Workspace (Library Watch Mode)",
+    name: "Default Workspace",
     timeLastSaved: Date.now(),
     layout: {
       tabs: new Map([
@@ -98,28 +98,7 @@ const createDefaultWorkspace = (): Workspace => {
           {
             tabId: defaultTabId,
             name: "Main",
-            panels: new Map([
-              [
-                "tradingview-1",
-                {
-                  panelId: "tradingview-1",
-                  appId: "tradingview",
-                  title: "Trading Terminal",
-                  url: "https://tradingview.com/chart/",
-                  icon: null,
-                },
-              ],
-              [
-                "polygon-1",
-                {
-                  panelId: "polygon-1",
-                  appId: "polygon",
-                  title: "Market Data",
-                  url: "https://polygon.io/dashboard",
-                  icon: null,
-                },
-              ],
-            ]),
+            panels: new Map(), // Start with empty panels - add FDC3 apps from directory
           },
         ],
       ]),
