@@ -237,14 +237,14 @@ async function notifyContextListeners(
     const listensForType =
       instance.contextListeners.has(context.type) || instance.contextListeners.has("*")
 
-    if (listensForType && instance.transport) {
+    if (listensForType) {
       try {
         const contextEvent = createDACPEvent("contextEvent", {
           channelId,
           context,
         })
 
-        // Add routing metadata
+        // Add routing metadata - WCPConnector will route based on destination.instanceId
         const contextEventWithRouting = {
           ...contextEvent,
           meta: {
@@ -253,8 +253,9 @@ async function notifyContextListeners(
           },
         }
 
-        // Send to the LISTENER's transport, not the sender's!
-        instance.transport.send(contextEventWithRouting)
+        // Send via the handler context's transport (routes through WCPConnector)
+        // WCPConnector routes to the correct app based on meta.destination.instanceId
+        handlerContext.transport.send(contextEventWithRouting)
 
         logger.debug("Context event sent to listener", {
           instanceId: instance.instanceId,

@@ -19,6 +19,18 @@ import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
 import type { DACPHandlerContext } from "./handlers/types"
 
 /**
+ * Structure of DACP message metadata for routing
+ */
+interface DACPMessageMeta {
+  source?: {
+    instanceId?: string
+  }
+  destination?: {
+    instanceId?: string
+  }
+}
+
+/**
  * Configuration for creating a Desktop Agent instance
  */
 export interface DesktopAgentConfig {
@@ -153,39 +165,53 @@ export class DesktopAgent {
    * Creates the handler context and routes to appropriate handler.
    */
   private async handleMessage(message: unknown): Promise<void> {
-    const context = this.createHandlerContext()
-    await routeDACPMessage(message, context)
+    // Extract instanceId from message metadata (set by WCPConnector)
+    const instanceId = this.extractInstanceId(message)
 
-    // After WCP handshake, instanceId will be set in the transport
-    // We need to update the instance with the transport reference
-    const instanceId = this.transport.getInstanceId()
-    if (instanceId) {
-      const instance = this.appInstanceRegistry.getInstance(instanceId)
-      if (instance && !instance.transport) {
-        instance.transport = this.transport
-      }
+    const context = this.createHandlerContext(instanceId)
+    await routeDACPMessage(message, context)
+  }
+
+  /**
+   * Extract instanceId from DACP message metadata.
+   * Messages from apps have meta.source.instanceId set by WCPConnector.
+   */
+  private extractInstanceId(message: unknown): string {
+    if (!message || typeof message !== "object") {
+      return ""
     }
+
+    const messageObj = message as { meta?: DACPMessageMeta }
+    return messageObj.meta?.source?.instanceId || ""
   }
 
   /**
    * Handle transport disconnection.
-   * Cleans up state for the disconnected instance.
+   * Cleans up state for all instances since transport-level disconnect affects all.
+   * Note: For browser Desktop Agent, individual app disconnects are handled via
+   * DACP heartbeat, not transport disconnect.
    */
   private handleDisconnect(): void {
-    const instanceId = this.transport.getInstanceId()
-    if (instanceId) {
-      const context = this.createHandlerContext()
+    // Transport-level disconnect - clean up all instances
+    // This is primarily for server-side Socket.IO transport where each
+    // socket represents one app. For browser Desktop Agent with InMemoryTransport,
+    // this rarely fires (only when the whole agent shuts down).
+    const allInstances = this.appInstanceRegistry.getAllInstances()
+    for (const instance of allInstances) {
+      const context = this.createHandlerContext(instance.instanceId)
       cleanupDACPHandlers(context)
     }
   }
 
   /**
    * Create the handler context for DACP message handlers.
+   *
+   * @param instanceId - The app instance ID extracted from message metadata
    */
-  private createHandlerContext(): DACPHandlerContext {
+  private createHandlerContext(instanceId: string): DACPHandlerContext {
     return {
       transport: this.transport,
-      instanceId: this.transport.getInstanceId() || "",
+      instanceId,
       appInstanceRegistry: this.appInstanceRegistry,
       intentRegistry: this.intentRegistry,
       channelContextRegistry: this.channelContextRegistry,
