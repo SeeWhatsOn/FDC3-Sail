@@ -88,6 +88,12 @@ export interface AppConnectionMetadata {
    * Timestamp when connection was established
    */
   connectedAt: Date
+
+  /**
+   * Panel ID from the iframe's name attribute (if set by Sail UI)
+   * Used to link connections to dockview panels
+   */
+  panelId?: string
 }
 
 /**
@@ -108,6 +114,12 @@ export interface WCPConnectorEvents {
    * Fired when handshake fails
    */
   handshakeFailed: (error: Error, connectionAttemptUuid: string) => void
+
+  /**
+   * Fired when an app's channel membership changes
+   * channelId is null when app leaves all channels
+   */
+  channelChanged: (instanceId: string, channelId: string | null) => void
 }
 
 /**
@@ -145,6 +157,8 @@ export class WCPConnector {
   private isStarted: boolean = false
   private connections = new Map<string, AppConnectionMetadata>()
   private messagePortTransports = new Map<string, MessagePortTransport>()
+  // Reverse lookup: transport → instanceId (updated after WCP5 migration)
+  private transportToInstanceId = new Map<MessagePortTransport, string>()
   private eventHandlers = new Map<keyof WCPConnectorEvents, Set<Function>>()
   // Store bound handler reference for proper event listener cleanup
   private boundHandleWindowMessage = this.handleWindowMessage.bind(this)
@@ -306,17 +320,24 @@ export class WCPConnector {
     // Bridge app transport <-> Desktop Agent transport
     this.bridgeTransports(instanceId, appTransport)
 
+    // Extract panelId from iframe's name attribute (set by FDC3IframePanel)
+    // This enables reliable panel-to-connection linking in the UI
+    const sourceWindow = event.source as Window
+    const panelId = sourceWindow.name || undefined
+
     // Store connection metadata
     const metadata: AppConnectionMetadata = {
       instanceId,
       appId: "unknown", // Will be set after WCP4 validation
       connectionAttemptUuid,
-      source: event.source as Window,
+      source: sourceWindow,
       port: channel.port2,
       connectedAt: new Date(),
+      panelId,
     }
     this.connections.set(instanceId, metadata)
     this.messagePortTransports.set(instanceId, appTransport)
+    this.transportToInstanceId.set(appTransport, instanceId)
 
     // Create WCP3Handshake response
     const handshake: WCP3HandshakeMessage = {
@@ -336,6 +357,19 @@ export class WCPConnector {
     // event.source is validated above, safe to cast
     ;(event.source as Window).postMessage(handshake, event.origin, [channel.port1])
 
+    // Set timeout to clean up stale connections that don't complete WCP4 validation
+    // If appId is still "unknown" after timeout, the handshake failed
+    setTimeout(() => {
+      const connection = this.connections.get(instanceId)
+      if (connection && connection.appId === "unknown") {
+        console.warn(
+          `[WCPConnector] Connection ${instanceId} timed out waiting for WCP4 validation, cleaning up`
+        )
+        this.disconnectApp(instanceId)
+        this.emit("handshakeFailed", new Error("WCP4 validation timeout"), connectionAttemptUuid)
+      }
+    }, this.options.handshakeTimeout)
+
     // Note: appConnected event will be fired after WCP4 validation by Desktop Agent
   }
 
@@ -347,13 +381,23 @@ export class WCPConnector {
    * - Desktop Agent → App: Route by destination metadata (instanceId) to target app
    *
    * Message format: DACP messages with meta.source/destination.instanceId for routing
+   *
+   * Note: Uses dynamic instanceId lookup via transportToInstanceId map because
+   * the instanceId changes from temp-{uuid} to actual instanceId after WCP5 validation.
    */
-  private bridgeTransports(instanceId: string, appTransport: MessagePortTransport): void {
+  private bridgeTransports(_initialInstanceId: string, appTransport: MessagePortTransport): void {
     // App → Desktop Agent: Enrich messages with source instanceId
     appTransport.onMessage((message: unknown) => {
       // Type guard: ensure message has expected structure
       if (!message || typeof message !== "object") {
         console.warn("Received invalid message from app, ignoring", message)
+        return
+      }
+
+      // Look up current instanceId dynamically (may have changed after WCP5 migration)
+      const currentInstanceId = this.transportToInstanceId.get(appTransport)
+      if (!currentInstanceId) {
+        console.warn("Cannot route message: transport not found in reverse lookup")
         return
       }
 
@@ -365,7 +409,7 @@ export class WCPConnector {
           source: {
             ...(((message as Record<string, unknown>).meta as Record<string, unknown> | undefined)
               ?.source as Record<string, unknown> | undefined),
-            instanceId,
+            instanceId: currentInstanceId,
           },
         },
       }
@@ -376,7 +420,13 @@ export class WCPConnector {
 
     // Handle app disconnection
     appTransport.onDisconnect(() => {
-      this.disconnectApp(instanceId)
+      // Look up current instanceId dynamically for cleanup
+      const currentInstanceId = this.transportToInstanceId.get(appTransport)
+      if (currentInstanceId) {
+        this.disconnectApp(currentInstanceId)
+      }
+      // Clean up reverse lookup
+      this.transportToInstanceId.delete(appTransport)
     })
   }
 
@@ -388,6 +438,7 @@ export class WCPConnector {
    * - Messages with meta.destination.instanceId → route to specific app
    * - Messages without destination → broadcast or Desktop Agent internal (ignored here)
    * - Only routes to connected transports
+   * - Intercepts WCP5ValidateAppIdentityResponse to migrate temp→actual instanceId
    */
   private handleDesktopAgentMessage(message: unknown): void {
     // Type guard: ensure message has expected structure
@@ -397,6 +448,7 @@ export class WCPConnector {
     }
 
     const messageObj = message as Record<string, unknown>
+    const messageType = messageObj.type as string | undefined
     const meta = messageObj.meta as Record<string, unknown> | undefined
     const destination = meta?.destination as Record<string, unknown> | undefined
 
@@ -406,6 +458,41 @@ export class WCPConnector {
     if (!destinationId) {
       // Broadcast message or Desktop Agent internal message - not routed to apps
       return
+    }
+
+    // Intercept WCP5ValidateAppIdentityResponse to migrate temp→actual instanceId
+    // This happens after Desktop Agent validates app identity via WCP4
+    if (messageType === "WCP5ValidateAppIdentityResponse") {
+      const payload = messageObj.payload as Record<string, unknown> | undefined
+      const actualInstanceId = payload?.instanceId as string | undefined
+      const appId = payload?.appId as string | undefined
+
+      if (actualInstanceId && appId && destinationId !== actualInstanceId) {
+        // Migrate from temp instanceId to actual instanceId
+        // destinationId is the temp instanceId (temp-{uuid})
+        // actualInstanceId is the real instanceId from Desktop Agent
+        this.updateConnectionMetadata(destinationId, actualInstanceId, appId)
+
+        // Now route to the actual instanceId (maps have been updated)
+        const appTransport = this.messagePortTransports.get(actualInstanceId)
+        if (appTransport && appTransport.isConnected()) {
+          appTransport.send(message)
+        } else {
+          console.warn(
+            `Cannot route WCP5 response to app ${actualInstanceId}: transport not found`
+          )
+        }
+        return
+      }
+    }
+
+    // Intercept channelChangedEvent to emit UI event
+    // This allows the UI to update panel titles with channel indicator
+    if (messageType === "channelChangedEvent") {
+      const payload = messageObj.payload as Record<string, unknown> | undefined
+      const channelId = payload?.channelId as string | null | undefined
+      // Emit event for UI (destinationId is the app whose channel changed)
+      this.emit("channelChanged", destinationId, channelId ?? null)
     }
 
     // Route to specific app if transport exists and is connected
@@ -427,6 +514,8 @@ export class WCPConnector {
     if (appTransport) {
       appTransport.disconnect()
       this.messagePortTransports.delete(instanceId)
+      // Clean up reverse lookup
+      this.transportToInstanceId.delete(appTransport)
     }
 
     this.connections.delete(instanceId)
@@ -463,6 +552,8 @@ export class WCPConnector {
     if (appTransport) {
       this.messagePortTransports.delete(tempInstanceId)
       this.messagePortTransports.set(actualInstanceId, appTransport)
+      // Update reverse lookup so bridgeTransports uses the actual instanceId
+      this.transportToInstanceId.set(appTransport, actualInstanceId)
     } else {
       console.warn(
         `Transport not found for temp instanceId ${tempInstanceId} during metadata update`
