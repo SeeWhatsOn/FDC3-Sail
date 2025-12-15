@@ -86,7 +86,7 @@ export interface DACPHandlerContext {
   /** Registry of app channels (dynamically created channels) */
   appChannelRegistry: AppChannelRegistry
 
-  /** Registry of user channels (pre-defined channels like red, blue, green) */
+  /** Registry of user channels (pre-defined FDC3 channels: fdc3.channel.1 through fdc3.channel.8) */
   userChannelRegistry: UserChannelRegistry
 
   /** App directory manager for app metadata lookups */

@@ -1,68 +1,85 @@
 /**
  * UserChannelRegistry manages pre-defined user channels.
- * User channels are the standard FDC3 channels like red, blue, green, etc.
- * that users can select via the channel selector UI.
+ * User channels are the standard FDC3 channels that users can select via the channel selector UI.
  */
 
 import type { BrowserTypes } from "@finos/fdc3"
 
 type UserChannel = BrowserTypes.Channel
 /**
- * Default FDC3 user channels based on the spec
+ * Default FDC3 recommended user channels based on the FDC3 specification
  */
 const DEFAULT_USER_CHANNELS: UserChannel[] = [
   {
-    id: "red",
+    id: "fdc3.channel.1",
     type: "user",
     displayMetadata: {
-      name: "Red",
-      color: "#FF0000",
-      glyph: "🔴",
+      name: "Channel 1",
+      color: "#FF0000", // red
+      glyph: "1",
     },
   },
   {
-    id: "blue",
+    id: "fdc3.channel.2",
     type: "user",
     displayMetadata: {
-      name: "Blue",
-      color: "#0000FF",
-      glyph: "🔵",
+      name: "Channel 2",
+      color: "#FF8800", // orange
+      glyph: "2",
     },
   },
   {
-    id: "green",
+    id: "fdc3.channel.3",
     type: "user",
     displayMetadata: {
-      name: "Green",
-      color: "#00FF00",
-      glyph: "🟢",
+      name: "Channel 3",
+      color: "#FFFF00", // yellow
+      glyph: "3",
     },
   },
   {
-    id: "yellow",
+    id: "fdc3.channel.4",
     type: "user",
     displayMetadata: {
-      name: "Yellow",
-      color: "#FFFF00",
-      glyph: "🟡",
+      name: "Channel 4",
+      color: "#00FF00", // green
+      glyph: "4",
     },
   },
   {
-    id: "orange",
+    id: "fdc3.channel.5",
     type: "user",
     displayMetadata: {
-      name: "Orange",
-      color: "#FF8800",
-      glyph: "🟠",
+      name: "Channel 5",
+      color: "#00FFFF", // cyan
+      glyph: "5",
     },
   },
   {
-    id: "purple",
+    id: "fdc3.channel.6",
     type: "user",
     displayMetadata: {
-      name: "Purple",
-      color: "#800080",
-      glyph: "🟣",
+      name: "Channel 6",
+      color: "#0000FF", // blue
+      glyph: "6",
+    },
+  },
+  {
+    id: "fdc3.channel.7",
+    type: "user",
+    displayMetadata: {
+      name: "Channel 7",
+      color: "#FF00FF", // magenta
+      glyph: "7",
+    },
+  },
+  {
+    id: "fdc3.channel.8",
+    type: "user",
+    displayMetadata: {
+      name: "Channel 8",
+      color: "#800080", // purple
+      glyph: "8",
     },
   },
 ]

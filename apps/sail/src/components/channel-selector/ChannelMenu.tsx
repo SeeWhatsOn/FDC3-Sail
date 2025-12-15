@@ -57,7 +57,7 @@ export const ChannelMenu = ({ trigger, selectedChannelId, onChannelSelect }: Cha
           <div className="px-2 py-1 text-xs font-medium text-muted-foreground">User Channels</div>
           {channels.map(channel => {
             const isSelected = selectedChannelId === channel.id
-            const color = channel.displayMetadata?.color || "#888888"
+            const color = channel.displayMetadata?.color
             const name = channel.displayMetadata?.name || channel.id
 
             return (
@@ -67,7 +67,7 @@ export const ChannelMenu = ({ trigger, selectedChannelId, onChannelSelect }: Cha
                 className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors
                   ${isSelected ? "bg-accent" : "hover:bg-accent/50"}`}
               >
-                <Circle className="size-3" style={{ fill: color, stroke: color }} />
+                {color && <Circle className="size-3" style={{ fill: color, stroke: color }} />}
                 <span className="flex-1 text-left">{name}</span>
                 {isSelected && <Check className="size-4 text-primary" />}
               </button>

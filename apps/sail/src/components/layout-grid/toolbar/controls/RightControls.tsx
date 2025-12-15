@@ -132,7 +132,7 @@ const ChannelSelectorButton = ({ activePanelId }: { activePanelId?: string }) =>
     console.log("[ChannelSelector] Note: Apps control their own channel membership via FDC3 API")
   }
 
-  const channelColor = channel?.displayMetadata?.color || "#888888"
+  const channelColor = channel?.displayMetadata?.color
   const channelName = channel?.displayMetadata?.name || channelId
 
   return (
@@ -149,9 +149,9 @@ const ChannelSelectorButton = ({ activePanelId }: { activePanelId?: string }) =>
           <Circle
             className="size-4"
             style={{
-              fill: channelId ? channelColor : "transparent",
-              stroke: channelId ? channelColor : "currentColor",
-              strokeWidth: channelId ? 0 : 1.5,
+              fill: channelId && channelColor ? channelColor : "transparent",
+              stroke: channelId && channelColor ? channelColor : "currentColor",
+              strokeWidth: channelId && channelColor ? 0 : 1.5,
             }}
           />
         </button>
