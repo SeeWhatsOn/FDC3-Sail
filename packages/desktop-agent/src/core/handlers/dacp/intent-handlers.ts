@@ -61,8 +61,7 @@ export async function handleRaiseIntentRequest(
     let targetAppId: string
 
     // Check if we need UI resolution (multiple handlers available)
-    const needsResolution =
-      handlers.compatibleApps.length > 1 && context.requestIntentResolution
+    const needsResolution = handlers.compatibleApps.length > 1 && context.requestIntentResolution
 
     if (needsResolution) {
       // Build handler options for UI with app metadata
@@ -216,8 +215,10 @@ export function handleAddIntentListener(message: unknown, context: DACPHandlerCo
       appId: instance.appId,
     })
 
+    // FDC3 spec requires listenerUUID (not listenerId) in the response payload
+    //TODO: change the var to match the spec - listenerId -> listenerUUID
     const response = createDACPSuccessResponse(request, "addIntentListenerResponse", {
-      listenerId,
+      listenerUUID: listenerId,
     })
 
     // Add routing metadata
