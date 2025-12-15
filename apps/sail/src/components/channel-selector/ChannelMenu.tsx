@@ -1,96 +1,101 @@
+import { useState, useMemo } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "sail-ui"
-import { Check } from "lucide-react"
-const recommendedChannels = [
-  {
-    id: "fdc3.channel.1",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 1",
-      color: "red",
-      glyph: "1",
-    },
-  },
-  {
-    id: "fdc3.channel.2",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 2",
-      color: "orange",
-      glyph: "2",
-    },
-  },
-  {
-    id: "fdc3.channel.3",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 3",
-      color: "yellow",
-      glyph: "3",
-    },
-  },
-  {
-    id: "fdc3.channel.4",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 4",
-      color: "green",
-      glyph: "4",
-    },
-  },
-  {
-    id: "fdc3.channel.5",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 5",
-      color: "cyan",
-      glyph: "5",
-    },
-  },
-  {
-    id: "fdc3.channel.6",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 6",
-      color: "blue",
-      glyph: "6",
-    },
-  },
-  {
-    id: "fdc3.channel.7",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 7",
-      color: "magenta",
-      glyph: "7",
-    },
-  },
-  {
-    id: "fdc3.channel.8",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 8",
-      color: "purple",
-      glyph: "8",
-    },
-  },
-]
+import { Check, Circle, X } from "lucide-react"
+import { useSailDesktopAgent } from "../../contexts/SailDesktopAgentContext"
 
-export const ChannelMenu = ({ trigger }: { trigger: React.ReactNode }) => {
+interface Channel {
+  id: string
+  type: string
+  displayMetadata?: {
+    name?: string
+    color?: string
+    glyph?: string
+  }
+}
+
+interface ChannelMenuProps {
+  trigger: React.ReactNode
+  selectedChannelId?: string | null
+  onChannelSelect?: (channelId: string | null) => void
+}
+
+export const ChannelMenu = ({ trigger, selectedChannelId, onChannelSelect }: ChannelMenuProps) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const sailAgent = useSailDesktopAgent()
+
+  // Get user channels from the Desktop Agent
+  const channels = useMemo<Channel[]>(() => {
+    try {
+      return sailAgent.desktopAgent.getUserChannelRegistry().getAll()
+    } catch (error) {
+      console.error("[ChannelMenu] Failed to get user channels:", error)
+      return []
+    }
+  }, [sailAgent])
+
+  const handleChannelClick = (channelId: string) => {
+    if (selectedChannelId === channelId) {
+      // Clicking selected channel deselects it (leave channel)
+      onChannelSelect?.(null)
+    } else {
+      onChannelSelect?.(channelId)
+    }
+    setIsOpen(false)
+  }
+
+  const handleLeaveChannel = () => {
+    onChannelSelect?.(null)
+    setIsOpen(false)
+  }
+
   return (
-    <Popover>
-      <PopoverTrigger>{trigger}</PopoverTrigger>
-      <PopoverContent>
-        <div className="flex flex-col gap-2">
-          {recommendedChannels.map(channel => (
-            <>
-              <div key={channel.id} className="flex items-center gap-2">
-                <Check className="size-4" />
-                {channel.displayMetadata.name}
-              </div>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverContent className="w-48 p-2" align="end">
+        <div className="flex flex-col gap-1">
+          <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
+            User Channels
+          </div>
+          {channels.map(channel => {
+            const isSelected = selectedChannelId === channel.id
+            const color = channel.displayMetadata?.color || "#888888"
+            const name = channel.displayMetadata?.name || channel.id
 
-              <hr className="border-border" />
+            return (
+              <button
+                key={channel.id}
+                onClick={() => handleChannelClick(channel.id)}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors
+                  ${isSelected ? "bg-accent" : "hover:bg-accent/50"}`}
+              >
+                <Circle
+                  className="size-3"
+                  style={{ fill: color, stroke: color }}
+                />
+                <span className="flex-1 text-left">{name}</span>
+                {isSelected && <Check className="size-4 text-primary" />}
+              </button>
+            )
+          })}
+
+          {selectedChannelId && (
+            <>
+              <hr className="my-1 border-border" />
+              <button
+                onClick={handleLeaveChannel}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-accent/50"
+              >
+                <X className="size-3" />
+                <span>Leave Channel</span>
+              </button>
             </>
-          ))}
+          )}
+
+          {channels.length === 0 && (
+            <div className="px-2 py-1 text-sm text-muted-foreground">
+              No channels available
+            </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>

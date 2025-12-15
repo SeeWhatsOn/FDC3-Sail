@@ -1,9 +1,9 @@
 import type { IDockviewHeaderActionsProps } from "dockview"
-import { useState, useEffect } from "react"
-import { Maximize2, Minimize2, ExternalLink, X } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { Circle, ExternalLink, Maximize2, Minimize2, X } from "lucide-react"
 
-import { ChannelSelectorButton as ChannelSelector } from "../../../channel-selector/ChannelSelectorButton"
 import { ChannelMenu } from "../../../channel-selector/ChannelMenu"
+import { useSailDesktopAgent, useConnectionStore } from "../../../../contexts/SailDesktopAgentContext"
 
 import { Icon } from "./Icon"
 
@@ -81,11 +81,80 @@ const MaximizeButton = (props: IDockviewHeaderActionsProps) => {
   )
 }
 
-const ChannelSelectorButton = () => {
+// Channel selector button that shows the active panel's FDC3 channel
+const ChannelSelectorButton = ({ activePanelId }: { activePanelId?: string }) => {
+  const sailAgent = useSailDesktopAgent()
+  const connectionStore = useConnectionStore()
+  const [channelId, setChannelId] = useState<string | null>(null)
+
+  // Get connection and channel for the active panel
+  // Re-runs when activePanelId changes (when user switches tabs)
+  useEffect(() => {
+    if (!activePanelId) {
+      setChannelId(null)
+      return
+    }
+    const connection = connectionStore.getConnectionByPanelId(activePanelId)
+    setChannelId(connection?.channelId ?? null)
+  }, [activePanelId, connectionStore])
+
+  // Also listen for channel changes via WCP events
+  useEffect(() => {
+    const handleChannelChanged = (instanceId: string, newChannelId: string | null) => {
+      // Check if this channel change is for the active panel
+      if (!activePanelId) return
+      const connection = connectionStore.getConnectionByPanelId(activePanelId)
+      if (connection?.instanceId === instanceId) {
+        setChannelId(newChannelId)
+      }
+    }
+
+    sailAgent.wcpConnector.on("channelChanged", handleChannelChanged)
+    return () => {
+      sailAgent.wcpConnector.off("channelChanged", handleChannelChanged)
+    }
+  }, [activePanelId, connectionStore, sailAgent.wcpConnector])
+
+  // Get channel metadata for display
+  const channel = useMemo(() => {
+    if (!channelId) return null
+    try {
+      return sailAgent.desktopAgent.getUserChannelRegistry().get(channelId)
+    } catch {
+      return null
+    }
+  }, [sailAgent, channelId])
+
+  // Channel selection is read-only for now - apps control their own channel via FDC3
+  // This UI just shows what channel the active panel's app has joined
+  const handleChannelSelect = (newChannelId: string | null) => {
+    console.log(`[ChannelSelector] User selected channel: ${newChannelId || "none"}`)
+    console.log("[ChannelSelector] Note: Apps control their own channel membership via FDC3 API")
+  }
+
+  const channelColor = channel?.displayMetadata?.color || "#888888"
+  const channelName = channel?.displayMetadata?.name || channelId
+
   return (
-    <>
-      <ChannelMenu trigger={<Icon title="Channel Selector" icon={ChannelSelector} />} />
-    </>
+    <ChannelMenu
+      trigger={
+        <button
+          className="icon-button flex items-center justify-center"
+          title={channel ? `Channel: ${channelName}` : "No channel (app not connected or not on a channel)"}
+        >
+          <Circle
+            className="size-4"
+            style={{
+              fill: channelId ? channelColor : "transparent",
+              stroke: channelId ? channelColor : "currentColor",
+              strokeWidth: channelId ? 0 : 1.5,
+            }}
+          />
+        </button>
+      }
+      selectedChannelId={channelId}
+      onChannelSelect={handleChannelSelect}
+    />
   )
 }
 
@@ -97,13 +166,12 @@ export const RightControls = (props: IDockviewHeaderActionsProps) => {
   // Check if panel is in popout mode for conditional rendering
   const isPopout = props.api.location.type === "popout"
 
-  // const { activePanel } = props
-
-  // const isFocused = activePanel?.api.isActive
+  // Get the active panel's ID for channel selector
+  const activePanelId = props.activePanel?.id
 
   return (
     <div className="group-control">
-      <ChannelSelectorButton />
+      <ChannelSelectorButton activePanelId={activePanelId} />
       <PopoutButton {...props} />
       {/* Maximize/Minimize button (only show when not in popout) */}
       {!isPopout && <MaximizeButton {...props} />}
