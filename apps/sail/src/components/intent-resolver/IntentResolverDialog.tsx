@@ -1,5 +1,6 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "sail-ui"
 import { Check, AppWindow } from "lucide-react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "sail-ui"
+
 import { useIntentResolverStore } from "../../contexts/SailDesktopAgentContext"
 
 /**
@@ -9,15 +10,7 @@ import { useIntentResolverStore } from "../../contexts/SailDesktopAgentContext"
  * User selects one app, or cancels to reject the intent.
  */
 export function IntentResolverDialog() {
-  const store = useIntentResolverStore()
-  const { isOpen, intentName, handlers, context } = store((state) => ({
-    isOpen: state.isOpen,
-    intentName: state.intentName,
-    handlers: state.handlers,
-    context: state.context,
-  }))
-  const selectHandler = store((state) => state.selectHandler)
-  const cancel = store((state) => state.cancel)
+  const { isOpen, intentName, handlers, context, selectHandler, cancel } = useIntentResolverStore()
 
   // Get context type for display
   const contextType = context && typeof context === "object" && "type" in context

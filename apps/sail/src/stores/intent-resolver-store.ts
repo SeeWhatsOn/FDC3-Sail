@@ -1,12 +1,19 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
 import type { createSailBrowserDesktopAgent } from "@finos/sail-api"
-import type {
-  IntentResolverPayload,
-  IntentHandler,
-} from "@finos/fdc3-sail-desktop-agent/browser"
 
 type SailDesktopAgentInstance = ReturnType<typeof createSailBrowserDesktopAgent>
+
+/**
+ * Handler option for intent resolution
+ */
+export interface IntentHandler {
+  instanceId?: string
+  appId: string
+  appName?: string
+  appIcon?: string
+  isRunning: boolean
+}
 
 /**
  * State for the intent resolver dialog
@@ -117,7 +124,13 @@ export const createIntentResolverStore = (sailAgent: SailDesktopAgentInstance) =
   const connector = sailAgent.wcpConnector
 
   // Handle intent resolution needed event
-  connector.on("intentResolverNeeded", (payload: IntentResolverPayload) => {
+  // The payload type matches IntentResolverPayload from wcp-connector
+  connector.on("intentResolverNeeded", (payload: {
+    requestId: string
+    intent: string
+    context: unknown
+    handlers: IntentHandler[]
+  }) => {
     console.log("[IntentResolverStore] Intent resolution needed:", payload)
     store.setState(state => {
       state.isOpen = true
