@@ -1,19 +1,13 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react"
+import { useMemo, type ReactNode } from "react"
 import type { createSailBrowserDesktopAgent } from "@finos/sail-api"
-import { createAppDirectoryStore, type AppDirectoryStore } from "../stores/app-directory-store"
-import { createConnectionStore, type ConnectionStore } from "../stores/connection-store"
-import { createIntentResolverStore, type IntentResolverStore } from "../stores/intent-resolver-store"
+
+import { createAppDirectoryStore } from "../stores/app-directory-store"
+import { createConnectionStore } from "../stores/connection-store"
+import { createIntentResolverStore } from "../stores/intent-resolver-store"
+
+import { SailDesktopAgentContext } from "./SailDesktopAgentContextValue"
 
 type SailDesktopAgentInstance = ReturnType<typeof createSailBrowserDesktopAgent>
-
-interface SailDesktopAgentContextValue {
-  sailAgent: SailDesktopAgentInstance
-  useAppDirectoryStore: () => AppDirectoryStore
-  useConnectionStore: () => ConnectionStore
-  useIntentResolverStore: () => IntentResolverStore
-}
-
-const SailDesktopAgentContext = createContext<SailDesktopAgentContextValue | null>(null)
 
 interface SailDesktopAgentProviderProps {
   sailAgent: SailDesktopAgentInstance
@@ -41,40 +35,6 @@ export function SailDesktopAgentProvider({ sailAgent, children }: SailDesktopAge
   )
 
   return (
-    <SailDesktopAgentContext.Provider value={value}>
-      {children}
-    </SailDesktopAgentContext.Provider>
+    <SailDesktopAgentContext.Provider value={value}>{children}</SailDesktopAgentContext.Provider>
   )
-}
-
-export function useSailDesktopAgent(): SailDesktopAgentInstance {
-  const context = useContext(SailDesktopAgentContext)
-  if (!context) {
-    throw new Error("useSailDesktopAgent must be used within SailDesktopAgentProvider")
-  }
-  return context.sailAgent
-}
-
-export function useAppDirectoryStore(): AppDirectoryStore {
-  const context = useContext(SailDesktopAgentContext)
-  if (!context) {
-    throw new Error("useAppDirectoryStore must be used within SailDesktopAgentProvider")
-  }
-  return context.useAppDirectoryStore()
-}
-
-export function useConnectionStore(): ConnectionStore {
-  const context = useContext(SailDesktopAgentContext)
-  if (!context) {
-    throw new Error("useConnectionStore must be used within SailDesktopAgentProvider")
-  }
-  return context.useConnectionStore()
-}
-
-export function useIntentResolverStore(): IntentResolverStore {
-  const context = useContext(SailDesktopAgentContext)
-  if (!context) {
-    throw new Error("useIntentResolverStore must be used within SailDesktopAgentProvider")
-  }
-  return context.useIntentResolverStore()
 }

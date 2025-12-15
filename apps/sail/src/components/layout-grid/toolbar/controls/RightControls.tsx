@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Circle, ExternalLink, Maximize2, Minimize2, X } from "lucide-react"
 
 import { ChannelMenu } from "../../../channel-selector/ChannelMenu"
-import { useSailDesktopAgent, useConnectionStore } from "../../../../contexts/SailDesktopAgentContext"
+import { useSailDesktopAgent, useConnectionStore } from "../../../../contexts"
 
 import { Icon } from "./Icon"
 
@@ -140,7 +140,11 @@ const ChannelSelectorButton = ({ activePanelId }: { activePanelId?: string }) =>
       trigger={
         <button
           className="icon-button flex items-center justify-center"
-          title={channel ? `Channel: ${channelName}` : "No channel (app not connected or not on a channel)"}
+          title={
+            channel
+              ? `Channel: ${channelName}`
+              : "No channel (app not connected or not on a channel)"
+          }
         >
           <Circle
             className="size-4"

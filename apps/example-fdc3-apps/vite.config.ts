@@ -7,9 +7,16 @@ import fs from "fs"
 const appsDir = resolve(__dirname, "src/apps")
 const apps = fs
   .readdirSync(appsDir)
-  .filter(file => fs.statSync(resolve(appsDir, file)).isDirectory())
+  .filter(file => {
+    const filePath = resolve(appsDir, file)
+    return (
+      fs.statSync(filePath).isDirectory() &&
+      fs.existsSync(resolve(filePath, "index.html"))
+    )
+  })
 
 // Create the Rollup input object for multiple HTML entry points
+// Only include directories that have an index.html file
 const input = apps.reduce((acc, app) => {
   acc[app] = resolve(__dirname, `src/apps/${app}/index.html`)
   return acc
@@ -65,7 +72,7 @@ export default defineConfig({
       ignored: ["node_modules/**", "dist/**"],
     },
     open: false,
-    port: 3000,
+    port: 3002,
     // Allow serving files from the project root (e.g., accessing assets outside src)
     fs: {
       allow: [".."],

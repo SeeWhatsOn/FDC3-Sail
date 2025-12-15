@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 import type { IDockviewPanelProps } from "dockview"
-import { useConnectionStore } from "../../../contexts/SailDesktopAgentContext"
+
+import { useConnectionStore } from "../../../contexts"
 
 /**
  * FDC3 Iframe Panel Component
@@ -75,12 +76,10 @@ export const FDC3Panel = ({ api, panel }: FDC3PanelProps) => {
     }
 
     // Add channel indicator if app is on a channel
-    const channelIndicator = connection.channelId
-      ? ` [${connection.channelId}]`
-      : ""
+    const channelIndicator = connection.channelId ? ` [${connection.channelId}]` : ""
 
     api.setTitle(`${panel.title}${channelIndicator} ${statusIndicator}`)
-  }, [connection?.status, connection?.channelId, panel.title, api])
+  }, [connection?.status, connection?.channelId, panel.title, api, connection?.panelId, connection])
 
   return (
     <iframe

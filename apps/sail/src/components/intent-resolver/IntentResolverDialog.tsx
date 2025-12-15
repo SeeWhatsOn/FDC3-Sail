@@ -1,7 +1,7 @@
 import { Check, AppWindow } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "sail-ui"
 
-import { useIntentResolverStore } from "../../contexts/SailDesktopAgentContext"
+import { useIntentResolverStore } from "../../contexts"
 
 /**
  * Dialog for selecting an app to handle an FDC3 intent.
@@ -13,12 +13,13 @@ export function IntentResolverDialog() {
   const { isOpen, intentName, handlers, context, selectHandler, cancel } = useIntentResolverStore()
 
   // Get context type for display
-  const contextType = context && typeof context === "object" && "type" in context
-    ? (context as { type: string }).type
-    : "unknown"
+  const contextType =
+    context && typeof context === "object" && "type" in context
+      ? (context as { type: string }).type
+      : "unknown"
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && cancel()}>
+    <Sheet open={isOpen} onOpenChange={open => !open && cancel()}>
       <SheetContent side="bottom" className="max-h-[60vh]">
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2">
@@ -26,15 +27,15 @@ export function IntentResolverDialog() {
             Select Application
           </SheetTitle>
           <SheetDescription>
-            Multiple applications can handle the <strong>{intentName}</strong> intent
-            for <code className="bg-muted px-1 py-0.5 rounded text-xs">{contextType}</code>.
+            Multiple applications can handle the <strong>{intentName}</strong> intent for{" "}
+            <code className="bg-muted px-1 py-0.5 rounded text-xs">{contextType}</code>.
             <br />
             Select which application should receive this intent:
           </SheetDescription>
         </SheetHeader>
 
         <div className="grid gap-2 py-2 max-h-[40vh] overflow-y-auto">
-          {handlers.map((handler) => (
+          {handlers.map(handler => (
             <button
               key={handler.instanceId || handler.appId}
               onClick={() => selectHandler(handler)}
@@ -47,7 +48,7 @@ export function IntentResolverDialog() {
                     src={handler.appIcon}
                     alt=""
                     className="size-full object-cover"
-                    onError={(e) => {
+                    onError={e => {
                       // Fallback to icon on error
                       e.currentTarget.style.display = "none"
                     }}
@@ -59,9 +60,7 @@ export function IntentResolverDialog() {
 
               {/* App info */}
               <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">
-                  {handler.appName || handler.appId}
-                </div>
+                <div className="font-medium truncate">{handler.appName || handler.appId}</div>
                 <div className="text-sm text-muted-foreground">
                   {handler.isRunning ? (
                     <span className="flex items-center gap-1">

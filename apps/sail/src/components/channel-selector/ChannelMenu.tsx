@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "sail-ui"
 import { Check, Circle, X } from "lucide-react"
-import { useSailDesktopAgent } from "../../contexts/SailDesktopAgentContext"
+
+import { useSailDesktopAgent } from "../../contexts"
 
 interface Channel {
   id: string
@@ -53,9 +54,7 @@ export const ChannelMenu = ({ trigger, selectedChannelId, onChannelSelect }: Cha
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-48 p-2" align="end">
         <div className="flex flex-col gap-1">
-          <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
-            User Channels
-          </div>
+          <div className="px-2 py-1 text-xs font-medium text-muted-foreground">User Channels</div>
           {channels.map(channel => {
             const isSelected = selectedChannelId === channel.id
             const color = channel.displayMetadata?.color || "#888888"
@@ -68,10 +67,7 @@ export const ChannelMenu = ({ trigger, selectedChannelId, onChannelSelect }: Cha
                 className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors
                   ${isSelected ? "bg-accent" : "hover:bg-accent/50"}`}
               >
-                <Circle
-                  className="size-3"
-                  style={{ fill: color, stroke: color }}
-                />
+                <Circle className="size-3" style={{ fill: color, stroke: color }} />
                 <span className="flex-1 text-left">{name}</span>
                 {isSelected && <Check className="size-4 text-primary" />}
               </button>
@@ -92,9 +88,7 @@ export const ChannelMenu = ({ trigger, selectedChannelId, onChannelSelect }: Cha
           )}
 
           {channels.length === 0 && (
-            <div className="px-2 py-1 text-sm text-muted-foreground">
-              No channels available
-            </div>
+            <div className="px-2 py-1 text-sm text-muted-foreground">No channels available</div>
           )}
         </div>
       </PopoverContent>

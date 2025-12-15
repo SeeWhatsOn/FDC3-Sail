@@ -119,7 +119,7 @@ npm run dev
 Access your new app at:
 
 ```
-http://localhost:3000/apps/my-new-app/
+http://localhost:3002/apps/my-new-app/
 ```
 
 ### Production Build
@@ -206,4 +206,4 @@ const App: React.FC = () => {
 export default App;' > src/apps/dashboard/App.tsx
 ```
 
-Now you can access your dashboard at `http://localhost:3000/apps/dashboard/`.
+Now you can access your dashboard at `http://localhost:3002/apps/dashboard/`.

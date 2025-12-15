@@ -121,6 +121,7 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
 
     // WCP handlers
     Wcp4Validateappidentity: wcpHandlers.handleWcp4Validateappidentity,
+    WCP4ValidateAppIdentity: wcpHandlers.handleWcp4Validateappidentity,
 
     // Heartbeat handlers
     heartbeatAcknowledgmentRequest: heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,

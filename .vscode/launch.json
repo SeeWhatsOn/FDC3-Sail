@@ -7,10 +7,13 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch Program",
+      "name": "Launch Sail Server",
       "skipFiles": ["<node_internals>/**"],
-      "program": "${workspaceFolder}/apps/sail-web/src/server/da/SailServerContext.ts",
-      "outFiles": ["${workspaceFolder}/**/*.js"]
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite-node"],
+      "program": "${workspaceFolder}/apps/sail-server/src/main.ts",
+      "outFiles": ["${workspaceFolder}/**/*.js"],
+      "cwd": "${workspaceFolder}/apps/sail-server"
     }
   ]
 }

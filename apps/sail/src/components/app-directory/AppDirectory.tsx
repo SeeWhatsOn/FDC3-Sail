@@ -4,7 +4,7 @@ import { Skeleton } from "sail-ui"
 import { ExternalLink } from "lucide-react"
 import type { IDockviewPanelProps } from "dockview-react"
 
-import { useAppDirectoryStore } from "../../contexts/SailDesktopAgentContext"
+import { useAppDirectoryStore } from "../../contexts"
 import { useUIStore } from "../../stores/ui-store"
 import { useWorkspaceStore } from "../../stores/workspace-store"
 import type { DirectoryApp, WebAppDetails } from "../../types/common"

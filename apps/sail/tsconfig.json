@@ -4,6 +4,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "jsx": "react-jsx",
+    "moduleDetection": "force",
     "paths": {
       "@/*": ["../../packages/sail-ui/src/*"],
       "sail-ui": ["../../packages/sail-ui/src/index.ts"],
@@ -11,8 +12,8 @@
     },
     "outDir": "./dist",
     "types": ["vitest/globals"],
-    "rootDir": "../../"
+    "noEmit": true
   },
-  "include": ["src/**/*", "../../packages/sail-ui/src/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "vitest.config.ts"]
 }
