@@ -83,6 +83,9 @@ export type {
   WCPConnectorEvents,
   WCPConnectorOptions,
   AppConnectionMetadata,
+  IntentHandler,
+  IntentResolverPayload,
+  IntentResolverResponse,
 } from "./wcp-connector"
 
 export { MessagePortTransport } from "./message-port-transport"

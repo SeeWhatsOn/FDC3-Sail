@@ -97,6 +97,46 @@ export interface AppConnectionMetadata {
 }
 
 /**
+ * Handler option for intent resolution
+ */
+export interface IntentHandler {
+  /** Instance ID if this is a running listener */
+  instanceId?: string
+  /** App ID from directory */
+  appId: string
+  /** Display name for the app */
+  appName?: string
+  /** Icon URL for the app */
+  appIcon?: string
+  /** Whether this is a running instance (has active listener) */
+  isRunning: boolean
+}
+
+/**
+ * Payload for intent resolution request to UI
+ */
+export interface IntentResolverPayload {
+  /** Unique request ID for correlation */
+  requestId: string
+  /** Intent name being raised */
+  intent: string
+  /** Context being passed with intent */
+  context: unknown
+  /** Available handlers to choose from */
+  handlers: IntentHandler[]
+}
+
+/**
+ * Response from UI with user's handler selection
+ */
+export interface IntentResolverResponse {
+  /** Request ID this is responding to */
+  requestId: string
+  /** Selected handler, or null if cancelled */
+  selectedHandler: { instanceId?: string; appId: string } | null
+}
+
+/**
  * Event types emitted by WCPConnector
  */
 export interface WCPConnectorEvents {
@@ -120,6 +160,12 @@ export interface WCPConnectorEvents {
    * channelId is null when app leaves all channels
    */
   channelChanged: (instanceId: string, channelId: string | null) => void
+
+  /**
+   * Fired when intent resolution UI is needed
+   * UI should display handler options and call resolveIntentSelection()
+   */
+  intentResolverNeeded: (payload: IntentResolverPayload) => void
 }
 
 /**
@@ -162,6 +208,15 @@ export class WCPConnector {
   private eventHandlers = new Map<keyof WCPConnectorEvents, Set<Function>>()
   // Store bound handler reference for proper event listener cleanup
   private boundHandleWindowMessage = this.handleWindowMessage.bind(this)
+  // Pending intent resolution requests awaiting UI response
+  private pendingIntentResolutions = new Map<
+    string,
+    {
+      resolve: (response: IntentResolverResponse) => void
+      reject: (error: Error) => void
+      timeoutId: ReturnType<typeof setTimeout>
+    }
+  >()
 
   /**
    * Create a new WCP Connector
@@ -583,5 +638,93 @@ export class WCPConnector {
    */
   getIsStarted(): boolean {
     return this.isStarted
+  }
+
+  /**
+   * Request intent resolution from UI when multiple handlers are available.
+   *
+   * This method emits an 'intentResolverNeeded' event for the UI to display
+   * a selection dialog, then waits for the UI to call resolveIntentSelection()
+   * with the user's choice.
+   *
+   * @param payload - Intent resolution request with available handlers
+   * @param timeoutMs - Timeout in milliseconds (default: 60000)
+   * @returns Promise that resolves with the user's selection or rejects on timeout/cancel
+   *
+   * @example
+   * ```typescript
+   * const response = await connector.requestIntentResolution({
+   *   requestId: 'abc-123',
+   *   intent: 'ViewContact',
+   *   context: { type: 'fdc3.contact', name: 'John' },
+   *   handlers: [
+   *     { appId: 'crm-app', appName: 'CRM', isRunning: true, instanceId: 'inst-1' },
+   *     { appId: 'outlook', appName: 'Outlook', isRunning: false }
+   *   ]
+   * })
+   *
+   * if (response.selectedHandler) {
+   *   // Route intent to selected handler
+   * } else {
+   *   // User cancelled
+   * }
+   * ```
+   */
+  requestIntentResolution(
+    payload: IntentResolverPayload,
+    timeoutMs: number = 60000
+  ): Promise<IntentResolverResponse> {
+    return new Promise((resolve, reject) => {
+      // Set up timeout to reject if UI doesn't respond
+      const timeoutId = setTimeout(() => {
+        this.pendingIntentResolutions.delete(payload.requestId)
+        reject(new Error(`Intent resolution timed out after ${timeoutMs}ms`))
+      }, timeoutMs)
+
+      // Store pending resolution
+      this.pendingIntentResolutions.set(payload.requestId, {
+        resolve,
+        reject,
+        timeoutId,
+      })
+
+      // Emit event to UI
+      this.emit("intentResolverNeeded", payload)
+    })
+  }
+
+  /**
+   * Called by UI to respond to an intent resolution request.
+   *
+   * @param response - User's selection (or null if cancelled)
+   *
+   * @example
+   * ```typescript
+   * // User selected an app
+   * connector.resolveIntentSelection({
+   *   requestId: 'abc-123',
+   *   selectedHandler: { appId: 'crm-app', instanceId: 'inst-1' }
+   * })
+   *
+   * // User cancelled
+   * connector.resolveIntentSelection({
+   *   requestId: 'abc-123',
+   *   selectedHandler: null
+   * })
+   * ```
+   */
+  resolveIntentSelection(response: IntentResolverResponse): void {
+    const pending = this.pendingIntentResolutions.get(response.requestId)
+    if (!pending) {
+      console.warn(`No pending intent resolution found for requestId: ${response.requestId}`)
+      return
+    }
+
+    // Clear timeout and remove from pending
+    clearTimeout(pending.timeoutId)
+    this.pendingIntentResolutions.delete(response.requestId)
+
+    // Resolve the promise with the user's selection
+    pending.resolve(response)
   }
 }

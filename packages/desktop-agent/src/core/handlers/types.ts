@@ -8,6 +8,58 @@ import type { UserChannelRegistry } from "../state/user-channel-registry"
 import type { AppDirectoryManager } from "../app-directory/app-directory-manager"
 
 // ============================================================================
+// INTENT RESOLUTION CALLBACK
+// ============================================================================
+
+/**
+ * Handler option for intent resolution UI
+ */
+export interface IntentHandlerOption {
+  /** Instance ID if this is a running listener */
+  instanceId?: string
+  /** App ID from directory */
+  appId: string
+  /** Display name for the app */
+  appName?: string
+  /** Icon URL for the app */
+  appIcon?: string
+  /** Whether this is a running instance (has active listener) */
+  isRunning: boolean
+}
+
+/**
+ * Request payload for intent resolution
+ */
+export interface IntentResolutionRequest {
+  /** Unique request ID for correlation */
+  requestId: string
+  /** Intent name being raised */
+  intent: string
+  /** Context being passed with intent */
+  context: unknown
+  /** Available handlers to choose from */
+  handlers: IntentHandlerOption[]
+}
+
+/**
+ * Response from intent resolution
+ */
+export interface IntentResolutionResponse {
+  /** Request ID this is responding to */
+  requestId: string
+  /** Selected handler, or null if cancelled */
+  selectedHandler: { instanceId?: string; appId: string } | null
+}
+
+/**
+ * Callback type for requesting UI-based intent resolution
+ * Returns selected handler or throws if cancelled/timeout
+ */
+export type IntentResolutionCallback = (
+  request: IntentResolutionRequest
+) => Promise<IntentResolutionResponse>
+
+// ============================================================================
 // DACP HANDLER CONTEXT
 // ============================================================================
 
@@ -42,6 +94,13 @@ export interface DACPHandlerContext {
 
   /** App launcher for opening/launching applications (optional) */
   appLauncher?: AppLauncher
+
+  /**
+   * Callback for requesting UI-based intent resolution when multiple handlers exist.
+   * If not provided, the first handler is automatically selected.
+   * Injected by browser/server Desktop Agent implementations.
+   */
+  requestIntentResolution?: IntentResolutionCallback
 }
 
 /**

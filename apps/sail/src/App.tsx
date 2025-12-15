@@ -5,6 +5,7 @@ import { ThemeProvider } from "./components/theme/theme-provider"
 import { Workspace } from "./components/workspace/Workspace"
 import Layout from "./components/layout-grid/Layout"
 import { QuickAccessPanel } from "./components/quick-access-panel"
+import { IntentResolverDialog } from "./components/intent-resolver"
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           </Workspace>
         </main>
         <QuickAccessPanel />
+        <IntentResolverDialog />
       </SidebarProvider>
     </ThemeProvider>
   )

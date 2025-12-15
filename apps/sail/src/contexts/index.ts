@@ -3,4 +3,5 @@ export {
   useSailDesktopAgent,
   useAppDirectoryStore,
   useConnectionStore,
+  useIntentResolverStore,
 } from "./SailDesktopAgentContext"

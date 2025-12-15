@@ -140,7 +140,11 @@ export function createBrowserDesktopAgent(
   // connectorTransport: Used by WCP Connector
   const [daTransport, connectorTransport] = createInMemoryTransportPair()
 
+  // Create WCP Connector first (so we can reference its methods)
+  const wcpConnector = new WCPConnector(connectorTransport, options?.wcpOptions)
+
   // Build Desktop Agent configuration
+  // Wire up WCPConnector's requestIntentResolution for UI-based intent resolution
   const daConfig: DesktopAgentConfig = {
     transport: daTransport,
     appLauncher: options?.appLauncher as any,
@@ -149,6 +153,8 @@ export function createBrowserDesktopAgent(
     channelContextRegistry: options?.registries?.channelContextRegistry as any,
     appChannelRegistry: options?.registries?.appChannelRegistry as any,
     userChannelRegistry: options?.registries?.userChannelRegistry as any,
+    // Enable UI-based intent resolution via WCPConnector
+    requestIntentResolution: (request) => wcpConnector.requestIntentResolution(request),
   }
 
   // Create Desktop Agent
@@ -161,9 +167,6 @@ export function createBrowserDesktopAgent(
       appDirectory.loadDirectory(directory)
     }
   }
-
-  // Create WCP Connector
-  const wcpConnector = new WCPConnector(connectorTransport, options?.wcpOptions)
 
   // Set up event forwarding from WCP Connector to Desktop Agent
   // When WCP Connector establishes a connection, we need to notify Desktop Agent

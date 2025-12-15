@@ -16,14 +16,14 @@ import {
   IntentResultRequestSchema,
   ContextSchema,
 } from "../validation/dacp-schemas"
-import { type DACPHandlerContext, logger } from "../types"
+import { type DACPHandlerContext, type IntentHandlerOption, logger } from "../types"
 import { type Context } from "@finos/fdc3"
 
 export async function handleRaiseIntentRequest(
   message: unknown,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, appInstanceRegistry, intentRegistry } = context
+  const { transport, instanceId, appInstanceRegistry, intentRegistry, appDirectory } = context
 
   try {
     const request = validateDACPMessage(message, RaiseIntentRequestSchema)
@@ -57,13 +57,56 @@ export async function handleRaiseIntentRequest(
       throw new Error(`No apps found to handle intent: ${request.payload.intent}`)
     }
 
-    // For now, select the first running listener or first available app
-    // TODO: Implement UI resolution when multiple handlers exist
     let targetInstanceId: string
     let targetAppId: string
 
-    if (handlers.runningListeners.length > 0) {
-      // Use a running listener (preferred)
+    // Check if we need UI resolution (multiple handlers available)
+    const needsResolution =
+      handlers.compatibleApps.length > 1 && context.requestIntentResolution
+
+    if (needsResolution) {
+      // Build handler options for UI with app metadata
+      const handlerOptions: IntentHandlerOption[] = handlers.compatibleApps.map(handler => {
+        const isRunning = "instanceId" in handler
+        const apps = appDirectory.retrieveAppsById(handler.appId)
+        const appInfo = apps[0] // Take first matching app
+        return {
+          instanceId: isRunning ? handler.instanceId : undefined,
+          appId: handler.appId,
+          appName: appInfo?.title || handler.appId,
+          appIcon: appInfo?.icons?.[0]?.src,
+          isRunning,
+        }
+      })
+
+      logger.info("DACP: Multiple handlers found, requesting UI resolution", {
+        intent: request.payload.intent,
+        handlerCount: handlerOptions.length,
+      })
+
+      // Request UI resolution
+      const resolution = await context.requestIntentResolution!({
+        requestId: request.meta.requestUuid,
+        intent: request.payload.intent,
+        context: validatedContext,
+        handlers: handlerOptions,
+      })
+
+      if (!resolution.selectedHandler) {
+        throw new Error("Intent resolution cancelled by user")
+      }
+
+      targetAppId = resolution.selectedHandler.appId
+      if (resolution.selectedHandler.instanceId) {
+        // Selected a running instance
+        targetInstanceId = resolution.selectedHandler.instanceId
+      } else {
+        // Need to launch the app
+        // TODO: Implement app launching logic
+        throw new Error(`App launching not yet implemented for: ${targetAppId}`)
+      }
+    } else if (handlers.runningListeners.length > 0) {
+      // Single handler or no UI - use a running listener (preferred)
       const listener = handlers.runningListeners[0]
       targetInstanceId = listener.instanceId
       targetAppId = listener.appId

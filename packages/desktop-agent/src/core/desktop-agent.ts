@@ -16,7 +16,7 @@ import { AppChannelRegistry } from "./state/app-channel-registry"
 import { UserChannelRegistry } from "./state/user-channel-registry"
 import { AppDirectoryManager } from "./app-directory/app-directory-manager"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
-import type { DACPHandlerContext } from "./handlers/types"
+import type { DACPHandlerContext, IntentResolutionCallback } from "./handlers/types"
 
 /**
  * Structure of DACP message metadata for routing
@@ -81,6 +81,13 @@ export interface DesktopAgentConfig {
    * OPTIONAL - defaults to new instance if not provided.
    */
   appDirectoryManager?: AppDirectoryManager
+
+  /**
+   * Callback for requesting UI-based intent resolution when multiple handlers exist.
+   * OPTIONAL - if not provided, the first handler is automatically selected.
+   * Injected by browser/server implementations to enable intent resolver UI.
+   */
+  requestIntentResolution?: IntentResolutionCallback
 }
 
 /**
@@ -111,11 +118,13 @@ export class DesktopAgent {
   private appChannelRegistry: AppChannelRegistry
   private userChannelRegistry: UserChannelRegistry
   private appDirectory: AppDirectoryManager
+  private requestIntentResolution?: IntentResolutionCallback
   private isStarted: boolean = false
 
   constructor(config: DesktopAgentConfig) {
     this.transport = config.transport
     this.appLauncher = config.appLauncher
+    this.requestIntentResolution = config.requestIntentResolution
 
     // Use provided registries or create defaults
     this.appInstanceRegistry = config.appInstanceRegistry ?? new AppInstanceRegistry()
@@ -219,6 +228,7 @@ export class DesktopAgent {
       userChannelRegistry: this.userChannelRegistry,
       appDirectory: this.appDirectory,
       appLauncher: this.appLauncher,
+      requestIntentResolution: this.requestIntentResolution,
     }
   }
 
