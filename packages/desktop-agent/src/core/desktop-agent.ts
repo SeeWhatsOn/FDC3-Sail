@@ -174,8 +174,15 @@ export class DesktopAgent {
    * Creates the handler context and routes to appropriate handler.
    */
   private async handleMessage(message: unknown): Promise<void> {
-    // Extract instanceId from message metadata (set by WCPConnector)
+    // Only process messages FROM apps (have source.instanceId)
+    // Messages TO apps (have destination.instanceId but no source) should pass through
     const instanceId = this.extractInstanceId(message)
+    
+    if (!instanceId) {
+      // Message has no source.instanceId - this is likely a message going TO an app
+      // (e.g., contextEvent, responses). Let it pass through without processing.
+      return
+    }
 
     const context = this.createHandlerContext(instanceId)
     await routeDACPMessage(message, context)
@@ -184,6 +191,7 @@ export class DesktopAgent {
   /**
    * Extract instanceId from DACP message metadata.
    * Messages from apps have meta.source.instanceId set by WCPConnector.
+   * Messages to apps have meta.destination.instanceId but no source.
    */
   private extractInstanceId(message: unknown): string {
     if (!message || typeof message !== "object") {

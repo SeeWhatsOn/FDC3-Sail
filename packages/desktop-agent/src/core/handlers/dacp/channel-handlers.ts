@@ -23,15 +23,49 @@ export function handleGetCurrentChannelRequest(
   message: unknown,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, appInstanceRegistry, userChannelRegistry, appChannelRegistry } = context
 
   try {
     const request = validateDACPMessage(message, GetCurrentChannelRequestSchema)
     const instance = appInstanceRegistry.getInstance(instanceId)
-    const currentChannel = instance?.currentChannel ?? null
+    const channelId = instance?.currentChannel ?? null
+
+    // If no channel, return null
+    if (!channelId) {
+      const response = createDACPSuccessResponse(request, "getCurrentChannelResponse", {
+        channel: null,
+      })
+      // Add routing metadata
+      const responseWithRouting = {
+        ...response,
+        meta: {
+          ...response.meta,
+          destination: { instanceId },
+        },
+      }
+      transport.send(responseWithRouting)
+      return
+    }
+
+    // Look up the channel object from the appropriate registry
+    // Try user channels first, then app channels
+    let channel = userChannelRegistry.get(channelId) ?? appChannelRegistry.get(channelId)
+
+    // If channel not found in registries, create a minimal channel object
+    // This shouldn't happen in normal operation, but provides a fallback
+    if (!channel) {
+      logger.warn("Channel not found in registries, creating minimal channel object", {
+        channelId,
+        instanceId,
+      })
+      channel = {
+        id: channelId,
+        type: "user", // Default to user channel if unknown
+      }
+    }
 
     const response = createDACPSuccessResponse(request, "getCurrentChannelResponse", {
-      channel: currentChannel,
+      channel,
     })
     // Add routing metadata
     const responseWithRouting = {

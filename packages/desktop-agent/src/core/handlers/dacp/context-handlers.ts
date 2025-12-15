@@ -22,10 +22,23 @@ export async function handleBroadcastRequest(
   message: unknown,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, channelContextRegistry } = context
+  const { transport, instanceId, channelContextRegistry, appInstanceRegistry } = context
 
   try {
+    // Validate message against DACP schema - channelId is required per spec
     const request = validateDACPMessage(message, BroadcastRequestSchema)
+
+    // Validate that the instance is a member of the channel they're broadcasting to
+    const instance = appInstanceRegistry.getInstance(instanceId)
+    if (!instance) {
+      throw new Error("Instance not found")
+    }
+
+    if (instance.currentChannel !== request.payload.channelId) {
+      throw new Error(
+        `Instance is not a member of channel ${request.payload.channelId}. Current channel: ${instance.currentChannel ?? "none"}`
+      )
+    }
 
     logger.info("DACP: Processing broadcast request", {
       channelId: request.payload.channelId,
@@ -232,32 +245,73 @@ async function notifyContextListeners(
   // Find instances on the same channel
   const instancesOnChannel = handlerContext.appInstanceRegistry.getInstancesOnChannel(channelId)
 
-  const notifications = instancesOnChannel.map(instance => {
-    // Check if the instance is listening for this context type
-    const listensForType =
-      instance.contextListeners.has(context.type) || instance.contextListeners.has("*")
+  logger.info("DACP: Notifying context listeners", {
+    channelId,
+    contextType: context.type,
+    totalInstancesOnChannel: instancesOnChannel.length,
+    instanceIds: instancesOnChannel.map(i => i.instanceId),
+  })
 
-    if (listensForType) {
+  const notifications = instancesOnChannel
+    .filter(instance => {
+      // Exclude the sender - they already have the context
+      if (instance.instanceId === handlerContext.instanceId) {
+        logger.debug("Skipping sender instance", { instanceId: instance.instanceId })
+        return false
+      }
+
+      // Check if the instance is listening for this context type
+      const listensForType =
+        instance.contextListeners.has(context.type) || instance.contextListeners.has("*")
+
+      if (!listensForType) {
+        logger.debug("Instance not listening for context type", {
+          instanceId: instance.instanceId,
+          contextType: context.type,
+          registeredListeners: Array.from(instance.contextListeners),
+        })
+      }
+
+      return listensForType
+    })
+    .map(instance => {
       try {
-        const contextEvent = createDACPEvent("contextEvent", {
+        // FDC3 agent library expects broadcastEvent (not contextEvent) with originatingApp
+        // Get the sender's instance info for originatingApp
+        const senderInstance = handlerContext.appInstanceRegistry.getInstance(
+          handlerContext.instanceId
+        )
+
+        const broadcastEvent = createDACPEvent("broadcastEvent", {
           channelId,
           context,
+          originatingApp: {
+            appId: senderInstance?.appId || "unknown",
+            instanceId: handlerContext.instanceId,
+          },
         })
 
         // Add routing metadata - WCPConnector will route based on destination.instanceId
-        const contextEventWithRouting = {
-          ...contextEvent,
+        const broadcastEventWithRouting = {
+          ...broadcastEvent,
           meta: {
-            ...contextEvent.meta,
+            ...broadcastEvent.meta,
             destination: { instanceId: instance.instanceId },
           },
         }
 
+        logger.info("DACP: Sending broadcast event to listener", {
+          targetInstanceId: instance.instanceId,
+          channelId,
+          contextType: context.type,
+          eventUuid: broadcastEvent.meta.eventUuid,
+        })
+
         // Send via the handler context's transport (routes through WCPConnector)
         // WCPConnector routes to the correct app based on meta.destination.instanceId
-        handlerContext.transport.send(contextEventWithRouting)
+        handlerContext.transport.send(broadcastEventWithRouting)
 
-        logger.debug("Context event sent to listener", {
+        logger.debug("Broadcast event sent to listener", {
           instanceId: instance.instanceId,
           channelId,
           contextType: context.type,
@@ -268,8 +322,17 @@ async function notifyContextListeners(
           error,
         })
       }
-    }
-  })
+    })
 
-  await Promise.allSettled(notifications)
+  const results = await Promise.allSettled(notifications)
+  const successful = results.filter(r => r.status === "fulfilled").length
+  const failed = results.filter(r => r.status === "rejected").length
+
+  logger.info("DACP: Context listener notification complete", {
+    channelId,
+    contextType: context.type,
+    successful,
+    failed,
+    total: results.length,
+  })
 }

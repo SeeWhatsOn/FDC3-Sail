@@ -527,8 +527,16 @@ export class WCPConnector {
     // Extract destination instanceId from message metadata
     const destinationId = destination?.instanceId as string | undefined
 
+    console.log("[WCPConnector] Received message from Desktop Agent", {
+      messageType,
+      destinationId,
+      hasDestination: !!destinationId,
+      availableTransports: Array.from(this.messagePortTransports.keys()),
+    })
+
     if (!destinationId) {
       // Broadcast message or Desktop Agent internal message - not routed to apps
+      console.log("[WCPConnector] No destinationId, skipping routing", { messageType })
       return
     }
 
@@ -568,10 +576,35 @@ export class WCPConnector {
     // Route to specific app if transport exists and is connected
     const appTransport = this.messagePortTransports.get(destinationId)
     if (appTransport && appTransport.isConnected()) {
-      appTransport.send(message)
+      console.log("[WCPConnector] Routing message to app", {
+        destinationId,
+        messageType,
+        eventUuid: meta?.eventUuid,
+        requestUuid: meta?.requestUuid,
+        responseUuid: meta?.responseUuid,
+      })
+      try {
+        appTransport.send(message)
+        console.log("[WCPConnector] Message sent successfully to app transport", {
+          destinationId,
+          messageType,
+        })
+      } catch (error) {
+        console.error("[WCPConnector] Error sending message to app transport", {
+          destinationId,
+          messageType,
+          error,
+        })
+      }
     } else {
       console.warn(
-        `Cannot route message to app ${destinationId}: transport not found or disconnected`
+        `[WCPConnector] Cannot route message to app ${destinationId}: transport not found or disconnected`,
+        {
+          messageType,
+          hasTransport: !!appTransport,
+          isConnected: appTransport?.isConnected(),
+          availableInstanceIds: Array.from(this.messagePortTransports.keys()),
+        }
       )
     }
   }

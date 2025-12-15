@@ -79,10 +79,21 @@ export class MessagePortTransport implements Transport {
       throw new Error("Cannot send message: MessagePort is disconnected")
     }
 
+    const messageType =
+      message && typeof message === "object" && "type" in message
+        ? (message as { type: unknown }).type
+        : "unknown"
+
+    console.log("[MessagePortTransport] Sending message", {
+      messageType,
+      connected: this.connected,
+    })
+
     try {
       this.port.postMessage(message)
+      console.log("[MessagePortTransport] Message posted successfully", { messageType })
     } catch (error) {
-      console.error("Error sending message through MessagePort:", error)
+      console.error("[MessagePortTransport] Error sending message through MessagePort:", error)
       // If posting fails, treat as disconnection
       this.handleDisconnect()
       throw error
@@ -165,12 +176,35 @@ export class MessagePortTransport implements Transport {
       return
     }
 
+    const message = event.data
+    const messageType =
+      message && typeof message === "object" && "type" in message
+        ? (message as { type: unknown }).type
+        : "unknown"
+
+    console.log("[MessagePortTransport] Received message", {
+      messageType,
+      hasHandler: !!this.messageHandler,
+      connected: this.connected,
+    })
+
     if (this.messageHandler) {
       try {
-        this.messageHandler(event.data)
+        const result = this.messageHandler(message)
+        // Handle promise if handler is async
+        if (result instanceof Promise) {
+          void result.catch(error => {
+            console.error("[MessagePortTransport] Error in async message handler:", error, {
+              messageType,
+            })
+          })
+        }
+        console.log("[MessagePortTransport] Message handler executed successfully", { messageType })
       } catch (error) {
-        console.error("Error in message handler:", error)
+        console.error("[MessagePortTransport] Error in message handler:", error, { messageType })
       }
+    } else {
+      console.warn("[MessagePortTransport] No message handler registered", { messageType })
     }
   }
 

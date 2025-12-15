@@ -128,6 +128,11 @@ export const WcpTestComponent = () => {
 
       const channel = await fdc3.getCurrentChannel()
       if (channel) {
+        // Ensure channel has an ID before broadcasting
+        if (!channel.id) {
+          throw new Error("Channel does not have an ID")
+        }
+        console.log("WCP Test Component: Broadcasting to channel", channel.id, context)
         await channel.broadcast(context)
         console.log("WCP Test Component: Message sent", context)
         addMessage({
@@ -169,6 +174,15 @@ export const WcpTestComponent = () => {
 
       const channel = await fdc3.getCurrentChannel()
       if (channel) {
+        // Ensure channel has an ID before broadcasting
+        if (!channel.id) {
+          throw new Error("Channel does not have an ID")
+        }
+        console.log(
+          "WCP Test Component: Broadcasting handshake to channel",
+          channel.id,
+          handshakeContext
+        )
         await channel.broadcast(handshakeContext)
         console.log("WCP Test Component: Handshake sent", handshakeContext)
         addMessage({
