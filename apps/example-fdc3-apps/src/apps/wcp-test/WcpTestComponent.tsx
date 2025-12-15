@@ -20,12 +20,17 @@ export const WcpTestComponent = () => {
   const [channelList, setChannelList] = useState<Channel[]>([])
   const [messages, setMessages] = useState<WcpMessage[]>([])
   const [listener, setListener] = useState<Promise<Listener> | null>(null)
+  const [intentListener, setIntentListener] = useState<Promise<Listener> | null>(null)
   const [testMessage, setTestMessage] = useState("")
+  const [instrumentName, setInstrumentName] = useState("")
+  const [instrumentTicker, setInstrumentTicker] = useState("")
   const [isConnected, setIsConnected] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   useEffect(() => {
     console.log("WCP Test Component: Starting...")
+    let intentListenerPromise: Promise<Listener> | null = null
+
     getAgent({
       identityUrl: "http://localhost:3002/apps/wcp-test/",
       channelSelector: false,
@@ -38,6 +43,19 @@ export const WcpTestComponent = () => {
         setIsConnected(true)
         handleChannelChanged(agent)
         agent.addEventListener("userChannelChanged", () => handleChannelChanged(agent))
+
+        // Add intent listener for ViewInstrument
+        intentListenerPromise = agent.addIntentListener("ViewInstrument", (context: Context) => {
+          console.log("WCP Test Component: ViewInstrument intent received", context)
+          addMessage({
+            id: generateId(),
+            type: "receive",
+            timestamp: new Date(),
+            payload: { intent: "ViewInstrument", context },
+            success: true,
+          })
+        })
+        setIntentListener(intentListenerPromise)
 
         addMessage({
           id: generateId(),
@@ -62,6 +80,13 @@ export const WcpTestComponent = () => {
       .finally(() => {
         console.log("WCP Test Component: Connection attempt completed")
       })
+
+    // Cleanup function
+    return () => {
+      if (intentListenerPromise) {
+        intentListenerPromise.then(listener => listener.unsubscribe()).catch(console.error)
+      }
+    }
   }, [])
 
   const generateId = () => Math.random().toString(36).substr(2, 9)
@@ -85,6 +110,12 @@ export const WcpTestComponent = () => {
         const listenerInstance = await listener
         listenerInstance.unsubscribe()
         setListener(null)
+      }
+
+      if (intentListener) {
+        const intentListenerInstance = await intentListener
+        intentListenerInstance.unsubscribe()
+        setIntentListener(null)
       }
 
       if (channel) {
@@ -200,6 +231,45 @@ export const WcpTestComponent = () => {
         type: "send",
         timestamp: new Date(),
         payload: { message: "WCP Handshake" },
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  const raiseViewInstrumentIntent = async () => {
+    if (!fdc3 || !instrumentTicker.trim()) return
+
+    try {
+      const context: Context = {
+        type: "fdc3.instrument",
+        id: {
+          ticker: instrumentTicker.trim(),
+        },
+      }
+
+      // Add name if provided
+      if (instrumentName.trim()) {
+        context.name = instrumentName.trim()
+      }
+
+      console.log("WCP Test Component: Raising ViewInstrument intent", context)
+      const result = await fdc3.raiseIntent("ViewInstrument", context)
+      console.log("WCP Test Component: Intent raised successfully", result)
+      addMessage({
+        id: generateId(),
+        type: "send",
+        timestamp: new Date(),
+        payload: { intent: "ViewInstrument", context, result },
+        success: true,
+      })
+    } catch (error) {
+      console.error("WCP Test Component: Error raising intent", error)
+      addMessage({
+        id: generateId(),
+        type: "send",
+        timestamp: new Date(),
+        payload: { intent: "ViewInstrument", context: { ticker: instrumentTicker, name: instrumentName } },
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
       })
@@ -366,6 +436,32 @@ export const WcpTestComponent = () => {
           <button onClick={sendTestMessage} disabled={!fdc3 || !testMessage.trim()}>
             Send Message
           </button>
+        </div>
+
+        <div className={styles.instrumentSection}>
+          <h3>ViewInstrument Intent</h3>
+          <div className={styles.instrumentInputs}>
+            <input
+              type="text"
+              value={instrumentName}
+              onChange={e => setInstrumentName(e.target.value)}
+              placeholder="Instrument name (optional)..."
+              className={styles.input}
+            />
+            <input
+              type="text"
+              value={instrumentTicker}
+              onChange={e => setInstrumentTicker(e.target.value)}
+              placeholder="Ticker (required)..."
+              className={styles.input}
+            />
+            <button
+              onClick={raiseViewInstrumentIntent}
+              disabled={!fdc3 || !instrumentTicker.trim()}
+            >
+              Raise ViewInstrument Intent
+            </button>
+          </div>
         </div>
 
         <div className={styles.buttons}>
