@@ -67,6 +67,14 @@ const appDirectorySources = [
   }
 })()
 
+// Sync function to be called after directory is loaded and when agents are created
+function syncAppDirectoryToAgents(): void {
+  // Sync to all existing agents
+  for (const agentInfo of userAgents.values()) {
+    agentInfo.agent.syncAppDirectoryToIntentRegistry()
+  }
+}
+
 /**
  * Get userId from socket authentication
  * In production, this should validate a JWT or session token
@@ -126,6 +134,9 @@ function getOrCreateUserAgent(userId: string): UserAgentInfo {
     })
 
     agent.start()
+
+    // Sync app directory to intent registry for this agent
+    agent.syncAppDirectoryToIntentRegistry()
 
     agentInfo = {
       agent,

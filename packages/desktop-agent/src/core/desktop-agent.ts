@@ -10,7 +10,7 @@
 import type { Transport } from "./interfaces/transport"
 import type { AppLauncher } from "./interfaces/app-launcher"
 import { AppInstanceRegistry } from "./state/app-instance-registry"
-import { IntentRegistry } from "./state/intent-registry"
+import { IntentRegistry, type IntentCapability } from "./state/intent-registry"
 import { ChannelContextRegistry } from "./state/channel-context-registry"
 import { AppChannelRegistry } from "./state/app-channel-registry"
 import { UserChannelRegistry } from "./state/user-channel-registry"
@@ -287,5 +287,46 @@ export class DesktopAgent {
    */
   getIsStarted(): boolean {
     return this.isStarted
+  }
+
+  /**
+   * Syncs apps from the app directory to the intent registry.
+   * This registers intent capabilities for all apps in the directory.
+   * Should be called after loading apps into the directory.
+   */
+  syncAppDirectoryToIntentRegistry(): void {
+    const apps = this.appDirectory.retrieveAllApps()
+    
+    for (const app of apps) {
+      const intents = app.interop?.intents?.listensFor
+      if (!intents || typeof intents !== "object") {
+        continue
+      }
+
+      const capabilities: Record<string, IntentCapability> = {}
+      
+      for (const [intentName, intentConfig] of Object.entries(intents)) {
+        if (intentConfig && typeof intentConfig === "object" && "contexts" in intentConfig) {
+          capabilities[intentName] = {
+            intentName,
+            appId: app.appId,
+            contextTypes: Array.isArray(intentConfig.contexts) ? intentConfig.contexts : [],
+            resultType: "resultType" in intentConfig && typeof intentConfig.resultType === "string" 
+              ? intentConfig.resultType 
+              : undefined,
+            displayName: "displayName" in intentConfig && typeof intentConfig.displayName === "string"
+              ? intentConfig.displayName
+              : undefined,
+            customConfig: "customConfig" in intentConfig && typeof intentConfig.customConfig === "object"
+              ? intentConfig.customConfig as Record<string, unknown>
+              : undefined,
+          }
+        }
+      }
+
+      if (Object.keys(capabilities).length > 0) {
+        this.intentRegistry.registerAppCapabilities(app.appId, capabilities)
+      }
+    }
   }
 }

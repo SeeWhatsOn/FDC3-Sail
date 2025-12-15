@@ -18,6 +18,73 @@ import {
 } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, type IntentHandlerOption, logger } from "../types"
 import { type Context } from "@finos/fdc3"
+import { AppInstanceState } from "../../state/app-instance-registry"
+
+/**
+ * Helper function to launch an app and wait for it to be registered
+ */
+async function launchAppAndWaitForInstance(
+  appId: string,
+  context: DACPHandlerContext,
+  validatedContext: unknown
+): Promise<string> {
+  const { appLauncher, appDirectory, appInstanceRegistry } = context
+
+  if (!appLauncher) {
+    throw new Error("App launching not available - no AppLauncher configured")
+  }
+
+  // Get app metadata from directory
+  const apps = appDirectory.retrieveAppsById(appId)
+  if (apps.length === 0) {
+    throw new Error(`App not found in directory: ${appId}`)
+  }
+  const appMetadata = apps[0]
+
+  logger.info("DACP: Launching app for intent", {
+    appId,
+    hasContext: !!validatedContext,
+  })
+
+  // Launch the app
+  const launchResult = await appLauncher.launch(
+    {
+      app: { appId },
+      context: validatedContext as Context | undefined,
+    },
+    appMetadata
+  )
+
+  const targetInstanceId = launchResult.appIdentifier.instanceId
+  if (!targetInstanceId) {
+    throw new Error("App launcher did not return an instance ID")
+  }
+
+  logger.info("DACP: App launched, waiting for instance registration", {
+    appId,
+    instanceId: targetInstanceId,
+  })
+
+  // Wait for the instance to be registered (with timeout)
+  const maxWaitTime = 10000 // 10 seconds
+  const checkInterval = 100 // Check every 100ms
+  const startTime = Date.now()
+
+  while (Date.now() - startTime < maxWaitTime) {
+    const instance = appInstanceRegistry.getInstance(targetInstanceId)
+    if (instance && instance.state === AppInstanceState.CONNECTED) {
+      logger.info("DACP: App instance registered and ready", {
+        appId,
+        instanceId: targetInstanceId,
+        state: instance.state,
+      })
+      return targetInstanceId
+    }
+    await new Promise(resolve => setTimeout(resolve, checkInterval))
+  }
+
+  throw new Error(`App instance ${targetInstanceId} did not register within ${maxWaitTime}ms`)
+}
 
 export async function handleRaiseIntentRequest(
   message: unknown,
@@ -101,8 +168,7 @@ export async function handleRaiseIntentRequest(
         targetInstanceId = resolution.selectedHandler.instanceId
       } else {
         // Need to launch the app
-        // TODO: Implement app launching logic
-        throw new Error(`App launching not yet implemented for: ${targetAppId}`)
+        targetInstanceId = await launchAppAndWaitForInstance(targetAppId, context, validatedContext)
       }
     } else if (handlers.runningListeners.length > 0) {
       // Single handler or no UI - use a running listener (preferred)
@@ -113,8 +179,7 @@ export async function handleRaiseIntentRequest(
       // Need to launch an app
       const appCapability = handlers.availableApps[0]
       targetAppId = appCapability.appId
-      // TODO: Implement app launching logic
-      throw new Error(`App launching not yet implemented for: ${targetAppId}`)
+      targetInstanceId = await launchAppAndWaitForInstance(targetAppId, context, validatedContext)
     } else {
       throw new Error(`No handler found for intent: ${request.payload.intent}`)
     }
@@ -135,7 +200,10 @@ export async function handleRaiseIntentRequest(
       request.payload.intent,
       validatedContext,
       request.meta.requestUuid,
-      instanceId
+      {
+        appId: source.appId,
+        instanceId: source.instanceId,
+      }
     )
 
     logger.info("DACP: Sending intentEvent to target app", {
@@ -156,12 +224,23 @@ export async function handleRaiseIntentRequest(
     transport.send(intentEventWithRouting)
 
     // Wait for the result from intentResultRequest handler
-    const intentResult = await resultPromise
+    await resultPromise
 
-    // Send response back to source app
+    // Get target app instance information
+    const targetInstance = appInstanceRegistry.getInstance(targetInstanceId)
+    if (!targetInstance) {
+      throw new Error(`Target instance ${targetInstanceId} not found`)
+    }
+
+    // Send response back to source app with intentResolution
     const response = createDACPSuccessResponse(request, "raiseIntentResponse", {
-      intentResult,
-      source: targetAppId,
+      intentResolution: {
+        source: {
+          appId: targetInstance.appId,
+          instanceId: targetInstance.instanceId,
+        },
+        intent: request.payload.intent,
+      },
     })
 
     // Add routing metadata
@@ -544,7 +623,7 @@ export async function handleRaiseIntentForContextRequest(
     } else if (handlers.availableApps.length > 0) {
       const appCapability = handlers.availableApps[0]
       targetAppId = appCapability.appId
-      throw new Error(`App launching not yet implemented for: ${targetAppId}`)
+      targetInstanceId = await launchAppAndWaitForInstance(targetAppId, context, validatedContext)
     } else {
       throw new Error(`No handler found for intent: ${selectedIntent}`)
     }
@@ -565,7 +644,10 @@ export async function handleRaiseIntentForContextRequest(
       selectedIntent,
       validatedContext,
       request.meta.requestUuid,
-      instanceId
+      {
+        appId: source.appId,
+        instanceId: source.instanceId,
+      }
     )
 
     logger.info("DACP: Sending intentEvent for context-first intent", {
@@ -586,12 +668,23 @@ export async function handleRaiseIntentForContextRequest(
     transport.send(intentEventWithRouting)
 
     // Wait for result
-    const intentResult = await resultPromise
+    await resultPromise
 
-    // Send response
+    // Get target app instance information
+    const targetInstance = appInstanceRegistry.getInstance(targetInstanceId)
+    if (!targetInstance) {
+      throw new Error(`Target instance ${targetInstanceId} not found`)
+    }
+
+    // Send response with intentResolution
     const response = createDACPSuccessResponse(request, "raiseIntentForContextResponse", {
-      intentResult,
-      source: targetAppId,
+      intentResolution: {
+        source: {
+          appId: targetInstance.appId,
+          instanceId: targetInstance.instanceId,
+        },
+        intent: selectedIntent,
+      },
     })
 
     // Add routing metadata

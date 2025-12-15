@@ -99,7 +99,10 @@ export function safeParseDACPMessage<T>(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof DACPValidationError ? error : new DACPValidationError(`${error as string}`),
+      error:
+        error instanceof DACPValidationError
+          ? error
+          : new DACPValidationError(`${error as string}`),
     }
   }
 }
@@ -159,18 +162,22 @@ export function createIntentEvent(
   intent: string,
   context: unknown,
   requestUuid: string,
-  originFdc3InstanceId?: string
+  originatingApp: { appId: string; instanceId?: string; desktopAgent?: string }
 ) {
   return {
     type: "intentEvent",
     payload: {
       intent,
       context,
-      ...(originFdc3InstanceId && { originFdc3InstanceId }),
+      originatingApp: {
+        appId: originatingApp.appId,
+        ...(originatingApp.instanceId && { instanceId: originatingApp.instanceId }),
+        ...(originatingApp.desktopAgent && { desktopAgent: originatingApp.desktopAgent }),
+      },
+      raiseIntentRequestUuid: requestUuid,
     },
     meta: {
       eventUuid: uuidv4(),
-      requestUuid, // Links back to the raiseIntentRequest
       timestamp: new Date(),
     },
   }

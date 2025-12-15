@@ -475,7 +475,7 @@ export class IntentRegistry {
     availableApps: IntentCapability[]
     compatibleApps: (IntentListener | IntentCapability)[]
   } {
-    const { intent, context, target } = request
+    const { intent, context, target, source } = request
 
     // Get running listeners for this intent
     let runningListeners = this.queryListeners({
@@ -487,10 +487,18 @@ export class IntentRegistry {
     // Get app capabilities for this intent
     let availableApps = this.getAppsForIntent(intent)
 
+    // Filter out the source instance from running listeners - prevent sending intent to the same instance
+    // But allow launching a new instance of the same app (availableApps should not be filtered by appId)
+    if (source?.instanceId) {
+      runningListeners = runningListeners.filter(
+        listener => listener?.instanceId !== source.instanceId
+      )
+    }
+
     // Filter by target if specified
     if (target?.appId) {
-      runningListeners = runningListeners.filter(l => l.appId === target.appId)
-      availableApps = availableApps.filter(c => c.appId === target.appId)
+      runningListeners = runningListeners.filter(listener => listener?.appId === target.appId)
+      availableApps = availableApps.filter(capability => capability?.appId === target.appId)
     }
 
     // Filter by context type compatibility
