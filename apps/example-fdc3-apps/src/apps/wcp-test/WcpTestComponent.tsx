@@ -24,7 +24,11 @@ export const WcpTestComponent = () => {
 
   useEffect(() => {
     console.log("WCP Test Component: Starting...")
-    getAgent()
+    getAgent({
+      identityUrl: "http://localhost:3002/apps/wcp-test/",
+      channelSelector: false,
+      intentResolver: false,
+    })
       .then(agent => {
         console.log("WCP Test Component: Got FDC3 agent")
         setFdc3(agent)
@@ -51,6 +55,9 @@ export const WcpTestComponent = () => {
           success: false,
           error: error.message,
         })
+      })
+      .finally(() => {
+        console.log("WCP Test Component: Connection attempt completed")
       })
   }, [])
 

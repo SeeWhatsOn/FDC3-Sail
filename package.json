@@ -6,7 +6,7 @@
   "scripts": {
     "clean": "npm run clean --workspaces",
     "build": "npm run build --workspaces --if-present",
-    "dev:web": "concurrently \"npm run dev --workspace=@finos/fdc3-sail-server\" \"npm run dev --workspace=@finos/fdc3-sail-app\" \"npm run dev --workspace=apps/example-fdc3-apps\"",
+    "dev:web": "concurrently \"npm run dev --workspace=@finos/fdc3-sail-desktop-agent\" \"npm run build:watch --workspace=@finos/sail-api\" \"npm run dev --workspace=@finos/fdc3-sail-server\" \"npm run dev --workspace=@finos/fdc3-sail-app\" \"npm run dev --workspace=apps/example-fdc3-apps\"",
     "dev:desktop": "concurrently \"npm run dev --workspace=@finos/fdc3-sail-server\" \"npm run dev --workspace=@finos/fdc3-sail-electron\" \"npm run dev --workspace=apps/example-fdc3-apps\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

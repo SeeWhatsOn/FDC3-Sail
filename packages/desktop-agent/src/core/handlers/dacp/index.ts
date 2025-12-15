@@ -120,11 +120,10 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
       privateChannelHandlers.handlePrivateChannelAddContextListenerRequest,
 
     // WCP handlers
-    Wcp4Validateappidentity: wcpHandlers.handleWcp4Validateappidentity,
-    WCP4ValidateAppIdentity: wcpHandlers.handleWcp4Validateappidentity,
+    WCP4ValidateAppIdentity: wcpHandlers.handleWcp4ValidateAppIdentity,
 
     // Heartbeat handlers
-    heartbeatAcknowledgmentRequest: heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,
+    heartbeatAcknowledgementRequest: heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,
   }
 
   return handlerMap[messageType] || null
@@ -239,10 +238,10 @@ export function getDACPHandlerStats(): {
     privateChannelAddContextListenerRequest: true,
 
     // WCP handlers
-    Wcp4Validateappidentity: true,
+    WCP4ValidateAppIdentity: true,
 
     // Heartbeat handlers
-    heartbeatAcknowledgmentRequest: true,
+    heartbeatAcknowledgementRequest: true,
   }
 
   return {
@@ -273,7 +272,7 @@ export function checkDACPHandlerHealth(): {
       "raiseIntentRequest",
       "getCurrentChannelRequest",
       "joinUserChannelRequest",
-      "Wcp4Validateappidentity",
+      "WCP4ValidateAppIdentity",
     ]
 
     const missingHandlers = requiredHandlers.filter(

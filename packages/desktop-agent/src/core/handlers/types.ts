@@ -132,7 +132,7 @@ export const logger = {
     console.log(`[DACP ${LogLevel.INFO}] ${message}`, ...args)
   },
   debug: (message: string, ...args: unknown[]) => {
-    if (process.env.DACP_DEBUG_MODE === "true") {
+    if (typeof process !== "undefined" && process.env?.DACP_DEBUG_MODE === "true") {
       console.log(`[DACP ${LogLevel.DEBUG}] ${message}`, ...args)
     }
   },

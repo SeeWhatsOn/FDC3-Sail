@@ -109,17 +109,24 @@ export function handleAddEventListenerRequest(message: unknown, context: DACPHan
     const eventType = payload.type
 
     // Validate event type
-    const validEventTypes = ["channelChanged"]
+    // FDC3 2.2 supports USER_CHANNEL_CHANGED event type
+    // We also support "channelChanged" as an alias for compatibility
+    const validEventTypes = ["channelChanged", "USER_CHANNEL_CHANGED"]
     if (!validEventTypes.includes(eventType)) {
       throw new Error(`Unsupported event type: ${eventType}`)
     }
 
+    // Normalize event type: USER_CHANNEL_CHANGED -> channelChanged
+    // This ensures listeners registered with either name receive the same events
+    const normalizedEventType = eventType === "USER_CHANNEL_CHANGED" ? "channelChanged" : eventType
+
     const listenerId = generateEventUuid()
 
-    eventListenerRegistry.register(listenerId, instanceId, eventType)
+    eventListenerRegistry.register(listenerId, instanceId, normalizedEventType)
 
+    // FDC3 spec requires listenerUUID (not listenerId) in the response payload
     const response = createDACPSuccessResponse(request, "addEventListenerResponse", {
-      listenerId,
+      listenerUUID: listenerId,
     })
 
     // Add routing metadata

@@ -11,10 +11,11 @@ import type { DACPHandlerContext } from "../types"
 import { startHeartbeat } from "./heartbeat-handlers"
 
 /**
- * Wcp4Validateappidentity message from FDC3 app
+ * WCP4ValidateAppIdentity message from FDC3 app
+ * Supports both "Wcp4Validateappidentity" and "WCP4ValidateAppIdentity" type variants
  */
-interface Wcp4Validateappidentity {
-  type: "Wcp4Validateappidentity"
+interface Wcp4ValidateAppIdentity {
+  type: "WCP4ValidateAppIdentity"
   payload: {
     identityUrl: string
     actualUrl: string
@@ -23,6 +24,7 @@ interface Wcp4Validateappidentity {
   }
   meta: {
     timestamp: string
+    connectionAttemptUuid?: string
   }
 }
 
@@ -43,6 +45,7 @@ interface WCP5ValidateAppIdentityResponse {
   }
   meta: {
     timestamp: string
+    connectionAttemptUuid?: string
   }
 }
 
@@ -72,11 +75,8 @@ interface WCP5ValidateAppIdentityFailedResponse {
  * @param message - Wcp4Validateappidentity message
  * @param context - Handler context with desktop agent access
  */
-export async function handleWcp4Validateappidentity(
-  message: unknown,
-  context: DACPHandlerContext
-): Promise<void> {
-  const wcp4Message = message as Wcp4Validateappidentity
+export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHandlerContext): void {
+  const wcp4Message = message as Wcp4ValidateAppIdentity
   const { transport, appInstanceRegistry, appDirectory } = context
 
   console.log("[WCP4] Received app identity validation request:", wcp4Message.payload)
@@ -108,19 +108,46 @@ export async function handleWcp4Validateappidentity(
     // 3. Look up app in app directory
     const apps = appDirectory.allApps
 
-    // Find app by matching identityUrl or actualUrl
-    const appMetadata = apps.find((app: any) => {
+    // Helper to normalize URLs for comparison (remove trailing slashes, etc.)
+    const normalizeUrl = (url: string): string => {
+      try {
+        const urlObj = new URL(url)
+        // Remove trailing slash from pathname
+        let pathname = urlObj.pathname
+        if (pathname.endsWith("/") && pathname.length > 1) {
+          pathname = pathname.slice(0, -1)
+        }
+        return `${urlObj.origin}${pathname}${urlObj.search}${urlObj.hash}`
+      } catch {
+        return url
+      }
+    }
+
+    // Find app by matching identityUrl or actualUrl (compare full URL path, not just origin)
+    const normalizedIdentityUrl = normalizeUrl(identityUrl)
+    const normalizedActualUrl = normalizeUrl(actualUrl)
+
+    const appMetadata = apps.find(app => {
       // Check if app's URL matches
-      if (app.url) {
+      if (
+        app.details &&
+        typeof app.details === "object" &&
+        "url" in app.details &&
+        typeof app.details.url === "string"
+      ) {
         try {
-          const appOrigin = new URL(app.url).origin
-          return appOrigin === identityOrigin
+          const normalizedAppUrl = normalizeUrl(app.details.url)
+          // Match if the normalized app URL matches either the identity URL or actual URL
+          return (
+            normalizedAppUrl === normalizedIdentityUrl ||
+            normalizedAppUrl === normalizedActualUrl
+          )
         } catch {
           return false
         }
       }
       return false
-    }) as any
+    })
 
     if (!appMetadata) {
       console.error("[WCP4] App not found in directory for identity:", identityUrl)
@@ -144,13 +171,13 @@ export async function handleWcp4Validateappidentity(
         instanceUuid = reconnectInstanceUuid
       } else {
         console.warn("[WCP4] Instance not found for reconnection, creating new instance")
-        const newInstance = await createAppInstance(context, appMetadata, identityUrl)
+        const newInstance = createAppInstance(context, appMetadata, identityUrl)
         instanceId = newInstance.instanceId
         instanceUuid = newInstance.instanceId // Use same for now
       }
     } else {
       // Create new app instance
-      const newInstance = await createAppInstance(context, appMetadata, identityUrl)
+      const newInstance = createAppInstance(context, appMetadata, identityUrl)
       instanceId = newInstance.instanceId
       instanceUuid = newInstance.instanceId // Use same for now
     }
@@ -175,22 +202,32 @@ export async function handleWcp4Validateappidentity(
 
     console.log("[WCP4] Validation successful, sending WCP5 response:", response.payload)
 
-    // Get the instanceId from the response to send the message
-    const responseInstanceId = response.payload.instanceId
+    // Extract connectionAttemptUuid from WCP4 message or from temporary instanceId
+    // The temporary instanceId format is "temp-{connectionAttemptUuid}"
+    let connectionAttemptUuid: string | undefined = wcp4Message.meta.connectionAttemptUuid
+    if (!connectionAttemptUuid && context.instanceId.startsWith("temp-")) {
+      connectionAttemptUuid = context.instanceId.replace("temp-", "")
+    }
 
-    // Add routing metadata
+    // Use the source instanceId (temporary) as destination so WCP connector can migrate it
+    // The WCP connector will intercept this response and migrate from temp to actual instanceId
+    const sourceInstanceId = context.instanceId
+
+    // Add routing metadata - use source instanceId so WCP connector can find the connection
+    // Include connectionAttemptUuid so FDC3 get-agent library can match the response
     const responseWithRouting = {
       ...response,
       meta: {
         ...response.meta,
-        destination: { instanceId: responseInstanceId },
+        connectionAttemptUuid,
+        destination: { instanceId: sourceInstanceId },
       },
     }
 
     transport.send(responseWithRouting)
 
-    // Start heartbeat for this instance
-    startHeartbeat(responseInstanceId, context)
+    // Start heartbeat for the actual instance (not the temp one)
+    startHeartbeat(instanceId, context)
   } catch (error) {
     console.error("[WCP4] Error during validation:", error)
     sendFailureResponse(

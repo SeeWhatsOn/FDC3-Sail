@@ -377,8 +377,25 @@ export class WCPConnector {
 
     // Extract panelId from iframe's name attribute (set by FDC3IframePanel)
     // This enables reliable panel-to-connection linking in the UI
+    // Note: For cross-origin iframes, accessing window.name will throw SecurityError
+    // so we wrap it in try-catch and gracefully fall back to undefined
     const sourceWindow = event.source as Window
-    const panelId = sourceWindow.name || undefined
+    let panelId: string | undefined
+    try {
+      panelId = sourceWindow.name || undefined
+    } catch (error) {
+      // Cross-origin iframe - cannot access window.name due to same-origin policy
+      // This is expected for apps hosted on different origins
+      // Connection will still work, just without panel linking
+      if (error instanceof Error && error.name === "SecurityError") {
+        console.debug(
+          `[WCPConnector] Cannot access window.name for cross-origin iframe from ${event.origin}, panelId will be undefined`
+        )
+      } else {
+        // Re-throw unexpected errors
+        throw error
+      }
+    }
 
     // Store connection metadata
     const metadata: AppConnectionMetadata = {
@@ -533,9 +550,7 @@ export class WCPConnector {
         if (appTransport && appTransport.isConnected()) {
           appTransport.send(message)
         } else {
-          console.warn(
-            `Cannot route WCP5 response to app ${actualInstanceId}: transport not found`
-          )
+          console.warn(`Cannot route WCP5 response to app ${actualInstanceId}: transport not found`)
         }
         return
       }
