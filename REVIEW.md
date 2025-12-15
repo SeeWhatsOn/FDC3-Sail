@@ -14,7 +14,7 @@ The codebase has a well-designed architecture with clear separation of concerns.
 |----------|--------|-------------|
 | **CRITICAL** | 3/3 FIXED | FDC3 messaging now works |
 | **HIGH** | 3/3 FIXED | Core functionality restored |
-| **MEDIUM** | 2/3 FIXED | Issues affecting user experience (1 UI feature pending) |
+| **MEDIUM** | 3/3 FIXED | All issues resolved |
 
 ---
 
@@ -189,17 +189,31 @@ panels: new Map(),
 
 ---
 
-### 8. No User Channel UI Integration - NOT FIXED (UI Feature)
+### 8. No User Channel UI Integration - FIXED
 
-**Location:** `apps/sail/src/components/channel-selector/`
+**Location:** `apps/sail/src/components/channel-selector/ChannelMenu.tsx`, `apps/sail/src/components/layout-grid/toolbar/controls/RightControls.tsx`
 
-**Problem:** Channel selector component exists but there's no visible integration in the toolbar.
+**Problem:** Channel selector component existed but wasn't integrated into the toolbar.
 
-**Impact:** Users can't manage channels through the UI (must use programmatic API).
+**Fix Applied:**
+- Rewrote `ChannelMenu.tsx` to fetch real channels from Desktop Agent's `UserChannelRegistry`
+- Added `ChannelSelectorButton` component to `RightControls.tsx`
+- Button shows colored circle indicating active panel's current FDC3 channel
+- Subscribes to `channelChanged` events for reactive updates when apps join/leave channels
+- Click opens dropdown showing all user channels with selection state
 
-**Note:** This is a UI feature enhancement, not a bug. Channel functionality works via FDC3 API.
+```typescript
+// Get channels from Desktop Agent
+const channels = sailAgent.desktopAgent.getUserChannelRegistry().getAll()
 
-**Recommended Fix:** Add channel selector to workspace toolbar when time permits.
+// Listen for channel changes
+sailAgent.wcpConnector.on("channelChanged", handleChannelChanged)
+
+// Show channel indicator in toolbar
+<Circle style={{ fill: channelId ? channelColor : "transparent" }} />
+```
+
+**Note:** Channel selection is read-only - apps control their own channel membership via FDC3 API. The UI reflects what channel the active panel's app has joined.
 
 ---
 
@@ -317,7 +331,7 @@ WCPConnector routes to correct MessagePortTransport
 - [x] Multiple apps on same channel receive each other's broadcasts
 - [x] App directory has apps loaded at startup
 - [ ] App directory browser UI shows available apps (UI not implemented)
-- [ ] Channel selector in toolbar (UI not implemented)
+- [x] Channel selector in toolbar shows active panel's channel
 
 ---
 
@@ -333,3 +347,5 @@ WCPConnector routes to correct MessagePortTransport
 | `apps/sail/src/stores/connection-store.ts` | Added `panelId`, `channelId` to Connection, event listeners |
 | `apps/sail/src/stores/workspace-store.ts` | Removed hardcoded demo panels, start with empty workspace |
 | `apps/sail/src/components/layout-grid/panel-templates/FDC3IframePanel.tsx` | Show channel in panel title |
+| `apps/sail/src/components/channel-selector/ChannelMenu.tsx` | Rewrote to use real channels from Desktop Agent |
+| `apps/sail/src/components/layout-grid/toolbar/controls/RightControls.tsx` | Added `ChannelSelectorButton` component with channel indicator |
