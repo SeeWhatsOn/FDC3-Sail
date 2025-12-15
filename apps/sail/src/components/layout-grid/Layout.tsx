@@ -221,6 +221,7 @@ const Layout = (props: DockviewSailProps) => {
             component: "fdc3",
             title: panel.title,
             params: { panel: fdc3Panel },
+            icon: undefined,
           })
 
           setMountedPanels(prev => new Map(prev).set(panel.panelId, fdc3Panel))

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { getAgent } from "@finos/fdc3-get-agent"
-import { type DesktopAgent, type Listener, type Context } from "@finos/fdc3"
+import { type DesktopAgent, type Listener, type Context, type Channel } from "@finos/fdc3"
 import { createRoot } from "react-dom/client"
 
 import styles from "./wcp-test.module.css"
@@ -17,10 +17,12 @@ interface WcpMessage {
 export const WcpTestComponent = () => {
   const [fdc3, setFdc3] = useState<DesktopAgent | null>(null)
   const [currentChannel, setCurrentChannel] = useState<string | null>(null)
+  const [channelList, setChannelList] = useState<Channel[]>([])
   const [messages, setMessages] = useState<WcpMessage[]>([])
   const [listener, setListener] = useState<Promise<Listener> | null>(null)
   const [testMessage, setTestMessage] = useState("")
   const [isConnected, setIsConnected] = useState(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   useEffect(() => {
     console.log("WCP Test Component: Starting...")
@@ -31,6 +33,7 @@ export const WcpTestComponent = () => {
     })
       .then(agent => {
         console.log("WCP Test Component: Got FDC3 agent")
+
         setFdc3(agent)
         setIsConnected(true)
         handleChannelChanged(agent)
@@ -73,6 +76,10 @@ export const WcpTestComponent = () => {
       const channel = await fdc3.getCurrentChannel()
       console.log("WCP Test Component: Channel changed to", channel?.id || "none")
       setCurrentChannel(channel?.id || null)
+
+      // Fetch available channels
+      const channels = await fdc3.getUserChannels()
+      setChannelList(channels)
 
       if (listener) {
         const listenerInstance = await listener
@@ -190,6 +197,71 @@ export const WcpTestComponent = () => {
     console.log("WCP Test Component: Messages cleared")
   }
 
+  const handleChannelSelect = async (channelId: string | null) => {
+    if (!fdc3) return
+
+    setIsDropdownOpen(false)
+
+    try {
+      if (channelId) {
+        await fdc3.joinUserChannel(channelId)
+        console.log("WCP Test Component: Joined channel", channelId)
+        // Immediately update state to reflect the change
+        setCurrentChannel(channelId)
+        addMessage({
+          id: generateId(),
+          type: "send",
+          timestamp: new Date(),
+          payload: { message: `Joined channel: ${channelId}` },
+          success: true,
+        })
+      } else {
+        await fdc3.leaveCurrentChannel()
+        console.log("WCP Test Component: Left channel")
+        // Immediately update state to reflect the change
+        setCurrentChannel(null)
+        addMessage({
+          id: generateId(),
+          type: "send",
+          timestamp: new Date(),
+          payload: { message: "Left current channel" },
+          success: true,
+        })
+      }
+    } catch (error) {
+      console.error("WCP Test Component: Error changing channel", error)
+      addMessage({
+        id: generateId(),
+        type: "send",
+        timestamp: new Date(),
+        payload: {
+          message: channelId ? `Failed to join channel: ${channelId}` : "Failed to leave channel",
+        },
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest(`.${styles.channelSelectWrapper}`)) {
+        setIsDropdownOpen(false)
+      }
+    }
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside)
+      }
+    }
+  }, [isDropdownOpen])
+
+  const selectedChannel = channelList.find(c => c.id === currentChannel)
+
   return (
     <div className={styles.wcpTestComponent}>
       <h2>FDC3 WCP Test Component</h2>
@@ -203,6 +275,68 @@ export const WcpTestComponent = () => {
         </div>
         <div className={styles.channelInfo}>
           Current Channel: <span className={styles.channelName}>{currentChannel || "None"}</span>
+        </div>
+      </div>
+
+      <div className={styles.channelPickerSection}>
+        <label className={styles.channelLabel}>Channel:</label>
+        <div className={styles.channelSelectWrapper}>
+          <button
+            type="button"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            disabled={!fdc3}
+            className={styles.channelSelectButton}
+          >
+            <div className={styles.channelSelectContent}>
+              {selectedChannel ? (
+                <>
+                  <span
+                    className={styles.channelColorBlock}
+                    style={{
+                      backgroundColor: selectedChannel.displayMetadata?.color || "#cccccc",
+                    }}
+                  />
+                  <span className={styles.channelSelectText}>
+                    {selectedChannel.displayMetadata?.name || selectedChannel.id}
+                  </span>
+                </>
+              ) : (
+                <span className={styles.channelSelectText}>None</span>
+              )}
+            </div>
+            <span className={styles.channelSelectArrow}>{isDropdownOpen ? "▲" : "▼"}</span>
+          </button>
+          {isDropdownOpen && (
+            <div className={styles.channelDropdown}>
+              <div
+                className={`${styles.channelOption} ${!currentChannel ? styles.channelOptionActive : ""}`}
+                onClick={() => handleChannelSelect(null)}
+              >
+                <span className={styles.channelOptionText}>None</span>
+              </div>
+              {channelList.map(channel => {
+                const isActive = channel.id === currentChannel
+                return (
+                  <div
+                    key={channel.id}
+                    className={`${styles.channelOption} ${isActive ? styles.channelOptionActive : ""}`}
+                    onClick={() => handleChannelSelect(channel.id)}
+                  >
+                    <span
+                      className={styles.channelColorBlock}
+                      style={{
+                        backgroundColor: channel.displayMetadata?.color || "#cccccc",
+                      }}
+                    />
+                    <span className={styles.channelOptionText}>
+                      {channel.displayMetadata?.name || channel.id}
+                    </span>
+                    {isActive && <span className={styles.channelOptionCheck}>✓</span>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
 

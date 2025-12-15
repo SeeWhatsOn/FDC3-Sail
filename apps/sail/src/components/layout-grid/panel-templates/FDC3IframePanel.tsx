@@ -56,29 +56,15 @@ export const FDC3Panel = ({ api, panel }: FDC3PanelProps) => {
   // Update panel title with connection status and channel indicator
   useEffect(() => {
     if (!connection) {
-      // No connection yet - show connecting indicator
-      api.setTitle(`${panel.title} ⏳`)
+      // No connection yet - just show the title
+      api.setTitle(panel.title)
       return
-    }
-
-    // Build title with status and optional channel indicator
-    let statusIndicator: string
-    switch (connection.status) {
-      case "connected":
-        statusIndicator = "🟢"
-        break
-      case "connecting":
-        statusIndicator = "⏳"
-        break
-      case "disconnected":
-        statusIndicator = "🔴"
-        break
     }
 
     // Add channel indicator if app is on a channel
     const channelIndicator = connection.channelId ? ` [${connection.channelId}]` : ""
 
-    api.setTitle(`${panel.title}${channelIndicator} ${statusIndicator}`)
+    api.setTitle(`${panel.title}${channelIndicator}`)
   }, [connection?.status, connection?.channelId, panel.title, api, connection?.panelId, connection])
 
   return (

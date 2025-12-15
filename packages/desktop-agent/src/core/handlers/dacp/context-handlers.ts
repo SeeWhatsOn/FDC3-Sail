@@ -103,11 +103,11 @@ export function handleAddContextListener(message: unknown, context: DACPHandlerC
 
     appInstanceRegistry.addContextListener(instanceId, contextType)
 
-    // The listenerId is the contextType itself for simplicity in unsubscribing.
-    const listenerId = contextType
+    // The listenerUUID is the contextType itself for simplicity in unsubscribing.
+    const listenerUUID = contextType
 
     const response = createDACPSuccessResponse(request, "addContextListenerResponse", {
-      listenerId,
+      listenerUUID,
     })
 
     // Add routing metadata
@@ -122,7 +122,7 @@ export function handleAddContextListener(message: unknown, context: DACPHandlerC
     transport.send(responseWithRouting)
 
     logger.debug("DACP: Context listener added successfully", {
-      listenerId,
+      listenerUUID,
       instanceId,
       requestUuid: request.meta.requestUuid,
     })
@@ -165,18 +165,18 @@ export function handleContextListenerUnsubscribe(
 
   try {
     const request = validateDACPMessage(message, ContextListenerUnsubscribeRequestSchema)
-    const listenerId = (request.payload as any).listenerId
+    const listenerUUID = request.payload.listenerUUID
 
     logger.info("DACP: Unsubscribing context listener", {
-      listenerId,
+      listenerUUID,
       instanceId,
       requestUuid: request.meta?.requestUuid,
     })
 
-    const removed = appInstanceRegistry.removeContextListener(instanceId, listenerId)
+    const removed = appInstanceRegistry.removeContextListener(instanceId, listenerUUID)
 
     if (!removed) {
-      throw new Error(`Context listener ${listenerId} not found for instance ${instanceId}`)
+      throw new Error(`Context listener ${listenerUUID} not found for instance ${instanceId}`)
     }
 
     const response = createDACPSuccessResponse(request, "contextListenerUnsubscribeResponse")
@@ -193,7 +193,7 @@ export function handleContextListenerUnsubscribe(
     transport.send(responseWithRouting)
 
     logger.debug("DACP: Context listener unsubscribed successfully", {
-      listenerId,
+      listenerUUID,
       instanceId,
       requestUuid: request.meta?.requestUuid,
     })

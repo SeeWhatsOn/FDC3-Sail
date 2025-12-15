@@ -13,6 +13,7 @@ const AddPanelButton = (props: IDockviewHeaderActionsProps) => {
       id: `id_${timestamp}`,
       component: "default",
       title: `Tab ${uniqueId}`,
+      icon: undefined,
       position: {
         referenceGroup: props.group,
       },

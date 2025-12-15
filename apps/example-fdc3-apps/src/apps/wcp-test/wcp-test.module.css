@@ -186,3 +186,117 @@ button:hover:not(:disabled) {
   border-radius: 4px;
   font-size: 12px;
 }
+
+.channelPickerSection {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.channelLabel {
+  font-weight: bold;
+  color: #495057;
+}
+
+.channelSelectWrapper {
+  position: relative;
+  flex: 1;
+  max-width: 300px;
+}
+
+.channelSelectButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+  color: #212529;
+  cursor: pointer;
+  text-align: left;
+}
+
+.channelSelectButton:disabled {
+  background: #e9ecef;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.channelSelectButton:hover:not(:disabled) {
+  border-color: #007bff;
+}
+
+.channelSelectContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.channelSelectText {
+  flex: 1;
+  color: #212529;
+}
+
+.channelSelectArrow {
+  color: #6c757d;
+  font-size: 10px;
+  margin-left: 8px;
+}
+
+.channelDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.channelOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.channelOption:hover {
+  background-color: #f8f9fa;
+}
+
+.channelOptionActive {
+  background-color: #e7f3ff;
+  font-weight: 600;
+}
+
+.channelOptionText {
+  flex: 1;
+  color: #212529;
+}
+
+.channelOptionCheck {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.channelColorBlock {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  border: 1px solid #ddd;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}

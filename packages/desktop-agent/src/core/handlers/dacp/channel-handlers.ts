@@ -14,6 +14,7 @@ import {
   GetOrCreateChannelRequestSchema,
 } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../types"
+import { getEventListeners } from "./event-handlers"
 
 /**
  * Handles get current channel requests
@@ -376,34 +377,27 @@ function notifyChannelChanged(
   context.transport.send(channelChangedEventWithRouting)
 
   // Also broadcast to all apps subscribed to channelChanged events
-  // Import getEventListeners at runtime to avoid circular dependency
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getEventListeners } = require("./event-handlers")
-    const subscribers = getEventListeners("channelChanged")
+  const subscribers = getEventListeners("channelChanged")
 
-    subscribers.forEach((subscriberId: string) => {
-      // Don't send duplicate to the app that changed
-      if (subscriberId !== instanceId) {
-        // Add routing metadata
-        const channelChangedEventWithRouting = {
-          ...channelChangedEvent,
-          meta: {
-            ...channelChangedEvent.meta,
-            destination: { instanceId: subscriberId },
-          },
-        }
-
-        context.transport.send(channelChangedEventWithRouting)
+  subscribers.forEach((subscriberId: string) => {
+    // Don't send duplicate to the app that changed
+    if (subscriberId !== instanceId) {
+      // Add routing metadata
+      const channelChangedEventWithRouting = {
+        ...channelChangedEvent,
+        meta: {
+          ...channelChangedEvent.meta,
+          destination: { instanceId: subscriberId },
+        },
       }
-    })
 
-    logger.debug("Channel changed event broadcast", {
-      instanceId,
-      channelId,
-      subscribers: subscribers.size,
-    })
-  } catch (error) {
-    logger.error("Failed to broadcast channel changed event", error)
-  }
+      context.transport.send(channelChangedEventWithRouting)
+    }
+  })
+
+  logger.debug("Channel changed event broadcast", {
+    instanceId,
+    channelId,
+    subscribers: subscribers.size,
+  })
 }

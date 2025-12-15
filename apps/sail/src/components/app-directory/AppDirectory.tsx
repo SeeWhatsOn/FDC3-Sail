@@ -164,6 +164,7 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
         component: "fdc3",
         title: instanceTitle,
         params: { panel: fdc3Panel },
+        icon: undefined,
         position: {
           referenceGroup: currentGroup,
         },
