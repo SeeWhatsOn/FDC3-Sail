@@ -1,11 +1,11 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { createSailBrowserDesktopAgent } from "@finos/sail-api"
+import { createSailBrowserDesktopAgent, type DirectoryApp } from "@finos/sail-api"
 import { allApplications } from "@finos/fdc3-sail-example-apps/manifests"
 
 import "./index.css"
 import App from "./App"
-import { SailDesktopAgentProvider } from "./contexts/SailDesktopAgentContext"
+import { SailDesktopAgentProvider } from "./contexts"
 
 // Initialize the FDC3 Desktop Agent BEFORE React renders
 // This ensures the agent is listening for WCP1Hello messages when getAgent() is called
@@ -18,7 +18,7 @@ const sailAgent = createSailBrowserDesktopAgent({
 // Load example apps into the app directory
 const appDirectory = sailAgent.desktopAgent.getAppDirectory()
 for (const app of allApplications) {
-  appDirectory.add(app)
+  appDirectory.add(app as unknown as DirectoryApp)
 }
 console.log(`[Sail] Loaded ${allApplications.length} apps into app directory`)
 

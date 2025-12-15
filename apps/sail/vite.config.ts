@@ -7,6 +7,7 @@ import path from "path"
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
+    extensions: [".tsx", ".ts", ".jsx", ".js", ".json"],
     alias: {
       "@": path.resolve(__dirname, "../../packages/sail-ui/src"),
       "sail-ui": path.resolve(__dirname, "../../packages/sail-ui/src"),
