@@ -5,6 +5,7 @@ import { ExternalLink } from "lucide-react"
 import type { IDockviewPanelProps } from "dockview-react"
 
 import { useAppDirectoryStore } from "../../contexts/SailDesktopAgentContext"
+import { useUIStore } from "../../stores/ui-store"
 import { useWorkspaceStore } from "../../stores/workspace-store"
 import type { DirectoryApp, WebAppDetails } from "../../types/common"
 
@@ -110,6 +111,7 @@ interface AppDirectoryProps {
 export function AppDirectory({ panelProps }: AppDirectoryProps) {
   const { apps, isLoading, error, loadApps, refreshApps } = useAppDirectoryStore()
   const { addPanel, workspaces, activeWorkspaceId } = useWorkspaceStore()
+  const { closeQuickAccessPanel } = useUIStore()
   const activeWorkspace = workspaces.get(activeWorkspaceId)
   const activeTabId = activeWorkspace?.layout.activeTabId || ""
 
@@ -121,14 +123,31 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
   const handleAppClick = (app: DirectoryApp) => {
     console.log("App clicked:", app)
 
-    if (app.type === "web" && app.details && panelProps) {
-      const webDetails = app.details as WebAppDetails
+    if (app.type !== "web" || !app.details) {
+      console.warn("App is not a web app or has no details:", app)
+      return
+    }
 
-      // Generate unique panel ID and instance title
-      const instanceId = `${app.appId}-${Date.now()}`
-      const instanceTitle = app.title || app.name || app.appId
+    const webDetails = app.details as WebAppDetails
 
-      // Create FDC3 app panel in the same group as this directory panel
+    // Generate unique panel ID and instance title
+    const instanceId = `${app.appId}-${Date.now()}`
+    const instanceTitle = app.title || app.name || app.appId
+
+    // Add to the workspace store - Layout will sync this to Dockview
+    if (activeWorkspaceId && activeTabId) {
+      addPanel(activeWorkspaceId, activeTabId, {
+        panelId: instanceId,
+        appId: app.appId,
+        title: instanceTitle,
+        url: webDetails.url,
+        icon: app.icons?.[0]?.src || null,
+      })
+    }
+
+    // If we have panelProps (opened from within Dockview), also add directly to the same group
+    // and close this directory panel
+    if (panelProps) {
       const fdc3Panel = {
         title: instanceTitle,
         url: webDetails.url,
@@ -157,18 +176,10 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
           panelProps.containerApi.removePanel(directoryPanel)
         }
       }, 100)
-
-      // Also add to the workspace store for state management
-      if (activeWorkspaceId && activeTabId) {
-        addPanel(activeWorkspaceId, activeTabId, {
-          panelId: instanceId,
-          appId: app.appId,
-          title: instanceTitle,
-          url: webDetails.url,
-          icon: app.icons?.[0]?.src || null,
-        })
-      }
     }
+
+    // Close the quick access panel if it's open
+    closeQuickAccessPanel()
   }
 
   if (error) {
