@@ -1,7 +1,7 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { createSailBrowserDesktopAgent, SailAppLauncher, type DirectoryApp } from "@finos/sail-api"
-import { allApplications } from "@finos/fdc3-sail-example-apps/manifests"
+import { defaultApplications } from "@finos/fdc3-sail-example-apps/manifests"
 import type { AppMetadata } from "@finos/fdc3"
 
 import "./index.css"
@@ -72,12 +72,12 @@ const sailAgent = createSailBrowserDesktopAgent({
   appLauncher,
 })
 
-// Load example apps into the app directory
+// Load default apps into the app directory (portfolio, news, charts, wcp-test)
 const appDirectory = sailAgent.desktopAgent.getAppDirectory()
-for (const app of allApplications) {
+for (const app of defaultApplications) {
   appDirectory.add(app as unknown as DirectoryApp)
 }
-console.log(`[Sail] Loaded ${allApplications.length} apps into app directory`)
+console.log(`[Sail] Loaded ${defaultApplications.length} apps into app directory`)
 
 // Sync app directory to intent registry so apps can be found for intents
 sailAgent.desktopAgent.syncAppDirectoryToIntentRegistry()

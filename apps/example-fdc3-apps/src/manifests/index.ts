@@ -10,6 +10,9 @@ import trainingPricerManifest from "../apps/training-pricer/manifest.json"
 import trainingTradelistManifest from "../apps/training-tradelist/manifest.json"
 import wcpTestManifest from "../apps/wcp-test/manifest.json"
 import oldFdc3Manifest from "../apps/old/manifest.json"
+import chartsManifest from "../apps/charts/manifest.json"
+import newsManifest from "../apps/news/manifest.json"
+import portfolioManifest from "../apps/portfolio/manifest.json"
 
 // External apps (reference implementations not hosted by Sail)
 import workbenchManifest from "../apps/external/workbench.json"
@@ -26,6 +29,9 @@ export {
   trainingTradelistManifest,
   wcpTestManifest,
   oldFdc3Manifest,
+  chartsManifest,
+  newsManifest,
+  portfolioManifest,
   workbenchManifest,
   conformanceManifest,
 }
@@ -55,6 +61,9 @@ export const exampleManifests: any[] = [
   trainingTradelistManifest,
   wcpTestManifest,
   oldFdc3Manifest,
+  chartsManifest,
+  newsManifest,
+  portfolioManifest,
 ]
 
 // External apps convenience export
@@ -64,4 +73,19 @@ export const externalManifests: any[] = [workbenchManifest, conformanceManifest]
 export const allManifests: any[] = [...exampleManifests, ...externalManifests]
 
 // Flatten all applications from all manifests
-export const allApplications: any[] = exampleManifests.flatMap((manifest: any) => manifest.applications)
+export const allApplications: any[] = exampleManifests.flatMap(
+  (manifest: any) => manifest.applications
+)
+
+// Default app directory: portfolio, news, charts, and wcp-test
+export const defaultAppDirectory: any[] = [
+  portfolioManifest,
+  newsManifest,
+  chartsManifest,
+  wcpTestManifest,
+]
+
+// Flatten applications from default app directory
+export const defaultApplications: any[] = defaultAppDirectory.flatMap(
+  (manifest: any) => manifest.applications
+)

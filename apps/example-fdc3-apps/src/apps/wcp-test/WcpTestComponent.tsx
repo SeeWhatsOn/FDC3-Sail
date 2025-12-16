@@ -239,6 +239,61 @@ export const WcpTestComponent = () => {
     }
   }
 
+  const broadcastInstrumentContext = async () => {
+    if (!fdc3 || !instrumentTicker.trim()) return
+
+    try {
+      const context: Context = {
+        type: "fdc3.instrument",
+        id: {
+          ticker: instrumentTicker.trim(),
+        },
+      }
+
+      // Add name if provided
+      if (instrumentName.trim()) {
+        context.name = instrumentName.trim()
+      }
+
+      const channel = await fdc3.getCurrentChannel()
+      if (channel) {
+        // Ensure channel has an ID before broadcasting
+        if (!channel.id) {
+          throw new Error("Channel does not have an ID")
+        }
+        console.log(
+          "WCP Test Component: Broadcasting instrument context to channel",
+          channel.id,
+          context
+        )
+        await channel.broadcast(context)
+        console.log("WCP Test Component: Instrument context sent", context)
+        addMessage({
+          id: generateId(),
+          type: "send",
+          timestamp: new Date(),
+          payload: context,
+          success: true,
+        })
+      } else {
+        throw new Error("No active channel")
+      }
+    } catch (error) {
+      console.error("WCP Test Component: Error broadcasting instrument context", error)
+      addMessage({
+        id: generateId(),
+        type: "send",
+        timestamp: new Date(),
+        payload: {
+          type: "fdc3.instrument",
+          id: { ticker: instrumentTicker, name: instrumentName },
+        },
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
   const raiseViewInstrumentIntent = async () => {
     if (!fdc3 || !instrumentTicker.trim()) return
 
@@ -444,7 +499,7 @@ export const WcpTestComponent = () => {
         </div>
 
         <div className={styles.instrumentSection}>
-          <h3>ViewInstrument Intent</h3>
+          <h3>fdc3.instrument Context</h3>
           <div className={styles.instrumentInputs}>
             <input
               type="text"
@@ -460,12 +515,20 @@ export const WcpTestComponent = () => {
               placeholder="Ticker (required)..."
               className={styles.input}
             />
-            <button
-              onClick={raiseViewInstrumentIntent}
-              disabled={!fdc3 || !instrumentTicker.trim()}
-            >
-              Raise ViewInstrument Intent
-            </button>
+            <div className={styles.instrumentButtons}>
+              <button
+                onClick={broadcastInstrumentContext}
+                disabled={!fdc3 || !instrumentTicker.trim()}
+              >
+                Broadcast Instrument Context
+              </button>
+              <button
+                onClick={raiseViewInstrumentIntent}
+                disabled={!fdc3 || !instrumentTicker.trim()}
+              >
+                Raise ViewInstrument Intent
+              </button>
+            </div>
           </div>
         </div>
 

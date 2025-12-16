@@ -47,13 +47,9 @@ const CLEANUP_INTERVAL_MS = 5 * 60 * 1000 // Check every 5 minutes
 // Load app directories
 const appDirectory = new AppDirectoryManager()
 const appDirectorySources = [
-  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/training-broadcast/manifest.json"),
-  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/training-receive/manifest.json"),
-  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/training-pricer/manifest.json"),
-  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/training-tradelist/manifest.json"),
-  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/polygon/manifest.json"),
-  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/tradingview/manifest.json"),
-  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/benzinga/manifest.json"),
+  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/portfolio/manifest.json"),
+  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/news/manifest.json"),
+  resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/charts/manifest.json"),
   resolve(__dirname, "../../../apps/example-fdc3-apps/src/apps/wcp-test/manifest.json"),
 ]
 
@@ -200,7 +196,9 @@ io.use((socket, next) => {
   const userId = getUserId(socket)
 
   if (!userId) {
-    console.error(`❌ Authentication failed for socket ${socket.id}: No userId or sessionId provided`)
+    console.error(
+      `❌ Authentication failed for socket ${socket.id}: No userId or sessionId provided`
+    )
     return next(new Error("Authentication required: Please provide userId or sessionId"))
   }
 
@@ -212,7 +210,7 @@ io.use((socket, next) => {
 })
 
 // Socket.IO connection handling
-io.on("connection", (socket) => {
+io.on("connection", socket => {
   const userId = socket.data.userId
 
   if (!userId) {
@@ -235,7 +233,7 @@ io.on("connection", (socket) => {
   console.log(`📊 User ${userId} now has ${stats.connectedSockets} connected socket(s)`)
 
   // Handle app directory requests - send current directory state
-  socket.on("app-directory:get", (callback) => {
+  socket.on("app-directory:get", callback => {
     console.log(`📚 User ${userId} requesting app directory`)
     const apps = agentInfo.agent.getAppDirectory()?.retrieveAllApps() || []
     console.log(`📚 Sending ${apps.length} apps to user ${userId}`)
@@ -285,7 +283,7 @@ const shutdown = () => {
       console.log("✅ Sail Server stopped gracefully")
       process.exit(0)
     })
-    .catch((error) => {
+    .catch(error => {
       console.error("❌ Error shutting down:", error)
       process.exit(1)
     })

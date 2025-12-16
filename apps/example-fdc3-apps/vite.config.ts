@@ -6,15 +6,10 @@ import fs from "fs"
 
 // Dynamically discover application entry points under src/apps
 const appsDir = resolve(__dirname, "src/apps")
-const apps = fs
-  .readdirSync(appsDir)
-  .filter(file => {
-    const filePath = resolve(appsDir, file)
-    return (
-      fs.statSync(filePath).isDirectory() &&
-      fs.existsSync(resolve(filePath, "index.html"))
-    )
-  })
+const apps = fs.readdirSync(appsDir).filter(file => {
+  const filePath = resolve(appsDir, file)
+  return fs.statSync(filePath).isDirectory() && fs.existsSync(resolve(filePath, "index.html"))
+})
 
 // Create the Rollup input object for multiple HTML entry points
 // Only include directories that have an index.html file
@@ -56,12 +51,47 @@ export default defineConfig({
       apply: "serve", // Only apply this plugin during development (vite serve)
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
-          if (req.url && req.url.startsWith("/apps/")) {
-            // Prepend /src to the request URL
-            req.url = "/src" + req.url
+          if (req.url) {
+            // Handle /apps/[appname]/* requests - rewrite to /src/apps/[appname]/*
+            if (req.url.startsWith("/apps/")) {
+              req.url = "/src" + req.url
+            }
+            // Handle /src/main.tsx and other /src/* requests from app context
+            // When accessed from /apps/[appname]/, rewrite to /src/apps/[appname]/src/*
+            // BUT exclude /src/components/* which are shared components at root level
+            else if (
+              req.url.startsWith("/src/") &&
+              !req.url.startsWith("/src/apps/") &&
+              !req.url.startsWith("/src/components/")
+            ) {
+              // Check if this is a request from an app context by looking at the referer
+              const referer = req.headers.referer || ""
+              const appMatch = referer.match(/\/apps\/([^\/\?]+)/)
+              if (appMatch) {
+                const appName = appMatch[1]
+                // Rewrite /src/main.tsx to /src/apps/[appname]/src/main.tsx
+                req.url = `/src/apps/${appName}${req.url}`
+              }
+            }
           }
           next()
         })
+      },
+    },
+    // Plugin to transform HTML and rewrite script paths for apps
+    {
+      name: "html-transform",
+      apply: "serve",
+      transformIndexHtml(html, ctx) {
+        // Extract app name from the file path
+        const appMatch = ctx.filename?.match(/src\/apps\/([^\/]+)\/index\.html/)
+        if (appMatch) {
+          const appName = appMatch[1]
+          // Rewrite /src/main.tsx to ./src/main.tsx (relative path)
+          // This ensures Vite resolves it relative to the HTML file location
+          return html.replace(/src="\/src\/([^"]+)"/g, `src="./src/$1"`)
+        }
+        return html
       },
     },
   ],

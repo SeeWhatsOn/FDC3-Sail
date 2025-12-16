@@ -318,12 +318,17 @@ button:hover:not(:disabled) {
 
 .instrumentInputs {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  flex-wrap: wrap;
-  align-items: flex-end;
 }
 
-.instrumentInputs .input {
+.instrumentInputs > input {
   flex: 1;
   min-width: 150px;
+}
+
+.instrumentButtons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
