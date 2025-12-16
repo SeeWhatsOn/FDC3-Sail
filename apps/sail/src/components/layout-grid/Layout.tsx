@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo } from "react"
 
 import "./styles.css"
 import { useWorkspaceStore } from "../../stores/workspace-store"
+import { useSailDesktopAgent, useConnectionStore } from "../../contexts"
 
 import type { FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
 import { LeftControls, PrefixToolbarControls, RightControls } from "./toolbar/controls/index"
@@ -31,6 +32,10 @@ const Layout = (props: DockviewSailProps) => {
     setDockviewLayout,
     getDockviewLayout,
   } = useWorkspaceStore()
+
+  // Get desktop agent and connection store for instance cleanup
+  const sailAgent = useSailDesktopAgent()
+  const connectionStore = useConnectionStore()
 
   const activeWorkspace = workspaces.get(activeWorkspaceId)
   const activeTabId = activeWorkspace?.layout.activeTabId || ""
@@ -148,11 +153,47 @@ const Layout = (props: DockviewSailProps) => {
         saveState()
       }),
       api.current.onDidRemovePanel(event => {
-        // Clean up desktop agent registration
-        // TODO: Implement window unregistration when needed
+        // Clean up desktop agent registration and send WCP6Goodbye
+        const panelId = event.id
+        console.log(`[Layout] Panel removed: ${panelId}`)
+
+        const connection = connectionStore.getConnectionByPanelId(panelId)
+        console.log(`[Layout] Connection lookup for panel ${panelId}:`, {
+          found: !!connection,
+          instanceId: connection?.instanceId,
+          status: connection?.status,
+        })
+
+        if (connection && connection.instanceId) {
+          console.log(
+            `[Layout] Disconnecting instance ${connection.instanceId} for panel ${panelId}`
+          )
+          try {
+            // Send WCP6Goodbye and disconnect the instance
+            sailAgent.wcpConnector.disconnectAppByInstanceId(connection.instanceId)
+            console.log(
+              `[Layout] Successfully initiated disconnect for instance ${connection.instanceId}`
+            )
+          } catch (error) {
+            console.error(`[Layout] Error disconnecting instance ${connection.instanceId}:`, error)
+          }
+        } else {
+          console.warn(
+            `[Layout] No connection found for panel ${panelId}, skipping disconnect. ` +
+              `This may indicate the panel was closed before the app connected, or the connection was already cleaned up.`
+          )
+        }
+
         // Remove from store
         if (activeWorkspaceId && activeTabId) {
-          removePanel(activeWorkspaceId, activeTabId, event.id)
+          console.log(
+            `[Layout] Removing panel ${panelId} from store (workspace: ${activeWorkspaceId}, tab: ${activeTabId})`
+          )
+          removePanel(activeWorkspaceId, activeTabId, panelId)
+        } else {
+          console.warn(
+            `[Layout] Cannot remove panel from store: activeWorkspaceId=${activeWorkspaceId}, activeTabId=${activeTabId}`
+          )
         }
         // Save state after removing panel
         saveState()
@@ -164,7 +205,16 @@ const Layout = (props: DockviewSailProps) => {
     ]
 
     return () => disposables.forEach(disposable => disposable.dispose())
-  }, [mountedPanels, activeTabId, addPanel, removePanel, setDockviewLayout, activeWorkspaceId])
+  }, [
+    mountedPanels,
+    activeTabId,
+    addPanel,
+    removePanel,
+    setDockviewLayout,
+    activeWorkspaceId,
+    connectionStore,
+    sailAgent,
+  ])
 
   // Sync with store panels when they change
   useEffect(() => {
@@ -175,14 +225,14 @@ const Layout = (props: DockviewSailProps) => {
 
     // Get all existing panels from Dockview to check current state
     const existingDockviewPanels = api.current.panels.map(p => p.id)
-    console.log(
-      "Sync check - Store panels:",
-      externalPanelIds,
-      "Mounted:",
-      currentPanelIds,
-      "Dockview:",
-      existingDockviewPanels
-    )
+    console.log("[Layout Sync Check]", {
+      storePanels: externalPanelIds,
+      mountedPanels: currentPanelIds,
+      dockviewPanels: existingDockviewPanels,
+      storeCount: externalPanelIds.length,
+      mountedCount: currentPanelIds.length,
+      dockviewCount: existingDockviewPanels.length,
+    })
 
     // Remove panels that no longer exist in the store but exist in mounted/dockview
     currentPanelIds
@@ -222,6 +272,13 @@ const Layout = (props: DockviewSailProps) => {
             title: panel.title,
             params: { panel: fdc3Panel },
             icon: undefined,
+            // Use 'always' renderer to prevent iframe reload when panel is moved in DOM.
+            // According to dockview docs: "Re-parenting an iFrame will reload the contents
+            // of the iFrame or the rephrase this, moving an iFrame within the DOM will
+            // cause a reload of its contents." This prevents zombie instances caused by
+            // iframe reloads triggering disconnects/reconnects.
+            // See: https://dockview.dev/docs/advanced/iframe/
+            renderer: "always",
           })
 
           setMountedPanels(prev => new Map(prev).set(panel.panelId, fdc3Panel))

@@ -339,6 +339,20 @@ export class IntentRegistry {
       listeners = listeners.filter(l => l.active === query.active)
     }
 
+    // Safety check: Remove any listeners whose instanceId is no longer in the instance index
+    // This prevents zombie listeners from appearing if cleanup didn't complete properly
+    listeners = listeners.filter(listener => {
+      const instanceListeners = this.instanceIndex.get(listener.instanceId)
+      const exists = instanceListeners?.has(listener.listenerId) ?? false
+      if (!exists && listener.active) {
+        // Log warning if we find an orphaned active listener
+        console.warn(
+          `[IntentRegistry] Found orphaned active listener ${listener.listenerId} for instance ${listener.instanceId}, removing from query results`
+        )
+      }
+      return exists
+    })
+
     return listeners
   }
 
@@ -376,9 +390,18 @@ export class IntentRegistry {
     const listenerIds = this.instanceIndex.get(instanceId) || new Set()
     const removedCount = listenerIds.size
 
+    if (removedCount > 0) {
+      console.log(
+        `[IntentRegistry] Removing ${removedCount} intent listener(s) for instance ${instanceId}`
+      )
+    }
+
     Array.from(listenerIds).forEach(listenerId => {
       this.unregisterListener(listenerId)
     })
+
+    // Clear the instance index entry after removing all listeners
+    this.instanceIndex.delete(instanceId)
 
     return removedCount
   }

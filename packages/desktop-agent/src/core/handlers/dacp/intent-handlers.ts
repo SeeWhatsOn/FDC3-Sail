@@ -256,22 +256,72 @@ export async function handleRaiseIntentRequest(
       requestId: request.meta.requestUuid,
     })
 
+    // Safety check: Filter out listeners whose instances no longer exist
+    // This prevents zombie instances from appearing in the resolver
+    const originalRunningCount = handlers.runningListeners.length
+    const validRunningListeners = handlers.runningListeners.filter(listener => {
+      const instance = appInstanceRegistry.getInstance(listener.instanceId)
+      if (!instance) {
+        logger.warn("DACP: Found listener for non-existent instance, filtering out", {
+          listenerId: listener.listenerId,
+          instanceId: listener.instanceId,
+          appId: listener.appId,
+          intent: request.payload.intent,
+        })
+        return false
+      }
+      if (instance.state === AppInstanceState.TERMINATED) {
+        logger.warn("DACP: Found listener for terminated instance, filtering out", {
+          listenerId: listener.listenerId,
+          instanceId: listener.instanceId,
+          appId: listener.appId,
+          intent: request.payload.intent,
+        })
+        return false
+      }
+      return true
+    })
+
+    // Rebuild handlers with filtered running listeners if any were filtered
+    // We need to rebuild compatibleApps because it's built from runningListeners + availableApps
+    // If we filtered out zombie listeners, compatibleApps would still contain them
+    const finalHandlers =
+      validRunningListeners.length !== originalRunningCount
+        ? (() => {
+            const runningAppIds = new Set(validRunningListeners.map(l => l.appId))
+            logger.info("DACP: Filtered out zombie listeners", {
+              originalCount: originalRunningCount,
+              validCount: validRunningListeners.length,
+              filteredCount: originalRunningCount - validRunningListeners.length,
+            })
+            return {
+              ...handlers,
+              runningListeners: validRunningListeners,
+              // Rebuild compatibleApps with filtered runningListeners to remove zombie instances
+              compatibleApps: [
+                ...validRunningListeners,
+                ...handlers.availableApps.filter(app => !runningAppIds.has(app.appId)),
+              ],
+            }
+          })()
+        : handlers
+
     logger.info("DACP: Intent handlers found", {
       intent: request.payload.intent,
-      runningListeners: handlers.runningListeners.length,
-      availableApps: handlers.availableApps.length,
-      compatibleApps: handlers.compatibleApps.length,
+      runningListeners: finalHandlers.runningListeners.length,
+      availableApps: finalHandlers.availableApps.length,
+      compatibleApps: finalHandlers.compatibleApps.length,
       contextType: validatedContext.type,
       hasName: typeof (validatedContext as Record<string, unknown>).name === "string",
     })
 
     // Check if we have any compatible handlers
-    if (handlers.compatibleApps.length === 0) {
+    if (finalHandlers.compatibleApps.length === 0) {
       logger.error("DACP: No compatible handlers found", {
         intent: request.payload.intent,
         contextType: validatedContext.type,
-        runningListeners: handlers.runningListeners.length,
-        availableApps: handlers.availableApps.length,
+        runningListeners: finalHandlers.runningListeners.length,
+        availableApps: finalHandlers.availableApps.length,
       })
       throw new Error(`No apps found to handle intent: ${request.payload.intent}`)
     }
@@ -280,11 +330,12 @@ export async function handleRaiseIntentRequest(
     let targetAppId: string
 
     // Check if we need UI resolution (multiple handlers available)
-    const needsResolution = handlers.compatibleApps.length > 1 && context.requestIntentResolution
+    const needsResolution =
+      finalHandlers.compatibleApps.length > 1 && context.requestIntentResolution
 
     if (needsResolution) {
       // Build handler options for UI with app metadata
-      const handlerOptions: IntentHandlerOption[] = handlers.compatibleApps.map(handler => {
+      const handlerOptions: IntentHandlerOption[] = finalHandlers.compatibleApps.map(handler => {
         const isRunning = "instanceId" in handler
         const apps = appDirectory.retrieveAppsById(handler.appId)
         const appInfo = apps[0] // Take first matching app
@@ -525,9 +576,9 @@ export async function handleRaiseIntentRequest(
           // Continue anyway - the app might handle the intent event when it registers the listener
         }
       }
-    } else if (handlers.runningListeners.length > 0) {
+    } else if (finalHandlers.runningListeners.length > 0) {
       // Single handler or no UI - use a running listener (preferred)
-      const listener = handlers.runningListeners[0]
+      const listener = finalHandlers.runningListeners[0]
       targetInstanceId = listener.instanceId
       targetAppId = listener.appId
       logger.info("DACP: Using running listener", {
@@ -537,9 +588,9 @@ export async function handleRaiseIntentRequest(
         contextType: validatedContext.type,
         hasName: typeof (validatedContext as Record<string, unknown>).name === "string",
       })
-    } else if (handlers.availableApps.length > 0) {
+    } else if (finalHandlers.availableApps.length > 0) {
       // Need to launch an app
-      const appCapability = handlers.availableApps[0]
+      const appCapability = finalHandlers.availableApps[0]
       targetAppId = appCapability.appId
       logger.info("DACP: Launching app for intent", {
         targetAppId,

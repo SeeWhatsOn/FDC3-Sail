@@ -21,6 +21,7 @@ import type { ChannelContextRegistry } from "../core/state/channel-context-regis
 import type { AppChannelRegistry } from "../core/state/app-channel-registry"
 import type { UserChannelRegistry } from "../core/state/user-channel-registry"
 import { createInMemoryTransportPair } from "../transports/in-memory-transport"
+import { cleanupDACPHandlers } from "../core/handlers/dacp/index"
 
 /**
  * Options for creating a browser-based Desktop Agent
@@ -177,8 +178,30 @@ export function createBrowserDesktopAgent(
   })
 
   wcpConnector.on("appDisconnected", (instanceId) => {
-    // Desktop Agent will handle cleanup via transport disconnect
-    console.log(`App disconnected: ${instanceId}`)
+    // Explicitly trigger desktop agent cleanup for this instance
+    // This ensures the instance is removed from all registries (including intent registry)
+    // so that the intent resolver no longer sees it as a running instance
+    console.log(`App disconnected: ${instanceId}, triggering cleanup`)
+    try {
+      // Create handler context for cleanup
+      const context = {
+        transport: daTransport,
+        instanceId,
+        appInstanceRegistry: desktopAgent.getAppInstanceRegistry(),
+        intentRegistry: desktopAgent.getIntentRegistry(),
+        channelContextRegistry: desktopAgent.getChannelContextRegistry(),
+        appChannelRegistry: desktopAgent.getAppChannelRegistry(),
+        userChannelRegistry: desktopAgent.getUserChannelRegistry(),
+        appDirectory: desktopAgent.getAppDirectory(),
+        appLauncher: daConfig.appLauncher,
+        requestIntentResolution: daConfig.requestIntentResolution,
+      }
+      // Call cleanup function to remove instance from all registries
+      cleanupDACPHandlers(context)
+      console.log(`Cleanup completed for instance ${instanceId}`)
+    } catch (error) {
+      console.error(`Error cleaning up instance ${instanceId}:`, error)
+    }
   })
 
   wcpConnector.on("handshakeFailed", (error, connectionAttemptUuid) => {

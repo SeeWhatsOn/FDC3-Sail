@@ -186,10 +186,14 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
   heartbeatHandlers.stopHeartbeat(instanceId)
 
   // Remove instance from registries
-  appInstanceRegistry.removeInstance(instanceId)
-  intentRegistry.removeInstanceListeners(instanceId)
+  const instanceRemoved = appInstanceRegistry.removeInstance(instanceId)
+  const listenersRemoved = intentRegistry.removeInstanceListeners(instanceId)
 
-  logger.debug("DACP handlers cleanup completed", { instanceId })
+  logger.info("DACP handlers cleanup completed", {
+    instanceId,
+    instanceRemoved,
+    listenersRemoved,
+  })
 }
 
 /**

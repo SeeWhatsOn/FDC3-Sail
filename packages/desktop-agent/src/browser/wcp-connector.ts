@@ -473,6 +473,16 @@ export class WCPConnector {
         return
       }
 
+      // Handle WCP6Goodbye from app (FDC3 standard: app sends goodbye when closing)
+      const messageObj = message as Record<string, unknown>
+      const messageType = messageObj.type as string | undefined
+      if (messageType === "WCP6Goodbye") {
+        console.log(`[WCPConnector] Received WCP6Goodbye from app instance ${currentInstanceId}`)
+        // App is gracefully disconnecting - clean up
+        this.disconnectApp(currentInstanceId)
+        return
+      }
+
       // Add source metadata to message for Desktop Agent routing
       const enrichedMessage = {
         ...(message as Record<string, unknown>),
@@ -621,7 +631,38 @@ export class WCPConnector {
   }
 
   /**
+   * Disconnect an app by instanceId, sending WCP6Goodbye first
+   * This is the public method to use when explicitly disconnecting an app
+   *
+   * @param instanceId - The instance ID of the app to disconnect
+   */
+  disconnectAppByInstanceId(instanceId: string): void {
+    const appTransport = this.messagePortTransports.get(instanceId)
+    if (appTransport && appTransport.isConnected()) {
+      // Send WCP6Goodbye message to the app before disconnecting
+      try {
+        const goodbyeMessage = {
+          type: "WCP6Goodbye" as const,
+          payload: undefined,
+          meta: {
+            timestamp: new Date(),
+          },
+        }
+        appTransport.send(goodbyeMessage)
+        console.log(`[WCPConnector] Sent WCP6Goodbye to instance ${instanceId}`)
+      } catch (error) {
+        console.warn(`[WCPConnector] Failed to send WCP6Goodbye to instance ${instanceId}:`, error)
+        // Continue with disconnection even if goodbye fails
+      }
+    }
+
+    // Disconnect the app (this will clean up resources and emit appDisconnected event)
+    this.disconnectApp(instanceId)
+  }
+
+  /**
    * Disconnect an app and clean up resources
+   * This is the internal method that performs the actual cleanup
    */
   private disconnectApp(instanceId: string): void {
     const appTransport = this.messagePortTransports.get(instanceId)

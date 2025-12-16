@@ -20,6 +20,8 @@ interface ConnectionState {
   connections: Map<string, Connection>
   // Map from panelId to instanceId for quick lookup
   panelToConnection: Map<string, string>
+  // Track panels waiting for connections (for cross-origin iframes where panelId is undefined)
+  waitingPanels: Map<string, { panelId: string; appId: string }>
 }
 
 interface ConnectionActions {
@@ -39,6 +41,8 @@ export const createConnectionStore = (sailAgent: SailDesktopAgentInstance) => {
       // Initial state
       connections: new Map(),
       panelToConnection: new Map(),
+      // Track panels waiting for connections (for cross-origin iframes where panelId is undefined)
+      waitingPanels: new Map<string, { panelId: string; appId: string }>(),
 
       // Actions
       getConnection: (instanceId: string) => {
@@ -55,20 +59,35 @@ export const createConnectionStore = (sailAgent: SailDesktopAgentInstance) => {
         return Array.from(get().connections.values())
       },
 
-      registerPanel: (panelId: string, _appId: string) =>
+      registerPanel: (panelId: string, appId: string) =>
         set(state => {
           // When a panel is registered, check if there's already a connection with this panelId
           // The panelId is extracted from the iframe's name attribute during WCP handshake
+          // However, for cross-origin iframes, panelId may be undefined, so we also check by appId
           for (const connection of state.connections.values()) {
             if (connection.panelId === panelId) {
               // Connection already linked to this panel - update the reverse mapping
               state.panelToConnection.set(panelId, connection.instanceId)
-              console.log(`[ConnectionStore] Panel ${panelId} linked to connection ${connection.instanceId}`)
+              state.waitingPanels.delete(panelId) // Remove from waiting if it was there
+              return
+            }
+            // For cross-origin iframes, panelId may be undefined in the connection
+            // Try to match by appId if the connection doesn't have a panelId yet
+            // WARNING: This could match the wrong connection if multiple instances of the same app exist
+            if (!connection.panelId && connection.appId === appId) {
+              // Link this connection to the panel
+              connection.panelId = panelId
+              state.panelToConnection.set(panelId, connection.instanceId)
+              state.waitingPanels.delete(panelId) // Remove from waiting
+              console.log(
+                `[ConnectionStore] Panel ${panelId} linked to connection ${connection.instanceId} (cross-origin match by appId)`
+              )
               return
             }
           }
-          // Connection not yet established - it will be linked when appConnected fires
-          console.log(`[ConnectionStore] Panel ${panelId} registered, waiting for connection`)
+          // Connection not yet established - store as waiting panel
+          // It will be linked when appConnected fires (for cross-origin iframes)
+          state.waitingPanels.set(panelId, { panelId, appId })
         }),
 
       linkPanelToConnection: (panelId: string, instanceId: string) =>
@@ -95,7 +114,6 @@ export const createConnectionStore = (sailAgent: SailDesktopAgentInstance) => {
 
   // Handle app connected event
   connector.on("appConnected", (metadata: AppConnectionMetadata) => {
-    console.log("[ConnectionStore] App connected:", metadata)
     store.setState(state => {
       // Create connection entry with panelId from metadata (extracted from iframe name)
       const connection: Connection = {
@@ -110,7 +128,23 @@ export const createConnectionStore = (sailAgent: SailDesktopAgentInstance) => {
       // If panelId is available, set up the reverse mapping
       if (metadata.panelId) {
         state.panelToConnection.set(metadata.panelId, metadata.instanceId)
-        console.log(`[ConnectionStore] Linked connection ${metadata.instanceId} to panel ${metadata.panelId}`)
+        // Remove from waiting panels if it was there
+        state.waitingPanels.delete(metadata.panelId)
+      } else {
+        // For cross-origin iframes, panelId may be undefined
+        // Try to find a waiting panel that matches by appId
+        const waitingPanel = Array.from(state.waitingPanels.values()).find(
+          wp => wp.appId === metadata.appId
+        )
+        if (waitingPanel) {
+          // Link this connection to the waiting panel
+          connection.panelId = waitingPanel.panelId
+          state.panelToConnection.set(waitingPanel.panelId, metadata.instanceId)
+          state.waitingPanels.delete(waitingPanel.panelId)
+          console.log(
+            `[ConnectionStore] Linked connection ${metadata.instanceId} to waiting panel ${waitingPanel.panelId} (cross-origin)`
+          )
+        }
       }
     })
   })
@@ -121,7 +155,15 @@ export const createConnectionStore = (sailAgent: SailDesktopAgentInstance) => {
     store.setState(state => {
       const connection = state.connections.get(instanceId)
       if (connection) {
-        connection.status = "disconnected"
+        // Remove from panelToConnection mapping if panelId exists
+        if (connection.panelId) {
+          state.panelToConnection.delete(connection.panelId)
+          console.log(`[ConnectionStore] Removed panel mapping for ${connection.panelId}`)
+        }
+        // Remove the connection entirely (not just mark as disconnected)
+        // This ensures ghost instances are fully cleaned up
+        state.connections.delete(instanceId)
+        console.log(`[ConnectionStore] Removed connection for instance ${instanceId}`)
       }
     })
   })

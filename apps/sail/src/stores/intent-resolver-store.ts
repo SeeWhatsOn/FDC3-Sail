@@ -72,7 +72,9 @@ export const createIntentResolverStore = (sailAgent: SailDesktopAgentInstance) =
           return
         }
 
-        console.log(`[IntentResolverStore] User selected handler: ${handler.appName || handler.appId}`)
+        console.log(
+          `[IntentResolverStore] User selected handler: ${handler.appName || handler.appId}`
+        )
 
         // Send response back to Desktop Agent via WCPConnector
         sailAgent.wcpConnector.resolveIntentSelection({
@@ -125,19 +127,64 @@ export const createIntentResolverStore = (sailAgent: SailDesktopAgentInstance) =
 
   // Handle intent resolution needed event
   // The payload type matches IntentResolverPayload from wcp-connector
-  connector.on("intentResolverNeeded", (payload: {
-    requestId: string
-    intent: string
-    context: unknown
-    handlers: IntentHandler[]
-  }) => {
-    console.log("[IntentResolverStore] Intent resolution needed:", payload)
+  connector.on(
+    "intentResolverNeeded",
+    (payload: {
+      requestId: string
+      intent: string
+      context: unknown
+      handlers: IntentHandler[]
+    }) => {
+      console.log("[IntentResolverStore] Intent resolution needed:", payload.intent)
+
+      // Validate handlers against app instance registry to filter out zombies
+      // This ensures we don't show disconnected instances even if they were in the original list
+      const appInstanceRegistry = sailAgent.desktopAgent.getAppInstanceRegistry()
+
+      const validHandlers = payload.handlers.filter(handler => {
+        // If handler has an instanceId, verify the instance still exists and is not terminated
+        if (handler.instanceId) {
+          const instance = appInstanceRegistry.getInstance(handler.instanceId)
+          if (!instance || instance.state === "terminated") {
+            console.warn(
+              `[IntentResolverStore] Filtering out invalid handler: ${handler.appId} (instance ${handler.instanceId}, exists: ${!!instance}, state: ${instance?.state})`
+            )
+            return false
+          }
+        }
+        return true
+      })
+
+      if (validHandlers.length !== payload.handlers.length) {
+        console.warn(
+          `[IntentResolverStore] Filtered ${payload.handlers.length - validHandlers.length} invalid handler(s), ${validHandlers.length} valid remaining`
+        )
+      }
+
+      store.setState(state => {
+        state.isOpen = true
+        state.requestId = payload.requestId
+        state.intentName = payload.intent
+        state.context = payload.context
+        state.handlers = validHandlers
+      })
+    }
+  )
+
+  // Listen for app disconnections to remove handlers from open dialog
+  connector.on("appDisconnected", (instanceId: string) => {
     store.setState(state => {
-      state.isOpen = true
-      state.requestId = payload.requestId
-      state.intentName = payload.intent
-      state.context = payload.context
-      state.handlers = payload.handlers
+      // Only update if dialog is open and has handlers
+      if (state.isOpen && state.handlers.length > 0) {
+        const beforeCount = state.handlers.length
+        // Remove handlers whose instanceId matches the disconnected instance
+        state.handlers = state.handlers.filter(handler => handler.instanceId !== instanceId)
+        if (state.handlers.length !== beforeCount) {
+          console.log(
+            `[IntentResolverStore] Removed ${beforeCount - state.handlers.length} handler(s) for disconnected instance ${instanceId}`
+          )
+        }
+      }
     })
   })
 
