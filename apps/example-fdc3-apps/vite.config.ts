@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite"
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 import { resolve } from "path"
@@ -27,6 +28,7 @@ export default defineConfig({
   base: "./",
   plugins: [
     react(),
+    tailwindcss(),
     // Plugin to ensure build output HTML files are placed correctly in dist/apps/[appname]/index.html
     {
       name: "html-output-control",

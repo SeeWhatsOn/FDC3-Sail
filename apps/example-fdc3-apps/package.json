@@ -24,9 +24,11 @@
     "dist"
   ],
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
     "@types/react": "^19.1.10",
     "eslint": "^9.9.1",
     "prettier": "^3.3.3",
+    "tailwindcss": "^4.1.18",
     "vite": "^7.1.2"
   },
   "dependencies": {
@@ -35,10 +37,20 @@
     "@finos/fdc3-get-agent": "^2.2.1-beta.3",
     "@finos/fdc3-schema": "^2.2.1-beta.3",
     "@finos/fdc3-web-impl": "^2.2.1-beta.3",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-slot": "^1.2.3",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.542.0",
     "react": "^19.1.1",
+    "react-day-picker": "^9.12.0",
     "react-dom": "^19.1.1",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.5.0",
     "typescript": "^5.3.2"
   }
