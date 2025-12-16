@@ -576,18 +576,29 @@ export class WCPConnector {
     // Route to specific app if transport exists and is connected
     const appTransport = this.messagePortTransports.get(destinationId)
     if (appTransport && appTransport.isConnected()) {
+      const payload = messageObj.payload as Record<string, unknown> | undefined
       console.log("[WCPConnector] Routing message to app", {
         destinationId,
         messageType,
         eventUuid: meta?.eventUuid,
         requestUuid: meta?.requestUuid,
         responseUuid: meta?.responseUuid,
+        ...(messageType === "intentEvent" && {
+          intent: payload?.intent,
+          contextType: (payload?.context as Record<string, unknown>)?.type,
+          contextHasName: typeof (payload?.context as Record<string, unknown>)?.name === "string",
+          contextPayload: JSON.stringify(payload?.context),
+        }),
       })
       try {
         appTransport.send(message)
         console.log("[WCPConnector] Message sent successfully to app transport", {
           destinationId,
           messageType,
+          ...(messageType === "intentEvent" && {
+            intent: payload?.intent,
+            contextHasName: typeof (payload?.context as Record<string, unknown>)?.name === "string",
+          }),
         })
       } catch (error) {
         console.error("[WCPConnector] Error sending message to app transport", {

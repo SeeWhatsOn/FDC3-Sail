@@ -18,7 +18,7 @@ const appLauncher = new SailAppLauncher({
   onLaunchApp: async (appMetadata: AppMetadata, instanceId: string, _context?: unknown) => {
     const workspaceStore = useWorkspaceStore.getState()
     const { activeWorkspaceId } = workspaceStore
-    
+
     if (!activeWorkspaceId) {
       throw new Error("No active workspace available")
     }
@@ -42,6 +42,11 @@ const appLauncher = new SailAppLauncher({
       throw new Error(`App ${appMetadata.appId} has no URL in metadata`)
     }
 
+    // Pre-register the instance in the Desktop Agent's AppInstanceRegistry
+    // This allows the app to reconnect to this instanceId via WCP4
+    // We'll need to access the desktop agent after it's created, so we'll do this
+    // in a callback after sailAgent is created
+
     // Create panel for the app
     const panel = {
       panelId: instanceId,
@@ -53,7 +58,7 @@ const appLauncher = new SailAppLauncher({
 
     // Add panel to the active workspace and tab
     workspaceStore.addPanel(activeWorkspaceId, activeTabId, panel)
-    
+
     console.log(`[Sail] Launched app ${appMetadata.appId} as panel ${instanceId}`, {
       workspaceId: activeWorkspaceId,
       tabId: activeTabId,

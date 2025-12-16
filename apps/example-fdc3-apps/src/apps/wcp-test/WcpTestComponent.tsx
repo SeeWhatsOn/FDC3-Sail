@@ -54,6 +54,8 @@ export const WcpTestComponent = () => {
             payload: { intent: "ViewInstrument", context },
             success: true,
           })
+          // Return void result to complete the intent
+          return Promise.resolve()
         })
         setIntentListener(intentListenerPromise)
 
@@ -269,7 +271,10 @@ export const WcpTestComponent = () => {
         id: generateId(),
         type: "send",
         timestamp: new Date(),
-        payload: { intent: "ViewInstrument", context: { ticker: instrumentTicker, name: instrumentName } },
+        payload: {
+          intent: "ViewInstrument",
+          context: { ticker: instrumentTicker, name: instrumentName },
+        },
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
       })

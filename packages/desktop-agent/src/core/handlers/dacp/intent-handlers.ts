@@ -22,6 +22,15 @@ import { AppInstanceState } from "../../state/app-instance-registry"
 
 /**
  * Helper function to launch an app and wait for it to be registered
+ *
+ * Per FDC3 spec: "Allow, by default, at least a 15 second timeout for an application,
+ * launched via fdc3.open, fdc3.raiseIntent or fdc3.raiseIntentForContext to add any
+ * context listener (via fdc3.addContextListener) or intent listener (via fdc3.addIntentListener)
+ * necessary to deliver context or intent and context to it on launch."
+ *
+ * This function waits for any NEW instance of the app to be created and connected,
+ * rather than waiting for a specific instanceId, since the Desktop Agent may create
+ * a different instanceId than what the launcher returns.
  */
 async function launchAppAndWaitForInstance(
   appId: string,
@@ -46,6 +55,10 @@ async function launchAppAndWaitForInstance(
     hasContext: !!validatedContext,
   })
 
+  // Track existing instances BEFORE launch to identify the new one
+  const existingInstances = appInstanceRegistry.queryInstances({ appId })
+  const existingInstanceIds = new Set(existingInstances.map(i => i.instanceId))
+
   // Launch the app
   const launchResult = await appLauncher.launch(
     {
@@ -55,35 +68,126 @@ async function launchAppAndWaitForInstance(
     appMetadata
   )
 
-  const targetInstanceId = launchResult.appIdentifier.instanceId
-  if (!targetInstanceId) {
+  const launcherInstanceId = launchResult.appIdentifier.instanceId
+  if (!launcherInstanceId) {
     throw new Error("App launcher did not return an instance ID")
   }
 
-  logger.info("DACP: App launched, waiting for instance registration", {
+  // Set timestamp AFTER launch completes to catch instances created during/after launch
+  // Use a small buffer to account for any timing differences
+  const launchTimestamp = Date.now() - 500 // 500ms before to catch instances created during launch
+
+  logger.info("DACP: App launched, waiting for new instance registration", {
     appId,
-    instanceId: targetInstanceId,
+    launcherInstanceId,
+    existingInstances: existingInstanceIds.size,
+    launchTimestamp,
   })
 
-  // Wait for the instance to be registered (with timeout)
-  const maxWaitTime = 10000 // 10 seconds
+  // Wait for a NEW instance to be registered and connected
+  // Per FDC3 spec: at least 15 seconds timeout
+  const maxWaitTime = 15000 // 15 seconds (FDC3 spec minimum)
   const checkInterval = 100 // Check every 100ms
   const startTime = Date.now()
 
   while (Date.now() - startTime < maxWaitTime) {
-    const instance = appInstanceRegistry.getInstance(targetInstanceId)
-    if (instance && instance.state === AppInstanceState.CONNECTED) {
-      logger.info("DACP: App instance registered and ready", {
+    // Query for all instances of this app
+    const allInstances = appInstanceRegistry.queryInstances({ appId })
+    const elapsed = Date.now() - startTime
+
+    // Log all instances periodically (every 2 seconds) for debugging
+    const shouldLog =
+      elapsed < checkInterval * 2 ||
+      Math.floor(elapsed / 2000) !== Math.floor((elapsed - checkInterval) / 2000)
+    if (shouldLog) {
+      logger.debug("DACP: Checking for new instance", {
         appId,
-        instanceId: targetInstanceId,
-        state: instance.state,
+        elapsedMs: elapsed,
+        totalInstances: allInstances.length,
+        existingCount: existingInstanceIds.size,
+        instances: allInstances.map(i => ({
+          instanceId: i.instanceId,
+          state: i.state,
+          createdAt: i.createdAt.getTime(),
+          isNew: !existingInstanceIds.has(i.instanceId),
+          isRecent: i.createdAt.getTime() >= launchTimestamp,
+          isReady: i.state === AppInstanceState.CONNECTED || i.state === AppInstanceState.PENDING,
+          matchesLauncher: i.instanceId === launcherInstanceId,
+        })),
+        launcherInstanceId,
+        launchTimestamp,
+        currentTime: Date.now(),
       })
-      return targetInstanceId
     }
+
+    // Find a new instance (not in the existing set)
+    // Accept PENDING or CONNECTED state - PENDING means WCP handshake complete and ready to receive messages
+    // The 15 second timeout allows the app to add listeners per FDC3 spec
+    const newInstance = allInstances.find(instance => {
+      const isNew = !existingInstanceIds.has(instance.instanceId)
+      const isRecent = instance.createdAt.getTime() >= launchTimestamp
+      const isReady =
+        instance.state === AppInstanceState.CONNECTED || instance.state === AppInstanceState.PENDING
+
+      if (isNew && isRecent && !isReady) {
+        logger.debug("DACP: Found new instance but not ready yet", {
+          instanceId: instance.instanceId,
+          state: instance.state,
+          createdAt: instance.createdAt.getTime(),
+          launchTimestamp,
+        })
+      }
+
+      return isNew && isRecent && isReady
+    })
+
+    if (newInstance) {
+      logger.info("DACP: New app instance registered and ready", {
+        appId,
+        instanceId: newInstance.instanceId,
+        launcherInstanceId,
+        state: newInstance.state,
+        elapsedMs: Date.now() - startTime,
+      })
+      return newInstance.instanceId
+    }
+
+    // Also check if the launcher's instanceId exists (PENDING or CONNECTED) for compatibility
+    const launcherInstance = appInstanceRegistry.getInstance(launcherInstanceId)
+    if (
+      launcherInstance &&
+      (launcherInstance.state === AppInstanceState.CONNECTED ||
+        launcherInstance.state === AppInstanceState.PENDING)
+    ) {
+      logger.info("DACP: Launcher instance registered and ready", {
+        appId,
+        instanceId: launcherInstanceId,
+        state: launcherInstance.state,
+      })
+      return launcherInstanceId
+    }
+
     await new Promise(resolve => setTimeout(resolve, checkInterval))
   }
 
-  throw new Error(`App instance ${targetInstanceId} did not register within ${maxWaitTime}ms`)
+  // Log debug info before throwing
+  const finalInstances = appInstanceRegistry.queryInstances({ appId })
+  logger.error("DACP: Timeout waiting for new instance", {
+    appId,
+    launcherInstanceId,
+    existingInstancesBeforeLaunch: existingInstanceIds.size,
+    currentInstances: finalInstances.length,
+    currentInstanceStates: finalInstances.map(i => ({
+      instanceId: i.instanceId,
+      state: i.state,
+      createdAt: i.createdAt.getTime(),
+      launchTimestamp,
+    })),
+  })
+
+  throw new Error(
+    `No new instance of app ${appId} registered and connected within ${maxWaitTime}ms (FDC3 spec minimum timeout)`
+  )
 }
 
 export async function handleRaiseIntentRequest(
@@ -95,12 +199,45 @@ export async function handleRaiseIntentRequest(
   try {
     const request = validateDACPMessage(message, RaiseIntentRequestSchema)
 
+    const contextPayload = request.payload.context as Record<string, unknown>
     logger.info("DACP: Processing raise intent request", {
       intent: request.payload.intent,
       requestUuid: request.meta.requestUuid,
+      contextType: contextPayload?.type,
+      contextKeys: contextPayload ? Object.keys(contextPayload) : [],
+      hasName: typeof contextPayload?.name === "string",
+      contextPayload: JSON.stringify(contextPayload),
     })
 
-    const validatedContext = validateDACPMessage(request.payload.context, ContextSchema)
+    let validatedContext: Context
+    try {
+      validatedContext = validateDACPMessage(request.payload.context, ContextSchema)
+    } catch (validationError) {
+      // Extract detailed validation error information
+      const errorMessage =
+        validationError instanceof Error ? validationError.message : String(validationError)
+
+      logger.error("DACP: Context validation failed", {
+        error: errorMessage,
+        contextPayload: JSON.stringify(contextPayload, null, 2),
+        contextType: contextPayload?.type,
+        hasName: typeof contextPayload?.name === "string",
+        nameValue: contextPayload?.name,
+        nameType: typeof contextPayload?.name,
+        allContextKeys: contextPayload ? Object.keys(contextPayload) : [],
+        contextStructure: contextPayload,
+      })
+      throw validationError
+    }
+
+    const validatedContextRecord = validatedContext as Record<string, unknown>
+    logger.debug("DACP: Context validated successfully", {
+      contextType: validatedContext.type,
+      hasId: !!validatedContext.id,
+      hasName: typeof validatedContextRecord.name === "string",
+      contextKeys: Object.keys(validatedContextRecord),
+      validatedContext: JSON.stringify(validatedContextRecord),
+    })
     const source = appInstanceRegistry.getInstance(instanceId)
 
     if (!source) {
@@ -119,8 +256,23 @@ export async function handleRaiseIntentRequest(
       requestId: request.meta.requestUuid,
     })
 
+    logger.info("DACP: Intent handlers found", {
+      intent: request.payload.intent,
+      runningListeners: handlers.runningListeners.length,
+      availableApps: handlers.availableApps.length,
+      compatibleApps: handlers.compatibleApps.length,
+      contextType: validatedContext.type,
+      hasName: typeof (validatedContext as Record<string, unknown>).name === "string",
+    })
+
     // Check if we have any compatible handlers
     if (handlers.compatibleApps.length === 0) {
+      logger.error("DACP: No compatible handlers found", {
+        intent: request.payload.intent,
+        contextType: validatedContext.type,
+        runningListeners: handlers.runningListeners.length,
+        availableApps: handlers.availableApps.length,
+      })
       throw new Error(`No apps found to handle intent: ${request.payload.intent}`)
     }
 
@@ -163,23 +315,290 @@ export async function handleRaiseIntentRequest(
       }
 
       targetAppId = resolution.selectedHandler.appId
+
+      // Re-query handlers after user selection to get current state
+      // (apps may have been launched/closed while user was selecting)
+      const currentHandlers = intentRegistry.findIntentHandlers({
+        intent: request.payload.intent,
+        context: validatedContext,
+        source: { appId: source.appId, instanceId: source.instanceId },
+        target: { appId: targetAppId },
+        requestId: request.meta.requestUuid,
+      })
+
+      // Check if there's a running instance for the selected app
+      const runningInstance = currentHandlers.runningListeners.find(
+        listener => listener.appId === targetAppId
+      )
+
       if (resolution.selectedHandler.instanceId) {
-        // Selected a running instance
-        targetInstanceId = resolution.selectedHandler.instanceId
+        // User selected a specific running instance - verify it still exists
+        const selectedInstance = appInstanceRegistry.getInstance(
+          resolution.selectedHandler.instanceId
+        )
+        if (selectedInstance && selectedInstance.state !== AppInstanceState.TERMINATED) {
+          targetInstanceId = resolution.selectedHandler.instanceId
+          logger.info("DACP: Using user-selected running instance", {
+            targetInstanceId,
+            targetAppId,
+            instanceState: selectedInstance.state,
+          })
+
+          // Verify intent listener is registered on the selected instance
+          const listeners = intentRegistry.queryListeners({
+            intentName: request.payload.intent,
+            instanceId: targetInstanceId,
+            active: true,
+          })
+
+          if (listeners.length === 0) {
+            logger.warn(
+              "DACP: No intent listener found on selected instance, waiting for registration",
+              {
+                targetInstanceId,
+                intent: request.payload.intent,
+              }
+            )
+
+            // Wait for listener to be registered (max 5 seconds for running instances)
+            const listenerWaitTime = 5000
+            const listenerCheckInterval = 100
+            const listenerWaitStart = Date.now()
+            let listenerRegistered = false
+
+            while (Date.now() - listenerWaitStart < listenerWaitTime) {
+              const currentListeners = intentRegistry.queryListeners({
+                intentName: request.payload.intent,
+                instanceId: targetInstanceId,
+                active: true,
+              })
+
+              if (currentListeners.length > 0) {
+                listenerRegistered = true
+                logger.info("DACP: Intent listener found on selected instance", {
+                  targetInstanceId,
+                  intent: request.payload.intent,
+                  listenerId: currentListeners[0].listenerId,
+                })
+                break
+              }
+
+              await new Promise(resolve => setTimeout(resolve, listenerCheckInterval))
+            }
+
+            if (!listenerRegistered) {
+              logger.warn(
+                "DACP: No intent listener registered on selected instance, sending intent event anyway",
+                {
+                  targetInstanceId,
+                  intent: request.payload.intent,
+                }
+              )
+            }
+          }
+        } else if (runningInstance) {
+          // Selected instance no longer exists, but there's another running instance
+          targetInstanceId = runningInstance.instanceId
+          logger.warn("DACP: Selected instance no longer available, using other running instance", {
+            selectedInstanceId: resolution.selectedHandler.instanceId,
+            targetInstanceId,
+            targetAppId,
+          })
+        } else {
+          // Selected instance gone, need to launch new one
+          logger.warn("DACP: Selected instance no longer available, launching new instance", {
+            selectedInstanceId: resolution.selectedHandler.instanceId,
+            targetAppId,
+          })
+          targetInstanceId = await launchAppAndWaitForInstance(
+            targetAppId,
+            context,
+            validatedContext
+          )
+        }
+      } else if (runningInstance) {
+        // User selected app but no specific instance - use running instance if available
+        targetInstanceId = runningInstance.instanceId
+        logger.info("DACP: Using existing running instance for selected app", {
+          targetInstanceId,
+          targetAppId,
+        })
+
+        // Verify intent listener is registered on this instance
+        const listeners = intentRegistry.queryListeners({
+          intentName: request.payload.intent,
+          instanceId: targetInstanceId,
+          active: true,
+        })
+
+        if (listeners.length === 0) {
+          logger.warn(
+            "DACP: No intent listener found on running instance, waiting for registration",
+            {
+              targetInstanceId,
+              intent: request.payload.intent,
+            }
+          )
+
+          // Wait for listener to be registered (max 5 seconds for running instances)
+          const listenerWaitTime = 5000
+          const listenerCheckInterval = 100
+          const listenerWaitStart = Date.now()
+          let listenerRegistered = false
+
+          while (Date.now() - listenerWaitStart < listenerWaitTime) {
+            const currentListeners = intentRegistry.queryListeners({
+              intentName: request.payload.intent,
+              instanceId: targetInstanceId,
+              active: true,
+            })
+
+            if (currentListeners.length > 0) {
+              listenerRegistered = true
+              logger.info("DACP: Intent listener found on running instance", {
+                targetInstanceId,
+                intent: request.payload.intent,
+                listenerId: currentListeners[0].listenerId,
+              })
+              break
+            }
+
+            await new Promise(resolve => setTimeout(resolve, listenerCheckInterval))
+          }
+
+          if (!listenerRegistered) {
+            logger.warn(
+              "DACP: No intent listener registered on running instance, sending intent event anyway",
+              {
+                targetInstanceId,
+                intent: request.payload.intent,
+              }
+            )
+          }
+        }
       } else {
         // Need to launch the app
         targetInstanceId = await launchAppAndWaitForInstance(targetAppId, context, validatedContext)
+
+        // Per FDC3 spec: Allow time for app to add intent listener after launch
+        // Wait up to 15 seconds for the app to register its intent listener
+        logger.info("DACP: Waiting for app to register intent listener (UI resolution path)", {
+          targetInstanceId,
+          intent: request.payload.intent,
+        })
+
+        const listenerWaitTime = 15000 // 15 seconds (FDC3 spec minimum)
+        const listenerCheckInterval = 100 // Check every 100ms
+        const listenerWaitStart = Date.now()
+        let listenerRegistered = false
+
+        while (Date.now() - listenerWaitStart < listenerWaitTime) {
+          // Check if a listener has been registered for this intent on this instance
+          const listeners = intentRegistry.queryListeners({
+            intentName: request.payload.intent,
+            instanceId: targetInstanceId,
+            active: true,
+          })
+
+          if (listeners.length > 0) {
+            listenerRegistered = true
+            logger.info("DACP: Intent listener registered (UI resolution path)", {
+              targetInstanceId,
+              intent: request.payload.intent,
+              listenerId: listeners[0].listenerId,
+            })
+            break
+          }
+
+          await new Promise(resolve => setTimeout(resolve, listenerCheckInterval))
+        }
+
+        if (!listenerRegistered) {
+          logger.warn(
+            "DACP: No intent listener registered within timeout (UI resolution path), sending intent event anyway",
+            {
+              targetInstanceId,
+              intent: request.payload.intent,
+              timeout: listenerWaitTime,
+            }
+          )
+          // Continue anyway - the app might handle the intent event when it registers the listener
+        }
       }
     } else if (handlers.runningListeners.length > 0) {
       // Single handler or no UI - use a running listener (preferred)
       const listener = handlers.runningListeners[0]
       targetInstanceId = listener.instanceId
       targetAppId = listener.appId
+      logger.info("DACP: Using running listener", {
+        targetInstanceId,
+        targetAppId,
+        intent: request.payload.intent,
+        contextType: validatedContext.type,
+        hasName: typeof (validatedContext as Record<string, unknown>).name === "string",
+      })
     } else if (handlers.availableApps.length > 0) {
       // Need to launch an app
       const appCapability = handlers.availableApps[0]
       targetAppId = appCapability.appId
+      logger.info("DACP: Launching app for intent", {
+        targetAppId,
+        intent: request.payload.intent,
+        contextType: validatedContext.type,
+        hasName: typeof (validatedContext as Record<string, unknown>).name === "string",
+      })
       targetInstanceId = await launchAppAndWaitForInstance(targetAppId, context, validatedContext)
+      logger.info("DACP: App launched successfully", {
+        targetInstanceId,
+        targetAppId,
+      })
+
+      // Per FDC3 spec: Allow time for app to add intent listener after launch
+      // Wait up to 15 seconds for the app to register its intent listener
+      // This ensures the app is ready to receive the intent event
+      logger.info("DACP: Waiting for app to register intent listener", {
+        targetInstanceId,
+        intent: request.payload.intent,
+      })
+
+      const listenerWaitTime = 15000 // 15 seconds (FDC3 spec minimum)
+      const listenerCheckInterval = 100 // Check every 100ms
+      const listenerWaitStart = Date.now()
+      let listenerRegistered = false
+
+      while (Date.now() - listenerWaitStart < listenerWaitTime) {
+        // Check if a listener has been registered for this intent on this instance
+        const listeners = intentRegistry.queryListeners({
+          intentName: request.payload.intent,
+          instanceId: targetInstanceId,
+          active: true,
+        })
+
+        if (listeners.length > 0) {
+          listenerRegistered = true
+          logger.info("DACP: Intent listener registered", {
+            targetInstanceId,
+            intent: request.payload.intent,
+            listenerId: listeners[0].listenerId,
+          })
+          break
+        }
+
+        await new Promise(resolve => setTimeout(resolve, listenerCheckInterval))
+      }
+
+      if (!listenerRegistered) {
+        logger.warn(
+          "DACP: No intent listener registered within timeout, sending intent event anyway",
+          {
+            targetInstanceId,
+            intent: request.payload.intent,
+            timeout: listenerWaitTime,
+          }
+        )
+        // Continue anyway - the app might handle the intent event when it registers the listener
+        // or the app might be using a different mechanism to handle intents
+      }
     } else {
       throw new Error(`No handler found for intent: ${request.payload.intent}`)
     }
@@ -208,8 +627,14 @@ export async function handleRaiseIntentRequest(
 
     logger.info("DACP: Sending intentEvent to target app", {
       targetInstanceId,
+      targetAppId,
       intent: request.payload.intent,
       requestUuid: request.meta.requestUuid,
+      eventUuid: intentEvent.meta.eventUuid,
+      hasDestination: true,
+      contextType: validatedContext.type,
+      contextHasName: typeof (validatedContext as Record<string, unknown>).name === "string",
+      intentEventPayload: JSON.stringify(intentEvent.payload),
     })
 
     // Add routing metadata
@@ -221,7 +646,69 @@ export async function handleRaiseIntentRequest(
       },
     }
 
+    // Verify target instance exists and is ready before sending
+    const targetInstanceForEvent = appInstanceRegistry.getInstance(targetInstanceId)
+    if (!targetInstanceForEvent) {
+      throw new Error(`Target instance ${targetInstanceId} not found when sending intent event`)
+    }
+
+    // Ensure instance is in a ready state (PENDING or CONNECTED)
+    if (
+      targetInstanceForEvent.state !== AppInstanceState.PENDING &&
+      targetInstanceForEvent.state !== AppInstanceState.CONNECTED
+    ) {
+      logger.warn("DACP: Target instance not in ready state, waiting briefly", {
+        targetInstanceId,
+        targetState: targetInstanceForEvent.state,
+      })
+      // Wait a bit for instance to become ready (max 2 seconds)
+      const maxWait = 2000
+      const checkInterval = 100
+      const startTime = Date.now()
+      while (Date.now() - startTime < maxWait) {
+        const instance = appInstanceRegistry.getInstance(targetInstanceId)
+        if (
+          instance &&
+          (instance.state === AppInstanceState.PENDING ||
+            instance.state === AppInstanceState.CONNECTED)
+        ) {
+          logger.info("DACP: Target instance became ready", {
+            targetInstanceId,
+            targetState: instance.state,
+            waitedMs: Date.now() - startTime,
+          })
+          break
+        }
+        await new Promise(resolve => setTimeout(resolve, checkInterval))
+      }
+
+      // Re-check after waiting
+      const finalInstance = appInstanceRegistry.getInstance(targetInstanceId)
+      if (
+        finalInstance &&
+        finalInstance.state !== AppInstanceState.PENDING &&
+        finalInstance.state !== AppInstanceState.CONNECTED
+      ) {
+        throw new Error(
+          `Target instance ${targetInstanceId} is not in ready state: ${finalInstance.state}`
+        )
+      }
+    }
+
+    logger.info("DACP: Target instance verified, sending intentEvent", {
+      targetInstanceId,
+      targetAppId: targetInstanceForEvent.appId,
+      targetState: targetInstanceForEvent.state,
+      eventType: intentEventWithRouting.type,
+    })
+
     transport.send(intentEventWithRouting)
+
+    logger.info("DACP: intentEvent sent, waiting for intentResultRequest", {
+      targetInstanceId,
+      requestUuid: request.meta.requestUuid,
+      timeoutMs: 30000,
+    })
 
     // Wait for the result from intentResultRequest handler
     await resultPromise
@@ -254,7 +741,16 @@ export async function handleRaiseIntentRequest(
 
     transport.send(responseWithRouting)
   } catch (error) {
-    logger.error("DACP: Raise intent request failed", error)
+    const messageRecord = message as Record<string, unknown>
+    const payload = messageRecord?.payload as Record<string, unknown> | undefined
+    const context = payload?.context as Record<string, unknown> | undefined
+
+    logger.error("DACP: Raise intent request failed", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      contextType: context?.type,
+      contextHasName: typeof context?.name === "string",
+    })
     const errorResponse = createDACPErrorResponse(
       message as { meta: { requestUuid: string } },
       DACP_ERROR_TYPES.INTENT_DELIVERY_FAILED,
@@ -624,6 +1120,49 @@ export async function handleRaiseIntentForContextRequest(
       const appCapability = handlers.availableApps[0]
       targetAppId = appCapability.appId
       targetInstanceId = await launchAppAndWaitForInstance(targetAppId, context, validatedContext)
+
+      // Per FDC3 spec: Allow time for app to add intent listener after launch
+      // Wait up to 15 seconds for the app to register its intent listener
+      logger.info("DACP: Waiting for app to register intent listener (context-first)", {
+        targetInstanceId,
+        intent: selectedIntent,
+      })
+
+      const listenerWaitTime = 15000 // 15 seconds (FDC3 spec minimum)
+      const listenerCheckInterval = 100 // Check every 100ms
+      const listenerWaitStart = Date.now()
+      let listenerRegistered = false
+
+      while (Date.now() - listenerWaitStart < listenerWaitTime) {
+        const listeners = intentRegistry.queryListeners({
+          intentName: selectedIntent,
+          instanceId: targetInstanceId,
+          active: true,
+        })
+
+        if (listeners.length > 0) {
+          listenerRegistered = true
+          logger.info("DACP: Intent listener registered (context-first)", {
+            targetInstanceId,
+            intent: selectedIntent,
+            listenerId: listeners[0].listenerId,
+          })
+          break
+        }
+
+        await new Promise(resolve => setTimeout(resolve, listenerCheckInterval))
+      }
+
+      if (!listenerRegistered) {
+        logger.warn(
+          "DACP: No intent listener registered within timeout (context-first), sending intent event anyway",
+          {
+            targetInstanceId,
+            intent: selectedIntent,
+            timeout: listenerWaitTime,
+          }
+        )
+      }
     } else {
       throw new Error(`No handler found for intent: ${selectedIntent}`)
     }
