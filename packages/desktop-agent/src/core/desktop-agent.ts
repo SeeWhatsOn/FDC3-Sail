@@ -177,7 +177,7 @@ export class DesktopAgent {
     // Only process messages FROM apps (have source.instanceId)
     // Messages TO apps (have destination.instanceId but no source) should pass through
     const instanceId = this.extractInstanceId(message)
-    
+
     if (!instanceId) {
       // Message has no source.instanceId - this is likely a message going TO an app
       // (e.g., contextEvent, responses). Let it pass through without processing.
@@ -296,7 +296,7 @@ export class DesktopAgent {
    */
   syncAppDirectoryToIntentRegistry(): void {
     const apps = this.appDirectory.retrieveAllApps()
-    
+
     for (const app of apps) {
       const intents = app.interop?.intents?.listensFor
       if (!intents || typeof intents !== "object") {
@@ -304,22 +304,25 @@ export class DesktopAgent {
       }
 
       const capabilities: Record<string, IntentCapability> = {}
-      
+
       for (const [intentName, intentConfig] of Object.entries(intents)) {
         if (intentConfig && typeof intentConfig === "object" && "contexts" in intentConfig) {
           capabilities[intentName] = {
             intentName,
             appId: app.appId,
             contextTypes: Array.isArray(intentConfig.contexts) ? intentConfig.contexts : [],
-            resultType: "resultType" in intentConfig && typeof intentConfig.resultType === "string" 
-              ? intentConfig.resultType 
-              : undefined,
-            displayName: "displayName" in intentConfig && typeof intentConfig.displayName === "string"
-              ? intentConfig.displayName
-              : undefined,
-            customConfig: "customConfig" in intentConfig && typeof intentConfig.customConfig === "object"
-              ? intentConfig.customConfig as Record<string, unknown>
-              : undefined,
+            resultType:
+              "resultType" in intentConfig && typeof intentConfig.resultType === "string"
+                ? intentConfig.resultType
+                : undefined,
+            displayName:
+              "displayName" in intentConfig && typeof intentConfig.displayName === "string"
+                ? intentConfig.displayName
+                : undefined,
+            customConfig:
+              "customConfig" in intentConfig && typeof intentConfig.customConfig === "object"
+                ? (intentConfig.customConfig as Record<string, unknown>)
+                : undefined,
           }
         }
       }
