@@ -4,6 +4,10 @@ import { Circle, ExternalLink, Maximize2, Minimize2, X } from "lucide-react"
 
 import { ChannelMenu } from "../../../channel-selector/ChannelMenu"
 import { useSailDesktopAgent, useConnectionStore } from "../../../../contexts"
+import {
+  createJoinUserChannelRequest,
+  createLeaveCurrentChannelRequest,
+} from "../../../../utils/dacp-messages"
 
 import { Icon } from "./Icon"
 
@@ -125,11 +129,40 @@ const ChannelSelectorButton = ({ activePanelId }: { activePanelId?: string }) =>
     }
   }, [sailAgent, channelId])
 
-  // Channel selection is read-only for now - apps control their own channel via FDC3
-  // This UI just shows what channel the active panel's app has joined
+  // Handle channel selection - send DACP message to change the active panel's channel
+  // According to FDC3 2.2 spec, when channelSelectorUrl is false (Sail-controlled UI),
+  // the external UI should send DACP messages directly to control app channels.
   const handleChannelSelect = (newChannelId: string | null) => {
-    console.log(`[ChannelSelector] User selected channel: ${newChannelId || "none"}`)
-    console.log("[ChannelSelector] Note: Apps control their own channel membership via FDC3 API")
+    if (!activePanelId) {
+      console.warn("[ChannelSelector] No active panel to change channel for")
+      return
+    }
+
+    const connection = connectionStore.getConnectionByPanelId(activePanelId)
+    if (!connection || !connection.instanceId) {
+      console.warn("[ChannelSelector] No connection found for active panel", activePanelId)
+      return
+    }
+
+    const instanceId = connection.instanceId
+
+    try {
+      if (newChannelId === null) {
+        // Leave current channel
+        const message = createLeaveCurrentChannelRequest()
+        sailAgent.sendDACPMessageOnBehalfOf(instanceId, message)
+        console.log(`[ChannelSelector] Sent leaveCurrentChannelRequest for instance ${instanceId}`)
+      } else {
+        // Join user channel
+        const message = createJoinUserChannelRequest(newChannelId)
+        sailAgent.sendDACPMessageOnBehalfOf(instanceId, message)
+        console.log(
+          `[ChannelSelector] Sent joinUserChannelRequest for instance ${instanceId}, channel ${newChannelId}`
+        )
+      }
+    } catch (error) {
+      console.error("[ChannelSelector] Failed to send channel change message:", error)
+    }
   }
 
   const channelColor = channel?.displayMetadata?.color
