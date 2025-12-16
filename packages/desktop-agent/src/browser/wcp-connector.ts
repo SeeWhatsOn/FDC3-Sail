@@ -217,6 +217,18 @@ export class WCPConnector {
       timeoutId: ReturnType<typeof setTimeout>
     }
   >()
+  // Track pending disconnects that may be cancelled if reconnection happens
+  private pendingDisconnects = new Map<string, ReturnType<typeof setTimeout>>()
+  // Track recently disconnected instances that can be restored on reconnection
+  // This handles cases where pagehide events trigger premature disconnects (e.g., tab moves)
+  // TODO: Consider using heartbeat-based detection instead of WCP6Goodbye for disconnection.
+  //       Heartbeat already runs (30s interval, 60s timeout) and can detect actual disconnections.
+  //       This would eliminate false-positive disconnects from pagehide events, but would delay
+  //       cleanup of actual disconnections by up to 60 seconds. See WCP6Goodbye handler for details.
+  private recentlyDisconnected = new Map<
+    string,
+    { metadata: AppConnectionMetadata; disconnectedAt: number }
+  >()
 
   /**
    * Create a new WCP Connector
@@ -478,8 +490,59 @@ export class WCPConnector {
       const messageType = messageObj.type as string | undefined
       if (messageType === "WCP6Goodbye") {
         console.log(`[WCPConnector] Received WCP6Goodbye from app instance ${currentInstanceId}`)
-        // App is gracefully disconnecting - clean up
-        this.disconnectApp(currentInstanceId)
+
+        // NOTE: WCP6Goodbye is sent by FDC3 get-agent library on pagehide events with persisted=false.
+        // This includes false positives like tab moves, navigation, etc. where the app is still active.
+        //
+        // Current approach: Delay disconnect to allow reconnection within grace period.
+        // This handles false-positive pagehide events from tab moves/navigation.
+        //
+        // Alternative approach (TODO): Consider using heartbeat-based detection instead.
+        // Heartbeat already runs (30s interval, 60s timeout) and can detect actual disconnections.
+        // Trade-offs:
+        //   - Heartbeat: More accurate (only disconnects on actual failure), but slower (up to 60s delay)
+        //   - Delayed WCP6Goodbye: Faster response (2s), but requires grace period for false positives
+        //   - Hybrid: Could ignore WCP6Goodbye and rely solely on heartbeat timeout for cleanup
+        //
+        // TODO: Evaluate using heartbeat-based disconnection detection instead of WCP6Goodbye.
+        //       If heartbeat fails, the instance will be cleaned up automatically. This would
+        //       eliminate false-positive disconnects from pagehide events, but would delay
+        //       cleanup of actual disconnections by up to 60 seconds.
+
+        // Delay disconnect to allow for reconnection (e.g., after tab moves trigger pagehide events)
+        // If a reconnection happens via WCP4ValidateAppIdentity within the grace period,
+        // the pending disconnect will be cancelled and the instance restored
+        const DISCONNECT_DELAY_MS = 2000 // 2 second grace period for reconnection
+        const existingTimeout = this.pendingDisconnects.get(currentInstanceId)
+        if (existingTimeout) {
+          // Already have a pending disconnect, extend it
+          clearTimeout(existingTimeout)
+        }
+
+        const connection = this.connections.get(currentInstanceId)
+        const timeoutId = setTimeout(() => {
+          this.pendingDisconnects.delete(currentInstanceId)
+
+          // Store in recently disconnected for potential restoration
+          if (connection) {
+            this.recentlyDisconnected.set(currentInstanceId, {
+              metadata: connection,
+              disconnectedAt: Date.now(),
+            })
+            // Clean up old entries (older than 5 seconds)
+            const fiveSecondsAgo = Date.now() - 5000
+            for (const [id, entry] of this.recentlyDisconnected.entries()) {
+              if (entry.disconnectedAt < fiveSecondsAgo) {
+                this.recentlyDisconnected.delete(id)
+              }
+            }
+          }
+
+          // App is gracefully disconnecting - clean up
+          this.disconnectApp(currentInstanceId)
+        }, DISCONNECT_DELAY_MS)
+
+        this.pendingDisconnects.set(currentInstanceId, timeoutId)
         return
       }
 
@@ -583,7 +646,7 @@ export class WCPConnector {
       // This is the instance whose channel changed, not the destination (which could be a subscriber)
       const identity = payload?.identity as { instanceId?: string } | undefined
       const changedInstanceId = identity?.instanceId
-      
+
       if (changedInstanceId) {
         // Only emit if we have a valid instanceId
         this.emit("channelChanged", changedInstanceId, channelId ?? null)
@@ -698,6 +761,27 @@ export class WCPConnector {
     if (!metadata) {
       console.warn(`Cannot update connection metadata: temp instanceId ${tempInstanceId} not found`)
       return
+    }
+
+    // Cancel any pending disconnect for the actual instanceId (reconnection scenario)
+    const pendingDisconnect = this.pendingDisconnects.get(actualInstanceId)
+    if (pendingDisconnect) {
+      clearTimeout(pendingDisconnect)
+      this.pendingDisconnects.delete(actualInstanceId)
+      console.log(
+        `[WCPConnector] Cancelled pending disconnect for instance ${actualInstanceId} - reconnection detected`
+      )
+    }
+
+    // Check if this is a reconnection to a recently disconnected instance
+    const recentlyDisconnectedEntry = this.recentlyDisconnected.get(actualInstanceId)
+    if (recentlyDisconnectedEntry) {
+      console.log(
+        `[WCPConnector] Restoring recently disconnected instance ${actualInstanceId} - reconnection within grace period`
+      )
+      // Restore the original metadata
+      Object.assign(metadata, recentlyDisconnectedEntry.metadata)
+      this.recentlyDisconnected.delete(actualInstanceId)
     }
 
     // Update metadata with validated info from Desktop Agent
