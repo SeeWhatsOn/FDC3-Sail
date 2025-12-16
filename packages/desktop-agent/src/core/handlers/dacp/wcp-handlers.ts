@@ -139,8 +139,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
           const normalizedAppUrl = normalizeUrl(app.details.url)
           // Match if the normalized app URL matches either the identity URL or actual URL
           return (
-            normalizedAppUrl === normalizedIdentityUrl ||
-            normalizedAppUrl === normalizedActualUrl
+            normalizedAppUrl === normalizedIdentityUrl || normalizedAppUrl === normalizedActualUrl
           )
         } catch {
           return false
