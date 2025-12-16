@@ -579,8 +579,15 @@ export class WCPConnector {
     if (messageType === "channelChangedEvent") {
       const payload = messageObj.payload as Record<string, unknown> | undefined
       const channelId = payload?.channelId as string | null | undefined
-      // Emit event for UI (destinationId is the app whose channel changed)
-      this.emit("channelChanged", destinationId, channelId ?? null)
+      // Extract the instanceId from the event payload's identity field
+      // This is the instance whose channel changed, not the destination (which could be a subscriber)
+      const identity = payload?.identity as { instanceId?: string } | undefined
+      const changedInstanceId = identity?.instanceId
+      
+      if (changedInstanceId) {
+        // Only emit if we have a valid instanceId
+        this.emit("channelChanged", changedInstanceId, channelId ?? null)
+      }
     }
 
     // Route to specific app if transport exists and is connected
