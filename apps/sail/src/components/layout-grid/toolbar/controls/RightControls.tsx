@@ -102,17 +102,18 @@ const ChannelSelectorButton = ({ activePanelId }: { activePanelId?: string }) =>
   }, [activePanelId])
 
   // Get connection and channel for THIS specific panel
-  // This should only update when activePanelId changes OR when we manually update via events
+  // This updates when activePanelId changes
   useEffect(() => {
     if (!activePanelId) {
-      setChannelId(null)
+      // Don't clear channelId immediately when activePanelId is undefined
+      // It might be temporarily undefined during tab switches
       return
     }
 
     const connection = connectionStore.getConnectionByPanelId(activePanelId)
     const newChannelId = connection?.channelId ?? null
 
-    // Only update if it actually changed to avoid unnecessary re-renders
+    // Update channelId when activePanelId changes
     setChannelId(prev => {
       if (prev !== newChannelId) {
         if (process.env.NODE_ENV === "development") {
@@ -123,6 +124,7 @@ const ChannelSelectorButton = ({ activePanelId }: { activePanelId?: string }) =>
               prev,
               newChannelId,
               instanceId: connection?.instanceId,
+              hasConnection: !!connection,
             }
           )
         }
@@ -148,17 +150,24 @@ const ChannelSelectorButton = ({ activePanelId }: { activePanelId?: string }) =>
 
       // Only update if this channel change is for THIS panel's instance
       if (connection?.instanceId === instanceId) {
+        // Re-read from store to ensure we have the latest value
+        // (the store is updated by the connection store's event handler)
+        const updatedConnection = connectionStore.getConnectionByPanelId(currentPanelId)
+        const storeChannelId = updatedConnection?.channelId ?? null
+
         if (process.env.NODE_ENV === "development") {
           console.log(
             `[ChannelSelectorButton:${instanceIdRef.current}] channelChanged event - updating state:`,
             {
               activePanelId: currentPanelId,
               instanceId,
-              newChannelId,
+              eventChannelId: newChannelId,
+              storeChannelId,
             }
           )
         }
-        setChannelId(newChannelId)
+        // Use the value from the store (which was just updated) to ensure consistency
+        setChannelId(storeChannelId)
       } else {
         if (process.env.NODE_ENV === "development") {
           console.log(
@@ -273,6 +282,13 @@ const ChannelSelectorButton = ({ activePanelId }: { activePanelId?: string }) =>
  */
 export const RightControls = (props: IDockviewHeaderActionsProps) => {
   const isPopout = props.api.location.type === "popout"
+  const [panelId, setPanelId] = useState<string | undefined>(undefined)
+  const panelIdRef = useRef<string | undefined>(undefined)
+
+  type PanelParams = { panel?: { panelId: string } } | undefined
+  const extractPanelId = (params: unknown): string | undefined => {
+    return (params as PanelParams)?.panel?.panelId
+  }
 
   /**
    * Resolves the panel ID for this header component.
@@ -281,12 +297,17 @@ export const RightControls = (props: IDockviewHeaderActionsProps) => {
    * rather than the actual panel ID stored in params.panel.panelId. This function searches
    * through available panels to find the matching panel and extract its panelId.
    *
+   * When there are multiple tabs in a panel group, props.activePanel represents the currently
+   * active/visible panel and should be used to determine which panel's channel selector to show.
+   *
    * @returns The panel ID if found, undefined otherwise
    */
   const resolvePanelId = (): string | undefined => {
-    type PanelParams = { panel?: { panelId: string } } | undefined
-    const extractPanelId = (params: unknown): string | undefined => {
-      return (params as PanelParams)?.panel?.panelId
+    // When there are multiple tabs in a group, use the active panel (currently visible tab)
+    // This ensures the channel selector shows for the active tab, not just when there's one tab
+    if (props.activePanel) {
+      const panelId = extractPanelId(props.activePanel.params)
+      if (panelId) return panelId
     }
 
     // Search within the group first
@@ -324,12 +345,81 @@ export const RightControls = (props: IDockviewHeaderActionsProps) => {
     return undefined
   }
 
-  const panelId = resolvePanelId()
+  // Sync ref with state
+  useEffect(() => {
+    panelIdRef.current = panelId
+  }, [panelId])
+
+  // Resolve panelId and update state when it changes
+  // Use activePanel as the primary source, but persist the value to avoid flickering
+  // This handles both initial resolution and tab switching
+  useEffect(() => {
+    const resolvedId = resolvePanelId()
+    const currentPanelId = panelIdRef.current
+
+    // Always update if we have a valid resolvedId and it's different
+    // This handles both initial load and tab switching
+    if (resolvedId && resolvedId !== currentPanelId) {
+      if (process.env.NODE_ENV === "development") {
+        console.log("[RightControls] Updating panelId:", {
+          from: currentPanelId,
+          to: resolvedId,
+          activePanel: props.activePanel ? extractPanelId(props.activePanel.params) : null,
+        })
+      }
+      setPanelId(resolvedId)
+      return
+    }
+
+    // If we couldn't resolve, check if we should clear the panelId
+    // Only clear if activePanel is explicitly null/undefined AND we can't find the panel in the group
+    if (!resolvedId) {
+      // If activePanel exists but we couldn't resolve, don't clear - it might be a timing issue
+      if (props.activePanel) {
+        // activePanel exists but resolvePanelId returned undefined
+        // This shouldn't happen, but don't clear panelId in case it's a temporary issue
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[RightControls] activePanel exists but resolvePanelId returned undefined", {
+            activePanel: props.activePanel,
+            currentPanelId,
+          })
+        }
+        return
+      }
+
+      // activePanel is null/undefined - check if current panelId is still valid
+      if (props.group && currentPanelId) {
+        const groupPanels = props.group.panels
+        let foundMatch = false
+        for (const panel of groupPanels) {
+          const id = extractPanelId(panel.params)
+          if (id === currentPanelId) {
+            foundMatch = true
+            break
+          }
+        }
+        // Only clear if we can't find the panel in the group anymore
+        if (!foundMatch) {
+          if (process.env.NODE_ENV === "development") {
+            console.log("[RightControls] Clearing panelId - not found in group", {
+              panelId: currentPanelId,
+              groupPanels: groupPanels.map(p => extractPanelId(p.params)),
+            })
+          }
+          setPanelId(undefined)
+        }
+      } else if (!props.group && currentPanelId) {
+        // No group, clear if we can't resolve
+        setPanelId(undefined)
+      }
+    }
+  }, [props.activePanel, props.api.id, props.group, props.containerApi.panels])
 
   if (process.env.NODE_ENV === "development" && !panelId) {
     console.warn("[RightControls] Could not resolve panelId for header", {
       "props.api.id": props.api.id,
       "group?.panels.length": props.group?.panels.length,
+      activePanel: props.activePanel ? extractPanelId(props.activePanel.params) : null,
     })
   }
 
@@ -337,6 +427,7 @@ export const RightControls = (props: IDockviewHeaderActionsProps) => {
 
   return (
     <div className="group-control">
+      {/* Render ChannelSelectorButton when we have a valid panelId */}
       {isFDC3Panel && panelId && <ChannelSelectorButton activePanelId={panelId} />}
       <PopoutButton {...props} />
       {/* Maximize/Minimize button (only show when not in popout) */}

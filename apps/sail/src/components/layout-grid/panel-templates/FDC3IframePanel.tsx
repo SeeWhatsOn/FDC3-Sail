@@ -43,8 +43,7 @@ interface FDC3PanelProps extends IDockviewPanelProps {
 }
 
 export const FDC3Panel = ({ api, panel }: FDC3PanelProps) => {
-  const { getConnectionByPanelId, registerPanel } = useConnectionStore()
-  const connection = getConnectionByPanelId(panel.panelId)
+  const { registerPanel } = useConnectionStore()
 
   console.log(`[FDC3Panel] Rendering panel: ${panel.panelId} with URL: ${panel.url}`)
 
@@ -53,19 +52,11 @@ export const FDC3Panel = ({ api, panel }: FDC3PanelProps) => {
     registerPanel(panel.panelId, panel.appId)
   }, [registerPanel, panel.panelId, panel.appId])
 
-  // Update panel title with connection status and channel indicator
+  // Update panel title (channel indicator removed from title for now)
   useEffect(() => {
-    if (!connection) {
-      // No connection yet - just show the title
-      api.setTitle(panel.title)
-      return
-    }
-
-    // Add channel indicator if app is on a channel
-    const channelIndicator = connection.channelId ? ` [${connection.channelId}]` : ""
-
-    api.setTitle(`${panel.title}${channelIndicator}`)
-  }, [connection?.status, connection?.channelId, panel.title, api, connection?.panelId, connection])
+    // Just show the panel title without channel indicator
+    api.setTitle(panel.title)
+  }, [panel.title, api])
 
   return (
     <iframe
