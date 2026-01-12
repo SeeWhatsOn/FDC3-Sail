@@ -669,6 +669,12 @@ export class WCPConnector {
           contextHasName: typeof (payload?.context as Record<string, unknown>)?.name === "string",
           contextPayload: JSON.stringify(payload?.context),
         }),
+        ...(messageType === "broadcastEvent" && {
+          channelId: payload?.channelId,
+          contextType: (payload?.context as Record<string, unknown>)?.type,
+          contextId: (payload?.context as Record<string, unknown>)?.id,
+          contextPayload: JSON.stringify(payload?.context),
+        }),
       })
       try {
         appTransport.send(message)

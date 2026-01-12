@@ -114,7 +114,13 @@ export function handleAddContextListener(message: unknown, context: DACPHandlerC
       requestUuid: request.meta.requestUuid,
     })
 
-    appInstanceRegistry.addContextListener(instanceId, contextType)
+    const added = appInstanceRegistry.addContextListener(instanceId, contextType)
+    logger.info("DACP: Context listener registration result", {
+      instanceId,
+      contextType,
+      added,
+      requestUuid: request.meta.requestUuid,
+    })
 
     // The listenerUUID is the contextType itself for simplicity in unsubscribing.
     const listenerUUID = contextType
@@ -265,7 +271,13 @@ async function notifyContextListeners(
         instance.contextListeners.has(context.type) || instance.contextListeners.has("*")
 
       if (!listensForType) {
-        logger.debug("Instance not listening for context type", {
+        logger.info("Instance not listening for context type", {
+          instanceId: instance.instanceId,
+          contextType: context.type,
+          registeredListeners: Array.from(instance.contextListeners),
+        })
+      } else {
+        logger.info("Instance IS listening for context type", {
           instanceId: instance.instanceId,
           contextType: context.type,
           registeredListeners: Array.from(instance.contextListeners),
@@ -305,11 +317,19 @@ async function notifyContextListeners(
           channelId,
           contextType: context.type,
           eventUuid: broadcastEvent.meta.eventUuid,
+          broadcastEventPayload: JSON.stringify(broadcastEvent.payload),
         })
 
         // Send via the handler context's transport (routes through WCPConnector)
         // WCPConnector routes to the correct app based on meta.destination.instanceId
         handlerContext.transport.send(broadcastEventWithRouting)
+
+        logger.debug("DACP: Broadcast event message structure", {
+          type: broadcastEventWithRouting.type,
+          hasPayload: !!broadcastEventWithRouting.payload,
+          hasContext: !!broadcastEventWithRouting.payload?.context,
+          contextType: broadcastEventWithRouting.payload?.context?.type,
+        })
 
         logger.debug("Broadcast event sent to listener", {
           instanceId: instance.instanceId,

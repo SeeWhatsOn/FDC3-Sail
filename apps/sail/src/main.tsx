@@ -72,7 +72,7 @@ const sailAgent = createSailBrowserDesktopAgent({
   appLauncher,
 })
 
-// Load default apps into the app directory (portfolio, news, charts, wcp-test)
+// Load default apps into the app directory (news, charts, yahoo, tradingview, benzinga, wcp-test)
 const appDirectory = sailAgent.desktopAgent.getAppDirectory()
 for (const app of defaultApplications) {
   appDirectory.add(app as unknown as DirectoryApp)

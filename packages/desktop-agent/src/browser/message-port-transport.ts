@@ -188,6 +188,20 @@ export class MessagePortTransport implements Transport {
       connected: this.connected,
     })
 
+    // Log broadcastEvent details for debugging
+    if (messageType === "broadcastEvent" && message && typeof message === "object") {
+      const msg = message as Record<string, unknown>
+      const payload = msg.payload as Record<string, unknown> | undefined
+      console.log("[MessagePortTransport] BroadcastEvent details", {
+        type: msg.type,
+        hasPayload: !!payload,
+        channelId: payload?.channelId,
+        contextType: (payload?.context as Record<string, unknown>)?.type,
+        contextId: (payload?.context as Record<string, unknown>)?.id,
+        fullMessage: JSON.stringify(message, null, 2),
+      })
+    }
+
     if (this.messageHandler) {
       try {
         const result = this.messageHandler(message)
