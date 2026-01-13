@@ -3,25 +3,25 @@ Feature: Heartbeat Messages Between Apps and Server
   Background:
     Given schemas loaded
     And "portfolioApp" is an app with the following intents
-      | Intent Name   | Context Type      | Result Type |
-      | ViewPortfolio | fdc3.portfolio     | {empty}     |
+      | Intent Name   | Context Type   | Result Type |
+      | ViewPortfolio | fdc3.portfolio | {empty}     |
     And A newly instantiated desktop agent with heartbeat checking
 
   Scenario: App Responds to heartbeats
-    When "portfolioApp/a1" is opened with connection id "a1"
+    When "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"
     And "a1" sends validate
     And we wait for a period of "500" ms
-    And "portfolioApp/a1" sends a heartbeat response to eventUuid "a1_1"
+    And "appId: portfolioApp, instanceId: a1" sends a heartbeat response to eventUuid "a1_1"
     And we wait for a period of "500" ms
-    And "portfolioApp/a1" sends a heartbeat response to eventUuid "a1_2"
+    And "appId: portfolioApp, instanceId: a1" sends a heartbeat response to eventUuid "a1_2"
     And we wait for a period of "500" ms
-    And "portfolioApp/a1" sends a heartbeat response to eventUuid "a1_3"
+    And "appId: portfolioApp, instanceId: a1" sends a heartbeat response to eventUuid "a1_3"
     And we wait for a period of "500" ms
-    And "portfolioApp/a1" sends a heartbeat response to eventUuid "a1_4"
+    And "appId: portfolioApp, instanceId: a1" sends a heartbeat response to eventUuid "a1_4"
     And we wait for a period of "500" ms
-    And "portfolioApp/a1" sends a heartbeat response to eventUuid "a1_5"
+    And "appId: portfolioApp, instanceId: a1" sends a heartbeat response to eventUuid "a1_5"
     And we wait for a period of "500" ms
-    Then I test the liveness of "portfolioApp/a1"
+    Then I test the liveness of "appId: portfolioApp, instanceId: a1"
     Then "{result}" is true
     And messaging will have outgoing posts
       | msg.matches_type | to.instanceId | to.appId     |
@@ -40,10 +40,10 @@ Feature: Heartbeat Messages Between Apps and Server
   Scenario: App Doesn't Respond to heartbeats
   Apps are considered dead if they don't respond to a heartbeat request within 2 seconds
 
-    When "portfolioApp/a1" is opened with connection id "a1"
+    When "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"
     And "a1" sends validate
     And we wait for a period of "3000" ms
-    Then I test the liveness of "portfolioApp/a1"
+    Then I test the liveness of "appId: portfolioApp, instanceId: a1"
     Then "{result}" is false
     And messaging will have outgoing posts
       | msg.matches_type | to.instanceId | to.appId     |
@@ -56,10 +56,10 @@ Feature: Heartbeat Messages Between Apps and Server
     Then "{result}" is empty
 
   Scenario: App says Goodbye
-    When "portfolioApp/a1" is opened with connection id "a1"
+    When "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"
     And "a1" sends validate
     And we wait for a period of "500" ms
-    And "portfolioApp/a1" sends a goodbye message
-    Then I test the liveness of "portfolioApp/a1"
+    And "appId: portfolioApp, instanceId: a1" sends a goodbye message
+    Then I test the liveness of "appId: portfolioApp, instanceId: a1"
     Then "{result}" is false
     And I shutdown the server

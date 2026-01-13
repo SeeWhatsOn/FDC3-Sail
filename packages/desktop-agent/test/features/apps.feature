@@ -3,34 +3,34 @@ Feature: Opening and Requesting App Details
   Background:
     Given schemas loaded
     And "portfolioApp" is an app with the following intents
-      | Intent Name    | Context Type      | Result Type |
-      | ViewPortfolio  | fdc3.portfolio    | {empty}     |
+      | Intent Name   | Context Type   | Result Type |
+      | ViewPortfolio | fdc3.portfolio | {empty}     |
     And "chartApp" is an app with the following intents
-      | Intent Name | Context Type      | Result Type |
-      | ViewChart   | fdc3.portfolio    | fdc3.chart  |
+      | Intent Name | Context Type   | Result Type |
+      | ViewChart   | fdc3.portfolio | fdc3.chart  |
     And A newly instantiated desktop agent
-    And "portfolioApp/a1" is opened with connection id "a1"
+    And "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"
 
   Scenario: Looking up app metadata
-    When "portfolioApp/a1" requests metadata for "chartApp"
+    When "appId: portfolioApp, instanceId: a1" requests metadata for "chartApp"
     Then messaging will have outgoing posts
       | msg.payload.appMetadata.appId | to.instanceId | msg.matches_type       |
-      | chartApp                       | a1            | getAppMetadataResponse |
+      | chartApp                      | a1            | getAppMetadataResponse |
 
   Scenario: Looking up app metadata from missing app
-    When "portfolioApp/a1" requests metadata for "unknownApp"
+    When "appId: portfolioApp, instanceId: a1" requests metadata for "unknownApp"
     Then messaging will have outgoing posts
       | msg.payload.error    | to.instanceId | msg.type               |
       | TargetAppUnavailable | a1            | getAppMetadataResponse |
 
   Scenario: Looking up DesktopAgent metadata
-    When "portfolioApp/a1" requests info on the DesktopAgent
+    When "appId: portfolioApp, instanceId: a1" requests info on the DesktopAgent
     Then messaging will have outgoing posts
-      | msg.payload.implementationMetadata.provider | to.instanceId | msg.matches_type       |
-      | cucumber-provider                           | a1            | getInfoResponse        |
+      | msg.payload.implementationMetadata.provider | to.instanceId | msg.matches_type |
+      | cucumber-provider                           | a1            | getInfoResponse  |
 
   Scenario: Opening An App
-    When "portfolioApp/a1" opens app "chartApp"
+    When "appId: portfolioApp, instanceId: a1" opens app "chartApp"
     And "uuid-0" sends validate
     Then messaging will have outgoing posts
       | msg.matches_type                | msg.payload.appIdentifier.appId | msg.payload.appIdentifier.instanceId | msg.payload.appId | msg.payload.instanceId | to.instanceId | to.appId     |
@@ -38,7 +38,7 @@ Feature: Opening and Requesting App Details
       | openResponse                    | chartApp                        | uuid-0                               | {null}            | {null}                 | a1            | portfolioApp |
 
   Scenario: Chart App Reconnects
-    When "portfolioApp/a1" opens app "chartApp"
+    When "appId: portfolioApp, instanceId: a1" opens app "chartApp"
     And "uuid-0" sends validate
     And we wait for a period of "100" ms
     And "uuid-0" revalidates
@@ -49,10 +49,10 @@ Feature: Opening and Requesting App Details
       | WCP5ValidateAppIdentityResponse | {null}                          | {null}                               | chartApp          | uuid-0                 | uuid-0        | chartApp     |
 
   Scenario: Opening An App With Context
-    When "portfolioApp/a1" opens app "chartApp" with context data "fdc3.instrument"
+    When "appId: portfolioApp, instanceId: a1" opens app "chartApp" with context data "fdc3.instrument"
     And "uuid-0" sends validate
     And we wait for a period of "100" ms
-    And "chartApp/uuid-0" adds a context listener on "{null}" with type "fdc3.instrument"
+    And "appId: chartApp, instanceId: uuid-0" adds a context listener on "{null}" with type "fdc3.instrument"
     Then messaging will have outgoing posts
       | msg.matches_type                | msg.payload.channelId | msg.payload.context.type | to.instanceId | to.appId     |
       | WCP5ValidateAppIdentityResponse | {null}                | {null}                   | uuid-0        | chartApp     |
@@ -61,7 +61,7 @@ Feature: Opening and Requesting App Details
       | broadcastEvent                  | {null}                | fdc3.instrument          | uuid-0        | chartApp     |
 
   Scenario: Opening An App With Context, But No Listener Added
-    When "portfolioApp/a1" opens app "chartApp" with context data "fdc3.instrument"
+    When "appId: portfolioApp, instanceId: a1" opens app "chartApp" with context data "fdc3.instrument"
     And "uuid-0" sends validate
     And we wait for the listener timeout
     Then messaging will have outgoing posts
@@ -70,21 +70,21 @@ Feature: Opening and Requesting App Details
       | openResponse                    | AppTimeout        | a1            | portfolioApp |
 
   Scenario: Opening A Missing App
-    When "portfolioApp/a1" opens app "missingApp"
+    When "appId: portfolioApp, instanceId: a1" opens app "missingApp"
     Then messaging will have outgoing posts
       | msg.type     | msg.payload.error | to.instanceId |
       | openResponse | AppNotFound       | a1            |
 
   Scenario: Find Instances with No Apps Running
-    And "portfolioApp/a1" findsInstances of "App1"
+    And "appId: portfolioApp, instanceId: a1" findsInstances of "App1"
     Then messaging will have outgoing posts
       | msg.matches_type      | msg.payload.appIdentifiers.length | to.instanceId |
       | findInstancesResponse |                                 0 | a1            |
 
   Scenario: Find Instances with Some Apps Running
-    When "chartApp/b1" is opened with connection id "b1"
-    And "chartApp/b2" is opened with connection id "b2"
-    And "portfolioApp/a1" findsInstances of "chartApp"
+    When "appId: chartApp, instanceId: b1" is opened with connection id "b1"
+    And "appId: chartApp, instanceId: b2" is opened with connection id "b2"
+    And "appId: portfolioApp, instanceId: a1" findsInstances of "chartApp"
     And we wait for a period of "100" ms
     Then messaging will have outgoing posts
       | msg.matches_type      | msg.payload.appIdentifiers.length | msg.payload.appIdentifiers[0].instanceId | msg.payload.appIdentifiers[1].instanceId | to.instanceId | msg.payload.appId |
