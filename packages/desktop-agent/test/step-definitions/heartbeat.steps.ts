@@ -14,9 +14,9 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
   const instanceId = getAppInstanceId(world, appStr);
   const meta = createMeta(world, appStr);
   
-  let instance = world.appInstanceRegistry.getInstance(instanceId);
+  let instance = world.desktopAgent.getAppInstanceRegistry().getInstance(instanceId);
   if (!instance) {
-    world.appInstanceRegistry.createInstance({
+    world.desktopAgent.getAppInstanceRegistry().createInstance({
       instanceId,
       appId: meta.source.appId,
       metadata: {
@@ -25,7 +25,7 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
         type: 'web',
       },
     });
-    world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
+    world.desktopAgent.getAppInstanceRegistry().updateInstanceState(instanceId, AppInstanceState.CONNECTED);
   }
   
   return instanceId;
@@ -63,7 +63,7 @@ Given('{string} sends a goodbye message', async function (this: CustomWorld, app
 
 Then('I test the liveness of {string}', async function (this: CustomWorld, appStr: string) {
   const instanceId = getAppInstanceId(this, appStr);
-  const instance = this.appInstanceRegistry.getInstance(instanceId);
+  const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId);
   
   // Check if instance exists and is connected
   const out = instance && instance.state === AppInstanceState.CONNECTED;

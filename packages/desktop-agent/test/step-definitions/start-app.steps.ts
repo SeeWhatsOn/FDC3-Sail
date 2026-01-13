@@ -1,295 +1,310 @@
-import { DataTable, Then, When } from '@cucumber/cucumber';
-import { CustomWorld } from '../world';
-import { contextMap, createMeta, getAppInstanceId } from './generic.steps';
-import { matchData } from '../support/testing-utils';
-import { BrowserTypes } from '@finos/fdc3-schema';
-import { GetInfoRequest } from '@finos/fdc3-schema/dist/generated/api/BrowserTypes';
-import { AppInstanceState } from '../../src/core/state/app-instance-registry';
-import { cleanupDACPHandlers } from '../../src/core/handlers/dacp';
+import { DataTable, Then, When } from "@cucumber/cucumber"
+import { CustomWorld } from "../world"
+import { contextMap, createMeta, getAppInstanceId } from "./generic.steps"
+import { matchData } from "../support/testing-utils"
+import { BrowserTypes } from "@finos/fdc3-schema"
+import type { GetInfoRequest } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
+import { AppInstanceState } from "../../src/core/state/app-instance-registry"
+import { cleanupDACPHandlers } from "../../src/core/handlers/dacp"
+import type { DACPHandlerContext } from "../../src/core/handlers/types"
 
-type OpenRequest = BrowserTypes.OpenRequest;
-type GetAppMetadataRequest = BrowserTypes.GetAppMetadataRequest;
-type FindInstancesRequest = BrowserTypes.FindInstancesRequest;
-type WebConnectionProtocol4ValidateAppIdentity = BrowserTypes.WebConnectionProtocol4ValidateAppIdentity;
+type OpenRequest = BrowserTypes.OpenRequest
+type GetAppMetadataRequest = BrowserTypes.GetAppMetadataRequest
+type FindInstancesRequest = BrowserTypes.FindInstancesRequest
+type WebConnectionProtocol4ValidateAppIdentity =
+  BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-When('{string} is opened with connection id {string}', function (this: CustomWorld, app: string, uuid: string) {
-  const meta = createMeta(this, app);
-  const appId = meta.source.appId;
-  
-  // Store instance ID mapping
-  this.props.instances = this.props.instances || {};
-  this.props.instances[app] = uuid;
-  
-  // Create app instance in registry
-  const existing = this.appInstanceRegistry.getInstance(uuid);
-  if (!existing) {
-    this.appInstanceRegistry.createInstance({
-      instanceId: uuid,
-      appId,
-      metadata: {
+When(
+  "{string} is opened with connection id {string}",
+  function (this: CustomWorld, app: string, uuid: string) {
+    const meta = createMeta(this, app)
+    const appId = meta.source.appId
+
+    // Store instance ID mapping
+    this.props.instances = this.props.instances || {}
+    this.props.instances[app] = uuid
+
+    // Create app instance in registry
+    const existing = this.desktopAgent.getAppInstanceRegistry().getInstance(uuid)
+    if (!existing) {
+      this.desktopAgent.getAppInstanceRegistry().createInstance({
+        instanceId: uuid,
         appId,
-        name: appId,
-        type: 'web',
-      },
-    });
-  }
-  
-  // Set to connected state
-  this.appInstanceRegistry.updateInstanceState(uuid, AppInstanceState.CONNECTED);
-});
+        metadata: {
+          appId,
+          name: appId,
+        },
+      })
+    }
 
-When('{string} is closed', function (this: CustomWorld, app: string) {
-  const instanceId = getAppInstanceId(this, app);
-  
+    // Set to connected state
+    this.desktopAgent.getAppInstanceRegistry().updateInstanceState(uuid, AppInstanceState.CONNECTED)
+  }
+)
+
+When("{string} is closed", function (this: CustomWorld, app: string) {
+  const instanceId = getAppInstanceId(this, app)
+
   // Run cleanup handlers
-  const context = {
+  const context: DACPHandlerContext = {
     transport: this.mockTransport,
     instanceId,
-    appInstanceRegistry: this.appInstanceRegistry,
-    intentRegistry: this.intentRegistry,
-    channelContextRegistry: this.channelContextRegistry,
-    appChannelRegistry: this.appChannelRegistry,
-    userChannelRegistry: this.userChannelRegistry,
-    appDirectory: this.appDirectory,
+    appInstanceRegistry: this.desktopAgent.getAppInstanceRegistry(),
+    intentRegistry: this.desktopAgent.getIntentRegistry(),
+    channelContextRegistry: this.desktopAgent.getChannelContextRegistry(),
+    appChannelRegistry: this.desktopAgent.getAppChannelRegistry(),
+    userChannelRegistry: this.desktopAgent.getUserChannelRegistry(),
+    appDirectory: this.desktopAgent.getAppDirectory(),
     appLauncher: this.mockAppLauncher,
     requestIntentResolution: this.mockIntentResolver.createCallback(),
-  };
-  
-  cleanupDACPHandlers(context);
-  
-  // Update instance state
-  this.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.TERMINATED);
-});
-
-When('{string} sends validate', async function (this: CustomWorld, uuid: string) {
-  const instance = this.appInstanceRegistry.getInstance(uuid);
-  if (!instance) {
-    throw new Error(`Did not find app instance ${uuid}`);
   }
-  
+
+  cleanupDACPHandlers(context)
+
+  // Update instance state
+  this.desktopAgent
+    .getAppInstanceRegistry()
+    .updateInstanceState(instanceId, AppInstanceState.TERMINATED)
+})
+
+When("{string} sends validate", async function (this: CustomWorld, uuid: string) {
+  const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(uuid)
+  if (!instance) {
+    throw new Error(`Did not find app instance ${uuid}`)
+  }
+
   const message: WebConnectionProtocol4ValidateAppIdentity = {
-    type: 'WCP4ValidateAppIdentity',
+    type: "WCP4ValidateAppIdentity",
     meta: {
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
-      source: {
-        appId: instance.appId,
-        instanceId: uuid,
-      },
     },
     payload: {
-      actualUrl: 'something',
-      identityUrl: 'something',
+      actualUrl: "something",
+      identityUrl: "something",
     },
-  };
-  
-  // Set to connected state
-  this.appInstanceRegistry.updateInstanceState(uuid, AppInstanceState.CONNECTED);
-  
-  // Send message to DesktopAgent
-  await this.mockTransport.receiveMessage(message);
-});
-
-When('{string} revalidates', async function (this: CustomWorld, uuid: string) {
-  const instance = this.appInstanceRegistry.getInstance(uuid);
-  if (!instance) {
-    throw new Error(`Did not find app instance ${uuid}`);
   }
-  
+
+  // Set to connected state
+  this.desktopAgent.getAppInstanceRegistry().updateInstanceState(uuid, AppInstanceState.CONNECTED)
+
+  // Send message to DesktopAgent
+  await this.mockTransport.receiveMessage(message)
+})
+
+When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
+  const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(uuid)
+  if (!instance) {
+    throw new Error(`Did not find app instance ${uuid}`)
+  }
+
   const message: WebConnectionProtocol4ValidateAppIdentity = {
-    type: 'WCP4ValidateAppIdentity',
+    type: "WCP4ValidateAppIdentity",
     meta: {
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
-      source: {
-        appId: instance.appId,
-        instanceId: uuid,
-      },
     },
     payload: {
       instanceUuid: uuid,
-      actualUrl: 'something',
-      identityUrl: 'something',
+      actualUrl: "something",
+      identityUrl: "something",
     },
-  };
+  }
 
-  await this.mockTransport.receiveMessage(message);
-});
+  await this.mockTransport.receiveMessage(message)
+})
 
-Then('running apps will be', async function (this: CustomWorld, dataTable: DataTable) {
+Then("running apps will be", function (this: CustomWorld, dataTable: DataTable) {
   // Get all connected app instances
-  const instances = this.appInstanceRegistry.queryInstances({
+  const instances = this.desktopAgent.getAppInstanceRegistry().queryInstances({
     state: AppInstanceState.CONNECTED,
-  });
-  
+  })
+
   const apps = instances.map(instance => ({
     appId: instance.appId,
     instanceId: instance.instanceId,
-    state: 'connected',
-  }));
-  
-  matchData(this, apps, dataTable);
-});
+    state: "connected",
+  }))
 
-When('{string} opens app {string}', async function (this: CustomWorld, appStr: string, open: string) {
-  const from = createMeta(this, appStr);
-  const instanceId = getAppInstanceId(this, appStr);
-  
-  // Ensure instance exists in registry
-  let instance = this.appInstanceRegistry.getInstance(instanceId);
-  if (!instance) {
-    this.appInstanceRegistry.createInstance({
-      instanceId,
-      appId: from.source.appId,
-      metadata: {
-        appId: from.source.appId,
-        name: from.source.appId,
-        type: 'web',
-      },
-    });
-    this.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
-  }
-  
-  const message: OpenRequest = {
-    type: 'openRequest',
-    meta: from,
-    payload: {
-      app: {
-        appId: open,
-        desktopAgent: 'n/a',
-      },
-    },
-  };
-  
-  await this.mockTransport.receiveMessage(message);
-});
+  matchData(this, apps, dataTable)
+})
 
 When(
-  '{string} opens app {string} with context data {string}',
-  async function (this: CustomWorld, appStr: string, open: string, context: string) {
-    const from = createMeta(this, appStr);
-    const instanceId = getAppInstanceId(this, appStr);
-    
+  "{string} opens app {string}",
+  async function (this: CustomWorld, appStr: string, open: string) {
+    const from = createMeta(this, appStr)
+    const instanceId = getAppInstanceId(this, appStr)
+
     // Ensure instance exists in registry
-    let instance = this.appInstanceRegistry.getInstance(instanceId);
+    const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId)
     if (!instance) {
-      this.appInstanceRegistry.createInstance({
+      this.desktopAgent.getAppInstanceRegistry().createInstance({
         instanceId,
         appId: from.source.appId,
         metadata: {
           appId: from.source.appId,
           name: from.source.appId,
-          type: 'web',
         },
-      });
-      this.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
+      })
+      this.desktopAgent
+        .getAppInstanceRegistry()
+        .updateInstanceState(instanceId, AppInstanceState.CONNECTED)
     }
-    
+
     const message: OpenRequest = {
-      type: 'openRequest',
+      type: "openRequest",
       meta: from,
       payload: {
         app: {
           appId: open,
-          desktopAgent: 'n/a',
+          desktopAgent: "n/a",
+        },
+      },
+    }
+
+    await this.mockTransport.receiveMessage(message)
+  }
+)
+
+When(
+  "{string} opens app {string} with context data {string}",
+  async function (this: CustomWorld, appStr: string, open: string, context: string) {
+    const from = createMeta(this, appStr)
+    const instanceId = getAppInstanceId(this, appStr)
+
+    // Ensure instance exists in registry
+    const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId)
+    if (!instance) {
+      this.desktopAgent.getAppInstanceRegistry().createInstance({
+        instanceId,
+        appId: from.source.appId,
+        metadata: {
+          appId: from.source.appId,
+          name: from.source.appId,
+        },
+      })
+      this.desktopAgent
+        .getAppInstanceRegistry()
+        .updateInstanceState(instanceId, AppInstanceState.CONNECTED)
+    }
+
+    const message: OpenRequest = {
+      type: "openRequest",
+      meta: from,
+      payload: {
+        app: {
+          appId: open,
+          desktopAgent: "n/a",
         },
         context: contextMap[context],
       },
-    };
-    
-    await this.mockTransport.receiveMessage(message);
-  }
-);
+    }
 
-When('{string} requests metadata for {string}', async function (this: CustomWorld, appStr: string, open: string) {
-  const from = createMeta(this, appStr);
-  const instanceId = getAppInstanceId(this, appStr);
-  
-  // Ensure instance exists in registry
-  let instance = this.appInstanceRegistry.getInstance(instanceId);
-  if (!instance) {
-    this.appInstanceRegistry.createInstance({
-      instanceId,
-      appId: from.source.appId,
-      metadata: {
-        appId: from.source.appId,
-        name: from.source.appId,
-        type: 'web',
-      },
-    });
-    this.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
+    await this.mockTransport.receiveMessage(message)
   }
-  
-  const message: GetAppMetadataRequest = {
-    type: 'getAppMetadataRequest',
-    meta: from,
-    payload: {
-      app: {
-        appId: open,
-        desktopAgent: 'n/a',
-      },
-    },
-  };
-  
-  await this.mockTransport.receiveMessage(message);
-});
+)
 
-When('{string} requests info on the DesktopAgent', async function (this: CustomWorld, appStr: string) {
-  const from = createMeta(this, appStr);
-  const instanceId = getAppInstanceId(this, appStr);
-  
-  // Ensure instance exists in registry
-  let instance = this.appInstanceRegistry.getInstance(instanceId);
-  if (!instance) {
-    this.appInstanceRegistry.createInstance({
-      instanceId,
-      appId: from.source.appId,
-      metadata: {
-        appId: from.source.appId,
-        name: from.source.appId,
-        type: 'web',
-      },
-    });
-    this.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
-  }
-  
-  const message: GetInfoRequest = {
-    type: 'getInfoRequest',
-    meta: from,
-    payload: {},
-  };
-  
-  await this.mockTransport.receiveMessage(message);
-});
+When(
+  "{string} requests metadata for {string}",
+  async function (this: CustomWorld, appStr: string, open: string) {
+    const from = createMeta(this, appStr)
+    const instanceId = getAppInstanceId(this, appStr)
 
-When('{string} findsInstances of {string}', async function (this: CustomWorld, appStr: string, open: string) {
-  const from = createMeta(this, appStr);
-  const instanceId = getAppInstanceId(this, appStr);
-  
-  // Ensure instance exists in registry
-  let instance = this.appInstanceRegistry.getInstance(instanceId);
-  if (!instance) {
-    this.appInstanceRegistry.createInstance({
-      instanceId,
-      appId: from.source.appId,
-      metadata: {
+    // Ensure instance exists in registry
+    const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId)
+    if (!instance) {
+      this.desktopAgent.getAppInstanceRegistry().createInstance({
+        instanceId,
         appId: from.source.appId,
-        name: from.source.appId,
-        type: 'web',
+        metadata: {
+          appId: from.source.appId,
+          name: from.source.appId,
+        },
+      })
+      this.desktopAgent
+        .getAppInstanceRegistry()
+        .updateInstanceState(instanceId, AppInstanceState.CONNECTED)
+    }
+
+    const message: GetAppMetadataRequest = {
+      type: "getAppMetadataRequest",
+      meta: from,
+      payload: {
+        app: {
+          appId: open,
+          desktopAgent: "n/a",
+        },
       },
-    });
-    this.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
+    }
+
+    await this.mockTransport.receiveMessage(message)
   }
-  
-  const message: FindInstancesRequest = {
-    type: 'findInstancesRequest',
-    meta: from,
-    payload: {
-      app: {
-        appId: open,
+)
+
+When(
+  "{string} requests info on the DesktopAgent",
+  async function (this: CustomWorld, appStr: string) {
+    const from = createMeta(this, appStr)
+    const instanceId = getAppInstanceId(this, appStr)
+
+    // Ensure instance exists in registry
+    const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId)
+    if (!instance) {
+      this.desktopAgent.getAppInstanceRegistry().createInstance({
+        instanceId,
+        appId: from.source.appId,
+        metadata: {
+          appId: from.source.appId,
+          name: from.source.appId,
+        },
+      })
+      this.desktopAgent
+        .getAppInstanceRegistry()
+        .updateInstanceState(instanceId, AppInstanceState.CONNECTED)
+    }
+
+    const message: GetInfoRequest = {
+      type: "getInfoRequest",
+      meta: from,
+      payload: {},
+    }
+
+    await this.mockTransport.receiveMessage(message)
+  }
+)
+
+When(
+  "{string} findsInstances of {string}",
+  async function (this: CustomWorld, appStr: string, open: string) {
+    const from = createMeta(this, appStr)
+    const instanceId = getAppInstanceId(this, appStr)
+
+    // Ensure instance exists in registry
+    const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId)
+    if (!instance) {
+      this.desktopAgent.getAppInstanceRegistry().createInstance({
+        instanceId,
+        appId: from.source.appId,
+        metadata: {
+          appId: from.source.appId,
+          name: from.source.appId,
+        },
+      })
+      this.desktopAgent
+        .getAppInstanceRegistry()
+        .updateInstanceState(instanceId, AppInstanceState.CONNECTED)
+    }
+
+    const message: FindInstancesRequest = {
+      type: "findInstancesRequest",
+      meta: from,
+      payload: {
+        app: {
+          appId: open,
+        },
       },
-    },
-  };
-  
-  await this.mockTransport.receiveMessage(message);
-});
+    }
+
+    await this.mockTransport.receiveMessage(message)
+  }
+)
