@@ -8,13 +8,15 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
-import { WCPConnector } from "../wcp-connector"
+import { WCPConnector } from "../wcp/wcp-connector"
 import { createInMemoryTransportPair } from "../../transports/in-memory-transport"
 import type { Transport } from "../../core/interfaces/transport"
 import type { BrowserTypes } from "@finos/fdc3"
 
 // Helper to create a mock WCP1Hello message
-function createWCP1Hello(connectionAttemptUuid: string = "test-uuid"): BrowserTypes.WebConnectionProtocol1Hello {
+function createWCP1Hello(
+  connectionAttemptUuid: string = "test-uuid"
+): BrowserTypes.WebConnectionProtocol1Hello {
   return {
     type: "WCP1Hello",
     meta: {
@@ -148,10 +150,10 @@ describe("WCPConnector", () => {
 
   describe("WCP1Hello handling", () => {
     it("should handle WCP1Hello and send WCP3Handshake", () => {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>(resolve => {
         connector = new WCPConnector(desktopAgentTransport, {
-          getIntentResolverUrl: (instanceId) => `/resolver?id=${instanceId}`,
-          getChannelSelectorUrl: (instanceId) => `/selector?id=${instanceId}`,
+          getIntentResolverUrl: instanceId => `/resolver?id=${instanceId}`,
+          getChannelSelectorUrl: instanceId => `/selector?id=${instanceId}`,
           fdc3Version: "2.2",
         })
 
@@ -229,7 +231,7 @@ describe("WCPConnector", () => {
     })
 
     it("should create temporary instanceId for new connections", () => {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>(resolve => {
         connector = new WCPConnector(desktopAgentTransport)
         connector.start()
 
@@ -251,7 +253,7 @@ describe("WCPConnector", () => {
     })
 
     it("should use false for UI URLs when not provided", () => {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>(resolve => {
         connector = new WCPConnector(desktopAgentTransport)
         const postMessageSpy = vi.spyOn(window, "postMessage")
 
@@ -295,7 +297,11 @@ describe("WCPConnector", () => {
       window.dispatchEvent(event)
 
       // Simulate validation completing
-      connector.updateConnectionMetadata("temp-test-uuid", "actual-instance-123", "app.example.test")
+      connector.updateConnectionMetadata(
+        "temp-test-uuid",
+        "actual-instance-123",
+        "app.example.test"
+      )
 
       expect(appConnectedHandler).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -318,7 +324,7 @@ describe("WCPConnector", () => {
       const event = createMessageEvent(wcp1Hello)
       window.dispatchEvent(event)
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       // Get the connection and manually trigger disconnect
       // (In real usage, MessagePortTransport listens to port 'messageerror' and 'close' events)
@@ -350,10 +356,7 @@ describe("WCPConnector", () => {
       const event = createMessageEvent(wcp1Hello)
       window.dispatchEvent(event)
 
-      expect(handshakeFailedHandler).toHaveBeenCalledWith(
-        expect.any(Error),
-        "error-uuid"
-      )
+      expect(handshakeFailedHandler).toHaveBeenCalledWith(expect.any(Error), "error-uuid")
 
       // Restore MessageChannel
       global.MessageChannel = originalMessageChannel
@@ -408,7 +411,7 @@ describe("WCPConnector", () => {
       connector.start()
 
       const receivedMessages: unknown[] = []
-      desktopAgentTransport.onMessage((msg) => {
+      desktopAgentTransport.onMessage(msg => {
         receivedMessages.push(msg)
       })
 
@@ -417,7 +420,7 @@ describe("WCPConnector", () => {
       const event = createMessageEvent(wcp1Hello)
       window.dispatchEvent(event)
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       // Get the MessagePort from the connection
       const connections = connector.getConnections()
@@ -437,7 +440,7 @@ describe("WCPConnector", () => {
         },
       })
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       // The message should be routed (we can't easily verify receipt without access to port1)
       // But we can verify no errors were thrown
@@ -452,7 +455,7 @@ describe("WCPConnector", () => {
       const event = createMessageEvent(wcp1Hello)
       window.dispatchEvent(event)
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       connector.updateConnectionMetadata("temp-test-uuid", "actual-123", "app.test")
 
@@ -462,7 +465,7 @@ describe("WCPConnector", () => {
         meta: {},
       })
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       // No error should occur - message is simply ignored
       expect(connector.getConnection("actual-123")).toBeDefined()
@@ -484,7 +487,7 @@ describe("WCPConnector", () => {
         })
       }).not.toThrow()
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       // Connector should still be running
       expect(connector.getIsStarted()).toBe(true)
@@ -500,13 +503,17 @@ describe("WCPConnector", () => {
       const event = createMessageEvent(wcp1Hello)
       window.dispatchEvent(event)
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       // Verify temp connection exists
       expect(connector.getConnection("temp-test-uuid")).toBeDefined()
 
       // Update with validated info
-      connector.updateConnectionMetadata("temp-test-uuid", "actual-instance-123", "app.example.test")
+      connector.updateConnectionMetadata(
+        "temp-test-uuid",
+        "actual-instance-123",
+        "app.example.test"
+      )
 
       // Verify connection migrated to new instanceId
       expect(connector.getConnection("temp-test-uuid")).toBeUndefined()
@@ -525,7 +532,9 @@ describe("WCPConnector", () => {
       connector.updateConnectionMetadata("nonexistent-id", "actual-123", "app.test")
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Cannot update connection metadata: temp instanceId nonexistent-id not found")
+        expect.stringContaining(
+          "Cannot update connection metadata: temp instanceId nonexistent-id not found"
+        )
       )
 
       consoleWarnSpy.mockRestore()
@@ -539,7 +548,7 @@ describe("WCPConnector", () => {
       const event = createMessageEvent(wcp1Hello)
       window.dispatchEvent(event)
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       connector.updateConnectionMetadata("temp-test-uuid", "actual-123", "app.test")
 
@@ -551,7 +560,7 @@ describe("WCPConnector", () => {
         },
       })
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       // No error should occur
       expect(connector.getConnection("actual-123")).toBeDefined()
@@ -572,7 +581,7 @@ describe("WCPConnector", () => {
       window.dispatchEvent(createMessageEvent(wcp1Hello1))
       window.dispatchEvent(createMessageEvent(wcp1Hello2))
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       const connections = connector.getConnections()
       expect(connections).toHaveLength(2)
@@ -587,7 +596,7 @@ describe("WCPConnector", () => {
       const wcp1Hello = createWCP1Hello("test-uuid")
       window.dispatchEvent(createMessageEvent(wcp1Hello))
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       const connection = connector.getConnection("temp-test-uuid")
       expect(connection).toBeDefined()
@@ -618,7 +627,7 @@ describe("WCPConnector", () => {
       window.dispatchEvent(createMessageEvent(createWCP1Hello("uuid-1")))
       window.dispatchEvent(createMessageEvent(createWCP1Hello("uuid-2")))
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       expect(connector.getConnections()).toHaveLength(2)
 
@@ -634,7 +643,7 @@ describe("WCPConnector", () => {
       const wcp1Hello = createWCP1Hello("test-uuid")
       window.dispatchEvent(createMessageEvent(wcp1Hello))
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       expect(connector.getConnection("temp-test-uuid")).toBeDefined()
 
@@ -663,7 +672,7 @@ describe("WCPConnector", () => {
       }).not.toThrow()
 
       // Wait for async message handling
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       // Connector should still be running
       expect(connector.getIsStarted()).toBe(true)

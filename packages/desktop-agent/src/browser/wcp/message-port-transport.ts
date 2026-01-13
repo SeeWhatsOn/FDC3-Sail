@@ -8,7 +8,7 @@
  * browser environments.
  */
 
-import type { Transport, MessageHandler, DisconnectHandler } from "../core/interfaces/transport"
+import type { Transport, MessageHandler, DisconnectHandler } from "../../core/interfaces/transport"
 
 /**
  * Transport implementation using MessagePort API.
@@ -176,7 +176,7 @@ export class MessagePortTransport implements Transport {
       return
     }
 
-    const message = event.data
+    const message = event.data as unknown
     const messageType =
       message && typeof message === "object" && "type" in message
         ? (message as { type: unknown }).type

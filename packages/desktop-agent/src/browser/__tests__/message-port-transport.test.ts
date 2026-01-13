@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { MessagePortTransport } from "../message-port-transport"
+import { MessagePortTransport } from "../wcp/message-port-transport"
 
 describe("MessagePortTransport", () => {
   let channel: MessageChannel
@@ -73,13 +73,13 @@ describe("MessagePortTransport", () => {
 
   describe("onMessage", () => {
     it("should register message handler", () => {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>(resolve => {
         const transport1 = new MessagePortTransport(port1)
         const transport2 = new MessagePortTransport(port2)
 
         const testMessage = { type: "test", payload: "hello" }
 
-        transport2.onMessage((msg) => {
+        transport2.onMessage(msg => {
           expect(msg).toEqual(testMessage)
           resolve()
         })
@@ -89,18 +89,14 @@ describe("MessagePortTransport", () => {
     })
 
     it("should handle multiple messages", () => {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>(resolve => {
         const transport1 = new MessagePortTransport(port1)
         const transport2 = new MessagePortTransport(port2)
 
         const messages: unknown[] = []
-        const expectedMessages = [
-          { type: "msg1" },
-          { type: "msg2" },
-          { type: "msg3" }
-        ]
+        const expectedMessages = [{ type: "msg1" }, { type: "msg2" }, { type: "msg3" }]
 
-        transport2.onMessage((msg) => {
+        transport2.onMessage(msg => {
           messages.push(msg)
           if (messages.length === expectedMessages.length) {
             expect(messages).toEqual(expectedMessages)
@@ -127,10 +123,7 @@ describe("MessagePortTransport", () => {
       // Give time for message to be processed
       await new Promise(resolve => setTimeout(resolve, 50))
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error in message handler:",
-        expect.any(Error)
-      )
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error in message handler:", expect.any(Error))
       consoleErrorSpy.mockRestore()
     })
 
@@ -241,7 +234,7 @@ describe("MessagePortTransport", () => {
 
   describe("bidirectional communication", () => {
     it("should support bidirectional message exchange", () => {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>(resolve => {
         const transport1 = new MessagePortTransport(port1)
         const transport2 = new MessagePortTransport(port2)
 
@@ -250,18 +243,24 @@ describe("MessagePortTransport", () => {
 
         const checkComplete = () => {
           if (messages1.length === 2 && messages2.length === 2) {
-            expect(messages1).toEqual([{ from: 2, count: 1 }, { from: 2, count: 2 }])
-            expect(messages2).toEqual([{ from: 1, count: 1 }, { from: 1, count: 2 }])
+            expect(messages1).toEqual([
+              { from: 2, count: 1 },
+              { from: 2, count: 2 },
+            ])
+            expect(messages2).toEqual([
+              { from: 1, count: 1 },
+              { from: 1, count: 2 },
+            ])
             resolve()
           }
         }
 
-        transport1.onMessage((msg) => {
+        transport1.onMessage(msg => {
           messages1.push(msg)
           checkComplete()
         })
 
-        transport2.onMessage((msg) => {
+        transport2.onMessage(msg => {
           messages2.push(msg)
           checkComplete()
         })
@@ -276,7 +275,7 @@ describe("MessagePortTransport", () => {
 
   describe("structured clone behavior", () => {
     it("should clone complex objects", () => {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>(resolve => {
         const transport1 = new MessagePortTransport(port1)
         const transport2 = new MessagePortTransport(port2)
 
@@ -285,9 +284,9 @@ describe("MessagePortTransport", () => {
             deep: {
               value: "test",
               array: [1, 2, 3],
-              date: new Date("2024-01-01")
-            }
-          }
+              date: new Date("2024-01-01"),
+            },
+          },
         }
 
         transport2.onMessage((msg: any) => {
@@ -303,7 +302,7 @@ describe("MessagePortTransport", () => {
     })
 
     it("should prevent shared references", () => {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>(resolve => {
         const transport1 = new MessagePortTransport(port1)
         const transport2 = new MessagePortTransport(port2)
 

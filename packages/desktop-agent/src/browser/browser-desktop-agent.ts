@@ -12,8 +12,8 @@
 
 import { DesktopAgent } from "../core/desktop-agent"
 import type { DesktopAgentConfig } from "../core/desktop-agent"
-import { WCPConnector } from "./wcp-connector"
-import type { WCPConnectorOptions } from "./wcp-connector"
+import { WCPConnector } from "./wcp/wcp-connector"
+import type { WCPConnectorOptions } from "./wcp/wcp-connector"
 import type { AppLauncher } from "../core/interfaces/app-launcher"
 import type { AppInstanceRegistry } from "../core/state/app-instance-registry"
 import type { IntentRegistry } from "../core/state/intent-registry"
@@ -148,14 +148,14 @@ export function createBrowserDesktopAgent(
   // Wire up WCPConnector's requestIntentResolution for UI-based intent resolution
   const daConfig: DesktopAgentConfig = {
     transport: daTransport,
-    appLauncher: options?.appLauncher as any,
-    appInstanceRegistry: options?.registries?.appInstanceRegistry as any,
-    intentRegistry: options?.registries?.intentRegistry as any,
-    channelContextRegistry: options?.registries?.channelContextRegistry as any,
-    appChannelRegistry: options?.registries?.appChannelRegistry as any,
-    userChannelRegistry: options?.registries?.userChannelRegistry as any,
+    appLauncher: options?.appLauncher as AppLauncher,
+    appInstanceRegistry: options?.registries?.appInstanceRegistry as AppInstanceRegistry,
+    intentRegistry: options?.registries?.intentRegistry as IntentRegistry,
+    channelContextRegistry: options?.registries?.channelContextRegistry as ChannelContextRegistry,
+    appChannelRegistry: options?.registries?.appChannelRegistry as AppChannelRegistry,
+    userChannelRegistry: options?.registries?.userChannelRegistry as UserChannelRegistry,
     // Enable UI-based intent resolution via WCPConnector
-    requestIntentResolution: (request) => wcpConnector.requestIntentResolution(request),
+    requestIntentResolution: request => wcpConnector.requestIntentResolution(request),
   }
 
   // Create Desktop Agent
@@ -165,19 +165,19 @@ export function createBrowserDesktopAgent(
   if (options?.appDirectories && options.appDirectories.length > 0) {
     const appDirectory = desktopAgent.getAppDirectory()
     for (const directory of options.appDirectories) {
-      appDirectory.loadDirectory(directory)
+      void appDirectory.loadDirectory(directory)
     }
   }
 
   // Set up event forwarding from WCP Connector to Desktop Agent
   // When WCP Connector establishes a connection, we need to notify Desktop Agent
-  wcpConnector.on("appConnected", (metadata) => {
+  wcpConnector.on("appConnected", metadata => {
     // Desktop Agent will have already processed WCP4 validation via transport
     // This event is for external observers (e.g., UI updates)
     console.log(`App connected: ${metadata.appId} (${metadata.instanceId})`)
   })
 
-  wcpConnector.on("appDisconnected", (instanceId) => {
+  wcpConnector.on("appDisconnected", instanceId => {
     // Explicitly trigger desktop agent cleanup for this instance
     // This ensures the instance is removed from all registries (including intent registry)
     // so that the intent resolver no longer sees it as a running instance

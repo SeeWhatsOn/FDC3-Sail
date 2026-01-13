@@ -78,7 +78,7 @@ export { createBrowserDesktopAgent } from "./browser-desktop-agent"
 export type { BrowserDesktopAgentOptions, BrowserDesktopAgentResult } from "./browser-desktop-agent"
 
 // Core browser components (for advanced usage)
-export { WCPConnector } from "./wcp-connector"
+export { WCPConnector } from "./wcp/wcp-connector"
 export type {
   WCPConnectorEvents,
   WCPConnectorOptions,
@@ -86,9 +86,9 @@ export type {
   IntentHandler,
   IntentResolverPayload,
   IntentResolverResponse,
-} from "./wcp-connector"
+} from "./wcp/wcp-connector"
 
-export { MessagePortTransport } from "./message-port-transport"
+export { MessagePortTransport } from "./wcp/message-port-transport"
 
 // Re-export core Desktop Agent for convenience
 // (This is safe - it's already in the core package)

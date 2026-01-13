@@ -12,13 +12,76 @@
  * - Manage app connection lifecycle
  */
 
-import type { Transport } from "../core/interfaces/transport"
+import type { Transport } from "../../core/interfaces/transport"
 import type { BrowserTypes } from "@finos/fdc3"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { MessagePortTransport } from "./message-port-transport"
+import type {
+  AppRequestMessage,
+  AgentResponseMessage,
+  AgentEventMessage,
+  WebConnectionProtocolMessage,
+} from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 
 type WCP1HelloMessage = BrowserTypes.WebConnectionProtocol1Hello
 type WCP3HandshakeMessage = BrowserTypes.WebConnectionProtocol3Handshake
+
+/**
+ * Union type for all DACP and WCP messages
+ * Uses official FDC3 schema types for full type safety
+ */
+type DACPMessage =
+  | AppRequestMessage
+  | AgentResponseMessage
+  | AgentEventMessage
+  | WebConnectionProtocolMessage
+
+/**
+ * Type guard to check if a message has the basic structure of a DACP message
+ *
+ * Note: Type guard parameters MUST be 'unknown' per TypeScript type narrowing requirements.
+ * This is the correct pattern for validating untrusted external input.
+ */
+function isDACPMessage(message: unknown): message is DACPMessage {
+  return (
+    message !== null &&
+    typeof message === "object" &&
+    "type" in message &&
+    typeof message.type === "string" &&
+    "meta" in message &&
+    message.meta !== null &&
+    typeof message.meta === "object"
+  )
+}
+
+/**
+ * Type guard to check if a message is from an app (request or WCP message)
+ *
+ * Note: Type guard parameters MUST be 'unknown' per TypeScript type narrowing requirements.
+ */
+function isAppMessage(
+  message: unknown
+): message is AppRequestMessage | WebConnectionProtocolMessage {
+  return (
+    isDACPMessage(message) && (message.type.endsWith("Request") || message.type.startsWith("WCP"))
+  )
+}
+
+/**
+ * Type guard to check if a message is from Desktop Agent (response or event)
+ *
+ * Note: Type guard parameters MUST be 'unknown' per TypeScript type narrowing requirements.
+ */
+function isAgentMessage(
+  message: unknown
+): message is AgentResponseMessage | AgentEventMessage | WebConnectionProtocolMessage {
+  return (
+    isDACPMessage(message) &&
+    (message.type.endsWith("Response") ||
+      message.type.endsWith("Event") ||
+      message.type.startsWith("WCP"))
+  )
+}
 
 /**
  * Configuration options for WCPConnector
@@ -53,6 +116,25 @@ export interface WCPConnectorOptions {
    * Defaults to 5000ms.
    */
   handshakeTimeout?: number
+
+  /**
+   * Grace period for app disconnection after WCP6Goodbye (ms).
+   * Allows reconnection during false-positive pagehide events (e.g., tab moves).
+   * Defaults to 2000ms.
+   */
+  disconnectGracePeriod?: number
+
+  /**
+   * Timeout for intent resolution UI response (ms).
+   * Defaults to 60000ms (60 seconds).
+   */
+  intentResolutionTimeout?: number
+
+  /**
+   * Enable debug logging.
+   * Defaults to false.
+   */
+  debug?: boolean
 }
 
 /**
@@ -90,10 +172,10 @@ export interface AppConnectionMetadata {
   connectedAt: Date
 
   /**
-   * Panel ID from the iframe's name attribute (if set by Sail UI)
-   * Used to link connections to dockview panels
+   * Optional identifier from the iframe's name attribute.
+   * Can be used by hosting applications to correlate connections with UI elements.
    */
-  panelId?: string
+  hostIdentifier?: string
 }
 
 /**
@@ -205,7 +287,7 @@ export class WCPConnector {
   private messagePortTransports = new Map<string, MessagePortTransport>()
   // Reverse lookup: transport → instanceId (updated after WCP5 migration)
   private transportToInstanceId = new Map<MessagePortTransport, string>()
-  private eventHandlers = new Map<keyof WCPConnectorEvents, Set<Function>>()
+  private eventHandlers: { [K in keyof WCPConnectorEvents]?: Set<WCPConnectorEvents[K]> } = {}
   // Store bound handler reference for proper event listener cleanup
   private boundHandleWindowMessage = this.handleWindowMessage.bind(this)
   // Pending intent resolution requests awaiting UI response
@@ -229,6 +311,8 @@ export class WCPConnector {
     string,
     { metadata: AppConnectionMetadata; disconnectedAt: number }
   >()
+  // Cleanup interval for stale disconnected entries
+  private cleanupInterval?: ReturnType<typeof setInterval>
 
   /**
    * Create a new WCP Connector
@@ -243,10 +327,25 @@ export class WCPConnector {
       getChannelSelectorUrl: options?.getChannelSelectorUrl ?? (() => false),
       fdc3Version: options?.fdc3Version ?? "2.2",
       handshakeTimeout: options?.handshakeTimeout ?? 5000,
+      disconnectGracePeriod: options?.disconnectGracePeriod ?? 2000,
+      intentResolutionTimeout: options?.intentResolutionTimeout ?? 60000,
+      debug: options?.debug ?? false,
     }
 
     // Listen to Desktop Agent transport for messages to route to apps
     this.desktopAgentTransport.onMessage(this.handleDesktopAgentMessage.bind(this))
+  }
+
+  /**
+   * Internal debug logging method
+   */
+  private log(
+    message: string,
+    data?: Record<string, string | number | boolean | null | undefined>
+  ): void {
+    if (this.options.debug) {
+      console.log(`[WCPConnector] ${message}`, data)
+    }
   }
 
   /**
@@ -262,6 +361,12 @@ export class WCPConnector {
     }
 
     window.addEventListener("message", this.boundHandleWindowMessage)
+
+    // Start periodic cleanup of stale disconnected entries (every 30 seconds)
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupStaleDisconnects()
+    }, 30000)
+
     this.isStarted = true
   }
 
@@ -275,6 +380,12 @@ export class WCPConnector {
 
     if (typeof window !== "undefined") {
       window.removeEventListener("message", this.boundHandleWindowMessage)
+    }
+
+    // Clear cleanup interval
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval)
+      this.cleanupInterval = undefined
     }
 
     // Disconnect all apps
@@ -295,10 +406,13 @@ export class WCPConnector {
     event: EventName,
     handler: WCPConnectorEvents[EventName]
   ): void {
-    if (!this.eventHandlers.has(event)) {
-      this.eventHandlers.set(event, new Set())
+    if (!this.eventHandlers[event]) {
+      // Type assertion needed: TypeScript can't infer the relationship between
+      // generic EventName and the mapped type in eventHandlers
+      ;(this.eventHandlers as Record<EventName, Set<WCPConnectorEvents[EventName]>>)[event] =
+        new Set()
     }
-    this.eventHandlers.get(event)!.add(handler)
+    this.eventHandlers[event]!.add(handler)
   }
 
   /**
@@ -311,7 +425,7 @@ export class WCPConnector {
     event: EventName,
     handler: WCPConnectorEvents[EventName]
   ): void {
-    this.eventHandlers.get(event)?.delete(handler)
+    this.eventHandlers[event]?.delete(handler)
   }
 
   /**
@@ -321,14 +435,14 @@ export class WCPConnector {
     event: EventName,
     ...args: Parameters<WCPConnectorEvents[EventName]>
   ): void {
-    const handlers = this.eventHandlers.get(event)
+    const handlers = this.eventHandlers[event]
     if (!handlers) {
       return
     }
 
     for (const handler of handlers) {
       try {
-        handler(...args)
+        ;(handler as (...args: Parameters<WCPConnectorEvents[EventName]>) => void)(...args)
       } catch (error) {
         console.error(`Error in ${event} handler:`, error)
       }
@@ -345,7 +459,7 @@ export class WCPConnector {
     }
 
     try {
-      this.handleWCP1Hello(event)
+      this.handleWCP1Hello(event as MessageEvent<WCP1HelloMessage>)
     } catch (error) {
       console.error("Error handling WCP1Hello:", error)
       this.emit("handshakeFailed", error as Error, event.data.meta.connectionAttemptUuid)
@@ -387,21 +501,21 @@ export class WCPConnector {
     // Bridge app transport <-> Desktop Agent transport
     this.bridgeTransports(instanceId, appTransport)
 
-    // Extract panelId from iframe's name attribute (set by FDC3IframePanel)
-    // This enables reliable panel-to-connection linking in the UI
+    // Extract host identifier from iframe's name attribute
+    // This enables hosting applications to correlate connections with UI elements
     // Note: For cross-origin iframes, accessing window.name will throw SecurityError
     // so we wrap it in try-catch and gracefully fall back to undefined
     const sourceWindow = event.source as Window
-    let panelId: string | undefined
+    let hostIdentifier: string | undefined
     try {
-      panelId = sourceWindow.name || undefined
+      hostIdentifier = sourceWindow.name || undefined
     } catch (error) {
       // Cross-origin iframe - cannot access window.name due to same-origin policy
       // This is expected for apps hosted on different origins
-      // Connection will still work, just without panel linking
+      // Connection will still work, just without host identifier
       if (error instanceof Error && error.name === "SecurityError") {
-        console.debug(
-          `[WCPConnector] Cannot access window.name for cross-origin iframe from ${event.origin}, panelId will be undefined`
+        this.log(
+          `Cannot access window.name for cross-origin iframe from ${event.origin}, hostIdentifier will be undefined`
         )
       } else {
         // Re-throw unexpected errors
@@ -417,7 +531,7 @@ export class WCPConnector {
       source: sourceWindow,
       port: channel.port2,
       connectedAt: new Date(),
-      panelId,
+      hostIdentifier,
     }
     this.connections.set(instanceId, metadata)
     this.messagePortTransports.set(instanceId, appTransport)
@@ -458,6 +572,87 @@ export class WCPConnector {
   }
 
   /**
+   * Enrich message with source instanceId for Desktop Agent routing
+   * Adds the instanceId to meta.source.instanceId per FDC3 spec
+   */
+  private enrichMessageWithSource(
+    message: AppRequestMessage | WebConnectionProtocolMessage,
+    instanceId: string
+  ): AppRequestMessage | WebConnectionProtocolMessage {
+    if ("meta" in message && message.meta && "source" in message.meta) {
+      return {
+        ...message,
+        meta: {
+          ...message.meta,
+          source: {
+            appId: (message.meta as { source?: { appId: string } }).source?.appId,
+            instanceId,
+          },
+        },
+      } as AppRequestMessage | WebConnectionProtocolMessage
+    }
+    return message
+  }
+
+  /**
+   * Handle WCP6Goodbye message from app
+   * Implements delayed disconnect with grace period for reconnection
+   */
+  private handleWCP6Goodbye(instanceId: string): void {
+    this.log(`Received WCP6Goodbye from app instance ${instanceId}`)
+
+    // NOTE: WCP6Goodbye is sent by FDC3 get-agent library on pagehide events with persisted=false.
+    // This includes false positives like tab moves, navigation, etc. where the app is still active.
+    //
+    // Current approach: Delay disconnect to allow reconnection within grace period.
+    // This handles false-positive pagehide events from tab moves/navigation.
+    //
+    // Alternative approach (TODO): Consider using heartbeat-based detection instead.
+    // Heartbeat already runs (30s interval, 60s timeout) and can detect actual disconnections.
+    // Trade-offs:
+    //   - Heartbeat: More accurate (only disconnects on actual failure), but slower (up to 60s delay)
+    //   - Delayed WCP6Goodbye: Faster response (configurable), but requires grace period for false positives
+    //   - Hybrid: Could ignore WCP6Goodbye and rely solely on heartbeat timeout for cleanup
+
+    // Cancel any existing pending disconnect
+    const existingTimeout = this.pendingDisconnects.get(instanceId)
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+    }
+
+    const connection = this.connections.get(instanceId)
+    const timeoutId = setTimeout(() => {
+      this.pendingDisconnects.delete(instanceId)
+
+      // Store in recently disconnected for potential restoration
+      if (connection) {
+        this.recentlyDisconnected.set(instanceId, {
+          metadata: connection,
+          disconnectedAt: Date.now(),
+        })
+      }
+
+      // App is gracefully disconnecting - clean up
+      this.disconnectApp(instanceId)
+    }, this.options.disconnectGracePeriod)
+
+    this.pendingDisconnects.set(instanceId, timeoutId)
+  }
+
+  /**
+   * Clean up stale entries from recentlyDisconnected Map
+   * Called periodically to prevent memory leaks
+   */
+  private cleanupStaleDisconnects(): void {
+    const fiveSecondsAgo = Date.now() - 5000
+    for (const [id, entry] of this.recentlyDisconnected.entries()) {
+      if (entry.disconnectedAt < fiveSecondsAgo) {
+        this.recentlyDisconnected.delete(id)
+      }
+    }
+  }
+
+  /**
    * Bridge messages between app MessagePort and Desktop Agent transport
    *
    * This sets up bidirectional message routing:
@@ -471,9 +666,10 @@ export class WCPConnector {
    */
   private bridgeTransports(_initialInstanceId: string, appTransport: MessagePortTransport): void {
     // App → Desktop Agent: Enrich messages with source instanceId
+    // Note: message is unknown from Transport.onMessage by design - validates untrusted input
     appTransport.onMessage((message: unknown) => {
-      // Type guard: ensure message has expected structure
-      if (!message || typeof message !== "object") {
+      // Type guard: validate message structure using type guard
+      if (!isAppMessage(message)) {
         console.warn("Received invalid message from app, ignoring", message)
         return
       }
@@ -486,78 +682,13 @@ export class WCPConnector {
       }
 
       // Handle WCP6Goodbye from app (FDC3 standard: app sends goodbye when closing)
-      const messageObj = message as Record<string, unknown>
-      const messageType = messageObj.type as string | undefined
-      if (messageType === "WCP6Goodbye") {
-        console.log(`[WCPConnector] Received WCP6Goodbye from app instance ${currentInstanceId}`)
-
-        // NOTE: WCP6Goodbye is sent by FDC3 get-agent library on pagehide events with persisted=false.
-        // This includes false positives like tab moves, navigation, etc. where the app is still active.
-        //
-        // Current approach: Delay disconnect to allow reconnection within grace period.
-        // This handles false-positive pagehide events from tab moves/navigation.
-        //
-        // Alternative approach (TODO): Consider using heartbeat-based detection instead.
-        // Heartbeat already runs (30s interval, 60s timeout) and can detect actual disconnections.
-        // Trade-offs:
-        //   - Heartbeat: More accurate (only disconnects on actual failure), but slower (up to 60s delay)
-        //   - Delayed WCP6Goodbye: Faster response (2s), but requires grace period for false positives
-        //   - Hybrid: Could ignore WCP6Goodbye and rely solely on heartbeat timeout for cleanup
-        //
-        // TODO: Evaluate using heartbeat-based disconnection detection instead of WCP6Goodbye.
-        //       If heartbeat fails, the instance will be cleaned up automatically. This would
-        //       eliminate false-positive disconnects from pagehide events, but would delay
-        //       cleanup of actual disconnections by up to 60 seconds.
-
-        // Delay disconnect to allow for reconnection (e.g., after tab moves trigger pagehide events)
-        // If a reconnection happens via WCP4ValidateAppIdentity within the grace period,
-        // the pending disconnect will be cancelled and the instance restored
-        const DISCONNECT_DELAY_MS = 2000 // 2 second grace period for reconnection
-        const existingTimeout = this.pendingDisconnects.get(currentInstanceId)
-        if (existingTimeout) {
-          // Already have a pending disconnect, extend it
-          clearTimeout(existingTimeout)
-        }
-
-        const connection = this.connections.get(currentInstanceId)
-        const timeoutId = setTimeout(() => {
-          this.pendingDisconnects.delete(currentInstanceId)
-
-          // Store in recently disconnected for potential restoration
-          if (connection) {
-            this.recentlyDisconnected.set(currentInstanceId, {
-              metadata: connection,
-              disconnectedAt: Date.now(),
-            })
-            // Clean up old entries (older than 5 seconds)
-            const fiveSecondsAgo = Date.now() - 5000
-            for (const [id, entry] of this.recentlyDisconnected.entries()) {
-              if (entry.disconnectedAt < fiveSecondsAgo) {
-                this.recentlyDisconnected.delete(id)
-              }
-            }
-          }
-
-          // App is gracefully disconnecting - clean up
-          this.disconnectApp(currentInstanceId)
-        }, DISCONNECT_DELAY_MS)
-
-        this.pendingDisconnects.set(currentInstanceId, timeoutId)
+      if (message.type === "WCP6Goodbye") {
+        this.handleWCP6Goodbye(currentInstanceId)
         return
       }
 
       // Add source metadata to message for Desktop Agent routing
-      const enrichedMessage = {
-        ...(message as Record<string, unknown>),
-        meta: {
-          ...((message as Record<string, unknown>).meta as Record<string, unknown> | undefined),
-          source: {
-            ...(((message as Record<string, unknown>).meta as Record<string, unknown> | undefined)
-              ?.source as Record<string, unknown> | undefined),
-            instanceId: currentInstanceId,
-          },
-        },
-      }
+      const enrichedMessage = this.enrichMessageWithSource(message, currentInstanceId)
 
       // Forward enriched message to Desktop Agent
       this.desktopAgentTransport.send(enrichedMessage)
@@ -585,40 +716,56 @@ export class WCPConnector {
    * - Only routes to connected transports
    * - Intercepts WCP5ValidateAppIdentityResponse to migrate temp→actual instanceId
    */
+  /**
+   * Handle messages from Desktop Agent transport
+   * Route to appropriate app based on destination metadata
+   *
+   * Note: message is unknown from Transport.onMessage by design - validates untrusted input
+   */
   private handleDesktopAgentMessage(message: unknown): void {
-    // Type guard: ensure message has expected structure
-    if (!message || typeof message !== "object") {
+    // Type guard: validate message structure using type guard
+    if (!isAgentMessage(message)) {
       console.warn("Received invalid message from Desktop Agent, ignoring", message)
       return
     }
 
-    const messageObj = message as Record<string, unknown>
-    const messageType = messageObj.type as string | undefined
-    const meta = messageObj.meta as Record<string, unknown> | undefined
-    const destination = meta?.destination as Record<string, unknown> | undefined
-
     // Extract destination instanceId from message metadata
-    const destinationId = destination?.instanceId as string | undefined
+    let destinationId: string | undefined
+    if (
+      "destination" in message.meta &&
+      message.meta.destination &&
+      typeof message.meta.destination === "object" &&
+      "instanceId" in message.meta.destination
+    ) {
+      destinationId = message.meta.destination.instanceId as string | undefined
+    }
 
-    console.log("[WCPConnector] Received message from Desktop Agent", {
-      messageType,
-      destinationId,
+    this.log("Received message from Desktop Agent", {
+      messageType: message.type,
+      destinationId: destinationId ?? "",
       hasDestination: !!destinationId,
-      availableTransports: Array.from(this.messagePortTransports.keys()),
     })
 
     if (!destinationId) {
       // Broadcast message or Desktop Agent internal message - not routed to apps
-      console.log("[WCPConnector] No destinationId, skipping routing", { messageType })
+      this.log("No destinationId, skipping routing", { messageType: message.type })
       return
     }
 
     // Intercept WCP5ValidateAppIdentityResponse to migrate temp→actual instanceId
     // This happens after Desktop Agent validates app identity via WCP4
-    if (messageType === "WCP5ValidateAppIdentityResponse") {
-      const payload = messageObj.payload as Record<string, unknown> | undefined
-      const actualInstanceId = payload?.instanceId as string | undefined
-      const appId = payload?.appId as string | undefined
+    if (message.type === "WCP5ValidateAppIdentityResponse") {
+      let actualInstanceId: string | undefined
+      let appId: string | undefined
+
+      if ("payload" in message && message.payload && typeof message.payload === "object") {
+        if ("instanceId" in message.payload && typeof message.payload.instanceId === "string") {
+          actualInstanceId = message.payload.instanceId
+        }
+        if ("appId" in message.payload && typeof message.payload.appId === "string") {
+          appId = message.payload.appId
+        }
+      }
 
       if (actualInstanceId && appId && destinationId !== actualInstanceId) {
         // Migrate from temp instanceId to actual instanceId
@@ -638,14 +785,29 @@ export class WCPConnector {
     }
 
     // Intercept channelChangedEvent to emit UI event
-    // This allows the UI to update panel titles with channel indicator
-    if (messageType === "channelChangedEvent") {
-      const payload = messageObj.payload as Record<string, unknown> | undefined
-      const channelId = payload?.channelId as string | null | undefined
-      // Extract the instanceId from the event payload's identity field
-      // This is the instance whose channel changed, not the destination (which could be a subscriber)
-      const identity = payload?.identity as { instanceId?: string } | undefined
-      const changedInstanceId = identity?.instanceId
+    // This allows the UI to update channel indicators
+    if (message.type === "channelChangedEvent") {
+      let channelId: string | null | undefined
+      let changedInstanceId: string | undefined
+
+      if ("payload" in message && message.payload && typeof message.payload === "object") {
+        if ("channelId" in message.payload) {
+          const ch = message.payload.channelId
+          channelId = ch === null || typeof ch === "string" ? ch : undefined
+        }
+        if (
+          "identity" in message.payload &&
+          message.payload.identity &&
+          typeof message.payload.identity === "object"
+        ) {
+          if (
+            "instanceId" in message.payload.identity &&
+            typeof message.payload.identity.instanceId === "string"
+          ) {
+            changedInstanceId = message.payload.identity.instanceId
+          }
+        }
+      }
 
       if (changedInstanceId) {
         // Only emit if we have a valid instanceId
@@ -656,40 +818,87 @@ export class WCPConnector {
     // Route to specific app if transport exists and is connected
     const appTransport = this.messagePortTransports.get(destinationId)
     if (appTransport && appTransport.isConnected()) {
-      const payload = messageObj.payload as Record<string, unknown> | undefined
-      console.log("[WCPConnector] Routing message to app", {
+      // Extract metadata fields for logging
+      const logMetadata: Record<string, string | number | boolean | null | undefined> = {
         destinationId,
-        messageType,
-        eventUuid: meta?.eventUuid,
-        requestUuid: meta?.requestUuid,
-        responseUuid: meta?.responseUuid,
-        ...(messageType === "intentEvent" && {
-          intent: payload?.intent,
-          contextType: (payload?.context as Record<string, unknown>)?.type,
-          contextHasName: typeof (payload?.context as Record<string, unknown>)?.name === "string",
-          contextPayload: JSON.stringify(payload?.context),
-        }),
-        ...(messageType === "broadcastEvent" && {
-          channelId: payload?.channelId,
-          contextType: (payload?.context as Record<string, unknown>)?.type,
-          contextId: (payload?.context as Record<string, unknown>)?.id,
-          contextPayload: JSON.stringify(payload?.context),
-        }),
-      })
+        messageType: message.type,
+      }
+
+      if ("meta" in message && message.meta && typeof message.meta === "object") {
+        if ("eventUuid" in message.meta && typeof message.meta.eventUuid === "string") {
+          logMetadata.eventUuid = message.meta.eventUuid
+        }
+        if ("requestUuid" in message.meta && typeof message.meta.requestUuid === "string") {
+          logMetadata.requestUuid = message.meta.requestUuid
+        }
+        if ("responseUuid" in message.meta && typeof message.meta.responseUuid === "string") {
+          logMetadata.responseUuid = message.meta.responseUuid
+        }
+      }
+
+      // Add intent-specific logging
+      if (
+        message.type === "intentEvent" &&
+        "payload" in message &&
+        message.payload &&
+        typeof message.payload === "object"
+      ) {
+        if ("intent" in message.payload && typeof message.payload.intent === "string") {
+          logMetadata.intent = message.payload.intent
+        }
+        if (
+          "context" in message.payload &&
+          message.payload.context &&
+          typeof message.payload.context === "object"
+        ) {
+          if (
+            "type" in message.payload.context &&
+            typeof message.payload.context.type === "string"
+          ) {
+            logMetadata.contextType = message.payload.context.type
+          }
+          if ("name" in message.payload.context) {
+            logMetadata.contextHasName = typeof message.payload.context.name === "string"
+          }
+        }
+      }
+
+      // Add broadcast-specific logging
+      if (
+        message.type === "broadcastEvent" &&
+        "payload" in message &&
+        message.payload &&
+        typeof message.payload === "object"
+      ) {
+        if ("channelId" in message.payload && typeof message.payload.channelId === "string") {
+          logMetadata.channelId = message.payload.channelId
+        }
+        if (
+          "context" in message.payload &&
+          message.payload.context &&
+          typeof message.payload.context === "object"
+        ) {
+          if (
+            "type" in message.payload.context &&
+            typeof message.payload.context.type === "string"
+          ) {
+            logMetadata.contextType = message.payload.context.type
+          }
+        }
+      }
+
+      this.log("Routing message to app", logMetadata)
+
       try {
         appTransport.send(message)
-        console.log("[WCPConnector] Message sent successfully to app transport", {
+        this.log("Message sent successfully to app transport", {
           destinationId,
-          messageType,
-          ...(messageType === "intentEvent" && {
-            intent: payload?.intent,
-            contextHasName: typeof (payload?.context as Record<string, unknown>)?.name === "string",
-          }),
+          messageType: message.type,
         })
       } catch (error) {
         console.error("[WCPConnector] Error sending message to app transport", {
           destinationId,
-          messageType,
+          messageType: message.type,
           error,
         })
       }
@@ -697,10 +906,9 @@ export class WCPConnector {
       console.warn(
         `[WCPConnector] Cannot route message to app ${destinationId}: transport not found or disconnected`,
         {
-          messageType,
+          messageType: message.type,
           hasTransport: !!appTransport,
           isConnected: appTransport?.isConnected(),
-          availableInstanceIds: Array.from(this.messagePortTransports.keys()),
         }
       )
     }
@@ -717,15 +925,15 @@ export class WCPConnector {
     if (appTransport && appTransport.isConnected()) {
       // Send WCP6Goodbye message to the app before disconnecting
       try {
-        const goodbyeMessage = {
-          type: "WCP6Goodbye" as const,
+        const goodbyeMessage: WebConnectionProtocolMessage = {
+          type: "WCP6Goodbye",
           payload: undefined,
           meta: {
             timestamp: new Date(),
           },
         }
         appTransport.send(goodbyeMessage)
-        console.log(`[WCPConnector] Sent WCP6Goodbye to instance ${instanceId}`)
+        this.log(`Sent WCP6Goodbye to instance ${instanceId}`)
       } catch (error) {
         console.warn(`[WCPConnector] Failed to send WCP6Goodbye to instance ${instanceId}:`, error)
         // Continue with disconnection even if goodbye fails
@@ -774,16 +982,16 @@ export class WCPConnector {
     if (pendingDisconnect) {
       clearTimeout(pendingDisconnect)
       this.pendingDisconnects.delete(actualInstanceId)
-      console.log(
-        `[WCPConnector] Cancelled pending disconnect for instance ${actualInstanceId} - reconnection detected`
+      this.log(
+        `Cancelled pending disconnect for instance ${actualInstanceId} - reconnection detected`
       )
     }
 
     // Check if this is a reconnection to a recently disconnected instance
     const recentlyDisconnectedEntry = this.recentlyDisconnected.get(actualInstanceId)
     if (recentlyDisconnectedEntry) {
-      console.log(
-        `[WCPConnector] Restoring recently disconnected instance ${actualInstanceId} - reconnection within grace period`
+      this.log(
+        `Restoring recently disconnected instance ${actualInstanceId} - reconnection within grace period`
       )
       // Restore the original metadata
       Object.assign(metadata, recentlyDisconnectedEntry.metadata)
@@ -845,7 +1053,7 @@ export class WCPConnector {
    * with the user's choice.
    *
    * @param payload - Intent resolution request with available handlers
-   * @param timeoutMs - Timeout in milliseconds (default: 60000)
+   * @param timeoutMs - Timeout in milliseconds (defaults to configured intentResolutionTimeout)
    * @returns Promise that resolves with the user's selection or rejects on timeout/cancel
    *
    * @example
@@ -869,14 +1077,16 @@ export class WCPConnector {
    */
   requestIntentResolution(
     payload: IntentResolverPayload,
-    timeoutMs: number = 60000
+    timeoutMs?: number
   ): Promise<IntentResolverResponse> {
+    const timeout = timeoutMs ?? this.options.intentResolutionTimeout
+
     return new Promise((resolve, reject) => {
       // Set up timeout to reject if UI doesn't respond
       const timeoutId = setTimeout(() => {
         this.pendingIntentResolutions.delete(payload.requestId)
-        reject(new Error(`Intent resolution timed out after ${timeoutMs}ms`))
-      }, timeoutMs)
+        reject(new Error(`Intent resolution timed out after ${timeout}ms`))
+      }, timeout)
 
       // Store pending resolution
       this.pendingIntentResolutions.set(payload.requestId, {
