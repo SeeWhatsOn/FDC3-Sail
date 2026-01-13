@@ -7,6 +7,7 @@
  */
 
 import { BasicDirectory } from "@finos/fdc3-web-impl/dist/src/directory/BasicDirectory"
+import type { DirectoryApp, DirectoryData } from "./types"
 
 // Helper to check if we're in a Node.js environment
 function isNodeEnvironment(): boolean {
@@ -34,39 +35,6 @@ async function getFsModules(): Promise<{
   } catch {
     return null
   }
-}
-// TODO: Import DirectoryApp from @apps/sail-socket when implementing
-// For now, using a minimal interface to avoid circular dependencies
-interface DirectoryApp {
-  appId: string
-  title?: string
-  name?: string
-  type?: string
-  details?: {
-    url?: string
-    path?: string
-    alias?: string
-    arguments?: string
-    [key: string]: unknown
-  }
-  icons?: { src: string }[]
-  interop?: {
-    intents?: {
-      listensFor?: Record<string, { contexts: string[] }>
-      [key: string]: unknown
-    }
-    [key: string]: unknown
-  }
-}
-
-/** Type definition for web application details in directory entries */
-interface WebAppDetails {
-  url: string
-}
-
-/** Expected structure of directory data from remote sources or local files */
-interface DirectoryData {
-  applications: DirectoryApp[]
 }
 
 /**

@@ -328,7 +328,7 @@ async function notifyContextListeners(
           type: broadcastEventWithRouting.type,
           hasPayload: !!broadcastEventWithRouting.payload,
           hasContext: !!broadcastEventWithRouting.payload?.context,
-          contextType: broadcastEventWithRouting.payload?.context?.type,
+          contextType: broadcastEventWithRouting.payload?.context,
         })
 
         logger.debug("Broadcast event sent to listener", {
