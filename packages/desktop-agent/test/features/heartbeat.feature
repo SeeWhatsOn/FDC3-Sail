@@ -5,7 +5,7 @@ Feature: Heartbeat Messages Between Apps and Server
     And "portfolioApp" is an app with the following intents
       | Intent Name   | Context Type      | Result Type |
       | ViewPortfolio | fdc3.portfolio     | {empty}     |
-    And A newly instantiated FDC3 Server with heartbeat checking
+    And A newly instantiated desktop agent with heartbeat checking
 
   Scenario: App Responds to heartbeats
     When "portfolioApp/a1" is opened with connection id "a1"

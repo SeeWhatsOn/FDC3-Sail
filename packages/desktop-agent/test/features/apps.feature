@@ -8,7 +8,7 @@ Feature: Opening and Requesting App Details
     And "chartApp" is an app with the following intents
       | Intent Name | Context Type      | Result Type |
       | ViewChart   | fdc3.portfolio    | fdc3.chart  |
-    And A newly instantiated FDC3 Server
+    And A newly instantiated desktop agent
     And "portfolioApp/a1" is opened with connection id "a1"
 
   Scenario: Looking up app metadata

@@ -4,7 +4,7 @@ Feature: Relaying Private Channel Broadcast messages
       This creates user channels "one", "two" and "three"
 
     Given schemas loaded
-    And A newly instantiated FDC3 Server
+    And A newly instantiated desktop agent
     And "App1/a1" is opened with connection id "a1"
     And "App2/a2" is opened with connection id "a2"
 

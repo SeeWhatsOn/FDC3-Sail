@@ -4,7 +4,7 @@ Feature: App Disconnection and Cleanup
     Given schemas loaded
 
   Scenario: Apps that disconnect and reconnect to the DA should receive one copy of a broadcast message from an app channel as state was cleaned up
-    Given A newly instantiated FDC3 Server
+    Given A newly instantiated desktop agent
     When "App1/a1" is opened with connection id "a1"
     And "App2/a2" is opened with connection id "a2"
     And "App2/a2" adds a context listener on "one" with type "fdc3.instrument"
@@ -34,7 +34,7 @@ Feature: App Disconnection and Cleanup
     And "App1" is an app with the following intents
       | Intent Name | Context Type    | Result Type |
       | viewNews    | fdc3.instrument | {empty}     |
-    And A newly instantiated FDC3 Server
+    And A newly instantiated desktop agent
     When "PortfolioApp/l1" is opened with connection id "l1"
     And "App1/a1" is opened with connection id "a1"
     And "PortfolioApp/l1" registers an intent listener for "ViewPortfolio"
@@ -50,7 +50,7 @@ Feature: App Disconnection and Cleanup
       | intentResultResponse      | {null}             | uuid10               | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
 
 Scenario: Disconnecting from the DA when subscribed to a private channel channel sends unsubscribe and disconnect messages
-    And A newly instantiated FDC3 Server
+    And A newly instantiated desktop agent
     And "App1/a1" is opened with connection id "a1"
     And "App2/a2" is opened with connection id "a2"
     And "App2/a1" creates a private channel

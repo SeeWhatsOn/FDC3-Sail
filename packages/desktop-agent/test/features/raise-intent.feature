@@ -15,7 +15,7 @@ Feature: Raising Intents
       | uniqueIntent | fdc3.instrument   | {empty}     |
     And "unusedApp" is an app with the following intents
       | Intent Name | Context Type | Result Type |
-    And A newly instantiated FDC3 Server
+    And A newly instantiated desktop agent
     And "uniqueIntentApp/c1" is opened with connection id "c1"
     And "uniqueIntentApp/c1" registers an intent listener for "uniqueIntent"
     And "App1/a1" is opened with connection id "a1"

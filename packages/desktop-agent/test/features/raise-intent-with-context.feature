@@ -12,7 +12,7 @@ Feature: Raising Intents For Context
       | ViewChart   | fdc3.portfolio    | {empty}     |
     And "unusedApp" is an app with the following intents
       | Intent Name | Context Type | Result Type |
-    And A newly instantiated FDC3 Server
+    And A newly instantiated desktop agent
     And "App1/a1" is opened with connection id "a1"
     And "listenerApp/b1" is opened with connection id "b1"
     And "listenerApp/b1" registers an intent listener for "ViewPortfolio"

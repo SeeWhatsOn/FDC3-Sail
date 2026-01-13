@@ -8,7 +8,7 @@ Feature: Intent Results Are Correctly Delivered
     And "App1" is an app with the following intents
       | Intent Name | Context Type    | Result Type |
       | viewNews    | fdc3.instrument | {empty}     |
-    And A newly instantiated FDC3 Server
+    And A newly instantiated desktop agent
     And "PortfolioApp/l1" is opened with connection id "l1"
     And "App1/a1" is opened with connection id "a1"
     And "PortfolioApp/l1" registers an intent listener for "ViewPortfolio"

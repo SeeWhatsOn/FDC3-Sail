@@ -55,7 +55,7 @@ export class CustomWorld extends World {
 
   /**
    * Initialize the DesktopAgent for a test scenario.
-   * Called by setup steps (e.g., "Given a newly instantiated FDC3 Server")
+   * Called by setup steps (e.g., "Given a newly instantiated desktop agent")
    */
   initializeDesktopAgent(
     apps: DirectoryApp[], 

@@ -124,14 +124,34 @@ function defaultChannels() {
 
 /**
  * Helper to create message metadata from app identifier string.
- * Supports both "appId" and "appId/instanceId" formats.
+ * Supports FDC3 AppIdentifier-like formats:
+ * - "appId" (instanceId optional)
+ * - "appId: App1, instanceId: a1" (explicit FDC3 AppIdentifier format)
+ * - "App1/a1" (legacy format, still supported for backwards compatibility)
  */
 export function createMeta(cw: CustomWorld, appStr: string) {
   let app: AppIdentifier
-  if (appStr.includes("/")) {
+
+  // Parse FDC3 AppIdentifier format: "appId: App1, instanceId: a1"
+  if (appStr.includes("appId:") && appStr.includes("instanceId:")) {
+    const appIdMatch = appStr.match(/appId:\s*([^,]+)/)
+    const instanceIdMatch = appStr.match(/instanceId:\s*(.+)/)
+    const appId = appIdMatch?.[1]?.trim()
+    const instanceId = instanceIdMatch?.[1]?.trim()
+
+    if (appId) {
+      app = instanceId ? { appId, instanceId } : { appId }
+    } else {
+      throw new Error(`Invalid AppIdentifier format: ${appStr}`)
+    }
+  }
+  // Legacy format: "App1/a1"
+  else if (appStr.includes("/")) {
     const [appId, instanceId] = appStr.split("/")
     app = { appId, instanceId }
-  } else {
+  }
+  // Simple format: just appId
+  else {
     app = { appId: appStr }
   }
 
@@ -145,6 +165,10 @@ export function createMeta(cw: CustomWorld, appStr: string) {
 /**
  * Helper to parse app identifier string and get/create instance ID.
  * Returns the instance ID that should be used for this app.
+ * Supports FDC3 AppIdentifier-like formats:
+ * - "appId: App1, instanceId: a1" (explicit FDC3 AppIdentifier format)
+ * - "App1/a1" (legacy format, still supported for backwards compatibility)
+ * - "appId" (will generate instance ID)
  */
 export function getAppInstanceId(cw: CustomWorld, appStr: string): string {
   // Check if instance ID is already stored in props
@@ -152,8 +176,17 @@ export function getAppInstanceId(cw: CustomWorld, appStr: string): string {
     cw.props.instances = {}
   }
 
-  // If appStr includes instance ID (app/instance format), use it
-  if (appStr.includes("/")) {
+  // Parse FDC3 AppIdentifier format: "appId: App1, instanceId: a1"
+  if (appStr.includes("appId:") && appStr.includes("instanceId:")) {
+    const instanceIdMatch = appStr.match(/instanceId:\s*(.+)/)
+    const instanceId = instanceIdMatch?.[1]?.trim()
+    if (instanceId) {
+      cw.props.instances[appStr] = instanceId
+      return instanceId
+    }
+  }
+  // Legacy format: "App1/a1"
+  else if (appStr.includes("/")) {
     const [appId, instanceId] = appStr.split("/")
     cw.props.instances[appStr] = instanceId
     return instanceId
@@ -170,7 +203,7 @@ export function getAppInstanceId(cw: CustomWorld, appStr: string): string {
   return instanceId
 }
 
-Given("A newly instantiated FDC3 Server", function (this: CustomWorld) {
+Given("A newly instantiated desktop agent", function (this: CustomWorld) {
   const apps = this.props[APP_FIELD] ?? []
 
   // Initialize DesktopAgent with clean architecture
@@ -180,7 +213,7 @@ Given("A newly instantiated FDC3 Server", function (this: CustomWorld) {
   })
 })
 
-Given("A newly instantiated FDC3 Server with heartbeat checking", function (this: CustomWorld) {
+Given("A newly instantiated desktop agent with heartbeat checking", function (this: CustomWorld) {
   const apps = this.props[APP_FIELD] ?? []
 
   // Initialize DesktopAgent
