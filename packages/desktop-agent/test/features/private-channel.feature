@@ -1,9 +1,7 @@
 Feature: Relaying Private Channel Broadcast messages
 
   Background:
-    Given schemas loaded
-    And A newly instantiated desktop agent
-    And "appId: App1, instanceId: a1" is opened with connection id "a1"
+    Given "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
     And "appId: App2, instanceId: a1" creates a private channel
     #TODO: have a2 retrieve the private channel by raising an intent - its currently using a1 reference to the channel

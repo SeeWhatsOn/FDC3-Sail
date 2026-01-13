@@ -1,6 +1,7 @@
-import { Given, When } from "@cucumber/cucumber"
+import { Before, Given, When } from "@cucumber/cucumber"
 import { CustomWorld } from "../world"
 import type { Context, AppIdentifier } from "@finos/fdc3"
+import { TEST_USER_CHANNELS } from "../support/channel-data"
 
 export const APP_FIELD = "apps"
 
@@ -93,35 +94,6 @@ export const contextMap: Record<string, Context> = {
   },
 }
 
-function defaultChannels() {
-  return [
-    {
-      id: "one",
-      type: "user" as const,
-      displayMetadata: {
-        name: "One Channel",
-        color: "orange",
-      },
-    },
-    {
-      id: "two",
-      type: "user" as const,
-      displayMetadata: {
-        name: "Two Channel",
-        color: "skyblue",
-      },
-    },
-    {
-      id: "three",
-      type: "user" as const,
-      displayMetadata: {
-        name: "Three Channel",
-        color: "ochre",
-      },
-    },
-  ]
-}
-
 /**
  * Helper to create message metadata from app identifier string.
  * Supports FDC3 AppIdentifier-like formats:
@@ -185,12 +157,6 @@ export function getAppInstanceId(cw: CustomWorld, appStr: string): string {
       return instanceId
     }
   }
-  // Legacy format: "App1/a1"
-  else if (appStr.includes("/")) {
-    const [appId, instanceId] = appStr.split("/")
-    cw.props.instances[appStr] = instanceId
-    return instanceId
-  }
 
   // Otherwise, look up or generate instance ID for this app
   if (cw.props.instances[appStr]) {
@@ -203,25 +169,29 @@ export function getAppInstanceId(cw: CustomWorld, appStr: string): string {
   return instanceId
 }
 
-Given("A newly instantiated desktop agent", function (this: CustomWorld) {
+// Create a desktop agent by default before each scenario
+// Scenarios can call "A desktop agent" again to reset with different apps
+Before(function (this: CustomWorld) {
   const apps = this.props[APP_FIELD] ?? []
 
   // Initialize DesktopAgent with clean architecture
-  this.initializeDesktopAgent(apps, defaultChannels(), {
-    intentTimeoutMs: 2000,
-    appLaunchTimeoutMs: 2000,
-  })
+  this.initializeDesktopAgent(apps, TEST_USER_CHANNELS)
 })
 
-Given("A newly instantiated desktop agent with heartbeat checking", function (this: CustomWorld) {
+Given("A desktop agent", function (this: CustomWorld) {
+  const apps = this.props[APP_FIELD] ?? []
+
+  // Reinitialize DesktopAgent (useful when apps are defined after the Before hook runs,
+  // or when you need a fresh desktop agent mid-scenario)
+  this.initializeDesktopAgent(apps, TEST_USER_CHANNELS)
+})
+
+Given("A desktop agent with heartbeat checking", function (this: CustomWorld) {
   const apps = this.props[APP_FIELD] ?? []
 
   // Initialize DesktopAgent
   // TODO: Implement heartbeat checking in new architecture
-  this.initializeDesktopAgent(apps, defaultChannels(), {
-    intentTimeoutMs: 2000,
-    appLaunchTimeoutMs: 2000,
-  })
+  this.initializeDesktopAgent(apps, TEST_USER_CHANNELS)
 })
 
 When("I shutdown the server", function (this: CustomWorld) {
@@ -229,9 +199,9 @@ When("I shutdown the server", function (this: CustomWorld) {
   this.mockTransport.disconnect()
 })
 
-Given("schemas loaded", function (this: CustomWorld) {
-  // Mark that schemas are loaded
-  this.props["schemas_loaded"] = true
+Given("I refer to {string} as {string}", function (this: CustomWorld, value: string, name: string) {
+  // Store a value with a name so it can be referenced later as {name}
+  this.props[name] = value
 })
 
 When("we wait for a period of {string} ms", async function (this: CustomWorld, ms: string) {

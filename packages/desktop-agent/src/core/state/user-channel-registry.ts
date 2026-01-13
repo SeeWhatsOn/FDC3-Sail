@@ -9,7 +9,7 @@ type UserChannel = BrowserTypes.Channel
 /**
  * Default FDC3 recommended user channels based on the FDC3 specification
  */
-const DEFAULT_USER_CHANNELS: UserChannel[] = [
+export const DEFAULT_USER_CHANNELS: UserChannel[] = [
   {
     id: "fdc3.channel.1",
     type: "user",

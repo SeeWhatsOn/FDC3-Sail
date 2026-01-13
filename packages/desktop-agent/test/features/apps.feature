@@ -1,14 +1,13 @@
 Feature: Opening and Requesting App Details
 
   Background:
-    Given schemas loaded
-    And "portfolioApp" is an app with the following intents
+    Given "portfolioApp" is an app with the following intents
       | Intent Name   | Context Type   | Result Type |
       | ViewPortfolio | fdc3.portfolio | {empty}     |
     And "chartApp" is an app with the following intents
       | Intent Name | Context Type   | Result Type |
       | ViewChart   | fdc3.portfolio | fdc3.chart  |
-    And A newly instantiated desktop agent
+    And A desktop agent
     And "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"
 
   Scenario: Looking up app metadata

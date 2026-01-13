@@ -4,15 +4,16 @@
  * Replacement for @finos/testing package functions used in step definitions.
  */
 
-import { DataTable, Given, Then, When } from "@cucumber/cucumber"
+import { DataTable } from "@cucumber/cucumber"
 import { CustomWorld } from "../world"
 import expect from "expect"
+import { get } from "lodash"
 
 /**
  * Handle resolution of special values in test data.
  * Resolves {null}, {empty}, etc. to actual values.
  */
-export function handleResolve(value: string, world: CustomWorld): any {
+export function handleResolve(value: string, world: CustomWorld): string | null | undefined {
   if (!value) return value
 
   // Handle special markers
@@ -22,10 +23,41 @@ export function handleResolve(value: string, world: CustomWorld): any {
   // Check if it's a reference to a prop in the world
   if (value.startsWith("{") && value.endsWith("}")) {
     const propName = value.slice(1, -1)
-    return world.props[propName]
+    return world.props[propName] as string | null | undefined
   }
 
   return value
+}
+
+/**
+ * Assert a field value matches the expected value.
+ * Handles special cases like matches_type fields and null/undefined values.
+ */
+function assertFieldValue(
+  actualValue: unknown,
+  expectedValue: string | null | undefined,
+  fieldName: string
+): void {
+  // Handle pattern matching for "matches_type" fields
+  if (fieldName.includes("matches_type") || fieldName.includes("matches_")) {
+    expect(actualValue).toBeTruthy()
+    return
+  }
+
+  // Handle null/undefined expectations
+  if (expectedValue === null) {
+    expect(actualValue).toBeNull()
+    return
+  }
+
+  if (expectedValue === undefined) {
+    // {empty} or {undefined} - don't assert specific value
+    // This allows optional fields in the verification
+    return
+  }
+
+  // Standard equality check
+  expect(actualValue).toEqual(expectedValue)
 }
 
 /**
@@ -33,75 +65,25 @@ export function handleResolve(value: string, world: CustomWorld): any {
  * Supports nested property access and special value handling.
  * Uses Jest's expect for powerful assertions and great error messages.
  */
-export function matchData(world: CustomWorld, actual: any[], dataTable: DataTable): void {
+export function matchData(world: CustomWorld, actual: unknown[], dataTable: DataTable): void {
   const expected = dataTable.hashes()
 
-  // Check length with Jest's built-in matcher
   expect(actual).toHaveLength(expected.length)
 
-  // Check each row
-  for (let i = 0; i < expected.length; i++) {
-    const expectedRow = expected[i]
-    const actualRow = actual[i]
+  expected.forEach((expectedRow, rowIndex) => {
+    const actualRow = actual[rowIndex]
 
-    // Check each column in the row
-    for (const [key, expectedValue] of Object.entries(expectedRow)) {
-      const resolvedExpected = handleResolve(expectedValue as string, world)
-
-      // Handle nested property access (e.g., "msg.type", "msg.payload.error")
-      const actualValue = getNestedProperty(actualRow, key)
+    Object.entries(expectedRow).forEach(([key, expectedValue]) => {
+      const resolvedExpected = handleResolve(expectedValue, world)
+      const actualValue = get(actualRow, key) as unknown
 
       try {
-        // Handle pattern matching for "matches_type" fields
-        if (key.includes("matches_type") || key.includes("matches_")) {
-          // For match fields, just check if it exists/is truthy
-          expect(actualValue).toBeTruthy()
-        } else if (resolvedExpected === null) {
-          expect(actualValue).toBeNull()
-        } else if (resolvedExpected === undefined) {
-          // {empty} or {undefined} - don't assert specific value
-          // This allows optional fields in the verification
-        } else {
-          expect(actualValue).toEqual(resolvedExpected)
-        }
+        assertFieldValue(actualValue, resolvedExpected, key)
       } catch (error) {
-        // Add context to Jest's error message
-        const enhancedError = new Error(
-          `Row ${i}, field "${key}": ${error instanceof Error ? error.message : String(error)}`
+        throw new Error(
+          `Row ${rowIndex}, field "${key}": ${error instanceof Error ? error.message : String(error)}`
         )
-        throw enhancedError
       }
-    }
-  }
-}
-
-/**
- * Get nested property from object using dot notation.
- * E.g., getNestedProperty(obj, "msg.payload.error") returns obj.msg.payload.error
- */
-function getNestedProperty(obj: any, path: string): any {
-  const parts = path.split(".")
-  let current = obj
-
-  for (const part of parts) {
-    if (current === null || current === undefined) {
-      return undefined
-    }
-
-    // Handle array access like "apps[0]"
-    const arrayMatch = part.match(/^(.+)\[(\d+)\]$/)
-    if (arrayMatch) {
-      const [, prop, index] = arrayMatch
-      current = current[prop]
-      if (Array.isArray(current)) {
-        current = current[parseInt(index, 10)]
-      } else {
-        return undefined
-      }
-    } else {
-      current = current[part]
-    }
-  }
-
-  return current
+    })
+  })
 }

@@ -23,5 +23,6 @@
     "**/node_modules/**": true,
     "**/dist/**": true,
     "**/.git/**": true
-  }
+  },
+  "cucumber.glue": ["packages/desktop-agent/test/step-definitions/**/*.ts"]
 }

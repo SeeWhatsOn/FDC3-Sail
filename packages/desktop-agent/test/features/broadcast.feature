@@ -1,9 +1,7 @@
 Feature: Relaying Broadcast messages
 
   Background:
-    Given schemas loaded
-    And A newly instantiated desktop agent
-    And "appId: App1, instanceId: a1" is opened with connection id "a1"
+    Given "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
 
   Scenario: Broadcast message to no-one

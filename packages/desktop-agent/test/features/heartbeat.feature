@@ -1,11 +1,10 @@
 Feature: Heartbeat Messages Between Apps and Server
 
   Background:
-    Given schemas loaded
-    And "portfolioApp" is an app with the following intents
+    Given "portfolioApp" is an app with the following intents
       | Intent Name   | Context Type   | Result Type |
       | ViewPortfolio | fdc3.portfolio | {empty}     |
-    And A newly instantiated desktop agent with heartbeat checking
+    And A desktop agent with heartbeat checking
 
   Scenario: App Responds to heartbeats
     When "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"

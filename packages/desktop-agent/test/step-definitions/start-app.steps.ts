@@ -14,6 +14,38 @@ type FindInstancesRequest = BrowserTypes.FindInstancesRequest
 type WebConnectionProtocol4ValidateAppIdentity =
   BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
+/**
+ * Test fixture helper: Ensures an app instance exists before sending DACP messages.
+ * 
+ * This simulates an app that has already connected via WCP protocol.
+ * In real scenarios, apps connect via WCP4ValidateAppIdentity before sending DACP messages.
+ * For tests, we directly create the instance to set up the test fixture.
+ * 
+ * @param world - The Cucumber world context
+ * @param appStr - The app identifier string (e.g., "App1" or "appId: App1, instanceId: a1")
+ * @returns The instanceId that was created or already existed
+ */
+function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string {
+  const meta = createMeta(world, appStr)
+  const instanceId = getAppInstanceId(world, appStr)
+
+  const existing = world.desktopAgent.getAppInstanceRegistry().getInstance(instanceId)
+  if (!existing) {
+    // Test fixture setup: Create connected instance directly
+    world.desktopAgent.getAppInstanceRegistry().createInstance({
+      instanceId,
+      appId: meta.source.appId,
+      metadata: {
+        appId: meta.source.appId,
+        name: meta.source.appId,
+      },
+    })
+    world.desktopAgent.getAppInstanceRegistry().updateInstanceState(instanceId, AppInstanceState.CONNECTED)
+  }
+
+  return instanceId
+}
+
 When(
   "{string} is opened with connection id {string}",
   function (this: CustomWorld, app: string, uuid: string) {
@@ -24,7 +56,8 @@ When(
     this.props.instances = this.props.instances || {}
     this.props.instances[app] = uuid
 
-    // Create app instance in registry
+    // Test fixture setup: Create app instance directly in registry
+    // This simulates an app that has already connected via WCP protocol
     const existing = this.desktopAgent.getAppInstanceRegistry().getInstance(uuid)
     if (!existing) {
       this.desktopAgent.getAppInstanceRegistry().createInstance({
@@ -115,7 +148,12 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
 })
 
 Then("running apps will be", function (this: CustomWorld, dataTable: DataTable) {
-  // Get all connected app instances
+  // Assertion: Verify internal state of connected app instances
+  // 
+  // Note: This queries internal state directly rather than via DACP because:
+  // 1. There's no FDC3 API to list "all running apps" (findInstances requires an appId)
+  // 2. This is an integration test verifying the Desktop Agent's internal state management
+  // 3. This validates that operations (like app launch, cleanup) correctly updated the registry
   const instances = this.desktopAgent.getAppInstanceRegistry().queryInstances({
     state: AppInstanceState.CONNECTED,
   })
@@ -132,25 +170,12 @@ Then("running apps will be", function (this: CustomWorld, dataTable: DataTable) 
 When(
   "{string} opens app {string}",
   async function (this: CustomWorld, appStr: string, open: string) {
+    // Test fixture setup: Ensure calling app instance exists
+    ensureAppInstanceForTesting(this, appStr)
+    
     const from = createMeta(this, appStr)
-    const instanceId = getAppInstanceId(this, appStr)
 
-    // Ensure instance exists in registry
-    const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId)
-    if (!instance) {
-      this.desktopAgent.getAppInstanceRegistry().createInstance({
-        instanceId,
-        appId: from.source.appId,
-        metadata: {
-          appId: from.source.appId,
-          name: from.source.appId,
-        },
-      })
-      this.desktopAgent
-        .getAppInstanceRegistry()
-        .updateInstanceState(instanceId, AppInstanceState.CONNECTED)
-    }
-
+    // Send DACP openRequest message (this is what we're testing)
     const message: OpenRequest = {
       type: "openRequest",
       meta: from,
@@ -169,25 +194,12 @@ When(
 When(
   "{string} opens app {string} with context data {string}",
   async function (this: CustomWorld, appStr: string, open: string, context: string) {
+    // Test fixture setup: Ensure calling app instance exists
+    ensureAppInstanceForTesting(this, appStr)
+    
     const from = createMeta(this, appStr)
-    const instanceId = getAppInstanceId(this, appStr)
 
-    // Ensure instance exists in registry
-    const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId)
-    if (!instance) {
-      this.desktopAgent.getAppInstanceRegistry().createInstance({
-        instanceId,
-        appId: from.source.appId,
-        metadata: {
-          appId: from.source.appId,
-          name: from.source.appId,
-        },
-      })
-      this.desktopAgent
-        .getAppInstanceRegistry()
-        .updateInstanceState(instanceId, AppInstanceState.CONNECTED)
-    }
-
+    // Send DACP openRequest message with context (this is what we're testing)
     const message: OpenRequest = {
       type: "openRequest",
       meta: from,
@@ -207,25 +219,12 @@ When(
 When(
   "{string} requests metadata for {string}",
   async function (this: CustomWorld, appStr: string, open: string) {
+    // Test fixture setup: Ensure calling app instance exists
+    ensureAppInstanceForTesting(this, appStr)
+    
     const from = createMeta(this, appStr)
-    const instanceId = getAppInstanceId(this, appStr)
 
-    // Ensure instance exists in registry
-    const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId)
-    if (!instance) {
-      this.desktopAgent.getAppInstanceRegistry().createInstance({
-        instanceId,
-        appId: from.source.appId,
-        metadata: {
-          appId: from.source.appId,
-          name: from.source.appId,
-        },
-      })
-      this.desktopAgent
-        .getAppInstanceRegistry()
-        .updateInstanceState(instanceId, AppInstanceState.CONNECTED)
-    }
-
+    // Send DACP getAppMetadataRequest message (this is what we're testing)
     const message: GetAppMetadataRequest = {
       type: "getAppMetadataRequest",
       meta: from,
@@ -244,25 +243,12 @@ When(
 When(
   "{string} requests info on the DesktopAgent",
   async function (this: CustomWorld, appStr: string) {
+    // Test fixture setup: Ensure calling app instance exists
+    ensureAppInstanceForTesting(this, appStr)
+    
     const from = createMeta(this, appStr)
-    const instanceId = getAppInstanceId(this, appStr)
 
-    // Ensure instance exists in registry
-    const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId)
-    if (!instance) {
-      this.desktopAgent.getAppInstanceRegistry().createInstance({
-        instanceId,
-        appId: from.source.appId,
-        metadata: {
-          appId: from.source.appId,
-          name: from.source.appId,
-        },
-      })
-      this.desktopAgent
-        .getAppInstanceRegistry()
-        .updateInstanceState(instanceId, AppInstanceState.CONNECTED)
-    }
-
+    // Send DACP getInfoRequest message (this is what we're testing)
     const message: GetInfoRequest = {
       type: "getInfoRequest",
       meta: from,
@@ -276,25 +262,12 @@ When(
 When(
   "{string} findsInstances of {string}",
   async function (this: CustomWorld, appStr: string, open: string) {
+    // Test fixture setup: Ensure calling app instance exists
+    ensureAppInstanceForTesting(this, appStr)
+    
     const from = createMeta(this, appStr)
-    const instanceId = getAppInstanceId(this, appStr)
 
-    // Ensure instance exists in registry
-    const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId)
-    if (!instance) {
-      this.desktopAgent.getAppInstanceRegistry().createInstance({
-        instanceId,
-        appId: from.source.appId,
-        metadata: {
-          appId: from.source.appId,
-          name: from.source.appId,
-        },
-      })
-      this.desktopAgent
-        .getAppInstanceRegistry()
-        .updateInstanceState(instanceId, AppInstanceState.CONNECTED)
-    }
-
+    // Send DACP findInstancesRequest message (this is what we're testing)
     const message: FindInstancesRequest = {
       type: "findInstancesRequest",
       meta: from,

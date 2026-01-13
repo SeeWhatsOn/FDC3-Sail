@@ -1,10 +1,9 @@
 Feature: App Disconnection and Cleanup
 
   Background:
-    Given schemas loaded
 
   Scenario: Apps that disconnect and reconnect to the DA should receive one copy of a broadcast message from an app channel as state was cleaned up
-    Given A newly instantiated desktop agent
+    Given A desktop agent
     When "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
     And "appId: App2, instanceId: a2" adds a context listener on "one" with type "fdc3.instrument"
@@ -25,16 +24,15 @@ Feature: App Disconnection and Cleanup
       | addContextListenerResponse | App2     | a2            | {null}                | {null}                   | {null}                        |
       | broadcastEvent             | App2     | a2            | one                   | fdc3.instrument          | AAPL                          |
       | broadcastResponse          | App1     | a1            | {null}                | {null}                   | {null}                        |
-  
 
   Scenario: Apps that disconnect and reconnect to the DA should NOT receive intent results from the previous connection as state was cleaned up
     Given "portfolioApp" is an app with the following intents
-      | Intent Name   | Context Type      | Result Type |
-      | ViewPortfolio | fdc3.portfolio     | {empty}     |
+      | Intent Name   | Context Type   | Result Type |
+      | ViewPortfolio | fdc3.portfolio | {empty}     |
     And "App1" is an app with the following intents
       | Intent Name | Context Type    | Result Type |
       | viewNews    | fdc3.instrument | {empty}     |
-    And A newly instantiated desktop agent
+    And A desktop agent
     When "appId: PortfolioApp, instanceId: l1" is opened with connection id "l1"
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: PortfolioApp, instanceId: l1" registers an intent listener for "ViewPortfolio"
@@ -44,13 +42,13 @@ Feature: App Disconnection and Cleanup
     And we wait for a period of "100" ms
     And "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "uuid7" and contextType "fdc3.portfolio" and raiseIntentUuid "ABC123"
     Then messaging will have outgoing posts
-      | msg.matches_type          | msg.meta.eventUuid | msg.meta.requestUuid | to.appId      | to.instanceId | msg.payload.raiseIntentRequestUuid | msg.payload.intentResolution.source.instanceId | msg.payload.intentResult.context.type |
-      | intentEvent               | uuid7              | {null}               | PortfolioApp | l1            | ABC123                             | {null}                                         | {null}                                |
-      | raiseIntentResponse       | {null}             | ABC123               | App1          | a1            | {null}                             | l1                                             | {null}                                |
-      | intentResultResponse      | {null}             | uuid10               | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
+      | msg.matches_type     | msg.meta.eventUuid | msg.meta.requestUuid | to.appId     | to.instanceId | msg.payload.raiseIntentRequestUuid | msg.payload.intentResolution.source.instanceId | msg.payload.intentResult.context.type |
+      | intentEvent          | uuid7              | {null}               | PortfolioApp | l1            | ABC123                             | {null}                                         | {null}                                |
+      | raiseIntentResponse  | {null}             | ABC123               | App1         | a1            | {null}                             | l1                                             | {null}                                |
+      | intentResultResponse | {null}             | uuid10               | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
 
-Scenario: Disconnecting from the DA when subscribed to a private channel channel sends unsubscribe and disconnect messages
-    And A newly instantiated desktop agent
+  Scenario: Disconnecting from the DA when subscribed to a private channel channel sends unsubscribe and disconnect messages
+    And A desktop agent
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
     And "appId: App2, instanceId: a1" creates a private channel

@@ -3,6 +3,6 @@
   "compilerOptions": {
     "outDir": "dist"
   },
-  "include": ["src", "vitest.config.d.ts", "scripts/generate-schemas.d.ts"],
+  "include": ["src", "test", "vitest.config.d.ts", "scripts/generate-schemas.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

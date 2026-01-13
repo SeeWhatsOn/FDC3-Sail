@@ -1,8 +1,7 @@
 Feature: Raising Intents For Context
 
   Background:
-    Given schemas loaded
-    And "portfolioApp" is an app with the following intents
+    Given "portfolioApp" is an app with the following intents
       | Intent Name    | Context Type    | Result Type |
       | ViewPortfolio  | fdc3.portfolio  | {empty}     |
       | ViewChart      | fdc3.portfolio  | {empty}     |
@@ -12,7 +11,7 @@ Feature: Raising Intents For Context
       | ViewChart   | fdc3.portfolio | {empty}     |
     And "unusedApp" is an app with the following intents
       | Intent Name | Context Type | Result Type |
-    And A newly instantiated desktop agent
+    And A desktop agent
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: listenerApp, instanceId: b1" is opened with connection id "b1"
     And "appId: listenerApp, instanceId: b1" registers an intent listener for "ViewPortfolio"

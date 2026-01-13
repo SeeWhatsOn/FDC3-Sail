@@ -1,23 +1,22 @@
 Feature: Find Intent API
 
   Background:
-    Given schemas loaded
-    And "portfolioApp" is an app with the following intents
-      | Intent Name      | Context Type      | Result Type      |
-      | ViewChart        | fdc3.portfolio    | fdc3.chart       |
-      | StreamChart      | fdc3.portfolio    | channel<chart>   |
-      | ViewPortfolio    | fdc3.portfolio    | {empty}          |
-      | StreamInstrument | fdc3.portfolio    | channel          |
+    Given "portfolioApp" is an app with the following intents
+      | Intent Name      | Context Type   | Result Type    |
+      | ViewChart        | fdc3.portfolio | fdc3.chart     |
+      | StreamChart      | fdc3.portfolio | channel<chart> |
+      | ViewPortfolio    | fdc3.portfolio | {empty}        |
+      | StreamInstrument | fdc3.portfolio | channel        |
     And "researchApp" is an app with the following intents
-      | Intent Name | Context Type | Result Type      |
-      | viewStock   | fdc3.product | {empty}          |
+      | Intent Name | Context Type | Result Type |
+      | viewStock   | fdc3.product | {empty}     |
     And "analyticsApp" is an app with the following intents
-      | Intent Name | Context Type | Result Type      |
-      | viewStock   | fdc3.product | {empty}          |
+      | Intent Name | Context Type | Result Type |
+      | viewStock   | fdc3.product | {empty}     |
     And "marketDataApp" is an app with the following intents
-      | Intent Name | Context Type | Result Type      |
-      | viewStock   | fdc3.product | {empty}          |
-    And A newly instantiated desktop agent
+      | Intent Name | Context Type | Result Type |
+      | viewStock   | fdc3.product | {empty}     |
+    And A desktop agent
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: App1, instanceId: b1" is opened with connection id "b1"
     And "appId: App1, instanceId: b1" registers an intent listener for "ViewPortfolio"
@@ -44,9 +43,9 @@ Feature: Find Intent API
     When "appId: App1, instanceId: a1" finds intents with intent "ViewChart" and contextType "{empty}" and result type "{empty}"
     Then messaging will have outgoing posts
       | msg.matches_type   | msg.payload.appIntent.intent.name | msg.payload.appIntent.apps.length | msg.payload.appIntent.apps[0].appId | to.instanceId | msg.payload.appIntent.intent.displayName |
-      | findIntentResponse | ViewChart                         |                                 1 | portfolioApp                         | a1            | ViewChart                                |
+      | findIntentResponse | ViewChart                         |                                 1 | portfolioApp                        | a1            | ViewChart                                |
 
-  Scenario: Find Intents Requests should include both the app and running instances of it 
+  Scenario: Find Intents Requests should include both the app and running instances of it
     When "appId: App1, instanceId: a1" finds intents with intent "viewStock" and contextType "fdc3.product" and result type "{empty}"
     Then messaging will have outgoing posts
       | msg.matches_type   | msg.payload.appIntent.intent.name | msg.payload.appIntent.apps.length | to.instanceId |
@@ -61,32 +60,32 @@ Feature: Find Intent API
     When "appId: App, instanceId: a1" finds intents with contextType "fdc3.portfolio"
     Then messaging will have outgoing posts
       | msg.matches_type             | msg.payload.appIntents[0].intent.name | msg.payload.appIntents.length | to.instanceId | msg.payload.appIntents[0].intent.displayName |
-      | findIntentsByContextResponse | ViewChart                              |                             4 | a1            | ViewChart                                    |
+      | findIntentsByContextResponse | ViewChart                             |                             4 | a1            | ViewChart                                    |
 
   Scenario: Find Intents by Context Request with multiple results
     When "appId: App, instanceId: a1" finds intents with contextType "fdc3.product"
     Then messaging will have outgoing posts
       | msg.matches_type             | msg.payload.appIntents[0].intent.name | msg.payload.appIntents.length | to.instanceId | msg.payload.appIntents[0].apps.length |
-      | findIntentsByContextResponse | viewStock                             |                             1 | a1            | 5                                     |
+      | findIntentsByContextResponse | viewStock                             |                             1 | a1            |                                     5 |
 
   Scenario: Find Intents by Context Request with multiple results which should not include an instance that has closed
     When "appId: analyticsApp, instanceId: b2" is closed
     When "appId: App, instanceId: a1" finds intents with contextType "fdc3.product"
     Then messaging will have outgoing posts
       | msg.matches_type             | msg.payload.appIntents[0].intent.name | msg.payload.appIntents.length | to.instanceId | msg.payload.appIntents[0].apps.length |
-      | findIntentsByContextResponse | viewStock                             |                             1 | a1            | 4                                     |
+      | findIntentsByContextResponse | viewStock                             |                             1 | a1            |                                     4 |
 
   Scenario: Successful Find Intents Request With Channel
     When "appId: App1, instanceId: a1" finds intents with intent "StreamChart" and contextType "fdc3.portfolio" and result type "channel"
     Then messaging will have outgoing posts
       | msg.matches_type   | msg.payload.appIntent.intent.name | msg.payload.appIntent.apps.length | msg.payload.appIntent.apps[0].appId | to.instanceId |
-      | findIntentResponse | StreamChart                       |                                 1 | portfolioApp                         | a1            |
+      | findIntentResponse | StreamChart                       |                                 1 | portfolioApp                        | a1            |
 
   Scenario: Successful Find Intents Request With A Typed Channel
     When "appId: App1, instanceId: a1" finds intents with intent "StreamChart" and contextType "{empty}" and result type "channel<chart>"
     Then messaging will have outgoing posts
       | msg.matches_type   | msg.payload.appIntent.intent.name | msg.payload.appIntent.apps.length | msg.payload.appIntent.apps[0].appId | to.instanceId |
-      | findIntentResponse | StreamChart                       |                                 1 | portfolioApp                         | a1            |
+      | findIntentResponse | StreamChart                       |                                 1 | portfolioApp                        | a1            |
 
   Scenario: Unsuccessful Find Intents Request With an untyped Channel
     When "appId: App1, instanceId: a1" finds intents with intent "StreamInstrument" and contextType "{empty}" and result type "channel<spurious>"
@@ -101,7 +100,7 @@ Feature: Find Intent API
       | findIntentResponse | ViewPortfolio                     |                                 2 | a1            |
     And messaging will have outgoing posts
       | msg.payload.appIntent.apps[1].appId | msg.payload.appIntent.apps[1].instanceId |
-      | App1                                 | b1                                       |
+      | App1                                | b1                                       |
     And messaging will have outgoing posts
       | msg.payload.appIntent.apps[0].appId | msg.payload.appIntent.apps[0].instanceId |
       | portfolioApp                        | {empty}                                  |

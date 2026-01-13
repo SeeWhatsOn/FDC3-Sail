@@ -1,6 +1,6 @@
 import { Given, Then } from '@cucumber/cucumber';
 import { CustomWorld } from '../world';
-import {
+import type {
   HeartbeatAcknowledgementRequest,
   WebConnectionProtocol6Goodbye,
 } from '@finos/fdc3-schema/dist/generated/api/BrowserTypes';
@@ -8,14 +8,23 @@ import { createMeta, getAppInstanceId } from './generic.steps';
 import { AppInstanceState } from '../../src/core/state/app-instance-registry';
 
 /**
- * Helper to ensure app instance exists and is connected before sending messages
+ * Test fixture helper: Ensures an app instance exists before sending heartbeat/goodbye messages.
+ * 
+ * This simulates an app that has already connected via WCP protocol.
+ * In real scenarios, apps connect via WCP4ValidateAppIdentity before sending DACP messages.
+ * For tests, we directly create the instance to set up the test fixture.
+ * 
+ * @param world - The Cucumber world context
+ * @param appStr - The app identifier string
+ * @returns The instanceId that was created or already existed
  */
-function ensureAppInstance(world: CustomWorld, appStr: string): string {
+function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string {
   const instanceId = getAppInstanceId(world, appStr);
   const meta = createMeta(world, appStr);
   
   let instance = world.desktopAgent.getAppInstanceRegistry().getInstance(instanceId);
   if (!instance) {
+    // Test fixture setup: Create connected instance directly
     world.desktopAgent.getAppInstanceRegistry().createInstance({
       instanceId,
       appId: meta.source.appId,
@@ -34,9 +43,11 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
 Given(
   '{string} sends a heartbeat response to eventUuid {string}',
   async function (this: CustomWorld, appStr: string, eventUuid: string) {
-    ensureAppInstance(this, appStr);
+    // Test fixture setup: Ensure app instance exists
+    ensureAppInstanceForTesting(this, appStr);
     const meta = createMeta(this, appStr);
 
+    // Send DACP heartbeatAcknowledgementRequest message (this is what we're testing)
     const message: HeartbeatAcknowledgementRequest = {
       meta,
       payload: {
@@ -50,9 +61,11 @@ Given(
 );
 
 Given('{string} sends a goodbye message', async function (this: CustomWorld, appStr: string) {
-  ensureAppInstance(this, appStr);
+  // Test fixture setup: Ensure app instance exists
+  ensureAppInstanceForTesting(this, appStr);
   const meta = createMeta(this, appStr);
 
+  // Send DACP WCP6Goodbye message (this is what we're testing)
   const message: WebConnectionProtocol6Goodbye = {
     meta,
     type: 'WCP6Goodbye',
@@ -63,6 +76,9 @@ Given('{string} sends a goodbye message', async function (this: CustomWorld, app
 
 Then('I test the liveness of {string}', async function (this: CustomWorld, appStr: string) {
   const instanceId = getAppInstanceId(this, appStr);
+  
+  // Assertion: Verify internal state of app instance
+  // Note: This queries internal state directly to verify liveness tracking
   const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId);
   
   // Check if instance exists and is connected

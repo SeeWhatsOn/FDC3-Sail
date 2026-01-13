@@ -1,18 +1,16 @@
 Feature: Relaying Private Channel Broadcast messages
 
   Background:
-      This creates user channels "one", "two" and "three"
+      This creates 8 user channels: "one", "two", "three", "fdc3.channel.4" through "fdc3.channel.8"
 
-    Given schemas loaded
-    And A newly instantiated desktop agent
-    And "appId: App1, instanceId: a1" is opened with connection id "a1"
+    Given "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
 
   Scenario: List User Channels
     When "appId: App1, instanceId: a1" gets the list of user channels
     Then messaging will have outgoing posts
-      | msg.payload.userChannels[0].id | msg.payload.userChannels[1].id | msg.payload.userChannels[2].id | msg.payload.userChannels[0].type | to.instanceId | msg.matches_type        |
-      | one                            | two                            | three                          | user                             | a1            | getUserChannelsResponse |
+      | msg.payload.userChannels[0].id | msg.payload.userChannels[1].id | msg.payload.userChannels[2].id | msg.payload.userChannels[3].id | msg.payload.userChannels[4].id | msg.payload.userChannels[5].id | msg.payload.userChannels[6].id | msg.payload.userChannels[7].id | msg.payload.userChannels[0].type | to.instanceId | msg.matches_type        |
+      | one                            | two                            | three                          | fdc3.channel.4                 | fdc3.channel.5                 | fdc3.channel.6                 | fdc3.channel.7                 | fdc3.channel.8                 | user                             | a1            | getUserChannelsResponse |
 
   Scenario: Initial User Channel
         At startup, the user channel shouldn't be set
@@ -85,7 +83,7 @@ Feature: Relaying Private Channel Broadcast messages
       | broadcastResponse           |
 
   Scenario: Joining a user channel that doesn't exist throws an error
-    When "appId: App, instanceId: a1" joins user channel "four"
+    When "appId: App, instanceId: a1" joins user channel "twenty"
     Then messaging will have outgoing posts
       | msg.payload.error | msg.type                |
       | NoChannelFound    | joinUserChannelResponse |

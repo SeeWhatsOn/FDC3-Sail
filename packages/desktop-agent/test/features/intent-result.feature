@@ -1,14 +1,13 @@
 Feature: Intent Results Are Correctly Delivered
 
   Background:
-    Given schemas loaded
-    And "portfolioApp" is an app with the following intents
+    Given "portfolioApp" is an app with the following intents
       | Intent Name   | Context Type   | Result Type |
       | ViewPortfolio | fdc3.portfolio | {empty}     |
     And "App1" is an app with the following intents
       | Intent Name | Context Type    | Result Type |
       | viewNews    | fdc3.instrument | {empty}     |
-    And A newly instantiated desktop agent
+    And A desktop agent
     And "appId: PortfolioApp, instanceId: l1" is opened with connection id "l1"
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: PortfolioApp, instanceId: l1" registers an intent listener for "ViewPortfolio"
