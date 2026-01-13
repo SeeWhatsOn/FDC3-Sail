@@ -26,8 +26,8 @@ export const contextMap: Record<string, Context> = {
   },
   "fdc3.book": {
     type: "fdc3.book",
-    author: "Greg Wallace",
-    title: "Cooking with Greg",
+    author: "Tim Berners-Lee",
+    title: "This is for everyone",
     id: {
       ISBN: "1234",
     },
@@ -53,6 +53,42 @@ export const contextMap: Record<string, Context> = {
     title: "Current bun",
     id: {
       productId: "cb1",
+    },
+  },
+  "fdc3.portfolio": {
+    type: "fdc3.portfolio",
+    name: "My Portfolio",
+    positions: [
+      {
+        type: "fdc3.instrument",
+        id: {
+          ticker: "AAPL",
+        },
+        holding: 100,
+      },
+      {
+        type: "fdc3.instrument",
+        id: {
+          ticker: "MSFT",
+        },
+        holding: 50,
+      },
+    ],
+  },
+  "fdc3.chart": {
+    type: "fdc3.chart",
+    instruments: [
+      {
+        type: "fdc3.instrument",
+        id: {
+          ticker: "AAPL",
+        },
+      },
+    ],
+    range: {
+      type: "fdc3.timeRange",
+      startTime: new Date("2024-01-01").toISOString(),
+      endTime: new Date("2024-12-31").toISOString(),
     },
   },
 }

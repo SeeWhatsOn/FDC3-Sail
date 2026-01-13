@@ -28,26 +28,26 @@ Feature: App Disconnection and Cleanup
   
 
   Scenario: Apps that disconnect and reconnect to the DA should NOT receive intent results from the previous connection as state was cleaned up
-    Given "libraryApp" is an app with the following intents
-      | Intent Name | Context Type | Result Type |
-      | returnBook  | fdc3.book    | {empty}     |
+    Given "portfolioApp" is an app with the following intents
+      | Intent Name   | Context Type      | Result Type |
+      | ViewPortfolio | fdc3.portfolio     | {empty}     |
     And "App1" is an app with the following intents
       | Intent Name | Context Type    | Result Type |
       | viewNews    | fdc3.instrument | {empty}     |
     And A newly instantiated FDC3 Server
-    When "LibraryApp/l1" is opened with connection id "l1"
+    When "PortfolioApp/l1" is opened with connection id "l1"
     And "App1/a1" is opened with connection id "a1"
-    And "LibraryApp/l1" registers an intent listener for "returnBook"
-    And "App1/a1" raises an intent for "returnBook" with contextType "fdc3.book" on app "LibraryApp/l1" with requestUuid "ABC123"
+    And "PortfolioApp/l1" registers an intent listener for "ViewPortfolio"
+    And "App1/a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "PortfolioApp/l1" with requestUuid "ABC123"
     And we wait for a period of "100" ms
     And "App1/a1" is closed
     And we wait for a period of "100" ms
-    And "LibraryApp/l1" sends a intentResultRequest with eventUuid "uuid7" and contextType "fdc3.book" and raiseIntentUuid "ABC123"
+    And "PortfolioApp/l1" sends a intentResultRequest with eventUuid "uuid7" and contextType "fdc3.portfolio" and raiseIntentUuid "ABC123"
     Then messaging will have outgoing posts
-      | msg.matches_type          | msg.meta.eventUuid | msg.meta.requestUuid | to.appId   | to.instanceId | msg.payload.raiseIntentRequestUuid | msg.payload.intentResolution.source.instanceId | msg.payload.intentResult.context.type |
-      | intentEvent               | uuid7              | {null}               | LibraryApp | l1            | ABC123                             | {null}                                         | {null}                                |
-      | raiseIntentResponse       | {null}             | ABC123               | App1       | a1            | {null}                             | l1                                             | {null}                                |
-      | intentResultResponse      | {null}             | uuid10               | LibraryApp | l1            | {null}                             | {null}                                         | {null}                                |
+      | msg.matches_type          | msg.meta.eventUuid | msg.meta.requestUuid | to.appId      | to.instanceId | msg.payload.raiseIntentRequestUuid | msg.payload.intentResolution.source.instanceId | msg.payload.intentResult.context.type |
+      | intentEvent               | uuid7              | {null}               | PortfolioApp | l1            | ABC123                             | {null}                                         | {null}                                |
+      | raiseIntentResponse       | {null}             | ABC123               | App1          | a1            | {null}                             | l1                                             | {null}                                |
+      | intentResultResponse      | {null}             | uuid10               | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
 
 Scenario: Disconnecting from the DA when subscribed to a private channel channel sends unsubscribe and disconnect messages
     And A newly instantiated FDC3 Server
