@@ -16,3 +16,5 @@ packages/socket/html
 apps/sail/PRODUCT.md
 packages/fdc3-web-impl/
 CLAUDE.md
+packages/desktop-agent/cucumber-report.html
+packages/desktop-agent/test-results.xml
