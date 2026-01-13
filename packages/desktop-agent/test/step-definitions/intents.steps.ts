@@ -1,0 +1,422 @@
+import { DataTable, Given, When } from '@cucumber/cucumber';
+import { CustomWorld } from '../world';
+import { DirectoryApp } from '../../src/core/app-directory/types';
+import { APP_FIELD, contextMap, createMeta, getAppInstanceId } from './generic.steps';
+import { handleResolve } from '../support/testing-utils';
+import { BrowserTypes } from '@finos/fdc3-schema';
+import { AppInstanceState } from '../../src/core/state/app-instance-registry';
+
+type FindIntentRequest = BrowserTypes.FindIntentRequest;
+type FindIntentsByContextRequest = BrowserTypes.FindIntentsByContextRequest;
+type AddIntentListenerRequest = BrowserTypes.AddIntentListenerRequest;
+type IntentListenerUnsubscribeRequest = BrowserTypes.IntentListenerUnsubscribeRequest;
+type RaiseIntentRequest = BrowserTypes.RaiseIntentRequest;
+type RaiseIntentForContextRequest = BrowserTypes.RaiseIntentForContextRequest;
+type IntentResultRequest = BrowserTypes.IntentResultRequest;
+
+type ListensFor = {
+  [key: string]: {
+    displayName?: string | undefined;
+    contexts: string[];
+    resultType?: string | undefined;
+  };
+};
+
+/**
+ * Helper to ensure app instance exists and is connected before sending messages
+ */
+function ensureAppInstance(world: CustomWorld, appStr: string): string {
+  const instanceId = getAppInstanceId(world, appStr);
+  const meta = createMeta(world, appStr);
+  
+  let instance = world.appInstanceRegistry.getInstance(instanceId);
+  if (!instance) {
+    world.appInstanceRegistry.createInstance({
+      instanceId,
+      appId: meta.source.appId,
+      metadata: {
+        appId: meta.source.appId,
+        name: meta.source.appId,
+        type: 'web',
+      },
+    });
+    world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
+  }
+  
+  return instanceId;
+}
+
+function decamelize(str: string, separator: string) {
+  separator = typeof separator === 'undefined' ? '_' : separator;
+
+  return str
+    .replace(/([a-z\d])([A-Z])/g, '$1' + separator + '$2')
+    .replace(/([A-Z]+)([A-Z][a-z\d]+)/g, '$1' + separator + '$2')
+    .toLowerCase();
+}
+
+function convertDataTableToListensFor(cw: CustomWorld, dt: DataTable): ListensFor {
+  const hashes = dt.hashes();
+  const out: ListensFor = {};
+  hashes.forEach(h => {
+    out[h['Intent Name']] = {
+      displayName: decamelize(h['Intent Name'], ' '),
+      contexts: [handleResolve(h['Context Type'], cw)],
+      resultType: handleResolve(h['Result Type'], cw),
+    };
+  });
+
+  return out;
+}
+
+Given('{string} is an app with the following intents', function (this: CustomWorld, appId: string, dt: DataTable) {
+  const currentApps = this.props[APP_FIELD] ?? [];
+
+  const newApp: DirectoryApp = {
+    appId,
+    type: 'web',
+    description: '',
+    title: '',
+    details: {},
+    interop: {
+      intents: {
+        listensFor: convertDataTableToListensFor(this, dt),
+      },
+    },
+  };
+
+  currentApps.push(newApp);
+
+  this.props[APP_FIELD] = currentApps;
+});
+
+When(
+  '{string} finds intents with intent {string} and contextType {string} and result type {string}',
+  async function (this: CustomWorld, appStr: string, intentName: string, contextType: string, resultType: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+    
+    const message: FindIntentRequest = {
+      meta,
+      payload: {
+        intent: handleResolve(intentName, this)!,
+        resultType: handleResolve(resultType, this),
+        context: contextMap[contextType],
+      },
+      type: 'findIntentRequest',
+    };
+
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+When(
+  '{string} finds intents with contextType {string}',
+  async function (this: CustomWorld, appStr: string, contextType: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+    
+    const message: FindIntentsByContextRequest = {
+      meta,
+      payload: {
+        context: contextMap[contextType],
+      },
+      type: 'findIntentsByContextRequest',
+    };
+
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+Given(
+  '{string} registers an intent listener for {string}',
+  async function (this: CustomWorld, appStr: string, intent: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+
+    const message: AddIntentListenerRequest = {
+      type: 'addIntentListenerRequest',
+      meta,
+      payload: {
+        intent: handleResolve(intent, this),
+      },
+    };
+    
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+Given(
+  '{string} registers an intent listener for {string} with contextType {string}',
+  async function (this: CustomWorld, appStr: string, intent: string, contextType: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+    
+    const message: AddIntentListenerRequest = {
+      type: 'addIntentListenerRequest',
+      meta,
+      payload: {
+        intent: handleResolve(intent, this),
+        contextType: handleResolve(contextType, this),
+      },
+    };
+    
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+Given(
+  '{string} unsubscribes an intent listener with id {string}',
+  async function (this: CustomWorld, appStr: string, id: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+    
+    const message: IntentListenerUnsubscribeRequest = {
+      type: 'intentListenerUnsubscribeRequest',
+      meta,
+      payload: {
+        listenerUUID: handleResolve(id, this),
+      },
+    };
+    
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+function raise(
+  cw: CustomWorld,
+  intentName: string,
+  contextType: string,
+  dest: string | null,
+  meta: RaiseIntentRequest['meta']
+): RaiseIntentRequest {
+  const destMeta = dest != null ? createMeta(cw, dest) : null;
+  const message = {
+    type: 'raiseIntentRequest',
+    meta: {
+      ...meta,
+    },
+    payload: {
+      intent: handleResolve(intentName, cw),
+      context: contextMap[contextType],
+      app: dest ? destMeta!.source : null,
+    },
+  } as RaiseIntentRequest;
+  return message;
+}
+
+function raiseWithContext(
+  cw: CustomWorld,
+  contextType: string,
+  dest: string | null,
+  meta: RaiseIntentForContextRequest['meta']
+): RaiseIntentForContextRequest {
+  const destMeta = dest != null ? createMeta(cw, dest) : null;
+  const message = {
+    type: 'raiseIntentForContextRequest',
+    meta: {
+      ...meta,
+    },
+    payload: {
+      context: contextMap[contextType],
+      app: dest ? destMeta!.source : null,
+    },
+  } as RaiseIntentForContextRequest;
+  return message;
+}
+
+function raiseWithInvalidTarget(
+  cw: CustomWorld,
+  intentName: string,
+  contextType: string,
+  meta: RaiseIntentRequest['meta']
+): RaiseIntentRequest {
+  const message = {
+    type: 'raiseIntentRequest',
+    meta: {
+      ...meta,
+    },
+    payload: {
+      intent: handleResolve(intentName, cw),
+      context: contextMap[contextType],
+      app: 'SPOON',
+    },
+  } as unknown as RaiseIntentRequest;
+  return message;
+}
+
+function raiseWithContextAnInvalidTarget(
+  contextType: string,
+  meta: RaiseIntentForContextRequest['meta']
+): RaiseIntentForContextRequest {
+  const message = {
+    type: 'raiseIntentForContextRequest',
+    meta: {
+      ...meta,
+    },
+    payload: {
+      context: contextMap[contextType],
+      app: 'SPOON',
+    },
+  } as unknown as RaiseIntentForContextRequest;
+  return message;
+}
+
+When(
+  '{string} raises an intent with contextType {string}',
+  async function (this: CustomWorld, appStr: string, contextType: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+    const message = raiseWithContext(this, contextType, null, meta);
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+When(
+  '{string} raises an intent with contextType {string} on app {string}',
+  async function (this: CustomWorld, appStr: string, contextType: string, dest: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+    const message = raiseWithContext(this, contextType, dest, meta);
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+When(
+  '{string} raises an intent for {string} with contextType {string}',
+  async function (this: CustomWorld, appStr: string, intentName: string, contextType: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+    const message = raise(this, intentName, contextType, null, meta);
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+When(
+  '{string} raises an intent for {string} with contextType {string} on app {string}',
+  async function (this: CustomWorld, appStr: string, intentName: string, contextType: string, dest: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+    const message = raise(this, intentName, contextType, dest, meta);
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+When(
+  '{string} raises an intent for {string} with contextType {string} on an invalid app instance',
+  async function (this: CustomWorld, appStr: string, intentName: string, contextType: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+    const message = raiseWithInvalidTarget(this, intentName, contextType, meta);
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+When(
+  '{string} raises an intent with contextType {string} on an invalid app instance',
+  async function (this: CustomWorld, appStr: string, contextType: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+    const message = raiseWithContextAnInvalidTarget(contextType, meta);
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+When(
+  '{string} raises an intent for {string} with contextType {string} on app {string} with requestUuid {string}',
+  async function (
+    this: CustomWorld,
+    appStr: string,
+    intentName: string,
+    contextType: string,
+    dest: string,
+    requestUuid: string
+  ) {
+    ensureAppInstance(this, appStr);
+    const meta = {
+      ...createMeta(this, appStr),
+      requestUuid,
+    };
+    const message = raise(this, intentName, contextType, dest, meta);
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+When('we wait for the intent timeout', function (this: CustomWorld) {
+  return new Promise<void>(resolve => {
+    setTimeout(() => resolve(), 2100);
+  });
+});
+
+When(
+  '{string} sends a intentResultRequest with eventUuid {string} and contextType {string} and raiseIntentUuid {string}',
+  async function (this: CustomWorld, appStr: string, eventUuid: string, contextType: string, raiseIntentUuid: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+    
+    const message: IntentResultRequest = {
+      type: 'intentResultRequest',
+      meta: {
+        ...meta,
+      },
+      payload: {
+        intentResult: {
+          context: contextMap[contextType],
+        },
+        intentEventUuid: eventUuid,
+        raiseIntentRequestUuid: raiseIntentUuid,
+      },
+    };
+    
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+When(
+  '{string} sends a intentResultRequest with eventUuid {string} and void contents and raiseIntentUuid {string}',
+  async function (this: CustomWorld, appStr: string, eventUuid: string, raiseIntentUuid: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+    
+    const message: IntentResultRequest = {
+      type: 'intentResultRequest',
+      meta: {
+        ...meta,
+      },
+      payload: {
+        intentResult: {},
+        intentEventUuid: eventUuid,
+        raiseIntentRequestUuid: raiseIntentUuid,
+      },
+    };
+    
+    await this.mockTransport.receiveMessage(message);
+  }
+);
+
+When(
+  '{string} sends a intentResultRequest with eventUuid {string} and private channel {string} and raiseIntentUuid {string}',
+  async function (this: CustomWorld, appStr: string, eventUuid: string, channelId: string, raiseIntentUuid: string) {
+    ensureAppInstance(this, appStr);
+    const meta = createMeta(this, appStr);
+
+    const message: IntentResultRequest = {
+      type: 'intentResultRequest',
+      meta: {
+        ...meta,
+      },
+      payload: {
+        intentResult: {
+          channel: {
+            type: 'private',
+            id: channelId,
+          },
+        },
+        intentEventUuid: eventUuid,
+        raiseIntentRequestUuid: raiseIntentUuid,
+      },
+    };
+    
+    await this.mockTransport.receiveMessage(message);
+  }
+);
