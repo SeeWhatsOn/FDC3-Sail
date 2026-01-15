@@ -13,8 +13,15 @@ local-docs
 packages/socket/html
 .claude/settings.local.json
 *.tsbuildinfo
-apps/sail/PRODUCT.md
+apps/sail-web/PRODUCT.md
 packages/fdc3-web-impl/
 CLAUDE.md
 packages/desktop-agent/cucumber-report.html
 packages/desktop-agent/test-results.xml
+.agent/
+.gitignore
+AGENTS.md
+.claude/skills/issue-creator/SKILL.md
+.claude/skills/issue-refiner/SKILL.md
+.claude/skills/issue-solver/SKILL.md
+.claude/skills/review-code/SKILL.md

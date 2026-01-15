@@ -7,7 +7,7 @@
     { "path": "./packages/sail-api" },
     { "path": "./packages/app-directories" },
     { "path": "./packages/sail-ui" },
-    { "path": "./apps/sail" },
+    { "path": "./apps/sail-web" },
     { "path": "./apps/sail-electron" },
     { "path": "./apps/sail-server" },
     { "path": "./apps/example-fdc3-apps" }
