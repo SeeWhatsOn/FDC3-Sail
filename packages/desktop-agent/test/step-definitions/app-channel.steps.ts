@@ -4,7 +4,6 @@ import { createMeta, getAppInstanceId } from "./generic.steps"
 import { handleResolve } from "../support/testing-utils"
 import { BrowserTypes } from "@finos/fdc3-schema"
 import { AppInstanceState } from "../../src/core/state/app-instance-registry"
-import {} from "@finos/fdc3-agent-proxy"
 type GetOrCreateChannelRequest = BrowserTypes.GetOrCreateChannelRequest
 
 /**

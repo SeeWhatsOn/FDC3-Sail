@@ -4,8 +4,6 @@
 
 import { existsSync } from "fs"
 import { resolve } from "path"
-import { Socket as ClientSocket } from "socket.io-client"
-import { Socket as ServerSocket } from "socket.io"
 
 /**
  * Validates that test data files exist before running tests
@@ -87,30 +85,3 @@ export function createTestPromise<T>(
   }
 }
 
-/**
- * Socket test helper with automatic cleanup
- */
-export class SocketTestHelper {
-  private sockets: (ClientSocket | ServerSocket)[] = []
-
-  addSocket(socket: ClientSocket | ServerSocket): void {
-    this.sockets.push(socket)
-  }
-
-  async cleanup(): Promise<void> {
-    await Promise.all(
-      this.sockets.map(async socket => {
-        try {
-          if (socket.connected) {
-            socket.disconnect()
-          }
-          // Wait for disconnect to complete
-          await new Promise(resolve => setTimeout(resolve, 50))
-        } catch (error) {
-          console.warn("Error cleaning up socket:", error)
-        }
-      })
-    )
-    this.sockets = []
-  }
-}
