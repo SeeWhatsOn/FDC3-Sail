@@ -1,5 +1,5 @@
 // Import shared types from sail-api package
-export type { TabDetail, DirectoryApp, WebAppDetails, AppHosting, InstanceID } from "@finos/sail-api"
+export type { TabDetail, DirectoryApp, WebAppDetails, AppHosting, InstanceID } from "@finos/sail-platform-sdk"
 
 // Sail app-specific message constants
 export const AppManagementMessages = {

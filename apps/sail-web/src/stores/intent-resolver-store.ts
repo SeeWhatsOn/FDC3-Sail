@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
-import type { createSailBrowserDesktopAgent } from "@finos/sail-api"
+import type { createSailBrowserDesktopAgent } from "@finos/sail-platform-sdk"
 
 type SailDesktopAgentInstance = ReturnType<typeof createSailBrowserDesktopAgent>
 

@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react"
-import type { createSailBrowserDesktopAgent } from "@finos/sail-api"
+import type { createSailBrowserDesktopAgent } from "@finos/sail-platform-sdk"
 
 import { createAppDirectoryStore } from "../stores/app-directory-store"
 import { createConnectionStore } from "../stores/connection-store"

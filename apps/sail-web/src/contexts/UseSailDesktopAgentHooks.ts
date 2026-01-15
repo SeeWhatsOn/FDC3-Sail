@@ -1,5 +1,5 @@
 import { useContext } from "react"
-import type { createSailBrowserDesktopAgent } from "@finos/sail-api"
+import type { createSailBrowserDesktopAgent } from "@finos/sail-platform-sdk"
 
 import type { AppDirectoryStore } from "../stores/app-directory-store"
 import type { ConnectionStore } from "../stores/connection-store"

@@ -6,7 +6,7 @@
  */
 
 import { Server } from "socket.io"
-import { SailDesktopAgent } from "@finos/sail-api"
+import { SailDesktopAgent } from "@finos/sail-platform-sdk"
 import { APP_CONFIG } from "./constants"
 import dotenv from "dotenv"
 import { AppDirectoryManager } from "@finos/fdc3-sail-desktop-agent"
@@ -19,7 +19,7 @@ const port = process.env.PORT || APP_CONFIG.DEFAULT_PORT
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-import { SocketIOServerTransport } from "@finos/sail-api/dist/adapters/socket-io-server-transport"
+import { SocketIOServerTransport } from "@finos/sail-platform-sdk/dist/adapters/socket-io-server-transport"
 
 // Create Socket.IO server
 const io = new Server(Number(port), {

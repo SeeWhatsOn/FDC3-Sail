@@ -1,6 +1,6 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { createSailBrowserDesktopAgent, SailAppLauncher, type DirectoryApp } from "@finos/sail-api"
+import { createSailBrowserDesktopAgent, SailAppLauncher, type DirectoryApp } from "@finos/sail-platform-sdk"
 import { defaultApplications } from "@finos/fdc3-sail-example-apps/manifests"
 import type { AppMetadata } from "@finos/fdc3"
 

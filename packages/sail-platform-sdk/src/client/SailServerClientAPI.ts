@@ -19,7 +19,7 @@ import { MiddlewarePipeline, type Middleware } from "../middleware"
  * @example
  * ```typescript
  * import { io } from "socket.io-client"
- * import { SailServerClientAPI } from "@finos/sail-api"
+ * import { SailServerClientAPI } from "@finos/sail-platform-sdk"
  * 
  * const socket = io("http://localhost:8091")
  * const client = new SailServerClientAPI(socket)

@@ -23,7 +23,7 @@
     "@finos/fdc3": "^2.2.0",
     "@finos/fdc3-sail-desktop-agent": "0.0.1",
     "@finos/fdc3-web-impl": "^2.2.1-beta.3",
-    "@finos/sail-api": "0.0.1",
+    "@finos/sail-platform-sdk": "0.0.1",
     "dotenv": "^16.0.0",
     "socket.io": "^4.7.5"
   },
