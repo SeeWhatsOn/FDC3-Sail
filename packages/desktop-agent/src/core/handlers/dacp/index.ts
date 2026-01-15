@@ -31,6 +31,18 @@ export async function routeDACPMessage(
     // Validate base message structure
     const baseMessage = validateDACPMessage(message, BaseDACPMessageSchema)
 
+    // If an injected validator is provided, use it for additional validation
+    if (context.validator) {
+      const validationResult = context.validator.validate(baseMessage.type, message)
+      if (!validationResult.valid) {
+        logger.error("DACP message validation failed:", {
+          messageType: baseMessage.type,
+          errors: validationResult.errors,
+        })
+        // Let the handler deal with the invalid message - it will send appropriate error response
+      }
+    }
+
     // Get appropriate timeout for message type
     const timeout = getTimeoutForMessageType(baseMessage.type)
 

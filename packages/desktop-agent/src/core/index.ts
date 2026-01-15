@@ -38,5 +38,9 @@ export { AppDirectoryManager } from "./app-directory/app-directory-manager"
 // DACP Protocol Messages (types)
 export * from "./protocol/dacp-messages"
 
-// Handler types
-export type { DACPHandlerContext } from "./handlers/types"
+// Handler types and validation
+export type { DACPHandlerContext, MessageValidator, ValidationResult } from "./handlers/types"
+export { noopValidator } from "./handlers/validation/dacp-validator"
+
+// DACP Schemas (for external validators like Zod validator in sail-platform-sdk)
+export * from "./handlers/validation/dacp-schemas"

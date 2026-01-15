@@ -60,6 +60,54 @@ export type IntentResolutionCallback = (
 ) => Promise<IntentResolutionResponse>
 
 // ============================================================================
+// MESSAGE VALIDATOR
+// ============================================================================
+
+/**
+ * Result of message validation
+ */
+export interface ValidationResult {
+  /** Whether the message is valid */
+  valid: boolean
+  /** Validation error messages if invalid */
+  errors?: string[]
+}
+
+/**
+ * Interface for message validation
+ * Can be implemented with Zod, AJV, or any other validation library
+ *
+ * @example
+ * ```typescript
+ * // Zod-based validator implementation
+ * const zodValidator: MessageValidator = {
+ *   validate(messageType, message) {
+ *     const schema = schemaMap[messageType]
+ *     if (!schema) return { valid: true } // Unknown types pass through
+ *     const result = schema.safeParse(message)
+ *     return result.success
+ *       ? { valid: true }
+ *       : { valid: false, errors: result.error.issues.map(i => i.message) }
+ *   }
+ * }
+ *
+ * // No-op validator (validation disabled)
+ * const noopValidator: MessageValidator = {
+ *   validate() { return { valid: true } }
+ * }
+ * ```
+ */
+export interface MessageValidator {
+  /**
+   * Validates a DACP message against its schema
+   * @param messageType - The DACP message type (e.g., "broadcastRequest")
+   * @param message - The message to validate
+   * @returns Validation result with success status and any errors
+   */
+  validate(messageType: string, message: unknown): ValidationResult
+}
+
+// ============================================================================
 // DACP HANDLER CONTEXT
 // ============================================================================
 
@@ -101,6 +149,13 @@ export interface DACPHandlerContext {
    * Injected by browser/server Desktop Agent implementations.
    */
   requestIntentResolution?: IntentResolutionCallback
+
+  /**
+   * Optional message validator for validating DACP messages.
+   * If not provided, messages are processed without validation.
+   * Implementations can inject Zod, AJV, or custom validators.
+   */
+  validator?: MessageValidator
 }
 
 /**

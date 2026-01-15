@@ -9,6 +9,26 @@ import {
   GetCurrentChannelRequestSchema,
   JoinUserChannelRequestSchema,
 } from "./dacp-schemas"
+import type { MessageValidator, ValidationResult } from "../types"
+
+// ============================================================================
+// DEFAULT VALIDATORS
+// ============================================================================
+
+/**
+ * No-op validator that passes all messages through without validation.
+ * Use this when schema validation is not required or is handled elsewhere.
+ * Logs a debug warning in development mode.
+ */
+export const noopValidator: MessageValidator = {
+  validate(_messageType: string, _message: unknown): ValidationResult {
+    // In development mode, log a warning that validation is disabled
+    if (typeof process !== "undefined" && process.env?.NODE_ENV === "development") {
+      console.debug("[DACP] Message validation is disabled (using noopValidator)")
+    }
+    return { valid: true }
+  },
+}
 
 // Custom error types
 export class DACPValidationError extends Error {

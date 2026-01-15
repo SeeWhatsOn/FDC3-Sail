@@ -42,3 +42,8 @@ export {
   DesktopAgent,
   type DesktopAgentConfig,
 } from "@finos/fdc3-sail-desktop-agent/browser";
+
+// Validation (re-export interface from desktop-agent, provide Zod implementation)
+export type { MessageValidator, ValidationResult } from "@finos/fdc3-sail-desktop-agent";
+export { noopValidator } from "@finos/fdc3-sail-desktop-agent";
+export { createZodValidator, zodValidator, strictZodValidator } from "./validation/zod-validator";

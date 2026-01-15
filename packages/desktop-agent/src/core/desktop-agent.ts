@@ -16,7 +16,7 @@ import { AppChannelRegistry } from "./state/app-channel-registry"
 import { UserChannelRegistry } from "./state/user-channel-registry"
 import { AppDirectoryManager } from "./app-directory/app-directory-manager"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
-import type { DACPHandlerContext, IntentResolutionCallback } from "./handlers/types"
+import type { DACPHandlerContext, IntentResolutionCallback, MessageValidator } from "./handlers/types"
 
 /**
  * Structure of DACP message metadata for routing
@@ -88,6 +88,13 @@ export interface DesktopAgentConfig {
    * Injected by browser/server implementations to enable intent resolver UI.
    */
   requestIntentResolution?: IntentResolutionCallback
+
+  /**
+   * Optional message validator for validating DACP messages.
+   * OPTIONAL - if not provided, messages are processed without schema validation.
+   * Implementations can inject Zod, AJV, or custom validators from sail-platform-sdk.
+   */
+  validator?: MessageValidator
 }
 
 /**
@@ -119,12 +126,14 @@ export class DesktopAgent {
   private userChannelRegistry: UserChannelRegistry
   private appDirectory: AppDirectoryManager
   private requestIntentResolution?: IntentResolutionCallback
+  private validator?: MessageValidator
   private isStarted: boolean = false
 
   constructor(config: DesktopAgentConfig) {
     this.transport = config.transport
     this.appLauncher = config.appLauncher
     this.requestIntentResolution = config.requestIntentResolution
+    this.validator = config.validator
 
     // Use provided registries or create defaults
     this.appInstanceRegistry = config.appInstanceRegistry ?? new AppInstanceRegistry()
@@ -237,6 +246,7 @@ export class DesktopAgent {
       appDirectory: this.appDirectory,
       appLauncher: this.appLauncher,
       requestIntentResolution: this.requestIntentResolution,
+      validator: this.validator,
     }
   }
 
