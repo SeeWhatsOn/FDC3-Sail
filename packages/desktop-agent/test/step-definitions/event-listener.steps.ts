@@ -1,0 +1,74 @@
+import { When } from "@cucumber/cucumber"
+import { CustomWorld } from "../world"
+import { createMeta, getAppInstanceId } from "./generic.steps"
+import { BrowserTypes } from "@finos/fdc3-schema"
+import { AppInstanceState } from "../../src/core/state/app-instance-registry"
+
+type AddEventListenerRequest = BrowserTypes.AddEventListenerRequest
+type EventListenerUnsubscribeRequest = BrowserTypes.EventListenerUnsubscribeRequest
+
+/**
+ * Helper to ensure app instance exists and is connected before sending messages
+ */
+function ensureAppInstance(world: CustomWorld, appStr: string): string {
+  const instanceId = getAppInstanceId(world, appStr)
+  const meta = createMeta(world, appStr)
+
+  const instance = world.appInstanceRegistry.getInstance(instanceId)
+  if (!instance) {
+    world.appInstanceRegistry.createInstance({
+      instanceId,
+      appId: meta.source.appId,
+      metadata: {
+        appId: meta.source.appId,
+        name: meta.source.appId,
+      },
+    })
+    world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED)
+  }
+
+  return instanceId
+}
+
+/**
+ * Add a Desktop Agent event listener (for DA-level events like channelChanged)
+ */
+When(
+  "{string} adds an event listener for {string}",
+  async function (this: CustomWorld, app: string, eventType: string) {
+    ensureAppInstance(this, app)
+    const meta = createMeta(this, app)
+
+    const message: AddEventListenerRequest = {
+      meta,
+      payload: {
+        type: eventType as AddEventListenerRequest["payload"]["type"],
+      },
+      type: "addEventListenerRequest",
+    }
+
+    await this.mockTransport.receiveMessage(message)
+  }
+)
+
+/**
+ * Unsubscribe from a Desktop Agent event listener
+ * Note: This is different from private channel event listeners
+ */
+When(
+  "{string} removes DA event listener {string}",
+  async function (this: CustomWorld, app: string, listenerUUID: string) {
+    ensureAppInstance(this, app)
+    const meta = createMeta(this, app)
+
+    const message: EventListenerUnsubscribeRequest = {
+      meta,
+      payload: {
+        listenerUUID,
+      },
+      type: "eventListenerUnsubscribeRequest",
+    }
+
+    await this.mockTransport.receiveMessage(message)
+  }
+)

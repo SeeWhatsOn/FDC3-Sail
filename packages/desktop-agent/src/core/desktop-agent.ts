@@ -16,7 +16,11 @@ import { AppChannelRegistry } from "./state/app-channel-registry"
 import { UserChannelRegistry } from "./state/user-channel-registry"
 import { AppDirectoryManager } from "./app-directory/app-directory-manager"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
-import type { DACPHandlerContext, IntentResolutionCallback, MessageValidator } from "./handlers/types"
+import type {
+  DACPHandlerContext,
+  IntentResolutionCallback,
+  MessageValidator,
+} from "./handlers/types"
 
 /**
  * Structure of DACP message metadata for routing
@@ -106,13 +110,11 @@ export interface DesktopAgentConfig {
  *
  * @example
  * ```typescript
- * // Create with Socket.IO transport (Node.js server)
  * const agent = new DesktopAgent({
- *   transport: new SocketIOTransport(socket),
+ *   transport: new InMemoryTransport,
  *   appLauncher: new BrowserAppLauncher(),
  * })
  *
- * // Wire up message handling
  * agent.start()
  * ```
  */

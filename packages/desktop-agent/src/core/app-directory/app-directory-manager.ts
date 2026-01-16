@@ -190,7 +190,7 @@ export class AppDirectoryManager extends BasicDirectory {
       // Add non-duplicate apps based on appId
       const existingAppIds = new Set(this.allApps.map(app => app.appId))
       const newApps = apps.filter(app => !existingAppIds.has(app.appId))
-      this.allApps.push(...(newApps as any))
+      this.allApps.push(...newApps)
     } catch (error) {
       const errorMessage = `Failed to load applications from ${uri}: ${
         error instanceof Error ? error.message : String(error)
@@ -251,7 +251,7 @@ export class AppDirectoryManager extends BasicDirectory {
    * @param app - The DirectoryApp to add
    */
   add(app: DirectoryApp): void {
-    this.allApps.push(app as any)
+    this.allApps.push(app)
   }
 
   /**
