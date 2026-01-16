@@ -11,7 +11,7 @@ FDC3-Sail.pem
 
 local-docs
 packages/socket/html
-.claude/settings.local.json
+.claude/
 *.tsbuildinfo
 apps/sail-web/PRODUCT.md
 packages/fdc3-web-impl/

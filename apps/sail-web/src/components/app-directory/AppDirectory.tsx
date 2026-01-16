@@ -162,9 +162,9 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
       panelProps.containerApi.addPanel({
         id: instanceId,
         component: "fdc3",
+        tabComponent: "fdc3Tab",
         title: instanceTitle,
         params: { panel: fdc3Panel },
-        icon: undefined,
         position: {
           referenceGroup: currentGroup,
         },

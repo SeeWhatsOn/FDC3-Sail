@@ -1,8 +1,9 @@
 {
-  "_comment": "TODO: Remove test files from the 'exclude' array below and fix the Vitest/Jest type conflicts.",
+  "_comment": "TODO: Fix sail-ui type checking - currently disabled due to rootDir/declaration issues",
   "extends": "../../tsconfig.root.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "rootDir": "../..",
     "jsx": "react-jsx",
     "moduleDetection": "force",
     "paths": {
@@ -12,8 +13,9 @@
     },
     "outDir": "./dist",
     "types": ["vitest/globals"],
-    "noEmit": true
+    "noEmit": true,
+    "skipLibCheck": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../../packages/sail-ui/src/**/*"],
   "exclude": ["node_modules", "dist", "vitest.config.ts"]
 }

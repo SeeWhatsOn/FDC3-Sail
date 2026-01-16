@@ -354,6 +354,172 @@ Update README files across all packages to reflect new architecture.
 
 ---
 
+### Issue 11: Add Logger interface and implementation to desktop-agent
+
+**Type:** Feature  
+**Priority:** Medium  
+**Estimated effort:** Small
+
+**Description:**
+Add a structured logging interface to the desktop-agent package to improve debugging, monitoring, and observability. The logger should be injectable to maintain the pure architecture principle.
+
+**Proposed interface:**
+```typescript
+interface Logger {
+  log(message: string, data?: unknown): void;
+  error(message: string, data?: unknown): void;
+  warn(message: string, data?: unknown): void;
+  debug(message: string, data?: unknown): void;
+  info(message: string, data?: unknown): void;
+}
+
+// Simple console logger implementation (default)
+class ConsoleLogger implements Logger {
+  log(message: string, data?: unknown): void {
+    console.log(message, data);
+  }
+  error(message: string, data?: unknown): void {
+    console.error(message, data);
+  }
+  warn(message: string, data?: unknown): void {
+    console.warn(message, data);
+  }
+  debug(message: string, data?: unknown): void {
+    console.debug(message, data);
+  }
+  info(message: string, data?: unknown): void {
+    console.info(message, data);
+  }
+}
+```
+
+**Tasks:**
+- [ ] Create `core/utils/logger.ts` with Logger interface
+- [ ] Implement `ConsoleLogger` as default implementation
+- [ ] Add optional `logger` to `DesktopAgentConfig`
+- [ ] Replace `console.log/error/warn` statements with logger calls
+- [ ] Add structured logging to key operations:
+  - [ ] DACP message handling
+  - [ ] WCP connection lifecycle
+  - [ ] Intent resolution flows
+  - [ ] Context broadcasts
+  - [ ] Error handling
+- [ ] Document logger injection pattern in README
+- [ ] Create example custom logger in sail-platform-sdk (optional)
+
+**Benefits:**
+- Better debugging experience with structured logs
+- Ability to inject custom loggers (file, cloud, metrics)
+- Consistent log format across the codebase
+- Easy to disable/filter logs in production
+- No additional dependencies (uses native console)
+
+**Acceptance Criteria:**
+- Logger interface defined and exported
+- Default ConsoleLogger implementation works
+- Logger is injectable via DesktopAgentConfig
+- Key operations use logger instead of console directly
+- Documentation explains how to inject custom logger
+- No breaking changes to existing API
+
+---
+
+### Issue 12: Remove sail-server application
+
+**Type:** Refactor  
+**Priority:** High  
+**Estimated effort:** Medium
+
+**Description:**
+Remove the `sail-server` application from the monorepo. Sail should be web-first and Electron-second for now. Although technically Sail could live on a server for multi-user scenarios, this is not the current focus and adds unnecessary complexity. The desktop agent should run in the browser (web mode) or Electron (desktop mode), not on a server.
+
+**Rationale:**
+- Simplifies the architecture by focusing on single-user deployments
+- Reduces maintenance burden and testing surface area
+- Web-first approach aligns better with FDC3 browser interoperability goals
+- Electron provides desktop integration when needed
+- Multi-user server mode can be revisited in the future if there's demand
+
+**Tasks:**
+- [ ] Remove `apps/sail-server/` directory
+- [ ] Remove sail-server references from root `package.json` workspaces
+- [ ] Update `package-lock.json` to remove sail-server dependencies
+- [ ] Remove sail-server scripts from root package.json (e.g., `dev:server`, `build:server`)
+- [ ] Update documentation to remove server deployment instructions
+- [ ] Update README to clarify supported deployment modes (web + Electron only)
+- [ ] Remove any CI/CD workflows related to sail-server
+- [ ] Archive server-specific Socket.IO transport if not needed by other apps
+
+**Acceptance Criteria:**
+- sail-server code fully removed
+- Project builds successfully
+- All tests pass
+- Documentation updated to reflect web + Electron only
+
+---
+
+### Issue 13: Reconsider Electron - Explore Desktop Progressive Web App (DPWA)
+
+**Type:** Architecture Decision  
+**Priority:** Medium  
+**Estimated effort:** Large (Research + Implementation)
+
+**Description:**
+Re-evaluate the use of Electron for desktop deployment. Electron is essentially a browser container, which adds significant overhead and maintenance burden. Modern browsers support Progressive Web App (PWA) features that can provide native-like desktop experiences. Consider migrating to a Desktop Progressive Web App (DPWA) approach instead.
+
+**Current Issues with Electron:**
+- Electron version needs to be fixed/updated
+- Large bundle size (includes entire Chromium)
+- Security update maintenance burden
+- Duplicates functionality already available in modern browsers
+- Adds complexity to build and deployment pipeline
+
+**DPWA Benefits:**
+- Leverages native browser capabilities (Chrome, Edge, Safari)
+- Users install directly from browser (no separate download/installer)
+- Automatic updates through browser
+- Smaller footprint - no bundled Chromium
+- Better security - browser handles updates
+- Installable as standalone app with app icon and window
+- Access to native features via Web APIs (File System Access, Notifications, etc.)
+- Works seamlessly with the web-first strategy
+
+**Tasks:**
+- [ ] Research DPWA capabilities and limitations for FDC3 use case
+- [ ] Audit required desktop features:
+  - [ ] File system access
+  - [ ] Window management
+  - [ ] System tray/menu bar (if needed)
+  - [ ] Native notifications
+  - [ ] Protocol handlers
+- [ ] Compare PWA APIs vs Electron APIs for required features
+- [ ] Create proof-of-concept PWA manifest and service worker
+- [ ] Test DPWA installation on Windows, macOS, Linux
+- [ ] Evaluate trade-offs:
+  - [ ] Feature availability
+  - [ ] User experience
+  - [ ] Developer experience
+  - [ ] Browser compatibility requirements
+- [ ] Document decision: Keep Electron vs Migrate to DPWA vs Support Both
+- [ ] If DPWA chosen: Create migration plan and timeline
+- [ ] Update electron version if keeping Electron for now
+
+**Technical Considerations:**
+- PWA manifest configuration for desktop appearance
+- Service worker for offline support (if needed)
+- Web APIs availability across browsers (Chrome/Edge/Safari)
+- Fallback strategy for browsers without PWA support
+- FDC3 Desktop Agent MessagePort compatibility in PWA context
+
+**Acceptance Criteria:**
+- Decision documented with technical rationale
+- Required features mapped to PWA APIs or Electron APIs
+- If DPWA: Working prototype demonstrates key functionality
+- If Electron: Version updated and maintenance plan documented
+- Architecture documentation updated with deployment strategy
+
+---
+
 ## Dependency Order
 
 ```
@@ -363,10 +529,13 @@ Update README files across all packages to reflect new architecture.
 4. Issue 6: Move Socket.IO transport (depends on 2, 3)
 5. Issue 5: Reorganize browser/ folder (no deps)
 6. Issue 4: Validator injection (depends on 3)
-7. Issue 7: Transport wrapper middleware (depends on 2, 6)
-8. Issue 9: Cucumber tests (depends on 3, 4)
-9. Issue 8: Docusaurus (no deps, can run parallel)
-10. Issue 10: Update READMEs (depends on all above)
+7. Issue 11: Add Logger interface (no deps, can run parallel)
+8. Issue 12: Remove sail-server (depends on 1, can run after renaming)
+9. Issue 13: DPWA vs Electron decision (no deps, research phase can run parallel)
+10. Issue 7: Transport wrapper middleware (depends on 2, 6)
+11. Issue 9: Cucumber tests (depends on 3, 4)
+12. Issue 8: Docusaurus (no deps, can run parallel)
+13. Issue 10: Update READMEs (depends on all above)
 ```
 
 ---

@@ -1,31 +1,199 @@
-import { BrowserTypes } from "@finos/fdc3-schema"
+/**
+ * FDC3 App Directory Types
+ *
+ * These types are based on the FDC3 App Directory OpenAPI specification.
+ * See: /appd.schema.json (local copy of the FDC3 App Directory schema)
+ * Source: https://github.com/finos/FDC3/blob/main/schemas/api/appDirectory.schema.json
+ *
+ * Duplicated here to avoid dependency on @finos/fdc3-web-impl which is being deprecated.
+ *
+ * NOTE: These types should ideally be exported from an official FDC3 package
+ * (e.g., @finos/fdc3-schema or @finos/fdc3). The App Directory schema exists
+ * but the generated TypeScript types are not currently built or released
+ * by FDC3 in any packages.
+ *
+ * TODO: Raise an issue with FINOS FDC3 to add/export these types from an official package.
+ * See: https://github.com/finos/FDC3
+ */
+
+// =============================================================================
+// Launch Details Types
+// =============================================================================
+
+/** Properties used to launch apps with `type: web` */
+export interface WebAppDetails {
+  /** Application start URL */
+  url: string
+}
+
+/** Properties used to launch apps with `type: native` that are already installed on the device */
+export interface NativeAppDetails {
+  /** The path on disk from which the application is launched */
+  path: string
+  /** Arguments that must be passed on the command line to launch the app */
+  arguments?: string
+}
+
+/** Properties used to launch virtualized apps with `type: citrix` */
+export interface CitrixAppDetails {
+  /** The Citrix alias / name of the virtual app */
+  alias: string
+  /** Arguments that must be passed on the command line to launch the app */
+  arguments?: string
+}
+
+/** Properties used to launch native apps with `type: onlineNative` that have an online launcher */
+export interface OnlineNativeAppDetails {
+  /** Application URL */
+  url: string
+}
+
+/** Apps with `type: other` are defined by a hostManifest and do not require other details */
+export interface OtherAppDetails {
+  // Empty object - no properties allowed per schema (additionalProperties: false)
+}
+
+/** Union of all launch details types */
+export type LaunchDetails =
+  | WebAppDetails
+  | NativeAppDetails
+  | CitrixAppDetails
+  | OnlineNativeAppDetails
+  | OtherAppDetails
+
+// =============================================================================
+// Icon and Screenshot Types
+// =============================================================================
+
+/** Icon for the application */
+export interface Icon {
+  /** Icon URL */
+  src: string
+  /** Icon dimension formatted as `<height>x<width>` */
+  size?: string
+  /** Image media type */
+  type?: string
+}
+
+/** Screenshot of the application */
+export interface Screenshot {
+  /** App Image URL */
+  src: string
+  /** Optional caption for the image */
+  label?: string
+  /** Image media type */
+  type?: string
+  /** Image dimension formatted as `<height>x<width>` */
+  size?: string
+}
+
+// =============================================================================
+// Intent Types
+// =============================================================================
+
+/**
+ * Intent definition as used in listensFor (where intent name is the key).
+ * Note: The intent name is the key in the Record, not a property here.
+ */
+export interface IntentDefinition {
+  /** Optional display name for the intent (deprecated) */
+  displayName?: string
+  /** Context types the intent can process (required) */
+  contexts: string[]
+  /** Optional type for output returned by the application */
+  resultType?: string
+  /** Custom configuration for the intent (deprecated) */
+  customConfig?: Record<string, unknown>
+}
+
+/** Intent that an application can handle (includes name for standalone use) */
+export interface AppIntent extends IntentDefinition {
+  /** The name of the intent */
+  name: string
+}
+
+// =============================================================================
+// Application Type
+// =============================================================================
+
+/** Application type */
+export type AppType = "web" | "native" | "citrix" | "onlineNative" | "other"
 
 /**
  * DirectoryApp represents a full application definition in the FDC3 App Directory.
- * It is specifically designed to be compatible with the BasicDirectory implementation
- * from @finos/fdc3-web-impl by overriding problematic fields from the base FDC3 schema.
+ * Based on the FDC3 App Directory specification.
  */
-export type DirectoryApp = Omit<
-  BrowserTypes.AppDefinition,
-  "appId" | "title" | "type" | "details" | "hostManifests"
-> & {
+export interface DirectoryApp {
   /** The unique application identifier (Required) */
   appId: string
-  /** Title for the application (Required) */
+  /** Title for the application, typically used in a launcher UI (Required) */
   title: string
   /** Application type (Required) */
-  type: "web" | "native" | "citrix" | "onlineNative" | "other"
-  /** Launch details specific to the application type (Required) */
-  details:
-    | { url: string }
-    | { path: string; arguments?: string }
-    | { alias: string; arguments?: string }
-    | Record<string, never>
-  /** Host-specific manifests with strict type matching for BasicDirectory */
-  hostManifests?: { [key: string]: string | Record<string, never> }
+  type: AppType
+  /** Properties used to launch the application (Required) */
+  details: LaunchDetails
+  /** The name of the application (deprecated in favor of appId/title) */
+  name?: string
+  /** Version of the application */
+  version?: string
+  /** Optional tooltip description */
+  tooltip?: string
+  /** Primary language of the application (IETF RFC 5646 language tag) */
+  lang?: string
+  /** Description of the application */
+  description?: string
+  /** Categories that describe the application */
+  categories?: string[]
+  /** Icons for the application */
+  icons?: Icon[]
+  /** Screenshots of the application */
+  screenshots?: Screenshot[]
+  /** Intents the application can handle */
+  interop?: {
+    intents?: {
+      listensFor?: Record<string, IntentDefinition>
+      raises?: Record<string, string[]>
+    }
+    userChannels?: {
+      broadcasts?: string[]
+      listensFor?: string[]
+    }
+    appChannels?: Array<{
+      id: string
+      description?: string
+      broadcasts?: string[]
+      listensFor?: string[]
+    }>
+  }
+  /** Host-specific application manifests (URI string or host manifest object) */
+  hostManifests?: Record<string, string | Record<string, unknown>>
+  /** Contact email for the app */
+  contactEmail?: string
+  /** Support email for the app */
+  supportEmail?: string
+  /** Publisher of the app */
+  publisher?: string
+  /** More info URL */
+  moreInfo?: string
+  /** Custom config name-value pairs (deprecated) */
+  customConfig?: Array<{ name?: string; value?: string }>
+  /** Localized versions of the app record */
+  localizedVersions?: Record<string, Partial<Omit<DirectoryApp, "appId" | "type" | "details">>>
 }
+
+// =============================================================================
+// Directory Data Types
+// =============================================================================
 
 /** Expected structure of directory data from remote sources or local files */
 export interface DirectoryData {
   applications: DirectoryApp[]
+}
+
+/** Intent with app association (used internally by directory lookups) */
+export interface DirectoryIntent extends AppIntent {
+  /** The name of the intent */
+  intentName: string
+  /** The app that handles this intent */
+  appId: string
 }

@@ -21,7 +21,6 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
       metadata: {
         appId: meta.source.appId,
         name: meta.source.appId,
-        type: "web",
       },
     })
     world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED)
@@ -39,7 +38,7 @@ When(
     const message: GetOrCreateChannelRequest = {
       meta,
       payload: {
-        channelId: handleResolve(channel, this),
+        channelId: handleResolve(channel, this) as string,
       },
       type: "getOrCreateChannelRequest",
     }

@@ -8,3 +8,12 @@
 
 export { SocketIOTransport } from "./socket-io-transport"
 export { SailAppLauncher, type SailAppLauncherConfig } from "./SailAppLauncher"
+export {
+  MiddlewareTransport,
+  type MiddlewareTransportOptions,
+  type TransportMiddleware,
+  createLoggingMiddleware,
+  createFilterMiddleware,
+  createTransformMiddleware,
+  createMetricsMiddleware,
+} from "./middleware-transport"

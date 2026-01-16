@@ -121,15 +121,15 @@ export const createConnectionStore = (sailAgent: SailDesktopAgentInstance) => {
         appId: metadata.appId,
         status: "connected",
         connectedAt: metadata.connectedAt,
-        panelId: metadata.panelId,
+        panelId: metadata.hostIdentifier,
       }
       state.connections.set(metadata.instanceId, connection)
 
       // If panelId is available, set up the reverse mapping
-      if (metadata.panelId) {
-        state.panelToConnection.set(metadata.panelId, metadata.instanceId)
+      if (metadata.hostIdentifier) {
+        state.panelToConnection.set(metadata.hostIdentifier, metadata.instanceId)
         // Remove from waiting panels if it was there
-        state.waitingPanels.delete(metadata.panelId)
+        state.waitingPanels.delete(metadata.hostIdentifier)
       } else {
         // For cross-origin iframes, panelId may be undefined
         // Try to find a waiting panel that matches by appId

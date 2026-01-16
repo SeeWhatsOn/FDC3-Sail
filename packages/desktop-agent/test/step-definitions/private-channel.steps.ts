@@ -25,7 +25,6 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
       metadata: {
         appId: meta.source.appId,
         name: meta.source.appId,
-        type: 'web',
       },
     });
     world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
@@ -71,8 +70,8 @@ When(
     const message: PrivateChannelAddEventListenerRequest = {
       meta,
       payload: {
-        privateChannelId: handleResolve(channelId, this),
-        listenerType,
+        privateChannelId: handleResolve(channelId, this) as string,
+        listenerType: listenerType as BrowserTypes.PrivateChannelAddEventListenerRequest['payload']['listenerType'],
       },
       type: 'privateChannelAddEventListenerRequest',
     };
@@ -90,7 +89,7 @@ When(
     const message: PrivateChannelDisconnectRequest = {
       meta,
       payload: {
-        channelId: handleResolve(channelId, this),
+        channelId: handleResolve(channelId, this) as string,
       },
       type: 'privateChannelDisconnectRequest',
     };

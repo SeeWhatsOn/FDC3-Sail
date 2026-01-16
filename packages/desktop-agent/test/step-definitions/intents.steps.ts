@@ -1,6 +1,6 @@
 import { DataTable, Given, When } from '@cucumber/cucumber';
 import { CustomWorld } from '../world';
-import { DirectoryApp } from '../../src/core/app-directory/types';
+import type { DirectoryApp } from '../../src/core/app-directory/types';
 import { APP_FIELD, contextMap, createMeta, getAppInstanceId } from './generic.steps';
 import { handleResolve } from '../support/testing-utils';
 import { BrowserTypes } from '@finos/fdc3-schema';
@@ -37,7 +37,6 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
       metadata: {
         appId: meta.source.appId,
         name: meta.source.appId,
-        type: 'web',
       },
     });
     world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
@@ -61,8 +60,8 @@ function convertDataTableToListensFor(cw: CustomWorld, dt: DataTable): ListensFo
   hashes.forEach(h => {
     out[h['Intent Name']] = {
       displayName: decamelize(h['Intent Name'], ' '),
-      contexts: [handleResolve(h['Context Type'], cw)],
-      resultType: handleResolve(h['Result Type'], cw),
+      contexts: [handleResolve(h['Context Type'], cw) as string],
+      resultType: handleResolve(h['Result Type'], cw) ?? undefined,
     };
   });
 
@@ -99,8 +98,8 @@ When(
     const message: FindIntentRequest = {
       meta,
       payload: {
-        intent: handleResolve(intentName, this)!,
-        resultType: handleResolve(resultType, this),
+        intent: handleResolve(intentName, this) as string,
+        resultType: handleResolve(resultType, this) ?? undefined,
         context: contextMap[contextType],
       },
       type: 'findIntentRequest',
@@ -138,7 +137,7 @@ Given(
       type: 'addIntentListenerRequest',
       meta,
       payload: {
-        intent: handleResolve(intent, this),
+        intent: handleResolve(intent, this) as string,
       },
     };
     
@@ -152,12 +151,13 @@ Given(
     ensureAppInstance(this, appStr);
     const meta = createMeta(this, appStr);
     
+    // Note: contextType parameter is captured but not used - AddIntentListenerRequest doesn't have contextType
+    void contextType;
     const message: AddIntentListenerRequest = {
       type: 'addIntentListenerRequest',
       meta,
       payload: {
-        intent: handleResolve(intent, this),
-        contextType: handleResolve(contextType, this),
+        intent: handleResolve(intent, this) as string,
       },
     };
     
@@ -175,7 +175,7 @@ Given(
       type: 'intentListenerUnsubscribeRequest',
       meta,
       payload: {
-        listenerUUID: handleResolve(id, this),
+        listenerUUID: handleResolve(id, this) as string,
       },
     };
     

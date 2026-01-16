@@ -1,5 +1,5 @@
 import { Socket } from "socket.io"
-import type { FDC3Server } from "@finos/fdc3-sail-desktop-agent"
+import type { SailServerDesktopAgent } from "@finos/sail-platform-sdk"
 
 /**
  * Extended Socket interface with authentication and FDC3 session data
@@ -8,7 +8,7 @@ export interface AuthenticatedSocket extends Socket {
   userId: string
   sessionId: string
   isAuthenticated: boolean
-  desktopAgent?: FDC3Server // FDC3 Desktop Agent instance
+  desktopAgent?: SailServerDesktopAgent // FDC3 Desktop Agent instance
 }
 
 /**

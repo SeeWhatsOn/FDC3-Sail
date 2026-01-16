@@ -7,7 +7,7 @@
  */
 
 import { BasicDirectory } from "@finos/fdc3-web-impl/dist/src/directory/BasicDirectory"
-import type { DirectoryApp, DirectoryData } from "./types"
+import type { DirectoryApp, DirectoryData, WebAppDetails } from "./types"
 
 // Helper to check if we're in a Node.js environment
 function isNodeEnvironment(): boolean {

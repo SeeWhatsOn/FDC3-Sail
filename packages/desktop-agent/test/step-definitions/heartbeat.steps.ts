@@ -31,7 +31,6 @@ function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string
       metadata: {
         appId: meta.source.appId,
         name: meta.source.appId,
-        type: 'web',
       },
     });
     world.desktopAgent.getAppInstanceRegistry().updateInstanceState(instanceId, AppInstanceState.CONNECTED);

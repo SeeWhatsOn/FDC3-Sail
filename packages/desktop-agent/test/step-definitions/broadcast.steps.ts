@@ -26,7 +26,6 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
       metadata: {
         appId: meta.source.appId,
         name: meta.source.appId,
-        type: 'web',
       },
     });
     world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
@@ -44,8 +43,8 @@ When(
     const message: AddContextListenerRequest = {
       meta,
       payload: {
-        channelId: handleResolve(channelId, this),
-        contextType: handleResolve(contextType, this),
+        channelId: handleResolve(channelId, this) ?? null,
+        contextType: handleResolve(contextType, this) ?? null,
       },
       type: 'addContextListenerRequest',
     };
@@ -63,7 +62,7 @@ When(
     const message: GetCurrentContextRequest = {
       meta,
       payload: {
-        channelId: handleResolve(channelId, this),
+        channelId: handleResolve(channelId, this) as string,
         contextType,
       },
       type: 'getCurrentContextRequest',
@@ -97,7 +96,7 @@ When(
     const message: BroadcastRequest = {
       meta,
       payload: {
-        channelId: handleResolve(channelId, this),
+        channelId: handleResolve(channelId, this) as string,
         context: contextMap[contextType],
       },
       type: 'broadcastRequest',

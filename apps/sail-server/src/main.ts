@@ -6,10 +6,11 @@
  */
 
 import { Server } from "socket.io"
-import { SailDesktopAgent } from "@finos/sail-platform-sdk"
+import { SailServerDesktopAgent } from "@finos/sail-platform-sdk"
 import { APP_CONFIG } from "./constants"
 import dotenv from "dotenv"
 import { AppDirectoryManager } from "@finos/fdc3-sail-desktop-agent"
+import type { AppMetadata } from "@finos/fdc3"
 import { fileURLToPath } from "url"
 import { dirname, resolve } from "path"
 
@@ -32,7 +33,7 @@ const io = new Server(Number(port), {
 
 // Track Desktop Agent instances per user/session
 interface UserAgentInfo {
-  agent: SailDesktopAgent
+  agent: SailServerDesktopAgent
   transport: SocketIOServerTransport
   createdAt: Date
   lastActivity: Date
@@ -63,13 +64,7 @@ const appDirectorySources = [
   }
 })()
 
-// Sync function to be called after directory is loaded and when agents are created
-function syncAppDirectoryToAgents(): void {
-  // Sync to all existing agents
-  for (const agentInfo of userAgents.values()) {
-    agentInfo.agent.syncAppDirectoryToIntentRegistry()
-  }
-}
+// Note: App directory is shared via the AppDirectoryManager passed to each agent
 
 /**
  * Get userId from socket authentication
@@ -113,10 +108,10 @@ function getOrCreateUserAgent(userId: string): UserAgentInfo {
     const transport = new SocketIOServerTransport(io, userId)
 
     // Create Desktop Agent
-    const agent = new SailDesktopAgent({
+    const agent = new SailServerDesktopAgent({
       transport,
       appLauncher: {
-        onLaunchApp: async (appMetadata, instanceId, context) => {
+        onLaunchApp: async (appMetadata: AppMetadata, instanceId: string, context?: unknown) => {
           console.log(`🚀 User ${userId} launching app:`, {
             appId: appMetadata.appId,
             instanceId,
@@ -130,9 +125,6 @@ function getOrCreateUserAgent(userId: string): UserAgentInfo {
     })
 
     agent.start()
-
-    // Sync app directory to intent registry for this agent
-    agent.syncAppDirectoryToIntentRegistry()
 
     agentInfo = {
       agent,

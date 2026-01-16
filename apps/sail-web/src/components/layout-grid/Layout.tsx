@@ -10,6 +10,12 @@ import { LeftControls, PrefixToolbarControls, RightControls } from "./toolbar/co
 import { Panels } from "./Panels"
 import type { DockviewSailProps } from "./types"
 import { WatermarkPanel } from "./panel-templates/WatermarkPanel"
+import { FDC3Tab } from "./tab-templates/FDC3Tab"
+
+// Custom tab components for rendering tabs with icons
+const TabComponents = {
+  fdc3Tab: FDC3Tab,
+}
 
 // Re-export types for backward compatibility
 export type { DockviewSailProps } from "./types"
@@ -269,9 +275,9 @@ const Layout = (props: DockviewSailProps) => {
           api.current?.addPanel({
             id: panel.panelId,
             component: "fdc3",
+            tabComponent: "fdc3Tab",
             title: panel.title,
             params: { panel: fdc3Panel },
-            icon: undefined,
             // Use 'always' renderer to prevent iframe reload when panel is moved in DOM.
             // According to dockview docs: "Re-parenting an iFrame will reload the contents
             // of the iFrame or the rephrase this, moving an iFrame within the DOM will
@@ -312,6 +318,7 @@ const Layout = (props: DockviewSailProps) => {
     >
       <DockviewReact
         components={Panels}
+        tabComponents={TabComponents}
         rightHeaderActionsComponent={RightControls}
         leftHeaderActionsComponent={LeftControls}
         prefixHeaderActionsComponent={PrefixToolbarControls}

@@ -34,6 +34,22 @@ export { PrivateChannelRegistry } from "./state/private-channel-registry"
 
 // App Directory
 export { AppDirectoryManager } from "./app-directory/app-directory-manager"
+export type {
+  DirectoryApp,
+  DirectoryData,
+  DirectoryIntent,
+  WebAppDetails,
+  NativeAppDetails,
+  CitrixAppDetails,
+  OnlineNativeAppDetails,
+  OtherAppDetails,
+  LaunchDetails,
+  AppType,
+  Icon,
+  Screenshot,
+  IntentDefinition,
+  AppIntent,
+} from "./app-directory/types"
 
 // DACP Protocol Messages (types)
 export * from "./protocol/dacp-messages"

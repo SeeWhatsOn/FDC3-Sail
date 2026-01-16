@@ -26,7 +26,6 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
       metadata: {
         appId: meta.source.appId,
         name: meta.source.appId,
-        type: 'web',
       },
     });
     world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
@@ -81,7 +80,7 @@ When('{string} joins user channel {string}', async function (this: CustomWorld, 
   const message: JoinUserChannelRequest = {
     meta,
     payload: {
-      channelId: handleResolve(channel, this),
+      channelId: handleResolve(channel, this) as string,
     },
     type: 'joinUserChannelRequest',
   };
@@ -98,8 +97,8 @@ When(
     const message: GetCurrentContextRequest = {
       meta,
       payload: {
-        channelId: handleResolve(channel, this),
-        contextType: handleResolve(type, this),
+        channelId: handleResolve(channel, this) as string,
+        contextType: handleResolve(type, this) ?? null,
       },
       type: 'getCurrentContextRequest',
     };

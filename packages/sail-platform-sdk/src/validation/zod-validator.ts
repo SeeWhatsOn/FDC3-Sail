@@ -41,9 +41,9 @@ import {
   EventListenerUnsubscribeRequestSchema,
   CreatePrivateChannelRequestSchema,
   PrivateChannelDisconnectRequestSchema,
-  PrivateChannelAddContextListenerRequestSchema,
+  PrivateChannelAddEventListenerRequestSchema,
   WCP4ValidateAppIdentitySchema,
-  HeartbeatAcknowledgementRequestSchema,
+  HeartbeatAcknowledgmentRequestSchema,
   ContextListenerUnsubscribeRequestSchema,
   GetCurrentContextRequestSchema,
 } from "@finos/fdc3-sail-desktop-agent"
@@ -90,13 +90,13 @@ const schemaMap: SchemaMap = {
   // Private channel handlers
   createPrivateChannelRequest: CreatePrivateChannelRequestSchema,
   privateChannelDisconnectRequest: PrivateChannelDisconnectRequestSchema,
-  privateChannelAddContextListenerRequest: PrivateChannelAddContextListenerRequestSchema,
+  privateChannelAddEventListenerRequest: PrivateChannelAddEventListenerRequestSchema,
 
   // WCP handlers
   WCP4ValidateAppIdentity: WCP4ValidateAppIdentitySchema,
 
   // Heartbeat handlers
-  heartbeatAcknowledgementRequest: HeartbeatAcknowledgementRequestSchema,
+  heartbeatAcknowledgmentRequest: HeartbeatAcknowledgmentRequestSchema,
 }
 
 /**
@@ -142,8 +142,7 @@ export function createZodValidator(options?: { strict?: boolean }): MessageValid
 
       // Extract error messages from Zod
       const errors = result.error.issues.map(
-        (issue: { path: (string | number)[]; message: string }) =>
-          `${issue.path.join(".")}: ${issue.message}`
+        (issue) => `${issue.path.join(".")}: ${issue.message}`
       )
 
       return {

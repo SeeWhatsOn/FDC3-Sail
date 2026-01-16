@@ -1,7 +1,6 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { createSailBrowserDesktopAgent, SailAppLauncher, type DirectoryApp } from "@finos/sail-platform-sdk"
-import { defaultApplications } from "@finos/fdc3-sail-example-apps/manifests"
+import { createSailBrowserDesktopAgent, SailAppLauncher } from "@finos/sail-platform-sdk"
 import type { AppMetadata } from "@finos/fdc3"
 
 import "./index.css"
@@ -72,16 +71,9 @@ const sailAgent = createSailBrowserDesktopAgent({
   appLauncher,
 })
 
-// Load default apps into the app directory (news, charts, yahoo, tradingview, benzinga, wcp-test)
-const appDirectory = sailAgent.desktopAgent.getAppDirectory()
-for (const app of defaultApplications) {
-  appDirectory.add(app as unknown as DirectoryApp)
-}
-console.log(`[Sail] Loaded ${defaultApplications.length} apps into app directory`)
-
-// Sync app directory to intent registry so apps can be found for intents
-sailAgent.desktopAgent.syncAppDirectoryToIntentRegistry()
-console.log("[Sail] Synced app directory to intent registry")
+// Note: Apps can be loaded into the app directory via:
+// const appDirectory = sailAgent.desktopAgent.getAppDirectory()
+// appDirectory.add(appDefinition)
 
 // Start the agent - this begins listening for WCP1Hello messages
 sailAgent.start()

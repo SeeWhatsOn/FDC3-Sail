@@ -9,6 +9,12 @@
 
 import type { AppIdentifier, AppIntent, Context } from "@finos/fdc3"
 
+// Re-export DirectoryApp and WebAppDetails from desktop-agent for consistency
+export type {
+  DirectoryApp,
+  WebAppDetails,
+} from "@finos/fdc3-sail-desktop-agent"
+
 // ============================================================================
 // SAIL INSTANCE MANAGEMENT
 // ============================================================================
@@ -39,76 +45,7 @@ export interface AppRegistration {
   instanceId: InstanceID
 }
 
-/**
- * Web app launch properties for Sail platform
- * Used by Sail app launcher for web-type applications
- */
-export interface WebAppDetails {
-  url: string
-}
-
-// ============================================================================
-// SAIL APP DIRECTORY
-// ============================================================================
-
-/**
- * Sail-extended directory app definition
- * Extends FDC3 AppMetadata concepts with Sail-specific fields
- */
-export interface DirectoryApp {
-  /** The unique application identifier */
-  appId: string
-  /** Title for the application */
-  title?: string
-  /** Application name */
-  name?: string
-  /** Version of the application */
-  version?: string
-  /** Optional tooltip description */
-  tooltip?: string
-  /** Description of the application */
-  description?: string
-  /** Publisher/vendor of the application */
-  publisher?: string
-  /** Application type */
-  type?: "web" | "native" | "citrix" | "onlineNative" | "other"
-  /** Launch details specific to the application type */
-  details?: {
-    url?: string
-    [key: string]: unknown
-  }
-  /** Sail-specific: Host-specific manifests for different platforms */
-  hostManifests?: {
-    [key: string]: unknown
-  }
-  /** Array of icons */
-  icons?: Array<{
-    src: string
-    size?: string
-    type?: string
-  }>
-  /** Interoperability configuration for intents and contexts */
-  interop?: {
-    intents?: {
-      listensFor?: {
-        [intentName: string]: {
-          displayName?: string
-          contexts: string[]
-          resultType?: string
-          customConfig?: Record<string, unknown>
-        }
-      }
-      raises?: {
-        [intentName: string]:
-          | string[]
-          | {
-              contexts?: string[]
-              resultType?: string
-            }
-      }
-    }
-  }
-}
+// Note: WebAppDetails and DirectoryApp are re-exported from @finos/fdc3-sail-desktop-agent above
 
 // ============================================================================
 // SAIL SERVER INTERFACES
