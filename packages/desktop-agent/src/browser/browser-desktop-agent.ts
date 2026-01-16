@@ -1,19 +1,22 @@
 /**
  * Browser Desktop Agent Factory
  *
- * Factory function for creating a complete browser-based Desktop Agent
- * with WCP connector for handling iframe app connections.
+ * Functions for creating FDC3 Desktop Agent setups in browser environments.
  *
- * This module combines:
- * - Pure Desktop Agent core
- * - WCP Connector for browser app connections
- * - InMemory transport pair for local communication
+ * Provides two main patterns:
+ * 1. `createWCPClient` - WCPConnector only, for when Desktop Agent is remote (server/worker)
+ * 2. `createBrowserDesktopAgent` - Complete local setup (WCPConnector + DesktopAgent in same process)
+ *
+ * Both patterns use the same WCPConnector, just with different transports:
+ * - Local mode: InMemoryTransport pair
+ * - Remote mode: SocketIO, WebWorker, or any Transport implementation
  */
 
 import { DesktopAgent } from "../core/desktop-agent"
 import type { DesktopAgentConfig } from "../core/desktop-agent"
 import { WCPConnector } from "./wcp/wcp-connector"
 import type { WCPConnectorOptions } from "./wcp/wcp-connector"
+import type { Transport } from "../core/interfaces/transport"
 import type { AppLauncher } from "../core/interfaces/app-launcher"
 import type { AppInstanceRegistry } from "../core/state/app-instance-registry"
 import type { IntentRegistry } from "../core/state/intent-registry"
@@ -21,7 +24,103 @@ import type { ChannelContextRegistry } from "../core/state/channel-context-regis
 import type { AppChannelRegistry } from "../core/state/app-channel-registry"
 import type { UserChannelRegistry } from "../core/state/user-channel-registry"
 import { createInMemoryTransportPair } from "../transports/in-memory-transport"
-import { cleanupDACPHandlers } from "../core/handlers/dacp/index"
+
+// ============================================================================
+// WCP CLIENT (for remote Desktop Agent - server mode, worker mode)
+// ============================================================================
+
+/**
+ * Options for creating a WCP client (WCPConnector only)
+ */
+export interface WCPClientOptions {
+  /**
+   * Transport to connect to the Desktop Agent.
+   * This could be SocketIOClientTransport, WebWorkerTransport, etc.
+   */
+  transport: Transport
+
+  /**
+   * WCP connector configuration
+   */
+  wcpOptions?: WCPConnectorOptions
+}
+
+/**
+ * Result of creating a WCP client
+ */
+export interface WCPClientResult {
+  /**
+   * The WCP connector instance (handles iframe connections)
+   */
+  wcpConnector: WCPConnector
+
+  /**
+   * Start the WCP connector
+   */
+  start: () => void
+
+  /**
+   * Stop the WCP connector
+   */
+  stop: () => void
+}
+
+/**
+ * Create a WCP client for connecting to a remote Desktop Agent.
+ *
+ * Use this when the Desktop Agent runs elsewhere (server, worker, etc.)
+ * and you only need the browser-side WCP handling.
+ *
+ * @param options - Configuration options with transport
+ * @returns WCPConnector with start/stop methods
+ *
+ * @example
+ * ```typescript
+ * // Server mode - Desktop Agent on server
+ * const transport = new SocketIOClientTransport({ url: "wss://server.com" })
+ * const { wcpConnector, start } = createWCPClient({
+ *   transport,
+ *   wcpOptions: {
+ *     getIntentResolverUrl: () => false,  // Sail-controlled UI
+ *     getChannelSelectorUrl: () => false,
+ *   }
+ * })
+ * start()
+ *
+ * // Worker mode - Desktop Agent in Web Worker
+ * const transport = new WebWorkerTransport(worker)
+ * const { wcpConnector, start } = createWCPClient({ transport })
+ * start()
+ * ```
+ */
+export function createWCPClient(options: WCPClientOptions): WCPClientResult {
+  const wcpConnector = new WCPConnector(options.transport, options.wcpOptions)
+
+  // Set up event handlers for logging/debugging
+  wcpConnector.on("appConnected", metadata => {
+    console.log(`[WCPClient] App connected: ${metadata.appId} (${metadata.instanceId})`)
+  })
+
+  wcpConnector.on("appDisconnected", instanceId => {
+    // Cleanup is handled via WCP6Goodbye message through transport
+    // No direct Desktop Agent manipulation needed
+    console.log(`[WCPClient] App disconnected: ${instanceId}`)
+  })
+
+  wcpConnector.on("handshakeFailed", (error, connectionAttemptUuid) => {
+    console.error(`[WCPClient] WCP handshake failed for ${connectionAttemptUuid}:`, error)
+  })
+
+  return {
+    wcpConnector,
+    start: () => wcpConnector.start(),
+    stop: () => wcpConnector.stop(),
+  }
+}
+
+// ============================================================================
+// BROWSER DESKTOP AGENT (local mode - WCPConnector + DesktopAgent same process)
+// ============================================================================
 
 /**
  * Options for creating a browser-based Desktop Agent
@@ -82,7 +181,9 @@ export interface BrowserDesktopAgentResult {
 /**
  * Create a browser-based Desktop Agent with WCP connector.
  *
- * This factory creates a complete FDC3 Desktop Agent setup for browser environments:
+ * This factory creates a complete FDC3 Desktop Agent setup for browser environments
+ * where both WCPConnector and DesktopAgent run in the same process:
+ *
  * 1. Creates InMemoryTransport pair for Desktop Agent ↔ WCP Connector communication
  * 2. Creates Desktop Agent instance with the transport
  * 3. Creates WCP Connector instance to handle iframe app connections
@@ -99,7 +200,7 @@ export interface BrowserDesktopAgentResult {
  *
  * @example
  * ```typescript
- * // Create browser Desktop Agent
+ * // Create browser Desktop Agent (local mode)
  * const { desktopAgent, wcpConnector, start } = createBrowserDesktopAgent({
  *   wcpOptions: {
  *     getIntentResolverUrl: (instanceId) => `/resolver?id=${instanceId}`,
@@ -169,43 +270,22 @@ export function createBrowserDesktopAgent(
     }
   }
 
-  // Set up event forwarding from WCP Connector to Desktop Agent
-  // When WCP Connector establishes a connection, we need to notify Desktop Agent
+  // Set up event forwarding from WCP Connector
+  // These are for external observers (e.g., UI updates)
+  // Cleanup is now handled via WCP6Goodbye message through transport
   wcpConnector.on("appConnected", metadata => {
-    // Desktop Agent will have already processed WCP4 validation via transport
-    // This event is for external observers (e.g., UI updates)
-    console.log(`App connected: ${metadata.appId} (${metadata.instanceId})`)
+    console.log(`[BrowserDA] App connected: ${metadata.appId} (${metadata.instanceId})`)
   })
 
   wcpConnector.on("appDisconnected", instanceId => {
-    // Explicitly trigger desktop agent cleanup for this instance
-    // This ensures the instance is removed from all registries (including intent registry)
-    // so that the intent resolver no longer sees it as a running instance
-    console.log(`App disconnected: ${instanceId}, triggering cleanup`)
-    try {
-      // Create handler context for cleanup
-      const context = {
-        transport: daTransport,
-        instanceId,
-        appInstanceRegistry: desktopAgent.getAppInstanceRegistry(),
-        intentRegistry: desktopAgent.getIntentRegistry(),
-        channelContextRegistry: desktopAgent.getChannelContextRegistry(),
-        appChannelRegistry: desktopAgent.getAppChannelRegistry(),
-        userChannelRegistry: desktopAgent.getUserChannelRegistry(),
-        appDirectory: desktopAgent.getAppDirectory(),
-        appLauncher: daConfig.appLauncher,
-        requestIntentResolution: daConfig.requestIntentResolution,
-      }
-      // Call cleanup function to remove instance from all registries
-      cleanupDACPHandlers(context)
-      console.log(`Cleanup completed for instance ${instanceId}`)
-    } catch (error) {
-      console.error(`Error cleaning up instance ${instanceId}:`, error)
-    }
+    // Cleanup is handled via WCP6Goodbye message through transport
+    // The Desktop Agent's WCP6Goodbye handler calls cleanupDACPHandlers
+    // No direct manipulation of Desktop Agent internals needed
+    console.log(`[BrowserDA] App disconnected: ${instanceId}`)
   })
 
   wcpConnector.on("handshakeFailed", (error, connectionAttemptUuid) => {
-    console.error(`WCP handshake failed for ${connectionAttemptUuid}:`, error)
+    console.error(`[BrowserDA] WCP handshake failed for ${connectionAttemptUuid}:`, error)
   })
 
   /**

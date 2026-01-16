@@ -133,6 +133,7 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
 
     // WCP handlers
     WCP4ValidateAppIdentity: wcpHandlers.handleWcp4ValidateAppIdentity,
+    WCP6Goodbye: wcpHandlers.handleWCP6Goodbye,
 
     // Heartbeat handlers
     heartbeatAcknowledgementRequest: heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,

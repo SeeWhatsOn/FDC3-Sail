@@ -683,6 +683,13 @@ export class WCPConnector {
 
       // Handle WCP6Goodbye from app (FDC3 standard: app sends goodbye when closing)
       if (message.type === "WCP6Goodbye") {
+        // Forward to Desktop Agent via transport for registry cleanup
+        // This allows cleanup to work regardless of where Desktop Agent lives
+        // (same process, worker, or server)
+        const enrichedGoodbye = this.enrichMessageWithSource(message, currentInstanceId)
+        this.desktopAgentTransport.send(enrichedGoodbye)
+
+        // Also handle locally for WCPConnector's own state (MessagePorts, connections map)
         this.handleWCP6Goodbye(currentInstanceId)
         return
       }

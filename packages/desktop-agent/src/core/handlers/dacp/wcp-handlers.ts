@@ -9,6 +9,7 @@
 import type { AppMetadata } from "@finos/fdc3"
 import type { DACPHandlerContext } from "../types"
 import { startHeartbeat } from "./heartbeat-handlers"
+import { cleanupDACPHandlers } from "./index"
 
 /**
  * WCP4ValidateAppIdentity message from FDC3 app
@@ -267,6 +268,37 @@ function createAppInstance(
   })
 
   return { instanceId }
+}
+
+/**
+ * Handles WCP6Goodbye messages from FDC3 apps.
+ *
+ * Per FDC3 spec:
+ * - Apps send WCP6Goodbye when they are closing/unloading
+ * - Desktop Agent should clean up all resources for that instance
+ *
+ * This handler is called when WCPConnector forwards the goodbye message
+ * through the transport, allowing cleanup to happen regardless of where
+ * the Desktop Agent is running (same process, worker, or server).
+ *
+ * @param message - WCP6Goodbye message
+ * @param context - Handler context with desktop agent access
+ */
+export function handleWCP6Goodbye(_message: unknown, context: DACPHandlerContext): void {
+  const { instanceId } = context
+
+  console.log("[WCP6] Received goodbye from app instance:", instanceId)
+
+  // Import cleanup function dynamically to avoid circular dependency
+  // The cleanup function handles:
+  // - Cancelling pending intents
+  // - Removing event listeners
+  // - Removing private channels
+  // - Stopping heartbeat
+  // - Removing from registries
+  cleanupDACPHandlers(context)
+
+  console.log("[WCP6] Cleanup completed for instance:", instanceId)
 }
 
 /**

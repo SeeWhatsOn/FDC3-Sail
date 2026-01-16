@@ -6,7 +6,8 @@
  *
  * ## Key Components
  *
- * - **createBrowserDesktopAgent()** - Factory for complete browser DA setup
+ * - **createBrowserDesktopAgent()** - Factory for complete local browser DA setup
+ * - **createWCPClient()** - Factory for remote DA (server/worker) mode
  * - **WCPConnector** - Handles WCP1-3 handshake with iframe apps
  * - **MessagePortTransport** - Transport for MessagePort communication
  *
@@ -28,7 +29,7 @@
  *
  * ## Usage Patterns
  *
- * ### Pattern 1: Complete Browser DA (Recommended)
+ * ### Pattern 1: Local Browser DA (Desktop Agent in same window)
  * ```typescript
  * import { createBrowserDesktopAgent } from '@finos/fdc3-sail-desktop-agent/browser'
  *
@@ -42,7 +43,36 @@
  * start()
  * ```
  *
- * ### Pattern 2: Manual Composition (Advanced)
+ * ### Pattern 2: Server Mode (Desktop Agent on server)
+ * ```typescript
+ * import { createWCPClient } from '@finos/fdc3-sail-desktop-agent/browser'
+ * import { SocketIOClientTransport } from '@finos/sail-platform-sdk'
+ *
+ * const transport = new SocketIOClientTransport({ url: 'wss://server.com' })
+ * const { wcpConnector, start } = createWCPClient({
+ *   transport,
+ *   wcpOptions: {
+ *     getIntentResolverUrl: () => false,  // Sail-controlled UI
+ *     getChannelSelectorUrl: () => false,
+ *   }
+ * })
+ *
+ * start()
+ * ```
+ *
+ * ### Pattern 3: Worker Mode (Desktop Agent in Web Worker)
+ * ```typescript
+ * import { createWCPClient } from '@finos/fdc3-sail-desktop-agent/browser'
+ * import { WebWorkerTransport } from '@finos/sail-platform-sdk'
+ *
+ * const worker = new Worker('desktop-agent-worker.js')
+ * const transport = new WebWorkerTransport(worker)
+ * const { wcpConnector, start } = createWCPClient({ transport })
+ *
+ * start()
+ * ```
+ *
+ * ### Pattern 4: Manual Composition (Advanced)
  * ```typescript
  * import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
  * import { WCPConnector, MessagePortTransport } from '@finos/fdc3-sail-desktop-agent/browser'
@@ -55,27 +85,16 @@
  * desktopAgent.start()
  * wcpConnector.start()
  * ```
- *
- * ### Pattern 3: Sail-Controlled UI
- * ```typescript
- * import { createBrowserDesktopAgent } from '@finos/fdc3-sail-desktop-agent/browser'
- *
- * const { desktopAgent, wcpConnector, start } = createBrowserDesktopAgent({
- *   wcpOptions: {
- *     // Return false to indicate Sail provides UI externally
- *     getIntentResolverUrl: () => false,
- *     getChannelSelectorUrl: () => false
- *   }
- * })
- *
- * start()
- * // Apps receive WCP3Handshake with intentResolverUrl: false, channelSelectorUrl: false
- * ```
  */
 
-// Main factory function (recommended entry point)
-export { createBrowserDesktopAgent } from "./browser-desktop-agent"
-export type { BrowserDesktopAgentOptions, BrowserDesktopAgentResult } from "./browser-desktop-agent"
+// Main factory functions
+export { createBrowserDesktopAgent, createWCPClient } from "./browser-desktop-agent"
+export type {
+  BrowserDesktopAgentOptions,
+  BrowserDesktopAgentResult,
+  WCPClientOptions,
+  WCPClientResult,
+} from "./browser-desktop-agent"
 
 // Core browser components (for advanced usage)
 export { WCPConnector } from "./wcp/wcp-connector"
