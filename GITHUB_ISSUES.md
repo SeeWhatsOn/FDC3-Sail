@@ -17,8 +17,9 @@ This plan restructures FDC3-Sail into a clean two-layer architecture:
 
 ### Issue 1: Rename `apps/sail` to `apps/sail-web`
 
-**Type:** Refactor  
-**Priority:** High  
+**Status:** ✅ Completed
+**Type:** Refactor
+**Priority:** High
 **Estimated effort:** Small
 
 **Description:**
@@ -42,8 +43,9 @@ Rename the main web application from `sail` to `sail-web` for consistency with `
 
 ### Issue 2: Rename `sail-api` to `sail-platform-sdk`
 
-**Type:** Refactor  
-**Priority:** High  
+**Status:** ✅ Completed
+**Type:** Refactor
+**Priority:** High
 **Estimated effort:** Medium
 
 **Description:**
@@ -69,8 +71,9 @@ Rename and clarify the purpose of `sail-api` package. It's an SDK (tools/impleme
 
 ### Issue 3: Clean up `desktop-agent` package dependencies
 
-**Type:** Refactor  
-**Priority:** High  
+**Status:** ✅ Completed
+**Type:** Refactor
+**Priority:** High
 **Estimated effort:** Medium
 
 **Description:**
@@ -105,8 +108,9 @@ Remove Sail-specific and transport-specific dependencies from the pure desktop-a
 
 ### Issue 4: Implement validator injection for schema validation
 
-**Type:** Feature  
-**Priority:** Medium  
+**Status:** ✅ Completed
+**Type:** Feature
+**Priority:** Medium
 **Estimated effort:** Medium
 
 **Description:**
@@ -143,8 +147,9 @@ Replace the brittle Zod schema generator with validator injection. Core stays pu
 
 ### Issue 5: Reorganize `browser/` folder structure
 
-**Type:** Refactor  
-**Priority:** Medium  
+**Status:** ✅ Completed
+**Type:** Refactor
+**Priority:** Medium
 **Estimated effort:** Small
 
 **Description:**
@@ -194,8 +199,9 @@ MessagePortTransport is tightly coupled to WCPConnector by design (WCP spec uses
 
 ### Issue 6: Move Socket.IO transport to sail-platform-sdk
 
-**Type:** Refactor  
-**Priority:** High  
+**Status:** ✅ Completed
+**Type:** Refactor
+**Priority:** High
 **Estimated effort:** Small
 
 **Description:**
@@ -217,8 +223,9 @@ MessagePortTransport is tightly coupled to WCPConnector by design (WCP spec uses
 
 ### Issue 7: Implement Transport Wrapper for middleware
 
-**Type:** Feature  
-**Priority:** Medium  
+**Status:** ✅ Completed
+**Type:** Feature
+**Priority:** Medium
 **Estimated effort:** Medium
 
 **Description:**
