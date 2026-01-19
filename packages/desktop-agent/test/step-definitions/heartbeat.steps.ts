@@ -22,7 +22,7 @@ function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string
   const instanceId = getAppInstanceId(world, appStr);
   const meta = createMeta(world, appStr);
   
-  let instance = world.desktopAgent.getAppInstanceRegistry().getInstance(instanceId);
+  const instance = world.desktopAgent.getAppInstanceRegistry().getInstance(instanceId);
   if (!instance) {
     // Test fixture setup: Create connected instance directly
     world.desktopAgent.getAppInstanceRegistry().createInstance({
@@ -73,7 +73,7 @@ Given('{string} sends a goodbye message', async function (this: CustomWorld, app
   await this.mockTransport.receiveMessage(message);
 });
 
-Then('I test the liveness of {string}', async function (this: CustomWorld, appStr: string) {
+Then('I test the liveness of {string}', function (this: CustomWorld, appStr: string) {
   const instanceId = getAppInstanceId(this, appStr);
   
   // Assertion: Verify internal state of app instance
@@ -85,7 +85,7 @@ Then('I test the liveness of {string}', async function (this: CustomWorld, appSt
   this.props['result'] = out;
 });
 
-Then('I get the heartbeat times', async function (this: CustomWorld) {
+Then('I get the heartbeat times', function (this: CustomWorld) {
   // TODO: Heartbeat tracking not yet implemented in new architecture
   // For now, return empty object to prevent test failures
   this.props['result'] = {};

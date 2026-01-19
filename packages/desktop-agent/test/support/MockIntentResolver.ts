@@ -57,39 +57,40 @@ export class MockIntentResolver {
    * This is what gets passed to DesktopAgent config.
    */
   createCallback(): IntentResolutionCallback {
-    return async (request: IntentResolutionRequest): Promise<IntentResolutionResponse> => {
-      // Track the request
+    // Return a function matching the IntentResolutionCallback signature
+    return (request: IntentResolutionRequest): Promise<IntentResolutionResponse> => {
+      // Track the request for test verification
       this.resolutionHistory.push(request)
 
       // Auto-resolve if only one handler available
       if (request.handlers.length === 1) {
-        return {
+        return Promise.resolve({
           requestId: request.requestId,
           selectedHandler: {
             instanceId: request.handlers[0].instanceId,
             appId: request.handlers[0].appId,
           },
-        }
+        })
       }
 
       // Use programmed choice if available
       if (this.nextChoice) {
         const selected = this.nextChoice
         this.nextChoice = null // Consume the choice
-        return {
+        return Promise.resolve({
           requestId: request.requestId,
           selectedHandler: selected,
-        }
+        })
       }
 
       // Default: return first handler
-      return {
+      return Promise.resolve({
         requestId: request.requestId,
         selectedHandler: {
           instanceId: request.handlers[0].instanceId,
           appId: request.handlers[0].appId,
         },
-      }
+      })
     }
   }
 }

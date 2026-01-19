@@ -17,7 +17,7 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
   const instanceId = getAppInstanceId(world, appStr);
   const meta = createMeta(world, appStr);
   
-  let instance = world.appInstanceRegistry.getInstance(instanceId);
+  const instance = world.appInstanceRegistry.getInstance(instanceId);
   if (!instance) {
     world.appInstanceRegistry.createInstance({
       instanceId,
