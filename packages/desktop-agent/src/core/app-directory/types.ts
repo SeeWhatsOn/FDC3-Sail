@@ -4,7 +4,7 @@
  * These types are based on the FDC3 App Directory OpenAPI specification.
  * See: /appd.schema.json (local copy of the FDC3 App Directory schema)
  * Source: https://github.com/finos/FDC3/blob/main/schemas/api/appDirectory.schema.json
- *
+  *
  * Duplicated here to avoid dependency on @finos/fdc3-web-impl which is being deprecated.
  *
  * NOTE: These types should ideally be exported from an official FDC3 package
@@ -15,6 +15,8 @@
  * TODO: Raise an issue with FINOS FDC3 to add/export these types from an official package.
  * See: https://github.com/finos/FDC3
  */
+
+import type { Icon, Image } from "@finos/fdc3"
 
 // =============================================================================
 // Launch Details Types
@@ -49,9 +51,7 @@ export interface OnlineNativeAppDetails {
 }
 
 /** Apps with `type: other` are defined by a hostManifest and do not require other details */
-export interface OtherAppDetails {
-  // Empty object - no properties allowed per schema (additionalProperties: false)
-}
+export type OtherAppDetails = Record<string, never>
 
 /** Union of all launch details types */
 export type LaunchDetails =
@@ -65,27 +65,17 @@ export type LaunchDetails =
 // Icon and Screenshot Types
 // =============================================================================
 
-/** Icon for the application */
-export interface Icon {
-  /** Icon URL */
-  src: string
-  /** Icon dimension formatted as `<height>x<width>` */
-  size?: string
-  /** Image media type */
-  type?: string
-}
+/**
+ * Re-export Icon from @finos/fdc3 for App Directory usage
+ * @see {@link Icon} from @finos/fdc3
+ */
+export type { Icon } from "@finos/fdc3"
 
-/** Screenshot of the application */
-export interface Screenshot {
-  /** App Image URL */
-  src: string
-  /** Optional caption for the image */
-  label?: string
-  /** Image media type */
-  type?: string
-  /** Image dimension formatted as `<height>x<width>` */
-  size?: string
-}
+/**
+ * Screenshot type for App Directory - uses FDC3 Image type
+ * The FDC3 Image type matches the App Directory Screenshot specification
+ */
+export type Screenshot = Image
 
 // =============================================================================
 // Intent Types
