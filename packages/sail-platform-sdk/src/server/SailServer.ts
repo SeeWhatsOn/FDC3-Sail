@@ -7,6 +7,7 @@
 
 import type { AppInstance, DesktopAgent, AppInstanceState } from "@finos/fdc3-sail-desktop-agent"
 import type { DirectoryApp } from "../types/sail-types"
+import { replaceAppDirectories } from "../utils/app-directory-loader"
 
 // ============================================================================
 // SIMPLE INTERFACES - Only what we actually need
@@ -53,13 +54,19 @@ export class SailServer {
   }
 
   /**
-   * Reload directories from URLs
+   * Reload directories from URLs and/or file paths
+   * Supports both RESTful endpoints (URLs) and local file paths (Node.js only)
+   *
+   * @param sources - Array of URLs (http/https) and/or file paths to load applications from
+   * @param customApps - Optional array of custom apps to add after loading directories
    */
-  async reloadDirectories(urls: string[], customApps: DirectoryApp[] = []): Promise<void> {
-    await this.desktopAgent.getAppDirectory().replace(urls)
+  async reloadDirectories(sources: string[], customApps: DirectoryApp[] = []): Promise<void> {
+    const appDirectory = this.desktopAgent.getAppDirectory()
+    // Use Sail SDK utility to handle both URLs and file paths
+    await replaceAppDirectories(appDirectory, sources)
     // Add custom apps
     for (const app of customApps) {
-      this.desktopAgent.getAppDirectory().add(app)
+      appDirectory.add(app)
     }
   }
 

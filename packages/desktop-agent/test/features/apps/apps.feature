@@ -22,6 +22,29 @@ Feature: Opening and Requesting App Details
       | msg.payload.error    | to.instanceId | msg.type               |
       | TargetAppUnavailable | a1            | getAppMetadataResponse |
 
+  Scenario: Looking up app metadata for non-running app from directory
+    Given "researchApp" is an app with the following intents
+      | Intent Name    | Context Type   | Result Type |
+      | ViewResearch   | fdc3.instrument | {empty}    |
+    And A desktop agent
+    And "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"
+    When "appId: portfolioApp, instanceId: a1" requests metadata for "researchApp"
+    Then messaging will have outgoing posts
+      | msg.payload.appMetadata.appId | msg.payload.appMetadata.title | to.instanceId | msg.matches_type       |
+      | researchApp                   | researchApp                   | a1            | getAppMetadataResponse |
+
+  Scenario: Looking up app metadata for running app includes instanceId
+    Given "chartApp" is an app with the following intents
+      | Intent Name | Context Type   | Result Type |
+      | ViewChart   | fdc3.instrument | {empty}    |
+    And A desktop agent
+    And "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"
+    And "appId: chartApp, instanceId: chart-123" is opened with connection id "chart-123"
+    When "appId: portfolioApp, instanceId: a1" requests metadata for "chartApp"
+    Then messaging will have outgoing posts
+      | msg.payload.appMetadata.appId | msg.payload.appMetadata.instanceId | to.instanceId | msg.matches_type       |
+      | chartApp                      | chart-123                          | a1            | getAppMetadataResponse |
+
   Scenario: Looking up DesktopAgent metadata
     When "appId: portfolioApp, instanceId: a1" requests info on the DesktopAgent
     Then messaging will have outgoing posts

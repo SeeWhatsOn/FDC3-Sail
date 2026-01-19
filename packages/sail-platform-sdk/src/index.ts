@@ -47,3 +47,10 @@ export {
 export type { MessageValidator, ValidationResult } from "@finos/fdc3-sail-desktop-agent";
 export { noopValidator } from "@finos/fdc3-sail-desktop-agent";
 export { createZodValidator, zodValidator, strictZodValidator } from "./validation/zod-validator";
+
+// Utilities
+export {
+  loadAppDirectorySource,
+  replaceAppDirectories,
+  addApplicationsFromJson,
+} from "./utils/app-directory-loader";

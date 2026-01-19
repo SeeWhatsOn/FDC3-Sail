@@ -1,306 +1,295 @@
 # FDC3 Sail Desktop Agent
 
-A fully compliant FDC3 Desktop Agent implementation that supports the complete Desktop Agent Communication Protocol (DACP) specification while remaining transport-agnostic.
+A pure, transport-agnostic FDC3 Desktop Agent implementation that supports the complete Desktop Agent Communication Protocol (DACP) specification.
 
 ## Overview
 
-This package provides a production-ready FDC3 Desktop Agent that manages application instances, channels, intents, and private channels according to the [FDC3 2.2 specification](https://fdc3.finos.org/docs/api/spec). It's designed to be transport-agnostic, supporting both MessagePort (DACP) and Socket.IO communication protocols.
+This package provides a production-ready FDC3 Desktop Agent that manages application instances, channels, intents, and private channels according to the [FDC3 2.2 specification](https://fdc3.finos.org/docs/api/spec).
 
 **Key Features:**
+
 - ✅ **Full FDC3 2.2 Compliance**: All mandatory Desktop Agent APIs implemented
-- ✅ **DACP Protocol Support**: Complete Desktop Agent Communication Protocol implementation
-- ✅ **Transport Agnostic**: Works with MessagePort, Socket.IO, WebSocket, or any message transport
-- ✅ **State Management**: Comprehensive app, channel, and intent registry management
+- ✅ **Transport Agnostic**: Core has zero transport dependencies - works with any message transport
+- ✅ **Environment Agnostic**: Runs in browser, Node.js, Web Worker, or any JavaScript runtime
+- ✅ **WCP Support**: Full Web Connection Protocol (WCP1-6) implementation for browser apps
+- ✅ **Flexible Deployment**: Same code runs locally, on server, or in worker
 - ✅ **Type Safety**: Built with TypeScript and Zod validation
-- ✅ **Production Ready**: Comprehensive test coverage and error handling
 
 ## Architecture
+
+The package follows a clean three-layer architecture:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Browser Apps (iframes)                                                 │
+│  Using @finos/fdc3-get-agent                                           │
+│  fdc3.raiseIntent(), fdc3.broadcast(), etc.                            │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │ MessagePort (WCP)
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  WCPConnector (Browser only)                                            │
+│  - Handles WCP1-3 handshake with iframe apps                           │
+│  - Manages MessagePorts per app                                         │
+│  - Bridges to Transport                                                 │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │ Transport (swappable)
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  DesktopAgent (runs anywhere)                                           │
+│  - Pure FDC3 logic, zero environment dependencies                       │
+│  - DACP message handlers                                                │
+│  - State registries (apps, channels, intents)                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Directory Structure
 
 ```
 packages/desktop-agent/
 ├── src/
-│   ├── handlers/
-│   │   ├── dacp/                    # FDC3 DACP message handlers
-│   │   │   ├── channel.handlers.ts  # Channel management
-│   │   │   ├── context.handlers.ts  # Context broadcasting/listening
-│   │   │   ├── intent.handlers.ts   # Intent resolution
-│   │   │   └── index.ts            # Message router
-│   │   └── validation/             # DACP message validation
-│   │       ├── dacp-schemas.ts     # Zod schemas for DACP messages
-│   │       └── dacp-validator.ts   # Validation utilities
-│   ├── state/                      # Core state management
-│   │   ├── AppInstanceRegistry.ts  # App instance lifecycle
-│   │   ├── IntentRegistry.ts       # Intent handler registration
-│   │   └── PrivateChannelRegistry.ts # Private channel management
-│   ├── app-directory/              # FDC3 app directory
-│   └── index.ts                    # Main exports
-└── ARCHITECTURE.md                 # Detailed architecture docs
+│   ├── core/                      # Pure FDC3 Desktop Agent (environment-agnostic)
+│   │   ├── desktop-agent.ts       # Main DesktopAgent class
+│   │   ├── handlers/              # DACP message handlers
+│   │   │   └── dacp/              # All FDC3 operation handlers
+│   │   ├── state/                 # State registries
+│   │   │   ├── app-instance-registry.ts
+│   │   │   ├── intent-registry.ts
+│   │   │   ├── channel-context-registry.ts
+│   │   │   └── ...
+│   │   ├── interfaces/            # Transport & AppLauncher interfaces
+│   │   └── app-directory/         # FDC3 App Directory management
+│   ├── browser/                   # Browser-specific code
+│   │   ├── browser-desktop-agent.ts  # Factory functions
+│   │   └── wcp/                   # WCP implementation
+│   │       ├── wcp-connector.ts   # WCP1-6 protocol handler
+│   │       └── message-port-transport.ts
+│   └── transports/                # Transport implementations
+│       └── in-memory-transport.ts # For same-process communication
+└── test/                          # Cucumber BDD tests
 ```
 
-## Quick Start
-
-### Installation
+## Installation
 
 ```bash
 npm install @finos/fdc3-sail-desktop-agent
 ```
 
-### Basic Usage
+## Quick Start
 
-#### MessagePort (DACP) Setup
+### Browser Mode (Desktop Agent in same window)
+
+Use when Desktop Agent runs in the browser alongside your UI:
 
 ```typescript
-import { registerDACPHandlers } from '@finos/fdc3-sail-desktop-agent'
+import { createBrowserDesktopAgent } from '@finos/fdc3-sail-desktop-agent/browser'
 
-// After WCP handshake establishes MessagePort
-const messagePort = /* obtained from WCP handshake */
-const serverContext = /* your app instance manager */
-const fdc3Server = /* your FDC3 server instance */
+const { desktopAgent, wcpConnector, start, stop } = createBrowserDesktopAgent({
+  wcpOptions: {
+    // Return false for Sail-controlled UI (recommended)
+    getIntentResolverUrl: () => false,
+    getChannelSelectorUrl: () => false,
+  },
+  appDirectories: ['https://example.com/apps.json'],
+})
 
-// Register DACP handlers
-registerDACPHandlers(messagePort, serverContext, fdc3Server)
+// Start Desktop Agent and WCP Connector
+start()
 
-console.log('FDC3 Desktop Agent ready for DACP messages')
+// Apps in iframes can now connect via fdc3.getAgent()
 ```
 
-#### Socket.IO Integration
+### Server Mode (Desktop Agent on server)
+
+Use when Desktop Agent runs on a Node.js server:
 
 ```typescript
-import { initSocketService } from '@finos/fdc3-sail-desktop-agent'
-import { Server } from 'socket.io'
+// Browser client
+import { createWCPClient } from '@finos/fdc3-sail-desktop-agent/browser'
+import { SocketIOClientTransport } from '@finos/sail-platform-sdk'
 
-const io = new Server(httpServer)
-
-// Initialize FDC3 handlers on socket connections
-io.on('connection', (socket) => {
-  initSocketService(socket, serverContext)
+const transport = new SocketIOClientTransport({ 
+  url: 'wss://your-server.com',
+  auth: { userId: 'user123' }
 })
+
+const { wcpConnector, start } = createWCPClient({
+  transport,
+  wcpOptions: {
+    getIntentResolverUrl: () => false,
+    getChannelSelectorUrl: () => false,
+  }
+})
+
+start()
+// Apps connect via WCP, messages flow to server
+```
+
+```typescript
+// Server
+import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
+import { SocketIOServerTransport } from '@finos/sail-platform-sdk'
+
+const transport = new SocketIOServerTransport(io, userId)
+const agent = new DesktopAgent({ transport })
+agent.start()
+```
+
+### Worker Mode (Desktop Agent in Web Worker)
+
+Use when Desktop Agent runs in a Web Worker for isolation:
+
+```typescript
+// Main thread
+import { createWCPClient } from '@finos/fdc3-sail-desktop-agent/browser'
+import { WebWorkerTransport } from '@finos/sail-platform-sdk'
+
+const worker = new Worker('desktop-agent-worker.js')
+const transport = new WebWorkerTransport(worker)
+
+const { wcpConnector, start } = createWCPClient({ transport })
+start()
+```
+
+### Manual Composition (Advanced)
+
+For full control over component setup:
+
+```typescript
+import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
+import { WCPConnector } from '@finos/fdc3-sail-desktop-agent/browser'
+import { createInMemoryTransportPair } from '@finos/fdc3-sail-desktop-agent/transports'
+
+// Create linked transport pair
+const [daTransport, wcpTransport] = createInMemoryTransportPair()
+
+// Create Desktop Agent
+const desktopAgent = new DesktopAgent({
+  transport: daTransport,
+  appLauncher: myAppLauncher,
+  requestIntentResolution: myIntentResolver,
+})
+
+// Create WCP Connector
+const wcpConnector = new WCPConnector(wcpTransport, {
+  getIntentResolverUrl: () => false,
+  getChannelSelectorUrl: () => false,
+})
+
+// Start both
+desktopAgent.start()
+wcpConnector.start()
 ```
 
 ## FDC3 API Coverage
 
-### ✅ Implemented APIs
-
-**Context Management:**
+### Context Management
 - `broadcast()` - Broadcast context to channel
 - `addContextListener()` - Listen for context on channels
 - `getCurrentContext()` - Get current context for channel
 
-**Channel Management:**
+### Channel Management
 - `getCurrentChannel()` - Get current user channel
 - `joinUserChannel()` - Join user channel
 - `leaveCurrentChannel()` - Leave current channel
 - `getUserChannels()` - Get available user channels
 - `getOrCreateChannel()` - Get or create app channel
 
-**Intent Management:**
+### Intent Management
 - `raiseIntent()` - Raise intent with optional target
 - `raiseIntentForContext()` - Raise intent by context type
 - `addIntentListener()` - Listen for specific intents
 - `findIntent()` - Find handlers for intent
 - `findIntentsByContext()` - Find intents for context type
 
-**App Management:**
+### App Management
 - `getInfo()` - Get desktop agent metadata
 - `open()` - Launch applications
 - `findInstances()` - Find running app instances
 - `getAppMetadata()` - Get app metadata from directory
 
-**Private Channels:**
+### Private Channels
 - `createPrivateChannel()` - Create private channels
-- Private channel event listeners
+- Private channel context listeners
 - Private channel disconnect handling
 
-## DACP Message Types
+## Protocol Support
 
-This desktop agent handles all standard DACP message types:
+### DACP (Desktop Agent Communication Protocol)
 
-**Request Messages:**
-- `broadcastRequest`
-- `addContextListenerRequest`
-- `raiseIntentRequest`
-- `addIntentListenerRequest`
-- `getCurrentChannelRequest`
-- `joinUserChannelRequest`
-- `getInfoRequest`
-- `openRequest`
-- `findInstancesRequest`
-- `createPrivateChannelRequest`
-- And many more...
+All FDC3 operations use DACP messages. The Desktop Agent handles:
 
-**Response Messages:**
-- Automatic response generation for all request types
-- Proper error handling with standard FDC3 error types
+**Request Messages:** `broadcastRequest`, `raiseIntentRequest`, `addContextListenerRequest`, `joinUserChannelRequest`, `openRequest`, `findIntentRequest`, etc.
 
-**Event Messages:**
-- `contextEvent` - Context broadcast notifications
-- `intentEvent` - Intent delivery to handlers
-- `listenerEvent` - Listener lifecycle notifications
+**Response Messages:** Automatic response generation with proper error handling.
 
-## Configuration
+**Event Messages:** `contextEvent`, `intentEvent`, `listenerEvent` for async notifications.
 
-### Environment Variables
+### WCP (Web Connection Protocol)
 
-```bash
-# Optional: Enable debug logging
-DEBUG=fdc3-desktop-agent:*
+Browser app connection handshake:
 
-# Optional: Configure timeouts (milliseconds)
-FDC3_DEFAULT_TIMEOUT=10000
-FDC3_APP_LAUNCH_TIMEOUT=100000
-```
+- **WCP1Hello** - App initiates connection
+- **WCP3Handshake** - Desktop Agent responds with MessagePort
+- **WCP4ValidateAppIdentity** - App validates identity
+- **WCP5ValidateAppIdentityResponse** - Desktop Agent confirms
+- **WCP6Goodbye** - App disconnects gracefully
 
-### TypeScript Configuration
+## Transport Interface
+
+The Desktop Agent works with any transport implementing this interface:
 
 ```typescript
-import type { DACPHandlerContext } from '@finos/fdc3-sail-desktop-agent'
-
-// Extend the handler context if needed
-interface CustomHandlerContext extends DACPHandlerContext {
-  customProperty: string
+interface Transport {
+  send(message: unknown): void
+  onMessage(handler: (message: unknown) => void): void
+  onDisconnect(handler: () => void): void
+  isConnected(): boolean
+  getInstanceId(): string | null
+  disconnect(): void
 }
 ```
 
-## State Management
+**Built-in Transports:**
+- `InMemoryTransport` - Same-process communication
+- `MessagePortTransport` - Browser MessagePort API
 
-The desktop agent maintains several registries for FDC3 entities:
-
-### App Instance Registry
-
-Tracks all connected applications and their state:
-
-```typescript
-import { AppInstanceRegistry } from '@finos/fdc3-sail-desktop-agent'
-
-const registry = new AppInstanceRegistry()
-
-// Register new app instance
-registry.register({
-  instanceId: 'app-123',
-  appId: 'my-trading-app',
-  state: State.Connected,
-  started: new Date(),
-  metaData: appMetadata,
-  currentChannel: 'red'
-})
-
-// Find instances
-const instances = registry.getInstancesByApp('my-trading-app')
-```
-
-### Intent Registry
-
-Manages intent handlers across all applications:
-
-```typescript
-import { IntentRegistry } from '@finos/fdc3-sail-desktop-agent'
-
-const intentRegistry = new IntentRegistry()
-
-// Register intent handler
-intentRegistry.registerHandler({
-  appId: 'chart-app',
-  instanceId: 'chart-123',
-  intent: 'ViewChart',
-  contexts: ['fdc3.instrument', 'fdc3.portfolio'],
-  metadata: appMetadata
-})
-
-// Find handlers for intent
-const handlers = intentRegistry.findHandlers('ViewChart', 'fdc3.instrument')
-```
-
-### Private Channel Registry
-
-Manages private channels and their participants:
-
-```typescript
-import { PrivateChannelRegistry } from '@finos/fdc3-sail-desktop-agent'
-
-const channelRegistry = new PrivateChannelRegistry()
-
-// Create private channel
-const channel = channelRegistry.create('creator-instance-id')
-
-// Add participants
-channelRegistry.addParticipant(channel.id, 'participant-instance-id')
-```
-
-## Error Handling
-
-The desktop agent provides comprehensive error handling following FDC3 specifications:
-
-```typescript
-// DACP errors are automatically handled and sent as response messages
-{
-  "type": "broadcastResponse",
-  "payload": {
-    "error": "ChannelError"  // Standard FDC3 error type
-  },
-  "meta": {
-    "responseUuid": "...",
-    "requestUuid": "...",
-    "timestamp": "2024-09-24T10:00:00Z"
-  }
-}
-```
-
-**Standard Error Types:**
-- `AgentError` - General desktop agent errors
-- `ChannelError` - Channel operation failures
-- `IntentDeliveryFailed` - Intent routing failures
-- `AppNotFound` - Application not in directory
-- `CreationFailed` - Resource creation failures
+**Platform SDK Transports:**
+- `SocketIOClientTransport` - Browser to server
+- `SocketIOServerTransport` - Server-side Socket.IO
 
 ## Testing
 
 ### Running Tests
 
 ```bash
-# Run all tests
-npm test
+# Run Cucumber BDD tests
+npm run test:cucumber --workspace=@finos/fdc3-sail-desktop-agent
 
-# Run specific test file
-npm test -- channel.handlers.test.ts
+# Run unit tests
+npm run test --workspace=@finos/fdc3-sail-desktop-agent
 
-# Run with coverage
-npm test -- --coverage
-
-# Run tests in watch mode
-npm run test:watch
+# Type checking
+npm run typecheck --workspace=@finos/fdc3-sail-desktop-agent
 ```
 
-### Integration Testing
+### Test Architecture
+
+Tests use a `MockTransport` that simulates DACP message flow:
 
 ```typescript
-import { describe, it, expect } from 'vitest'
-import { registerDACPHandlers } from '@finos/fdc3-sail-desktop-agent'
+// Tests send DACP messages directly to the transport
+const message: RaiseIntentRequest = {
+  type: 'raiseIntentRequest',
+  meta: { source: { instanceId: 'app-1' }, ... },
+  payload: { intent: 'ViewChart', context: {...} }
+}
 
-describe('FDC3 Desktop Agent Integration', () => {
-  it('should handle complete broadcast flow', async () => {
-    const { port1, port2 } = new MessageChannel()
+await mockTransport.receiveMessage(message)
 
-    registerDACPHandlers(port1, mockServerContext, mockFdc3Server)
-
-    // Send broadcast request
-    port2.postMessage({
-      type: 'broadcastRequest',
-      payload: {
-        channelId: 'red',
-        context: { type: 'fdc3.instrument', id: { ticker: 'AAPL' } }
-      },
-      meta: {
-        requestUuid: 'test-123',
-        timestamp: new Date()
-      }
-    })
-
-    // Verify response
-    const response = await waitForMessage(port2)
-    expect(response.type).toBe('broadcastResponse')
-    expect(response.payload.error).toBeUndefined()
-  })
-})
+// Verify responses
+const responses = mockTransport.getMessagesByType('raiseIntentResponse')
+expect(responses[0].payload.resolution).toBeDefined()
 ```
 
 ## Development
@@ -308,89 +297,55 @@ describe('FDC3 Desktop Agent Integration', () => {
 ### Building
 
 ```bash
-# Build the package
-npm run build
-
-# Build and watch for changes
-npm run build:watch
-
-# Type checking
-npm run typecheck
+npm run build --workspace=@finos/fdc3-sail-desktop-agent
 ```
 
-### Contributing
+### Key Design Principles
 
-1. **Follow the Architecture**: Keep FDC3 logic separate from transport concerns
-2. **Add Tests**: All new handlers must have integration tests
-3. **Update Schemas**: Regenerate DACP schemas when FDC3 spec updates
-4. **Maintain Types**: Use official FDC3 types from `@finos/fdc3`
+1. **Pure Core**: `DesktopAgent` has zero browser/Node.js dependencies
+2. **Transport Abstraction**: All communication via `Transport` interface
+3. **WCP in Browser Only**: `WCPConnector` handles browser-specific concerns
+4. **Message-Driven Cleanup**: App disconnects flow through transport (WCP6Goodbye)
 
 ### Adding New DACP Handlers
 
-1. **Create Handler Function:**
+1. Create handler in `src/core/handlers/dacp/`:
+
 ```typescript
-// src/handlers/dacp/new-feature.handlers.ts
-export async function handleNewFeatureRequest(
+export function handleNewFeatureRequest(
   message: unknown,
   context: DACPHandlerContext
-): Promise<void> {
-  const request = validateDACPMessage(message, NewFeatureRequestSchema)
-  // Implementation
-  const response = createDACPSuccessResponse(request, 'newFeatureResponse', result)
-  context.messagePort.postMessage(response)
+): void {
+  // Validate, process, send response
 }
 ```
 
-2. **Register in Router:**
+2. Register in `src/core/handlers/dacp/index.ts`:
+
 ```typescript
-// src/handlers/dacp/index.ts
 const handlerMap = {
-  // ... existing handlers
-  'newFeatureRequest': newFeatureHandlers.handleNewFeatureRequest,
+  // ...existing handlers
+  newFeatureRequest: newHandlers.handleNewFeatureRequest,
 }
 ```
 
-3. **Add Tests:**
-```typescript
-// src/handlers/dacp/__tests__/new-feature.test.ts
-describe('New Feature Handler', () => {
-  it('should handle new feature request', async () => {
-    // Test implementation
-  })
-})
-```
+3. Add Cucumber tests in `test/features/` and `test/step-definitions/`.
 
 ## Dependencies
 
-### Runtime Dependencies
-- `@finos/fdc3` - Official FDC3 types and interfaces
-- `zod` - Runtime type validation for DACP messages
-- `uuid` - Unique identifier generation
+### Runtime
+- `@finos/fdc3` - Official FDC3 types
+- `@finos/fdc3-schema` - FDC3 JSON schemas and type guards
 
-### Development Dependencies
-- `typescript` - Type safety and compilation
-- `vitest` - Fast unit testing framework
-- `@types/node` - Node.js type definitions
-
-## Related Packages
-
-- [`@apps/sail-socket`](../../apps/sail-socket/) - Socket server with Sail platform integration
-- [`@packages/sail-app`](../sail-app/) - Frontend application using FDC3
+### Peer Dependencies
+- `zod` - Runtime validation (optional, for schema validation)
 
 ## License
 
-ISC
+Apache-2.0
 
-## Support
+## Related
 
-- **Documentation**: See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed design
-- **Implementation Guide**: See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for development roadmap
-- **FDC3 Specification**: [https://fdc3.finos.org/docs/api/spec](https://fdc3.finos.org/docs/api/spec)
-
-## Changelog
-
-### 0.0.1
-- Initial implementation with core DACP handlers
-- App instance, intent, and private channel registries
-- Complete FDC3 2.2 API coverage
-- Transport-agnostic architecture
+- [FDC3 Specification](https://fdc3.finos.org/docs/api/spec)
+- [@finos/fdc3-get-agent](https://www.npmjs.com/package/@finos/fdc3) - Browser-side FDC3 API
+- [Sail Platform SDK](../sail-platform-sdk/) - Transport implementations

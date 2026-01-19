@@ -33,7 +33,7 @@ export { UserChannelRegistry } from "./state/user-channel-registry"
 export { PrivateChannelRegistry } from "./state/private-channel-registry"
 
 // App Directory
-export { AppDirectoryManager } from "./app-directory/app-directory-manager"
+export { AppDirectoryManager, isValidDirectoryUrl } from "./app-directory/app-directory-manager"
 export type {
   DirectoryApp,
   DirectoryData,

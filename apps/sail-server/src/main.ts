@@ -6,7 +6,7 @@
  */
 
 import { Server } from "socket.io"
-import { SailServerDesktopAgent } from "@finos/sail-platform-sdk"
+import { SailServerDesktopAgent, replaceAppDirectories } from "@finos/sail-platform-sdk"
 import { APP_CONFIG } from "./constants"
 import dotenv from "dotenv"
 import { AppDirectoryManager } from "@finos/fdc3-sail-desktop-agent"
@@ -57,7 +57,8 @@ const appDirectorySources = [
 // Load app directories on startup
 ;(async () => {
   try {
-    await appDirectory.replace(appDirectorySources)
+    // Use Sail SDK utility to load from both file paths and URLs
+    await replaceAppDirectories(appDirectory, appDirectorySources)
     console.log(`📚 Loaded ${appDirectory.retrieveAllApps().length} apps from directories`)
   } catch (error) {
     console.error("❌ Failed to load app directories:", error)

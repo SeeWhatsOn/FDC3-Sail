@@ -214,59 +214,132 @@ export function handleFindInstancesRequest(message: unknown, context: DACPHandle
 }
 
 /**
+ * Helper function to convert DirectoryApp to AppMetadata format
+ * Maps FDC3 App Directory fields to FDC3 AppMetadata response format
+ *
+ * @param app - The DirectoryApp from app directory
+ * @param instanceId - Optional instance ID if app is running
+ * @returns AppMetadata object ready for DACP response
+ */
+function convertDirectoryAppToAppMetadata(
+  app: import("../app-directory/types").DirectoryApp,
+  instanceId?: string
+) {
+  return {
+    appId: app.appId,
+    name: app.name,
+    version: app.version,
+    title: app.title,
+    tooltip: app.tooltip,
+    description: app.description,
+    icons: app.icons || [],
+    screenshots: app.screenshots || [],
+    instanceId,
+    desktopAgent: instanceId ? "FDC3-Sail" : undefined,
+  }
+}
+
+/**
  * Handles getAppMetadataRequest to return app metadata
- * TODO: This needs integration with AppDirectoryManager
+ * Returns metadata from running instances or from the App Directory
  */
 export function handleGetAppMetadataRequest(message: unknown, context: DACPHandlerContext): void {
-  const { transport, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, appInstanceRegistry, appDirectory } = context
 
   try {
     const request = validateDACPMessage(message, GetAppMetadataRequestSchema)
 
-    // TODO: Integrate with AppDirectoryManager to get full app metadata
-    // For now, check if we have a running instance and return basic metadata
-
-    logger.warn("DACP: getAppMetadataRequest not fully implemented", {
-      payload: request.payload,
-    })
-
-    // Try to get metadata from a running instance
+    // Parse request payload
     const payload = request.payload as { app: { appId: string; instanceId?: string } }
     const appId = payload.app.appId
     const specificInstanceId = payload.app.instanceId
 
-    let instance
+    // Step 1: Try to get metadata from a running instance
+    let runningInstance
     if (specificInstanceId) {
-      instance = appInstanceRegistry.getInstance(specificInstanceId)
+      runningInstance = appInstanceRegistry.getInstance(specificInstanceId)
     } else {
       const instances = appInstanceRegistry.queryInstances({ appId })
-      instance = instances[0]
+      runningInstance = instances[0]
     }
 
-    if (!instance) {
-      throw new Error(`No metadata found for app: ${appId}`)
+    // Step 2: If running instance found, return metadata with instanceId
+    if (runningInstance) {
+      // Query directory for full metadata
+      const directoryApps = appDirectory.retrieveAppsById(appId)
+      const directoryApp = directoryApps[0]
+
+      if (directoryApp) {
+        // Combine directory metadata with instance information
+        const appMetadata = convertDirectoryAppToAppMetadata(
+          directoryApp,
+          runningInstance.instanceId
+        )
+
+        const response = createDACPSuccessResponse(request, "getAppMetadataResponse", {
+          appMetadata,
+        })
+
+        const responseWithRouting = {
+          ...response,
+          meta: {
+            ...response.meta,
+            destination: { instanceId },
+          },
+        }
+
+        transport.send(responseWithRouting)
+        return
+      }
+
+      // Fallback: running instance but no directory entry (shouldn't happen normally)
+      logger.warn("DACP: Running instance found but no directory entry", { appId })
+      const appMetadata = {
+        appId: runningInstance.appId,
+        name: runningInstance.appId,
+        instanceId: runningInstance.instanceId,
+        desktopAgent: "FDC3-Sail",
+      }
+
+      const response = createDACPSuccessResponse(request, "getAppMetadataResponse", {
+        appMetadata,
+      })
+
+      const responseWithRouting = {
+        ...response,
+        meta: {
+          ...response.meta,
+          destination: { instanceId },
+        },
+      }
+
+      transport.send(responseWithRouting)
+      return
     }
 
-    // Return basic metadata from the instance
-    const response = createDACPSuccessResponse(request, "getAppMetadataResponse", {
-      appMetadata: {
-        appId: instance.appId,
-        name: instance.appId, // TODO: Get from app directory
-        version: "1.0.0", // TODO: Get from app directory
-        instanceId: instance.instanceId,
-      },
-    })
+    // Step 3: No running instance - fallback to App Directory
+    const directoryApps = appDirectory.retrieveAppsById(appId)
+    if (directoryApps.length > 0) {
+      const appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0])
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
+      const response = createDACPSuccessResponse(request, "getAppMetadataResponse", {
+        appMetadata,
+      })
+
+      const responseWithRouting = {
+        ...response,
+        meta: {
+          ...response.meta,
+          destination: { instanceId },
+        },
+      }
+
+      transport.send(responseWithRouting)
+      return
     }
 
-    transport.send(responseWithRouting)
+    // Step 4: App not found anywhere - return error
+    throw new Error(`No metadata found for app: ${appId}`)
   } catch (error) {
     logger.error("DACP: getAppMetadataRequest failed", error)
     const errorResponse = createDACPErrorResponse(
@@ -275,7 +348,7 @@ export function handleGetAppMetadataRequest(message: unknown, context: DACPHandl
       "getAppMetadataResponse",
       error instanceof Error ? error.message : "Failed to get app metadata"
     )
-    // Add routing metadata
+
     const errorResponseWithRouting = {
       ...errorResponse,
       meta: {

@@ -77,8 +77,10 @@ Given(
       appId,
       type: "web",
       description: "",
-      title: "",
-      details: {},
+      title: appId, // Use appId as title to ensure it's not empty
+      details: {
+        url: `https://example.com/${appId}`, // Provide valid URL for web apps
+      },
       interop: {
         intents: {
           listensFor: convertDataTableToListensFor(this, dt),
