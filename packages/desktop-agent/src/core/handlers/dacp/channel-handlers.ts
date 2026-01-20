@@ -408,7 +408,7 @@ function notifyChannelChanged(
   context.transport.send(channelChangedEventWithRouting)
 
   // Also broadcast to all apps subscribed to channelChanged events
-  const subscribers = getEventListeners("channelChanged", handlerContext.getState)
+  const subscribers = getEventListeners("channelChanged", context.getState)
 
   subscribers.forEach((subscriberId: string) => {
     // Don't send duplicate to the app that changed

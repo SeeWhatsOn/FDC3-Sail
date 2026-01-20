@@ -6,22 +6,20 @@
  */
 
 import { produce } from "immer"
+import type { AppMetadata, Context } from "@finos/fdc3"
 import type {
   AgentState,
   AppInstance,
-  AppInstanceState,
-  AppMetadata,
   IntentListener,
   PendingIntent,
   IntentResolution,
-  Context,
-  Channel,
   PrivateChannel,
   ContextListener,
   DisconnectListener,
   EventListener,
   HeartbeatState,
 } from "./types"
+import { AppInstanceState } from "./types"
 
 // ============================================================================
 // INSTANCE TRANSFORMS

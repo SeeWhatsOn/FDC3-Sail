@@ -23,14 +23,11 @@ export type { Transport, MessageHandler, DisconnectHandler } from "./interfaces/
 export type { AppLauncher } from "./interfaces/app-launcher"
 export * from "./interfaces"
 
-// State Registries
-export { AppInstanceRegistry } from "./state/app-instance-registry"
-export type { AppInstance, AppInstanceState } from "./state/app-instance-registry"
-export { IntentRegistry } from "./state/intent-registry"
-export { ChannelContextRegistry } from "./state/channel-context-registry"
-export { AppChannelRegistry } from "./state/app-channel-registry"
-export { UserChannelRegistry } from "./state/user-channel-registry"
-export { PrivateChannelRegistry } from "./state/private-channel-registry"
+// State Types (from functional state management)
+export type { AgentState, AppInstance, AppInstanceState } from "./state/types"
+export { createInitialState, createStateWithOverrides } from "./state/initial"
+export * from "./state/selectors"
+export * from "./state/transforms"
 
 // App Directory
 export { AppDirectoryManager, isValidDirectoryUrl } from "./app-directory/app-directory-manager"

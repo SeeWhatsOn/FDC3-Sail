@@ -26,7 +26,8 @@ export async function handleBroadcastRequest(
     const broadcastContext = (message.payload as { context: Context }).context
 
     // Validate that the instance is a member of the channel they're broadcasting to
-    const instance = getInstance(getState(), instanceId)
+    const state = getState()
+    const instance = getInstance(state, instanceId)
     if (!instance) {
       throw new Error("Instance not found")
     }

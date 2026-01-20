@@ -18,11 +18,6 @@ import { WCPConnector } from "./wcp/wcp-connector"
 import type { WCPConnectorOptions } from "./wcp/wcp-connector"
 import type { Transport } from "../core/interfaces/transport"
 import type { AppLauncher } from "../core/interfaces/app-launcher"
-import type { AppInstanceRegistry } from "../core/state/app-instance-registry"
-import type { IntentRegistry } from "../core/state/intent-registry"
-import type { ChannelContextRegistry } from "../core/state/channel-context-registry"
-import type { AppChannelRegistry } from "../core/state/app-channel-registry"
-import type { UserChannelRegistry } from "../core/state/user-channel-registry"
 import { createInMemoryTransportPair } from "../transports/in-memory-transport"
 
 // ============================================================================
@@ -140,17 +135,6 @@ export interface BrowserDesktopAgentOptions {
    * Custom app launcher implementation
    */
   appLauncher?: AppLauncher
-
-  /**
-   * Custom registries (for advanced use cases)
-   */
-  registries?: {
-    appInstanceRegistry?: AppInstanceRegistry
-    intentRegistry?: IntentRegistry
-    channelContextRegistry?: ChannelContextRegistry
-    appChannelRegistry?: AppChannelRegistry
-    userChannelRegistry?: UserChannelRegistry
-  }
 }
 
 /**
@@ -249,12 +233,7 @@ export function createBrowserDesktopAgent(
   // Wire up WCPConnector's requestIntentResolution for UI-based intent resolution
   const daConfig: DesktopAgentConfig = {
     transport: daTransport,
-    appLauncher: options?.appLauncher as AppLauncher,
-    appInstanceRegistry: options?.registries?.appInstanceRegistry as AppInstanceRegistry,
-    intentRegistry: options?.registries?.intentRegistry as IntentRegistry,
-    channelContextRegistry: options?.registries?.channelContextRegistry as ChannelContextRegistry,
-    appChannelRegistry: options?.registries?.appChannelRegistry as AppChannelRegistry,
-    userChannelRegistry: options?.registries?.userChannelRegistry as UserChannelRegistry,
+    appLauncher: options?.appLauncher,
     // Enable UI-based intent resolution via WCPConnector
     requestIntentResolution: request => wcpConnector.requestIntentResolution(request),
   }

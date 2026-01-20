@@ -1,38 +1,5 @@
 import { withDACPTimeout, DACP_TIMEOUTS, logDACPMessage } from "../../protocol/dacp-utilities"
-import { validateDACPMessage } from "../validation/dacp-validator"
-import {
-  BaseDACPMessageSchema,
-  BroadcastRequestSchema,
-  AddContextListenerRequestSchema,
-  ContextListenerUnsubscribeRequestSchema,
-  RaiseIntentRequestSchema,
-  RaiseIntentForContextRequestSchema,
-  AddIntentListenerRequestSchema,
-  IntentListenerUnsubscribeRequestSchema,
-  FindIntentRequestSchema,
-  FindIntentsByContextRequestSchema,
-  IntentResultRequestSchema,
-  GetCurrentChannelRequestSchema,
-  GetCurrentContextRequestSchema,
-  JoinUserChannelRequestSchema,
-  LeaveCurrentChannelRequestSchema,
-  GetUserChannelsRequestSchema,
-  GetOrCreateChannelRequestSchema,
-  GetInfoRequestSchema,
-  OpenRequestSchema,
-  FindInstancesRequestSchema,
-  GetAppMetadataRequestSchema,
-  AddEventListenerRequestSchema,
-  EventListenerUnsubscribeRequestSchema,
-  CreatePrivateChannelRequestSchema,
-  PrivateChannelDisconnectRequestSchema,
-  PrivateChannelAddEventListenerRequestSchema,
-  WCP4ValidateAppIdentitySchema,
-  WCP6GoodbyeSchema,
-  HeartbeatAcknowledgmentRequestSchema,
-} from "../validation/dacp-schemas"
 import { type DACPHandler, type DACPHandlerContext, type DACPMessage } from "../types"
-import { type z } from "zod"
 import { resolvePendingIntent, removeListenersForInstance, removeInstance } from "../../state/transforms"
 
 // Import all DACP handlers
@@ -56,15 +23,18 @@ export async function routeDACPMessage(
     // Log incoming message (with sensitive data filtering)
     logDACPMessage("incoming", message, "DACP Router")
 
-    // Validate base message structure
-    const baseMessage = validateDACPMessage(message, BaseDACPMessageSchema)
+    // Extract message type for routing
+    let messageType = "unknown"
+    if (typeof message === "object" && message !== null && "type" in message) {
+      messageType = (message as { type: string }).type
+    }
 
-    // If an injected validator is provided, use it for additional validation
+    // If an injected validator is provided, use it for validation
     if (context.validator) {
-      const validationResult = context.validator.validate(baseMessage.type, message)
+      const validationResult = context.validator.validate(messageType, message)
       if (!validationResult.valid) {
         context.logger.error("DACP message validation failed:", {
-          messageType: baseMessage.type,
+          messageType,
           errors: validationResult.errors,
         })
         // Let the handler deal with the invalid message - it will send appropriate error response
@@ -72,13 +42,13 @@ export async function routeDACPMessage(
     }
 
     // Get appropriate timeout for message type
-    const timeout = getTimeoutForMessageType(baseMessage.type)
+    const timeout = getTimeoutForMessageType(messageType)
 
     // Route to handler with timeout
     await withDACPTimeout(
-      handleDACPMessage(baseMessage.type, message, context),
+      handleDACPMessage(messageType, message, context),
       timeout,
-      `DACP ${baseMessage.type} handling`
+      `DACP ${messageType} handling`
     )
   } catch (error) {
     // Use console.error as fallback since we don't have context here
@@ -97,58 +67,6 @@ export async function routeDACPMessage(
   }
 }
 
-/**
- * Schema map for message type validation
- */
-function getSchemaForMessageType(messageType: string): z.ZodSchema | null {
-  const schemaMap: Record<string, z.ZodSchema> = {
-    // Context handlers
-    broadcastRequest: BroadcastRequestSchema,
-    addContextListenerRequest: AddContextListenerRequestSchema,
-    contextListenerUnsubscribeRequest: ContextListenerUnsubscribeRequestSchema,
-
-    // Intent handlers
-    raiseIntentRequest: RaiseIntentRequestSchema,
-    raiseIntentForContextRequest: RaiseIntentForContextRequestSchema,
-    addIntentListenerRequest: AddIntentListenerRequestSchema,
-    intentListenerUnsubscribeRequest: IntentListenerUnsubscribeRequestSchema,
-    findIntentRequest: FindIntentRequestSchema,
-    findIntentsByContextRequest: FindIntentsByContextRequestSchema,
-    intentResultRequest: IntentResultRequestSchema,
-
-    // Channel handlers
-    getCurrentChannelRequest: GetCurrentChannelRequestSchema,
-    getCurrentContextRequest: GetCurrentContextRequestSchema,
-    joinUserChannelRequest: JoinUserChannelRequestSchema,
-    leaveCurrentChannelRequest: LeaveCurrentChannelRequestSchema,
-    getUserChannelsRequest: GetUserChannelsRequestSchema,
-    getOrCreateChannelRequest: GetOrCreateChannelRequestSchema,
-
-    // App management handlers
-    getInfoRequest: GetInfoRequestSchema,
-    openRequest: OpenRequestSchema,
-    findInstancesRequest: FindInstancesRequestSchema,
-    getAppMetadataRequest: GetAppMetadataRequestSchema,
-
-    // Event handlers
-    addEventListenerRequest: AddEventListenerRequestSchema,
-    eventListenerUnsubscribeRequest: EventListenerUnsubscribeRequestSchema,
-
-    // Private channel handlers
-    createPrivateChannelRequest: CreatePrivateChannelRequestSchema,
-    privateChannelDisconnectRequest: PrivateChannelDisconnectRequestSchema,
-    privateChannelAddContextListenerRequest: PrivateChannelAddEventListenerRequestSchema,
-
-    // WCP handlers
-    WCP4ValidateAppIdentity: WCP4ValidateAppIdentitySchema,
-    WCP6Goodbye: WCP6GoodbyeSchema,
-
-    // Heartbeat handlers
-    heartbeatAcknowledgementRequest: HeartbeatAcknowledgmentRequestSchema,
-  }
-
-  return schemaMap[messageType] || null
-}
 
 /**
  * Routes messages to specific handlers based on message type
@@ -166,17 +84,8 @@ async function handleDACPMessage(
     return
   }
 
-  // Validate message against specific schema
-  const schema = getSchemaForMessageType(messageType)
-  if (schema) {
-    const validatedMessage = validateDACPMessage(message, schema)
-    // Execute handler with validated message
-    await handler(validatedMessage as DACPMessage, context)
-  } else {
-    // No schema available, pass message as-is (for backwards compatibility)
-    context.logger.debug(`No schema found for message type: ${messageType}, passing message as-is`)
-    await handler(message as DACPMessage, context)
-  }
+  // Pass message to handler - validation is handled by injected validator at router level
+  await handler(message as DACPMessage, context)
 }
 
 /**
