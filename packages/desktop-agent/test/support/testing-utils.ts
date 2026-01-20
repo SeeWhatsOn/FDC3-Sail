@@ -75,7 +75,15 @@ export function matchData(world: CustomWorld, actual: unknown[], dataTable: Data
 
     Object.entries(expectedRow).forEach(([key, expectedValue]) => {
       const resolvedExpected = handleResolve(expectedValue, world)
-      const actualValue = get(actualRow, key) as unknown
+      
+      // Map matches_type to type for message fields
+      let actualKey = key
+      if (key.includes("matches_type")) {
+        // Replace matches_type with type in the path
+        actualKey = key.replace(/matches_type/g, "type")
+      }
+      
+      const actualValue = get(actualRow, actualKey) as unknown
 
       try {
         assertFieldValue(actualValue, resolvedExpected, key)

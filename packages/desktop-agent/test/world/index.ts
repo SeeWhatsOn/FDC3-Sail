@@ -8,7 +8,7 @@ import { UserChannelRegistry } from "../../src/core/state/user-channel-registry"
 import { MockTransport } from "../support/MockTransport"
 import { MockAppLauncher } from "../support/MockAppLauncher"
 import { MockIntentResolver } from "../support/MockIntentResolver"
-import type { DisplayMetadata } from "@finos/fdc3"
+import type { DisplayMetadata, BrowserTypes } from "@finos/fdc3"
 import type { DirectoryApp } from "../../src/core/app-directory/types"
 import { AppDirectoryManager } from "../../src/core/app-directory/app-directory-manager"
 
@@ -61,7 +61,7 @@ export class CustomWorld extends World {
   channelContextRegistry!: ChannelContextRegistry
   appChannelRegistry!: AppChannelRegistry
   userChannelRegistry!: UserChannelRegistry
-  appDirectory!: AppDirectoryManager
+  appDirectoryManager!: AppDirectoryManager
 
   // MOCK external dependencies (to avoid side effects)
   mockTransport!: MockTransport
@@ -78,41 +78,42 @@ export class CustomWorld extends World {
   /**
    * Initialize the DesktopAgent for a test scenario.
    * Called by setup steps (e.g., "Given a desktop agent")
+   * 
+   * Uses dependency injection: create registries in tests and pass them to DesktopAgent.
+   * This allows tests to access registries directly without exposing them via getters.
    */
   initializeDesktopAgent(apps: DirectoryApp[], channels: UserChannelConfig[]): void {
-    // Create REAL registries - we want to test actual behavior
-    this.appInstanceRegistry = new AppInstanceRegistry()
-    this.intentRegistry = new IntentRegistry()
-    this.channelContextRegistry = new ChannelContextRegistry()
-    this.appChannelRegistry = new AppChannelRegistry()
-    this.userChannelRegistry = new UserChannelRegistry(channels)
-    this.appDirectory = new AppDirectoryManager()
-    
-    // Add apps to the directory
-    apps.forEach(app => this.appDirectory.add(app))
-
     // Create MOCK external dependencies - avoid side effects
     this.mockTransport = new MockTransport()
     this.mockAppLauncher = new MockAppLauncher()
     this.mockIntentResolver = new MockIntentResolver()
 
-    // Create and configure DesktopAgent
+    // Create REAL registries (internal state - test the real thing!)
+    // We create them here so we can access them directly for assertions
+    this.appInstanceRegistry = new AppInstanceRegistry()
+    this.intentRegistry = new IntentRegistry()
+    this.channelContextRegistry = new ChannelContextRegistry()
+    this.appChannelRegistry = new AppChannelRegistry()
+    this.userChannelRegistry = new UserChannelRegistry(channels as BrowserTypes.Channel[])
+    this.appDirectoryManager = new AppDirectoryManager()
+
+    // Create DesktopAgent with dependency injection - pass in our registries
     this.desktopAgent = new DesktopAgent({
       // External dependencies (mocked)
       transport: this.mockTransport,
       appLauncher: this.mockAppLauncher,
       requestIntentResolution: this.mockIntentResolver.createCallback(),
-
-      // Internal state (real instances)
+      // Internal state (injected - we own these instances)
       appInstanceRegistry: this.appInstanceRegistry,
       intentRegistry: this.intentRegistry,
       channelContextRegistry: this.channelContextRegistry,
       appChannelRegistry: this.appChannelRegistry,
       userChannelRegistry: this.userChannelRegistry,
-      appDirectoryManager: this.appDirectory,
+      appDirectoryManager: this.appDirectoryManager,
     })
 
-    // Sync apps from directory to intent registry
+    // Add apps to directory and sync to intent registry
+    this.appDirectoryManager.addApplications(apps)
     this.desktopAgent.syncAppDirectoryToIntentRegistry()
 
     // Start the agent

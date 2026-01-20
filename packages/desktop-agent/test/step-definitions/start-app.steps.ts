@@ -29,10 +29,10 @@ function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string
   const meta = createMeta(world, appStr)
   const instanceId = getAppInstanceId(world, appStr)
 
-  const existing = world.desktopAgent.getAppInstanceRegistry().getInstance(instanceId)
+  const existing = world.appInstanceRegistry.getInstance(instanceId)
   if (!existing) {
     // Test fixture setup: Create connected instance directly
-    world.desktopAgent.getAppInstanceRegistry().createInstance({
+    world.appInstanceRegistry.createInstance({
       instanceId,
       appId: meta.source.appId,
       metadata: {
@@ -40,7 +40,7 @@ function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string
         name: meta.source.appId,
       },
     })
-    world.desktopAgent.getAppInstanceRegistry().updateInstanceState(instanceId, AppInstanceState.CONNECTED)
+    world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED)
   }
 
   return instanceId
@@ -58,9 +58,9 @@ When(
 
     // Test fixture setup: Create app instance directly in registry
     // This simulates an app that has already connected via WCP protocol
-    const existing = this.desktopAgent.getAppInstanceRegistry().getInstance(uuid)
+    const existing = this.appInstanceRegistry.getInstance(uuid)
     if (!existing) {
-      this.desktopAgent.getAppInstanceRegistry().createInstance({
+      this.appInstanceRegistry.createInstance({
         instanceId: uuid,
         appId,
         metadata: {
@@ -71,7 +71,7 @@ When(
     }
 
     // Set to connected state
-    this.desktopAgent.getAppInstanceRegistry().updateInstanceState(uuid, AppInstanceState.CONNECTED)
+    this.appInstanceRegistry.updateInstanceState(uuid, AppInstanceState.CONNECTED)
   }
 )
 
@@ -82,12 +82,12 @@ When("{string} is closed", function (this: CustomWorld, app: string) {
   const context: DACPHandlerContext = {
     transport: this.mockTransport,
     instanceId,
-    appInstanceRegistry: this.desktopAgent.getAppInstanceRegistry(),
-    intentRegistry: this.desktopAgent.getIntentRegistry(),
-    channelContextRegistry: this.desktopAgent.getChannelContextRegistry(),
-    appChannelRegistry: this.desktopAgent.getAppChannelRegistry(),
-    userChannelRegistry: this.desktopAgent.getUserChannelRegistry(),
-    appDirectory: this.desktopAgent.getAppDirectory(),
+    appInstanceRegistry: this.appInstanceRegistry,
+    intentRegistry: this.intentRegistry,
+    channelContextRegistry: this.channelContextRegistry,
+    appChannelRegistry: this.appChannelRegistry,
+    userChannelRegistry: this.userChannelRegistry,
+    appDirectory: this.appDirectoryManager,
     appLauncher: this.mockAppLauncher,
     requestIntentResolution: this.mockIntentResolver.createCallback(),
   }
@@ -95,13 +95,11 @@ When("{string} is closed", function (this: CustomWorld, app: string) {
   cleanupDACPHandlers(context)
 
   // Update instance state
-  this.desktopAgent
-    .getAppInstanceRegistry()
-    .updateInstanceState(instanceId, AppInstanceState.TERMINATED)
+  this.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.TERMINATED)
 })
 
 When("{string} sends validate", async function (this: CustomWorld, uuid: string) {
-  const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(uuid)
+  const instance = this.appInstanceRegistry.getInstance(uuid)
   if (!instance) {
     throw new Error(`Did not find app instance ${uuid}`)
   }
@@ -119,14 +117,14 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
   }
 
   // Set to connected state
-  this.desktopAgent.getAppInstanceRegistry().updateInstanceState(uuid, AppInstanceState.CONNECTED)
+  this.appInstanceRegistry.updateInstanceState(uuid, AppInstanceState.CONNECTED)
 
   // Send message to DesktopAgent
   await this.mockTransport.receiveMessage(message)
 })
 
 When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
-  const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(uuid)
+  const instance = this.appInstanceRegistry.getInstance(uuid)
   if (!instance) {
     throw new Error(`Did not find app instance ${uuid}`)
   }
@@ -154,7 +152,7 @@ Then("running apps will be", function (this: CustomWorld, dataTable: DataTable) 
   // 1. There's no FDC3 API to list "all running apps" (findInstances requires an appId)
   // 2. This is an integration test verifying the Desktop Agent's internal state management
   // 3. This validates that operations (like app launch, cleanup) correctly updated the registry
-  const instances = this.desktopAgent.getAppInstanceRegistry().queryInstances({
+  const instances = this.appInstanceRegistry.queryInstances({
     state: AppInstanceState.CONNECTED,
   })
 

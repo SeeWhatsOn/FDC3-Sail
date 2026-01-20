@@ -22,10 +22,10 @@ function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string
   const instanceId = getAppInstanceId(world, appStr);
   const meta = createMeta(world, appStr);
   
-  const instance = world.desktopAgent.getAppInstanceRegistry().getInstance(instanceId);
+  const instance = world.appInstanceRegistry.getInstance(instanceId);
   if (!instance) {
     // Test fixture setup: Create connected instance directly
-    world.desktopAgent.getAppInstanceRegistry().createInstance({
+    world.appInstanceRegistry.createInstance({
       instanceId,
       appId: meta.source.appId,
       metadata: {
@@ -33,7 +33,7 @@ function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string
         name: meta.source.appId,
       },
     });
-    world.desktopAgent.getAppInstanceRegistry().updateInstanceState(instanceId, AppInstanceState.CONNECTED);
+    world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
   }
   
   return instanceId;
@@ -78,7 +78,7 @@ Then('I test the liveness of {string}', function (this: CustomWorld, appStr: str
   
   // Assertion: Verify internal state of app instance
   // Note: This queries internal state directly to verify liveness tracking
-  const instance = this.desktopAgent.getAppInstanceRegistry().getInstance(instanceId);
+  const instance = this.appInstanceRegistry.getInstance(instanceId);
   
   // Check if instance exists and is connected
   const out = instance && instance.state === AppInstanceState.CONNECTED;
