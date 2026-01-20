@@ -109,7 +109,7 @@ When("{string} is closed", function (this: CustomWorld, app: string) {
   cleanupDACPHandlers(context)
 
   // Update instance state
-  this.desktopAgent.setState(currentState =>
+  this.updateState(currentState =>
     updateInstanceState(currentState, instanceId, AppInstanceState.TERMINATED)
   )
 })
@@ -134,7 +134,7 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
   }
 
   // Set to connected state
-  this.desktopAgent.setState(currentState =>
+  this.updateState(currentState =>
     updateInstanceState(currentState, uuid, AppInstanceState.CONNECTED)
   )
 
