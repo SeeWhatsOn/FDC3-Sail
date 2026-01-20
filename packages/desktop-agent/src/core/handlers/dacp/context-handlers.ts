@@ -4,8 +4,10 @@ import {
   createDACPEvent,
   DACP_ERROR_TYPES,
 } from "../../protocol/dacp-utilities"
-import { type DACPHandlerContext, type DACPMessage, logger } from "../types"
+import { type DACPHandlerContext, type DACPMessage } from "../types"
 import type { Context } from "@finos/fdc3"
+import { getInstance, getInstancesOnChannel } from "../../state/selectors"
+import { storeContext, addContextListener, removeContextListener } from "../../state/transforms"
 
 /**
  * Handles broadcast requests to send context to a channel
@@ -17,35 +19,35 @@ export async function handleBroadcastRequest(
   message: DACPMessage,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, channelContextRegistry, appInstanceRegistry } = context
+  const { transport, instanceId, getState, setState, logger } = context
 
   try {
+    const channelId = (message.payload as { channelId: string }).channelId
+    const broadcastContext = (message.payload as { context: Context }).context
 
     // Validate that the instance is a member of the channel they're broadcasting to
-    const instance = appInstanceRegistry.getInstance(instanceId)
+    const instance = getInstance(getState(), instanceId)
     if (!instance) {
       throw new Error("Instance not found")
     }
 
-    if (instance.currentChannel !== request.payload.channelId) {
+    if (instance.currentChannel !== channelId) {
       throw new Error(
-        `Instance is not a member of channel ${request.payload.channelId}. Current channel: ${instance.currentChannel ?? "none"}`
+        `Instance is not a member of channel ${channelId}. Current channel: ${instance.currentChannel ?? "none"}`
       )
     }
 
     logger.info("DACP: Processing broadcast request", {
-      channelId: request.payload.channelId,
-      contextType: request.payload.context.type,
-      requestUuid: request.meta.requestUuid,
+      channelId,
+      contextType: broadcastContext.type,
+      requestUuid: message.meta.requestUuid,
     })
 
-    const broadcastContext = request.payload.context
-
-    // Store context in channel context registry
-    channelContextRegistry.storeContext(request.payload.channelId, broadcastContext, instanceId)
+    // Store context using state transform
+    setState(state => storeContext(state, channelId, broadcastContext, instanceId))
 
     // Notify listeners on the channel
-    await notifyContextListeners(request.payload.channelId, broadcastContext, context)
+    await notifyContextListeners(channelId, broadcastContext, context)
 
     const response = createDACPSuccessResponse(message, "broadcastResponse")
 
@@ -61,7 +63,7 @@ export async function handleBroadcastRequest(
     transport.send(responseWithRouting)
 
     logger.debug("DACP: Broadcast request completed successfully", {
-      requestUuid: request.meta.requestUuid,
+      requestUuid: message.meta.requestUuid,
     })
   } catch (error) {
     logger.error("DACP: Broadcast request failed", error)
@@ -95,23 +97,25 @@ export async function handleBroadcastRequest(
  * Implements DACP addContextListenerRequest message handling
  */
 export function handleAddContextListener(message: DACPMessage, context: DACPHandlerContext): void {
-  const { transport, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, setState, logger } = context
 
   try {
-    const contextType = request.payload.contextType ?? "*" // Default to all contexts if not specified
+    const contextType = (message.payload as { contextType?: string }).contextType ?? "*" // Default to all contexts if not specified
 
     logger.info("DACP: Adding context listener", {
       instanceId,
       contextType,
-      requestUuid: request.meta.requestUuid,
+      requestUuid: message.meta.requestUuid,
     })
 
-    const added = appInstanceRegistry.addContextListener(instanceId, contextType)
+    // Add context listener using state transform
+    setState(state => addContextListener(state, instanceId, contextType))
+
     logger.info("DACP: Context listener registration result", {
       instanceId,
       contextType,
-      added,
-      requestUuid: request.meta.requestUuid,
+      added: true,
+      requestUuid: message.meta.requestUuid,
     })
 
     // The listenerUUID is the contextType itself for simplicity in unsubscribing.
@@ -135,7 +139,7 @@ export function handleAddContextListener(message: DACPMessage, context: DACPHand
     logger.debug("DACP: Context listener added successfully", {
       listenerUUID,
       instanceId,
-      requestUuid: request.meta.requestUuid,
+      requestUuid: message.meta.requestUuid,
     })
   } catch (error) {
     logger.error("DACP: Add context listener failed", error)
@@ -172,22 +176,25 @@ export function handleContextListenerUnsubscribe(
   message: DACPMessage,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const listenerUUID = request.payload.listenerUUID
+    const listenerUUID = (message.payload as { listenerUUID: string }).listenerUUID
 
     logger.info("DACP: Unsubscribing context listener", {
       listenerUUID,
       instanceId,
-      requestUuid: request.meta?.requestUuid,
+      requestUuid: message.meta?.requestUuid,
     })
 
-    const removed = appInstanceRegistry.removeContextListener(instanceId, listenerUUID)
-
-    if (!removed) {
+    // Check if listener exists before removing
+    const instance = getInstance(getState(), instanceId)
+    if (!instance || !instance.contextListeners.includes(listenerUUID)) {
       throw new Error(`Context listener ${listenerUUID} not found for instance ${instanceId}`)
     }
+
+    // Remove context listener using state transform
+    setState(state => removeContextListener(state, instanceId, listenerUUID))
 
     const response = createDACPSuccessResponse(message, "contextListenerUnsubscribeResponse")
 
@@ -205,7 +212,7 @@ export function handleContextListenerUnsubscribe(
     logger.debug("DACP: Context listener unsubscribed successfully", {
       listenerUUID,
       instanceId,
-      requestUuid: request.meta?.requestUuid,
+      requestUuid: message.meta?.requestUuid,
     })
   } catch (error) {
     logger.error("DACP: Context listener unsubscribe failed", error)
@@ -239,8 +246,10 @@ async function notifyContextListeners(
   context: Context,
   handlerContext: DACPHandlerContext
 ): Promise<void> {
+  const { getState, logger } = handlerContext
+
   // Find instances on the same channel
-  const instancesOnChannel = handlerContext.appInstanceRegistry.getInstancesOnChannel(channelId)
+  const instancesOnChannel = getInstancesOnChannel(getState(), channelId)
 
   logger.info("DACP: Notifying context listeners", {
     channelId,
@@ -259,19 +268,19 @@ async function notifyContextListeners(
 
       // Check if the instance is listening for this context type
       const listensForType =
-        instance.contextListeners.has(context.type) || instance.contextListeners.has("*")
+        instance.contextListeners.includes(context.type) || instance.contextListeners.includes("*")
 
       if (!listensForType) {
         logger.info("Instance not listening for context type", {
           instanceId: instance.instanceId,
           contextType: context.type,
-          registeredListeners: Array.from(instance.contextListeners),
+          registeredListeners: instance.contextListeners,
         })
       } else {
         logger.info("Instance IS listening for context type", {
           instanceId: instance.instanceId,
           contextType: context.type,
-          registeredListeners: Array.from(instance.contextListeners),
+          registeredListeners: instance.contextListeners,
         })
       }
 
@@ -281,9 +290,7 @@ async function notifyContextListeners(
       try {
         // FDC3 agent library expects broadcastEvent (not contextEvent) with originatingApp
         // Get the sender's instance info for originatingApp
-        const senderInstance = handlerContext.appInstanceRegistry.getInstance(
-          handlerContext.instanceId
-        )
+        const senderInstance = getInstance(getState(), handlerContext.instanceId)
 
         const broadcastEvent = createDACPEvent("broadcastEvent", {
           channelId,

@@ -10,6 +10,8 @@ import type { AppMetadata } from "@finos/fdc3"
 import type { DACPHandlerContext } from "../types"
 import { startHeartbeat } from "./heartbeat-handlers"
 import { cleanupDACPHandlers } from "./index"
+import { getInstance } from "../../state/selectors"
+import { connectInstance } from "../../state/transforms"
 
 /**
  * WCP4ValidateAppIdentity message from FDC3 app
@@ -78,9 +80,9 @@ interface WCP5ValidateAppIdentityFailedResponse {
  */
 export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHandlerContext): void {
   const wcp4Message = message as Wcp4ValidateAppIdentity
-  const { transport, appInstanceRegistry, appDirectory } = context
+  const { transport, getState, setState, appDirectory, logger } = context
 
-  console.log("[WCP4] Received app identity validation request:", wcp4Message.payload)
+  logger.info("[WCP4] Received app identity validation request", wcp4Message.payload)
 
   try {
     const {
@@ -96,7 +98,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
 
     // 2. Validate origins match (per FDC3 spec requirement)
     if (identityOrigin !== actualOrigin) {
-      console.error("[WCP4] Origin mismatch:", { identityOrigin, actualOrigin })
+      logger.error("[WCP4] Origin mismatch", { identityOrigin, actualOrigin })
       sendFailureResponse(
         context,
         "Origin mismatch: identityUrl and actualUrl must have same origin"
@@ -150,12 +152,12 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     })
 
     if (!appMetadata) {
-      console.error("[WCP4] App not found in directory for identity:", identityUrl)
+      logger.error("[WCP4] App not found in directory for identity", identityUrl)
       sendFailureResponse(context, "App not found in app directory")
       return
     }
 
-    console.log("[WCP4] App found in directory:", appMetadata.appId)
+    logger.info("[WCP4] App found in directory", appMetadata.appId)
 
     // 4. Check if reconnecting to existing instance
     let instanceId: string
@@ -163,14 +165,14 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
 
     if (reconnectInstanceId && reconnectInstanceUuid) {
       // Attempt to reconnect to existing instance
-      const existingInstance = appInstanceRegistry.getInstance(reconnectInstanceId)
+      const existingInstance = getInstance(getState(), reconnectInstanceId)
 
       if (existingInstance) {
-        console.log("[WCP4] Reconnecting to existing instance:", reconnectInstanceId)
+        logger.info("[WCP4] Reconnecting to existing instance", reconnectInstanceId)
         instanceId = reconnectInstanceId
         instanceUuid = reconnectInstanceUuid
       } else {
-        console.warn("[WCP4] Instance not found for reconnection, creating new instance")
+        logger.warn("[WCP4] Instance not found for reconnection, creating new instance")
         const newInstance = createAppInstance(context, appMetadata, identityUrl)
         instanceId = newInstance.instanceId
         instanceUuid = newInstance.instanceId // Use same for now
@@ -200,7 +202,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
       },
     }
 
-    console.log("[WCP4] Validation successful, sending WCP5 response:", response.payload)
+    logger.info("[WCP4] Validation successful, sending WCP5 response", response.payload)
 
     // Extract connectionAttemptUuid from WCP4 message or from temporary instanceId
     // The temporary instanceId format is "temp-{connectionAttemptUuid}"
@@ -229,7 +231,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     // Start heartbeat for the actual instance (not the temp one)
     startHeartbeat(instanceId, context)
   } catch (error) {
-    console.error("[WCP4] Error during validation:", error)
+    logger.error("[WCP4] Error during validation", error)
     sendFailureResponse(
       context,
       error instanceof Error ? error.message : "Internal validation error"
@@ -247,21 +249,23 @@ function createAppInstance(
 ) {
   const instanceId = crypto.randomUUID()
 
-  // Register the instance in the app instance registry
-  context.appInstanceRegistry.createInstance({
-    instanceId,
-    appId: appMetadata.appId,
-    metadata: {
+  // Register the instance using state transform
+  context.setState(state =>
+    connectInstance(state, {
+      instanceId,
       appId: appMetadata.appId,
-      name: appMetadata.name,
-      title: appMetadata.title,
-      description: appMetadata.description,
-      icons: appMetadata.icons,
-      screenshots: appMetadata.screenshots,
-    },
-  })
+      metadata: {
+        appId: appMetadata.appId,
+        name: appMetadata.name,
+        title: appMetadata.title,
+        description: appMetadata.description,
+        icons: appMetadata.icons,
+        screenshots: appMetadata.screenshots,
+      },
+    })
+  )
 
-  console.log("[WCP4] Created new app instance:", {
+  context.logger.info("[WCP4] Created new app instance", {
     instanceId,
     appId: appMetadata.appId,
     identityUrl,
@@ -285,9 +289,9 @@ function createAppInstance(
  * @param context - Handler context with desktop agent access
  */
 export function handleWCP6Goodbye(_message: unknown, context: DACPHandlerContext): void {
-  const { instanceId } = context
+  const { instanceId, logger } = context
 
-  console.log("[WCP6] Received goodbye from app instance:", instanceId)
+  logger.info("[WCP6] Received goodbye from app instance", instanceId)
 
   // Import cleanup function dynamically to avoid circular dependency
   // The cleanup function handles:
@@ -295,10 +299,10 @@ export function handleWCP6Goodbye(_message: unknown, context: DACPHandlerContext
   // - Removing event listeners
   // - Removing private channels
   // - Stopping heartbeat
-  // - Removing from registries
+  // - Removing from state
   cleanupDACPHandlers(context)
 
-  console.log("[WCP6] Cleanup completed for instance:", instanceId)
+  logger.info("[WCP6] Cleanup completed for instance", instanceId)
 }
 
 /**
@@ -319,7 +323,7 @@ function sendFailureResponse(context: DACPHandlerContext, error: string): void {
     },
   }
 
-  console.log("[WCP4] Validation failed, sending WCP5 failure response:", error)
+  context.logger.info("[WCP4] Validation failed, sending WCP5 failure response", error)
 
   // Try to get the instance ID from the transport (e.g. socket ID)
   const instanceId = context.transport.getInstanceId()
@@ -335,6 +339,6 @@ function sendFailureResponse(context: DACPHandlerContext, error: string): void {
     }
     context.transport.send(responseWithRouting)
   } else {
-    console.error("[WCP4] Cannot send failure response: instanceId not established")
+    context.logger.error("[WCP4] Cannot send failure response: instanceId not established")
   }
 }
