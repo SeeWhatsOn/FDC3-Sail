@@ -5,11 +5,14 @@ import {
   DACP_ERROR_TYPES,
   generateEventUuid,
 } from "../../protocol/dacp-utilities"
-import { type DACPHandlerContext, type DACPMessage, logger } from "../types"
-import { PrivateChannelRegistry } from "../../state/private-channel-registry"
-
-// Singleton registry instance
-const privateChannelRegistry = new PrivateChannelRegistry()
+import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { getInstance, getPrivateChannel } from "../../state/selectors"
+import {
+  createPrivateChannel,
+  disconnectInstanceFromPrivateChannel,
+  addPrivateChannelContextListener,
+} from "../../state/transforms"
+import { v4 as uuidv4 } from "uuid"
 
 /**
  * Handles createPrivateChannelRequest
@@ -19,20 +22,23 @@ export function handleCreatePrivateChannelRequest(
   message: DACPMessage,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const instance = appInstanceRegistry.getInstance(instanceId)
+    const instance = getInstance(getState(), instanceId)
 
     if (!instance) {
       throw new Error(`Instance ${instanceId} not found for creating private channel`)
     }
 
-    // Create the private channel
-    const channel = privateChannelRegistry.createChannel(instance.appId, instanceId)
+    // Generate channel ID
+    const channelId = `private-${uuidv4()}`
+
+    // Create the private channel using state transform
+    setState(state => createPrivateChannel(state, channelId, instance.appId, instanceId))
 
     logger.info("DACP: Private channel created", {
-      channelId: channel.id,
+      channelId,
       creatorAppId: instance.appId,
       creatorInstanceId: instanceId,
     })
@@ -40,7 +46,7 @@ export function handleCreatePrivateChannelRequest(
     // Return channel information to the creator
     const response = createDACPSuccessResponse(message, "createPrivateChannelResponse", {
       channel: {
-        id: channel.id,
+        id: channelId,
         type: "private",
       },
     })
@@ -84,24 +90,25 @@ export function handlePrivateChannelDisconnectRequest(
   message: DACPMessage,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId } = context
+  const { transport, instanceId, getState, setState, logger } = context
 
   try {
     const payload = message.payload as { channelId: string }
     const channelId = payload.channelId
 
-    const channel = privateChannelRegistry.getChannel(channelId)
+    const state = getState()
+    const channel = getPrivateChannel(state, channelId)
     if (!channel) {
       throw new Error(`Private channel ${channelId} not found`)
     }
 
     // Verify the instance is connected to this channel
-    if (!channel.connectedInstances.has(instanceId)) {
+    if (!channel.connectedInstances.includes(instanceId)) {
       throw new Error(`Instance ${instanceId} is not connected to channel ${channelId}`)
     }
 
     // Notify all disconnect listeners before disconnecting
-    const disconnectListeners = Array.from(channel.disconnectListeners.values())
+    const disconnectListeners = Object.values(channel.disconnectListeners)
     disconnectListeners.forEach(listener => {
       if (listener.instanceId !== instanceId) {
         const disconnectEvent = createDACPEvent("privateChannelDisconnectEvent", {
@@ -122,7 +129,7 @@ export function handlePrivateChannelDisconnectRequest(
     })
 
     // Unsubscribe all context listeners for this instance
-    const contextListenersToRemove = Array.from(channel.contextListeners.values()).filter(
+    const contextListenersToRemove = Object.values(channel.contextListeners).filter(
       listener => listener.instanceId === instanceId
     )
 
@@ -149,8 +156,8 @@ export function handlePrivateChannelDisconnectRequest(
       })
     })
 
-    // Disconnect the instance
-    privateChannelRegistry.disconnectInstance(channelId, instanceId)
+    // Disconnect the instance using state transform
+    setState(state => disconnectInstanceFromPrivateChannel(state, channelId, instanceId))
 
     logger.info("DACP: Instance disconnected from private channel", {
       channelId,
@@ -199,29 +206,27 @@ export function handlePrivateChannelAddContextListenerRequest(
   message: DACPMessage,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId } = context
+  const { transport, instanceId, getState, setState, logger } = context
 
   try {
     // TODO: Validate with proper schema when available
     const { channelId, contextType } = message.payload as { channelId: string; contextType?: string }
 
-    const channel = privateChannelRegistry.getChannel(channelId)
+    const state = getState()
+    const channel = getPrivateChannel(state, channelId)
     if (!channel) {
       throw new Error(`Private channel ${channelId} not found`)
     }
 
-    if (!channel.connectedInstances.has(instanceId)) {
+    if (!channel.connectedInstances.includes(instanceId)) {
       throw new Error(`Instance ${instanceId} is not connected to channel ${channelId}`)
     }
 
     const listenerId = generateEventUuid()
 
-    // Add the listener
-    privateChannelRegistry.addContextListener(
-      channelId,
-      listenerId,
-      instanceId,
-      contextType || null
+    // Add the listener using state transform
+    setState(state =>
+      addPrivateChannelContextListener(state, channelId, listenerId, instanceId, contextType || null)
     )
 
     logger.info("DACP: Context listener added to private channel", {
@@ -293,22 +298,22 @@ export function handlePrivateChannelAddContextListenerRequest(
 }
 
 /**
- * Get the private channel registry (for use by other handlers)
- */
-export function getPrivateChannelRegistry(): PrivateChannelRegistry {
-  return privateChannelRegistry
-}
-
-/**
  * Remove all private channels for an instance (called on disconnect)
  */
-export function removeInstancePrivateChannels(instanceId: string): number {
-  return privateChannelRegistry.removeInstanceChannels(instanceId)
-}
+export function removeInstancePrivateChannels(
+  instanceId: string,
+  getState: () => import("../../state/types").AgentState,
+  setState: (fn: (state: import("../../state/types").AgentState) => import("../../state/types").AgentState) => void
+): number {
+  const state = getState()
+  const privateChannels = Object.values(state.channels.private)
+  const channelsToRemove = privateChannels.filter(channel =>
+    channel.connectedInstances.includes(instanceId)
+  )
 
-/**
- * Clear all private channels (for testing)
- */
-export function clearPrivateChannels(): void {
-  privateChannelRegistry.clear()
+  channelsToRemove.forEach(channel => {
+    setState(state => disconnectInstanceFromPrivateChannel(state, channel.id, instanceId))
+  })
+
+  return channelsToRemove.length
 }

@@ -5,9 +5,236 @@ import {
   DACP_ERROR_TYPES,
   generateEventUuid,
 } from "../../protocol/dacp-utilities"
-import { type DACPHandlerContext, type DACPMessage, type IntentHandlerOption, logger } from "../types"
+import { type DACPHandlerContext, type DACPMessage, type IntentHandlerOption } from "../types"
 import { type Context } from "@finos/fdc3"
-import { AppInstanceState } from "../../state/app-instance-registry"
+import { AppInstanceState } from "../../state/types"
+import {
+  getInstance,
+  getInstancesByAppId,
+  getActiveListenersForIntent,
+  getListenersForInstance,
+  getPendingIntent,
+  getAllIntentListeners,
+} from "../../state/selectors"
+import {
+  registerIntentListener,
+  unregisterIntentListener,
+  addPendingIntent,
+  resolvePendingIntent,
+} from "../../state/transforms"
+import type { IntentListener } from "../../state/types"
+import type { AppDirectoryManager } from "../../app-directory/app-directory-manager"
+
+/**
+ * Map to store promise functions for pending intents
+ * These can't be stored in state (not serializable), so we manage them separately
+ */
+const pendingIntentPromises = new Map<
+  string,
+  {
+    resolve: (result: unknown) => void
+    reject: (error: Error) => void
+    timeoutHandle?: NodeJS.Timeout
+  }
+>()
+
+/**
+ * Helper to check if context type is compatible with supported types
+ */
+function isContextTypeCompatible(supportedTypes: string[], contextType: string): boolean {
+  if (supportedTypes.length === 0) {
+    return true // Accepts all context types
+  }
+  return supportedTypes.includes(contextType) || supportedTypes.includes("*")
+}
+
+/**
+ * Helper to find intent handlers using state and app directory
+ * Replaces intentRegistry.findIntentHandlers()
+ */
+function findIntentHandlers(
+  state: import("../../state/types").AgentState,
+  appDirectory: AppDirectoryManager,
+  request: {
+    intent: string
+    context: Context
+    target?: { appId: string; instanceId?: string }
+    source?: { appId: string; instanceId?: string }
+  }
+): {
+  runningListeners: IntentListener[]
+  availableApps: Array<{
+    intentName: string
+    appId: string
+    contextTypes: string[]
+    resultType?: string
+    displayName?: string
+  }>
+  compatibleApps: (IntentListener | {
+    intentName: string
+    appId: string
+    contextTypes: string[]
+    resultType?: string
+    displayName?: string
+  })[]
+} {
+  const { intent, context, target, source } = request
+
+  // Get running listeners for this intent
+  let runningListeners = getActiveListenersForIntent(state, intent)
+
+  // Filter by context type compatibility
+  runningListeners = runningListeners.filter(l =>
+    isContextTypeCompatible(l.contextTypes, context.type)
+  )
+
+  // Filter out the source instance from running listeners
+  if (source?.instanceId) {
+    runningListeners = runningListeners.filter(
+      listener => listener.instanceId !== source.instanceId
+    )
+  }
+
+  // Filter by target if specified
+  if (target?.appId) {
+    runningListeners = runningListeners.filter(listener => listener.appId === target.appId)
+  }
+
+  // Get app capabilities from app directory
+  const allApps = appDirectory.retrieveAllApps()
+  let availableApps = allApps
+    .filter(app => {
+      const intents = app.interop?.intents?.listensFor
+      if (!intents || typeof intents !== "object") return false
+      const intentDef = intents[intent]
+      if (!intentDef || typeof intentDef !== "object" || !("contexts" in intentDef)) return false
+      const contextTypes = Array.isArray(intentDef.contexts) ? intentDef.contexts : []
+      return isContextTypeCompatible(contextTypes, context.type)
+    })
+    .map(app => {
+      const intents = app.interop?.intents?.listensFor
+      const intentDef = intents?.[intent]
+      const contextTypes = Array.isArray(intentDef?.contexts) ? intentDef.contexts : []
+      return {
+        intentName: intent,
+        appId: app.appId,
+        contextTypes,
+        resultType: typeof intentDef?.resultType === "string" ? intentDef.resultType : undefined,
+        displayName: typeof intentDef?.displayName === "string" ? intentDef.displayName : undefined,
+      }
+    })
+
+  // Filter by target if specified
+  if (target?.appId) {
+    availableApps = availableApps.filter(capability => capability.appId === target.appId)
+  }
+
+  // Combine and deduplicate (prefer running listeners)
+  const runningAppIds = new Set(runningListeners.map(l => l.appId))
+  const compatibleApps: (IntentListener | typeof availableApps[0])[] = [
+    ...runningListeners,
+    ...availableApps.filter(app => !runningAppIds.has(app.appId)),
+  ]
+
+  return {
+    runningListeners,
+    availableApps,
+    compatibleApps,
+  }
+}
+
+/**
+ * Helper to create AppIntent objects for FDC3 API responses
+ * Replaces intentRegistry.createAppIntents()
+ */
+function createAppIntents(
+  state: import("../../state/types").AgentState,
+  appDirectory: AppDirectoryManager,
+  intentName: string,
+  contextType?: string
+): Array<{
+  intent: { name: string; displayName?: string }
+  apps: Array<{ appId: string; name?: string; version?: string }>
+}> {
+  const allApps = appDirectory.retrieveAllApps()
+  const appIntentsMap = new Map<
+    string,
+    {
+      intent: { name: string; displayName?: string }
+      apps: Array<{ appId: string; name?: string; version?: string }>
+    }
+  >()
+
+  allApps.forEach(app => {
+    const intents = app.interop?.intents?.listensFor
+    if (!intents || typeof intents !== "object") return
+    const intentDef = intents[intentName]
+    if (!intentDef || typeof intentDef !== "object" || !("contexts" in intentDef)) return
+
+    const contextTypes = Array.isArray(intentDef.contexts) ? intentDef.contexts : []
+    if (contextType && !isContextTypeCompatible(contextTypes, contextType)) return
+
+    if (!appIntentsMap.has(intentName)) {
+      appIntentsMap.set(intentName, {
+        intent: {
+          name: intentName,
+          displayName:
+            typeof intentDef.displayName === "string" ? intentDef.displayName : intentName,
+        },
+        apps: [],
+      })
+    }
+
+    const appIntent = appIntentsMap.get(intentName)!
+    appIntent.apps.push({
+      appId: app.appId,
+      name: app.name,
+      version: app.version,
+    })
+  })
+
+  return Array.from(appIntentsMap.values())
+}
+
+/**
+ * Helper to find intents by context type
+ * Replaces intentRegistry.findIntentsByContext()
+ */
+function findIntentsByContext(
+  state: import("../../state/types").AgentState,
+  appDirectory: AppDirectoryManager,
+  contextType: string
+): Array<{ name: string; displayName?: string }> {
+  const intentNames = new Set<string>()
+
+  // Get intents from active listeners
+  const allListeners = getAllIntentListeners(state)
+  allListeners.forEach(listener => {
+    if (listener.active && isContextTypeCompatible(listener.contextTypes, contextType)) {
+      intentNames.add(listener.intentName)
+    }
+  })
+
+  // Get intents from app directory
+  const allApps = appDirectory.retrieveAllApps()
+  allApps.forEach(app => {
+    const intents = app.interop?.intents?.listensFor
+    if (!intents || typeof intents !== "object") return
+    Object.entries(intents).forEach(([intentName, intentDef]) => {
+      if (intentDef && typeof intentDef === "object" && "contexts" in intentDef) {
+        const contextTypes = Array.isArray(intentDef.contexts) ? intentDef.contexts : []
+        if (isContextTypeCompatible(contextTypes, contextType)) {
+          intentNames.add(intentName)
+        }
+      }
+    })
+  })
+
+  return Array.from(intentNames).map(name => ({
+    name,
+    displayName: name, // Could be enhanced to get from app directory
+  }))
+}
 
 /**
  * Helper function to launch an app and wait for it to be registered
@@ -26,7 +253,7 @@ async function launchAppAndWaitForInstance(
   context: DACPHandlerContext,
   validatedContext: unknown
 ): Promise<string> {
-  const { appLauncher, appDirectory, appInstanceRegistry } = context
+  const { appLauncher, appDirectory, getState, logger } = context
 
   if (!appLauncher) {
     throw new Error("App launching not available - no AppLauncher configured")
@@ -45,7 +272,8 @@ async function launchAppAndWaitForInstance(
   })
 
   // Track existing instances BEFORE launch to identify the new one
-  const existingInstances = appInstanceRegistry.queryInstances({ appId })
+  const state = getState()
+  const existingInstances = getInstancesByAppId(state, appId)
   const existingInstanceIds = new Set(existingInstances.map(i => i.instanceId))
 
   // Launch the app
@@ -81,7 +309,8 @@ async function launchAppAndWaitForInstance(
 
   while (Date.now() - startTime < maxWaitTime) {
     // Query for all instances of this app
-    const allInstances = appInstanceRegistry.queryInstances({ appId })
+    const currentState = context.getState()
+    const allInstances = getInstancesByAppId(currentState, appId)
     const elapsed = Date.now() - startTime
 
     // Log all instances periodically (every 2 seconds) for debugging
@@ -142,7 +371,7 @@ async function launchAppAndWaitForInstance(
     }
 
     // Also check if the launcher's instanceId exists (PENDING or CONNECTED) for compatibility
-    const launcherInstance = appInstanceRegistry.getInstance(launcherInstanceId)
+    const launcherInstance = getInstance(currentState, launcherInstanceId)
     if (
       launcherInstance &&
       (launcherInstance.state === AppInstanceState.CONNECTED ||
@@ -160,7 +389,8 @@ async function launchAppAndWaitForInstance(
   }
 
   // Log debug info before throwing
-  const finalInstances = appInstanceRegistry.queryInstances({ appId })
+  const finalState = context.getState()
+  const finalInstances = getInstancesByAppId(finalState, appId)
   logger.error("DACP: Timeout waiting for new instance", {
     appId,
     launcherInstanceId,
@@ -183,21 +413,26 @@ export async function handleRaiseIntentRequest(
   message: DACPMessage,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, appInstanceRegistry, intentRegistry, appDirectory } = context
+  const { transport, instanceId, getState, setState, appDirectory, logger } = context
 
   try {
+    const payload = message.payload as {
+      intent: string
+      context: Context
+      app?: string | { appId: string; instanceId?: string }
+    }
 
-    const contextPayload = request.payload.context as Record<string, unknown>
+    const contextPayload = payload.context as Record<string, unknown>
     logger.info("DACP: Processing raise intent request", {
-      intent: request.payload.intent,
-      requestUuid: request.meta.requestUuid,
+      intent: payload.intent,
+      requestUuid: message.meta.requestUuid,
       contextType: contextPayload?.type,
       contextKeys: contextPayload ? Object.keys(contextPayload) : [],
       hasName: typeof contextPayload?.name === "string",
       contextPayload: JSON.stringify(contextPayload),
     })
 
-    const validatedContext: Context = request.payload.context
+    const validatedContext: Context = payload.context
 
     const validatedContextRecord = validatedContext as Record<string, unknown>
     logger.debug("DACP: Context validated successfully", {
@@ -207,35 +442,35 @@ export async function handleRaiseIntentRequest(
       contextKeys: Object.keys(validatedContextRecord),
       validatedContext: JSON.stringify(validatedContextRecord),
     })
-    const source = appInstanceRegistry.getInstance(instanceId)
+    const source = getInstance(getState(), instanceId)
 
     if (!source) {
       throw new Error(`Source instance ${instanceId} not found`)
     }
 
     // Find intent handlers for this request
-    const handlers = intentRegistry.findIntentHandlers({
-      intent: request.payload.intent,
+    const state = getState()
+    const handlers = findIntentHandlers(state, appDirectory, {
+      intent: payload.intent,
       context: validatedContext,
       source: { appId: source.appId, instanceId: source.instanceId },
       target:
-        typeof request.payload.app === "string"
-          ? { appId: request.payload.app }
-          : request.payload.app,
-      requestId: request.meta.requestUuid,
+        typeof payload.app === "string"
+          ? { appId: payload.app }
+          : payload.app,
     })
 
     // Safety check: Filter out listeners whose instances no longer exist
     // This prevents zombie instances from appearing in the resolver
     const originalRunningCount = handlers.runningListeners.length
     const validRunningListeners = handlers.runningListeners.filter(listener => {
-      const instance = appInstanceRegistry.getInstance(listener.instanceId)
+      const instance = getInstance(state, listener.instanceId)
       if (!instance) {
         logger.warn("DACP: Found listener for non-existent instance, filtering out", {
           listenerId: listener.listenerId,
           instanceId: listener.instanceId,
           appId: listener.appId,
-          intent: request.payload.intent,
+          intent: payload.intent,
         })
         return false
       }
@@ -244,7 +479,7 @@ export async function handleRaiseIntentRequest(
           listenerId: listener.listenerId,
           instanceId: listener.instanceId,
           appId: listener.appId,
-          intent: request.payload.intent,
+          intent: payload.intent,
         })
         return false
       }
@@ -276,7 +511,7 @@ export async function handleRaiseIntentRequest(
         : handlers
 
     logger.info("DACP: Intent handlers found", {
-      intent: request.payload.intent,
+      intent: payload.intent,
       runningListeners: finalHandlers.runningListeners.length,
       availableApps: finalHandlers.availableApps.length,
       compatibleApps: finalHandlers.compatibleApps.length,
@@ -287,12 +522,12 @@ export async function handleRaiseIntentRequest(
     // Check if we have any compatible handlers
     if (finalHandlers.compatibleApps.length === 0) {
       logger.error("DACP: No compatible handlers found", {
-        intent: request.payload.intent,
+        intent: payload.intent,
         contextType: validatedContext.type,
         runningListeners: finalHandlers.runningListeners.length,
         availableApps: finalHandlers.availableApps.length,
       })
-      throw new Error(`No apps found to handle intent: ${request.payload.intent}`)
+      throw new Error(`No apps found to handle intent: ${payload.intent}`)
     }
 
     let targetInstanceId: string
@@ -309,7 +544,7 @@ export async function handleRaiseIntentRequest(
         const apps = appDirectory.retrieveAppsById(handler.appId)
         const appInfo = apps[0] // Take first matching app
         return {
-          instanceId: isRunning ? handler.instanceId : undefined,
+          instanceId: isRunning ? (handler as IntentListener).instanceId : undefined,
           appId: handler.appId,
           appName: appInfo?.title || handler.appId,
           appIcon: appInfo?.icons?.[0]?.src,
@@ -318,14 +553,14 @@ export async function handleRaiseIntentRequest(
       })
 
       logger.info("DACP: Multiple handlers found, requesting UI resolution", {
-        intent: request.payload.intent,
+        intent: payload.intent,
         handlerCount: handlerOptions.length,
       })
 
       // Request UI resolution
       const resolution = await context.requestIntentResolution!({
-        requestId: request.meta.requestUuid,
-        intent: request.payload.intent,
+        requestId: message.meta.requestUuid,
+        intent: payload.intent,
         context: validatedContext,
         handlers: handlerOptions,
       })
@@ -338,12 +573,12 @@ export async function handleRaiseIntentRequest(
 
       // Re-query handlers after user selection to get current state
       // (apps may have been launched/closed while user was selecting)
-      const currentHandlers = intentRegistry.findIntentHandlers({
-        intent: request.payload.intent,
+      const currentState = getState()
+      const currentHandlers = findIntentHandlers(currentState, appDirectory, {
+        intent: payload.intent,
         context: validatedContext,
         source: { appId: source.appId, instanceId: source.instanceId },
         target: { appId: targetAppId },
-        requestId: request.meta.requestUuid,
       })
 
       // Check if there's a running instance for the selected app
@@ -353,9 +588,7 @@ export async function handleRaiseIntentRequest(
 
       if (resolution.selectedHandler.instanceId) {
         // User selected a specific running instance - verify it still exists
-        const selectedInstance = appInstanceRegistry.getInstance(
-          resolution.selectedHandler.instanceId
-        )
+        const selectedInstance = getInstance(currentState, resolution.selectedHandler.instanceId)
         if (selectedInstance && selectedInstance.state !== AppInstanceState.TERMINATED) {
           targetInstanceId = resolution.selectedHandler.instanceId
           logger.info("DACP: Using user-selected running instance", {
@@ -365,18 +598,16 @@ export async function handleRaiseIntentRequest(
           })
 
           // Verify intent listener is registered on the selected instance
-          const listeners = intentRegistry.queryListeners({
-            intentName: request.payload.intent,
-            instanceId: targetInstanceId,
-            active: true,
-          })
+          const listeners = getListenersForInstance(currentState, targetInstanceId).filter(
+            l => l.intentName === payload.intent && l.active
+          )
 
           if (listeners.length === 0) {
             logger.warn(
               "DACP: No intent listener found on selected instance, waiting for registration",
               {
                 targetInstanceId,
-                intent: request.payload.intent,
+                intent: payload.intent,
               }
             )
 
@@ -387,17 +618,16 @@ export async function handleRaiseIntentRequest(
             let listenerRegistered = false
 
             while (Date.now() - listenerWaitStart < listenerWaitTime) {
-              const currentListeners = intentRegistry.queryListeners({
-                intentName: request.payload.intent,
-                instanceId: targetInstanceId,
-                active: true,
-              })
+              const waitState = getState()
+              const currentListeners = getListenersForInstance(waitState, targetInstanceId).filter(
+                l => l.intentName === payload.intent && l.active
+              )
 
               if (currentListeners.length > 0) {
                 listenerRegistered = true
                 logger.info("DACP: Intent listener found on selected instance", {
                   targetInstanceId,
-                  intent: request.payload.intent,
+                  intent: payload.intent,
                   listenerId: currentListeners[0].listenerId,
                 })
                 break
@@ -411,7 +641,7 @@ export async function handleRaiseIntentRequest(
                 "DACP: No intent listener registered on selected instance, sending intent event anyway",
                 {
                   targetInstanceId,
-                  intent: request.payload.intent,
+                  intent: payload.intent,
                 }
               )
             }
@@ -445,18 +675,16 @@ export async function handleRaiseIntentRequest(
         })
 
         // Verify intent listener is registered on this instance
-        const listeners = intentRegistry.queryListeners({
-          intentName: request.payload.intent,
-          instanceId: targetInstanceId,
-          active: true,
-        })
+        const listeners = getListenersForInstance(currentState, targetInstanceId).filter(
+          l => l.intentName === payload.intent && l.active
+        )
 
         if (listeners.length === 0) {
           logger.warn(
             "DACP: No intent listener found on running instance, waiting for registration",
             {
               targetInstanceId,
-              intent: request.payload.intent,
+              intent: payload.intent,
             }
           )
 
@@ -467,17 +695,16 @@ export async function handleRaiseIntentRequest(
           let listenerRegistered = false
 
           while (Date.now() - listenerWaitStart < listenerWaitTime) {
-            const currentListeners = intentRegistry.queryListeners({
-              intentName: request.payload.intent,
-              instanceId: targetInstanceId,
-              active: true,
-            })
+            const waitState = getState()
+            const currentListeners = getListenersForInstance(waitState, targetInstanceId).filter(
+              l => l.intentName === payload.intent && l.active
+            )
 
             if (currentListeners.length > 0) {
               listenerRegistered = true
               logger.info("DACP: Intent listener found on running instance", {
                 targetInstanceId,
-                intent: request.payload.intent,
+                intent: payload.intent,
                 listenerId: currentListeners[0].listenerId,
               })
               break
@@ -491,7 +718,7 @@ export async function handleRaiseIntentRequest(
               "DACP: No intent listener registered on running instance, sending intent event anyway",
               {
                 targetInstanceId,
-                intent: request.payload.intent,
+                intent: payload.intent,
               }
             )
           }
@@ -504,7 +731,7 @@ export async function handleRaiseIntentRequest(
         // Wait up to 15 seconds for the app to register its intent listener
         logger.info("DACP: Waiting for app to register intent listener (UI resolution path)", {
           targetInstanceId,
-          intent: request.payload.intent,
+          intent: payload.intent,
         })
 
         const listenerWaitTime = 15000 // 15 seconds (FDC3 spec minimum)
@@ -514,17 +741,16 @@ export async function handleRaiseIntentRequest(
 
         while (Date.now() - listenerWaitStart < listenerWaitTime) {
           // Check if a listener has been registered for this intent on this instance
-          const listeners = intentRegistry.queryListeners({
-            intentName: request.payload.intent,
-            instanceId: targetInstanceId,
-            active: true,
-          })
+          const waitState = getState()
+          const listeners = getListenersForInstance(waitState, targetInstanceId).filter(
+            l => l.intentName === payload.intent && l.active
+          )
 
           if (listeners.length > 0) {
             listenerRegistered = true
             logger.info("DACP: Intent listener registered (UI resolution path)", {
               targetInstanceId,
-              intent: request.payload.intent,
+              intent: payload.intent,
               listenerId: listeners[0].listenerId,
             })
             break
@@ -538,7 +764,7 @@ export async function handleRaiseIntentRequest(
             "DACP: No intent listener registered within timeout (UI resolution path), sending intent event anyway",
             {
               targetInstanceId,
-              intent: request.payload.intent,
+              intent: payload.intent,
               timeout: listenerWaitTime,
             }
           )
@@ -553,7 +779,7 @@ export async function handleRaiseIntentRequest(
       logger.info("DACP: Using running listener", {
         targetInstanceId,
         targetAppId,
-        intent: request.payload.intent,
+        intent: payload.intent,
         contextType: validatedContext.type,
         hasName: typeof (validatedContext as Record<string, unknown>).name === "string",
       })
@@ -563,7 +789,7 @@ export async function handleRaiseIntentRequest(
       targetAppId = appCapability.appId
       logger.info("DACP: Launching app for intent", {
         targetAppId,
-        intent: request.payload.intent,
+        intent: payload.intent,
         contextType: validatedContext.type,
         hasName: typeof (validatedContext as Record<string, unknown>).name === "string",
       })
@@ -578,7 +804,7 @@ export async function handleRaiseIntentRequest(
       // This ensures the app is ready to receive the intent event
       logger.info("DACP: Waiting for app to register intent listener", {
         targetInstanceId,
-        intent: request.payload.intent,
+        intent: payload.intent,
       })
 
       const listenerWaitTime = 15000 // 15 seconds (FDC3 spec minimum)
@@ -588,17 +814,16 @@ export async function handleRaiseIntentRequest(
 
       while (Date.now() - listenerWaitStart < listenerWaitTime) {
         // Check if a listener has been registered for this intent on this instance
-        const listeners = intentRegistry.queryListeners({
-          intentName: request.payload.intent,
-          instanceId: targetInstanceId,
-          active: true,
-        })
+        const waitState = getState()
+        const listeners = getListenersForInstance(waitState, targetInstanceId).filter(
+          l => l.intentName === payload.intent && l.active
+        )
 
         if (listeners.length > 0) {
           listenerRegistered = true
           logger.info("DACP: Intent listener registered", {
             targetInstanceId,
-            intent: request.payload.intent,
+            intent: payload.intent,
             listenerId: listeners[0].listenerId,
           })
           break
@@ -612,7 +837,7 @@ export async function handleRaiseIntentRequest(
           "DACP: No intent listener registered within timeout, sending intent event anyway",
           {
             targetInstanceId,
-            intent: request.payload.intent,
+            intent: payload.intent,
             timeout: listenerWaitTime,
           }
         )
@@ -620,25 +845,40 @@ export async function handleRaiseIntentRequest(
         // or the app might be using a different mechanism to handle intents
       }
     } else {
-      throw new Error(`No handler found for intent: ${request.payload.intent}`)
+      throw new Error(`No handler found for intent: ${payload.intent}`)
     }
 
     // Register pending intent and get promise for result
-    const resultPromise = intentRegistry.registerPendingIntent({
-      requestId: request.meta.requestUuid,
-      intentName: request.payload.intent,
-      context: validatedContext,
-      sourceInstanceId: instanceId,
-      targetInstanceId,
-      targetAppId,
-      timeoutMs: 30000,
+    // Note: PendingIntent includes resolve/reject functions which can't be serialized in state
+    // We'll need to handle this differently - store the pending intent metadata in state
+    // and manage the promise separately
+    const requestId = message.meta.requestUuid
+    let resolvePromise: (result: unknown) => void
+    let rejectPromise: (error: Error) => void
+    const resultPromise = new Promise<unknown>((resolve, reject) => {
+      resolvePromise = resolve
+      rejectPromise = reject
     })
+
+    // Store pending intent in state (without promise functions)
+    setState(state =>
+      addPendingIntent(state, {
+        requestId,
+        intentName: payload.intent,
+        context: validatedContext,
+        sourceInstanceId: instanceId,
+        targetInstanceId,
+        targetAppId,
+        resolve: resolvePromise!,
+        reject: rejectPromise!,
+      })
+    )
 
     // Send intentEvent to target app
     const intentEvent = createIntentEvent(
-      request.payload.intent,
+      payload.intent,
       validatedContext,
-      request.meta.requestUuid,
+      requestId,
       {
         appId: source.appId,
         instanceId: source.instanceId,
@@ -648,8 +888,8 @@ export async function handleRaiseIntentRequest(
     logger.info("DACP: Sending intentEvent to target app", {
       targetInstanceId,
       targetAppId,
-      intent: request.payload.intent,
-      requestUuid: request.meta.requestUuid,
+      intent: payload.intent,
+      requestUuid: requestId,
       eventUuid: intentEvent.meta.eventUuid,
       hasDestination: true,
       contextType: validatedContext.type,
@@ -667,7 +907,7 @@ export async function handleRaiseIntentRequest(
     }
 
     // Verify target instance exists and is ready before sending
-    const targetInstanceForEvent = appInstanceRegistry.getInstance(targetInstanceId)
+    const targetInstanceForEvent = getInstance(getState(), targetInstanceId)
     if (!targetInstanceForEvent) {
       throw new Error(`Target instance ${targetInstanceId} not found when sending intent event`)
     }
@@ -686,7 +926,8 @@ export async function handleRaiseIntentRequest(
       const checkInterval = 100
       const startTime = Date.now()
       while (Date.now() - startTime < maxWait) {
-        const instance = appInstanceRegistry.getInstance(targetInstanceId)
+        const waitState = getState()
+        const instance = getInstance(waitState, targetInstanceId)
         if (
           instance &&
           (instance.state === AppInstanceState.PENDING ||
@@ -703,7 +944,8 @@ export async function handleRaiseIntentRequest(
       }
 
       // Re-check after waiting
-      const finalInstance = appInstanceRegistry.getInstance(targetInstanceId)
+      const finalState = getState()
+      const finalInstance = getInstance(finalState, targetInstanceId)
       if (
         finalInstance &&
         finalInstance.state !== AppInstanceState.PENDING &&
@@ -726,15 +968,32 @@ export async function handleRaiseIntentRequest(
 
     logger.info("DACP: intentEvent sent, waiting for intentResultRequest", {
       targetInstanceId,
-      requestUuid: request.meta.requestUuid,
+      requestUuid: requestId,
       timeoutMs: 30000,
     })
+
+    // Set up timeout for pending intent
+    const timeoutHandle = setTimeout(() => {
+      const promiseData = pendingIntentPromises.get(requestId)
+      if (promiseData) {
+        promiseData.reject(new Error("Intent result timeout"))
+        pendingIntentPromises.delete(requestId)
+        setState(state => resolvePendingIntent(state, requestId))
+      }
+    }, 30000)
+
+    // Store timeout handle
+    const promiseData = pendingIntentPromises.get(requestId)
+    if (promiseData) {
+      promiseData.timeoutHandle = timeoutHandle
+    }
 
     // Wait for the result from intentResultRequest handler
     await resultPromise
 
     // Get target app instance information
-    const targetInstance = appInstanceRegistry.getInstance(targetInstanceId)
+    const finalState = getState()
+    const targetInstance = getInstance(finalState, targetInstanceId)
     if (!targetInstance) {
       throw new Error(`Target instance ${targetInstanceId} not found`)
     }
@@ -746,7 +1005,7 @@ export async function handleRaiseIntentRequest(
           appId: targetInstance.appId,
           instanceId: targetInstance.instanceId,
         },
-        intent: request.payload.intent,
+        intent: payload.intent,
       },
     })
 
@@ -790,10 +1049,11 @@ export async function handleRaiseIntentRequest(
 }
 
 export function handleAddIntentListener(message: DACPMessage, context: DACPHandlerContext): void {
-  const { transport, instanceId, appInstanceRegistry, intentRegistry } = context
+  const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const instance = appInstanceRegistry.getInstance(instanceId)
+    const payload = message.payload as { intent: string; contextTypes?: string[] }
+    const instance = getInstance(getState(), instanceId)
 
     if (!instance) {
       throw new Error(`Instance ${instanceId} not found for adding intent listener`)
@@ -801,12 +1061,15 @@ export function handleAddIntentListener(message: DACPMessage, context: DACPHandl
 
     const listenerId = generateEventUuid()
 
-    intentRegistry.registerListener({
-      listenerId,
-      intentName: request.payload.intent,
-      instanceId,
-      appId: instance.appId,
-    })
+    setState(state =>
+      registerIntentListener(state, {
+        listenerId,
+        intentName: payload.intent,
+        instanceId,
+        appId: instance.appId,
+        contextTypes: payload.contextTypes ?? [],
+      })
+    )
 
     // FDC3 spec requires listenerUUID (not listenerId) in the response payload
     //TODO: change the var to match the spec - listenerId -> listenerUUID
@@ -849,15 +1112,19 @@ export function handleIntentListenerUnsubscribe(
   message: DACPMessage,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, intentRegistry } = context
+  const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const listenerUUID = request.payload.listenerUUID
+    const listenerUUID = (message.payload as { listenerUUID: string }).listenerUUID
 
-    const unregistered = intentRegistry.unregisterListener(listenerUUID)
-    if (!unregistered) {
+    // Check if listener exists before removing
+    const state = getState()
+    const listener = state.intents.listeners[listenerUUID]
+    if (!listener) {
       throw new Error(`Intent listener ${listenerUUID} not found`)
     }
+
+    setState(state => unregisterIntentListener(state, listenerUUID))
 
     const response = createDACPSuccessResponse(message, "intentListenerUnsubscribeResponse")
     // Add routing metadata
@@ -892,13 +1159,14 @@ export function handleIntentListenerUnsubscribe(
 }
 
 export function handleFindIntentRequest(message: DACPMessage, context: DACPHandlerContext): void {
-  const { transport, instanceId, intentRegistry } = context
+  const { transport, instanceId, getState, appDirectory, logger } = context
 
   try {
-    const intent = (request.payload as { intent: string }).intent
-    const contextType = (request.payload as { context: Context })?.context?.type
+    const payload = message.payload as { intent: string; context?: Context }
+    const intent = payload.intent
+    const contextType = payload.context?.type
 
-    const appIntents = intentRegistry.createAppIntents(intent, contextType)
+    const appIntents = createAppIntents(getState(), appDirectory, intent, contextType)
 
     const response = createDACPSuccessResponse(message, "findIntentResponse", {
       appIntent: appIntents[0] ?? { intent: { name: intent, displayName: intent }, apps: [] },
@@ -936,20 +1204,25 @@ export function handleFindIntentRequest(message: DACPMessage, context: DACPHandl
 }
 
 export function handleIntentResultRequest(message: DACPMessage, context: DACPHandlerContext): void {
-  const { transport, instanceId, intentRegistry } = context
+  const { transport, instanceId, getState, setState, logger } = context
 
   try {
+    const payload = message.payload as {
+      raiseIntentRequestUuid: string
+      intentResult?: unknown
+    }
 
     logger.info("DACP: Processing intent result request", {
-      requestUuid: request.meta.requestUuid,
-      raiseIntentRequestUuid: request.payload.raiseIntentRequestUuid,
+      requestUuid: message.meta.requestUuid,
+      raiseIntentRequestUuid: payload.raiseIntentRequestUuid,
     })
 
     // Get the original request ID from payload.raiseIntentRequestUuid
-    const originalRequestId = request.payload.raiseIntentRequestUuid
+    const originalRequestId = payload.raiseIntentRequestUuid
 
     // Check if there's a pending intent for this request
-    const pendingIntent = intentRegistry.getPendingIntent(originalRequestId)
+    const state = getState()
+    const pendingIntent = getPendingIntent(state, originalRequestId)
 
     if (!pendingIntent) {
       throw new Error(`No pending intent found for request: ${originalRequestId}`)
@@ -962,13 +1235,25 @@ export function handleIntentResultRequest(message: DACPMessage, context: DACPHan
       )
     }
 
-    // Note: Errors are communicated via error responses, not via request.payload.error
+    // Note: Errors are communicated via error responses, not via message.payload.error
     // If the intent handler failed, it would send an error response directly,
     // not an intentResultRequest with an error field
 
     // Resolve the pending intent with the result
-    const intentResult = request.payload.intentResult
-    intentRegistry.resolvePendingIntent(originalRequestId, intentResult)
+    const intentResult = payload.intentResult
+
+    // Get promise functions from Map and resolve
+    const promiseData = pendingIntentPromises.get(originalRequestId)
+    if (promiseData) {
+      if (promiseData.timeoutHandle) {
+        clearTimeout(promiseData.timeoutHandle)
+      }
+      promiseData.resolve(intentResult)
+      pendingIntentPromises.delete(originalRequestId)
+    }
+
+    // Remove from state
+    setState(state => resolvePendingIntent(state, originalRequestId))
 
     // Send acknowledgment response
     const response = createDACPSuccessResponse(message, "intentResultResponse")
@@ -1012,10 +1297,11 @@ export function handleFindIntentsByContextRequest(
   message: DACPMessage,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, intentRegistry } = context
+  const { transport, instanceId, getState, appDirectory, logger } = context
 
   try {
-    const contextType = (request.payload as { context: Context }).context?.type
+    const payload = message.payload as { context: Context }
+    const contextType = payload.context?.type
 
     if (!contextType) {
       throw new Error("Context type is required for findIntentsByContext")
@@ -1023,12 +1309,12 @@ export function handleFindIntentsByContextRequest(
 
     logger.info("DACP: Finding intents for context type", { contextType })
 
-    // Use IntentRegistry to find all intents that can handle this context type
-    const intentMetadata = intentRegistry.findIntentsByContext(contextType)
+    // Find all intents that can handle this context type
+    const intentMetadata = findIntentsByContext(getState(), appDirectory, contextType)
 
     // Convert to AppIntent[] format
     const appIntents = intentMetadata.map(metadata => {
-      const appIntentsForIntent = intentRegistry.createAppIntents(metadata.name, contextType)
+      const appIntentsForIntent = createAppIntents(getState(), appDirectory, metadata.name, contextType)
       return (
         appIntentsForIntent[0] || {
           intent: { name: metadata.name, displayName: metadata.displayName || metadata.name },
@@ -1076,24 +1362,28 @@ export async function handleRaiseIntentForContextRequest(
   message: DACPMessage,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, appInstanceRegistry, intentRegistry } = context
+  const { transport, instanceId, getState, setState, appDirectory, logger } = context
 
   try {
+    const payload = message.payload as {
+      context: Context
+      app?: { appId: string; instanceId?: string }
+    }
 
     logger.info("DACP: Processing raise intent for context request", {
-      requestUuid: request.meta.requestUuid,
+      requestUuid: message.meta.requestUuid,
     })
 
     // app is an AppIdentifier object (with appId, instanceId, desktopAgent)
-    const validatedContext = request.payload.context
-    const source = appInstanceRegistry.getInstance(instanceId)
+    const validatedContext = payload.context
+    const source = getInstance(getState(), instanceId)
 
     if (!source) {
       throw new Error(`Source instance ${instanceId} not found`)
     }
 
     // Find all intents that can handle this context type
-    const intentMetadata = intentRegistry.findIntentsByContext(validatedContext.type)
+    const intentMetadata = findIntentsByContext(getState(), appDirectory, validatedContext.type)
 
     if (intentMetadata.length === 0) {
       throw new Error(`No intents found to handle context type: ${validatedContext.type}`)
@@ -1109,12 +1399,12 @@ export async function handleRaiseIntentForContextRequest(
     })
 
     // Find handlers for this intent
-    const handlers = intentRegistry.findIntentHandlers({
+    const state = getState()
+    const handlers = findIntentHandlers(state, appDirectory, {
       intent: selectedIntent,
       context: validatedContext,
       source: { appId: source.appId, instanceId: source.instanceId },
-      target: request.payload.app, // app is already an AppIdentifier object
-      requestId: request.meta.requestUuid,
+      target: payload.app, // app is already an AppIdentifier object
     })
 
     if (handlers.compatibleApps.length === 0) {
@@ -1147,11 +1437,10 @@ export async function handleRaiseIntentForContextRequest(
       let listenerRegistered = false
 
       while (Date.now() - listenerWaitStart < listenerWaitTime) {
-        const listeners = intentRegistry.queryListeners({
-          intentName: selectedIntent,
-          instanceId: targetInstanceId,
-          active: true,
-        })
+        const waitState = getState()
+        const listeners = getListenersForInstance(waitState, targetInstanceId).filter(
+          l => l.intentName === selectedIntent && l.active
+        )
 
         if (listeners.length > 0) {
           listenerRegistered = true
@@ -1180,22 +1469,55 @@ export async function handleRaiseIntentForContextRequest(
       throw new Error(`No handler found for intent: ${selectedIntent}`)
     }
 
-    // Register pending intent
-    const resultPromise = intentRegistry.registerPendingIntent({
-      requestId: request.meta.requestUuid,
-      intentName: selectedIntent,
-      context: validatedContext,
-      sourceInstanceId: instanceId,
-      targetInstanceId,
-      targetAppId,
-      timeoutMs: 30000,
+    // Register pending intent and get promise for result
+    const requestId = message.meta.requestUuid
+    let resolvePromise: (result: unknown) => void
+    let rejectPromise: (error: Error) => void
+    const resultPromise = new Promise<unknown>((resolve, reject) => {
+      resolvePromise = resolve
+      rejectPromise = reject
     })
+
+    // Store promise functions in Map (can't be in state)
+    pendingIntentPromises.set(requestId, {
+      resolve: resolvePromise!,
+      reject: rejectPromise!,
+    })
+
+    // Store pending intent metadata in state (without promise functions)
+    setState(state =>
+      addPendingIntent(state, {
+        requestId,
+        intentName: selectedIntent,
+        context: validatedContext,
+        sourceInstanceId: instanceId,
+        targetInstanceId,
+        targetAppId,
+        resolve: () => {}, // Placeholder - actual resolve is in Map
+        reject: () => {}, // Placeholder - actual reject is in Map
+      })
+    )
+
+    // Set up timeout
+    const timeoutHandle = setTimeout(() => {
+      const promiseData = pendingIntentPromises.get(requestId)
+      if (promiseData) {
+        promiseData.reject(new Error("Intent result timeout"))
+        pendingIntentPromises.delete(requestId)
+        setState(state => resolvePendingIntent(state, requestId))
+      }
+    }, 30000)
+
+    const promiseData = pendingIntentPromises.get(requestId)
+    if (promiseData) {
+      promiseData.timeoutHandle = timeoutHandle
+    }
 
     // Send intentEvent to target app
     const intentEvent = createIntentEvent(
       selectedIntent,
       validatedContext,
-      request.meta.requestUuid,
+      requestId,
       {
         appId: source.appId,
         instanceId: source.instanceId,
@@ -1223,7 +1545,8 @@ export async function handleRaiseIntentForContextRequest(
     await resultPromise
 
     // Get target app instance information
-    const targetInstance = appInstanceRegistry.getInstance(targetInstanceId)
+    const finalState = getState()
+    const targetInstance = getInstance(finalState, targetInstanceId)
     if (!targetInstance) {
       throw new Error(`Target instance ${targetInstanceId} not found`)
     }

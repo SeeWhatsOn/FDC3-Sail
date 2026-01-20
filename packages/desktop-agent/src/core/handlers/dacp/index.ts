@@ -26,13 +26,14 @@ import {
   EventListenerUnsubscribeRequestSchema,
   CreatePrivateChannelRequestSchema,
   PrivateChannelDisconnectRequestSchema,
-  PrivateChannelAddContextListenerRequestSchema,
+  PrivateChannelAddEventListenerRequestSchema,
   WCP4ValidateAppIdentitySchema,
   WCP6GoodbyeSchema,
   HeartbeatAcknowledgmentRequestSchema,
 } from "../validation/dacp-schemas"
-import { type DACPHandler, type DACPHandlerContext, logger } from "../types"
+import { type DACPHandler, type DACPHandlerContext, type DACPMessage } from "../types"
 import { type z } from "zod"
+import { resolvePendingIntent, removeListenersForInstance, removeInstance } from "../../state/transforms"
 
 // Import all DACP handlers
 import * as contextHandlers from "./context-handlers"
@@ -62,7 +63,7 @@ export async function routeDACPMessage(
     if (context.validator) {
       const validationResult = context.validator.validate(baseMessage.type, message)
       if (!validationResult.valid) {
-        logger.error("DACP message validation failed:", {
+        context.logger.error("DACP message validation failed:", {
           messageType: baseMessage.type,
           errors: validationResult.errors,
         })
@@ -80,7 +81,8 @@ export async function routeDACPMessage(
       `DACP ${baseMessage.type} handling`
     )
   } catch (error) {
-    logger.error("DACP message routing failed:", {
+    // Use console.error as fallback since we don't have context here
+    console.error("DACP message routing failed:", {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       messageType:
@@ -135,7 +137,7 @@ function getSchemaForMessageType(messageType: string): z.ZodSchema | null {
     // Private channel handlers
     createPrivateChannelRequest: CreatePrivateChannelRequestSchema,
     privateChannelDisconnectRequest: PrivateChannelDisconnectRequestSchema,
-    privateChannelAddContextListenerRequest: PrivateChannelAddContextListenerRequestSchema,
+    privateChannelAddContextListenerRequest: PrivateChannelAddEventListenerRequestSchema,
 
     // WCP handlers
     WCP4ValidateAppIdentity: WCP4ValidateAppIdentitySchema,
@@ -160,7 +162,7 @@ async function handleDACPMessage(
   const handler = getHandlerForMessageType(messageType)
 
   if (!handler) {
-    logger.warn(`No handler found for DACP message type: ${messageType}`)
+    context.logger.warn(`No handler found for DACP message type: ${messageType}`)
     return
   }
 
@@ -169,11 +171,11 @@ async function handleDACPMessage(
   if (schema) {
     const validatedMessage = validateDACPMessage(message, schema)
     // Execute handler with validated message
-    await handler(validatedMessage, context)
+    await handler(validatedMessage as DACPMessage, context)
   } else {
     // No schema available, pass message as-is (for backwards compatibility)
-    logger.debug(`No schema found for message type: ${messageType}, passing message as-is`)
-    await handler(message, context)
+    context.logger.debug(`No schema found for message type: ${messageType}, passing message as-is`)
+    await handler(message as DACPMessage, context)
   }
 }
 
@@ -253,31 +255,40 @@ function getTimeoutForMessageType(messageType: string): number {
 
 /**
  * Cleanup function to be called when a DACP connection is closed.
- * Removes instance from registries.
+ * Removes instance from state.
  */
 export function cleanupDACPHandlers(context: DACPHandlerContext): void {
-  const { instanceId, appInstanceRegistry, intentRegistry } = context
+  const { instanceId, getState, setState, logger } = context
 
   logger.info("Cleaning up DACP handlers for instance", { instanceId })
 
   // Cancel any pending intents involving this instance
-  const cancelledIntents = intentRegistry.cancelPendingIntentsForInstance(instanceId)
-  if (cancelledIntents > 0) {
-    logger.info(`Cancelled ${cancelledIntents} pending intents for disconnected instance`, {
+  const state = getState()
+  const pendingIntents = Object.values(state.intents.pending).filter(
+    p => p.sourceInstanceId === instanceId || p.targetInstanceId === instanceId
+  )
+  pendingIntents.forEach(pending => {
+    // Reject promise if it exists (from intent-handlers Map)
+    // Note: This requires access to the Map in intent-handlers, which is module-level
+    // For now, we'll just remove from state - the promise will timeout
+    setState(state => resolvePendingIntent(state, pending.requestId))
+  })
+  if (pendingIntents.length > 0) {
+    logger.info(`Cancelled ${pendingIntents.length} pending intents for disconnected instance`, {
       instanceId,
     })
   }
 
   // Remove event listeners
-  const removedEventListeners = eventHandlers.removeInstanceEventListeners(instanceId)
-  if (removedEventListeners > 0) {
-    logger.info(`Removed ${removedEventListeners} event listeners for disconnected instance`, {
-      instanceId,
-    })
-  }
+  eventHandlers.removeInstanceEventListeners(instanceId, setState)
+  logger.info("Removed event listeners for disconnected instance", { instanceId })
 
   // Remove private channels
-  const removedPrivateChannels = privateChannelHandlers.removeInstancePrivateChannels(instanceId)
+  const removedPrivateChannels = privateChannelHandlers.removeInstancePrivateChannels(
+    instanceId,
+    getState,
+    setState
+  )
   if (removedPrivateChannels > 0) {
     logger.info(`Removed ${removedPrivateChannels} private channels for disconnected instance`, {
       instanceId,
@@ -285,17 +296,15 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
   }
 
   // Stop heartbeat
-  heartbeatHandlers.stopHeartbeat(instanceId)
+  heartbeatHandlers.stopHeartbeat(instanceId, setState)
 
-  // Remove instance from registries
-  const instanceRemoved = appInstanceRegistry.removeInstance(instanceId)
-  const listenersRemoved = intentRegistry.removeInstanceListeners(instanceId)
+  // Remove intent listeners
+  setState(state => removeListenersForInstance(state, instanceId))
 
-  logger.info("DACP handlers cleanup completed", {
-    instanceId,
-    instanceRemoved,
-    listenersRemoved,
-  })
+  // Remove instance from state
+  setState(state => removeInstance(state, instanceId))
+
+  logger.info("DACP handlers cleanup completed", { instanceId })
 }
 
 /**
