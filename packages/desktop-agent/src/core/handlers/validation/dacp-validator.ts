@@ -89,6 +89,7 @@ export const DACP_ERROR_TYPES = {
   // App errors
   APP_NOT_FOUND: "AppNotFound",
   APP_LAUNCH_FAILED: "AppLaunchFailed",
+  TARGET_APP_UNAVAILABLE: "TargetAppUnavailable",
 } as const
 
 export type DACPErrorType = (typeof DACP_ERROR_TYPES)[keyof typeof DACP_ERROR_TYPES]

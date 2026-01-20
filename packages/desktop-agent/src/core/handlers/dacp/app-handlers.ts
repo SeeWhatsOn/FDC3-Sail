@@ -12,6 +12,7 @@ import {
 } from "../validation/dacp-schemas"
 import { type DACPHandlerContext, logger } from "../types"
 import type { Context } from "@finos/fdc3"
+import type { DirectoryApp } from "../../app-directory/types"
 
 /**
  * Implementation metadata constants.
@@ -221,10 +222,7 @@ export function handleFindInstancesRequest(message: unknown, context: DACPHandle
  * @param instanceId - Optional instance ID if app is running
  * @returns AppMetadata object ready for DACP response
  */
-function convertDirectoryAppToAppMetadata(
-  app: import("../app-directory/types").DirectoryApp,
-  instanceId?: string
-) {
+function convertDirectoryAppToAppMetadata(app: DirectoryApp, instanceId?: string) {
   return {
     appId: app.appId,
     name: app.name,
@@ -344,7 +342,7 @@ export function handleGetAppMetadataRequest(message: unknown, context: DACPHandl
     logger.error("DACP: getAppMetadataRequest failed", error)
     const errorResponse = createDACPErrorResponse(
       message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.APP_NOT_FOUND,
+      DACP_ERROR_TYPES.TARGET_APP_UNAVAILABLE,
       "getAppMetadataResponse",
       error instanceof Error ? error.message : "Failed to get app metadata"
     )
