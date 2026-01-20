@@ -57,6 +57,22 @@ function isContextTypeCompatible(supportedTypes: string[], contextType: string):
 }
 
 /**
+ * Helper to check if result types match
+ */
+function isResultTypeCompatible(
+  actualResultType: string | undefined,
+  requiredResultType: string | undefined
+): boolean {
+  if (requiredResultType === undefined) {
+    return true
+  }
+  if (actualResultType === undefined) {
+    return false
+  }
+  return actualResultType === requiredResultType
+}
+
+/**
  * Helper to find intent handlers using state and app directory
  * Replaces intentRegistry.findIntentHandlers()
  */
@@ -154,25 +170,72 @@ function findIntentHandlers(
 /**
  * Helper to create AppIntent objects for FDC3 API responses
  * Replaces intentRegistry.createAppIntents()
+ * Includes both apps from directory and running instances with intent listeners
  */
 function createAppIntents(
   state: import("../../state/types").AgentState,
   appDirectory: AppDirectoryManager,
   intentName: string,
-  contextType?: string
+  contextType?: string,
+  resultType?: string
 ): Array<{
   intent: { name: string; displayName?: string }
-  apps: Array<{ appId: string; name?: string; version?: string }>
+  apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }>
 }> {
   const allApps = appDirectory.retrieveAllApps()
   const appIntentsMap = new Map<
     string,
     {
       intent: { name: string; displayName?: string }
-      apps: Array<{ appId: string; name?: string; version?: string }>
+      apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }>
     }
   >()
 
+  // Get running listeners for this intent
+  let runningListeners = getActiveListenersForIntent(state, intentName)
+
+  // Filter by context type if provided
+  if (contextType) {
+    runningListeners = runningListeners.filter(listener =>
+      isContextTypeCompatible(listener.contextTypes, contextType)
+    )
+  }
+
+  // Filter out listeners for terminated instances
+  const validRunningListeners = runningListeners.filter(listener => {
+    const instance = getInstance(state, listener.instanceId)
+    return instance && instance.state !== AppInstanceState.TERMINATED
+  })
+
+  // Filter running listeners by resultType if provided
+  // Check resultType from app directory for each listener's app
+  // Note: resultType can be undefined (from "{empty}"), which means "no result type"
+  // When resultType is undefined, include all running instances
+  // When resultType is defined, only include running instances that match (must be in directory)
+  const filteredRunningListeners =
+    resultType !== undefined
+      ? validRunningListeners.filter(listener => {
+          const apps = appDirectory.retrieveAppsById(listener.appId)
+          const appInfo = apps[0]
+          if (!appInfo) {
+            // If app is not in directory, we can't check resultType, so exclude it
+            // (only apps in directory can be filtered by resultType)
+            return false
+          }
+          const intents = appInfo.interop?.intents?.listensFor
+          if (!intents || typeof intents !== "object") return false
+          const intentDef = intents[intentName]
+          if (!intentDef || typeof intentDef !== "object") return false
+          const actualResultType =
+            typeof intentDef.resultType === "string" ? intentDef.resultType : undefined
+          return isResultTypeCompatible(actualResultType, resultType)
+        })
+      : validRunningListeners
+
+  // Track which appIds have running instances
+  const runningAppIds = new Set(filteredRunningListeners.map(l => l.appId))
+
+  // First, add apps from directory (those without running instances will be added)
   allApps.forEach(app => {
     const intents = app.interop?.intents?.listensFor
     if (!intents || typeof intents !== "object") return
@@ -181,6 +244,15 @@ function createAppIntents(
 
     const contextTypes = Array.isArray(intentDef.contexts) ? intentDef.contexts : []
     if (contextType && !isContextTypeCompatible(contextTypes, contextType)) return
+
+    // Filter by resultType if provided
+    // Note: resultType can be undefined (from "{empty}"), which means "no result type"
+    const actualResultType =
+      typeof intentDef.resultType === "string" ? intentDef.resultType : undefined
+    if (resultType !== undefined && !isResultTypeCompatible(actualResultType, resultType)) return
+
+    // Skip if this app has running instances (we'll add those separately)
+    if (runningAppIds.has(app.appId)) return
 
     if (!appIntentsMap.has(intentName)) {
       appIntentsMap.set(intentName, {
@@ -198,8 +270,48 @@ function createAppIntents(
       appId: app.appId,
       name: app.name,
       version: app.version,
+      // No instanceId for directory apps
     })
   })
+
+  // Then, add running instances with their instanceId
+  if (filteredRunningListeners.length > 0) {
+    if (!appIntentsMap.has(intentName)) {
+      // Get display name from first listener's app directory entry if available
+      const firstListener = filteredRunningListeners[0]
+      const apps = appDirectory.retrieveAppsById(firstListener.appId)
+      const appInfo = apps[0]
+      const intentDef = appInfo?.interop?.intents?.listensFor?.[intentName]
+      const displayName =
+        typeof intentDef === "object" && intentDef && "displayName" in intentDef
+          ? (intentDef.displayName as string)
+          : intentName
+
+      appIntentsMap.set(intentName, {
+        intent: {
+          name: intentName,
+          displayName,
+        },
+        apps: [],
+      })
+    }
+
+    const appIntent = appIntentsMap.get(intentName)!
+    filteredRunningListeners.forEach(listener => {
+      const instance = getInstance(state, listener.instanceId)
+      if (!instance) return
+
+      const apps = appDirectory.retrieveAppsById(listener.appId)
+      const appInfo = apps[0] // Take first matching app
+
+      appIntent.apps.push({
+        appId: listener.appId,
+        name: appInfo?.name,
+        version: appInfo?.version,
+        instanceId: listener.instanceId,
+      })
+    })
+  }
 
   return Array.from(appIntentsMap.values())
 }
@@ -1215,11 +1327,12 @@ export function handleFindIntentRequest(message: DACPMessage, context: DACPHandl
   const { transport, instanceId, getState, appDirectory, logger } = context
 
   try {
-    const payload = message.payload as { intent: string; context?: Context }
+    const payload = message.payload as { intent: string; context?: Context; resultType?: string }
     const intent = payload.intent
     const contextType = payload.context?.type
+    const resultType = payload.resultType
 
-    const appIntents = createAppIntents(getState(), appDirectory, intent, contextType)
+    const appIntents = createAppIntents(getState(), appDirectory, intent, contextType, resultType)
 
     const response = createDACPSuccessResponse(message, "findIntentResponse", {
       appIntent: appIntents[0] ?? { intent: { name: intent, displayName: intent }, apps: [] },

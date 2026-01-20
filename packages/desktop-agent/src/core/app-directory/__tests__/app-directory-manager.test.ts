@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { AppDirectoryManager, isValidDirectoryUrl } from "../app-directory-manager"
-import type { DirectoryApp, DirectoryData, DirectoryIntent } from "../types"
+import type { DirectoryApp, DirectoryData } from "../types"
 
 describe("AppDirectoryManager", () => {
   let directory: AppDirectoryManager

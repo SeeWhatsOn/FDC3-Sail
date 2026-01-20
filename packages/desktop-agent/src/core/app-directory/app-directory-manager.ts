@@ -524,8 +524,8 @@ export class AppDirectoryManager {
    */
   retrieveApps(
     contextType: string | undefined,
-    intentName?: string | undefined,
-    resultType?: string | undefined
+    intentName?: string ,
+    resultType?: string 
   ): DirectoryApp[] {
     // Early return if no filters provided
     if (contextType === undefined && intentName === undefined && resultType === undefined) {
