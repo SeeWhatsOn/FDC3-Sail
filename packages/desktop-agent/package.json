@@ -29,7 +29,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:cucumber": "cucumber-js",
-    "test:cucumber:report": "cucumber-js --publish",
+    "test:cucumber:report": "FORCE_COLOR=false cucumber-js --publish",
     "test:cucumber:watch": "cucumber-js --watch",
     "generate:schemas": "tsx scripts/generate-schemas.ts"
   },

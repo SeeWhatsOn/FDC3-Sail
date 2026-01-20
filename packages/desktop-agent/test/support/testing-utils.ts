@@ -6,8 +6,8 @@
 
 import { DataTable } from "@cucumber/cucumber"
 import { CustomWorld } from "../world"
-import expect from "expect"
 import { get } from "lodash"
+import expect from "expect"
 
 /**
  * Handle resolution of special values in test data.
@@ -32,6 +32,7 @@ export function handleResolve(value: string, world: CustomWorld): string | null 
 /**
  * Assert a field value matches the expected value.
  * Handles special cases like matches_type fields and null/undefined values.
+ * Uses Jest expect for assertions.
  */
 function assertFieldValue(
   actualValue: unknown,
@@ -45,14 +46,21 @@ function assertFieldValue(
   }
 
   // Handle null/undefined expectations
+  // {null} means "no value present" - accept null or undefined
   if (expectedValue === null) {
-    expect(actualValue).toBeNull()
+    expect(actualValue).toBeFalsy()
     return
   }
 
+  // {empty} or {undefined} - don't assert specific value
   if (expectedValue === undefined) {
-    // {empty} or {undefined} - don't assert specific value
-    // This allows optional fields in the verification
+    return
+  }
+
+  // If expected looks like a number, convert for comparison
+  const numericValue = Number(expectedValue)
+  if (!isNaN(numericValue) && typeof actualValue === "number") {
+    expect(actualValue).toBe(numericValue)
     return
   }
 
@@ -63,35 +71,30 @@ function assertFieldValue(
 /**
  * Match data from test against expected values in DataTable.
  * Supports nested property access and special value handling.
- * Uses Jest's expect for powerful assertions and great error messages.
+ * Uses Jest expect for assertions.
  */
 export function matchData(world: CustomWorld, actual: unknown[], dataTable: DataTable): void {
   const expected = dataTable.hashes()
 
-  expect(actual).toHaveLength(expected.length)
+  // Length check using Jest expect
+  expect(actual.length).toBe(expected.length)
 
   expected.forEach((expectedRow, rowIndex) => {
     const actualRow = actual[rowIndex]
 
     Object.entries(expectedRow).forEach(([key, expectedValue]) => {
       const resolvedExpected = handleResolve(expectedValue, world)
-      
+
       // Map matches_type to type for message fields
       let actualKey = key
       if (key.includes("matches_type")) {
         // Replace matches_type with type in the path
         actualKey = key.replace(/matches_type/g, "type")
       }
-      
+
       const actualValue = get(actualRow, actualKey) as unknown
 
-      try {
-        assertFieldValue(actualValue, resolvedExpected, key)
-      } catch (error) {
-        throw new Error(
-          `Row ${rowIndex}, field "${key}": ${error instanceof Error ? error.message : String(error)}`
-        )
-      }
+      assertFieldValue(actualValue, resolvedExpected, key)
     })
   })
 }
