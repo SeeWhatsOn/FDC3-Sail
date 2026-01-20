@@ -66,6 +66,7 @@ export const DACP_ERROR_TYPES = {
   APP_NOT_FOUND: "AppNotFound",
   APP_LAUNCH_FAILED: "AppLaunchFailed",
   TARGET_APP_UNAVAILABLE: "TargetAppUnavailable",
+  TARGET_INSTANCE_UNAVAILABLE: "TargetInstanceUnavailable",
 } as const
 
 export type DACPErrorType = (typeof DACP_ERROR_TYPES)[keyof typeof DACP_ERROR_TYPES]
@@ -77,10 +78,11 @@ export type DACPErrorType = (typeof DACP_ERROR_TYPES)[keyof typeof DACP_ERROR_TY
 /**
  * Creates a DACP error response following the specification format.
  * Accepts any object with meta.requestUuid (typically a DACPMessage).
+ * errorType can be a DACPErrorType or an FDC3 error enum value (string).
  */
 export function createDACPErrorResponse(
   originalRequest: { meta: { requestUuid: string; [key: string]: unknown } },
-  errorType: DACPErrorType,
+  errorType: DACPErrorType | string,
   responseType: string,
   errorMessage?: string
 ) {

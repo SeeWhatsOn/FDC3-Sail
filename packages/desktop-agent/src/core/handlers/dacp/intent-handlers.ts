@@ -6,8 +6,16 @@ import {
   generateEventUuid,
 } from "../../protocol/dacp-utilities"
 import { type DACPHandlerContext, type DACPMessage, type IntentHandlerOption } from "../types"
-import { type Context } from "@finos/fdc3"
+import { type Context, ResolveError } from "@finos/fdc3"
 import { AppInstanceState } from "../../state/types"
+import {
+  NoAppsFoundError,
+  TargetAppUnavailableError,
+  TargetInstanceUnavailableError,
+  IntentDeliveryFailedError,
+  UserCancelledError,
+  FDC3ResolveError,
+} from "../../errors/fdc3-errors"
 import {
   getInstance,
   getInstancesByAppId,
@@ -442,6 +450,28 @@ export async function handleRaiseIntentRequest(
       contextKeys: Object.keys(validatedContextRecord),
       validatedContext: JSON.stringify(validatedContextRecord),
     })
+
+    // Validate target app/instance BEFORE attempting delivery
+    if (payload.app) {
+      const targetAppId = typeof payload.app === "string" ? payload.app : payload.app.appId
+      const targetInstanceId = typeof payload.app === "object" ? payload.app.instanceId : undefined
+
+      // Check if app exists in directory
+      const apps = appDirectory.retrieveAppsById(targetAppId)
+      if (apps.length === 0) {
+        throw new TargetAppUnavailableError(`App not found in directory: ${targetAppId}`)
+      }
+
+      // Check if specific instance exists (if specified)
+      if (targetInstanceId) {
+        const state = getState()
+        const instance = getInstance(state, targetInstanceId)
+        if (!instance || instance.state === AppInstanceState.TERMINATED) {
+          throw new TargetInstanceUnavailableError(`Instance not found or terminated: ${targetInstanceId}`)
+        }
+      }
+    }
+
     const source = getInstance(getState(), instanceId)
 
     if (!source) {
@@ -527,7 +557,7 @@ export async function handleRaiseIntentRequest(
         runningListeners: finalHandlers.runningListeners.length,
         availableApps: finalHandlers.availableApps.length,
       })
-      throw new Error(`No apps found to handle intent: ${payload.intent}`)
+      throw new NoAppsFoundError(`No apps found to handle intent: ${payload.intent}`)
     }
 
     let targetInstanceId: string
@@ -566,7 +596,7 @@ export async function handleRaiseIntentRequest(
       })
 
       if (!resolution.selectedHandler) {
-        throw new Error("Intent resolution cancelled by user")
+        throw new UserCancelledError("Intent resolution cancelled by user")
       }
 
       targetAppId = resolution.selectedHandler.appId
@@ -845,7 +875,7 @@ export async function handleRaiseIntentRequest(
         // or the app might be using a different mechanism to handle intents
       }
     } else {
-      throw new Error(`No handler found for intent: ${payload.intent}`)
+      throw new NoAppsFoundError(`No handler found for intent: ${payload.intent}`)
     }
 
     // Register pending intent and get promise for result
@@ -860,7 +890,13 @@ export async function handleRaiseIntentRequest(
       rejectPromise = reject
     })
 
-    // Store pending intent in state (without promise functions)
+    // Store promise functions in Map (they can't be serialized in state)
+    pendingIntentPromises.set(requestId, {
+      resolve: resolvePromise!,
+      reject: rejectPromise!,
+    })
+
+    // Store pending intent metadata in state (without promise functions)
     setState(state =>
       addPendingIntent(state, {
         requestId,
@@ -869,8 +905,8 @@ export async function handleRaiseIntentRequest(
         sourceInstanceId: instanceId,
         targetInstanceId,
         targetAppId,
-        resolve: resolvePromise!,
-        reject: rejectPromise!,
+        resolve: () => {}, // Placeholder - actual resolve is in Map
+        reject: () => {}, // Placeholder - actual reject is in Map
       })
     )
 
@@ -1029,11 +1065,28 @@ export async function handleRaiseIntentRequest(
       contextType: context?.type,
       contextHasName: typeof context?.name === "string",
     })
+
+    // Determine error type from error instance
+    let errorType: string = ResolveError.IntentDeliveryFailed
+    const errorMessage = error instanceof Error ? error.message : String(error)
+
+    if (error instanceof FDC3ResolveError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("No apps found") || errorMessage.includes("No handler found")) {
+      errorType = ResolveError.NoAppsFound
+    } else if (errorMessage.includes("App not found in directory")) {
+      errorType = ResolveError.TargetAppUnavailable
+    } else if (errorMessage.includes("not found") && errorMessage.includes("instance")) {
+      errorType = ResolveError.TargetInstanceUnavailable
+    } else if (errorMessage.includes("cancelled by user")) {
+      errorType = ResolveError.UserCancelled
+    }
+
     const errorResponse = createDACPErrorResponse(
       message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.INTENT_DELIVERY_FAILED,
+      errorType,
       "raiseIntentResponse",
-      error instanceof Error ? error.message : "Intent delivery failed"
+      errorMessage
     )
     // Add routing metadata
     const errorResponseWithRouting = {
@@ -1376,6 +1429,28 @@ export async function handleRaiseIntentForContextRequest(
 
     // app is an AppIdentifier object (with appId, instanceId, desktopAgent)
     const validatedContext = payload.context
+
+    // Validate target app/instance BEFORE attempting delivery
+    if (payload.app) {
+      const targetAppId = payload.app.appId
+      const targetInstanceId = payload.app.instanceId
+
+      // Check if app exists in directory
+      const apps = appDirectory.retrieveAppsById(targetAppId)
+      if (apps.length === 0) {
+        throw new TargetAppUnavailableError(`App not found in directory: ${targetAppId}`)
+      }
+
+      // Check if specific instance exists (if specified)
+      if (targetInstanceId) {
+        const state = getState()
+        const instance = getInstance(state, targetInstanceId)
+        if (!instance || instance.state === AppInstanceState.TERMINATED) {
+          throw new TargetInstanceUnavailableError(`Instance not found or terminated: ${targetInstanceId}`)
+        }
+      }
+    }
+
     const source = getInstance(getState(), instanceId)
 
     if (!source) {
@@ -1386,7 +1461,7 @@ export async function handleRaiseIntentForContextRequest(
     const intentMetadata = findIntentsByContext(getState(), appDirectory, validatedContext.type)
 
     if (intentMetadata.length === 0) {
-      throw new Error(`No intents found to handle context type: ${validatedContext.type}`)
+      throw new NoAppsFoundError(`No intents found to handle context type: ${validatedContext.type}`)
     }
 
     // For now, use the first intent found
@@ -1408,7 +1483,7 @@ export async function handleRaiseIntentForContextRequest(
     })
 
     if (handlers.compatibleApps.length === 0) {
-      throw new Error(`No apps found to handle intent: ${selectedIntent}`)
+      throw new NoAppsFoundError(`No apps found to handle intent: ${selectedIntent}`)
     }
 
     // Select target (prefer running listeners)
@@ -1466,7 +1541,7 @@ export async function handleRaiseIntentForContextRequest(
         )
       }
     } else {
-      throw new Error(`No handler found for intent: ${selectedIntent}`)
+      throw new NoAppsFoundError(`No handler found for intent: ${selectedIntent}`)
     }
 
     // Register pending intent and get promise for result
@@ -1574,11 +1649,28 @@ export async function handleRaiseIntentForContextRequest(
     transport.send(responseWithRouting)
   } catch (error) {
     logger.error("DACP: Raise intent for context request failed", error)
+
+    // Determine error type from error instance
+    let errorType: string = ResolveError.IntentDeliveryFailed
+    const errorMessage = error instanceof Error ? error.message : String(error)
+
+    if (error instanceof FDC3ResolveError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("No apps found") || errorMessage.includes("No handler found") || errorMessage.includes("No intents found")) {
+      errorType = ResolveError.NoAppsFound
+    } else if (errorMessage.includes("App not found in directory")) {
+      errorType = ResolveError.TargetAppUnavailable
+    } else if (errorMessage.includes("not found") && errorMessage.includes("instance")) {
+      errorType = ResolveError.TargetInstanceUnavailable
+    } else if (errorMessage.includes("cancelled by user")) {
+      errorType = ResolveError.UserCancelled
+    }
+
     const errorResponse = createDACPErrorResponse(
       message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.INTENT_DELIVERY_FAILED,
+      errorType,
       "raiseIntentForContextResponse",
-      error instanceof Error ? error.message : "Intent delivery failed"
+      errorMessage
     )
     // Add routing metadata
     const errorResponseWithRouting = {

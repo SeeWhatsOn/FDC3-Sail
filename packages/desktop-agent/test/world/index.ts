@@ -7,6 +7,7 @@ import type { DisplayMetadata, BrowserTypes } from "@finos/fdc3"
 import type { DirectoryApp } from "../../src/core/app-directory/types"
 import { AppDirectoryManager } from "../../src/core/app-directory/app-directory-manager"
 import type { AgentState } from "../../src/core/state/types"
+import { connectInstance } from "../../src/core/state/transforms"
 
 /**
  * User channel configuration for tests
@@ -95,6 +96,17 @@ export class CustomWorld extends World {
       // User channels
       userChannels: channels as BrowserTypes.Channel[],
     })
+
+    // Wire up MockAppLauncher callback to register instances in state
+    this.mockAppLauncher.onInstanceCreated = (instanceId, appId) => {
+      this.updateState(state =>
+        connectInstance(state, {
+          instanceId,
+          appId,
+          metadata: { appId, name: appId },
+        })
+      )
+    }
 
     // Start the agent
     this.desktopAgent.start()

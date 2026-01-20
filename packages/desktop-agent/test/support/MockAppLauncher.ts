@@ -23,6 +23,7 @@ export class MockAppLauncher implements AppLauncher {
   
   // Callbacks for test coordination
   public onAppLaunched?: (instanceId: string, appId: string) => void | Promise<void>
+  public onInstanceCreated?: (instanceId: string, appId: string) => void
 
   /**
    * Launch an app, returning a mock instance ID.
@@ -41,6 +42,11 @@ export class MockAppLauncher implements AppLauncher {
 
     // Generate instance ID
     const instanceId = `uuid-${this.nextInstanceId++}`
+
+    // Notify tests that instance was created (so they can register it in state)
+    if (this.onInstanceCreated) {
+      this.onInstanceCreated(instanceId, appId)
+    }
 
     // Notify tests that app was launched (so they can simulate validation)
     if (this.onAppLaunched) {
