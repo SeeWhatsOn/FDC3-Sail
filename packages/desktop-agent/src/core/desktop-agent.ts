@@ -21,6 +21,9 @@ import type {
   IntentResolutionCallback,
   MessageValidator,
 } from "./handlers/types"
+import type { DirectoryApp } from "./app-directory/types"
+import type { BrowserTypes } from "@finos/fdc3"
+import { InMemoryTransport } from "../transports/in-memory-transport"
 
 /**
  * Structure of DACP message metadata for routing
@@ -82,9 +85,24 @@ export interface DesktopAgentConfig {
 
   /**
    * App directory manager for querying app metadata.
-   * OPTIONAL - defaults to new instance if not provided.
+   * OPTIONAL - defaults to new instance if not provided. 
    */
   appDirectoryManager?: AppDirectoryManager
+
+  /**
+   * Array of DirectoryApp entries to initialize the app directory with.
+   * OPTIONAL - if provided, apps will be added to the directory and synced to intent registry.
+   * Convenience option that simplifies initialization - equivalent to creating AppDirectoryManager
+   * and calling add() for each app, then syncAppDirectoryToIntentRegistry().
+   */
+  apps?: DirectoryApp[]
+
+  /**
+   * Array of user channels to initialize the user channel registry with.
+   * OPTIONAL - if provided, these channels will be used instead of default FDC3 channels.
+   * If `userChannelRegistry` is also provided, this will be ignored.
+   */
+  channels?: BrowserTypes.Channel[]
 
   /**
    * Callback for requesting UI-based intent resolution when multiple handlers exist.
@@ -110,6 +128,12 @@ export interface DesktopAgentConfig {
  *
  * @example
  * ```typescript
+ * const agent = new DesktopAgent()
+ *
+ * agent.start()
+ * 
+ * OR 
+ * 
  * const agent = new DesktopAgent({
  *   transport: new InMemoryTransport,
  *   appLauncher: new BrowserAppLauncher(),
@@ -119,31 +143,35 @@ export interface DesktopAgentConfig {
  * ```
  */
 export class DesktopAgent {
-  private transport: Transport
+  private transport?: Transport
   private appLauncher?: AppLauncher
   private appInstanceRegistry: AppInstanceRegistry
-  private intentRegistry: IntentRegistry
-  private channelContextRegistry: ChannelContextRegistry
-  private appChannelRegistry: AppChannelRegistry
-  private userChannelRegistry: UserChannelRegistry
-  private appDirectory: AppDirectoryManager
+  private intentRegistry?: IntentRegistry
+  private channelContextRegistry?: ChannelContextRegistry
+  private appChannelRegistry?: AppChannelRegistry
+  private userChannelRegistry?: UserChannelRegistry
+  private appDirectory?: AppDirectoryManager
   private requestIntentResolution?: IntentResolutionCallback
   private validator?: MessageValidator
   private isStarted: boolean = false
 
-  constructor(config: DesktopAgentConfig) {
-    this.transport = config.transport
-    this.appLauncher = config.appLauncher
-    this.requestIntentResolution = config.requestIntentResolution
-    this.validator = config.validator
+  constructor(config?: DesktopAgentConfig) {
 
-    // Use provided registries or create defaults
-    this.appInstanceRegistry = config.appInstanceRegistry ?? new AppInstanceRegistry()
-    this.intentRegistry = config.intentRegistry ?? new IntentRegistry()
-    this.channelContextRegistry = config.channelContextRegistry ?? new ChannelContextRegistry()
-    this.appChannelRegistry = config.appChannelRegistry ?? new AppChannelRegistry()
-    this.userChannelRegistry = config.userChannelRegistry ?? new UserChannelRegistry()
-    this.appDirectory = config.appDirectoryManager ?? new AppDirectoryManager()
+    // TODO: there should be a way to pass in the intent resolver and the app launcher should there be defaults for these options?
+    this.requestIntentResolution = config?.requestIntentResolution
+    this.appLauncher = config?.appLauncher
+
+    // Use provided config or create defaults
+    this.appInstanceRegistry = config?.appInstanceRegistry ?? new AppInstanceRegistry()
+    this.intentRegistry = config?.intentRegistry ?? new IntentRegistry()
+    this.channelContextRegistry = config?.channelContextRegistry ?? new ChannelContextRegistry()
+    this.appChannelRegistry = config?.appChannelRegistry ?? new AppChannelRegistry()
+    this.transport = config?.transport ?? new InMemoryTransport()
+    this.appDirectory = config?.appDirectoryManager ?? new AppDirectoryManager()
+    this.userChannelRegistry = config?.userChannelRegistry ?? new UserChannelRegistry()
+    //TODO fix this and add the option to pass a validator function
+    this.validator = config?.validator || (() => true) as MessageValidator
+ 
   }
 
   /**
@@ -333,7 +361,7 @@ export class DesktopAgent {
                 : undefined,
             customConfig:
               "customConfig" in intentConfig && typeof intentConfig.customConfig === "object"
-                ? (intentConfig.customConfig as Record<string, unknown>)
+                ? (intentConfig.customConfig)
                 : undefined,
           }
         }
