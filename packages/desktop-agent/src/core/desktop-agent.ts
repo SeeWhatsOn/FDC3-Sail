@@ -9,11 +9,6 @@
 
 import type { Transport } from "./interfaces/transport"
 import type { AppLauncher } from "./interfaces/app-launcher"
-import { AppInstanceRegistry } from "./state/app-instance-registry"
-import { IntentRegistry, type IntentCapability } from "./state/intent-registry"
-import { ChannelContextRegistry } from "./state/channel-context-registry"
-import { AppChannelRegistry } from "./state/app-channel-registry"
-import { UserChannelRegistry } from "./state/user-channel-registry"
 import { AppDirectoryManager } from "./app-directory/app-directory-manager"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
 import type {
@@ -24,6 +19,9 @@ import type {
 import type { DirectoryApp } from "./app-directory/types"
 import type { BrowserTypes } from "@finos/fdc3"
 import { InMemoryTransport } from "../transports/in-memory-transport"
+import type { AgentState } from "./state/types"
+import { createInitialState, createStateWithOverrides } from "./state/initial"
+import { consoleLogger, type Logger } from "./interfaces/logger"
 
 /**
  * Structure of DACP message metadata for routing
@@ -54,36 +52,6 @@ export interface DesktopAgentConfig {
   appLauncher?: AppLauncher
 
   /**
-   * App instance registry for tracking connected apps.
-   * OPTIONAL - defaults to new instance if not provided.
-   */
-  appInstanceRegistry?: AppInstanceRegistry
-
-  /**
-   * Intent registry for managing intent handlers and resolution.
-   * OPTIONAL - defaults to new instance if not provided.
-   */
-  intentRegistry?: IntentRegistry
-
-  /**
-   * Channel context registry for storing last broadcast context per channel.
-   * OPTIONAL - defaults to new instance if not provided.
-   */
-  channelContextRegistry?: ChannelContextRegistry
-
-  /**
-   * App channel registry for managing dynamically created app channels.
-   * OPTIONAL - defaults to new instance if not provided.
-   */
-  appChannelRegistry?: AppChannelRegistry
-
-  /**
-   * User channel registry for managing pre-defined user channels.
-   * OPTIONAL - defaults to new instance with standard FDC3 channels if not provided.
-   */
-  userChannelRegistry?: UserChannelRegistry
-
-  /**
    * App directory manager for querying app metadata.
    * OPTIONAL - defaults to new instance if not provided. 
    */
@@ -91,18 +59,15 @@ export interface DesktopAgentConfig {
 
   /**
    * Array of DirectoryApp entries to initialize the app directory with.
-   * OPTIONAL - if provided, apps will be added to the directory and synced to intent registry.
-   * Convenience option that simplifies initialization - equivalent to creating AppDirectoryManager
-   * and calling add() for each app, then syncAppDirectoryToIntentRegistry().
+   * OPTIONAL - if provided, apps will be added to the directory.
    */
   apps?: DirectoryApp[]
 
   /**
    * Array of user channels to initialize the user channel registry with.
    * OPTIONAL - if provided, these channels will be used instead of default FDC3 channels.
-   * If `userChannelRegistry` is also provided, this will be ignored.
    */
-  channels?: BrowserTypes.Channel[]
+  userChannels?: BrowserTypes.Channel[]
 
   /**
    * Callback for requesting UI-based intent resolution when multiple handlers exist.
@@ -117,6 +82,18 @@ export interface DesktopAgentConfig {
    * Implementations can inject Zod, AJV, or custom validators from sail-platform-sdk.
    */
   validator?: MessageValidator
+
+  /**
+   * Logger instance for DACP handlers.
+   * OPTIONAL - defaults to consoleLogger if not provided.
+   */
+  logger?: Logger
+
+  /**
+   * Initial state (for testing/persistence).
+   * OPTIONAL - if provided, merges with default initial state.
+   */
+  initialState?: Partial<AgentState>
 }
 
 /**
@@ -143,35 +120,34 @@ export interface DesktopAgentConfig {
  * ```
  */
 export class DesktopAgent {
-  private transport?: Transport
+  private state: AgentState
+  private transport: Transport
+  private appDirectory: AppDirectoryManager
   private appLauncher?: AppLauncher
-  private appInstanceRegistry: AppInstanceRegistry
-  private intentRegistry?: IntentRegistry
-  private channelContextRegistry?: ChannelContextRegistry
-  private appChannelRegistry?: AppChannelRegistry
-  private userChannelRegistry?: UserChannelRegistry
-  private appDirectory?: AppDirectoryManager
   private requestIntentResolution?: IntentResolutionCallback
   private validator?: MessageValidator
+  private logger: Logger
   private isStarted: boolean = false
 
   constructor(config?: DesktopAgentConfig) {
-
-    // TODO: there should be a way to pass in the intent resolver and the app launcher should there be defaults for these options?
-    this.requestIntentResolution = config?.requestIntentResolution
-    this.appLauncher = config?.appLauncher
-
-    // Use provided config or create defaults
-    this.appInstanceRegistry = config?.appInstanceRegistry ?? new AppInstanceRegistry()
-    this.intentRegistry = config?.intentRegistry ?? new IntentRegistry()
-    this.channelContextRegistry = config?.channelContextRegistry ?? new ChannelContextRegistry()
-    this.appChannelRegistry = config?.appChannelRegistry ?? new AppChannelRegistry()
     this.transport = config?.transport ?? new InMemoryTransport()
     this.appDirectory = config?.appDirectoryManager ?? new AppDirectoryManager()
-    this.userChannelRegistry = config?.userChannelRegistry ?? new UserChannelRegistry()
-    //TODO fix this and add the option to pass a validator function
-    this.validator = config?.validator || (() => true) as MessageValidator
- 
+    this.appLauncher = config?.appLauncher
+    this.requestIntentResolution = config?.requestIntentResolution
+    this.validator = config?.validator
+    this.logger = config?.logger ?? consoleLogger
+
+    // Initialize state
+    this.state = config?.initialState
+      ? createStateWithOverrides(config.initialState)
+      : createInitialState(config?.userChannels)
+
+    // Initialize app directory with provided apps if any
+    if (config?.apps) {
+      for (const app of config.apps) {
+        this.appDirectory.add(app)
+      }
+    }
   }
 
   /**
@@ -252,7 +228,7 @@ export class DesktopAgent {
     // This is primarily for server-side Socket.IO transport where each
     // socket represents one app. For browser Desktop Agent with InMemoryTransport,
     // this rarely fires (only when the whole agent shuts down).
-    const allInstances = this.appInstanceRegistry.getAllInstances()
+    const allInstances = Object.values(this.state.instances)
     for (const instance of allInstances) {
       const context = this.createHandlerContext(instance.instanceId)
       cleanupDACPHandlers(context)
@@ -268,51 +244,30 @@ export class DesktopAgent {
     return {
       transport: this.transport,
       instanceId,
-      appInstanceRegistry: this.appInstanceRegistry,
-      intentRegistry: this.intentRegistry,
-      channelContextRegistry: this.channelContextRegistry,
-      appChannelRegistry: this.appChannelRegistry,
-      userChannelRegistry: this.userChannelRegistry,
+      getState: () => this.state,
+      setState: (fn) => {
+        this.state = fn(this.state)
+      },
       appDirectory: this.appDirectory,
       appLauncher: this.appLauncher,
       requestIntentResolution: this.requestIntentResolution,
       validator: this.validator,
+      logger: this.logger,
     }
   }
 
   /**
-   * Get the app instance registry (for testing/inspection)
+   * Get current state snapshot (for debugging/export)
    */
-  getAppInstanceRegistry(): AppInstanceRegistry {
-    return this.appInstanceRegistry
+  getState(): AgentState {
+    return this.state
   }
 
   /**
-   * Get the intent registry (for testing/inspection)
+   * Export state as JSON string (for debugging/persistence)
    */
-  getIntentRegistry(): IntentRegistry {
-    return this.intentRegistry
-  }
-
-  /**
-   * Get the channel context registry (for testing/inspection)
-   */
-  getChannelContextRegistry(): ChannelContextRegistry {
-    return this.channelContextRegistry
-  }
-
-  /**
-   * Get the app channel registry (for testing/inspection)
-   */
-  getAppChannelRegistry(): AppChannelRegistry {
-    return this.appChannelRegistry
-  }
-
-  /**
-   * Get the user channel registry (for testing/inspection)
-   */
-  getUserChannelRegistry(): UserChannelRegistry {
-    return this.userChannelRegistry
+  exportState(): string {
+    return JSON.stringify(this.state, null, 2)
   }
 
   /**
@@ -329,47 +284,4 @@ export class DesktopAgent {
     return this.isStarted
   }
 
-  /**
-   * Syncs apps from the app directory to the intent registry.
-   * This registers intent capabilities for all apps in the directory.
-   * Should be called after loading apps into the directory.
-   */
-  syncAppDirectoryToIntentRegistry(): void {
-    const apps = this.appDirectory.retrieveAllApps()
-
-    for (const app of apps) {
-      const intents = app.interop?.intents?.listensFor
-      if (!intents || typeof intents !== "object") {
-        continue
-      }
-
-      const capabilities: Record<string, IntentCapability> = {}
-
-      for (const [intentName, intentConfig] of Object.entries(intents)) {
-        if (intentConfig && typeof intentConfig === "object" && "contexts" in intentConfig) {
-          capabilities[intentName] = {
-            intentName,
-            appId: app.appId,
-            contextTypes: Array.isArray(intentConfig.contexts) ? intentConfig.contexts : [],
-            resultType:
-              "resultType" in intentConfig && typeof intentConfig.resultType === "string"
-                ? intentConfig.resultType
-                : undefined,
-            displayName:
-              "displayName" in intentConfig && typeof intentConfig.displayName === "string"
-                ? intentConfig.displayName
-                : undefined,
-            customConfig:
-              "customConfig" in intentConfig && typeof intentConfig.customConfig === "object"
-                ? (intentConfig.customConfig)
-                : undefined,
-          }
-        }
-      }
-
-      if (Object.keys(capabilities).length > 0) {
-        this.intentRegistry.registerAppCapabilities(app.appId, capabilities)
-      }
-    }
-  }
 }

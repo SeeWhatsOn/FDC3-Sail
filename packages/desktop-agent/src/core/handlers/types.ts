@@ -1,11 +1,8 @@
 import type { Transport } from "../interfaces/transport"
 import type { AppLauncher } from "../interfaces/app-launcher"
-import type { AppInstanceRegistry } from "../state/app-instance-registry"
-import type { IntentRegistry } from "../state/intent-registry"
-import type { ChannelContextRegistry } from "../state/channel-context-registry"
-import type { AppChannelRegistry } from "../state/app-channel-registry"
-import type { UserChannelRegistry } from "../state/user-channel-registry"
 import type { AppDirectoryManager } from "../app-directory/app-directory-manager"
+import type { AgentState } from "../state/types"
+import type { Logger } from "../interfaces/logger"
 
 // ============================================================================
 // INTENT RESOLUTION CALLBACK
@@ -137,7 +134,7 @@ export interface DACPMessage {
 
 /**
  * Context passed to all DACP message handlers
- * Contains state registries and the message transport for sending responses
+ * Contains state access functions and the message transport for sending responses
  */
 export interface DACPHandlerContext {
   /** Message transport for sending responses to this specific app instance */
@@ -146,20 +143,11 @@ export interface DACPHandlerContext {
   /** Unique identifier for this app instance */
   instanceId: string
 
-  /** Registry of all app instances and their state */
-  appInstanceRegistry: AppInstanceRegistry
+  /** Get current state (read-only snapshot) */
+  getState: () => AgentState
 
-  /** Registry of intent listeners and capabilities */
-  intentRegistry: IntentRegistry
-
-  /** Registry of channel contexts (last broadcast context per channel) */
-  channelContextRegistry: ChannelContextRegistry
-
-  /** Registry of app channels (dynamically created channels) */
-  appChannelRegistry: AppChannelRegistry
-
-  /** Registry of user channels (pre-defined FDC3 channels: fdc3.channel.1 through fdc3.channel.8) */
-  userChannelRegistry: UserChannelRegistry
+  /** Update state with a transform function */
+  setState: (fn: (state: AgentState) => AgentState) => void
 
   /** App directory manager for app metadata lookups */
   appDirectory: AppDirectoryManager
@@ -180,6 +168,9 @@ export interface DACPHandlerContext {
    * Implementations can inject Zod, AJV, or custom validators.
    */
   validator?: MessageValidator
+
+  /** Logger instance */
+  logger: Logger
 }
 
 /**
@@ -188,32 +179,3 @@ export interface DACPHandlerContext {
  */
 export type DACPHandler = (message: DACPMessage, context: DACPHandlerContext) => void | Promise<void>
 
-// ============================================================================
-// LOGGING
-// ============================================================================
-
-// Log levels for structured logging
-export enum LogLevel {
-  ERROR = "ERROR",
-  WARN = "WARN",
-  INFO = "INFO",
-  DEBUG = "DEBUG",
-}
-
-// Logging utility for DACP handlers
-export const logger = {
-  error: (message: string, ...args: unknown[]) => {
-    console.error(`[DACP ${LogLevel.ERROR}] ${message}`, ...args)
-  },
-  warn: (message: string, ...args: unknown[]) => {
-    console.warn(`[DACP ${LogLevel.WARN}] ${message}`, ...args)
-  },
-  info: (message: string, ...args: unknown[]) => {
-    console.log(`[DACP ${LogLevel.INFO}] ${message}`, ...args)
-  },
-  debug: (message: string, ...args: unknown[]) => {
-    if (typeof process !== "undefined" && process.env?.DACP_DEBUG_MODE === "true") {
-      console.log(`[DACP ${LogLevel.DEBUG}] ${message}`, ...args)
-    }
-  },
-}
