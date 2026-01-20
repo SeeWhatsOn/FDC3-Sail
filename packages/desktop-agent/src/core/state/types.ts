@@ -1,0 +1,299 @@
+/**
+ * Unified Agent State Types
+ *
+ * This file defines all types used in the functional state management system.
+ * Types are designed to be JSON-serializable (using Records instead of Maps,
+ * arrays instead of Sets).
+ */
+
+import type { AppMetadata, Context } from "@finos/fdc3"
+import type { BrowserTypes } from "@finos/fdc3"
+
+type Channel = BrowserTypes.Channel
+
+// ============================================================================
+// APP INSTANCE TYPES
+// ============================================================================
+
+/**
+ * FDC3 App Instance connection states
+ */
+export enum AppInstanceState {
+  PENDING = "pending", // App launched but not completed FDC3 handshake
+  CONNECTED = "connected", // App completed FDC3 handshake and ready
+  NOT_RESPONDING = "not_responding", // App not responding to heartbeat
+  DISCONNECTING = "disconnecting", // App in process of disconnecting
+  TERMINATED = "terminated", // App has disconnected or been terminated
+}
+
+/**
+ * Core FDC3 app instance information
+ */
+export interface AppInstance {
+  /** Unique instance identifier */
+  instanceId: string
+
+  /** FDC3 app identifier */
+  appId: string
+
+  /** App metadata from directory */
+  metadata: AppMetadata
+
+  /** Current connection state */
+  state: AppInstanceState
+
+  /** Instance creation timestamp */
+  createdAt: Date
+
+  /** Last activity timestamp for heartbeat tracking */
+  lastActivity: Date
+
+  /** Current user channel (null if not joined to any channel) */
+  currentChannel: string | null
+
+  /** Array of context types this instance listens for */
+  contextListeners: string[]
+
+  /** Array of intents this instance listens for */
+  intentListeners: string[]
+
+  /** Array of private channel IDs this instance has access to */
+  privateChannels: string[]
+
+  /** Instance-specific metadata */
+  instanceMetadata?: {
+    title?: string
+    hosting?: "frame" | "tab" | "window"
+    parentInstanceId?: string
+    [key: string]: unknown
+  }
+}
+
+// ============================================================================
+// INTENT TYPES
+// ============================================================================
+
+/**
+ * Intent listener registration information
+ */
+export interface IntentListener {
+  /** Unique listener identifier */
+  listenerId: string
+
+  /** Intent name being listened for */
+  intentName: string
+
+  /** Instance that registered this listener */
+  instanceId: string
+
+  /** App that owns this listener */
+  appId: string
+
+  /** Context types this listener can handle (empty = all types) */
+  contextTypes: string[]
+
+  /** Optional result type this listener produces */
+  resultType?: string
+
+  /** Registration timestamp */
+  registeredAt: Date
+
+  /** Last activity timestamp */
+  lastActivity: Date
+
+  /** Whether this listener is currently active */
+  active: boolean
+
+  /** Custom listener metadata */
+  metadata?: Record<string, unknown>
+}
+
+/**
+ * Pending intent - tracks intents waiting for results
+ */
+export interface PendingIntent {
+  /** Original request ID */
+  requestId: string
+
+  /** Intent name */
+  intentName: string
+
+  /** Context passed to the intent */
+  context: Context
+
+  /** Source app that raised the intent */
+  sourceInstanceId: string
+
+  /** Target app handling the intent */
+  targetInstanceId: string
+
+  /** Target app ID */
+  targetAppId: string
+
+  /** When the intent was raised */
+  raisedAt: Date
+
+  /** Promise resolve function for returning the result */
+  resolve: (result: unknown) => void
+
+  /** Promise reject function for errors */
+  reject: (error: Error) => void
+
+  /** Timeout handle */
+  timeoutHandle?: NodeJS.Timeout
+}
+
+/**
+ * Intent resolution result
+ */
+export interface IntentResolution {
+  /** Request that was resolved */
+  requestId: string
+
+  /** Selected app for handling the intent */
+  selectedApp: AppMetadata
+
+  /** Selected instance (if app was already running) */
+  selectedInstanceId?: string
+
+  /** Whether a new instance was launched */
+  wasLaunched: boolean
+
+  /** Resolution timestamp */
+  resolvedAt: Date
+}
+
+// ============================================================================
+// CHANNEL TYPES
+// ============================================================================
+
+/**
+ * Stored context with metadata
+ */
+export interface StoredContext {
+  context: Context
+  timestamp: number
+  sourceInstanceId: string
+}
+
+/**
+ * Private Channel metadata (internal registry representation)
+ * This tracks the server-side state of a private channel
+ */
+export interface PrivateChannel extends BrowserTypes.Channel {
+  /** Unique channel ID */
+  id: string
+
+  /** Type is always 'private' */
+  type: "private"
+
+  /** App that created the channel */
+  creatorAppId: string
+
+  /** App instance that created the channel */
+  creatorInstanceId: string
+
+  /** When the channel was created */
+  createdAt: Date
+
+  /** Array of instance IDs currently connected to this channel */
+  connectedInstances: string[]
+
+  /** Context listeners registered on this channel */
+  contextListeners: Record<string, ContextListener>
+
+  /** Disconnect listeners for onDisconnect callbacks */
+  disconnectListeners: Record<string, DisconnectListener>
+
+  /** Last context broadcast per context type */
+  lastContextByType: Record<string, Context>
+}
+
+/**
+ * Context listener on a private channel
+ */
+export interface ContextListener {
+  listenerId: string
+  instanceId: string
+  contextType: string | null // null means all types
+}
+
+/**
+ * Disconnect listener for private channels
+ */
+export interface DisconnectListener {
+  listenerId: string
+  instanceId: string
+}
+
+// ============================================================================
+// EVENT TYPES
+// ============================================================================
+
+/**
+ * Event listener registration
+ */
+export interface EventListener {
+  listenerId: string
+  instanceId: string
+  eventType: string
+}
+
+// ============================================================================
+// HEARTBEAT TYPES
+// ============================================================================
+
+/**
+ * Heartbeat state for an instance
+ */
+export interface HeartbeatState {
+  instanceId: string
+  lastHeartbeatSent: number
+  lastAcknowledgmentReceived: number
+  missedHeartbeats: number
+}
+
+// ============================================================================
+// UNIFIED AGENT STATE
+// ============================================================================
+
+/**
+ * Unified agent state containing all desktop agent state
+ */
+export interface AgentState {
+  /** All app instances keyed by instanceId */
+  instances: Record<string, AppInstance>
+
+  /** Intent-related state */
+  intents: {
+    /** Intent listeners keyed by listenerId */
+    listeners: Record<string, IntentListener>
+    /** Pending intents keyed by requestId */
+    pending: Record<string, PendingIntent>
+    /** Intent resolution history keyed by requestId */
+    history: Record<string, IntentResolution>
+  }
+
+  /** Channel-related state */
+  channels: {
+    /** User channels (pre-defined FDC3 channels) keyed by channelId */
+    user: Record<string, BrowserTypes.Channel>
+    /** App channels (dynamically created) keyed by channelId */
+    app: Record<string, BrowserTypes.Channel>
+    /** Private channels keyed by channelId */
+    private: Record<string, PrivateChannel>
+    /** Stored contexts: channelId -> contextType -> StoredContext */
+    contexts: Record<string, Record<string, StoredContext>>
+  }
+
+  /** Event-related state */
+  events: {
+    /** Event listeners keyed by listenerId */
+    listeners: Record<string, EventListener>
+    /** Index: eventType -> listenerIds */
+    byEventType: Record<string, string[]>
+  }
+
+  /** Heartbeat state keyed by instanceId */
+  heartbeats: Record<string, HeartbeatState>
+}

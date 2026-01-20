@@ -8,3 +8,4 @@
 
 export type { Transport } from "./transport"
 export type { AppLauncher, AppLaunchRequest, AppLaunchResult } from "./app-launcher"
+export * from "./logger"

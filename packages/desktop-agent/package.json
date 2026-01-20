@@ -53,6 +53,7 @@
   "dependencies": {
     "@finos/fdc3": "^2.2.0",
     "@finos/fdc3-schema": "^2.2.1-beta.3",
+    "immer": "^10.1.1",
     "uuid": "^11.1.0",
     "zod": "^4.1.11"
   },
