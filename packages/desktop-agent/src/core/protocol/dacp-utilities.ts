@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from "uuid"
 
 // ============================================================================
 // ERROR CLASSES
@@ -92,7 +91,7 @@ export function createDACPErrorResponse(
       ...(errorMessage && { message: errorMessage }),
     },
     meta: {
-      responseUuid: uuidv4(),
+      responseUuid: crypto.randomUUID(),
       requestUuid: originalRequest.meta.requestUuid,
       timestamp: new Date(),
     },
@@ -112,7 +111,7 @@ export function createDACPSuccessResponse(
     type: responseType,
     payload,
     meta: {
-      responseUuid: uuidv4(),
+      responseUuid: crypto.randomUUID(),
       requestUuid: originalRequest.meta.requestUuid,
       timestamp: new Date(),
     },
@@ -127,7 +126,7 @@ export function createDACPEvent(eventType: string, payload: Record<string, unkno
     type: eventType,
     payload,
     meta: {
-      eventUuid: uuidv4(),
+      eventUuid: crypto.randomUUID(),
       timestamp: new Date(),
     },
   }
@@ -155,7 +154,7 @@ export function createIntentEvent(
       raiseIntentRequestUuid: requestUuid,
     },
     meta: {
-      eventUuid: uuidv4(),
+      eventUuid: crypto.randomUUID(),
       timestamp: new Date(),
     },
   }
@@ -187,7 +186,7 @@ export function withDACPTimeout<T>(
  * Generates a UUID for events.
  */
 export function generateEventUuid(): string {
-  return uuidv4()
+  return crypto.randomUUID()
 }
 
 /**

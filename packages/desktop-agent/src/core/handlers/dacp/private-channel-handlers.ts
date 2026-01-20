@@ -12,7 +12,6 @@ import {
   disconnectInstanceFromPrivateChannel,
   addPrivateChannelContextListener,
 } from "../../state/transforms"
-import { v4 as uuidv4 } from "uuid"
 
 /**
  * Handles createPrivateChannelRequest
@@ -32,7 +31,7 @@ export function handleCreatePrivateChannelRequest(
     }
 
     // Generate channel ID
-    const channelId = `private-${uuidv4()}`
+    const channelId = `private-${crypto.randomUUID()}`
 
     // Create the private channel using state transform
     setState(state => createPrivateChannel(state, channelId, instance.appId, instanceId))
