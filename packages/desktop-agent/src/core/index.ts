@@ -54,9 +54,8 @@ export type {
 // DACP Protocol Messages (types)
 export * from "./protocol/dacp-messages"
 
-// Handler types and validation
-export type { DACPHandlerContext, MessageValidator, ValidationResult } from "./handlers/types"
-export { noopValidator } from "./handlers/validation/dacp-validator"
+// Handler types
+export type { DACPHandlerContext, DACPMessage, MessageValidator, ValidationResult } from "./handlers/types"
 
-// DACP Schemas (for external validators like Zod validator in sail-platform-sdk)
-export * from "./handlers/validation/dacp-schemas"
+// DACP Protocol Utilities (errors, constants, message creators, utilities)
+export * from "./protocol/dacp-utilities"

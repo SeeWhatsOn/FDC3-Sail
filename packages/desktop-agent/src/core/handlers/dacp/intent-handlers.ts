@@ -1,22 +1,11 @@
 import {
-  validateDACPMessage,
   createDACPErrorResponse,
   createDACPSuccessResponse,
   createIntentEvent,
   DACP_ERROR_TYPES,
   generateEventUuid,
-} from "../validation/dacp-validator"
-import {
-  RaiseIntentRequestSchema,
-  RaiseIntentForContextRequestSchema,
-  AddIntentListenerRequestSchema,
-  IntentListenerUnsubscribeRequestSchema,
-  FindIntentRequestSchema,
-  FindIntentsByContextRequestSchema,
-  IntentResultRequestSchema,
-  ContextSchema,
-} from "../validation/dacp-schemas"
-import { type DACPHandlerContext, type IntentHandlerOption, logger } from "../types"
+} from "../../protocol/dacp-utilities"
+import { type DACPHandlerContext, type DACPMessage, type IntentHandlerOption, logger } from "../types"
 import { type Context } from "@finos/fdc3"
 import { AppInstanceState } from "../../state/app-instance-registry"
 
@@ -191,13 +180,12 @@ async function launchAppAndWaitForInstance(
 }
 
 export async function handleRaiseIntentRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): Promise<void> {
   const { transport, instanceId, appInstanceRegistry, intentRegistry, appDirectory } = context
 
   try {
-    const request = validateDACPMessage(message, RaiseIntentRequestSchema)
 
     const contextPayload = request.payload.context as Record<string, unknown>
     logger.info("DACP: Processing raise intent request", {
@@ -209,26 +197,7 @@ export async function handleRaiseIntentRequest(
       contextPayload: JSON.stringify(contextPayload),
     })
 
-    let validatedContext: Context
-    try {
-      validatedContext = validateDACPMessage(request.payload.context, ContextSchema)
-    } catch (validationError) {
-      // Extract detailed validation error information
-      const errorMessage =
-        validationError instanceof Error ? validationError.message : String(validationError)
-
-      logger.error("DACP: Context validation failed", {
-        error: errorMessage,
-        contextPayload: JSON.stringify(contextPayload, null, 2),
-        contextType: contextPayload?.type,
-        hasName: typeof contextPayload?.name === "string",
-        nameValue: contextPayload?.name,
-        nameType: typeof contextPayload?.name,
-        allContextKeys: contextPayload ? Object.keys(contextPayload) : [],
-        contextStructure: contextPayload,
-      })
-      throw validationError
-    }
+    const validatedContext: Context = request.payload.context
 
     const validatedContextRecord = validatedContext as Record<string, unknown>
     logger.debug("DACP: Context validated successfully", {
@@ -771,7 +740,7 @@ export async function handleRaiseIntentRequest(
     }
 
     // Send response back to source app with intentResolution
-    const response = createDACPSuccessResponse(request, "raiseIntentResponse", {
+    const response = createDACPSuccessResponse(message, "raiseIntentResponse", {
       intentResolution: {
         source: {
           appId: targetInstance.appId,
@@ -792,8 +761,7 @@ export async function handleRaiseIntentRequest(
 
     transport.send(responseWithRouting)
   } catch (error) {
-    const messageRecord = message as Record<string, unknown>
-    const payload = messageRecord?.payload as Record<string, unknown> | undefined
+    const payload = message.payload as Record<string, unknown>
     const context = payload?.context as Record<string, unknown> | undefined
 
     logger.error("DACP: Raise intent request failed", {
@@ -821,11 +789,10 @@ export async function handleRaiseIntentRequest(
   }
 }
 
-export function handleAddIntentListener(message: unknown, context: DACPHandlerContext): void {
+export function handleAddIntentListener(message: DACPMessage, context: DACPHandlerContext): void {
   const { transport, instanceId, appInstanceRegistry, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, AddIntentListenerRequestSchema)
     const instance = appInstanceRegistry.getInstance(instanceId)
 
     if (!instance) {
@@ -843,7 +810,7 @@ export function handleAddIntentListener(message: unknown, context: DACPHandlerCo
 
     // FDC3 spec requires listenerUUID (not listenerId) in the response payload
     //TODO: change the var to match the spec - listenerId -> listenerUUID
-    const response = createDACPSuccessResponse(request, "addIntentListenerResponse", {
+    const response = createDACPSuccessResponse(message, "addIntentListenerResponse", {
       listenerUUID: listenerId,
     })
 
@@ -879,13 +846,12 @@ export function handleAddIntentListener(message: unknown, context: DACPHandlerCo
 }
 
 export function handleIntentListenerUnsubscribe(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, IntentListenerUnsubscribeRequestSchema)
     const listenerUUID = request.payload.listenerUUID
 
     const unregistered = intentRegistry.unregisterListener(listenerUUID)
@@ -893,7 +859,7 @@ export function handleIntentListenerUnsubscribe(
       throw new Error(`Intent listener ${listenerUUID} not found`)
     }
 
-    const response = createDACPSuccessResponse(request, "intentListenerUnsubscribeResponse")
+    const response = createDACPSuccessResponse(message, "intentListenerUnsubscribeResponse")
     // Add routing metadata
     const responseWithRouting = {
       ...response,
@@ -925,17 +891,16 @@ export function handleIntentListenerUnsubscribe(
   }
 }
 
-export function handleFindIntentRequest(message: unknown, context: DACPHandlerContext): void {
+export function handleFindIntentRequest(message: DACPMessage, context: DACPHandlerContext): void {
   const { transport, instanceId, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, FindIntentRequestSchema)
     const intent = (request.payload as { intent: string }).intent
     const contextType = (request.payload as { context: Context })?.context?.type
 
     const appIntents = intentRegistry.createAppIntents(intent, contextType)
 
-    const response = createDACPSuccessResponse(request, "findIntentResponse", {
+    const response = createDACPSuccessResponse(message, "findIntentResponse", {
       appIntent: appIntents[0] ?? { intent: { name: intent, displayName: intent }, apps: [] },
     })
 
@@ -970,11 +935,10 @@ export function handleFindIntentRequest(message: unknown, context: DACPHandlerCo
   }
 }
 
-export function handleIntentResultRequest(message: unknown, context: DACPHandlerContext): void {
+export function handleIntentResultRequest(message: DACPMessage, context: DACPHandlerContext): void {
   const { transport, instanceId, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, IntentResultRequestSchema)
 
     logger.info("DACP: Processing intent result request", {
       requestUuid: request.meta.requestUuid,
@@ -1007,7 +971,7 @@ export function handleIntentResultRequest(message: unknown, context: DACPHandler
     intentRegistry.resolvePendingIntent(originalRequestId, intentResult)
 
     // Send acknowledgment response
-    const response = createDACPSuccessResponse(request, "intentResultResponse")
+    const response = createDACPSuccessResponse(message, "intentResultResponse")
     // Add routing metadata
     const responseWithRouting = {
       ...response,
@@ -1045,13 +1009,12 @@ export function handleIntentResultRequest(message: unknown, context: DACPHandler
 }
 
 export function handleFindIntentsByContextRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, FindIntentsByContextRequestSchema)
     const contextType = (request.payload as { context: Context }).context?.type
 
     if (!contextType) {
@@ -1074,7 +1037,7 @@ export function handleFindIntentsByContextRequest(
       )
     })
 
-    const response = createDACPSuccessResponse(request, "findIntentsByContextResponse", {
+    const response = createDACPSuccessResponse(message, "findIntentsByContextResponse", {
       appIntents,
     })
 
@@ -1110,20 +1073,19 @@ export function handleFindIntentsByContextRequest(
 }
 
 export async function handleRaiseIntentForContextRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): Promise<void> {
   const { transport, instanceId, appInstanceRegistry, intentRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, RaiseIntentForContextRequestSchema)
 
     logger.info("DACP: Processing raise intent for context request", {
       requestUuid: request.meta.requestUuid,
     })
 
     // app is an AppIdentifier object (with appId, instanceId, desktopAgent)
-    const validatedContext = validateDACPMessage(request.payload.context, ContextSchema)
+    const validatedContext = request.payload.context
     const source = appInstanceRegistry.getInstance(instanceId)
 
     if (!source) {
@@ -1267,7 +1229,7 @@ export async function handleRaiseIntentForContextRequest(
     }
 
     // Send response with intentResolution
-    const response = createDACPSuccessResponse(request, "raiseIntentForContextResponse", {
+    const response = createDACPSuccessResponse(message, "raiseIntentForContextResponse", {
       intentResolution: {
         source: {
           appId: targetInstance.appId,

@@ -1,32 +1,25 @@
 import {
-  validateDACPMessage,
   createDACPErrorResponse,
   createDACPSuccessResponse,
   createDACPEvent,
   DACP_ERROR_TYPES,
-} from "../validation/dacp-validator"
-import {
-  BroadcastRequestSchema,
-  AddContextListenerRequestSchema,
-  ContextSchema,
-  ContextListenerUnsubscribeRequestSchema,
-} from "../validation/dacp-schemas"
-import { type DACPHandlerContext, logger } from "../types"
+} from "../../protocol/dacp-utilities"
+import { type DACPHandlerContext, type DACPMessage, logger } from "../types"
 import type { Context } from "@finos/fdc3"
 
 /**
  * Handles broadcast requests to send context to a channel
  * Implements DACP broadcastRequest message handling
+ *
+ * Note: Message validation happens at router level before this handler is called
  */
 export async function handleBroadcastRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): Promise<void> {
   const { transport, instanceId, channelContextRegistry, appInstanceRegistry } = context
 
   try {
-    // Validate message against DACP schema - channelId is required per spec
-    const request = validateDACPMessage(message, BroadcastRequestSchema)
 
     // Validate that the instance is a member of the channel they're broadcasting to
     const instance = appInstanceRegistry.getInstance(instanceId)
@@ -46,15 +39,15 @@ export async function handleBroadcastRequest(
       requestUuid: request.meta.requestUuid,
     })
 
-    const validatedContext = validateDACPMessage(request.payload.context, ContextSchema)
+    const broadcastContext = request.payload.context
 
     // Store context in channel context registry
-    channelContextRegistry.storeContext(request.payload.channelId, validatedContext, instanceId)
+    channelContextRegistry.storeContext(request.payload.channelId, broadcastContext, instanceId)
 
     // Notify listeners on the channel
-    await notifyContextListeners(request.payload.channelId, validatedContext, context)
+    await notifyContextListeners(request.payload.channelId, broadcastContext, context)
 
-    const response = createDACPSuccessResponse(request, "broadcastResponse")
+    const response = createDACPSuccessResponse(message, "broadcastResponse")
 
     // Add routing metadata
     const responseWithRouting = {
@@ -101,11 +94,10 @@ export async function handleBroadcastRequest(
  * Handles add context listener requests
  * Implements DACP addContextListenerRequest message handling
  */
-export function handleAddContextListener(message: unknown, context: DACPHandlerContext): void {
+export function handleAddContextListener(message: DACPMessage, context: DACPHandlerContext): void {
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, AddContextListenerRequestSchema)
     const contextType = request.payload.contextType ?? "*" // Default to all contexts if not specified
 
     logger.info("DACP: Adding context listener", {
@@ -125,7 +117,7 @@ export function handleAddContextListener(message: unknown, context: DACPHandlerC
     // The listenerUUID is the contextType itself for simplicity in unsubscribing.
     const listenerUUID = contextType
 
-    const response = createDACPSuccessResponse(request, "addContextListenerResponse", {
+    const response = createDACPSuccessResponse(message, "addContextListenerResponse", {
       listenerUUID,
     })
 
@@ -177,13 +169,12 @@ export function handleAddContextListener(message: unknown, context: DACPHandlerC
  * Implements DACP contextListenerUnsubscribeRequest message handling
  */
 export function handleContextListenerUnsubscribe(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, ContextListenerUnsubscribeRequestSchema)
     const listenerUUID = request.payload.listenerUUID
 
     logger.info("DACP: Unsubscribing context listener", {
@@ -198,7 +189,7 @@ export function handleContextListenerUnsubscribe(
       throw new Error(`Context listener ${listenerUUID} not found for instance ${instanceId}`)
     }
 
-    const response = createDACPSuccessResponse(request, "contextListenerUnsubscribeResponse")
+    const response = createDACPSuccessResponse(message, "contextListenerUnsubscribeResponse")
 
     // Add routing metadata
     const responseWithRouting = {

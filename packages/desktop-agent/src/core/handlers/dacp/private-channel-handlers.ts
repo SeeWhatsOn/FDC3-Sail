@@ -1,16 +1,11 @@
 import {
-  validateDACPMessage,
   createDACPErrorResponse,
   createDACPSuccessResponse,
   createDACPEvent,
   DACP_ERROR_TYPES,
   generateEventUuid,
-} from "../validation/dacp-validator"
-import {
-  CreatePrivateChannelRequestSchema,
-  PrivateChannelDisconnectRequestSchema,
-} from "../validation/dacp-schemas"
-import { type DACPHandlerContext, logger } from "../types"
+} from "../../protocol/dacp-utilities"
+import { type DACPHandlerContext, type DACPMessage, logger } from "../types"
 import { PrivateChannelRegistry } from "../../state/private-channel-registry"
 
 // Singleton registry instance
@@ -21,13 +16,12 @@ const privateChannelRegistry = new PrivateChannelRegistry()
  * Creates a new private channel for peer-to-peer communication between apps
  */
 export function handleCreatePrivateChannelRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, CreatePrivateChannelRequestSchema)
     const instance = appInstanceRegistry.getInstance(instanceId)
 
     if (!instance) {
@@ -44,7 +38,7 @@ export function handleCreatePrivateChannelRequest(
     })
 
     // Return channel information to the creator
-    const response = createDACPSuccessResponse(request, "createPrivateChannelResponse", {
+    const response = createDACPSuccessResponse(message, "createPrivateChannelResponse", {
       channel: {
         id: channel.id,
         type: "private",
@@ -87,14 +81,13 @@ export function handleCreatePrivateChannelRequest(
  * Disconnects an instance from a private channel
  */
 export function handlePrivateChannelDisconnectRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId } = context
 
   try {
-    const request = validateDACPMessage(message, PrivateChannelDisconnectRequestSchema)
-    const payload = request.payload as { channelId: string }
+    const payload = message.payload as { channelId: string }
     const channelId = payload.channelId
 
     const channel = privateChannelRegistry.getChannel(channelId)
@@ -166,7 +159,7 @@ export function handlePrivateChannelDisconnectRequest(
     })
 
     // Send success response
-    const response = createDACPSuccessResponse(request, "privateChannelDisconnectResponse")
+    const response = createDACPSuccessResponse(message, "privateChannelDisconnectResponse")
     // Add routing metadata
     const responseWithRouting = {
       ...response,
@@ -203,18 +196,14 @@ export function handlePrivateChannelDisconnectRequest(
  * TODO: Implement this when the schema is available
  */
 export function handlePrivateChannelAddContextListenerRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId } = context
 
   try {
     // TODO: Validate with proper schema when available
-    const request = message as {
-      meta: { requestUuid: string }
-      payload: { channelId: string; contextType?: string }
-    }
-    const { channelId, contextType } = request.payload
+    const { channelId, contextType } = message.payload as { channelId: string; contextType?: string }
 
     const channel = privateChannelRegistry.getChannel(channelId)
     if (!channel) {
@@ -265,7 +254,7 @@ export function handlePrivateChannelAddContextListenerRequest(
 
     // Send success response
     const response = createDACPSuccessResponse(
-      request,
+      message,
       "privateChannelAddContextListenerResponse",
       {
         listenerId,

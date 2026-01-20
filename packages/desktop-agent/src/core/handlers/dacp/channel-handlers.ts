@@ -1,38 +1,28 @@
 import {
-  validateDACPMessage,
   createDACPErrorResponse,
   createDACPSuccessResponse,
   createDACPEvent,
   DACP_ERROR_TYPES,
-} from "../validation/dacp-validator"
-import {
-  GetCurrentChannelRequestSchema,
-  GetCurrentContextRequestSchema,
-  JoinUserChannelRequestSchema,
-  LeaveCurrentChannelRequestSchema,
-  GetUserChannelsRequestSchema,
-  GetOrCreateChannelRequestSchema,
-} from "../validation/dacp-schemas"
-import { type DACPHandlerContext, logger } from "../types"
+} from "../../protocol/dacp-utilities"
+import { type DACPHandlerContext, type DACPMessage, logger } from "../types"
 import { getEventListeners } from "./event-handlers"
 
 /**
  * Handles get current channel requests
  */
 export function handleGetCurrentChannelRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, appInstanceRegistry, userChannelRegistry, appChannelRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, GetCurrentChannelRequestSchema)
     const instance = appInstanceRegistry.getInstance(instanceId)
     const channelId = instance?.currentChannel ?? null
 
     // If no channel, return null
     if (!channelId) {
-      const response = createDACPSuccessResponse(request, "getCurrentChannelResponse", {
+      const response = createDACPSuccessResponse(message, "getCurrentChannelResponse", {
         channel: null,
       })
       // Add routing metadata
@@ -64,7 +54,7 @@ export function handleGetCurrentChannelRequest(
       }
     }
 
-    const response = createDACPSuccessResponse(request, "getCurrentChannelResponse", {
+    const response = createDACPSuccessResponse(message, "getCurrentChannelResponse", {
       channel,
     })
     // Add routing metadata
@@ -104,12 +94,11 @@ export function handleGetCurrentChannelRequest(
 /**
  * Handles join user channel requests
  */
-export function handleJoinUserChannelRequest(message: unknown, context: DACPHandlerContext): void {
+export function handleJoinUserChannelRequest(message: DACPMessage, context: DACPHandlerContext): void {
   const { transport, instanceId, appInstanceRegistry, userChannelRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, JoinUserChannelRequestSchema)
-    const { channelId } = request.payload
+    const { channelId } = message.payload as { channelId: string }
 
     // Validate channel exists in user channel registry
     if (!userChannelRegistry.has(channelId)) {
@@ -118,7 +107,7 @@ export function handleJoinUserChannelRequest(message: unknown, context: DACPHand
 
     appInstanceRegistry.setInstanceChannel(instanceId, channelId)
 
-    const response = createDACPSuccessResponse(request, "joinUserChannelResponse")
+    const response = createDACPSuccessResponse(message, "joinUserChannelResponse")
     // Add routing metadata
     const responseWithRouting = {
       ...response,
@@ -161,16 +150,15 @@ export function handleJoinUserChannelRequest(message: unknown, context: DACPHand
  * Handles leave current channel requests
  */
 export function handleLeaveCurrentChannelRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, LeaveCurrentChannelRequestSchema)
     appInstanceRegistry.setInstanceChannel(instanceId, null)
 
-    const response = createDACPSuccessResponse(request, "leaveCurrentChannelResponse")
+    const response = createDACPSuccessResponse(message, "leaveCurrentChannelResponse")
     // Add routing metadata
     const responseWithRouting = {
       ...response,
@@ -210,14 +198,13 @@ export function handleLeaveCurrentChannelRequest(
 /**
  * Handles get user channels requests
  */
-export function handleGetUserChannelsRequest(message: unknown, context: DACPHandlerContext): void {
+export function handleGetUserChannelsRequest(message: DACPMessage, context: DACPHandlerContext): void {
   const { transport, instanceId, userChannelRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, GetUserChannelsRequestSchema)
     const userChannels = userChannelRegistry.getAll()
 
-    const response = createDACPSuccessResponse(request, "getUserChannelsResponse", {
+    const response = createDACPSuccessResponse(message, "getUserChannelsResponse", {
       userChannels,
     })
     // Add routing metadata
@@ -258,14 +245,13 @@ export function handleGetUserChannelsRequest(message: unknown, context: DACPHand
  * Handles get current context requests
  */
 export function handleGetCurrentContextRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, appInstanceRegistry, channelContextRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, GetCurrentContextRequestSchema)
-    const payload = request.payload as { channelId?: string; contextType?: string }
+    const payload = message.payload as { channelId?: string; contextType?: string }
 
     const instance = appInstanceRegistry.getInstance(instanceId)
     const channelId = payload.channelId || instance?.currentChannel
@@ -283,7 +269,7 @@ export function handleGetCurrentContextRequest(
       hasContext: !!storedContext,
     })
 
-    const response = createDACPSuccessResponse(request, "getCurrentContextResponse", {
+    const response = createDACPSuccessResponse(message, "getCurrentContextResponse", {
       context: storedContext,
     })
     // Add routing metadata
@@ -325,14 +311,13 @@ export function handleGetCurrentContextRequest(
  * Creates an app channel if it doesn't exist, or returns existing one
  */
 export function handleGetOrCreateChannelRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, appChannelRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, GetOrCreateChannelRequestSchema)
-    const { channelId } = request.payload
+    const { channelId } = message.payload as { channelId: string }
 
     // Get or create the app channel
     const channel = appChannelRegistry.getOrCreate(channelId)
@@ -342,7 +327,7 @@ export function handleGetOrCreateChannelRequest(
       existed: appChannelRegistry.has(channelId),
     })
 
-    const response = createDACPSuccessResponse(request, "getOrCreateChannelResponse", {
+    const response = createDACPSuccessResponse(message, "getOrCreateChannelResponse", {
       channel,
     })
     // Add routing metadata

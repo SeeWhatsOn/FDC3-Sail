@@ -45,8 +45,11 @@ export {
 
 // Validation (re-export interface from desktop-agent, provide Zod implementation)
 export type { MessageValidator, ValidationResult } from "@finos/fdc3-sail-desktop-agent";
-export { noopValidator } from "@finos/fdc3-sail-desktop-agent";
 export { createZodValidator, zodValidator, strictZodValidator } from "./validation/zod-validator";
+
+// DACP Validation - Zod-based validators and schemas
+export { validateDACPMessage, safeParseDACPMessage } from "./validation/dacp-zod-validator";
+export * from "./validation/dacp-schemas";
 
 // Utilities
 export {

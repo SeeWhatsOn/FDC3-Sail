@@ -1,15 +1,10 @@
 import {
-  validateDACPMessage,
   createDACPErrorResponse,
   createDACPSuccessResponse,
   DACP_ERROR_TYPES,
   generateEventUuid,
-} from "../validation/dacp-validator"
-import {
-  AddEventListenerRequestSchema,
-  EventListenerUnsubscribeRequestSchema,
-} from "../validation/dacp-schemas"
-import { type DACPHandlerContext, logger } from "../types"
+} from "../../protocol/dacp-utilities"
+import { type DACPHandlerContext, type DACPMessage, logger } from "../types"
 
 /**
  * Desktop Agent Event Listener Registry
@@ -94,11 +89,10 @@ const eventListenerRegistry = new EventListenerRegistry()
 /**
  * Handles addEventListenerRequest for DA-level events
  */
-export function handleAddEventListenerRequest(message: unknown, context: DACPHandlerContext): void {
+export function handleAddEventListenerRequest(message: DACPMessage, context: DACPHandlerContext): void {
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, AddEventListenerRequestSchema)
     const instance = appInstanceRegistry.getInstance(instanceId)
 
     if (!instance) {
@@ -127,7 +121,7 @@ export function handleAddEventListenerRequest(message: unknown, context: DACPHan
 
     // FDC3 spec requires listenerUUID (not listenerId) in the response payload
     //TODO: update the code to match the spec
-    const response = createDACPSuccessResponse(request, "addEventListenerResponse", {
+    const response = createDACPSuccessResponse(message, "addEventListenerResponse", {
       listenerUUID: listenerId,
     })
 
@@ -169,13 +163,12 @@ export function handleAddEventListenerRequest(message: unknown, context: DACPHan
  * Handles eventListenerUnsubscribeRequest
  */
 export function handleEventListenerUnsubscribeRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId } = context
 
   try {
-    const request = validateDACPMessage(message, EventListenerUnsubscribeRequestSchema)
     const listenerUUID = request.payload.listenerUUID
 
     const unregistered = eventListenerRegistry.unregister(listenerUUID)
@@ -183,7 +176,7 @@ export function handleEventListenerUnsubscribeRequest(
       throw new Error(`Event listener ${listenerUUID} not found`)
     }
 
-    const response = createDACPSuccessResponse(request, "eventListenerUnsubscribeResponse")
+    const response = createDACPSuccessResponse(message, "eventListenerUnsubscribeResponse")
 
     // Add routing metadata
     const responseWithRouting = {

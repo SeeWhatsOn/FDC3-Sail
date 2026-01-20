@@ -6,11 +6,6 @@ import {
   createDACPSuccessResponse,
   createDACPErrorResponse,
   createDACPEvent,
-  isDACPRequest,
-  isDACPResponse,
-  isDACPEvent,
-  isBroadcastRequest,
-  isAddContextListenerRequest,
   DACP_ERROR_TYPES,
   DACP_TIMEOUTS
 } from '../dacp-validator'
@@ -276,57 +271,6 @@ describe('Safe Parsing', () => {
     if (!result.success) {
       expect(result.error).toBeInstanceOf(DACPValidationError)
     }
-  })
-})
-
-describe('Message Type Guards', () => {
-  const sampleRequest = {
-    type: 'broadcastRequest',
-    payload: { channelId: 'red', context: { type: 'fdc3.instrument' } },
-    meta: { requestUuid: '123', timestamp: new Date() }
-  }
-
-  const sampleResponse = {
-    type: 'broadcastResponse',
-    payload: {},
-    meta: { responseUuid: '456', requestUuid: '123', timestamp: new Date() }
-  }
-
-  const sampleEvent = {
-    type: 'contextEvent',
-    payload: { context: { type: 'fdc3.instrument' } },
-    meta: { eventUuid: '789', timestamp: new Date() }
-  }
-
-  it('should identify DACP requests', () => {
-    expect(isDACPRequest(sampleRequest)).toBe(true)
-    expect(isDACPRequest(sampleResponse)).toBe(false)
-    expect(isDACPRequest(sampleEvent)).toBe(false)
-  })
-
-  it('should identify DACP responses', () => {
-    expect(isDACPResponse(sampleResponse)).toBe(true)
-    expect(isDACPResponse(sampleRequest)).toBe(false)
-    expect(isDACPResponse(sampleEvent)).toBe(false)
-  })
-
-  it('should identify DACP events', () => {
-    expect(isDACPEvent(sampleEvent)).toBe(true)
-    expect(isDACPEvent(sampleRequest)).toBe(false)
-    expect(isDACPEvent(sampleResponse)).toBe(false)
-  })
-
-  it('should identify specific message types', () => {
-    expect(isBroadcastRequest(sampleRequest)).toBe(true)
-    expect(isBroadcastRequest(sampleResponse)).toBe(false)
-
-    const addListenerRequest = {
-      type: 'addContextListenerRequest',
-      payload: {},
-      meta: { requestUuid: '123', timestamp: new Date() }
-    }
-    expect(isAddContextListenerRequest(addListenerRequest)).toBe(true)
-    expect(isAddContextListenerRequest(sampleRequest)).toBe(false)
   })
 })
 

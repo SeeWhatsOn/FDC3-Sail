@@ -108,6 +108,30 @@ export interface MessageValidator {
 }
 
 // ============================================================================
+// DACP MESSAGE TYPES
+// ============================================================================
+
+/**
+ * Base structure for all DACP messages
+ * Messages are validated by the router before being passed to handlers
+ */
+export interface DACPMessage {
+  /** Message type (e.g., "broadcastRequest", "raiseIntentRequest") */
+  type: string
+  /** Message payload - specific structure depends on message type */
+  payload: Record<string, unknown>
+  /** Message metadata */
+  meta: {
+    requestUuid: string
+    timestamp: Date
+    responseUuid?: string
+    eventUuid?: string
+    source?: { instanceId: string }
+    destination?: { instanceId: string }
+  }
+}
+
+// ============================================================================
 // DACP HANDLER CONTEXT
 // ============================================================================
 
@@ -160,8 +184,9 @@ export interface DACPHandlerContext {
 
 /**
  * Type for DACP handler functions
+ * Handlers receive validated messages from the router
  */
-export type DACPHandler = (message: unknown, context: DACPHandlerContext) => void | Promise<void>
+export type DACPHandler = (message: DACPMessage, context: DACPHandlerContext) => void | Promise<void>
 
 // ============================================================================
 // LOGGING

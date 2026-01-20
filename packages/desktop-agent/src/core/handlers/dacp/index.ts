@@ -1,11 +1,38 @@
+import { withDACPTimeout, DACP_TIMEOUTS, logDACPMessage } from "../../protocol/dacp-utilities"
+import { validateDACPMessage } from "../validation/dacp-validator"
 import {
-  validateDACPMessage,
-  withDACPTimeout,
-  DACP_TIMEOUTS,
-  logDACPMessage,
-} from "../validation/dacp-validator"
-import { BaseDACPMessageSchema } from "../validation/dacp-schemas"
+  BaseDACPMessageSchema,
+  BroadcastRequestSchema,
+  AddContextListenerRequestSchema,
+  ContextListenerUnsubscribeRequestSchema,
+  RaiseIntentRequestSchema,
+  RaiseIntentForContextRequestSchema,
+  AddIntentListenerRequestSchema,
+  IntentListenerUnsubscribeRequestSchema,
+  FindIntentRequestSchema,
+  FindIntentsByContextRequestSchema,
+  IntentResultRequestSchema,
+  GetCurrentChannelRequestSchema,
+  GetCurrentContextRequestSchema,
+  JoinUserChannelRequestSchema,
+  LeaveCurrentChannelRequestSchema,
+  GetUserChannelsRequestSchema,
+  GetOrCreateChannelRequestSchema,
+  GetInfoRequestSchema,
+  OpenRequestSchema,
+  FindInstancesRequestSchema,
+  GetAppMetadataRequestSchema,
+  AddEventListenerRequestSchema,
+  EventListenerUnsubscribeRequestSchema,
+  CreatePrivateChannelRequestSchema,
+  PrivateChannelDisconnectRequestSchema,
+  PrivateChannelAddContextListenerRequestSchema,
+  WCP4ValidateAppIdentitySchema,
+  WCP6GoodbyeSchema,
+  HeartbeatAcknowledgmentRequestSchema,
+} from "../validation/dacp-schemas"
 import { type DACPHandler, type DACPHandlerContext, logger } from "../types"
+import { type z } from "zod"
 
 // Import all DACP handlers
 import * as contextHandlers from "./context-handlers"
@@ -69,6 +96,59 @@ export async function routeDACPMessage(
 }
 
 /**
+ * Schema map for message type validation
+ */
+function getSchemaForMessageType(messageType: string): z.ZodSchema | null {
+  const schemaMap: Record<string, z.ZodSchema> = {
+    // Context handlers
+    broadcastRequest: BroadcastRequestSchema,
+    addContextListenerRequest: AddContextListenerRequestSchema,
+    contextListenerUnsubscribeRequest: ContextListenerUnsubscribeRequestSchema,
+
+    // Intent handlers
+    raiseIntentRequest: RaiseIntentRequestSchema,
+    raiseIntentForContextRequest: RaiseIntentForContextRequestSchema,
+    addIntentListenerRequest: AddIntentListenerRequestSchema,
+    intentListenerUnsubscribeRequest: IntentListenerUnsubscribeRequestSchema,
+    findIntentRequest: FindIntentRequestSchema,
+    findIntentsByContextRequest: FindIntentsByContextRequestSchema,
+    intentResultRequest: IntentResultRequestSchema,
+
+    // Channel handlers
+    getCurrentChannelRequest: GetCurrentChannelRequestSchema,
+    getCurrentContextRequest: GetCurrentContextRequestSchema,
+    joinUserChannelRequest: JoinUserChannelRequestSchema,
+    leaveCurrentChannelRequest: LeaveCurrentChannelRequestSchema,
+    getUserChannelsRequest: GetUserChannelsRequestSchema,
+    getOrCreateChannelRequest: GetOrCreateChannelRequestSchema,
+
+    // App management handlers
+    getInfoRequest: GetInfoRequestSchema,
+    openRequest: OpenRequestSchema,
+    findInstancesRequest: FindInstancesRequestSchema,
+    getAppMetadataRequest: GetAppMetadataRequestSchema,
+
+    // Event handlers
+    addEventListenerRequest: AddEventListenerRequestSchema,
+    eventListenerUnsubscribeRequest: EventListenerUnsubscribeRequestSchema,
+
+    // Private channel handlers
+    createPrivateChannelRequest: CreatePrivateChannelRequestSchema,
+    privateChannelDisconnectRequest: PrivateChannelDisconnectRequestSchema,
+    privateChannelAddContextListenerRequest: PrivateChannelAddContextListenerRequestSchema,
+
+    // WCP handlers
+    WCP4ValidateAppIdentity: WCP4ValidateAppIdentitySchema,
+    WCP6Goodbye: WCP6GoodbyeSchema,
+
+    // Heartbeat handlers
+    heartbeatAcknowledgementRequest: HeartbeatAcknowledgmentRequestSchema,
+  }
+
+  return schemaMap[messageType] || null
+}
+
+/**
  * Routes messages to specific handlers based on message type
  */
 async function handleDACPMessage(
@@ -84,8 +164,17 @@ async function handleDACPMessage(
     return
   }
 
-  // Execute handler
-  await handler(message, context)
+  // Validate message against specific schema
+  const schema = getSchemaForMessageType(messageType)
+  if (schema) {
+    const validatedMessage = validateDACPMessage(message, schema)
+    // Execute handler with validated message
+    await handler(validatedMessage, context)
+  } else {
+    // No schema available, pass message as-is (for backwards compatibility)
+    logger.debug(`No schema found for message type: ${messageType}, passing message as-is`)
+    await handler(message, context)
+  }
 }
 
 /**

@@ -1,16 +1,9 @@
 import {
-  validateDACPMessage,
   createDACPSuccessResponse,
   createDACPErrorResponse,
   DACP_ERROR_TYPES,
-} from "../validation/dacp-validator"
-import {
-  FindInstancesRequestSchema,
-  GetAppMetadataRequestSchema,
-  GetInfoRequestSchema,
-  OpenRequestSchema,
-} from "../validation/dacp-schemas"
-import { type DACPHandlerContext, logger } from "../types"
+} from "../../protocol/dacp-utilities"
+import { type DACPHandlerContext, type DACPMessage, logger } from "../types"
 import type { Context } from "@finos/fdc3"
 import type { DirectoryApp } from "../../app-directory/types"
 
@@ -31,13 +24,12 @@ const IMPLEMENTATION_METADATA = {
 /**
  * Handles getInfoRequest to return implementation metadata.
  */
-export function handleGetInfoRequest(message: unknown, context: DACPHandlerContext): void {
+export function handleGetInfoRequest(message: DACPMessage, context: DACPHandlerContext): void {
   const { transport, instanceId } = context
 
   try {
-    const request = validateDACPMessage(message, GetInfoRequestSchema)
 
-    const response = createDACPSuccessResponse(request, "getInfoResponse", IMPLEMENTATION_METADATA)
+    const response = createDACPSuccessResponse(message, "getInfoResponse", IMPLEMENTATION_METADATA)
 
     // Add routing metadata
     const responseWithRouting = {
@@ -52,7 +44,7 @@ export function handleGetInfoRequest(message: unknown, context: DACPHandlerConte
   } catch (error) {
     logger.error("DACP: getInfoRequest failed", error)
     const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
+      message,
       DACP_ERROR_TYPES.API_TIMEOUT, // Or a more appropriate error
       "getInfoResponse",
       error instanceof Error ? error.message : "Failed to get implementation info"
@@ -74,14 +66,13 @@ export function handleGetInfoRequest(message: unknown, context: DACPHandlerConte
  * Handles openRequest to launch an app
  */
 export async function handleOpenRequest(
-  message: unknown,
+  message: DACPMessage,
   context: DACPHandlerContext
 ): Promise<void> {
   const { transport, instanceId, appDirectory, appLauncher } = context
 
   try {
-    const request = validateDACPMessage(message, OpenRequestSchema)
-    const payload = request.payload as {
+    const payload = message.payload as {
       app: { appId: string; instanceId?: string }
       context?: Context
     }
@@ -124,7 +115,7 @@ export async function handleOpenRequest(
     })
 
     // Return app identifier to caller
-    const response = createDACPSuccessResponse(request, "openResponse", {
+    const response = createDACPSuccessResponse(message, "openResponse", {
       appIdentifier: launchResult.appIdentifier,
     })
     // Add routing metadata
@@ -161,12 +152,11 @@ export async function handleOpenRequest(
 /**
  * Handles findInstancesRequest to return all app instances for a given appId
  */
-export function handleFindInstancesRequest(message: unknown, context: DACPHandlerContext): void {
+export function handleFindInstancesRequest(message: DACPMessage, context: DACPHandlerContext): void {
   const { transport, instanceId, appInstanceRegistry } = context
 
   try {
-    const request = validateDACPMessage(message, FindInstancesRequestSchema)
-    const appIdentifier = request.payload.app
+    const appIdentifier = (message.payload as { app: { appId: string; instanceId?: string } }).app
 
     logger.info("DACP: Finding instances for app", { appId: appIdentifier.appId })
 
@@ -179,7 +169,7 @@ export function handleFindInstancesRequest(message: unknown, context: DACPHandle
       instanceId: instance.instanceId,
     }))
 
-    const response = createDACPSuccessResponse(request, "findInstancesResponse", {
+    const response = createDACPSuccessResponse(message, "findInstancesResponse", {
       appIdentifiers,
     })
 
@@ -241,14 +231,13 @@ function convertDirectoryAppToAppMetadata(app: DirectoryApp, instanceId?: string
  * Handles getAppMetadataRequest to return app metadata
  * Returns metadata from running instances or from the App Directory
  */
-export function handleGetAppMetadataRequest(message: unknown, context: DACPHandlerContext): void {
+export function handleGetAppMetadataRequest(message: DACPMessage, context: DACPHandlerContext): void {
   const { transport, instanceId, appInstanceRegistry, appDirectory } = context
 
   try {
-    const request = validateDACPMessage(message, GetAppMetadataRequestSchema)
 
     // Parse request payload
-    const payload = request.payload as { app: { appId: string; instanceId?: string } }
+    const payload = message.payload as { app: { appId: string; instanceId?: string } }
     const appId = payload.app.appId
     const specificInstanceId = payload.app.instanceId
 
@@ -274,7 +263,7 @@ export function handleGetAppMetadataRequest(message: unknown, context: DACPHandl
           runningInstance.instanceId
         )
 
-        const response = createDACPSuccessResponse(request, "getAppMetadataResponse", {
+        const response = createDACPSuccessResponse(message, "getAppMetadataResponse", {
           appMetadata,
         })
 
@@ -299,7 +288,7 @@ export function handleGetAppMetadataRequest(message: unknown, context: DACPHandl
         desktopAgent: "FDC3-Sail",
       }
 
-      const response = createDACPSuccessResponse(request, "getAppMetadataResponse", {
+      const response = createDACPSuccessResponse(message, "getAppMetadataResponse", {
         appMetadata,
       })
 
@@ -320,7 +309,7 @@ export function handleGetAppMetadataRequest(message: unknown, context: DACPHandl
     if (directoryApps.length > 0) {
       const appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0])
 
-      const response = createDACPSuccessResponse(request, "getAppMetadataResponse", {
+      const response = createDACPSuccessResponse(message, "getAppMetadataResponse", {
         appMetadata,
       })
 

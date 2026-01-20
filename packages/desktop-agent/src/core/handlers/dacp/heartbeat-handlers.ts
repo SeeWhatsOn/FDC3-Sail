@@ -1,10 +1,5 @@
-import {
-  validateDACPMessage,
-  createDACPEvent,
-  generateEventUuid,
-} from "../validation/dacp-validator"
-import { HeartbeatAcknowledgmentRequestSchema } from "../validation/dacp-schemas"
-import { type DACPHandlerContext, logger } from "../types"
+import { createDACPEvent, generateEventUuid } from "../../protocol/dacp-utilities"
+import { type DACPHandlerContext, type DACPMessage, logger } from "../types"
 
 /**
  * Heartbeat configuration
@@ -155,15 +150,13 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
  * Handle heartbeatAcknowledgmentRequest
  */
 export function handleHeartbeatAcknowledgmentRequest(
-  message: unknown,
+  _message: DACPMessage,
   context: DACPHandlerContext
 ): void {
   const { instanceId } = context
 
   try {
-    validateDACPMessage(message, HeartbeatAcknowledgmentRequestSchema)
-
-    // Record acknowledgment
+    // Record acknowledgment (message is pre-validated by router)
     heartbeatRegistry.acknowledge(instanceId)
 
     logger.debug("Heartbeat acknowledgment received", { instanceId })
