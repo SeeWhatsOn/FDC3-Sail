@@ -4,102 +4,24 @@ import {
   DACP_ERROR_TYPES,
   generateEventUuid,
 } from "../../protocol/dacp-utilities"
-import { type DACPHandlerContext, type DACPMessage, logger } from "../types"
-
-/**
- * Desktop Agent Event Listener Registry
- * Tracks which apps are subscribed to which DA-level events
- */
-class EventListenerRegistry {
-  // Map of eventType -> Set of instanceIds
-  private listeners = new Map<string, Set<string>>()
-
-  // Map of listenerId -> { instanceId, eventType }
-  private listenerDetails = new Map<string, { instanceId: string; eventType: string }>()
-
-  /**
-   * Register an event listener
-   */
-  register(listenerId: string, instanceId: string, eventType: string): void {
-    if (!this.listeners.has(eventType)) {
-      this.listeners.set(eventType, new Set())
-    }
-    this.listeners.get(eventType)!.add(instanceId)
-    this.listenerDetails.set(listenerId, { instanceId, eventType })
-
-    logger.debug("Event listener registered", { listenerId, instanceId, eventType })
-  }
-
-  /**
-   * Unregister an event listener
-   */
-  unregister(listenerId: string): boolean {
-    const details = this.listenerDetails.get(listenerId)
-    if (!details) {
-      return false
-    }
-
-    const { instanceId, eventType } = details
-    const listeners = this.listeners.get(eventType)
-    if (listeners) {
-      listeners.delete(instanceId)
-      if (listeners.size === 0) {
-        this.listeners.delete(eventType)
-      }
-    }
-
-    this.listenerDetails.delete(listenerId)
-    logger.debug("Event listener unregistered", { listenerId, instanceId, eventType })
-    return true
-  }
-
-  /**
-   * Get all instances subscribed to an event type
-   */
-  getListeners(eventType: string): Set<string> {
-    return this.listeners.get(eventType) || new Set()
-  }
-
-  /**
-   * Remove all listeners for an instance (on disconnect)
-   */
-  removeInstanceListeners(instanceId: string): number {
-    let count = 0
-    for (const [listenerId, details] of this.listenerDetails.entries()) {
-      if (details.instanceId === instanceId) {
-        this.unregister(listenerId)
-        count++
-      }
-    }
-    return count
-  }
-
-  /**
-   * Clear all listeners (for testing)
-   */
-  clear(): void {
-    this.listeners.clear()
-    this.listenerDetails.clear()
-  }
-}
-
-// Singleton instance
-const eventListenerRegistry = new EventListenerRegistry()
+import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { getInstance, getEventListenersForType } from "../../state/selectors"
+import { addEventListener, removeEventListener, removeEventListenersForInstance } from "../../state/transforms"
 
 /**
  * Handles addEventListenerRequest for DA-level events
  */
 export function handleAddEventListenerRequest(message: DACPMessage, context: DACPHandlerContext): void {
-  const { transport, instanceId, appInstanceRegistry } = context
+  const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const instance = appInstanceRegistry.getInstance(instanceId)
+    const instance = getInstance(getState(), instanceId)
 
     if (!instance) {
       throw new Error(`Instance ${instanceId} not found for adding event listener`)
     }
 
-    const payload = request.payload as { type: string }
+    const payload = message.payload as { type: string }
     const eventType = payload.type
 
     // Validate event type
@@ -117,7 +39,13 @@ export function handleAddEventListenerRequest(message: DACPMessage, context: DAC
 
     const listenerId = generateEventUuid()
 
-    eventListenerRegistry.register(listenerId, instanceId, normalizedEventType)
+    setState(state =>
+      addEventListener(state, {
+        listenerId,
+        instanceId,
+        eventType: normalizedEventType,
+      })
+    )
 
     // FDC3 spec requires listenerUUID (not listenerId) in the response payload
     //TODO: update the code to match the spec
@@ -166,15 +94,18 @@ export function handleEventListenerUnsubscribeRequest(
   message: DACPMessage,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId } = context
+  const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const listenerUUID = request.payload.listenerUUID
+    const listenerUUID = (message.payload as { listenerUUID: string }).listenerUUID
 
-    const unregistered = eventListenerRegistry.unregister(listenerUUID)
-    if (!unregistered) {
+    // Check if listener exists before removing
+    const listener = getState().events.listeners[listenerUUID]
+    if (!listener) {
       throw new Error(`Event listener ${listenerUUID} not found`)
     }
+
+    setState(state => removeEventListener(state, listenerUUID))
 
     const response = createDACPSuccessResponse(message, "eventListenerUnsubscribeResponse")
 
@@ -214,21 +145,21 @@ export function handleEventListenerUnsubscribeRequest(
 
 /**
  * Get listeners for an event type (exported for use by other handlers)
+ * Note: This function now requires state to be passed in
  */
-export function getEventListeners(eventType: string): Set<string> {
-  return eventListenerRegistry.getListeners(eventType)
+export function getEventListeners(
+  eventType: string,
+  getState: () => import("../../state/types").AgentState
+): string[] {
+  return getEventListenersForType(getState(), eventType)
 }
 
 /**
  * Remove all event listeners for an instance (called on disconnect)
  */
-export function removeInstanceEventListeners(instanceId: string): number {
-  return eventListenerRegistry.removeInstanceListeners(instanceId)
-}
-
-/**
- * Clear all event listeners (for testing)
- */
-export function clearEventListeners(): void {
-  eventListenerRegistry.clear()
+export function removeInstanceEventListeners(
+  instanceId: string,
+  setState: (fn: (state: import("../../state/types").AgentState) => import("../../state/types").AgentState) => void
+): void {
+  setState(state => removeEventListenersForInstance(state, instanceId))
 }

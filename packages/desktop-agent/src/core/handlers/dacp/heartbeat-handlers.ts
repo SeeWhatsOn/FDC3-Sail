@@ -1,5 +1,13 @@
 import { createDACPEvent, generateEventUuid } from "../../protocol/dacp-utilities"
-import { type DACPHandlerContext, type DACPMessage, logger } from "../types"
+import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { getHeartbeatState } from "../../state/selectors"
+import {
+  startHeartbeat as startHeartbeatTransform,
+  acknowledgeHeartbeat,
+  updateHeartbeatSent,
+  stopHeartbeat as stopHeartbeatTransform,
+  removeInstance,
+} from "../../state/transforms"
 
 /**
  * Heartbeat configuration
@@ -8,117 +16,23 @@ const HEARTBEAT_INTERVAL = 30000 // 30 seconds
 const HEARTBEAT_TIMEOUT = 60000 // 60 seconds (2 missed heartbeats)
 
 /**
- * Tracks heartbeat state for instances
+ * Map of instanceId -> interval handle
+ * Interval handles are runtime state, not part of persistent state
  */
-interface HeartbeatState {
-  lastHeartbeatSent: number
-  lastAcknowledgmentReceived: number
-  intervalHandle?: NodeJS.Timeout
-  missedHeartbeats: number
-}
-
-/**
- * Heartbeat registry - tracks heartbeat state per instance
- */
-class HeartbeatRegistry {
-  private heartbeats = new Map<string, HeartbeatState>()
-
-  /**
-   * Start heartbeat for an instance
-   */
-  start(instanceId: string, sendHeartbeat: () => void, onTimeout: () => void): void {
-    // Clear any existing heartbeat
-    this.stop(instanceId)
-
-    const state: HeartbeatState = {
-      lastHeartbeatSent: Date.now(),
-      lastAcknowledgmentReceived: Date.now(),
-      missedHeartbeats: 0,
-    }
-
-    // Set up periodic heartbeat
-    state.intervalHandle = setInterval(() => {
-      const now = Date.now()
-      const timeSinceLastAck = now - state.lastAcknowledgmentReceived
-
-      // Check if instance has timed out
-      if (timeSinceLastAck > HEARTBEAT_TIMEOUT) {
-        logger.warn("Instance heartbeat timeout", {
-          instanceId,
-          timeSinceLastAck,
-          missedHeartbeats: state.missedHeartbeats,
-        })
-        this.stop(instanceId)
-        onTimeout()
-        return
-      }
-
-      // Send heartbeat
-      sendHeartbeat()
-      state.lastHeartbeatSent = now
-      state.missedHeartbeats++
-
-      logger.debug("Heartbeat sent", {
-        instanceId,
-        missedHeartbeats: state.missedHeartbeats,
-      })
-    }, HEARTBEAT_INTERVAL)
-
-    this.heartbeats.set(instanceId, state)
-
-    logger.info("Heartbeat started for instance", { instanceId })
-  }
-
-  /**
-   * Record acknowledgment received
-   */
-  acknowledge(instanceId: string): void {
-    const state = this.heartbeats.get(instanceId)
-    if (state) {
-      state.lastAcknowledgmentReceived = Date.now()
-      state.missedHeartbeats = 0
-      logger.debug("Heartbeat acknowledged", { instanceId })
-    }
-  }
-
-  /**
-   * Stop heartbeat for an instance
-   */
-  stop(instanceId: string): void {
-    const state = this.heartbeats.get(instanceId)
-    if (state?.intervalHandle) {
-      clearInterval(state.intervalHandle)
-      this.heartbeats.delete(instanceId)
-      logger.info("Heartbeat stopped for instance", { instanceId })
-    }
-  }
-
-  /**
-   * Get heartbeat state for an instance
-   */
-  getState(instanceId: string): HeartbeatState | undefined {
-    return this.heartbeats.get(instanceId)
-  }
-
-  /**
-   * Stop all heartbeats
-   */
-  stopAll(): void {
-    for (const instanceId of this.heartbeats.keys()) {
-      this.stop(instanceId)
-    }
-  }
-}
-
-// Singleton instance
-const heartbeatRegistry = new HeartbeatRegistry()
+const heartbeatIntervals = new Map<string, NodeJS.Timeout>()
 
 /**
  * Start heartbeat for an instance
  * Called when an instance connects
  */
 export function startHeartbeat(instanceId: string, context: DACPHandlerContext): void {
-  const { transport, appInstanceRegistry } = context
+  const { transport, getState, setState, logger } = context
+
+  // Stop any existing heartbeat
+  stopHeartbeat(instanceId, setState)
+
+  // Initialize heartbeat state
+  setState(state => startHeartbeatTransform(state, instanceId))
 
   const sendHeartbeat = () => {
     const heartbeatEvent = createDACPEvent("heartbeatEvent", {
@@ -135,15 +49,55 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
     }
 
     transport.send(heartbeatEventWithRouting)
+
+    // Update heartbeat sent timestamp
+    setState(state => updateHeartbeatSent(state, instanceId))
   }
 
   const onTimeout = () => {
     logger.warn("Instance failed heartbeat check, removing", { instanceId })
-    // Remove instance from registry
-    appInstanceRegistry.removeInstance(instanceId)
+    // Remove instance using state transform
+    setState(state => removeInstance(state, instanceId))
+    stopHeartbeat(instanceId, setState)
   }
 
-  heartbeatRegistry.start(instanceId, sendHeartbeat, onTimeout)
+  // Set up periodic heartbeat
+  const intervalHandle = setInterval(() => {
+    const state = getState()
+    const heartbeat = getHeartbeatState(state, instanceId)
+    if (!heartbeat) {
+      clearInterval(intervalHandle)
+      heartbeatIntervals.delete(instanceId)
+      return
+    }
+
+    const now = Date.now()
+    const timeSinceLastAck = now - heartbeat.lastAcknowledgmentReceived
+
+    // Check if instance has timed out
+    if (timeSinceLastAck > HEARTBEAT_TIMEOUT) {
+      logger.warn("Instance heartbeat timeout", {
+        instanceId,
+        timeSinceLastAck,
+        missedHeartbeats: heartbeat.missedHeartbeats,
+      })
+      clearInterval(intervalHandle)
+      heartbeatIntervals.delete(instanceId)
+      onTimeout()
+      return
+    }
+
+    // Send heartbeat
+    sendHeartbeat()
+
+    logger.debug("Heartbeat sent", {
+      instanceId,
+      missedHeartbeats: heartbeat.missedHeartbeats,
+    })
+  }, HEARTBEAT_INTERVAL)
+
+  heartbeatIntervals.set(instanceId, intervalHandle)
+  logger.info("Heartbeat started for instance", { instanceId })
 }
 
 /**
@@ -153,11 +107,11 @@ export function handleHeartbeatAcknowledgmentRequest(
   _message: DACPMessage,
   context: DACPHandlerContext
 ): void {
-  const { instanceId } = context
+  const { instanceId, setState, logger } = context
 
   try {
     // Record acknowledgment (message is pre-validated by router)
-    heartbeatRegistry.acknowledge(instanceId)
+    setState(state => acknowledgeHeartbeat(state, instanceId))
 
     logger.debug("Heartbeat acknowledgment received", { instanceId })
   } catch (error) {
@@ -172,20 +126,23 @@ export function handleHeartbeatAcknowledgmentRequest(
  * Stop heartbeat for an instance
  * Called when an instance disconnects
  */
-export function stopHeartbeat(instanceId: string): void {
-  heartbeatRegistry.stop(instanceId)
+export function stopHeartbeat(instanceId: string, setState: (fn: (state: import("../../state/types").AgentState) => import("../../state/types").AgentState) => void): void {
+  // Clear interval
+  const intervalHandle = heartbeatIntervals.get(instanceId)
+  if (intervalHandle) {
+    clearInterval(intervalHandle)
+    heartbeatIntervals.delete(instanceId)
+  }
+
+  // Remove from state
+  setState(state => stopHeartbeatTransform(state, instanceId))
 }
 
 /**
  * Stop all heartbeats (for testing/shutdown)
  */
-export function stopAllHeartbeats(): void {
-  heartbeatRegistry.stopAll()
-}
-
-/**
- * Get heartbeat state (for testing/monitoring)
- */
-export function getHeartbeatState(instanceId: string): HeartbeatState | undefined {
-  return heartbeatRegistry.getState(instanceId)
+export function stopAllHeartbeats(setState: (fn: (state: import("../../state/types").AgentState) => import("../../state/types").AgentState) => void): void {
+  for (const instanceId of heartbeatIntervals.keys()) {
+    stopHeartbeat(instanceId, setState)
+  }
 }
