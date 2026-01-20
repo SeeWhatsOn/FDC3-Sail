@@ -109,6 +109,14 @@ export class CustomWorld extends World {
   }
 
   /**
+   * Update agent state (for test fixture setup).
+   * This uses DesktopAgent's test helper method.
+   */
+  updateState(fn: (state: AgentState) => AgentState): void {
+    this.desktopAgent.updateStateForTesting(fn)
+  }
+
+  /**
    * Helper to create unique UUIDs for test messages
    */
   createUUID(): string {

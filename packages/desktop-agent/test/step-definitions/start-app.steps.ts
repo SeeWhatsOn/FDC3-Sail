@@ -4,9 +4,12 @@ import { contextMap, createMeta, getAppInstanceId } from "./generic.steps"
 import { matchData } from "../support/testing-utils"
 import { BrowserTypes } from "@finos/fdc3-schema"
 import type { GetInfoRequest } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import { AppInstanceState } from "../../src/core/state/app-instance-registry"
+import { AppInstanceState } from "../../src/core/state/types"
 import { cleanupDACPHandlers } from "../../src/core/handlers/dacp"
 import type { DACPHandlerContext } from "../../src/core/handlers/types"
+import { getInstance, getInstancesByState } from "../../src/core/state/selectors"
+import { connectInstance, updateInstanceState } from "../../src/core/state/transforms"
+import { consoleLogger } from "../../src/core/interfaces/logger"
 
 type OpenRequest = BrowserTypes.OpenRequest
 type GetAppMetadataRequest = BrowserTypes.GetAppMetadataRequest
@@ -29,19 +32,25 @@ function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string
   const meta = createMeta(world, appStr)
   const instanceId = getAppInstanceId(world, appStr)
 
-  const existing = world.appInstanceRegistry.getInstance(instanceId)
-  if (!existing) {
-    // Test fixture setup: Create connected instance directly
-    world.appInstanceRegistry.createInstance({
-      instanceId,
-      appId: meta.source.appId,
-      metadata: {
-        appId: meta.source.appId,
-        name: meta.source.appId,
-      },
-    })
-    world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED)
-  }
+    const state = world.getState()
+    const existing = getInstance(state, instanceId)
+    if (!existing) {
+      // Test fixture setup: Create connected instance directly
+      world.updateState(currentState =>
+        updateInstanceState(
+          connectInstance(currentState, {
+            instanceId,
+            appId: meta.source.appId,
+            metadata: {
+              appId: meta.source.appId,
+              name: meta.source.appId,
+            },
+          }),
+          instanceId,
+          AppInstanceState.CONNECTED
+        )
+      )
+    }
 
   return instanceId
 }
@@ -56,22 +65,27 @@ When(
     this.props.instances = this.props.instances || {}
     this.props.instances[app] = uuid
 
-    // Test fixture setup: Create app instance directly in registry
+    // Test fixture setup: Create app instance directly in state
     // This simulates an app that has already connected via WCP protocol
-    const existing = this.appInstanceRegistry.getInstance(uuid)
+    const state = this.getState()
+    const existing = getInstance(state, uuid)
     if (!existing) {
-      this.appInstanceRegistry.createInstance({
-        instanceId: uuid,
-        appId,
-        metadata: {
+      this.updateState(currentState =>
+        connectInstance(currentState, {
+          instanceId: uuid,
           appId,
-          name: appId,
-        },
-      })
+          metadata: {
+            appId,
+            name: appId,
+          },
+        })
+      )
     }
 
     // Set to connected state
-    this.appInstanceRegistry.updateInstanceState(uuid, AppInstanceState.CONNECTED)
+    this.updateState(currentState =>
+      updateInstanceState(currentState, uuid, AppInstanceState.CONNECTED)
+    )
   }
 )
 
@@ -82,24 +96,27 @@ When("{string} is closed", function (this: CustomWorld, app: string) {
   const context: DACPHandlerContext = {
     transport: this.mockTransport,
     instanceId,
-    appInstanceRegistry: this.appInstanceRegistry,
-    intentRegistry: this.intentRegistry,
-    channelContextRegistry: this.channelContextRegistry,
-    appChannelRegistry: this.appChannelRegistry,
-    userChannelRegistry: this.userChannelRegistry,
+    getState: () => this.getState(),
+    setState: (fn) => {
+      this.updateState(fn)
+    },
     appDirectory: this.appDirectoryManager,
     appLauncher: this.mockAppLauncher,
     requestIntentResolution: this.mockIntentResolver.createCallback(),
+    logger: consoleLogger,
   }
 
   cleanupDACPHandlers(context)
 
   // Update instance state
-  this.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.TERMINATED)
+  this.desktopAgent.setState(currentState =>
+    updateInstanceState(currentState, instanceId, AppInstanceState.TERMINATED)
+  )
 })
 
 When("{string} sends validate", async function (this: CustomWorld, uuid: string) {
-  const instance = this.appInstanceRegistry.getInstance(uuid)
+  const state = this.getState()
+  const instance = getInstance(state, uuid)
   if (!instance) {
     throw new Error(`Did not find app instance ${uuid}`)
   }
@@ -117,14 +134,17 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
   }
 
   // Set to connected state
-  this.appInstanceRegistry.updateInstanceState(uuid, AppInstanceState.CONNECTED)
+  this.desktopAgent.setState(currentState =>
+    updateInstanceState(currentState, uuid, AppInstanceState.CONNECTED)
+  )
 
   // Send message to DesktopAgent
   await this.mockTransport.receiveMessage(message)
 })
 
 When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
-  const instance = this.appInstanceRegistry.getInstance(uuid)
+  const state = this.getState()
+  const instance = getInstance(state, uuid)
   if (!instance) {
     throw new Error(`Did not find app instance ${uuid}`)
   }
@@ -151,12 +171,11 @@ Then("running apps will be", function (this: CustomWorld, dataTable: DataTable) 
   // Note: This queries internal state directly rather than via DACP because:
   // 1. There's no FDC3 API to list "all running apps" (findInstances requires an appId)
   // 2. This is an integration test verifying the Desktop Agent's internal state management
-  // 3. This validates that operations (like app launch, cleanup) correctly updated the registry
-  const instances = this.appInstanceRegistry.queryInstances({
-    state: AppInstanceState.CONNECTED,
-  })
+  // 3. This validates that operations (like app launch, cleanup) correctly updated the state
+  const state = this.getState()
+  const instances = getInstancesByState(state, AppInstanceState.CONNECTED)
 
-  const apps = instances.map(instance => ({
+  const apps = instances.map((instance: { appId: string; instanceId: string }) => ({
     appId: instance.appId,
     instanceId: instance.instanceId,
     state: "connected",

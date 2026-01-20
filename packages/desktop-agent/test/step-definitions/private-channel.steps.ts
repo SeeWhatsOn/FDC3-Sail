@@ -3,7 +3,9 @@ import { CustomWorld } from '../world';
 import { createMeta, getAppInstanceId } from './generic.steps';
 import { BrowserTypes } from '@finos/fdc3-schema';
 import { handleResolve } from '../support/testing-utils';
-import { AppInstanceState } from '../../src/core/state/app-instance-registry';
+import { AppInstanceState } from '../../src/core/state/types';
+import { getInstance } from '../../src/core/state/selectors';
+import { connectInstance, updateInstanceState } from '../../src/core/state/transforms';
 
 type CreatePrivateChannelRequest = BrowserTypes.CreatePrivateChannelRequest;
 type PrivateChannelAddEventListenerRequest = BrowserTypes.PrivateChannelAddEventListenerRequest;
@@ -17,17 +19,23 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
   const instanceId = getAppInstanceId(world, appStr);
   const meta = createMeta(world, appStr);
   
-  const instance = world.appInstanceRegistry.getInstance(instanceId);
+  const state = world.getState();
+  const instance = getInstance(state, instanceId);
   if (!instance) {
-    world.appInstanceRegistry.createInstance({
-      instanceId,
-      appId: meta.source.appId,
-      metadata: {
-        appId: meta.source.appId,
-        name: meta.source.appId,
-      },
-    });
-    world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
+    world.updateState(currentState =>
+      updateInstanceState(
+        connectInstance(currentState, {
+          instanceId,
+          appId: meta.source.appId,
+          metadata: {
+            appId: meta.source.appId,
+            name: meta.source.appId,
+          },
+        }),
+        instanceId,
+        AppInstanceState.CONNECTED
+      )
+    );
   }
   
   return instanceId;

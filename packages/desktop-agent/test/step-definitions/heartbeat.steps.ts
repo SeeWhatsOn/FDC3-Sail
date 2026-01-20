@@ -5,7 +5,9 @@ import type {
   WebConnectionProtocol6Goodbye,
 } from '@finos/fdc3-schema/dist/generated/api/BrowserTypes';
 import { createMeta, getAppInstanceId } from './generic.steps';
-import { AppInstanceState } from '../../src/core/state/app-instance-registry';
+import { AppInstanceState } from '../../src/core/state/types';
+import { getInstance } from '../../src/core/state/selectors';
+import { connectInstance, updateInstanceState } from '../../src/core/state/transforms';
 
 /**
  * Test fixture helper: Ensures an app instance exists before sending heartbeat/goodbye messages.
@@ -22,18 +24,24 @@ function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string
   const instanceId = getAppInstanceId(world, appStr);
   const meta = createMeta(world, appStr);
   
-  const instance = world.appInstanceRegistry.getInstance(instanceId);
+  const state = world.getState();
+  const instance = getInstance(state, instanceId);
   if (!instance) {
     // Test fixture setup: Create connected instance directly
-    world.appInstanceRegistry.createInstance({
-      instanceId,
-      appId: meta.source.appId,
-      metadata: {
-        appId: meta.source.appId,
-        name: meta.source.appId,
-      },
-    });
-    world.appInstanceRegistry.updateInstanceState(instanceId, AppInstanceState.CONNECTED);
+    world.updateState(currentState =>
+      updateInstanceState(
+        connectInstance(currentState, {
+          instanceId,
+          appId: meta.source.appId,
+          metadata: {
+            appId: meta.source.appId,
+            name: meta.source.appId,
+          },
+        }),
+        instanceId,
+        AppInstanceState.CONNECTED
+      )
+    );
   }
   
   return instanceId;
@@ -78,7 +86,8 @@ Then('I test the liveness of {string}', function (this: CustomWorld, appStr: str
   
   // Assertion: Verify internal state of app instance
   // Note: This queries internal state directly to verify liveness tracking
-  const instance = this.appInstanceRegistry.getInstance(instanceId);
+  const state = this.getState();
+  const instance = getInstance(state, instanceId);
   
   // Check if instance exists and is connected
   const out = instance && instance.state === AppInstanceState.CONNECTED;

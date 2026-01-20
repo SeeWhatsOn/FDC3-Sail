@@ -264,6 +264,14 @@ export class DesktopAgent {
   }
 
   /**
+   * Update state (for testing purposes only).
+   * In production, state is only updated through handler contexts.
+   */
+  updateStateForTesting(fn: (state: AgentState) => AgentState): void {
+    this.state = fn(this.state)
+  }
+
+  /**
    * Export state as JSON string (for debugging/persistence)
    */
   exportState(): string {
