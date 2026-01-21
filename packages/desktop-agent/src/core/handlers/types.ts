@@ -3,6 +3,7 @@ import type { AppLauncher } from "../interfaces/app-launcher"
 import type { AppDirectoryManager } from "../app-directory/app-directory-manager"
 import type { AgentState } from "../state/types"
 import type { Logger } from "../interfaces/logger"
+import type { DesktopAgentConfig } from "../desktop-agent"
 
 // ============================================================================
 // INTENT RESOLUTION CALLBACK
@@ -171,6 +172,9 @@ export interface DACPHandlerContext {
 
   /** Logger instance */
   logger: Logger
+
+  /** Implementation metadata for the desktop agent */
+  implementationMetadata: DesktopAgentConfig["implementationMetadata"]
 }
 
 /**

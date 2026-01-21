@@ -1,5 +1,5 @@
 {
-  "name": "@finos/fdc3-sail-desktop-agent",
+  "name": "@finos/sail-desktop-agent",
   "version": "0.0.1",
   "type": "module",
   "description": "FDC3 Desktop Agent implementation for Sail",
@@ -53,8 +53,7 @@
   "dependencies": {
     "@finos/fdc3": "^2.2.0",
     "@finos/fdc3-schema": "^2.2.1-beta.3",
-    "immer": "^10.1.1",
-    "zod": "^4.1.11"
+    "immer": "^10.1.1"
   },
   "author": "",
   "license": "ISC"

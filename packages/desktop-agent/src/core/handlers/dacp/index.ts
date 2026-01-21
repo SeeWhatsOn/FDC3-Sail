@@ -19,21 +19,21 @@ export async function routeDACPMessage(
   message: unknown,
   context: DACPHandlerContext
 ): Promise<void> {
+  const { logger, validator } = context
   try {
     // Log incoming message (with sensitive data filtering)
     logDACPMessage("incoming", message, "DACP Router")
+    logger.info("DACP: Routing message", { message })
 
     // Extract message type for routing
-    let messageType = "unknown"
-    if (typeof message === "object" && message !== null && "type" in message) {
-      messageType = (message as { type: string }).type
-    }
+    const messageType = (message as { type?: string })?.type ?? "unknown"
+
 
     // If an injected validator is provided, use it for validation
-    if (context.validator) {
-      const validationResult = context.validator.validate(messageType, message)
+    if (validator) {
+      const validationResult = validator.validate(messageType, message)
       if (!validationResult.valid) {
-        context.logger.error("DACP message validation failed:", {
+        logger.error("DACP message validation failed:", {
           messageType,
           errors: validationResult.errors,
         })
@@ -52,7 +52,7 @@ export async function routeDACPMessage(
     )
   } catch (error) {
     // Use console.error as fallback since we don't have context here
-    console.error("DACP message routing failed:", {
+    logger.error("DACP message routing failed:", {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       messageType:
@@ -76,11 +76,12 @@ async function handleDACPMessage(
   message: unknown,
   context: DACPHandlerContext
 ): Promise<void> {
+  const { logger } = context
   // Get handler function for message type
   const handler = getHandlerForMessageType(messageType)
 
   if (!handler) {
-    context.logger.warn(`No handler found for DACP message type: ${messageType}`)
+    logger.warn(`No handler found for DACP message type: ${messageType}`)
     return
   }
 

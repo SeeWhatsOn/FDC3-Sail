@@ -94,6 +94,12 @@ export interface DesktopAgentConfig {
    * OPTIONAL - if provided, merges with default initial state.
    */
   initialState?: Partial<AgentState>
+
+  /**
+   * Implementation metadata for the desktop agent.
+   * Required - must be provided by environment-specific code.
+   */
+  implementationMetadata?: Pick<BrowserTypes.ImplementationMetadata, "fdc3Version" | "provider" | "providerVersion" > &  Partial<Pick<BrowserTypes.ImplementationMetadata, "optionalFeatures">>
 }
 
 /**
@@ -128,6 +134,7 @@ export class DesktopAgent {
   private validator?: MessageValidator
   private logger: Logger
   private isStarted: boolean = false
+  private implementationMetadata?:DesktopAgentConfig["implementationMetadata"]
 
   constructor(config?: DesktopAgentConfig) {
     this.transport = config?.transport ?? new InMemoryTransport()
@@ -136,7 +143,17 @@ export class DesktopAgent {
     this.requestIntentResolution = config?.requestIntentResolution
     this.validator = config?.validator
     this.logger = config?.logger ?? consoleLogger
-
+    this.implementationMetadata = config?.implementationMetadata ?? {
+      // TODO: Get this from the env or move to a config file.
+      fdc3Version: "2.2",
+      provider: "FDC3-Sail",
+      providerVersion: "3.0.0",
+      optionalFeatures: {
+        DesktopAgentBridging: false,
+        OriginatingAppMetadata: true,
+        UserChannelMembershipAPIs: true,
+      }
+    }
     // Initialize state
     this.state = config?.initialState
       ? createStateWithOverrides(config.initialState)
@@ -208,28 +225,38 @@ export class DesktopAgent {
    * Messages from apps have meta.source.instanceId set by WCPConnector.
    * Messages to apps have meta.destination.instanceId but no source.
    */
-  private extractInstanceId(message: unknown): string {
+  private extractInstanceId(message: unknown): string | null {
     if (!message || typeof message !== "object") {
-      return ""
+      return null
     }
 
     const messageObj = message as { meta?: DACPMessageMeta }
-    return messageObj.meta?.source?.instanceId || ""
+    return messageObj.meta?.source?.instanceId || null
   }
 
   /**
-   * Handle transport disconnection.
-   * Cleans up state for all instances since transport-level disconnect affects all.
-   * Note: For browser Desktop Agent, individual app disconnects are handled via
-   * DACP heartbeat, not transport disconnect.
+   * Handle transport-level disconnection.
+   * 
+   * This is called when the ENTIRE transport disconnects (e.g., all sockets for a user
+   * disconnect, or the transport is explicitly shut down). This is different from
+   * individual app disconnects, which are handled via:
+   * - WCP6Goodbye messages (apps send goodbye when closing)
+   * - DACP heartbeat timeout (detects dead connections)
+   * 
+   * When the transport disconnects, we cannot send WCP6Goodbye to apps because
+   * the transport is already gone. We can only clean up internal state.
+   * 
+   * Note: Individual socket/app disconnects in server mode should be handled by
+   * the transport layer (e.g., SocketIOServerTransport) before the transport fully
+   * disconnects, allowing WCP6Goodbye to be sent if needed.
    */
   private handleDisconnect(): void {
-    // Transport-level disconnect - clean up all instances
-    // This is primarily for server-side Socket.IO transport where each
-    // socket represents one app. For browser Desktop Agent with InMemoryTransport,
-    // this rarely fires (only when the whole agent shuts down).
+    // Transport is already disconnected - we cannot send messages
+    // Clean up all instances from internal state
     const allInstances = Object.values(this.state.instances)
     for (const instance of allInstances) {
+      // createHandlerContext is needed because cleanupDACPHandlers requires
+      // a DACPHandlerContext with transport, instanceId, getState, setState, logger, etc.
       const context = this.createHandlerContext(instance.instanceId)
       cleanupDACPHandlers(context)
     }
@@ -244,7 +271,8 @@ export class DesktopAgent {
     return {
       transport: this.transport,
       instanceId,
-      getState: () => this.state,
+      getState: () => this.getState(),
+      //todo: use immer to update state
       setState: (fn) => {
         this.state = fn(this.state)
       },
@@ -253,6 +281,7 @@ export class DesktopAgent {
       requestIntentResolution: this.requestIntentResolution,
       validator: this.validator,
       logger: this.logger,
+      implementationMetadata: this.implementationMetadata,
     }
   }
 
@@ -267,8 +296,8 @@ export class DesktopAgent {
    * Update state (for testing purposes only).
    * In production, state is only updated through handler contexts.
    */
-  updateStateForTesting(fn: (state: AgentState) => AgentState): void {
-    this.state = fn(this.state)
+  updateStateForTesting(callback: (state: AgentState) => AgentState): void {
+    this.state = callback(this.state)
   }
 
   /**
