@@ -6,7 +6,7 @@ import { handleResolve } from "../support/testing-utils"
 import { BrowserTypes } from "@finos/fdc3-schema"
 import { AppInstanceState } from "../../src/core/state/types"
 import { getInstance } from "../../src/core/state/selectors"
-import { connectInstance, updateInstanceState } from "../../src/core/state/transforms"
+import { connectInstance, updateInstanceState } from "../../src/core/state/mutators"
 
 type FindIntentRequest = BrowserTypes.FindIntentRequest
 type FindIntentsByContextRequest = BrowserTypes.FindIntentsByContextRequest

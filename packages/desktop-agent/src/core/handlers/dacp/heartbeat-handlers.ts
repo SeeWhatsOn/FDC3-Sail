@@ -7,7 +7,8 @@ import {
   updateHeartbeatSent,
   stopHeartbeat as stopHeartbeatTransform,
   removeInstance,
-} from "../../state/transforms"
+} from "../../state/mutators"
+import type { StateSetter } from "../../state/types"
 
 /**
  * Heartbeat configuration
@@ -126,7 +127,7 @@ export function handleHeartbeatAcknowledgmentRequest(
  * Stop heartbeat for an instance
  * Called when an instance disconnects
  */
-export function stopHeartbeat(instanceId: string, setState: (fn: (state: import("../../state/types").AgentState) => import("../../state/types").AgentState) => void): void {
+export function stopHeartbeat(instanceId: string, setState: StateSetter): void {
   // Clear interval
   const intervalHandle = heartbeatIntervals.get(instanceId)
   if (intervalHandle) {
@@ -136,13 +137,4 @@ export function stopHeartbeat(instanceId: string, setState: (fn: (state: import(
 
   // Remove from state
   setState(state => stopHeartbeatTransform(state, instanceId))
-}
-
-/**
- * Stop all heartbeats (for testing/shutdown)
- */
-export function stopAllHeartbeats(setState: (fn: (state: import("../../state/types").AgentState) => import("../../state/types").AgentState) => void): void {
-  for (const instanceId of heartbeatIntervals.keys()) {
-    stopHeartbeat(instanceId, setState)
-  }
 }

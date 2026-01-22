@@ -7,7 +7,7 @@ import type {
 import { createMeta, getAppInstanceId } from './generic.steps';
 import { AppInstanceState } from '../../src/core/state/types';
 import { getInstance } from '../../src/core/state/selectors';
-import { connectInstance, updateInstanceState } from '../../src/core/state/transforms';
+import { connectInstance, updateInstanceState } from '../../src/core/state/mutators';
 
 /**
  * Test fixture helper: Ensures an app instance exists before sending heartbeat/goodbye messages.

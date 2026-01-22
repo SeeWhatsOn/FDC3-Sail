@@ -1,6 +1,7 @@
 import { withDACPTimeout, DACP_TIMEOUTS, logDACPMessage } from "../../protocol/dacp-utilities"
 import { type DACPHandler, type DACPHandlerContext, type DACPMessage } from "../types"
-import { resolvePendingIntent, removeListenersForInstance, removeInstance } from "../../state/transforms"
+import { resolvePendingIntent, removeListenersForInstance, removeInstance } from "../../state/mutators"
+import { pendingIntentPromises } from "./intent-handlers"
 
 // Import all DACP handlers
 import * as contextHandlers from "./context-handlers"
@@ -37,7 +38,8 @@ export async function routeDACPMessage(
           messageType,
           errors: validationResult.errors,
         })
-        // Let the handler deal with the invalid message - it will send appropriate error response
+        // TODO: Let the handler deal with the invalid message - it will send appropriate error response or should this be handled here?
+        return
       }
     }
 
@@ -178,9 +180,15 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
     p => p.sourceInstanceId === instanceId || p.targetInstanceId === instanceId
   )
   pendingIntents.forEach(pending => {
-    // Reject promise if it exists (from intent-handlers Map)
-    // Note: This requires access to the Map in intent-handlers, which is module-level
-    // For now, we'll just remove from state - the promise will timeout
+    // Reject promise if it exists (from intent-helpers Map)
+    const promiseData = pendingIntentPromises.get(pending.requestId)
+    if (promiseData) {
+      if (promiseData.timeoutHandle) {
+        clearTimeout(promiseData.timeoutHandle)
+      }
+      promiseData.reject(new Error("Intent cancelled - instance disconnected"))
+      pendingIntentPromises.delete(pending.requestId)
+    }
     setState(state => resolvePendingIntent(state, pending.requestId))
   })
   if (pendingIntents.length > 0) {
@@ -215,119 +223,4 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
   setState(state => removeInstance(state, instanceId))
 
   logger.info("DACP handlers cleanup completed", { instanceId })
-}
-
-/**
- * Get statistics about registered listeners and handlers
- */
-export function getDACPHandlerStats(): {
-  supportedMessageTypes: string[]
-  totalHandlers: number
-} {
-  const handlerMap = {
-    // Context handlers
-    broadcastRequest: true,
-    addContextListenerRequest: true,
-    contextListenerUnsubscribeRequest: true,
-
-    // Intent handlers
-    raiseIntentRequest: true,
-    raiseIntentForContextRequest: true,
-    addIntentListenerRequest: true,
-    intentListenerUnsubscribeRequest: true,
-    findIntentRequest: true,
-    findIntentsByContextRequest: true,
-    intentResultRequest: true,
-
-    // Channel handlers
-    getCurrentChannelRequest: true,
-    getCurrentContextRequest: true,
-    joinUserChannelRequest: true,
-    leaveCurrentChannelRequest: true,
-    getUserChannelsRequest: true,
-    getOrCreateChannelRequest: true,
-
-    // App management handlers
-    getInfoRequest: true,
-    openRequest: true,
-    findInstancesRequest: true,
-    getAppMetadataRequest: true,
-
-    // Event handlers
-    addEventListenerRequest: true,
-    eventListenerUnsubscribeRequest: true,
-
-    // Private channel handlers
-    createPrivateChannelRequest: true,
-    privateChannelDisconnectRequest: true,
-    privateChannelAddContextListenerRequest: true,
-
-    // WCP handlers
-    WCP4ValidateAppIdentity: true,
-
-    // Heartbeat handlers
-    heartbeatAcknowledgementRequest: true,
-  }
-
-  return {
-    supportedMessageTypes: Object.keys(handlerMap),
-    totalHandlers: Object.keys(handlerMap).length,
-  }
-}
-
-/**
- * Health check function for DACP handlers
- */
-export function checkDACPHandlerHealth(): {
-  status: "healthy" | "degraded" | "unhealthy"
-  details: string[]
-} {
-  const details: string[] = []
-  let status: "healthy" | "degraded" | "unhealthy" = "healthy"
-
-  try {
-    // Check if handler functions are available
-    const stats = getDACPHandlerStats()
-    details.push(`${stats.totalHandlers} DACP handlers registered`)
-
-    // Check for required handlers
-    const requiredHandlers = [
-      "broadcastRequest",
-      "addContextListenerRequest",
-      "raiseIntentRequest",
-      "getCurrentChannelRequest",
-      "joinUserChannelRequest",
-      "WCP4ValidateAppIdentity",
-    ]
-
-    const missingHandlers = requiredHandlers.filter(
-      handler => !stats.supportedMessageTypes.includes(handler)
-    )
-
-    if (missingHandlers.length > 0) {
-      status = "unhealthy"
-      details.push(`Missing required handlers: ${missingHandlers.join(", ")}`)
-    }
-
-    if (status === "healthy") {
-      details.push("All DACP handlers operational")
-    }
-  } catch (error) {
-    status = "unhealthy"
-    details.push(`Health check failed: ${error instanceof Error ? error.message : String(error)}`)
-  }
-
-  return { status, details }
-}
-
-// Re-export handlers for testing and direct access
-export {
-  contextHandlers,
-  intentHandlers,
-  channelHandlers,
-  eventHandlers,
-  appHandlers,
-  wcpHandlers,
-  privateChannelHandlers,
-  heartbeatHandlers,
 }

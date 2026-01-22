@@ -12,7 +12,7 @@ import { sendDACPResponse } from "./utils/dacp-response-utils"
 import { startHeartbeat } from "./heartbeat-handlers"
 import { cleanupDACPHandlers } from "./index"
 import { getInstance } from "../../state/selectors"
-import { connectInstance } from "../../state/transforms"
+import { connectInstance } from "../../state/mutators"
 
 /**
  * WCP4ValidateAppIdentity message from FDC3 app

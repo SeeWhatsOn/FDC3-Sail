@@ -6,7 +6,7 @@ import {
 import { type DACPHandlerContext, type DACPMessage } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import { getInstance, getEventListenersForType } from "../../state/selectors"
-import { addEventListener, removeEventListener, removeEventListenersForInstance } from "../../state/transforms"
+import { addEventListener, removeEventListener, removeEventListenersForInstance } from "../../state/mutators"
 import type { AgentState } from "../../state/types"
 
 /**

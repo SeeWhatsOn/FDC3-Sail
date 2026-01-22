@@ -24,10 +24,10 @@ export type { AppLauncher } from "./interfaces/app-launcher"
 export * from "./interfaces"
 
 // State Types (from functional state management)
-export type { AgentState, AppInstance, AppInstanceState } from "./state/types"
+export type { AgentState, AppInstance, AppInstanceState, StateSetter } from "./state/types"
 export { createInitialState, createStateWithOverrides } from "./state/initial"
 export * from "./state/selectors"
-export * from "./state/transforms"
+export * from "./state/mutators"
 
 // App Directory
 export { AppDirectoryManager, isValidDirectoryUrl } from "./app-directory/app-directory-manager"

@@ -7,7 +7,7 @@ import type { DisplayMetadata, BrowserTypes } from "@finos/fdc3"
 import type { DirectoryApp } from "../../src/core/app-directory/types"
 import { AppDirectoryManager } from "../../src/core/app-directory/app-directory-manager"
 import type { AgentState } from "../../src/core/state/types"
-import { connectInstance } from "../../src/core/state/transforms"
+import { connectInstance } from "../../src/core/state/mutators"
 
 /**
  * User channel configuration for tests

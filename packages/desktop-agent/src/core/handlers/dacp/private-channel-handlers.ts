@@ -11,7 +11,7 @@ import {
   createPrivateChannel,
   disconnectInstanceFromPrivateChannel,
   addPrivateChannelContextListener,
-} from "../../state/transforms"
+} from "../../state/mutators"
 
 /**
  * Handles createPrivateChannelRequest

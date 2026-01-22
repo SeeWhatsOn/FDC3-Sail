@@ -7,7 +7,7 @@ import { type DACPHandlerContext, type DACPMessage } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import { getEventListeners } from "./event-handlers"
 import { getInstance, getUserChannel, getAppChannel, getAllUserChannels, getChannelContext } from "../../state/selectors"
-import { joinChannel, createAppChannel } from "../../state/transforms"
+import { joinChannel, createAppChannel } from "../../state/mutators"
 
 /**
  * Handles get current channel requests

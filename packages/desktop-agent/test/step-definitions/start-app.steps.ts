@@ -8,7 +8,7 @@ import { AppInstanceState } from "../../src/core/state/types"
 import { cleanupDACPHandlers } from "../../src/core/handlers/dacp"
 import type { DACPHandlerContext } from "../../src/core/handlers/types"
 import { getInstance, getInstancesByState } from "../../src/core/state/selectors"
-import { connectInstance, updateInstanceState } from "../../src/core/state/transforms"
+import { connectInstance, updateInstanceState } from "../../src/core/state/mutators"
 import { consoleLogger } from "../../src/core/interfaces/logger"
 
 type OpenRequest = BrowserTypes.OpenRequest
@@ -104,6 +104,7 @@ When("{string} is closed", function (this: CustomWorld, app: string) {
     appLauncher: this.mockAppLauncher,
     requestIntentResolution: this.mockIntentResolver.createCallback(),
     logger: consoleLogger,
+    implementationMetadata: this.desktopAgent.getImplementationMetadata(),
   }
 
   cleanupDACPHandlers(context)
