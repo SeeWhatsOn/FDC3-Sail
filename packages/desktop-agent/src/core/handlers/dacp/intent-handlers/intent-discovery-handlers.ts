@@ -1,0 +1,90 @@
+/**
+ * Intent Discovery Handlers
+ *
+ * Handlers for finding intents and apps that handle intents
+ */
+
+import { createDACPSuccessResponse } from "../../../dacp-protocol/dacp-message-creators"
+import { DACP_ERROR_TYPES } from "../../../dacp-protocol/dacp-constants"
+import { type DACPHandlerContext, type DACPMessage } from "../../types"
+import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
+import { type Context } from "@finos/fdc3"
+import {
+  createAppIntents,
+  findIntentsByContext,
+} from "./intent-helpers"
+
+export function handleFindIntentRequest(message: DACPMessage, context: DACPHandlerContext): void {
+  const { transport, instanceId, getState, appDirectory, logger } = context
+
+  try {
+    const payload = message.payload as { intent: string; context?: Context; resultType?: string }
+    const intent = payload.intent
+    const contextType = payload.context?.type
+    const resultType = payload.resultType
+
+    const appIntents = createAppIntents(getState(), appDirectory, intent, contextType, resultType)
+
+    const response = createDACPSuccessResponse(message, "findIntentResponse", {
+      appIntent: appIntents[0] ?? { intent: { name: intent, displayName: intent }, apps: [] },
+    })
+
+    sendDACPResponse({ response, instanceId, transport })
+  } catch (error) {
+    logger.error("DACP: Find intent request failed", error)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.NO_APPS_FOUND,
+      errorMessage: error instanceof Error ? error.message : "Failed to find apps for intent",
+      instanceId,
+      transport,
+    })
+  }
+}
+
+export function handleFindIntentsByContextRequest(
+  message: DACPMessage,
+  context: DACPHandlerContext
+): void {
+  const { transport, instanceId, getState, appDirectory, logger } = context
+
+  try {
+    const payload = message.payload as { context: Context }
+    const contextType = payload.context?.type
+
+    if (!contextType) {
+      throw new Error("Context type is required for findIntentsByContext")
+    }
+
+    logger.info("DACP: Finding intents for context type", { contextType })
+
+    // Find all intents that can handle this context type
+    const intentMetadata = findIntentsByContext(getState(), appDirectory, contextType)
+
+    // Convert to AppIntent[] format
+    const appIntents = intentMetadata.map(metadata => {
+      const appIntentsForIntent = createAppIntents(getState(), appDirectory, metadata.name, contextType)
+      return (
+        appIntentsForIntent[0] || {
+          intent: { name: metadata.name, displayName: metadata.displayName || metadata.name },
+          apps: [],
+        }
+      )
+    })
+
+    const response = createDACPSuccessResponse(message, "findIntentsByContextResponse", {
+      appIntents,
+    })
+
+    sendDACPResponse({ response, instanceId, transport })
+  } catch (error) {
+    logger.error("DACP: Find intents by context request failed", error)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.NO_APPS_FOUND,
+      errorMessage: error instanceof Error ? error.message : "Failed to find intents for context type",
+      instanceId,
+      transport,
+    })
+  }
+}

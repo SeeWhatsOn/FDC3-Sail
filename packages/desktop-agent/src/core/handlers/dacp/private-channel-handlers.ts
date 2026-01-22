@@ -1,9 +1,6 @@
-import {
-  createDACPSuccessResponse,
-  createDACPEvent,
-  DACP_ERROR_TYPES,
-  generateEventUuid,
-} from "../../protocol/dacp-utilities"
+import { createDACPSuccessResponse, createDACPEvent } from "../../dacp-protocol/dacp-message-creators"
+import { DACP_ERROR_TYPES } from "../../dacp-protocol/dacp-constants"
+import { generateEventUuid } from "../../dacp-protocol/dacp-utils"
 import { type DACPHandlerContext, type DACPMessage } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import { getInstance, getPrivateChannel } from "../../state/selectors"

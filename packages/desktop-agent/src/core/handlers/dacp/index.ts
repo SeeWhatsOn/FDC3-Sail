@@ -1,4 +1,5 @@
-import { withDACPTimeout, DACP_TIMEOUTS, logDACPMessage } from "../../protocol/dacp-utilities"
+import { withDACPTimeout, logDACPMessage } from "../../dacp-protocol/dacp-utils"
+import { DACP_TIMEOUTS } from "../../dacp-protocol/dacp-constants"
 import { type DACPHandler, type DACPHandlerContext, type DACPMessage } from "../types"
 import { resolvePendingIntent, removeListenersForInstance, removeInstance } from "../../state/mutators"
 import { pendingIntentPromises } from "./intent-handlers"

@@ -49,10 +49,13 @@ export type {
 } from "./app-directory/types"
 
 // DACP Protocol Messages (types)
-export * from "./protocol/dacp-messages"
+export * from "./dacp-protocol/dacp-messages"
 
 // Handler types
 export type { DACPHandlerContext, DACPMessage, MessageValidator, ValidationResult } from "./handlers/types"
 
 // DACP Protocol Utilities (errors, constants, message creators, utilities)
-export * from "./protocol/dacp-utilities"
+export * from "./dacp-protocol/dacp-errors"
+export * from "./dacp-protocol/dacp-constants"
+export * from "./dacp-protocol/dacp-message-creators"
+export * from "./dacp-protocol/dacp-utils"

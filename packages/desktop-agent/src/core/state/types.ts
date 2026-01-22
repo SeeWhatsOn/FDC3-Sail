@@ -9,8 +9,6 @@
 import type { AppMetadata, Context } from "@finos/fdc3"
 import type { BrowserTypes } from "@finos/fdc3"
 
-type Channel = BrowserTypes.Channel
-
 // ============================================================================
 // APP INSTANCE TYPES
 // ============================================================================
@@ -110,6 +108,8 @@ export interface IntentListener {
 
 /**
  * Pending intent - tracks intents waiting for results
+ * Note: Promise functions are NOT stored in state (not serializable).
+ * They are managed separately in the intent handlers.
  */
 export interface PendingIntent {
   /** Original request ID */
@@ -132,15 +132,6 @@ export interface PendingIntent {
 
   /** When the intent was raised */
   raisedAt: Date
-
-  /** Promise resolve function for returning the result */
-  resolve: (result: unknown) => void
-
-  /** Promise reject function for errors */
-  reject: (error: Error) => void
-
-  /** Timeout handle */
-  timeoutHandle?: NodeJS.Timeout
 }
 
 /**
@@ -212,7 +203,7 @@ export interface PrivateChannel extends BrowserTypes.Channel {
 /**
  * Context listener on a private channel
  */
-export interface ContextListener {
+ interface ContextListener {
   listenerId: string
   instanceId: string
   contextType: string | null // null means all types
@@ -221,7 +212,7 @@ export interface ContextListener {
 /**
  * Disconnect listener for private channels
  */
-export interface DisconnectListener {
+ interface DisconnectListener {
   listenerId: string
   instanceId: string
 }
@@ -297,3 +288,21 @@ export interface AgentState {
   /** Heartbeat state keyed by instanceId */
   heartbeats: Record<string, HeartbeatState>
 }
+
+// ============================================================================
+// STATE MANAGEMENT TYPES
+// ============================================================================
+
+/**
+ * Function type for updating agent state.
+ * Takes a transform function that receives the current state and returns the new state.
+ * 
+ * @example
+ * ```typescript
+ * setState((state) => ({
+ *   ...state,
+ *   instances: { ...state.instances, [id]: newInstance }
+ * }))
+ * ```
+ */
+export type StateSetter = (callback: (state: AgentState) => AgentState) => void

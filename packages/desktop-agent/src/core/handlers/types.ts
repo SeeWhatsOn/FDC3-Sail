@@ -1,22 +1,21 @@
+import type { AppIdentifier, Context } from "@finos/fdc3"
 import type { Transport } from "../interfaces/transport"
 import type { AppLauncher } from "../interfaces/app-launcher"
 import type { AppDirectoryManager } from "../app-directory/app-directory-manager"
-import type { AgentState } from "../state/types"
+import type { AgentState, StateSetter } from "../state/types"
 import type { Logger } from "../interfaces/logger"
 import type { DesktopAgentConfig } from "../desktop-agent"
+import type { DACPMessageType } from "../dacp-protocol/dacp-messages"
 
 // ============================================================================
 // INTENT RESOLUTION CALLBACK
 // ============================================================================
 
 /**
- * Handler option for intent resolution UI
+ * Handler option for intent resolution UI.
+ * Extends FDC3 AppIdentifier with display metadata and runtime state.
  */
-export interface IntentHandlerOption {
-  /** Instance ID if this is a running listener */
-  instanceId?: string
-  /** App ID from directory */
-  appId: string
+export interface IntentHandlerOption extends AppIdentifier {
   /** Display name for the app */
   appName?: string
   /** Icon URL for the app */
@@ -34,7 +33,7 @@ export interface IntentResolutionRequest {
   /** Intent name being raised */
   intent: string
   /** Context being passed with intent */
-  context: unknown
+  context: Context
   /** Available handlers to choose from */
   handlers: IntentHandlerOption[]
 }
@@ -46,7 +45,7 @@ export interface IntentResolutionResponse {
   /** Request ID this is responding to */
   requestId: string
   /** Selected handler, or null if cancelled */
-  selectedHandler: { instanceId?: string; appId: string } | null
+  selectedHandler: AppIdentifier | null
 }
 
 /**
@@ -102,7 +101,7 @@ export interface MessageValidator {
    * @param message - The message to validate
    * @returns Validation result with success status and any errors
    */
-  validate(messageType: string, message: unknown): ValidationResult
+  validate(messageType: DACPMessageType, message: unknown): ValidationResult
 }
 
 // ============================================================================
@@ -114,8 +113,8 @@ export interface MessageValidator {
  * Messages are validated by the router before being passed to handlers
  */
 export interface DACPMessage {
-  /** Message type (e.g., "broadcastRequest", "raiseIntentRequest") */
-  type: string
+  /** Message type (e.g., "broadcastRequest", "raiseIntentRequest", "intentEvent") */
+  type: DACPMessageType
   /** Message payload - specific structure depends on message type */
   payload: Record<string, unknown>
   /** Message metadata */
@@ -148,7 +147,7 @@ export interface DACPHandlerContext {
   getState: () => AgentState
 
   /** Update state with a transform function */
-  setState: (fn: (state: AgentState) => AgentState) => void
+  setState: StateSetter
 
   /** App directory manager for app metadata lookups */
   appDirectory: AppDirectoryManager

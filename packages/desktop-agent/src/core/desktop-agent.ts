@@ -19,7 +19,7 @@ import type {
 import type { DirectoryApp } from "./app-directory/types"
 import type { BrowserTypes } from "@finos/fdc3"
 import { InMemoryTransport } from "../transports/in-memory-transport"
-import type { AgentState } from "./state/types"
+import type { AgentState, StateSetter } from "./state/types"
 import { createInitialState, createStateWithOverrides } from "./state/initial"
 import { consoleLogger, type Logger } from "./interfaces/logger"
 
@@ -268,14 +268,15 @@ export class DesktopAgent {
    * @param instanceId - The app instance ID extracted from message metadata
    */
   private createHandlerContext(instanceId: string): DACPHandlerContext {
+    const setState: StateSetter = (callback) => {
+      this.state = callback(this.state)
+    }
+
     return {
       transport: this.transport,
       instanceId,
       getState: () => this.getState(),
-      //todo: use immer to update state
-      setState: (fn) => {
-        this.state = fn(this.state)
-      },
+      setState,
       appDirectory: this.appDirectory,
       appLauncher: this.appLauncher,
       requestIntentResolution: this.requestIntentResolution,
@@ -297,7 +298,10 @@ export class DesktopAgent {
    * In production, state is only updated through handler contexts.
    */
   updateStateForTesting(callback: (state: AgentState) => AgentState): void {
-    this.state = callback(this.state)
+    const setState: StateSetter = (cb: (state: AgentState) => AgentState) => {
+      this.state = cb(this.state)
+    }
+    setState(callback)
   }
 
   /**
@@ -319,6 +323,13 @@ export class DesktopAgent {
    */
   getIsStarted(): boolean {
     return this.isStarted
+  }
+
+  /**
+   * Get the implementation metadata (for testing/inspection)
+   */
+  getImplementationMetadata(): DesktopAgentConfig["implementationMetadata"] {
+    return this.implementationMetadata
   }
 
 }

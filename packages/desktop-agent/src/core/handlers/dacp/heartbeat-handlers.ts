@@ -1,4 +1,5 @@
-import { createDACPEvent, generateEventUuid } from "../../protocol/dacp-utilities"
+import { createDACPEvent } from "../../dacp-protocol/dacp-message-creators"
+import { generateEventUuid } from "../../dacp-protocol/dacp-utils"
 import { type DACPHandlerContext, type DACPMessage } from "../types"
 import { getHeartbeatState } from "../../state/selectors"
 import {
