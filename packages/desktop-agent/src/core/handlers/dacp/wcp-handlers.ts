@@ -8,6 +8,7 @@
 
 import type { AppMetadata } from "@finos/fdc3"
 import type { DACPHandlerContext } from "../types"
+import { sendDACPResponse } from "./utils/dacp-response-utils"
 import { startHeartbeat } from "./heartbeat-handlers"
 import { cleanupDACPHandlers } from "./index"
 import { getInstance } from "../../state/selectors"
@@ -80,7 +81,7 @@ interface WCP5ValidateAppIdentityFailedResponse {
  */
 export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHandlerContext): void {
   const wcp4Message = message as Wcp4ValidateAppIdentity
-  const { transport, getState, setState, appDirectory, logger } = context
+  const { transport, getState, appDirectory, logger } = context
 
   logger.info("[WCP4] Received app identity validation request", wcp4Message.payload)
 
@@ -329,15 +330,13 @@ function sendFailureResponse(context: DACPHandlerContext, error: string): void {
   const instanceId = context.transport.getInstanceId()
 
   if (instanceId) {
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-    context.transport.send(responseWithRouting)
+    // WCP5 failure response is not a standard DACP message, but we can still use the routing utility
+    // by treating it as a DACPMessage-like object
+    sendDACPResponse({
+      response: response as unknown as import("../types").DACPMessage,
+      instanceId,
+      transport: context.transport,
+    })
   } else {
     context.logger.error("[WCP4] Cannot send failure response: instanceId not established")
   }

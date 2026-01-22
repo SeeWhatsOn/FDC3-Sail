@@ -1,65 +1,33 @@
 import {
   createDACPSuccessResponse,
-  createDACPErrorResponse,
   DACP_ERROR_TYPES,
 } from "../../protocol/dacp-utilities"
 import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { Context } from "@finos/fdc3"
 import type { DirectoryApp } from "../../app-directory/types"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
 
 /**
- * Implementation metadata constants.
- * TODO: Get this from the env or move to a config file.
- */
-const IMPLEMENTATION_METADATA = {
-  fdc3Version: "2.2",
-  provider: "FDC3-Sail",
-  providerVersion: "0.0.1",
-  optionalFeatures: {
-    OriginatingAppMetadata: true,
-    UserChannelMembershipAPIs: true,
-  },
-}
-
-/**
  * Handles getInfoRequest to return implementation metadata.
  */
 export function handleGetInfoRequest(message: DACPMessage, context: DACPHandlerContext): void {
-  const { transport, instanceId } = context
+  const { transport, instanceId, implementationMetadata, logger } = context
 
   try {
 
-    const response = createDACPSuccessResponse(message, "getInfoResponse", IMPLEMENTATION_METADATA)
+    const response = createDACPSuccessResponse(message, "getInfoResponse", implementationMetadata)
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    context.logger.error("DACP: getInfoRequest failed", error)
-    const errorResponse = createDACPErrorResponse(
+    logger.error("DACP: getInfoRequest failed", error)
+    sendDACPErrorResponse({
       message,
-      DACP_ERROR_TYPES.API_TIMEOUT, // Or a more appropriate error
-      "getInfoResponse",
-      error instanceof Error ? error.message : "Failed to get implementation info"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+      errorType: DACP_ERROR_TYPES.API_TIMEOUT,
+      errorMessage: error instanceof Error ? error.message : "Failed to get implementation info",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -70,7 +38,7 @@ export async function handleOpenRequest(
   message: DACPMessage,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, appDirectory, appLauncher } = context
+  const { transport, instanceId, appDirectory, appLauncher, logger } = context
 
   try {
     const payload = message.payload as {
@@ -94,7 +62,7 @@ export async function handleOpenRequest(
     }
     const appMetadata = apps[0]
 
-    context.logger.info("DACP: Launching app", {
+    logger.info("DACP: Launching app", {
       appId,
       targetInstanceId,
       hasContext: !!launchContext,
@@ -109,7 +77,7 @@ export async function handleOpenRequest(
       appMetadata
     )
 
-    context.logger.info("DACP: App launched successfully", {
+    logger.info("DACP: App launched successfully", {
       appId: launchResult.appIdentifier.appId,
       instanceId: launchResult.appIdentifier.instanceId,
       method: launchResult.launchMetadata?.method,
@@ -119,34 +87,17 @@ export async function handleOpenRequest(
     const response = createDACPSuccessResponse(message, "openResponse", {
       appIdentifier: launchResult.appIdentifier,
     })
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
 
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    context.logger.error("DACP: openRequest failed", error)
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.APP_LAUNCH_FAILED,
-      "openResponse",
-      error instanceof Error ? error.message : "Failed to open app"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+    logger.error("DACP: openRequest failed", error)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.APP_LAUNCH_FAILED,
+      errorMessage: error instanceof Error ? error.message : "Failed to open app",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -174,34 +125,16 @@ export function handleFindInstancesRequest(message: DACPMessage, context: DACPHa
       appIdentifiers,
     })
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: findInstancesRequest failed", error)
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.APP_NOT_FOUND,
-      "findInstancesResponse",
-      error instanceof Error ? error.message : "Failed to find app instances"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.APP_NOT_FOUND,
+      errorMessage: error instanceof Error ? error.message : "Failed to find app instances",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -268,15 +201,7 @@ export function handleGetAppMetadataRequest(message: DACPMessage, context: DACPH
           appMetadata,
         })
 
-        const responseWithRouting = {
-          ...response,
-          meta: {
-            ...response.meta,
-            destination: { instanceId },
-          },
-        }
-
-        transport.send(responseWithRouting)
+        sendDACPResponse({ response, instanceId, transport })
         return
       }
 
@@ -293,15 +218,7 @@ export function handleGetAppMetadataRequest(message: DACPMessage, context: DACPH
         appMetadata,
       })
 
-      const responseWithRouting = {
-        ...response,
-        meta: {
-          ...response.meta,
-          destination: { instanceId },
-        },
-      }
-
-      transport.send(responseWithRouting)
+      sendDACPResponse({ response, instanceId, transport })
       return
     }
 
@@ -310,41 +227,24 @@ export function handleGetAppMetadataRequest(message: DACPMessage, context: DACPH
     if (directoryApps.length > 0) {
       const appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0])
 
-      const response = createDACPSuccessResponse(message, "getAppMetadataResponse", {
-        appMetadata,
-      })
+        const response = createDACPSuccessResponse(message, "getAppMetadataResponse", {
+          appMetadata,
+        })
 
-      const responseWithRouting = {
-        ...response,
-        meta: {
-          ...response.meta,
-          destination: { instanceId },
-        },
-      }
-
-      transport.send(responseWithRouting)
-      return
+        sendDACPResponse({ response, instanceId, transport })
+        return
     }
 
     // Step 4: App not found anywhere - return error
     throw new Error(`No metadata found for app: ${appId}`)
   } catch (error) {
     logger.error("DACP: getAppMetadataRequest failed", error)
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.TARGET_APP_UNAVAILABLE,
-      "getAppMetadataResponse",
-      error instanceof Error ? error.message : "Failed to get app metadata"
-    )
-
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.TARGET_APP_UNAVAILABLE,
+      errorMessage: error instanceof Error ? error.message : "Failed to get app metadata",
+      instanceId,
+      transport,
+    })
   }
 }

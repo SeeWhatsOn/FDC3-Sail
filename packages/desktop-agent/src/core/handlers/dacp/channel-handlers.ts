@@ -1,10 +1,10 @@
 import {
-  createDACPErrorResponse,
   createDACPSuccessResponse,
   createDACPEvent,
   DACP_ERROR_TYPES,
 } from "../../protocol/dacp-utilities"
 import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import { getEventListeners } from "./event-handlers"
 import { getInstance, getUserChannel, getAppChannel, getAllUserChannels, getChannelContext } from "../../state/selectors"
 import { joinChannel, createAppChannel } from "../../state/transforms"
@@ -27,15 +27,7 @@ export function handleGetCurrentChannelRequest(
       const response = createDACPSuccessResponse(message, "getCurrentChannelResponse", {
         channel: null,
       })
-      // Add routing metadata
-      const responseWithRouting = {
-        ...response,
-        meta: {
-          ...response.meta,
-          destination: { instanceId },
-        },
-      }
-      transport.send(responseWithRouting)
+      sendDACPResponse({ response, instanceId, transport })
       return
     }
 
@@ -60,37 +52,23 @@ export function handleGetCurrentChannelRequest(
     const response = createDACPSuccessResponse(message, "getCurrentChannelResponse", {
       channel,
     })
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    const errorResponse = createDACPErrorResponse(
-      {
-        meta: {
-          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
-        },
-      },
-      DACP_ERROR_TYPES.CHANNEL_ERROR,
-      "getCurrentChannelResponse",
-      error instanceof Error ? error.message : "Failed to get current channel"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
+    const messageWithUuid: DACPMessage = {
+      ...message,
       meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
+        ...message.meta,
+        requestUuid: message.meta?.requestUuid || "",
       },
     }
 
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message: messageWithUuid,
+      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to get current channel",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -98,7 +76,7 @@ export function handleGetCurrentChannelRequest(
  * Handles join user channel requests
  */
 export function handleJoinUserChannelRequest(message: DACPMessage, context: DACPHandlerContext): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { transport, instanceId, getState, setState } = context
 
   try {
     const { channelId } = message.payload as { channelId: string }
@@ -112,41 +90,27 @@ export function handleJoinUserChannelRequest(message: DACPMessage, context: DACP
     setState(state => joinChannel(state, instanceId, channelId))
 
     const response = createDACPSuccessResponse(message, "joinUserChannelResponse")
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
 
     notifyChannelChanged(instanceId, channelId, context)
   } catch (error) {
-    const errorResponse = createDACPErrorResponse(
-      {
-        meta: {
-          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
-        },
-      },
-      error instanceof Error && error.message.includes("does not exist")
-        ? DACP_ERROR_TYPES.NO_CHANNEL_FOUND
-        : DACP_ERROR_TYPES.CHANNEL_ERROR,
-      "joinUserChannelResponse",
-      error instanceof Error ? error.message : "Failed to join user channel"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
+    const messageWithUuid: DACPMessage = {
+      ...message,
       meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
+        ...message.meta,
+        requestUuid: message.meta?.requestUuid || "",
       },
     }
 
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message: messageWithUuid,
+      errorType: error instanceof Error && error.message.includes("does not exist")
+        ? DACP_ERROR_TYPES.NO_CHANNEL_FOUND
+        : DACP_ERROR_TYPES.CHANNEL_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to join user channel",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -163,39 +127,25 @@ export function handleLeaveCurrentChannelRequest(
     setState(state => joinChannel(state, instanceId, null))
 
     const response = createDACPSuccessResponse(message, "leaveCurrentChannelResponse")
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
 
     notifyChannelChanged(instanceId, null, context)
   } catch (error) {
-    const errorResponse = createDACPErrorResponse(
-      {
-        meta: {
-          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
-        },
-      },
-      DACP_ERROR_TYPES.CHANNEL_ERROR,
-      "leaveCurrentChannelResponse",
-      error instanceof Error ? error.message : "Failed to leave current channel"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
+    const messageWithUuid: DACPMessage = {
+      ...message,
       meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
+        ...message.meta,
+        requestUuid: message.meta?.requestUuid || "",
       },
     }
 
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message: messageWithUuid,
+      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to leave current channel",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -211,37 +161,23 @@ export function handleGetUserChannelsRequest(message: DACPMessage, context: DACP
     const response = createDACPSuccessResponse(message, "getUserChannelsResponse", {
       userChannels,
     })
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    const errorResponse = createDACPErrorResponse(
-      {
-        meta: {
-          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
-        },
-      },
-      DACP_ERROR_TYPES.CHANNEL_ERROR,
-      "getUserChannelsResponse",
-      error instanceof Error ? error.message : "Failed to get user channels"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
+    const messageWithUuid: DACPMessage = {
+      ...message,
       meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
+        ...message.meta,
+        requestUuid: message.meta?.requestUuid || "",
       },
     }
 
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message: messageWithUuid,
+      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to get user channels",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -276,37 +212,23 @@ export function handleGetCurrentContextRequest(
     const response = createDACPSuccessResponse(message, "getCurrentContextResponse", {
       context: storedContext,
     })
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    const errorResponse = createDACPErrorResponse(
-      {
-        meta: {
-          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
-        },
-      },
-      DACP_ERROR_TYPES.CHANNEL_ERROR,
-      "getCurrentContextResponse",
-      error instanceof Error ? error.message : "Failed to get current context"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
+    const messageWithUuid: DACPMessage = {
+      ...message,
       meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
+        ...message.meta,
+        requestUuid: message.meta?.requestUuid || "",
       },
     }
 
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message: messageWithUuid,
+      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to get current context",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -342,37 +264,23 @@ export function handleGetOrCreateChannelRequest(
     const response = createDACPSuccessResponse(message, "getOrCreateChannelResponse", {
       channel,
     })
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    const errorResponse = createDACPErrorResponse(
-      {
-        meta: {
-          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
-        },
-      },
-      DACP_ERROR_TYPES.CHANNEL_ERROR,
-      "getOrCreateChannelResponse",
-      error instanceof Error ? error.message : "Failed to get or create channel"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
+    const messageWithUuid: DACPMessage = {
+      ...message,
       meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
+        ...message.meta,
+        requestUuid: message.meta?.requestUuid || "",
       },
     }
 
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message: messageWithUuid,
+      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to get or create channel",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -381,9 +289,10 @@ function notifyChannelChanged(
   channelId: string | null,
   context: DACPHandlerContext
 ): void {
-  const instance = getInstance(context.getState(), instanceId)
+  const { transport, logger, getState } = context
+  const instance = getInstance(getState(), instanceId)
   if (!instance) {
-    context.logger.warn("No instance found for channel change notification", { instanceId })
+    logger.warn("No instance found for channel change notification", { instanceId })
     return
   }
 
@@ -405,7 +314,7 @@ function notifyChannelChanged(
   }
 
   // Send to the app that changed channels
-  context.transport.send(channelChangedEventWithRouting)
+  transport.send(channelChangedEventWithRouting)
 
   // Also broadcast to all apps subscribed to channelChanged events
   const subscribers = getEventListeners("channelChanged", context.getState)
@@ -422,11 +331,11 @@ function notifyChannelChanged(
         },
       }
 
-      context.transport.send(channelChangedEventWithRouting)
+      transport.send(channelChangedEventWithRouting)
     }
   })
 
-  context.logger.debug("Channel changed event broadcast", {
+  logger.debug("Channel changed event broadcast", {
     instanceId,
     channelId,
     subscribers: subscribers.length,

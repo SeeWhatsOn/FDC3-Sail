@@ -1,11 +1,11 @@
 import {
-  createDACPErrorResponse,
   createDACPSuccessResponse,
   createDACPEvent,
   DACP_ERROR_TYPES,
   generateEventUuid,
 } from "../../protocol/dacp-utilities"
 import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import { getInstance, getPrivateChannel } from "../../state/selectors"
 import {
   createPrivateChannel,
@@ -50,34 +50,16 @@ export function handleCreatePrivateChannelRequest(
       },
     })
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Create private channel failed", error)
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.CHANNEL_ERROR,
-      "createPrivateChannelResponse",
-      error instanceof Error ? error.message : "Failed to create private channel"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to create private channel",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -166,34 +148,16 @@ export function handlePrivateChannelDisconnectRequest(
 
     // Send success response
     const response = createDACPSuccessResponse(message, "privateChannelDisconnectResponse")
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Private channel disconnect failed", error)
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.CHANNEL_ERROR,
-      "privateChannelDisconnectResponse",
-      error instanceof Error ? error.message : "Failed to disconnect from private channel"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to disconnect from private channel",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -208,7 +172,6 @@ export function handlePrivateChannelAddContextListenerRequest(
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    // TODO: Validate with proper schema when available
     const { channelId, contextType } = message.payload as { channelId: string; contextType?: string }
 
     const state = getState()
@@ -265,34 +228,16 @@ export function handlePrivateChannelAddContextListenerRequest(
       }
     )
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Private channel add context listener failed", error)
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.LISTENER_ERROR,
-      "privateChannelAddContextListenerResponse",
-      error instanceof Error ? error.message : "Failed to add context listener to private channel"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.LISTENER_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to add context listener to private channel",
+      instanceId,
+      transport,
+    })
   }
 }
 

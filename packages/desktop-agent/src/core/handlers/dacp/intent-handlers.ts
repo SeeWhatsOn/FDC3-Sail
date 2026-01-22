@@ -1,18 +1,18 @@
 import {
-  createDACPErrorResponse,
   createDACPSuccessResponse,
   createIntentEvent,
   DACP_ERROR_TYPES,
   generateEventUuid,
 } from "../../protocol/dacp-utilities"
 import { type DACPHandlerContext, type DACPMessage, type IntentHandlerOption } from "../types"
+import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import { type Context, ResolveError } from "@finos/fdc3"
 import { AppInstanceState } from "../../state/types"
 import {
   NoAppsFoundError,
   TargetAppUnavailableError,
   TargetInstanceUnavailableError,
-  IntentDeliveryFailedError,
+  // IntentDeliveryFailedError,
   UserCancelledError,
   FDC3ResolveError,
 } from "../../errors/fdc3-errors"
@@ -30,7 +30,7 @@ import {
   addPendingIntent,
   resolvePendingIntent,
 } from "../../state/transforms"
-import type { IntentListener } from "../../state/types"
+import type { AgentState, IntentListener } from "../../state/types"
 import type { AppDirectoryManager } from "../../app-directory/app-directory-manager"
 
 /**
@@ -77,7 +77,7 @@ function isResultTypeCompatible(
  * Replaces intentRegistry.findIntentHandlers()
  */
 function findIntentHandlers(
-  state: import("../../state/types").AgentState,
+  state: AgentState,
   appDirectory: AppDirectoryManager,
   request: {
     intent: string
@@ -173,7 +173,7 @@ function findIntentHandlers(
  * Includes both apps from directory and running instances with intent listeners
  */
 function createAppIntents(
-  state: import("../../state/types").AgentState,
+  state:AgentState,
   appDirectory: AppDirectoryManager,
   intentName: string,
   contextType?: string,
@@ -321,7 +321,7 @@ function createAppIntents(
  * Replaces intentRegistry.findIntentsByContext()
  */
 function findIntentsByContext(
-  state: import("../../state/types").AgentState,
+  state: AgentState,
   appDirectory: AppDirectoryManager,
   contextType: string
 ): Array<{ name: string; displayName?: string }> {
@@ -686,7 +686,7 @@ export async function handleRaiseIntentRequest(
         const apps = appDirectory.retrieveAppsById(handler.appId)
         const appInfo = apps[0] // Take first matching app
         return {
-          instanceId: isRunning ? (handler as IntentListener).instanceId : undefined,
+          instanceId: isRunning ? (handler).instanceId : undefined,
           appId: handler.appId,
           appName: appInfo?.title || handler.appId,
           appIcon: appInfo?.icons?.[0]?.src,
@@ -1157,18 +1157,9 @@ export async function handleRaiseIntentRequest(
       },
     })
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    const payload = message.payload as Record<string, unknown>
+    const payload = message.payload
     const context = payload?.context as Record<string, unknown> | undefined
 
     logger.error("DACP: Raise intent request failed", {
@@ -1194,22 +1185,13 @@ export async function handleRaiseIntentRequest(
       errorType = ResolveError.UserCancelled
     }
 
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
+    sendDACPErrorResponse({
+      message,
       errorType,
-      "raiseIntentResponse",
-      errorMessage
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+      errorMessage,
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -1242,34 +1224,16 @@ export function handleAddIntentListener(message: DACPMessage, context: DACPHandl
       listenerUUID: listenerId,
     })
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Add intent listener failed", error)
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.LISTENER_ERROR,
-      "addIntentListenerResponse",
-      error instanceof Error ? error.message : "Failed to add intent listener"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.LISTENER_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to add intent listener",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -1292,34 +1256,16 @@ export function handleIntentListenerUnsubscribe(
     setState(state => unregisterIntentListener(state, listenerUUID))
 
     const response = createDACPSuccessResponse(message, "intentListenerUnsubscribeResponse")
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Intent listener unsubscribe failed", error)
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.LISTENER_ERROR,
-      "intentListenerUnsubscribeResponse",
-      error instanceof Error ? error.message : "Failed to unsubscribe intent listener"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.LISTENER_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to unsubscribe intent listener",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -1338,34 +1284,16 @@ export function handleFindIntentRequest(message: DACPMessage, context: DACPHandl
       appIntent: appIntents[0] ?? { intent: { name: intent, displayName: intent }, apps: [] },
     })
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Find intent request failed", error)
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.NO_APPS_FOUND,
-      "findIntentResponse",
-      error instanceof Error ? error.message : "Failed to find apps for intent"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.NO_APPS_FOUND,
+      errorMessage: error instanceof Error ? error.message : "Failed to find apps for intent",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -1423,16 +1351,7 @@ export function handleIntentResultRequest(message: DACPMessage, context: DACPHan
 
     // Send acknowledgment response
     const response = createDACPSuccessResponse(message, "intentResultResponse")
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
 
     logger.info("DACP: Intent result processed successfully", {
       originalRequestId,
@@ -1440,22 +1359,13 @@ export function handleIntentResultRequest(message: DACPMessage, context: DACPHan
     })
   } catch (error) {
     logger.error("DACP: Intent result request failed", error)
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.INTENT_DELIVERY_FAILED,
-      "intentResultResponse",
-      error instanceof Error ? error.message : "Failed to process intent result"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.INTENT_DELIVERY_FAILED,
+      errorMessage: error instanceof Error ? error.message : "Failed to process intent result",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -1493,34 +1403,16 @@ export function handleFindIntentsByContextRequest(
       appIntents,
     })
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Find intents by context request failed", error)
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
-      DACP_ERROR_TYPES.NO_APPS_FOUND,
-      "findIntentsByContextResponse",
-      error instanceof Error ? error.message : "Failed to find intents for context type"
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message,
+      errorType: DACP_ERROR_TYPES.NO_APPS_FOUND,
+      errorMessage: error instanceof Error ? error.message : "Failed to find intents for context type",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -1750,16 +1642,7 @@ export async function handleRaiseIntentForContextRequest(
       },
     })
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Raise intent for context request failed", error)
 
@@ -1779,21 +1662,12 @@ export async function handleRaiseIntentForContextRequest(
       errorType = ResolveError.UserCancelled
     }
 
-    const errorResponse = createDACPErrorResponse(
-      message as { meta: { requestUuid: string } },
+    sendDACPErrorResponse({
+      message,
       errorType,
-      "raiseIntentForContextResponse",
-      errorMessage
-    )
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
-      meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(errorResponseWithRouting)
+      errorMessage,
+      instanceId,
+      transport,
+    })
   }
 }

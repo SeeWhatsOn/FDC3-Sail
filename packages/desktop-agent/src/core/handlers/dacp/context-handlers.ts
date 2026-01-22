@@ -1,10 +1,10 @@
 import {
-  createDACPErrorResponse,
   createDACPSuccessResponse,
   createDACPEvent,
   DACP_ERROR_TYPES,
 } from "../../protocol/dacp-utilities"
 import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { Context } from "@finos/fdc3"
 import { getInstance, getInstancesOnChannel } from "../../state/selectors"
 import { storeContext, addContextListener, removeContextListener } from "../../state/transforms"
@@ -52,16 +52,7 @@ export async function handleBroadcastRequest(
 
     const response = createDACPSuccessResponse(message, "broadcastResponse")
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
 
     logger.debug("DACP: Broadcast request completed successfully", {
       requestUuid: message.meta.requestUuid,
@@ -69,27 +60,22 @@ export async function handleBroadcastRequest(
   } catch (error) {
     logger.error("DACP: Broadcast request failed", error)
 
-    const errorResponse = createDACPErrorResponse(
-      {
-        meta: {
-          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
-        },
-      },
-      DACP_ERROR_TYPES.BROADCAST_ERROR,
-      "broadcastResponse",
-      error instanceof Error ? error.message : "Unknown broadcast error"
-    )
-
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
+    // Ensure message has requestUuid for error response
+    const messageWithUuid: DACPMessage = {
+      ...message,
       meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
+        ...message.meta,
+        requestUuid: message.meta?.requestUuid || "",
       },
     }
 
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message: messageWithUuid,
+      errorType: DACP_ERROR_TYPES.BROADCAST_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Unknown broadcast error",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -126,16 +112,7 @@ export function handleAddContextListener(message: DACPMessage, context: DACPHand
       listenerUUID,
     })
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
 
     logger.debug("DACP: Context listener added successfully", {
       listenerUUID,
@@ -145,27 +122,21 @@ export function handleAddContextListener(message: DACPMessage, context: DACPHand
   } catch (error) {
     logger.error("DACP: Add context listener failed", error)
 
-    const errorResponse = createDACPErrorResponse(
-      {
-        meta: {
-          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
-        },
-      },
-      DACP_ERROR_TYPES.LISTENER_ERROR,
-      "addContextListenerResponse",
-      error instanceof Error ? error.message : "Failed to add context listener"
-    )
-
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
+    const messageWithUuid: DACPMessage = {
+      ...message,
       meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
+        ...message.meta,
+        requestUuid: message.meta?.requestUuid || "",
       },
     }
 
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message: messageWithUuid,
+      errorType: DACP_ERROR_TYPES.LISTENER_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to add context listener",
+      instanceId,
+      transport,
+    })
   }
 }
 
@@ -199,16 +170,7 @@ export function handleContextListenerUnsubscribe(
 
     const response = createDACPSuccessResponse(message, "contextListenerUnsubscribeResponse")
 
-    // Add routing metadata
-    const responseWithRouting = {
-      ...response,
-      meta: {
-        ...response.meta,
-        destination: { instanceId },
-      },
-    }
-
-    transport.send(responseWithRouting)
+    sendDACPResponse({ response, instanceId, transport })
 
     logger.debug("DACP: Context listener unsubscribed successfully", {
       listenerUUID,
@@ -218,27 +180,21 @@ export function handleContextListenerUnsubscribe(
   } catch (error) {
     logger.error("DACP: Context listener unsubscribe failed", error)
 
-    const errorResponse = createDACPErrorResponse(
-      {
-        meta: {
-          requestUuid: (message as { meta?: { requestUuid?: string } })?.meta?.requestUuid || "",
-        },
-      },
-      DACP_ERROR_TYPES.LISTENER_ERROR,
-      "contextListenerUnsubscribeResponse",
-      error instanceof Error ? error.message : "Failed to unsubscribe context listener"
-    )
-
-    // Add routing metadata
-    const errorResponseWithRouting = {
-      ...errorResponse,
+    const messageWithUuid: DACPMessage = {
+      ...message,
       meta: {
-        ...errorResponse.meta,
-        destination: { instanceId },
+        ...message.meta,
+        requestUuid: message.meta?.requestUuid || "",
       },
     }
 
-    transport.send(errorResponseWithRouting)
+    sendDACPErrorResponse({
+      message: messageWithUuid,
+      errorType: DACP_ERROR_TYPES.LISTENER_ERROR,
+      errorMessage: error instanceof Error ? error.message : "Failed to unsubscribe context listener",
+      instanceId,
+      transport,
+    })
   }
 }
 
