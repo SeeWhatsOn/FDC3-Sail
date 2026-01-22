@@ -29,9 +29,6 @@ export default defineConfig([
       "**/pnpm-lock.yaml",
       "**/assets/",
 
-      // TODO: remove this at a later date
-      "**/apps/example-fdc3-apps/",
-
       // Keep test files included for type checking
     ],
   },
@@ -110,6 +107,21 @@ export default defineConfig([
             // Allow PascalCase for React components
             /^[A-Z][a-zA-Z0-9]*\.tsx$/,
           ],
+        },
+      ],
+    },
+  },
+
+  // Desktop Agent package: enforce max-lines rule for maintainability
+  {
+    files: ["packages/desktop-agent/**/*.ts", "packages/sail-platform-sdk/**/*.ts"],
+    rules: {
+      "max-lines": [
+        "error",
+        {
+          max: 400,
+          skipBlankLines: true, // Don't count blank lines (formatting)
+          skipComments: false, // Count comments (they add to file size/maintenance)
         },
       ],
     },
