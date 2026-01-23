@@ -43,7 +43,7 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
 }
 
 When(
-  "{string} adds a context listener on {string} with type {string}",
+  "{string} adds a context listener on {string} with type {string} [fdc3.addContextListener]",
   async function (this: CustomWorld, app: string, channelId: string, contextType: string) {
     ensureAppInstance(this, app)
     const meta = createMeta(this, app)
@@ -62,7 +62,7 @@ When(
 )
 
 When(
-  "{string} asks for the latest context on {string} with type {string}",
+  "{string} asks for the latest context on {string} with type {string} [fdc3.getCurrentContext]",
   async function (this: CustomWorld, app: string, channelId: string, contextType: string) {
     ensureAppInstance(this, app)
     const meta = createMeta(this, app)
@@ -81,7 +81,7 @@ When(
 )
 
 When(
-  "{string} removes context listener with id {string}",
+  "{string} removes context listener with id {string} [fdc3.removeContextListener]",
   async function (this: CustomWorld, app: string, id: string) {
     ensureAppInstance(this, app)
     const meta = createMeta(this, app)
@@ -99,7 +99,7 @@ When(
 )
 
 When(
-  "{string} broadcasts {string} on {string}",
+  "{string} broadcasts {string} on {string} [fdc3.broadcast]",
   async function (this: CustomWorld, app: string, contextType: string, channelId: string) {
     ensureAppInstance(this, app)
     const meta = createMeta(this, app)

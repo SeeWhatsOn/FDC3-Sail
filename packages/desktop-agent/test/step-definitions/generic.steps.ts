@@ -1,4 +1,4 @@
-import { Before, Given, When } from "@cucumber/cucumber"
+import { Before, DataTable, Given, Then, When } from "@cucumber/cucumber"
 import { CustomWorld } from "../world"
 import type { Context, AppIdentifier } from "@finos/fdc3"
 import { TEST_USER_CHANNELS } from "../support/channel-data"
@@ -103,6 +103,7 @@ export const contextMap: Record<string, Context> = {
  */
 export function createMeta(cw: CustomWorld, appStr: string) {
   let app: AppIdentifier
+  const desktopAgentName = cw.desktopAgent?.getImplementationMetadata()?.provider ?? "unknown"
 
   // Parse FDC3 AppIdentifier format: "appId: App1, instanceId: a1"
   if (appStr.includes("appId:") && appStr.includes("instanceId:")) {
@@ -112,7 +113,7 @@ export function createMeta(cw: CustomWorld, appStr: string) {
     const instanceId = instanceIdMatch?.[1]?.trim()
 
     if (appId) {
-      app = instanceId ? { appId, instanceId } : { appId }
+      app = instanceId ? { appId, instanceId, desktopAgent: desktopAgentName } : { appId, desktopAgent: desktopAgentName }
     } else {
       throw new Error(`Invalid AppIdentifier format: ${appStr}`)
     }
@@ -120,11 +121,11 @@ export function createMeta(cw: CustomWorld, appStr: string) {
   // Legacy format: "App1/a1"
   else if (appStr.includes("/")) {
     const [appId, instanceId] = appStr.split("/")
-    app = { appId, instanceId }
+    app = { appId, instanceId, desktopAgent: desktopAgentName }
   }
   // Simple format: just appId
   else {
-    app = { appId: appStr }
+    app = { appId: appStr, desktopAgent: desktopAgentName }
   }
 
   return {
@@ -211,4 +212,49 @@ When("we wait for a period of {string} ms", async function (this: CustomWorld, m
 When("we wait for the listener timeout", async function (this: CustomWorld) {
   // Default listener timeout
   await new Promise(resolve => setTimeout(resolve, 2100))
+})
+
+Then('{string} is true', function (this: CustomWorld, propName: string) {
+  const value = this.props[propName]
+  if (value !== true) {
+    throw new Error(`Expected ${propName} to be true, but got ${JSON.stringify(value)}`)
+  }
+})
+
+Then('{string} is false', function (this: CustomWorld, propName: string) {
+  const value = this.props[propName]
+  if (value !== false) {
+    throw new Error(`Expected ${propName} to be false, but got ${JSON.stringify(value)}`)
+  }
+})
+
+Then('{string} is empty', function (this: CustomWorld, propName: string) {
+  const value = this.props[propName]
+  if (value !== null && value !== undefined && !(Array.isArray(value) && value.length === 0)) {
+    throw new Error(`Expected ${propName} to be empty, but got ${JSON.stringify(value)}`)
+  }
+})
+
+Then('{string} is an array of objects with the following contents', function (this: CustomWorld, propName: string, dataTable: DataTable) {
+  const value = this.props[propName]
+  if (!Array.isArray(value)) {
+    throw new Error(`Expected ${propName} to be an array, but got ${JSON.stringify(value)}`)
+  }
+  
+  const expected = dataTable.hashes()
+  if (value.length !== expected.length) {
+    throw new Error(`Expected array length ${expected.length}, but got ${value.length}`)
+  }
+  
+  // Simple comparison - could be enhanced
+  for (let i = 0; i < expected.length; i++) {
+    const expectedRow = expected[i]
+    const actualRow = value[i]
+    
+    for (const [key, expectedValue] of Object.entries(expectedRow)) {
+      if (actualRow[key] !== expectedValue) {
+        throw new Error(`Expected ${propName}[${i}].${key} to be ${expectedValue}, but got ${actualRow[key]}`)
+      }
+    }
+  }
 })

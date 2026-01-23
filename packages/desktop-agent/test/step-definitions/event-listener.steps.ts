@@ -42,7 +42,7 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
  * Add a Desktop Agent event listener (for DA-level events like channelChanged)
  */
 When(
-  "{string} adds an event listener for {string}",
+  "{string} adds an event listener for {string} [fdc3.addEventListener]",
   async function (this: CustomWorld, app: string, eventType: string) {
     ensureAppInstance(this, app)
     const meta = createMeta(this, app)
@@ -64,7 +64,7 @@ When(
  * Note: This is different from private channel event listeners
  */
 When(
-  "{string} removes DA event listener {string}",
+  "{string} removes DA event listener {string} [fdc3.removeEventListener]",
   async function (this: CustomWorld, app: string, listenerUUID: string) {
     ensureAppInstance(this, app)
     const meta = createMeta(this, app)

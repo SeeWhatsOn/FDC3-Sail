@@ -42,7 +42,7 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
   return instanceId;
 }
 
-When('{string} gets the list of user channels', async function (this: CustomWorld, app: string) {
+When('{string} gets the list of user channels [fdc3.getUserChannels]', async function (this: CustomWorld, app: string) {
   ensureAppInstance(this, app);
   const meta = createMeta(this, app);
   
@@ -55,7 +55,7 @@ When('{string} gets the list of user channels', async function (this: CustomWorl
   await this.mockTransport.receiveMessage(message);
 });
 
-When('{string} gets the current user channel', async function (this: CustomWorld, app: string) {
+When('{string} gets the current user channel [fdc3.getCurrentChannel]', async function (this: CustomWorld, app: string) {
   ensureAppInstance(this, app);
   const meta = createMeta(this, app);
   
@@ -68,7 +68,7 @@ When('{string} gets the current user channel', async function (this: CustomWorld
   await this.mockTransport.receiveMessage(message);
 });
 
-When('{string} leaves the current user channel', async function (this: CustomWorld, app: string) {
+When('{string} leaves the current user channel [fdc3.leaveCurrentChannel]', async function (this: CustomWorld, app: string) {
   ensureAppInstance(this, app);
   const meta = createMeta(this, app);
   
@@ -81,7 +81,7 @@ When('{string} leaves the current user channel', async function (this: CustomWor
   await this.mockTransport.receiveMessage(message);
 });
 
-When('{string} joins user channel {string}', async function (this: CustomWorld, app: string, channel: string) {
+When('{string} joins user channel {string} [fdc3.joinUserChannel]', async function (this: CustomWorld, app: string, channel: string) {
   ensureAppInstance(this, app);
   const meta = createMeta(this, app);
   
@@ -97,7 +97,7 @@ When('{string} joins user channel {string}', async function (this: CustomWorld, 
 });
 
 When(
-  '{string} gets the latest context on {string} with type {string}',
+  '{string} gets the latest context on {string} with type {string} [fdc3.getCurrentContext]',
   async function (this: CustomWorld, app: string, channel: string, type: string) {
     ensureAppInstance(this, app);
     const meta = createMeta(this, app);

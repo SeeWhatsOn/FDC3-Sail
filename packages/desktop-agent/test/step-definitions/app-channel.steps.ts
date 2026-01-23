@@ -38,7 +38,7 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
 }
 
 When(
-  "{string} creates or gets an app channel called {string}",
+  "{string} creates or gets an app channel called {string} [fdc3.getOrCreateChannel]",
   async function (this: CustomWorld, app: string, channel: string) {
     ensureAppInstance(this, app)
     const meta = createMeta(this, app)

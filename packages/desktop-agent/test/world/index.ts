@@ -75,6 +75,7 @@ export class CustomWorld extends World {
    * Access state via desktopAgent.getState() for assertions.
    */
   initializeDesktopAgent(apps: DirectoryApp[], channels: UserChannelConfig[]): void {
+
     // Create MOCK external dependencies - avoid side effects
     this.mockTransport = new MockTransport()
     this.mockAppLauncher = new MockAppLauncher()
@@ -95,6 +96,16 @@ export class CustomWorld extends World {
       apps: apps,
       // User channels
       userChannels: channels as BrowserTypes.Channel[],
+      implementationMetadata: {
+        fdc3Version: "2.2",
+        provider: "cucumber-provider",
+        providerVersion: "1.0.0",
+        optionalFeatures: {
+          DesktopAgentBridging: false,
+          OriginatingAppMetadata: true,
+          UserChannelMembershipAPIs: true,
+        }
+      }
     })
 
     // Wire up MockAppLauncher callback to register instances in state

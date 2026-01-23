@@ -186,14 +186,14 @@ Then("running apps will be", function (this: CustomWorld, dataTable: DataTable) 
 })
 
 When(
-  "{string} opens app {string}",
+  "{string} opens app {string} [fdc3.open]",
   async function (this: CustomWorld, appStr: string, open: string) {
     // Test fixture setup: Ensure calling app instance exists
     ensureAppInstanceForTesting(this, appStr)
     
     const from = createMeta(this, appStr)
 
-    // Send DACP openRequest message (this is what we're testing)
+    // Send DACP openRequest message (corresponds to fdc3.open() API call)
     const message: OpenRequest = {
       type: "openRequest",
       meta: from,
@@ -210,14 +210,14 @@ When(
 )
 
 When(
-  "{string} opens app {string} with context data {string}",
+  "{string} opens app {string} with context data {string} [fdc3.open]",
   async function (this: CustomWorld, appStr: string, open: string, context: string) {
     // Test fixture setup: Ensure calling app instance exists
     ensureAppInstanceForTesting(this, appStr)
     
     const from = createMeta(this, appStr)
 
-    // Send DACP openRequest message with context (this is what we're testing)
+    // Send DACP openRequest message with context (corresponds to fdc3.open() API call)
     const message: OpenRequest = {
       type: "openRequest",
       meta: from,
@@ -235,14 +235,14 @@ When(
 )
 
 When(
-  "{string} requests metadata for {string}",
+  "{string} requests metadata for {string} [fdc3.getAppMetadata]",
   async function (this: CustomWorld, appStr: string, open: string) {
     // Test fixture setup: Ensure calling app instance exists
     ensureAppInstanceForTesting(this, appStr)
     
     const from = createMeta(this, appStr)
 
-    // Send DACP getAppMetadataRequest message (this is what we're testing)
+    // Send DACP getAppMetadataRequest message (corresponds to fdc3.getAppMetadata() API call)
     const message: GetAppMetadataRequest = {
       type: "getAppMetadataRequest",
       meta: from,
@@ -259,14 +259,14 @@ When(
 )
 
 When(
-  "{string} requests info on the DesktopAgent",
+  "{string} requests info on the DesktopAgent [fdc3.getInfo]",
   async function (this: CustomWorld, appStr: string) {
     // Test fixture setup: Ensure calling app instance exists
     ensureAppInstanceForTesting(this, appStr)
     
     const from = createMeta(this, appStr)
 
-    // Send DACP getInfoRequest message (this is what we're testing)
+    // Send DACP getInfoRequest message (corresponds to fdc3.getInfo() API call)
     const message: GetInfoRequest = {
       type: "getInfoRequest",
       meta: from,
@@ -278,14 +278,14 @@ When(
 )
 
 When(
-  "{string} findsInstances of {string}",
+  "{string} findsInstances of {string} [fdc3.findInstances]",
   async function (this: CustomWorld, appStr: string, open: string) {
     // Test fixture setup: Ensure calling app instance exists
     ensureAppInstanceForTesting(this, appStr)
     
     const from = createMeta(this, appStr)
 
-    // Send DACP findInstancesRequest message (this is what we're testing)
+    // Send DACP findInstancesRequest message (corresponds to fdc3.findInstances() API call)
     const message: FindInstancesRequest = {
       type: "findInstancesRequest",
       meta: from,

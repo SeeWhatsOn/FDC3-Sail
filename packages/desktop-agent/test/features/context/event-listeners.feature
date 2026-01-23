@@ -8,14 +8,14 @@ Feature: Desktop Agent Event Listeners
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
 
   Scenario: Adding an event listener for channel changes
-    When "appId: App1, instanceId: a1" adds an event listener for "channelChanged"
+    When "appId: App1, instanceId: a1" adds an event listener for "channelChanged" [fdc3.addEventListener]
     Then messaging will have outgoing posts
       | msg.matches_type           | msg.payload.listenerUUID | to.instanceId |
       | addEventListenerResponse   | uuid3                    | a1            |
 
   Scenario: Receiving channelChanged event when another app joins a channel
-    When "appId: App1, instanceId: a1" adds an event listener for "channelChanged"
-    And "appId: App2, instanceId: a2" joins user channel "one"
+    When "appId: App1, instanceId: a1" adds an event listener for "channelChanged" [fdc3.addEventListener]
+    And "appId: App2, instanceId: a2" joins user channel "one" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
       | msg.matches_type           | to.instanceId | msg.payload.newChannelId |
       | addEventListenerResponse   | a1            | {null}                   |
@@ -23,8 +23,8 @@ Feature: Desktop Agent Event Listeners
       | joinUserChannelResponse    | a2            | {null}                   |
 
   Scenario: Receiving channelChanged event when I join a channel
-    When "appId: App1, instanceId: a1" adds an event listener for "channelChanged"
-    And "appId: App1, instanceId: a1" joins user channel "one"
+    When "appId: App1, instanceId: a1" adds an event listener for "channelChanged" [fdc3.addEventListener]
+    And "appId: App1, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
       | msg.matches_type           | to.instanceId | msg.payload.newChannelId |
       | addEventListenerResponse   | a1            | {null}                   |
@@ -32,9 +32,9 @@ Feature: Desktop Agent Event Listeners
       | joinUserChannelResponse    | a1            | {null}                   |
 
   Scenario: Receiving channelChanged event when leaving a channel
-    When "appId: App1, instanceId: a1" adds an event listener for "channelChanged"
-    And "appId: App1, instanceId: a1" joins user channel "one"
-    And "appId: App1, instanceId: a1" leaves the current user channel
+    When "appId: App1, instanceId: a1" adds an event listener for "channelChanged" [fdc3.addEventListener]
+    And "appId: App1, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App1, instanceId: a1" leaves the current user channel [fdc3.leaveCurrentChannel]
     Then messaging will have outgoing posts
       | msg.matches_type            | to.instanceId | msg.payload.newChannelId |
       | addEventListenerResponse    | a1            | {null}                   |
@@ -44,9 +44,9 @@ Feature: Desktop Agent Event Listeners
       | leaveCurrentChannelResponse | a1            | {null}                   |
 
   Scenario: Unsubscribing from event listener
-    When "appId: App1, instanceId: a1" adds an event listener for "channelChanged"
-    And "appId: App1, instanceId: a1" removes DA event listener "uuid3"
-    And "appId: App2, instanceId: a2" joins user channel "one"
+    When "appId: App1, instanceId: a1" adds an event listener for "channelChanged" [fdc3.addEventListener]
+    And "appId: App1, instanceId: a1" removes DA event listener "uuid3" [fdc3.removeEventListener]
+    And "appId: App2, instanceId: a2" joins user channel "one" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
       | msg.matches_type                   | to.instanceId |
       | addEventListenerResponse           | a1            |
@@ -55,9 +55,9 @@ Feature: Desktop Agent Event Listeners
       | joinUserChannelResponse            | a2            |
 
   Scenario: Multiple apps listening for channel changes
-    When "appId: App1, instanceId: a1" adds an event listener for "channelChanged"
-    And "appId: App2, instanceId: a2" adds an event listener for "channelChanged"
-    And "appId: App1, instanceId: a1" joins user channel "one"
+    When "appId: App1, instanceId: a1" adds an event listener for "channelChanged" [fdc3.addEventListener]
+    And "appId: App2, instanceId: a2" adds an event listener for "channelChanged" [fdc3.addEventListener]
+    And "appId: App1, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
       | msg.matches_type           | to.instanceId | msg.payload.newChannelId |
       | addEventListenerResponse   | a1            | {null}                   |
@@ -67,8 +67,8 @@ Feature: Desktop Agent Event Listeners
       | joinUserChannelResponse    | a1            | {null}                   |
 
   Scenario: Adding event listener with USER_CHANNEL_CHANGED type (FDC3 2.2 standard)
-    When "appId: App1, instanceId: a1" adds an event listener for "USER_CHANNEL_CHANGED"
-    And "appId: App2, instanceId: a2" joins user channel "one"
+    When "appId: App1, instanceId: a1" adds an event listener for "USER_CHANNEL_CHANGED" [fdc3.addEventListener]
+    And "appId: App2, instanceId: a2" joins user channel "one" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
       | msg.matches_type           | to.instanceId | msg.payload.newChannelId |
       | addEventListenerResponse   | a1            | {null}                   |
@@ -76,13 +76,13 @@ Feature: Desktop Agent Event Listeners
       | joinUserChannelResponse    | a2            | {null}                   |
 
   Scenario: Adding event listener for unsupported event type returns error
-    When "appId: App1, instanceId: a1" adds an event listener for "unsupportedEvent"
+    When "appId: App1, instanceId: a1" adds an event listener for "unsupportedEvent" [fdc3.addEventListener]
     Then messaging will have outgoing posts
       | msg.type                   | to.instanceId | msg.payload.error |
       | addEventListenerResponse   | a1            | ListenerError     |
 
   Scenario: Unsubscribing from non-existent event listener returns error
-    When "appId: App1, instanceId: a1" removes DA event listener "nonexistent-listener-id"
+    When "appId: App1, instanceId: a1" removes DA event listener "nonexistent-listener-id" [fdc3.removeEventListener]
     Then messaging will have outgoing posts
       | msg.type                         | to.instanceId | msg.payload.error |
       | eventListenerUnsubscribeResponse | a1            | ListenerError     |

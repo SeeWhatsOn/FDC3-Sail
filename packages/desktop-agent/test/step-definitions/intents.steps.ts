@@ -103,7 +103,7 @@ Given(
 )
 
 When(
-  "{string} finds intents with intent {string} and contextType {string} and result type {string}",
+  "{string} finds intents with intent {string} and contextType {string} and result type {string} [fdc3.findIntent]",
   async function (
     this: CustomWorld,
     appStr: string,
@@ -129,7 +129,7 @@ When(
 )
 
 When(
-  "{string} finds intents with contextType {string}",
+  "{string} finds intents with contextType {string} [fdc3.findIntentsByContext]",
   async function (this: CustomWorld, appStr: string, contextType: string) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -147,7 +147,7 @@ When(
 )
 
 Given(
-  "{string} registers an intent listener for {string}",
+  "{string} registers an intent listener for {string} [fdc3.addIntentListener]",
   async function (this: CustomWorld, appStr: string, intent: string) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -165,7 +165,7 @@ Given(
 )
 
 Given(
-  "{string} registers an intent listener for {string} with contextType {string}",
+  "{string} registers an intent listener for {string} with contextType {string} [fdc3.addIntentListener]",
   async function (this: CustomWorld, appStr: string, intent: string, contextType: string) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -185,7 +185,7 @@ Given(
 )
 
 Given(
-  "{string} unsubscribes an intent listener with id {string}",
+  "{string} unsubscribes an intent listener with id {string} [fdc3.removeIntentListener]",
   async function (this: CustomWorld, appStr: string, id: string) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -282,7 +282,7 @@ function raiseWithContextAnInvalidTarget(
 }
 
 When(
-  "{string} raises an intent with contextType {string}",
+  "{string} raises an intent with contextType {string} [fdc3.raiseIntentForContext]",
   async function (this: CustomWorld, appStr: string, contextType: string) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -292,7 +292,7 @@ When(
 )
 
 When(
-  "{string} raises an intent with contextType {string} on app {string}",
+  "{string} raises an intent with contextType {string} on app {string} [fdc3.raiseIntentForContext]",
   async function (this: CustomWorld, appStr: string, contextType: string, dest: string) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -302,7 +302,7 @@ When(
 )
 
 When(
-  "{string} raises an intent for {string} with contextType {string}",
+  "{string} raises an intent for {string} with contextType {string} [fdc3.raiseIntent]",
   async function (this: CustomWorld, appStr: string, intentName: string, contextType: string) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -312,7 +312,7 @@ When(
 )
 
 When(
-  "{string} raises an intent for {string} with contextType {string} on app {string}",
+  "{string} raises an intent for {string} with contextType {string} on app {string} [fdc3.raiseIntent]",
   async function (
     this: CustomWorld,
     appStr: string,
@@ -328,7 +328,7 @@ When(
 )
 
 When(
-  "{string} raises an intent for {string} with contextType {string} on an invalid app instance",
+  "{string} raises an intent for {string} with contextType {string} on an invalid app instance [fdc3.raiseIntent]",
   async function (this: CustomWorld, appStr: string, intentName: string, contextType: string) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -338,7 +338,7 @@ When(
 )
 
 When(
-  "{string} raises an intent with contextType {string} on an invalid app instance",
+  "{string} raises an intent with contextType {string} on an invalid app instance [fdc3.raiseIntentForContext]",
   async function (this: CustomWorld, appStr: string, contextType: string) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -348,7 +348,7 @@ When(
 )
 
 When(
-  "{string} raises an intent for {string} with contextType {string} on app {string} with requestUuid {string}",
+  "{string} raises an intent for {string} with contextType {string} on app {string} with requestUuid {string} [fdc3.raiseIntent]",
   async function (
     this: CustomWorld,
     appStr: string,
@@ -374,7 +374,7 @@ When("we wait for the intent timeout", function (this: CustomWorld) {
 })
 
 When(
-  "{string} sends a intentResultRequest with eventUuid {string} and contextType {string} and raiseIntentUuid {string}",
+  "{string} sends a intentResultRequest with eventUuid {string} and contextType {string} and raiseIntentUuid {string} [IntentResolution.getResult]",
   async function (
     this: CustomWorld,
     appStr: string,
@@ -404,7 +404,7 @@ When(
 )
 
 When(
-  "{string} sends a intentResultRequest with eventUuid {string} and void contents and raiseIntentUuid {string}",
+  "{string} sends a intentResultRequest with eventUuid {string} and void contents and raiseIntentUuid {string} [IntentResolution.getResult]",
   async function (this: CustomWorld, appStr: string, eventUuid: string, raiseIntentUuid: string) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -426,7 +426,7 @@ When(
 )
 
 When(
-  "{string} sends a intentResultRequest with eventUuid {string} and private channel {string} and raiseIntentUuid {string}",
+  "{string} sends a intentResultRequest with eventUuid {string} and private channel {string} and raiseIntentUuid {string} [IntentResolution.getResult]",
   async function (
     this: CustomWorld,
     appStr: string,

@@ -41,7 +41,7 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
   return instanceId;
 }
 
-When('{string} creates a private channel', async function (this: CustomWorld, app: string) {
+When('{string} creates a private channel [fdc3.createPrivateChannel]', async function (this: CustomWorld, app: string) {
   ensureAppInstance(this, app);
   const meta = createMeta(this, app);
   
@@ -54,7 +54,7 @@ When('{string} creates a private channel', async function (this: CustomWorld, ap
   await this.mockTransport.receiveMessage(message);
 });
 
-When('{string} removes event listener {string}', async function (this: CustomWorld, app: string, listenerUUID: string) {
+When('{string} removes event listener {string} [PrivateChannel.removeContextListener]', async function (this: CustomWorld, app: string, listenerUUID: string) {
   ensureAppInstance(this, app);
   const meta = createMeta(this, app);
   
@@ -70,7 +70,7 @@ When('{string} removes event listener {string}', async function (this: CustomWor
 });
 
 When(
-  '{string} adds an {string} event listener on {string}',
+  '{string} adds an {string} event listener on {string} [PrivateChannel.addContextListener]',
   async function (this: CustomWorld, app: string, listenerType: string, channelId: string) {
     ensureAppInstance(this, app);
     const meta = createMeta(this, app);
@@ -89,7 +89,7 @@ When(
 );
 
 When(
-  '{string} disconnects from private channel {string}',
+  '{string} disconnects from private channel {string} [PrivateChannel.disconnect]',
   async function (this: CustomWorld, app: string, channelId: string) {
     ensureAppInstance(this, app);
     const meta = createMeta(this, app);

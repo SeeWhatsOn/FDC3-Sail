@@ -6,9 +6,9 @@ Feature: App Disconnection and Cleanup
     Given A desktop agent
     When "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
-    And "appId: App2, instanceId: a2" adds a context listener on "one" with type "fdc3.instrument"
+    And "appId: App2, instanceId: a2" adds a context listener on "one" with type "fdc3.instrument" [fdc3.addContextListener]
     And we wait for a period of "100" ms
-    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "one"
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "one" [fdc3.broadcast]
     Then messaging will have outgoing posts
       | msg.matches_type           | to.appId | to.instanceId | msg.payload.channelId | msg.payload.context.type | msg.payload.context.id.ticker |
       | addContextListenerResponse | App2     | a2            | {null}                | {null}                   | {null}                        |
@@ -16,9 +16,9 @@ Feature: App Disconnection and Cleanup
       | broadcastResponse          | App1     | a1            | {null}                | {null}                   | {null}                        |
     And "appId: App2, instanceId: a2" is closed
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
-    And "appId: App2, instanceId: a2" adds a context listener on "one" with type "fdc3.instrument"
+    And "appId: App2, instanceId: a2" adds a context listener on "one" with type "fdc3.instrument" [fdc3.addContextListener]
     And we wait for a period of "100" ms
-    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "one"
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "one" [fdc3.broadcast]
     Then messaging will have outgoing posts
       | msg.matches_type           | to.appId | to.instanceId | msg.payload.channelId | msg.payload.context.type | msg.payload.context.id.ticker |
       | addContextListenerResponse | App2     | a2            | {null}                | {null}                   | {null}                        |
@@ -35,12 +35,12 @@ Feature: App Disconnection and Cleanup
     And A desktop agent
     When "appId: PortfolioApp, instanceId: l1" is opened with connection id "l1"
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
-    And "appId: PortfolioApp, instanceId: l1" registers an intent listener for "ViewPortfolio"
-    And "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: PortfolioApp, instanceId: l1" with requestUuid "ABC123"
+    And "appId: PortfolioApp, instanceId: l1" registers an intent listener for "ViewPortfolio" [fdc3.addIntentListener]
+    And "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: PortfolioApp, instanceId: l1" with requestUuid "ABC123" [fdc3.raiseIntent]
     And we wait for a period of "100" ms
     And "appId: App1, instanceId: a1" is closed
     And we wait for a period of "100" ms
-    And "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "uuid7" and contextType "fdc3.portfolio" and raiseIntentUuid "ABC123"
+    And "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "uuid7" and contextType "fdc3.portfolio" and raiseIntentUuid "ABC123" [IntentResolution.getResult]
     Then messaging will have outgoing posts
       | msg.matches_type     | msg.meta.eventUuid | msg.meta.requestUuid | to.appId     | to.instanceId | msg.payload.raiseIntentRequestUuid | msg.payload.intentResolution.source.instanceId | msg.payload.intentResult.context.type |
       | intentEvent          | uuid7              | {null}               | PortfolioApp | l1            | ABC123                             | {null}                                         | {null}                                |
@@ -51,12 +51,12 @@ Feature: App Disconnection and Cleanup
     And A desktop agent
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
-    And "appId: App2, instanceId: a1" creates a private channel
+    And "appId: App2, instanceId: a1" creates a private channel [fdc3.createPrivateChannel]
     #TODO: have a2 retrieve the private channel by raising an intent - its currently using a1 reference to the channel
     And I refer to "uuid3" as "channel1Id"
-    When "appId: App2, instanceId: a2" adds an "disconnect" event listener on "{channel1Id}"
-    And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument"
-    And "appId: App2, instanceId: a2" adds an "unsubscribe" event listener on "{channel1Id}"
+    When "appId: App2, instanceId: a2" adds an "disconnect" event listener on "{channel1Id}" [PrivateChannel.addContextListener]
+    And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App2, instanceId: a2" adds an "unsubscribe" event listener on "{channel1Id}" [PrivateChannel.addContextListener]
     And "appId: App1, instanceId: a1" is closed
     Then messaging will have outgoing posts
       | msg.matches_type                 | msg.payload.privateChannelId | msg.payload.contextType | to.appId | to.instanceId |
