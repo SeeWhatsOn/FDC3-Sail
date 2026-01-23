@@ -3,6 +3,8 @@ import { DACP_ERROR_TYPES } from "../../dacp-protocol/dacp-constants"
 import { generateEventUuid } from "../../dacp-protocol/dacp-utils"
 import { type DACPHandlerContext, type DACPMessage } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
+import { ChannelError } from "@finos/fdc3"
+import { FDC3ChannelError, ChannelCreationFailedError } from "../../errors/fdc3-errors"
 import { getInstance, getPrivateChannel } from "../../state/selectors"
 import {
   createPrivateChannel,
@@ -50,10 +52,21 @@ export function handleCreatePrivateChannelRequest(
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Create private channel failed", error)
+    
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.CreationFailed
+    const errorMessage = error instanceof Error ? error.message : "Failed to create private channel"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    } else if (error instanceof ChannelCreationFailedError) {
+      errorType = error.errorType
+    }
+
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to create private channel",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })
@@ -148,10 +161,19 @@ export function handlePrivateChannelDisconnectRequest(
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Private channel disconnect failed", error)
+    
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to disconnect from private channel"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    }
+
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to disconnect from private channel",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })
@@ -228,10 +250,23 @@ export function handlePrivateChannelAddContextListenerRequest(
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Private channel add context listener failed", error)
+    
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to add context listener to private channel"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("Access denied") || errorMessage.includes("denied")) {
+      errorType = ChannelError.AccessDenied
+    } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
+      errorType = ChannelError.NoChannelFound
+    }
+
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.LISTENER_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to add context listener to private channel",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })

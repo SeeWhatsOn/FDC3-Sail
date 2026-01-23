@@ -25,7 +25,7 @@ export * from "./interfaces"
 
 // State Types (from functional state management)
 export type { AgentState, AppInstance, AppInstanceState, StateSetter } from "./state/types"
-export { createInitialState, createStateWithOverrides } from "./state/initial"
+export { createInitialState, createStateWithOverrides } from "./state/initial-state"
 export * from "./state/selectors"
 export * from "./state/mutators"
 

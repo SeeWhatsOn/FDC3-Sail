@@ -17,10 +17,6 @@ import {
 } from "../../../state/selectors"
 import { AppInstanceState } from "../../../state/types"
 
-// ============================================================================
-// MODULE-LEVEL STATE
-// ============================================================================
-
 /**
  * Map to store promise functions for pending intents.
  * These CANNOT be stored in AgentState (not serializable).
@@ -37,14 +33,11 @@ export const pendingIntentPromises = new Map<
   }
 >()
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
 
 /**
  * Helper to check if context type is compatible with supported types
  */
-export function isContextTypeCompatible(supportedTypes: string[], contextType: string): boolean {
+ function isContextTypeCompatible(supportedTypes: string[], contextType: string): boolean {
   if (supportedTypes.length === 0) {
     return true // Accepts all context types
   }
@@ -54,7 +47,7 @@ export function isContextTypeCompatible(supportedTypes: string[], contextType: s
 /**
  * Helper to check if result types match
  */
-export function isResultTypeCompatible(
+ function isResultTypeCompatible(
   actualResultType: string | undefined,
   requiredResultType: string | undefined
 ): boolean {

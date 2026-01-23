@@ -3,6 +3,8 @@ import { DACP_ERROR_TYPES } from "../../dacp-protocol/dacp-constants"
 import { type DACPHandlerContext, type DACPMessage } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { Context } from "@finos/fdc3"
+import { ChannelError } from "@finos/fdc3"
+import { FDC3ChannelError } from "../../errors/fdc3-errors"
 import { getInstance, getInstancesOnChannel } from "../../state/selectors"
 import { storeContext, addContextListener, removeContextListener } from "../../state/mutators"
 
@@ -66,10 +68,21 @@ export async function handleBroadcastRequest(
       },
     }
 
+    // BroadcastResponse schema doesn't validate error payloads, but use ChannelError for consistency
+    // Common errors: MalformedContext, ApiTimeout
+    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Unknown broadcast error"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("Malformed") || errorMessage.includes("invalid context")) {
+      errorType = ChannelError.MalformedContext
+    }
+
     sendDACPErrorResponse({
       message: messageWithUuid,
-      errorType: DACP_ERROR_TYPES.BROADCAST_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Unknown broadcast error",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })
@@ -127,10 +140,22 @@ export function handleAddContextListener(message: DACPMessage, context: DACPHand
       },
     }
 
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to add context listener"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("Access denied") || errorMessage.includes("denied")) {
+      errorType = ChannelError.AccessDenied
+    } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
+      errorType = ChannelError.NoChannelFound
+    }
+
     sendDACPErrorResponse({
       message: messageWithUuid,
-      errorType: DACP_ERROR_TYPES.LISTENER_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to add context listener",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })
@@ -185,10 +210,22 @@ export function handleContextListenerUnsubscribe(
       },
     }
 
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to unsubscribe context listener"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("Access denied") || errorMessage.includes("denied")) {
+      errorType = ChannelError.AccessDenied
+    } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
+      errorType = ChannelError.NoChannelFound
+    }
+
     sendDACPErrorResponse({
       message: messageWithUuid,
-      errorType: DACP_ERROR_TYPES.LISTENER_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to unsubscribe context listener",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })

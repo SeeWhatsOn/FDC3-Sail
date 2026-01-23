@@ -43,7 +43,7 @@ export function createDACPErrorResponse(
  */
 export function createDACPSuccessResponse(
   originalRequest: { meta: { requestUuid: string; [key: string]: unknown } },
-  responseType: string,
+  responseType: DACPResponseType,
   payload: Record<string, unknown> = {}
 ) {
   return {

@@ -3,6 +3,8 @@ import { DACP_ERROR_TYPES } from "../../dacp-protocol/dacp-constants"
 import { generateEventUuid } from "../../dacp-protocol/dacp-utils"
 import { type DACPHandlerContext, type DACPMessage } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
+import { ChannelError } from "@finos/fdc3"
+import { FDC3ChannelError } from "../../errors/fdc3-errors"
 import { getInstance, getEventListenersForType } from "../../state/selectors"
 import { addEventListener, removeEventListener, removeEventListenersForInstance } from "../../state/mutators"
 import type { AgentState } from "../../state/types"
@@ -55,10 +57,21 @@ export function handleAddEventListenerRequest(message: DACPMessage, context: DAC
     logger.info("DACP: Event listener added", { instanceId, eventType, listenerId })
   } catch (error) {
     logger.error("DACP: Add event listener failed", error)
+    
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to add event listener"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("Access denied") || errorMessage.includes("denied")) {
+      errorType = ChannelError.AccessDenied
+    }
+
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.LISTENER_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to add event listener",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })
@@ -92,10 +105,21 @@ export function handleEventListenerUnsubscribeRequest(
     logger.info("DACP: Event listener unsubscribed", { instanceId, listenerUUID })
   } catch (error) {
     logger.error("DACP: Event listener unsubscribe failed", error)
+    
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to unsubscribe event listener"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("Access denied") || errorMessage.includes("denied")) {
+      errorType = ChannelError.AccessDenied
+    }
+
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.LISTENER_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to unsubscribe event listener",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })

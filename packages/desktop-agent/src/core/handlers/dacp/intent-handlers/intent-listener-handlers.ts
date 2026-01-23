@@ -9,6 +9,7 @@ import { generateEventUuid } from "../../../dacp-protocol/dacp-utils"
 import { DACP_ERROR_TYPES } from "../../../dacp-protocol/dacp-constants"
 import { type DACPHandlerContext, type DACPMessage } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
+import { ResolveError } from "@finos/fdc3"
 import { getInstance } from "../../../state/selectors"
 import {
   registerIntentListener,
@@ -47,10 +48,20 @@ export function handleAddIntentListener(message: DACPMessage, context: DACPHandl
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Add intent listener failed", error)
+    
+    // Use ResolveError for intent listener errors (AddIntentListenerResponse validates ResolveError enum values)
+    let errorType: ResolveError = ResolveError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to add intent listener"
+    
+    // Intent listener errors typically map to ApiTimeout or other ResolveError values
+    if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
+      errorType = ResolveError.TargetInstanceUnavailable
+    }
+
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.LISTENER_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to add intent listener",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })
@@ -79,10 +90,19 @@ export function handleIntentListenerUnsubscribe(
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Intent listener unsubscribe failed", error)
+    
+    // Use ResolveError for intent listener errors
+    let errorType: ResolveError = ResolveError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to unsubscribe intent listener"
+    
+    if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
+      errorType = ResolveError.TargetInstanceUnavailable
+    }
+
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.LISTENER_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to unsubscribe intent listener",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })

@@ -39,7 +39,7 @@ export function sendDACPResponse(options: SendDACPResponseOptions): void {
 export interface SendDACPErrorResponseOptions {
   /** Original request message (must have type and meta.requestUuid) */
   message: DACPMessage
-  /** DACP error type or FDC3 error enum (e.g., DACP_ERROR_TYPES.LISTENER_ERROR, ResolveError.NoAppsFound, OpenError.AppNotFound, ChannelError.NoChannelFound) */
+  /** DACP error type or FDC3 error enum (e.g., ResolveError.NoAppsFound, OpenError.AppNotFound, ChannelError.NoChannelFound) */
   errorType: DACPErrorType | ResolveError | OpenError | ChannelError
   /** Human-readable error message */
   errorMessage: string

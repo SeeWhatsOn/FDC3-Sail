@@ -3,6 +3,8 @@ import { DACP_ERROR_TYPES } from "../../dacp-protocol/dacp-constants"
 import { type DACPHandlerContext, type DACPMessage } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { Context } from "@finos/fdc3"
+import { OpenError, ResolveError } from "@finos/fdc3"
+import { AppNotFoundError, ErrorOnLaunchError } from "../../errors/fdc3-errors"
 import type { DirectoryApp } from "../../app-directory/types"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
 
@@ -14,7 +16,9 @@ export function handleGetInfoRequest(message: DACPMessage, context: DACPHandlerC
 
   try {
 
-    const response = createDACPSuccessResponse(message, "getInfoResponse", implementationMetadata)
+    const response = createDACPSuccessResponse(message, "getInfoResponse", {
+      implementationMetadata,
+    })
 
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
@@ -89,10 +93,23 @@ export async function handleOpenRequest(
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: openRequest failed", error)
+    
+    // Extract FDC3 error type from error instance
+    let errorType: OpenError = OpenError.ErrorOnLaunch
+    const errorMessage = error instanceof Error ? error.message : "Failed to open app"
+    
+    if (error instanceof AppNotFoundError) {
+      errorType = error.errorType
+    } else if (error instanceof ErrorOnLaunchError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("not found") || errorMessage.includes("App not found")) {
+      errorType = OpenError.AppNotFound
+    }
+    
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.APP_LAUNCH_FAILED,
-      errorMessage: error instanceof Error ? error.message : "Failed to open app",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })

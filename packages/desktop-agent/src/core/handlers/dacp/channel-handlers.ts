@@ -5,6 +5,8 @@ import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-u
 import { getEventListeners } from "./event-handlers"
 import { getInstance, getUserChannel, getAppChannel, getAllUserChannels, getChannelContext } from "../../state/selectors"
 import { joinChannel, createAppChannel } from "../../state/mutators"
+import { ChannelError } from "@finos/fdc3"
+import { NoChannelFoundError, ChannelAccessDeniedError, ChannelCreationFailedError, FDC3ChannelError } from "../../errors/fdc3-errors"
 
 /**
  * Handles get current channel requests
@@ -59,10 +61,20 @@ export function handleGetCurrentChannelRequest(
       },
     }
 
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to get current channel"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
+      errorType = ChannelError.NoChannelFound
+    }
+
     sendDACPErrorResponse({
       message: messageWithUuid,
-      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to get current channel",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })
@@ -99,12 +111,20 @@ export function handleJoinUserChannelRequest(message: DACPMessage, context: DACP
       },
     }
 
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to join user channel"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("does not exist") || errorMessage.includes("not found")) {
+      errorType = ChannelError.NoChannelFound
+    }
+
     sendDACPErrorResponse({
       message: messageWithUuid,
-      errorType: error instanceof Error && error.message.includes("does not exist")
-        ? DACP_ERROR_TYPES.NO_CHANNEL_FOUND
-        : DACP_ERROR_TYPES.CHANNEL_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to join user channel",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })
@@ -136,10 +156,18 @@ export function handleLeaveCurrentChannelRequest(
       },
     }
 
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to leave current channel"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    }
+
     sendDACPErrorResponse({
       message: messageWithUuid,
-      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to leave current channel",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })
@@ -168,10 +196,18 @@ export function handleGetUserChannelsRequest(message: DACPMessage, context: DACP
       },
     }
 
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to get user channels"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    }
+
     sendDACPErrorResponse({
       message: messageWithUuid,
-      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to get user channels",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })
@@ -219,10 +255,20 @@ export function handleGetCurrentContextRequest(
       },
     }
 
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorMessage = error instanceof Error ? error.message : "Failed to get current context"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
+      errorType = ChannelError.NoChannelFound
+    }
+
     sendDACPErrorResponse({
       message: messageWithUuid,
-      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to get current context",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })
@@ -271,10 +317,22 @@ export function handleGetOrCreateChannelRequest(
       },
     }
 
+    // Extract FDC3 error type from error instance
+    let errorType: ChannelError = ChannelError.CreationFailed
+    const errorMessage = error instanceof Error ? error.message : "Failed to get or create channel"
+    
+    if (error instanceof FDC3ChannelError) {
+      errorType = error.errorType
+    } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
+      errorType = ChannelError.NoChannelFound
+    } else if (errorMessage.includes("denied") || errorMessage.includes("access")) {
+      errorType = ChannelError.AccessDenied
+    }
+
     sendDACPErrorResponse({
       message: messageWithUuid,
-      errorType: DACP_ERROR_TYPES.CHANNEL_ERROR,
-      errorMessage: error instanceof Error ? error.message : "Failed to get or create channel",
+      errorType,
+      errorMessage,
       instanceId,
       transport,
     })
