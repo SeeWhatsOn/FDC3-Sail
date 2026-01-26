@@ -133,10 +133,6 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
     meta: {
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
-      source: {
-        instanceId: uuid,
-        appId: instance.appId,
-      },
     },
     payload: {
       actualUrl: appUrl,
@@ -171,10 +167,6 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
     meta: {
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
-      source: {
-        instanceId: uuid,
-        appId: instance.appId,
-      },
     },
     payload: {
       instanceUuid: uuid,

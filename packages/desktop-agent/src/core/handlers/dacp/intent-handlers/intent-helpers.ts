@@ -393,7 +393,7 @@ export async function launchAppAndWaitForInstance(
     appMetadata
   )
 
-  const launcherInstanceId = launchResult.appIdentifier.instanceId
+  const launcherInstanceId = launchResult.instanceId
   if (!launcherInstanceId) {
     throw new Error("App launcher did not return an instance ID")
   }
