@@ -13,7 +13,7 @@
  */
 
 import type { Transport } from "../../core/interfaces/transport"
-import type { BrowserTypes } from "@finos/fdc3"
+import type { AppMetadata, BrowserTypes } from "@finos/fdc3"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { MessagePortTransport } from "./message-port-transport"
 import type {
@@ -181,15 +181,7 @@ export interface AppConnectionMetadata {
 /**
  * Handler option for intent resolution
  */
-export interface IntentHandler {
-  /** Instance ID if this is a running listener */
-  instanceId?: string
-  /** App ID from directory */
-  appId: string
-  /** Display name for the app */
-  appName?: string
-  /** Icon URL for the app */
-  appIcon?: string
+export type IntentHandler = AppMetadata & {
   /** Whether this is a running instance (has active listener) */
   isRunning: boolean
 }
@@ -1070,8 +1062,8 @@ export class WCPConnector {
    *   intent: 'ViewContact',
    *   context: { type: 'fdc3.contact', name: 'John' },
    *   handlers: [
-   *     { appId: 'crm-app', appName: 'CRM', isRunning: true, instanceId: 'inst-1' },
-   *     { appId: 'outlook', appName: 'Outlook', isRunning: false }
+   *     { appId: 'crm-app', title: 'CRM', isRunning: true, instanceId: 'inst-1' },
+   *     { appId: 'outlook', title: 'Outlook', isRunning: false }
    *   ]
    * })
    *

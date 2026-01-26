@@ -185,10 +185,12 @@ export async function handleRaiseIntentRequest(
         const apps = appDirectory.retrieveAppsById(handler.appId)
         const appInfo = apps[0] // Take first matching app
         return {
-          instanceId: isRunning ? (handler).instanceId : undefined,
           appId: handler.appId,
-          appName: appInfo?.title || handler.appId,
-          appIcon: appInfo?.icons?.[0]?.src,
+          instanceId: isRunning ? handler.instanceId : undefined,
+          title: appInfo?.title ?? handler.appId,
+          name: appInfo?.name,
+          description: appInfo?.description,
+          icons: appInfo?.icons,
           isRunning,
         }
       })

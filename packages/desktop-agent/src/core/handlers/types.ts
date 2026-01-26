@@ -1,4 +1,4 @@
-import type { AppIdentifier, Context } from "@finos/fdc3"
+import type { AppIdentifier, AppMetadata, Context } from "@finos/fdc3"
 import type { Transport } from "../interfaces/transport"
 import type { AppLauncher } from "../interfaces/app-launcher"
 import type { AppDirectoryManager } from "../app-directory/app-directory-manager"
@@ -13,13 +13,9 @@ import type { DACPMessageType } from "../dacp-protocol/dacp-messages"
 
 /**
  * Handler option for intent resolution UI.
- * Extends FDC3 AppIdentifier with display metadata and runtime state.
+ * Extends FDC3 AppMetadata with runtime state.
  */
-export interface IntentHandlerOption extends AppIdentifier {
-  /** Display name for the app */
-  appName?: string
-  /** Icon URL for the app */
-  appIcon?: string
+export type IntentHandlerOption = AppMetadata & {
   /** Whether this is a running instance (has active listener) */
   isRunning: boolean
 }

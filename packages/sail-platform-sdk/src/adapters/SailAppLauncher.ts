@@ -6,8 +6,8 @@
  * iframes, tabs, or windows.
  */
 
-import type { AppLauncher, AppLaunchRequest, AppLaunchResult } from "@finos/fdc3-sail-desktop-agent"
-import type { AppMetadata } from "@finos/fdc3"
+import type { AppLauncher } from "@finos/fdc3-sail-desktop-agent"
+import type { AppMetadata, AppIdentifier, BrowserTypes } from "@finos/fdc3"
 import { v4 as uuidv4 } from "uuid"
 
 /**
@@ -35,7 +35,10 @@ export interface SailAppLauncherConfig {
 export class SailAppLauncher implements AppLauncher {
   constructor(private config: SailAppLauncherConfig) {}
 
-  async launch(request: AppLaunchRequest, appMetadata: AppMetadata): Promise<AppLaunchResult> {
+  async launch(
+    request: BrowserTypes.OpenRequestPayload,
+    appMetadata: AppMetadata
+  ): Promise<AppIdentifier> {
     // Generate instance ID if not targeting existing instance
     const instanceId = request.app.instanceId || uuidv4()
 
@@ -50,14 +53,8 @@ export class SailAppLauncher implements AppLauncher {
 
     // Return launch result
     return {
-      appIdentifier: {
-        appId: request.app.appId,
-        instanceId,
-      },
-      launchMetadata: {
-        url,
-        method: "iframe", // TODO: Determine from app metadata or config
-      },
+      appId: request.app.appId,
+      instanceId,
     }
   }
 

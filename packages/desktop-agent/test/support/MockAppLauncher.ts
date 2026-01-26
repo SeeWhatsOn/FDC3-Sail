@@ -5,8 +5,8 @@
  * Provides hooks for tests to control and verify launch behavior.
  */
 
-import type { AppLauncher, AppLaunchRequest, AppLaunchResult } from "../../src/core/interfaces/app-launcher"
-import type { AppMetadata } from "@finos/fdc3"
+import type { AppLauncher } from "../../src/core/interfaces/app-launcher"
+import type { AppIdentifier, AppMetadata, BrowserTypes } from "@finos/fdc3"
 
 /**
  * Mock AppLauncher that simulates app launches for testing.
@@ -18,7 +18,10 @@ import type { AppMetadata } from "@finos/fdc3"
  */
 export class MockAppLauncher implements AppLauncher {
   private nextInstanceId: number = 0
-  private launchHistory: Array<{ request: AppLaunchRequest; metadata: AppMetadata }> = []
+  private launchHistory: Array<{
+    request: BrowserTypes.OpenRequestPayload
+    metadata: AppMetadata
+  }> = []
   private failApps: Set<string> = new Set()
   
   // Callbacks for test coordination
@@ -29,7 +32,10 @@ export class MockAppLauncher implements AppLauncher {
    * Launch an app, returning a mock instance ID.
    * Throws error if app is configured to fail or contains "missing" in name.
    */
-  async launch(request: AppLaunchRequest, appMetadata: AppMetadata): Promise<AppLaunchResult> {
+  async launch(
+    request: BrowserTypes.OpenRequestPayload,
+    appMetadata: AppMetadata
+  ): Promise<AppIdentifier> {
     const appId = request.app.appId
 
     // Track launch attempt
@@ -54,13 +60,8 @@ export class MockAppLauncher implements AppLauncher {
     }
 
     return {
-      appIdentifier: {
-        appId,
-        instanceId,
-      },
-      launchMetadata: {
-        method: "mock",
-      },
+      appId,
+      instanceId,
     }
   }
 
@@ -81,7 +82,10 @@ export class MockAppLauncher implements AppLauncher {
   /**
    * Get launch history for verification
    */
-  getLaunchHistory(): Array<{ request: AppLaunchRequest; metadata: AppMetadata }> {
+  getLaunchHistory(): Array<{
+    request: BrowserTypes.OpenRequestPayload
+    metadata: AppMetadata
+  }> {
     return [...this.launchHistory]
   }
 

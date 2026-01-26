@@ -1,0 +1,9 @@
+{
+  "ignoreExports": [
+    "packages/desktop-agent/src/index.ts",
+    "packages/desktop-agent/src/browser/index.ts",
+    "packages/desktop-agent/src/transports/index.ts",
+    "packages/sail-platform-sdk/src/index.ts",
+    "packages/sail-ui/src/index.ts"
+  ]
+}

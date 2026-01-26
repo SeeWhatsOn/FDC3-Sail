@@ -6,59 +6,7 @@
  * native processes, etc.)
  */
 
-import type { Context, AppMetadata, AppIdentifier } from "@finos/fdc3"
-
-/**
- * Request to launch an application
- * Extends FDC3 OpenRequestPayload with targetChannelId
- */
-export interface AppLaunchRequest {
-  /**
-   * App identifier (FDC3 standard structure)
-   */
-  app: AppIdentifier
-
-  /**
-   * Optional context to pass to the app on launch
-   */
-  context?: Context
-
-  /**
-   * Optional channel ID for the app to join after launch
-   */
-  targetChannelId?: string | null
-}
-
-/**
- * Result of a successful app launch
- * Extends FDC3 OpenResponsePayload with required appIdentifier and launchMetadata
- */
-export interface AppLaunchResult {
-  /**
-   * App identifier (required, from FDC3 OpenResponsePayload)
-   */
-  appIdentifier: AppIdentifier
-
-  /**
-   * Optional metadata about how/where the app was launched
-   */
-  launchMetadata?: {
-    /**
-     * URL or path where the app was launched
-     */
-    url?: string
-
-    /**
-     * Launch method used (e.g., "iframe", "window", "tab", "electron")
-     */
-    method?: string
-
-    /**
-     * Any additional environment-specific metadata
-     */
-    [key: string]: unknown
-  }
-}
+import type { AppMetadata, AppIdentifier, BrowserTypes } from "@finos/fdc3"
 
 /**
  * AppLauncher interface for launching FDC3 applications.
@@ -76,14 +24,17 @@ export interface AppLauncher {
    *
    * The Desktop Agent will handle:
    * - Registering the instance in AppInstanceRegistry
-   * - Setting the target channel (if specified)
+   * - Joining any requested channel (if applicable)
    * - Delivering launch context (if specified)
    * - Sending the FDC3 response
    *
-   * @param request - Launch request with app identifier, context, target channel
+   * @param request - Launch request with app identifier and context
    * @param appMetadata - App metadata from directory (for launch details)
-   * @returns Promise resolving to launch result
+   * @returns Promise resolving to launched app identifier
    * @throws Error if launch fails (Desktop Agent will convert to FDC3 error response)
    */
-  launch(request: AppLaunchRequest, appMetadata: AppMetadata): Promise<AppLaunchResult>
-}
+  launch(
+    request: BrowserTypes.OpenRequestPayload,
+    appMetadata: AppMetadata
+  ): Promise<AppIdentifier>
+ }
