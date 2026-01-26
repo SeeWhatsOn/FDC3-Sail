@@ -17,11 +17,11 @@ import type { BrowserTypes } from "@finos/fdc3"
 function createWCP1Hello(
   connectionAttemptUuid: string = "test-uuid"
 ): BrowserTypes.WebConnectionProtocol1Hello {
-  return {
+  const message = {
     type: "WCP1Hello",
     meta: {
       connectionAttemptUuid,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     },
     payload: {
       identityUrl: "https://example.com/app",
@@ -29,6 +29,8 @@ function createWCP1Hello(
       fdc3Version: "2.2",
     },
   }
+
+  return message as unknown as BrowserTypes.WebConnectionProtocol1Hello
 }
 
 // Helper to create a mock MessageEvent with source window

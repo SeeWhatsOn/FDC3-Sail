@@ -92,16 +92,16 @@ export interface ValidationResult {
  */
 export interface MessageValidator {
   /**
-   * Validates a DACP message against its schema
-   * @param messageType - The DACP message type (e.g., "broadcastRequest")
+   * Validates a message against its schema
+   * @param messageType - The message type (e.g., "broadcastRequest", "WCP4ValidateAppIdentity")
    * @param message - The message to validate
    * @returns Validation result with success status and any errors
    */
-  validate(messageType: DACPMessageType, message: unknown): ValidationResult
+  validate(messageType: MessageType, message: unknown): ValidationResult
 }
 
 // ============================================================================
-// DACP MESSAGE TYPES
+// MESSAGE TYPES
 // ============================================================================
 
 /**
@@ -112,6 +112,16 @@ export type DACPMessage =
   | BrowserTypes.AppRequestMessage
   | BrowserTypes.AgentResponseMessage
   | BrowserTypes.AgentEventMessage
+
+/**
+ * WCP message type union from the FDC3 schema definitions.
+ */
+export type WCPMessageType = BrowserTypes.WebConnectionProtocolMessage["type"]
+
+/**
+ * Combined DACP + WCP message types for validation/routing.
+ */
+export type MessageType = DACPMessageType | WCPMessageType
 
 // ============================================================================
 // DACP HANDLER CONTEXT
@@ -148,7 +158,7 @@ export interface DACPHandlerContext {
   requestIntentResolution?: IntentResolutionCallback
 
   /**
-   * Optional message validator for validating DACP messages.
+   * Optional message validator for validating DACP/WCP messages.
    * If not provided, messages are processed without validation.
    * Implementations can inject Zod, AJV, or custom validators.
    */

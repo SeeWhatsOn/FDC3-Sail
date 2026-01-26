@@ -1,7 +1,11 @@
 import { withDACPTimeout, logDACPMessage } from "../../dacp-protocol/dacp-utils"
 import { DACP_TIMEOUTS } from "../../dacp-protocol/dacp-constants"
-import { type DACPHandlerContext } from "../types"
-import { resolvePendingIntent, removeListenersForInstance, removeInstance } from "../../state/mutators"
+import { type DACPHandlerContext, type MessageType } from "../types"
+import {
+  resolvePendingIntent,
+  removeListenersForInstance,
+  removeInstance,
+} from "../../state/mutators"
 import { pendingIntentPromises } from "./intent-handlers"
 
 // Import all DACP handlers
@@ -13,7 +17,6 @@ import * as appHandlers from "./app-handlers"
 import * as wcpHandlers from "./wcp-handlers"
 import * as privateChannelHandlers from "./private-channel-handlers"
 import * as heartbeatHandlers from "./heartbeat-handlers"
-import type { DACPMessageType } from "../../dacp-protocol/dacp-messages"
 
 /**
  * Routes DACP messages to appropriate handlers
@@ -29,12 +32,11 @@ export async function routeDACPMessage(
     logger.info("DACP: Routing message", { message })
 
     // Extract message type for routing
-    const messageType = (message as { type?: string })?.type ?? "unknown"
-
+    const messageType = (message as { type?: MessageType })?.type
 
     // If an injected validator is provided, use it for validation
-    if (validator) {
-      const validationResult = validator.validate(messageType as DACPMessageType, message)
+    if (validator && messageType) {
+      const validationResult = validator.validate(messageType, message)
       if (!validationResult.valid) {
         logger.error("DACP message validation failed:", {
           messageType,
@@ -47,13 +49,14 @@ export async function routeDACPMessage(
     }
 
     // Get appropriate timeout for message type
-    const timeout = getTimeoutForMessageType(messageType)
+    const resolvedMessageType = messageType ?? "unknown"
+    const timeout = getTimeoutForMessageType(resolvedMessageType)
 
     // Route to handler with timeout
     await withDACPTimeout(
-      handleDACPMessage(messageType, message, context),
+      handleDACPMessage(resolvedMessageType, message, context),
       timeout,
-      `DACP ${messageType} handling`
+      `DACP ${resolvedMessageType} handling`
     )
   } catch (error) {
     // Use console.error as fallback since we don't have context here
@@ -71,7 +74,6 @@ export async function routeDACPMessage(
     // The router doesn't send responses directly to avoid conflicts
   }
 }
-
 
 /**
  * Routes messages to specific handlers based on message type

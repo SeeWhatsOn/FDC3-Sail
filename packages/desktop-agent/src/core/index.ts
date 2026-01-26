@@ -52,7 +52,14 @@ export type {
 export * from "./dacp-protocol/dacp-messages"
 
 // Handler types
-export type { DACPHandlerContext, DACPMessage, MessageValidator, ValidationResult } from "./handlers/types"
+export type {
+  DACPHandlerContext,
+  DACPMessage,
+  MessageValidator,
+  ValidationResult,
+  MessageType,
+  WCPMessageType,
+} from "./handlers/types"
 
 // DACP Protocol Utilities (errors, constants, message creators, utilities)
 export * from "./dacp-protocol/dacp-errors"

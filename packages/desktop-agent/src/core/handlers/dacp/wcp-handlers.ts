@@ -112,7 +112,11 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
 
     if (!appMetadata) {
       logger.error("[WCP4] App not found in directory for identity", identityUrl)
-      sendFailureResponse(context, "App not found in app directory", wcp4Message.meta.connectionAttemptUuid)
+      sendFailureResponse(
+        context,
+        "App not found in app directory",
+        wcp4Message.meta.connectionAttemptUuid
+      )
       return
     }
 
@@ -178,7 +182,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     }
 
     // 5. Send success response
-    const response: WCP5ValidateAppIdentityResponse = {
+    const response = {
       type: "WCP5ValidateAppIdentityResponse",
       payload: {
         appId: appMetadata.appId,
@@ -187,10 +191,12 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
         implementationMetadata,
       },
       meta: {
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         connectionAttemptUuid,
       },
-    }
+      // BrowserTypes currently type meta.timestamp as Date, but wire schema expects ISO string.
+      // TODO: Raise GitHub issue to align generated types with schema (timestamp as string).
+    } as unknown as WCP5ValidateAppIdentityResponse
 
     logger.info("[WCP4] Validation successful, sending WCP5 response", response.payload)
 
@@ -302,22 +308,22 @@ function sendFailureResponse(
     (context.instanceId.startsWith("temp-") ? context.instanceId.replace("temp-", "") : undefined)
 
   if (!resolvedConnectionAttemptUuid) {
-    context.logger.error(
-      "[WCP4] Cannot send failure response: connectionAttemptUuid not available"
-    )
+    context.logger.error("[WCP4] Cannot send failure response: connectionAttemptUuid not available")
     return
   }
 
-  const response: WCP5ValidateAppIdentityFailedResponse = {
+  const response = {
     type: "WCP5ValidateAppIdentityFailedResponse",
     payload: {
       message: error,
     },
     meta: {
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
       connectionAttemptUuid: resolvedConnectionAttemptUuid,
     },
-  }
+    // BrowserTypes currently type meta.timestamp as Date, but wire schema expects ISO string.
+    // TODO: Raise GitHub issue to align generated types with schema (timestamp as string).
+  } as unknown as WCP5ValidateAppIdentityFailedResponse
 
   context.logger.info("[WCP4] Validation failed, sending WCP5 failure response", error)
 

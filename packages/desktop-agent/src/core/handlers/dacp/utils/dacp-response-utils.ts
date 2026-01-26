@@ -1,6 +1,9 @@
 import type { BrowserTypes } from "@finos/fdc3"
 import type { Transport } from "../../../interfaces/transport"
-import { createDACPErrorResponse, type DACPRequestLike } from "../../../dacp-protocol/dacp-message-creators"
+import {
+  createDACPErrorResponse,
+  type DACPRequestLike,
+} from "../../../dacp-protocol/dacp-message-creators"
 import type { DACPErrorType } from "../../../dacp-protocol/dacp-constants"
 import type { DACPResponseType } from "../../../dacp-protocol/dacp-messages"
 import type { ResolveError, OpenError, ChannelError } from "@finos/fdc3"

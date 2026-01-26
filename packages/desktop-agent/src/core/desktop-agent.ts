@@ -133,7 +133,7 @@ export interface DesktopAgentConfig {
 
   /**
    * App directory manager for querying app metadata.
-   * OPTIONAL - defaults to new instance if not provided. 
+   * OPTIONAL - defaults to new instance if not provided.
    */
   appDirectoryManager?: AppDirectoryManager
 
@@ -179,7 +179,11 @@ export interface DesktopAgentConfig {
    * Implementation metadata for the desktop agent.
    * Required - must be provided by environment-specific code.
    */
-  implementationMetadata?: Pick<BrowserTypes.ImplementationMetadata, "fdc3Version" | "provider" | "providerVersion" > &  Partial<Pick<BrowserTypes.ImplementationMetadata, "optionalFeatures">>
+  implementationMetadata?: Pick<
+    BrowserTypes.ImplementationMetadata,
+    "fdc3Version" | "provider" | "providerVersion"
+  > &
+    Partial<Pick<BrowserTypes.ImplementationMetadata, "optionalFeatures">>
 }
 
 /**
@@ -194,9 +198,9 @@ export interface DesktopAgentConfig {
  * const agent = new DesktopAgent()
  *
  * agent.start()
- * 
- * OR 
- * 
+ *
+ * OR
+ *
  * const agent = new DesktopAgent({
  *   transport: new InMemoryTransport,
  *   appLauncher: new BrowserAppLauncher(),
@@ -214,7 +218,7 @@ export class DesktopAgent {
   private validator?: MessageValidator
   private logger: Logger
   private isStarted: boolean = false
-  private implementationMetadata?:DesktopAgentConfig["implementationMetadata"]
+  private implementationMetadata?: DesktopAgentConfig["implementationMetadata"]
   private userChannels: BrowserTypes.Channel[]
 
   constructor(config?: DesktopAgentConfig) {
@@ -234,7 +238,7 @@ export class DesktopAgent {
         DesktopAgentBridging: false,
         OriginatingAppMetadata: true,
         UserChannelMembershipAPIs: true,
-      }
+      },
     }
     // Initialize state - use this.userChannels to ensure consistency
     this.state = config?.initialState
@@ -282,12 +286,16 @@ export class DesktopAgent {
     this.transport.disconnect()
     this.isStarted = false
   }
-
   /**
-   * Handle an incoming DACP message from an app.
-   * Creates the handler context and routes to appropriate handler.
+   * Handle an incoming DACP message from an app and route it.
    */
   private async handleMessage(message: unknown): Promise<void> {
+    const messageType = (message as { type?: string })?.type
+    if (messageType?.startsWith("WCP")) {
+      await this.handleWcpMessage(message)
+      return
+    }
+
     // Only process messages FROM apps (have source.instanceId)
     // Messages TO apps (have destination.instanceId but no source) should pass through
     const instanceId = this.extractInstanceId(message)
@@ -301,11 +309,9 @@ export class DesktopAgent {
     const context = this.createHandlerContext(instanceId)
     await routeDACPMessage(message, context)
   }
-
   /**
    * Extract instanceId from DACP message metadata.
-   * Messages from apps have meta.source.instanceId set by WCPConnector.
-   * Messages to apps have meta.destination.instanceId but no source.
+   * Messages from apps have meta.source.instanceId set by WCPConnector; messages to apps do not.
    */
   private extractInstanceId(message: unknown): string | null {
     if (!message || typeof message !== "object") {
@@ -315,22 +321,42 @@ export class DesktopAgent {
     const messageObj = message as { meta?: DACPMessageMeta }
     return messageObj.meta?.source?.instanceId || null
   }
+  private async handleWcpMessage(message: unknown): Promise<void> {
+    if (!message || typeof message !== "object") {
+      return
+    }
 
+    const messageObj = message as {
+      type?: string
+      meta?: { connectionAttemptUuid?: string }
+    }
+
+    if (messageObj.type === "WCP4ValidateAppIdentity") {
+      const connectionAttemptUuid = messageObj.meta?.connectionAttemptUuid
+      if (!connectionAttemptUuid) {
+        this.logger.warn("[WCP4] Missing connectionAttemptUuid, cannot route message")
+        return
+      }
+
+      const tempInstanceId = `temp-${connectionAttemptUuid}`
+      const wcpContext = this.createHandlerContext(tempInstanceId)
+      await routeDACPMessage(message, wcpContext)
+      return
+    }
+
+    const instanceId = this.extractInstanceId(message) ?? this.transport.getInstanceId()
+    if (!instanceId) {
+      this.logger.warn("[WCP] Missing instanceId, cannot route message", {
+        messageType: messageObj.type,
+      })
+      return
+    }
+
+    const wcpContext = this.createHandlerContext(instanceId)
+    await routeDACPMessage(message, wcpContext)
+  }
   /**
-   * Handle transport-level disconnection.
-   * 
-   * This is called when the ENTIRE transport disconnects (e.g., all sockets for a user
-   * disconnect, or the transport is explicitly shut down). This is different from
-   * individual app disconnects, which are handled via:
-   * - WCP6Goodbye messages (apps send goodbye when closing)
-   * - DACP heartbeat timeout (detects dead connections)
-   * 
-   * When the transport disconnects, we cannot send WCP6Goodbye to apps because
-   * the transport is already gone. We can only clean up internal state.
-   * 
-   * Note: Individual socket/app disconnects in server mode should be handled by
-   * the transport layer (e.g., SocketIOServerTransport) before the transport fully
-   * disconnects, allowing WCP6Goodbye to be sent if needed.
+   * Handle transport-level disconnection; app disconnects use WCP6Goodbye/heartbeat.
    */
   private handleDisconnect(): void {
     // Transport is already disconnected - we cannot send messages
@@ -343,17 +369,14 @@ export class DesktopAgent {
       cleanupDACPHandlers(context)
     }
   }
-
   /**
    * Create the handler context for DACP message handlers.
-   *
    * @param instanceId - The app instance ID extracted from message metadata
    */
   private createHandlerContext(instanceId: string): DACPHandlerContext {
-    const setState: StateSetter = (callback) => {
+    const setState: StateSetter = callback => {
       this.state = callback(this.state)
     }
-
     return {
       transport: this.transport,
       instanceId,
@@ -367,14 +390,12 @@ export class DesktopAgent {
       implementationMetadata: this.implementationMetadata,
     }
   }
-
   /**
    * Get current state snapshot (for debugging/export)
    */
   getState(): AgentState {
     return this.state
   }
-
   /**
    * Update state (for testing purposes only).
    * In production, state is only updated through handler contexts.
@@ -385,35 +406,28 @@ export class DesktopAgent {
     }
     setState(callback)
   }
-
-  /**
-   * Export state as JSON string (for debugging/persistence)
-   */
+  /** Export state as JSON string (for debugging/persistence) */
   exportState(): string {
     return JSON.stringify(this.state, null, 2)
   }
-
   /**
    * Get the app directory (for testing/inspection)
    */
   getAppDirectory(): AppDirectoryManager {
     return this.appDirectory
   }
-
   /**
    * Check if the agent is started
    */
   getIsStarted(): boolean {
     return this.isStarted
   }
-
   /**
    * Get the implementation metadata (for testing/inspection)
    */
   getImplementationMetadata(): DesktopAgentConfig["implementationMetadata"] {
     return this.implementationMetadata
   }
-
   /**
    * Get the configured user channels.
    * User channels are static configuration set at initialization and never change.
@@ -421,5 +435,4 @@ export class DesktopAgent {
   getUserChannels(): BrowserTypes.Channel[] {
     return this.userChannels
   }
-
 }

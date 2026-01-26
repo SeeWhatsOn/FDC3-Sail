@@ -1,5 +1,5 @@
 /**
- * Zod-based Message Validator for DACP Messages
+ * Zod-based Message Validator for DACP and WCP messages
  *
  * This validator uses the auto-generated Zod schemas from the FDC3 specification
  * to validate DACP messages at runtime. It's an optional component that can be
@@ -100,7 +100,7 @@ const schemaMap: SchemaMap = {
 }
 
 /**
- * Creates a Zod-based message validator for DACP messages.
+ * Creates a Zod-based message validator for DACP and WCP messages.
  *
  * @param options - Optional configuration
  * @param options.strict - If true, reject unknown message types. Default: false (pass through)

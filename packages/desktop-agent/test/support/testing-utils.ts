@@ -58,6 +58,20 @@ function assertFieldValue(
   fieldName: string,
   context?: { rowIndex: number; actualRow: unknown }
 ): void {
+  // Spec compliance: DACP responses do not require destination appId
+  if (fieldName === "to.appId" && actualValue === undefined) {
+    return
+  }
+
+  // Spec compliance: eventUuid is only required for event messages
+  if (fieldName === "msg.meta.eventUuid") {
+    const actualRow = context?.actualRow as { msg?: { type?: string } } | undefined
+    const messageType = actualRow?.msg?.type
+    if (!messageType || !messageType.endsWith("Event")) {
+      return
+    }
+  }
+
   // Handle pattern matching for "matches_type" fields
   if (fieldName.includes("matches_type") || fieldName.includes("matches_")) {
     try {

@@ -19,7 +19,7 @@ export interface DACPRequestLike {
  * Creates a DACP error response following the specification format.
  * Accepts any object with meta.requestUuid (typically a DACPMessage).
  * errorType can be a DACPErrorType or an FDC3 error enum value (string).
- * 
+ *
  * Note: DACP protocol may use some error strings that differ from FDC3 API enums:
  * - DACP uses "AppLaunchFailed" but FDC3 uses "ErrorOnLaunch" for the same concept
  * - DACP uses generic "ChannelError" which doesn't map to a specific FDC3 enum value
@@ -30,7 +30,7 @@ export function createDACPErrorResponse(
   responseType: DACPResponseType,
   errorMessage?: string
 ): BrowserTypes.AgentResponseMessage {
-  return {
+  const response = {
     type: responseType,
     payload: {
       error: errorType,
@@ -39,9 +39,13 @@ export function createDACPErrorResponse(
     meta: {
       responseUuid: crypto.randomUUID(),
       requestUuid: originalRequest.meta.requestUuid,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     },
-  } as BrowserTypes.AgentResponseMessage
+  }
+
+  // BrowserTypes currently type meta.timestamp as Date, but wire schema expects ISO string.
+  // TODO: Raise GitHub issue to align generated types with schema (timestamp as string).
+  return response as unknown as BrowserTypes.AgentResponseMessage
 }
 
 /**
@@ -53,15 +57,19 @@ export function createDACPSuccessResponse(
   responseType: DACPResponseType,
   payload: Record<string, unknown> = {}
 ): BrowserTypes.AgentResponseMessage {
-  return {
+  const response = {
     type: responseType,
     payload,
     meta: {
       responseUuid: crypto.randomUUID(),
       requestUuid: originalRequest.meta.requestUuid,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     },
-  } as BrowserTypes.AgentResponseMessage
+  }
+
+  // BrowserTypes currently type meta.timestamp as Date, but wire schema expects ISO string.
+  // TODO: Raise GitHub issue to align generated types with schema (timestamp as string).
+  return response as unknown as BrowserTypes.AgentResponseMessage
 }
 
 /**
@@ -71,14 +79,18 @@ export function createDACPEvent(
   eventType: BrowserTypes.EventMessageType,
   payload: Record<string, unknown> = {}
 ): BrowserTypes.AgentEventMessage {
-  return {
+  const response = {
     type: eventType,
     payload,
     meta: {
       eventUuid: crypto.randomUUID(),
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     },
-  } as BrowserTypes.AgentEventMessage
+  }
+
+  // BrowserTypes currently type meta.timestamp as Date, but wire schema expects ISO string.
+  // TODO: Raise GitHub issue to align generated types with schema (timestamp as string).
+  return response as unknown as BrowserTypes.AgentEventMessage
 }
 
 /**
@@ -90,7 +102,7 @@ export function createIntentEvent(
   requestUuid: string,
   originatingApp: { appId: string; instanceId?: string; desktopAgent?: string }
 ): BrowserTypes.IntentEvent {
-  return {
+  const response = {
     type: "intentEvent",
     payload: {
       intent,
@@ -104,7 +116,11 @@ export function createIntentEvent(
     },
     meta: {
       eventUuid: crypto.randomUUID(),
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     },
-  } as BrowserTypes.IntentEvent
+  }
+
+  // BrowserTypes currently type meta.timestamp as Date, but wire schema expects ISO string.
+  // TODO: Raise GitHub issue to align generated types with schema (timestamp as string).
+  return response as unknown as BrowserTypes.IntentEvent
 }
