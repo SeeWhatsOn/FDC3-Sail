@@ -123,7 +123,11 @@ describe("MessagePortTransport", () => {
       // Give time for message to be processed
       await new Promise(resolve => setTimeout(resolve, 50))
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error in message handler:", expect.any(Error))
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "[MessagePortTransport] Error in message handler:",
+        expect.any(Error),
+        { messageType: "test" }
+      )
       consoleErrorSpy.mockRestore()
     })
 
