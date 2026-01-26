@@ -21,7 +21,4 @@ packages/desktop-agent/test-results.xml
 .agent/
 .gitignore
 AGENTS.md
-.claude/skills/issue-creator/SKILL.md
-.claude/skills/issue-refiner/SKILL.md
-.claude/skills/issue-solver/SKILL.md
-.claude/skills/review-code/SKILL.md
+.cursor/
