@@ -152,15 +152,19 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
 When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
   const state = this.getState()
   const instance = getInstance(state, uuid)
-  if (!instance) {
-    throw new Error(`Did not find app instance ${uuid}`)
-  }
-
-  // Get app URL from app directory to match what WCP4 handler expects
-  const apps = this.appDirectoryManager.retrieveAppsById(instance.appId)
-  const appUrl = apps.length > 0 && apps[0].details && typeof apps[0].details === "object" && "url" in apps[0].details
-    ? (apps[0].details.url)
-    : `https://example.com/${instance.appId}`
+  // Get app URL from app directory to match what WCP4 handler expects.
+  // If instance is missing, use an unknown app URL to trigger WCP5 failure.
+  const appUrl = instance
+    ? (() => {
+        const apps = this.appDirectoryManager.retrieveAppsById(instance.appId)
+        return apps.length > 0 &&
+          apps[0].details &&
+          typeof apps[0].details === "object" &&
+          "url" in apps[0].details
+          ? apps[0].details.url
+          : `https://example.com/${instance.appId}`
+      })()
+    : `https://example.com/unknown-app/${uuid}`
 
   const message: WebConnectionProtocol4ValidateAppIdentity = {
     type: "WCP4ValidateAppIdentity",
@@ -169,6 +173,7 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
       timestamp: new Date(),
     },
     payload: {
+      instanceId: uuid,
       instanceUuid: uuid,
       actualUrl: appUrl,
       identityUrl: appUrl,
