@@ -8,6 +8,7 @@ import { DataTable } from "@cucumber/cucumber"
 import { CustomWorld } from "../world"
 import { get } from "lodash"
 import expect from "expect"
+import { inspect } from "util"
 
 /**
  * Handle resolution of special values in test data.
@@ -30,25 +31,56 @@ export function handleResolve(value: string, world: CustomWorld): string | null 
 }
 
 /**
+ * Format a value for display in error messages.
+ */
+function formatValue(value: unknown): string {
+  if (value === null) return "null"
+  if (value === undefined) return "undefined"
+  if (typeof value === "object") {
+    return inspect(value, { depth: 5, compact: false, breakLength: 80 })
+  }
+  return String(value)
+}
+
+/**
  * Assert a field value matches the expected value.
  * Handles special cases like matches_type fields and null/undefined values.
- * Uses Jest expect for assertions.
+ * Uses Jest expect for assertions with enhanced error messages.
  */
 function assertFieldValue(
   actualValue: unknown,
   expectedValue: string | null | undefined,
-  fieldName: string
+  fieldName: string,
+  context?: { rowIndex: number; actualRow: unknown }
 ): void {
   // Handle pattern matching for "matches_type" fields
   if (fieldName.includes("matches_type") || fieldName.includes("matches_")) {
-    expect(actualValue).toBeTruthy()
+    try {
+      expect(actualValue).toBeTruthy()
+    } catch (error) {
+      const contextMsg = context
+        ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
+        : ""
+      throw new Error(
+        `Field "${fieldName}" should be truthy but got: ${formatValue(actualValue)}${contextMsg}`
+      )
+    }
     return
   }
 
   // Handle null/undefined expectations
   // {null} means "no value present" - accept null or undefined
   if (expectedValue === null) {
-    expect(actualValue).toBeFalsy()
+    try {
+      expect(actualValue).toBeFalsy()
+    } catch (error) {
+      const contextMsg = context
+        ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
+        : ""
+      throw new Error(
+        `Field "${fieldName}" should be null/undefined but got: ${formatValue(actualValue)}${contextMsg}`
+      )
+    }
     return
   }
 
@@ -60,24 +92,54 @@ function assertFieldValue(
   // If expected looks like a number, convert for comparison
   const numericValue = Number(expectedValue)
   if (!isNaN(numericValue) && typeof actualValue === "number") {
-    expect(actualValue).toBe(numericValue)
+    try {
+      expect(actualValue).toBe(numericValue)
+    } catch (error) {
+      const contextMsg = context
+        ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
+        : ""
+      throw new Error(
+        `Field "${fieldName}" expected number ${numericValue} but got: ${formatValue(actualValue)}${contextMsg}`
+      )
+    }
     return
   }
 
-  // Standard equality check
-  expect(actualValue).toEqual(expectedValue)
+  // Standard equality check with enhanced error message
+  try {
+    expect(actualValue).toEqual(expectedValue)
+  } catch (error) {
+    const contextMsg = context
+      ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
+      : ""
+    throw new Error(
+      `Field "${fieldName}" mismatch:\n  Expected: ${formatValue(expectedValue)}\n  Received: ${formatValue(actualValue)}${contextMsg}`
+    )
+  }
 }
 
 /**
  * Match data from test against expected values in DataTable.
  * Supports nested property access and special value handling.
- * Uses Jest expect for assertions.
+ * Uses Jest expect for assertions with enhanced error messages.
  */
 export function matchData(world: CustomWorld, actual: unknown[], dataTable: DataTable): void {
   const expected = dataTable.hashes()
 
-  // Length check using Jest expect
-  expect(actual.length).toBe(expected.length)
+  // Length check with detailed error message
+  if (actual.length !== expected.length) {
+    const errorMessage = [
+      `Expected ${expected.length} message(s) but received ${actual.length} message(s)`,
+      "",
+      "Expected messages:",
+      ...expected.map((row, idx) => `  [${idx}] ${inspect(row, { depth: 3, compact: true })}`),
+      "",
+      "Actual messages:",
+      ...actual.map((msg, idx) => `  [${idx}] ${inspect(msg, { depth: 3, compact: true })}`),
+    ].join("\n")
+
+    throw new Error(errorMessage)
+  }
 
   expected.forEach((expectedRow, rowIndex) => {
     const actualRow = actual[rowIndex]
@@ -94,7 +156,10 @@ export function matchData(world: CustomWorld, actual: unknown[], dataTable: Data
 
       const actualValue = get(actualRow, actualKey) as unknown
 
-      assertFieldValue(actualValue, resolvedExpected, key)
+      assertFieldValue(actualValue, resolvedExpected, key, {
+        rowIndex,
+        actualRow,
+      })
     })
   })
 }

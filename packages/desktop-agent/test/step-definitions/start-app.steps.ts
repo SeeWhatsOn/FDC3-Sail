@@ -122,15 +122,25 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
     throw new Error(`Did not find app instance ${uuid}`)
   }
 
+  // Get app URL from app directory to match what WCP4 handler expects
+  const apps = this.appDirectoryManager.retrieveAppsById(instance.appId)
+  const appUrl = apps.length > 0 && apps[0].details && typeof apps[0].details === "object" && "url" in apps[0].details
+    ? (apps[0].details.url as string)
+    : `https://example.com/${instance.appId}`
+
   const message: WebConnectionProtocol4ValidateAppIdentity = {
     type: "WCP4ValidateAppIdentity",
     meta: {
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
+      source: {
+        instanceId: uuid,
+        appId: instance.appId,
+      },
     },
     payload: {
-      actualUrl: "something",
-      identityUrl: "something",
+      actualUrl: appUrl,
+      identityUrl: appUrl,
     },
   }
 
@@ -150,16 +160,26 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
     throw new Error(`Did not find app instance ${uuid}`)
   }
 
+  // Get app URL from app directory to match what WCP4 handler expects
+  const apps = this.appDirectoryManager.retrieveAppsById(instance.appId)
+  const appUrl = apps.length > 0 && apps[0].details && typeof apps[0].details === "object" && "url" in apps[0].details
+    ? (apps[0].details.url as string)
+    : `https://example.com/${instance.appId}`
+
   const message: WebConnectionProtocol4ValidateAppIdentity = {
     type: "WCP4ValidateAppIdentity",
     meta: {
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
+      source: {
+        instanceId: uuid,
+        appId: instance.appId,
+      },
     },
     payload: {
       instanceUuid: uuid,
-      actualUrl: "something",
-      identityUrl: "something",
+      actualUrl: appUrl,
+      identityUrl: appUrl,
     },
   }
 
