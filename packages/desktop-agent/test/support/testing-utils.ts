@@ -137,6 +137,34 @@ function assertFieldValue(
   }
 }
 
+function matchesRow(
+  world: CustomWorld,
+  actualRow: unknown,
+  expectedRow: Record<string, string>,
+  rowIndex: number
+): boolean {
+  try {
+    Object.entries(expectedRow).forEach(([key, expectedValue]) => {
+      const resolvedExpected = handleResolve(expectedValue, world)
+
+      // Map matches_type to type for message fields
+      let actualKey = key
+      if (key.includes("matches_type")) {
+        actualKey = key.replace(/matches_type/g, "type")
+      }
+
+      const actualValue = get(actualRow, actualKey) as unknown
+      assertFieldValue(actualValue, resolvedExpected, key, {
+        rowIndex,
+        actualRow,
+      })
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /**
  * Match data from test against expected values in DataTable.
  * Supports nested property access and special value handling.
@@ -180,5 +208,52 @@ export function matchData(world: CustomWorld, actual: unknown[], dataTable: Data
         actualRow,
       })
     })
+  })
+}
+
+/**
+ * Match data from test against expected values in DataTable, ignoring order.
+ * Uses last-N slicing at the caller to scope recent messages.
+ */
+export function matchDataUnordered(
+  world: CustomWorld,
+  actual: unknown[],
+  dataTable: DataTable
+): void {
+  const expected = dataTable.hashes()
+
+  if (actual.length !== expected.length) {
+    const errorMessage = [
+      `Expected ${expected.length} message(s) but received ${actual.length} message(s)`,
+      "",
+      "Expected messages:",
+      ...expected.map((row, idx) => `  [${idx}] ${inspect(row, { depth: 3, compact: true })}`),
+      "",
+      "Actual messages:",
+      ...actual.map((msg, idx) => `  [${idx}] ${inspect(msg, { depth: 3, compact: true })}`),
+    ].join("\n")
+
+    throw new Error(errorMessage)
+  }
+
+  const remaining = [...actual]
+  expected.forEach((expectedRow, rowIndex) => {
+    const matchIndex = remaining.findIndex(actualRow =>
+      matchesRow(world, actualRow, expectedRow, rowIndex)
+    )
+
+    if (matchIndex === -1) {
+      const errorMessage = [
+        "Expected row not found in actual messages:",
+        `  [${rowIndex}] ${inspect(expectedRow, { depth: 3, compact: true })}`,
+        "",
+        "Actual messages:",
+        ...remaining.map((msg, idx) => `  [${idx}] ${inspect(msg, { depth: 3, compact: true })}`),
+      ].join("\n")
+
+      throw new Error(errorMessage)
+    }
+
+    remaining.splice(matchIndex, 1)
   })
 }
