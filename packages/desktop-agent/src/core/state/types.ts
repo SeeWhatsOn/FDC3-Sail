@@ -135,9 +135,9 @@ export interface PendingIntent {
 }
 
 /**
- * Intent resolution result
+ * Intent resolution record (internal state)
  */
-export interface IntentResolution {
+export interface IntentResolutionRecord {
   /** Request that was resolved */
   requestId: string
 
@@ -262,7 +262,7 @@ export interface AgentState {
     /** Pending intents keyed by requestId */
     pending: Record<string, PendingIntent>
     /** Intent resolution history keyed by requestId */
-    history: Record<string, IntentResolution>
+    history: Record<string, IntentResolutionRecord>
   }
 
   /** Channel-related state */

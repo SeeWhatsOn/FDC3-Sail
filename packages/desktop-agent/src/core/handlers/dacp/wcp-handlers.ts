@@ -7,6 +7,13 @@
  */
 
 import type { AppMetadata } from "@finos/fdc3"
+import type {
+  AppMetadata as SchemaAppMetadata,
+  ImplementationMetadata,
+  WebConnectionProtocol4ValidateAppIdentity,
+  WebConnectionProtocol5ValidateAppIdentityFailedResponse,
+  WebConnectionProtocol5ValidateAppIdentitySuccessResponse,
+} from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type { DACPHandlerContext } from "../types"
 import { sendDACPResponse } from "./utils/dacp-response-utils"
 import { startHeartbeat } from "./heartbeat-handlers"
@@ -14,59 +21,9 @@ import { cleanupDACPHandlers } from "./index"
 import { getInstance } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
 
-/**
- * WCP4ValidateAppIdentity message from FDC3 app
- * Supports both "Wcp4Validateappidentity" and "WCP4ValidateAppIdentity" type variants
- */
-interface Wcp4ValidateAppIdentity {
-  type: "WCP4ValidateAppIdentity"
-  payload: {
-    identityUrl: string
-    actualUrl: string
-    instanceId?: string
-    instanceUuid?: string
-  }
-  meta: {
-    timestamp: string
-    connectionAttemptUuid?: string
-  }
-}
-
-/**
- * WCP5ValidateAppIdentityResponse - success response
- */
-interface WCP5ValidateAppIdentityResponse {
-  type: "WCP5ValidateAppIdentityResponse"
-  payload: {
-    appId: string
-    instanceId: string
-    instanceUuid: string
-    implementationMetadata?: {
-      fdc3Version: string
-      provider: string
-      providerVersion?: string
-    }
-  }
-  meta: {
-    timestamp: string
-    connectionAttemptUuid?: string
-  }
-}
-
-/**
- * WCP5ValidateAppIdentityFailedResponse - failure response
- */
-interface WCP5ValidateAppIdentityFailedResponse {
-  type: "WCP5ValidateAppIdentityFailedResponse"
-  payload: {
-    error: string
-  }
-  meta: {
-    timestamp: string
-    requestUuid: string
-    responseUuid: string
-  }
-}
+type Wcp4ValidateAppIdentity = WebConnectionProtocol4ValidateAppIdentity
+type WCP5ValidateAppIdentityResponse = WebConnectionProtocol5ValidateAppIdentitySuccessResponse
+type WCP5ValidateAppIdentityFailedResponse = WebConnectionProtocol5ValidateAppIdentityFailedResponse
 
 /**
  * Handles Wcp4Validateappidentity messages from FDC3 apps.
@@ -102,7 +59,8 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
       logger.error("[WCP4] Origin mismatch", { identityOrigin, actualOrigin })
       sendFailureResponse(
         context,
-        "Origin mismatch: identityUrl and actualUrl must have same origin"
+        "Origin mismatch: identityUrl and actualUrl must have same origin",
+        wcp4Message.meta.connectionAttemptUuid
       )
       return
     }
@@ -154,7 +112,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
 
     if (!appMetadata) {
       logger.error("[WCP4] App not found in directory for identity", identityUrl)
-      sendFailureResponse(context, "App not found in app directory")
+      sendFailureResponse(context, "App not found in app directory", wcp4Message.meta.connectionAttemptUuid)
       return
     }
 
@@ -185,6 +143,40 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
       instanceUuid = newInstance.instanceId // Use same for now
     }
 
+    // Extract connectionAttemptUuid from WCP4 message or from temporary instanceId
+    // The temporary instanceId format is "temp-{connectionAttemptUuid}"
+    let connectionAttemptUuid: string | undefined = wcp4Message.meta.connectionAttemptUuid
+    if (!connectionAttemptUuid && context.instanceId.startsWith("temp-")) {
+      connectionAttemptUuid = context.instanceId.replace("temp-", "")
+    }
+
+    if (!connectionAttemptUuid) {
+      throw new Error("Missing connectionAttemptUuid for WCP5 response")
+    }
+
+    const appMetadataForImplementation: SchemaAppMetadata = {
+      appId: appMetadata.appId,
+      instanceId,
+      name: appMetadata.name,
+      title: appMetadata.title,
+      description: appMetadata.description,
+      icons: appMetadata.icons,
+      screenshots: appMetadata.screenshots,
+    }
+
+    const baseImplementationMetadata = context.implementationMetadata
+    const implementationMetadata: ImplementationMetadata = {
+      appMetadata: appMetadataForImplementation,
+      fdc3Version: baseImplementationMetadata?.fdc3Version ?? "2.2",
+      provider: baseImplementationMetadata?.provider ?? "FDC3-Sail",
+      providerVersion: baseImplementationMetadata?.providerVersion ?? "0.0.1",
+      optionalFeatures: baseImplementationMetadata?.optionalFeatures ?? {
+        DesktopAgentBridging: false,
+        OriginatingAppMetadata: true,
+        UserChannelMembershipAPIs: true,
+      },
+    }
+
     // 5. Send success response
     const response: WCP5ValidateAppIdentityResponse = {
       type: "WCP5ValidateAppIdentityResponse",
@@ -192,25 +184,15 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
         appId: appMetadata.appId,
         instanceId,
         instanceUuid,
-        implementationMetadata: {
-          fdc3Version: "2.2",
-          provider: "FDC3-Sail",
-          providerVersion: "0.0.1",
-        },
+        implementationMetadata,
       },
       meta: {
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(),
+        connectionAttemptUuid,
       },
     }
 
     logger.info("[WCP4] Validation successful, sending WCP5 response", response.payload)
-
-    // Extract connectionAttemptUuid from WCP4 message or from temporary instanceId
-    // The temporary instanceId format is "temp-{connectionAttemptUuid}"
-    let connectionAttemptUuid: string | undefined = wcp4Message.meta.connectionAttemptUuid
-    if (!connectionAttemptUuid && context.instanceId.startsWith("temp-")) {
-      connectionAttemptUuid = context.instanceId.replace("temp-", "")
-    }
 
     // Use the source instanceId (temporary) as destination so WCP connector can migrate it
     // The WCP connector will intercept this response and migrate from temp to actual instanceId
@@ -235,7 +217,8 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     logger.error("[WCP4] Error during validation", error)
     sendFailureResponse(
       context,
-      error instanceof Error ? error.message : "Internal validation error"
+      error instanceof Error ? error.message : "Internal validation error",
+      wcp4Message.meta.connectionAttemptUuid
     )
   }
 }
@@ -309,18 +292,30 @@ export function handleWCP6Goodbye(_message: unknown, context: DACPHandlerContext
 /**
  * Helper to send WCP5 failure response
  */
-function sendFailureResponse(context: DACPHandlerContext, error: string): void {
+function sendFailureResponse(
+  context: DACPHandlerContext,
+  error: string,
+  connectionAttemptUuid?: string
+): void {
+  const resolvedConnectionAttemptUuid =
+    connectionAttemptUuid ??
+    (context.instanceId.startsWith("temp-") ? context.instanceId.replace("temp-", "") : undefined)
+
+  if (!resolvedConnectionAttemptUuid) {
+    context.logger.error(
+      "[WCP4] Cannot send failure response: connectionAttemptUuid not available"
+    )
+    return
+  }
+
   const response: WCP5ValidateAppIdentityFailedResponse = {
     type: "WCP5ValidateAppIdentityFailedResponse",
     payload: {
-      error,
+      message: error,
     },
     meta: {
-      timestamp: new Date().toISOString(),
-      // We need requestUuid/responseUuid but don't have them easily here without the request message
-      // For now, generating new ones or using empty strings if allowed by schema
-      requestUuid: "",
-      responseUuid: crypto.randomUUID(),
+      timestamp: new Date(),
+      connectionAttemptUuid: resolvedConnectionAttemptUuid,
     },
   }
 
