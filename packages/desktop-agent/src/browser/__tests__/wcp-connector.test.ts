@@ -170,22 +170,19 @@ describe("WCPConnector", () => {
 
         // Wait for async handling
         setTimeout(() => {
-          // Should have sent WCP3Handshake
-          expect(postMessageSpy).toHaveBeenCalledWith(
-            expect.objectContaining({
-              type: "WCP3Handshake",
-              meta: expect.objectContaining({
-                connectionAttemptUuid: "test-connection-uuid",
-              }),
-              payload: expect.objectContaining({
-                fdc3Version: "2.2",
-                intentResolverUrl: expect.stringContaining("/resolver"),
-                channelSelectorUrl: expect.stringContaining("/selector"),
-              }),
-            }),
-            "https://example.com",
-            expect.arrayContaining([expect.any(MessagePort)])
-          )
+          const calls = postMessageSpy.mock.calls as unknown as Array<
+            [BrowserTypes.WebConnectionProtocol3Handshake, string, MessagePort[]]
+          >
+          expect(calls.length).toBeGreaterThan(0)
+
+          const [handshakeMessage, targetOrigin, ports] = calls[0]
+          expect(handshakeMessage.type).toBe("WCP3Handshake")
+          expect(handshakeMessage.meta.connectionAttemptUuid).toBe("test-connection-uuid")
+          expect(handshakeMessage.payload.fdc3Version).toBe("2.2")
+          expect(handshakeMessage.payload.intentResolverUrl).toContain("/resolver")
+          expect(handshakeMessage.payload.channelSelectorUrl).toContain("/selector")
+          expect(targetOrigin).toBe("https://example.com")
+          expect(ports).toEqual(expect.arrayContaining([expect.any(MessagePort)]))
 
           postMessageSpy.mockRestore()
           resolve()
@@ -265,16 +262,15 @@ describe("WCPConnector", () => {
         window.dispatchEvent(event)
 
         setTimeout(() => {
-          expect(postMessageSpy).toHaveBeenCalledWith(
-            expect.objectContaining({
-              payload: expect.objectContaining({
-                intentResolverUrl: false,
-                channelSelectorUrl: false,
-              }),
-            }),
-            expect.any(String),
-            expect.any(Array)
-          )
+          const calls = postMessageSpy.mock.calls as unknown as Array<
+            [BrowserTypes.WebConnectionProtocol3Handshake, string, MessagePort[]]
+          >
+          expect(calls.length).toBeGreaterThan(0)
+
+          const [handshakeMessage, targetOrigin] = calls[0]
+          expect(handshakeMessage.payload.intentResolverUrl).toBe(false)
+          expect(handshakeMessage.payload.channelSelectorUrl).toBe(false)
+          expect(targetOrigin).toBe("https://example.com")
 
           postMessageSpy.mockRestore()
           resolve()
@@ -346,11 +342,12 @@ describe("WCPConnector", () => {
 
       // Mock MessageChannel to throw
       const originalMessageChannel = global.MessageChannel
-      global.MessageChannel = class {
+      class FailingMessageChannel {
         constructor() {
           throw new Error("MessageChannel creation failed")
         }
-      } as any
+      }
+      global.MessageChannel = FailingMessageChannel as unknown as typeof MessageChannel
 
       const wcp1Hello = createWCP1Hello("error-uuid")
       const event = createMessageEvent(wcp1Hello)

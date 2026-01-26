@@ -241,19 +241,38 @@ Then('{string} is an array of objects with the following contents', function (th
     throw new Error(`Expected ${propName} to be an array, but got ${JSON.stringify(value)}`)
   }
   
-  const expected = dataTable.hashes()
-  if (value.length !== expected.length) {
-    throw new Error(`Expected array length ${expected.length}, but got ${value.length}`)
+  const expectedRaw = dataTable.hashes() as unknown
+  if (!Array.isArray(expectedRaw)) {
+    throw new Error(`Expected ${propName} expectations to be an array`)
+  }
+  const expected = expectedRaw as Array<Record<string, string>>
+
+  const valueArray = value as unknown[]
+  if (valueArray.length !== expected.length) {
+    throw new Error(`Expected array length ${expected.length}, but got ${valueArray.length}`)
   }
   
+  const isRecord = (input: unknown): input is Record<string, unknown> =>
+    typeof input === "object" && input !== null
+
   // Simple comparison - could be enhanced
   for (let i = 0; i < expected.length; i++) {
     const expectedRow = expected[i]
-    const actualRow = value[i]
+    const actualRow = valueArray[i]
+    if (!isRecord(actualRow)) {
+      throw new Error(
+        `Expected ${propName}[${i}] to be an object, but got ${JSON.stringify(actualRow)}`
+      )
+    }
     
     for (const [key, expectedValue] of Object.entries(expectedRow)) {
-      if (actualRow[key] !== expectedValue) {
-        throw new Error(`Expected ${propName}[${i}].${key} to be ${expectedValue}, but got ${actualRow[key]}`)
+      const actualValue = actualRow[key]
+      if (actualValue !== expectedValue) {
+        throw new Error(
+          `Expected ${propName}[${i}].${key} to be ${expectedValue}, but got ${String(
+            actualValue
+          )}`
+        )
       }
     }
   }

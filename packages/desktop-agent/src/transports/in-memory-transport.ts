@@ -79,7 +79,9 @@ export class InMemoryTransport implements Transport {
         try {
           // Deep clone the message to prevent shared references
           const clonedMessage = this.deepClone(message)
-          this.peer.messageHandler(clonedMessage)
+          void Promise.resolve(this.peer.messageHandler(clonedMessage)).catch(error => {
+            console.error("Error in peer message handler:", error)
+          })
         } catch (error) {
           console.error("Error in peer message handler:", error)
         }

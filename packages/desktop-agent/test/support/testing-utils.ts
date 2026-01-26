@@ -39,7 +39,12 @@ function formatValue(value: unknown): string {
   if (typeof value === "object") {
     return inspect(value, { depth: 5, compact: false, breakLength: 80 })
   }
-  return String(value)
+  if (typeof value === "string") return value
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value)
+  }
+  if (typeof value === "symbol") return value.toString()
+  return inspect(value, { depth: 2, compact: false, breakLength: 80 })
 }
 
 /**
@@ -57,7 +62,7 @@ function assertFieldValue(
   if (fieldName.includes("matches_type") || fieldName.includes("matches_")) {
     try {
       expect(actualValue).toBeTruthy()
-    } catch (error) {
+    } catch {
       const contextMsg = context
         ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
         : ""
@@ -73,7 +78,7 @@ function assertFieldValue(
   if (expectedValue === null) {
     try {
       expect(actualValue).toBeFalsy()
-    } catch (error) {
+    } catch {
       const contextMsg = context
         ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
         : ""
@@ -94,7 +99,7 @@ function assertFieldValue(
   if (!isNaN(numericValue) && typeof actualValue === "number") {
     try {
       expect(actualValue).toBe(numericValue)
-    } catch (error) {
+    } catch {
       const contextMsg = context
         ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
         : ""
@@ -108,7 +113,7 @@ function assertFieldValue(
   // Standard equality check with enhanced error message
   try {
     expect(actualValue).toEqual(expectedValue)
-  } catch (error) {
+  } catch {
     const contextMsg = context
       ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
       : ""

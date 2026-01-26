@@ -37,9 +37,9 @@ describe("InMemoryTransport", () => {
     it("should deep clone messages to prevent shared references", async () => {
       const [transport1, transport2] = createInMemoryTransportPair()
 
-      let receivedMessage: any
+      let receivedMessage: { nested: { value: string } } | undefined
       transport2.onMessage(msg => {
-        receivedMessage = msg
+        receivedMessage = msg as { nested: { value: string } }
       })
 
       const originalMessage = { nested: { value: "original" } }
@@ -50,6 +50,10 @@ describe("InMemoryTransport", () => {
       // Modify original message
       originalMessage.nested.value = "modified"
 
+      if (!receivedMessage) {
+        throw new Error("Expected message to be received")
+      }
+
       // Received message should not be affected
       expect(receivedMessage.nested.value).toBe("original")
     })
@@ -57,7 +61,7 @@ describe("InMemoryTransport", () => {
 
   describe("send", () => {
     it("should throw if transport is disconnected", () => {
-      const [transport1, _transport2] = createInMemoryTransportPair()
+      const [transport1] = createInMemoryTransportPair()
       transport1.disconnect()
 
       expect(() => transport1.send({ type: "test" })).toThrow(
@@ -92,7 +96,7 @@ describe("InMemoryTransport", () => {
     })
 
     it("should handle structuredClone errors gracefully", async () => {
-      const [transport1, _transport2] = createInMemoryTransportPair()
+      const [transport1] = createInMemoryTransportPair()
 
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 
@@ -242,14 +246,14 @@ describe("InMemoryTransport", () => {
       let count2 = 0
       const maxMessages = 100
 
-      transport1.onMessage((_msg: any) => {
+      transport1.onMessage(() => {
         count1++
         if (count1 < maxMessages) {
           transport1.send({ type: "ping", count: count1 })
         }
       })
 
-      transport2.onMessage((_msg: any) => {
+      transport2.onMessage(() => {
         count2++
         if (count2 < maxMessages) {
           transport2.send({ type: "pong", count: count2 })

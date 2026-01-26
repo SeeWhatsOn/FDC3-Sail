@@ -279,7 +279,17 @@ describe("MessagePortTransport", () => {
         const transport1 = new MessagePortTransport(port1)
         const transport2 = new MessagePortTransport(port2)
 
-        const complexMessage = {
+        type ComplexMessage = {
+          nested: {
+            deep: {
+              value: string
+              array: number[]
+              date: Date
+            }
+          }
+        }
+
+        const complexMessage: ComplexMessage = {
           nested: {
             deep: {
               value: "test",
@@ -289,11 +299,14 @@ describe("MessagePortTransport", () => {
           },
         }
 
-        transport2.onMessage((msg: any) => {
-          expect(msg).toEqual(complexMessage)
+        transport2.onMessage((msg: unknown) => {
+          const received = msg as ComplexMessage
+          expect(received).toEqual(complexMessage)
           // Date should be cloned
-          expect(msg.nested.deep.date).toBeInstanceOf(Date)
-          expect(msg.nested.deep.date.getTime()).toBe(complexMessage.nested.deep.date.getTime())
+          expect(received.nested.deep.date).toBeInstanceOf(Date)
+          expect(received.nested.deep.date.getTime()).toBe(
+            complexMessage.nested.deep.date.getTime()
+          )
           resolve()
         })
 
@@ -306,11 +319,13 @@ describe("MessagePortTransport", () => {
         const transport1 = new MessagePortTransport(port1)
         const transport2 = new MessagePortTransport(port2)
 
-        const original = { nested: { value: "original" } }
+        type NestedMessage = { nested: { value: string } }
+        const original: NestedMessage = { nested: { value: "original" } }
 
-        transport2.onMessage((msg: any) => {
+        transport2.onMessage((msg: unknown) => {
+          const received = msg as NestedMessage
           // Modify received message
-          msg.nested.value = "modified"
+          received.nested.value = "modified"
 
           // Original should be unchanged (because structuredClone creates a copy)
           expect(original.nested.value).toBe("original")
