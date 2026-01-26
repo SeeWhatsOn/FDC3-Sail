@@ -4,7 +4,7 @@
  * Factory functions for creating DACP protocol messages following the FDC3 specification.
  */
 
-import type { ResolveError, OpenError, ChannelError } from "@finos/fdc3"
+import type { BrowserTypes, ResolveError, OpenError, ChannelError } from "@finos/fdc3"
 import type { DACPResponseType } from "./dacp-messages"
 import type { DACPErrorType } from "./dacp-constants"
 
@@ -29,7 +29,7 @@ export function createDACPErrorResponse(
   errorType: DACPErrorType | ResolveError | OpenError | ChannelError,
   responseType: DACPResponseType,
   errorMessage?: string
-) {
+): BrowserTypes.AgentResponseMessage {
   return {
     type: responseType,
     payload: {
@@ -41,7 +41,7 @@ export function createDACPErrorResponse(
       requestUuid: originalRequest.meta.requestUuid,
       timestamp: new Date(),
     },
-  }
+  } as BrowserTypes.AgentResponseMessage
 }
 
 /**
@@ -52,7 +52,7 @@ export function createDACPSuccessResponse(
   originalRequest: DACPRequestLike,
   responseType: DACPResponseType,
   payload: Record<string, unknown> = {}
-) {
+): BrowserTypes.AgentResponseMessage {
   return {
     type: responseType,
     payload,
@@ -61,13 +61,16 @@ export function createDACPSuccessResponse(
       requestUuid: originalRequest.meta.requestUuid,
       timestamp: new Date(),
     },
-  }
+  } as BrowserTypes.AgentResponseMessage
 }
 
 /**
  * Creates a DACP event message.
  */
-export function createDACPEvent(eventType: string, payload: Record<string, unknown> = {}) {
+export function createDACPEvent(
+  eventType: BrowserTypes.EventMessageType,
+  payload: Record<string, unknown> = {}
+): BrowserTypes.AgentEventMessage {
   return {
     type: eventType,
     payload,
@@ -75,7 +78,7 @@ export function createDACPEvent(eventType: string, payload: Record<string, unkno
       eventUuid: crypto.randomUUID(),
       timestamp: new Date(),
     },
-  }
+  } as BrowserTypes.AgentEventMessage
 }
 
 /**
@@ -86,7 +89,7 @@ export function createIntentEvent(
   context: unknown,
   requestUuid: string,
   originatingApp: { appId: string; instanceId?: string; desktopAgent?: string }
-) {
+): BrowserTypes.IntentEvent {
   return {
     type: "intentEvent",
     payload: {
@@ -103,5 +106,5 @@ export function createIntentEvent(
       eventUuid: crypto.randomUUID(),
       timestamp: new Date(),
     },
-  }
+  } as BrowserTypes.IntentEvent
 }

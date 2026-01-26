@@ -325,10 +325,8 @@ function sendFailureResponse(
   const instanceId = context.transport.getInstanceId()
 
   if (instanceId) {
-    // WCP5 failure response is not a standard DACP message, but we can still use the routing utility
-    // by treating it as a DACPMessage-like object
     sendDACPResponse({
-      response: response as unknown as import("../types").DACPMessage,
+      response,
       instanceId,
       transport: context.transport,
     })

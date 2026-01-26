@@ -1,4 +1,4 @@
-import type { DACPMessage } from "../../types"
+import type { BrowserTypes } from "@finos/fdc3"
 import type { Transport } from "../../../interfaces/transport"
 import { createDACPErrorResponse, type DACPRequestLike } from "../../../dacp-protocol/dacp-message-creators"
 import type { DACPErrorType } from "../../../dacp-protocol/dacp-constants"
@@ -10,7 +10,7 @@ import type { ResolveError, OpenError, ChannelError } from "@finos/fdc3"
  */
 export interface SendDACPResponseOptions {
   /** The DACP response message to send */
-  response: DACPMessage
+  response: BrowserTypes.AgentResponseMessage | BrowserTypes.WebConnectionProtocolMessage
   /** The target instance ID for routing */
   instanceId: string
   /** The transport to send the message through */

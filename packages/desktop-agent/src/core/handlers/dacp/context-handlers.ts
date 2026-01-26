@@ -289,11 +289,12 @@ async function notifyContextListeners(
         // WCPConnector routes to the correct app based on meta.destination.instanceId
         handlerContext.transport.send(broadcastEventWithRouting)
 
+        const broadcastPayload = (broadcastEvent as BrowserTypes.BroadcastEvent).payload
         logger.debug("DACP: Broadcast event message structure", {
           type: broadcastEventWithRouting.type,
-          hasPayload: !!broadcastEventWithRouting.payload,
-          hasContext: !!broadcastEventWithRouting.payload?.context,
-          contextType: broadcastEventWithRouting.payload?.context,
+          hasPayload: !!broadcastPayload,
+          hasContext: !!broadcastPayload?.context,
+          contextType: broadcastPayload?.context?.type,
         })
 
         logger.debug("Broadcast event sent to listener", {

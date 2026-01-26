@@ -167,8 +167,11 @@ export interface DirectoryApp {
   moreInfo?: string
   /** Custom config name-value pairs (deprecated) */
   customConfig?: Array<{ name?: string; value?: string }>
-  /** Localized versions of the app record */
-  localizedVersions?: Record<string, Partial<Omit<DirectoryApp, "appId" | "type" | "details">>>
+  /**
+   * Localized versions of the app record.
+   * AppD schema allows BaseApplication fields, including appId/type/details.
+   */
+  localizedVersions?: Record<string, Partial<DirectoryApp>>
 }
 
 // =============================================================================
@@ -178,6 +181,8 @@ export interface DirectoryApp {
 /** Expected structure of directory data from remote sources or local files */
 export interface DirectoryData {
   applications: DirectoryApp[]
+  /** Optional response message from directory */
+  message?: string
 }
 
 /** Intent with app association (used internally by directory lookups) */

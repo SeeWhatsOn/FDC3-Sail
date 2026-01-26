@@ -1,4 +1,4 @@
-import type { AppIdentifier, AppMetadata, Context } from "@finos/fdc3"
+import type { AppIdentifier, AppMetadata, BrowserTypes, Context } from "@finos/fdc3"
 import type { Transport } from "../interfaces/transport"
 import type { AppLauncher } from "../interfaces/app-launcher"
 import type { AppDirectoryManager } from "../app-directory/app-directory-manager"
@@ -108,21 +108,10 @@ export interface MessageValidator {
  * Base structure for all DACP messages
  * Messages are validated by the router before being passed to handlers
  */
-export interface DACPMessage {
-  /** Message type (e.g., "broadcastRequest", "raiseIntentRequest", "intentEvent") */
-  type: DACPMessageType
-  /** Message payload - specific structure depends on message type */
-  payload: Record<string, unknown>
-  /** Message metadata */
-  meta: {
-    requestUuid: string
-    timestamp: Date
-    responseUuid?: string
-    eventUuid?: string
-    source?: { instanceId: string }
-    destination?: { instanceId: string }
-  }
-}
+export type DACPMessage =
+  | BrowserTypes.AppRequestMessage
+  | BrowserTypes.AgentResponseMessage
+  | BrowserTypes.AgentEventMessage
 
 // ============================================================================
 // DACP HANDLER CONTEXT

@@ -101,7 +101,7 @@ export function handlePrivateChannelDisconnectRequest(
     const disconnectListeners = Object.values(channel.disconnectListeners)
     disconnectListeners.forEach(listener => {
       if (listener.instanceId !== instanceId) {
-        const disconnectEvent = createDACPEvent("privateChannelDisconnectEvent", {
+        const disconnectEvent = createDACPEvent("privateChannelOnDisconnectEvent", {
           channelId,
           instanceId, // The instance that is disconnecting
         })
@@ -125,7 +125,7 @@ export function handlePrivateChannelDisconnectRequest(
 
     contextListenersToRemove.forEach(listener => {
       // Notify other apps about unsubscribe
-      const unsubscribeEvent = createDACPEvent("privateChannelUnsubscribeEvent", {
+      const unsubscribeEvent = createDACPEvent("privateChannelOnUnsubscribeEvent", {
         channelId,
         contextType: listener.contextType,
       })
@@ -219,7 +219,7 @@ export function handlePrivateChannelAddContextListenerRequest(
     })
 
     // Notify other connected apps about the new listener
-    const addListenerEvent = createDACPEvent("privateChannelAddContextListenerEvent", {
+    const addListenerEvent = createDACPEvent("privateChannelOnAddContextListenerEvent", {
       channelId,
       contextType: null,
     })
