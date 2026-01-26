@@ -5,9 +5,10 @@
  */
 
 import { createDACPSuccessResponse, createIntentEvent } from "../../../dacp-protocol/dacp-message-creators"
-import { type DACPHandlerContext, type DACPMessage, type IntentHandlerOption } from "../../types"
+import { type DACPHandlerContext, type IntentHandlerOption } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
-import { type Context, ResolveError } from "@finos/fdc3"
+import type { BrowserTypes, Context } from "@finos/fdc3"
+import { ResolveError } from "@finos/fdc3"
 import { AppInstanceState } from "../../../state/types"
 import {
   NoAppsFoundError,
@@ -32,17 +33,13 @@ import {
 } from "./intent-helpers"
 
 export async function handleRaiseIntentRequest(
-  message: DACPMessage,
+  message: BrowserTypes.RaiseIntentRequest,
   context: DACPHandlerContext
 ): Promise<void> {
   const { transport, instanceId, getState, setState, appDirectory, logger } = context
 
   try {
-    const payload = message.payload as {
-      intent: string
-      context: Context
-      app?: string | { appId: string; instanceId?: string }
-    }
+    const payload = message.payload
 
     const contextPayload = payload.context as Record<string, unknown>
     logger.info("DACP: Processing raise intent request", {
@@ -695,16 +692,13 @@ export async function handleRaiseIntentRequest(
 }
 
 export async function handleRaiseIntentForContextRequest(
-  message: DACPMessage,
+  message: BrowserTypes.RaiseIntentForContextRequest,
   context: DACPHandlerContext
 ): Promise<void> {
   const { transport, instanceId, getState, setState, appDirectory, logger } = context
 
   try {
-    const payload = message.payload as {
-      context: Context
-      app?: { appId: string; instanceId?: string }
-    }
+    const payload = message.payload
 
     logger.info("DACP: Processing raise intent for context request", {
       requestUuid: message.meta.requestUuid,

@@ -6,19 +6,22 @@
 
 import { createDACPSuccessResponse } from "../../../dacp-protocol/dacp-message-creators"
 import { DACP_ERROR_TYPES } from "../../../dacp-protocol/dacp-constants"
-import { type DACPHandlerContext, type DACPMessage } from "../../types"
+import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
-import { type Context } from "@finos/fdc3"
+import type { BrowserTypes } from "@finos/fdc3"
 import {
   createAppIntents,
   findIntentsByContext,
 } from "./intent-helpers"
 
-export function handleFindIntentRequest(message: DACPMessage, context: DACPHandlerContext): void {
+export function handleFindIntentRequest(
+  message: BrowserTypes.FindIntentRequest,
+  context: DACPHandlerContext
+): void {
   const { transport, instanceId, getState, appDirectory, logger } = context
 
   try {
-    const payload = message.payload as { intent: string; context?: Context; resultType?: string }
+    const payload = message.payload
     const intent = payload.intent
     const contextType = payload.context?.type
     const resultType = payload.resultType
@@ -43,13 +46,13 @@ export function handleFindIntentRequest(message: DACPMessage, context: DACPHandl
 }
 
 export function handleFindIntentsByContextRequest(
-  message: DACPMessage,
+  message: BrowserTypes.FindIntentsByContextRequest,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, getState, appDirectory, logger } = context
 
   try {
-    const payload = message.payload as { context: Context }
+    const payload = message.payload
     const contextType = payload.context?.type
 
     if (!contextType) {

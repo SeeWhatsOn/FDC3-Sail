@@ -6,9 +6,9 @@
 
 import { createDACPSuccessResponse } from "../../../dacp-protocol/dacp-message-creators"
 import { generateEventUuid } from "../../../dacp-protocol/dacp-utils"
-import { DACP_ERROR_TYPES } from "../../../dacp-protocol/dacp-constants"
-import { type DACPHandlerContext, type DACPMessage } from "../../types"
+import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
+import type { BrowserTypes } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
 import { getInstance } from "../../../state/selectors"
 import {
@@ -16,11 +16,14 @@ import {
   unregisterIntentListener,
 } from "../../../state/mutators"
 
-export function handleAddIntentListener(message: DACPMessage, context: DACPHandlerContext): void {
+export function handleAddIntentListener(
+  message: BrowserTypes.AddIntentListenerRequest,
+  context: DACPHandlerContext
+): void {
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const payload = message.payload as { intent: string; contextTypes?: string[] }
+    const payload = message.payload
     const instance = getInstance(getState(), instanceId)
 
     if (!instance) {
@@ -35,7 +38,7 @@ export function handleAddIntentListener(message: DACPMessage, context: DACPHandl
         intentName: payload.intent,
         instanceId,
         appId: instance.appId,
-        contextTypes: payload.contextTypes ?? [],
+        contextTypes: [],
       })
     )
 
@@ -69,13 +72,13 @@ export function handleAddIntentListener(message: DACPMessage, context: DACPHandl
 }
 
 export function handleIntentListenerUnsubscribe(
-  message: DACPMessage,
+  message: BrowserTypes.IntentListenerUnsubscribeRequest,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const listenerUUID = (message.payload as { listenerUUID: string }).listenerUUID
+    const { listenerUUID } = message.payload
 
     // Check if listener exists before removing
     const state = getState()

@@ -1,9 +1,9 @@
 import { createDACPSuccessResponse } from "../../dacp-protocol/dacp-message-creators"
 import { DACP_ERROR_TYPES } from "../../dacp-protocol/dacp-constants"
-import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
-import type { Context } from "@finos/fdc3"
-import { OpenError, ResolveError } from "@finos/fdc3"
+import type { BrowserTypes } from "@finos/fdc3"
+import { OpenError } from "@finos/fdc3"
 import { AppNotFoundError, ErrorOnLaunchError } from "../../errors/fdc3-errors"
 import type { DirectoryApp } from "../../app-directory/types"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
@@ -11,7 +11,10 @@ import { getInstance, getInstancesByAppId } from "../../state/selectors"
 /**
  * Handles getInfoRequest to return implementation metadata.
  */
-export function handleGetInfoRequest(message: DACPMessage, context: DACPHandlerContext): void {
+export function handleGetInfoRequest(
+  message: BrowserTypes.GetInfoRequest,
+  context: DACPHandlerContext
+): void {
   const { transport, instanceId, implementationMetadata, logger } = context
 
   try {
@@ -37,16 +40,13 @@ export function handleGetInfoRequest(message: DACPMessage, context: DACPHandlerC
  * Handles openRequest to launch an app
  */
 export async function handleOpenRequest(
-  message: DACPMessage,
+  message: BrowserTypes.OpenRequest,
   context: DACPHandlerContext
 ): Promise<void> {
   const { transport, instanceId, appDirectory, appLauncher, logger } = context
 
   try {
-    const payload = message.payload as {
-      app: { appId: string; instanceId?: string }
-      context?: Context
-    }
+    const payload = message.payload
 
     // Check if app launcher is available
     if (!appLauncher) {
@@ -119,11 +119,14 @@ export async function handleOpenRequest(
 /**
  * Handles findInstancesRequest to return all app instances for a given appId
  */
-export function handleFindInstancesRequest(message: DACPMessage, context: DACPHandlerContext): void {
+export function handleFindInstancesRequest(
+  message: BrowserTypes.FindInstancesRequest,
+  context: DACPHandlerContext
+): void {
   const { transport, instanceId, getState, logger } = context
 
   try {
-    const appIdentifier = (message.payload as { app: { appId: string; instanceId?: string } }).app
+    const { app: appIdentifier } = message.payload
 
     logger.info("DACP: Finding instances for app", { appId: appIdentifier.appId })
 
@@ -180,13 +183,16 @@ function convertDirectoryAppToAppMetadata(app: DirectoryApp, instanceId?: string
  * Handles getAppMetadataRequest to return app metadata
  * Returns metadata from running instances or from the App Directory
  */
-export function handleGetAppMetadataRequest(message: DACPMessage, context: DACPHandlerContext): void {
+export function handleGetAppMetadataRequest(
+  message: BrowserTypes.GetAppMetadataRequest,
+  context: DACPHandlerContext
+): void {
   const { transport, instanceId, getState, appDirectory, logger } = context
 
   try {
 
     // Parse request payload
-    const payload = message.payload as { app: { appId: string; instanceId?: string } }
+    const payload = message.payload
     const appId = payload.app.appId
     const specificInstanceId = payload.app.instanceId
 

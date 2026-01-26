@@ -1,8 +1,8 @@
 import { createDACPSuccessResponse } from "../../dacp-protocol/dacp-message-creators"
-import { DACP_ERROR_TYPES } from "../../dacp-protocol/dacp-constants"
 import { generateEventUuid } from "../../dacp-protocol/dacp-utils"
-import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
+import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
 import { FDC3ChannelError } from "../../errors/fdc3-errors"
 import { getInstance, getEventListenersForType } from "../../state/selectors"
@@ -12,7 +12,10 @@ import type { AgentState } from "../../state/types"
 /**
  * Handles addEventListenerRequest for DA-level events
  */
-export function handleAddEventListenerRequest(message: DACPMessage, context: DACPHandlerContext): void {
+export function handleAddEventListenerRequest(
+  message: BrowserTypes.AddEventListenerRequest,
+  context: DACPHandlerContext
+): void {
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
@@ -22,8 +25,10 @@ export function handleAddEventListenerRequest(message: DACPMessage, context: DAC
       throw new Error(`Instance ${instanceId} not found for adding event listener`)
     }
 
-    const payload = message.payload as { type: string }
-    const eventType = payload.type
+    const { type: eventType } = message.payload
+    if (!eventType) {
+      throw new Error("Event type is required")
+    }
 
     // Validate event type
     // FDC3 2.2 supports USER_CHANNEL_CHANGED event type
@@ -82,13 +87,13 @@ export function handleAddEventListenerRequest(message: DACPMessage, context: DAC
  * Handles eventListenerUnsubscribeRequest
  */
 export function handleEventListenerUnsubscribeRequest(
-  message: DACPMessage,
+  message: BrowserTypes.EventListenerUnsubscribeRequest,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const listenerUUID = (message.payload as { listenerUUID: string }).listenerUUID
+    const { listenerUUID } = message.payload
 
     // Check if listener exists before removing
     const listener = getState().events.listeners[listenerUUID]

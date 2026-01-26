@@ -1,8 +1,8 @@
 import { createDACPSuccessResponse, createDACPEvent } from "../../dacp-protocol/dacp-message-creators"
-import { DACP_ERROR_TYPES } from "../../dacp-protocol/dacp-constants"
 import { generateEventUuid } from "../../dacp-protocol/dacp-utils"
-import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
+import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
 import { FDC3ChannelError, ChannelCreationFailedError } from "../../errors/fdc3-errors"
 import { getInstance, getPrivateChannel } from "../../state/selectors"
@@ -17,7 +17,7 @@ import {
  * Creates a new private channel for peer-to-peer communication between apps
  */
 export function handleCreatePrivateChannelRequest(
-  message: DACPMessage,
+  message: BrowserTypes.CreatePrivateChannelRequest,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, getState, setState, logger } = context
@@ -78,14 +78,13 @@ export function handleCreatePrivateChannelRequest(
  * Disconnects an instance from a private channel
  */
 export function handlePrivateChannelDisconnectRequest(
-  message: DACPMessage,
+  message: BrowserTypes.PrivateChannelDisconnectRequest,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const payload = message.payload as { channelId: string }
-    const channelId = payload.channelId
+    const { channelId } = message.payload
 
     const state = getState()
     const channel = getPrivateChannel(state, channelId)
@@ -181,17 +180,21 @@ export function handlePrivateChannelDisconnectRequest(
 }
 
 /**
- * Handles privateChannelAddContextListenerRequest
- * TODO: Implement this when the schema is available
+ * Handles privateChannelAddEventListenerRequest
  */
 export function handlePrivateChannelAddContextListenerRequest(
-  message: DACPMessage,
+  message: BrowserTypes.PrivateChannelAddEventListenerRequest,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const { channelId, contextType } = message.payload as { channelId: string; contextType?: string }
+    const { privateChannelId, listenerType } = message.payload
+    const channelId = privateChannelId
+
+    if (listenerType && listenerType !== "addContextListener") {
+      throw new Error(`Unsupported private channel listener type: ${listenerType}`)
+    }
 
     const state = getState()
     const channel = getPrivateChannel(state, channelId)
@@ -206,21 +209,19 @@ export function handlePrivateChannelAddContextListenerRequest(
     const listenerId = generateEventUuid()
 
     // Add the listener using state transform
-    setState(state =>
-      addPrivateChannelContextListener(state, channelId, listenerId, instanceId, contextType || null)
-    )
+    setState(state => addPrivateChannelContextListener(state, channelId, listenerId, instanceId, null))
 
     logger.info("DACP: Context listener added to private channel", {
       channelId,
       instanceId,
-      contextType,
+      listenerType: listenerType ?? "addContextListener",
       listenerId,
     })
 
     // Notify other connected apps about the new listener
     const addListenerEvent = createDACPEvent("privateChannelAddContextListenerEvent", {
       channelId,
-      contextType: contextType || null,
+      contextType: null,
     })
 
     channel.connectedInstances.forEach(connectedInstanceId => {
@@ -241,9 +242,9 @@ export function handlePrivateChannelAddContextListenerRequest(
     // Send success response
     const response = createDACPSuccessResponse(
       message,
-      "privateChannelAddContextListenerResponse",
+      "privateChannelAddEventListenerResponse",
       {
-        listenerId,
+        listenerUUID: listenerId,
       }
     )
 

@@ -1,6 +1,6 @@
 import { withDACPTimeout, logDACPMessage } from "../../dacp-protocol/dacp-utils"
 import { DACP_TIMEOUTS } from "../../dacp-protocol/dacp-constants"
-import { type DACPHandler, type DACPHandlerContext, type DACPMessage } from "../types"
+import { type DACPHandlerContext } from "../types"
 import { resolvePendingIntent, removeListenersForInstance, removeInstance } from "../../state/mutators"
 import { pendingIntentPromises } from "./intent-handlers"
 
@@ -13,6 +13,7 @@ import * as appHandlers from "./app-handlers"
 import * as wcpHandlers from "./wcp-handlers"
 import * as privateChannelHandlers from "./private-channel-handlers"
 import * as heartbeatHandlers from "./heartbeat-handlers"
+import type { DACPMessageType } from "../../dacp-protocol/dacp-messages"
 
 /**
  * Routes DACP messages to appropriate handlers
@@ -33,13 +34,14 @@ export async function routeDACPMessage(
 
     // If an injected validator is provided, use it for validation
     if (validator) {
-      const validationResult = validator.validate(messageType, message)
+      const validationResult = validator.validate(messageType as DACPMessageType, message)
       if (!validationResult.valid) {
         logger.error("DACP message validation failed:", {
           messageType,
           errors: validationResult.errors,
         })
         // TODO: Let the handler deal with the invalid message - it will send appropriate error response or should this be handled here?
+        // We need to add some basic checking here or use a default validator to check things like a uuid is present etc
         return
       }
     }
@@ -89,14 +91,16 @@ async function handleDACPMessage(
   }
 
   // Pass message to handler - validation is handled by injected validator at router level
-  await handler(message as DACPMessage, context)
+  await handler(message, context)
 }
 
 /**
  * Handler registry - maps message types to handler functions
  */
-function getHandlerForMessageType(messageType: string): DACPHandler | null {
-  const handlerMap: Record<string, DACPHandler> = {
+type RoutedHandler = (message: unknown, context: DACPHandlerContext) => void | Promise<void>
+
+function getHandlerForMessageType(messageType: string): RoutedHandler | null {
+  const handlerMap = {
     // Context handlers
     broadcastRequest: contextHandlers.handleBroadcastRequest,
     addContextListenerRequest: contextHandlers.handleAddContextListener,
@@ -132,7 +136,7 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
     // Private channel handlers
     createPrivateChannelRequest: privateChannelHandlers.handleCreatePrivateChannelRequest,
     privateChannelDisconnectRequest: privateChannelHandlers.handlePrivateChannelDisconnectRequest,
-    privateChannelAddContextListenerRequest:
+    privateChannelAddEventListenerRequest:
       privateChannelHandlers.handlePrivateChannelAddContextListenerRequest,
 
     // WCP handlers
@@ -143,7 +147,7 @@ function getHandlerForMessageType(messageType: string): DACPHandler | null {
     heartbeatAcknowledgementRequest: heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,
   }
 
-  return handlerMap[messageType] || null
+  return (handlerMap as Record<string, RoutedHandler>)[messageType] || null
 }
 
 /**

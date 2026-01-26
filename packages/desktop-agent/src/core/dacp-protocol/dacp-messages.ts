@@ -21,6 +21,7 @@ export type DACPRequestType =
   | "raiseIntentForContextRequest"
   | "addIntentListenerRequest"
   | "intentListenerUnsubscribeRequest"
+  | "intentResultRequest"
   | "findIntentRequest"
   | "findIntentsByContextRequest"
   | "getInfoRequest"
@@ -28,9 +29,12 @@ export type DACPRequestType =
   | "findInstancesRequest"
   | "getAppMetadataRequest"
   | "createPrivateChannelRequest"
+  | "privateChannelAddEventListenerRequest"
   | "privateChannelDisconnectRequest"
+  | "privateChannelUnsubscribeEventListenerRequest"
   | "addEventListenerRequest"
   | "eventListenerUnsubscribeRequest"
+  | "heartbeatAcknowledgementRequest"
 
 /**
  * Union type of all DACP response message types
@@ -57,9 +61,13 @@ export type DACPResponseType =
   | "findInstancesResponse"
   | "getAppMetadataResponse"
   | "createPrivateChannelResponse"
+  | "privateChannelAddEventListenerResponse"
   | "privateChannelDisconnectResponse"
+  | "privateChannelUnsubscribeEventListenerResponse"
   | "addEventListenerResponse"
   | "eventListenerUnsubscribeResponse"
+  | "intentResultResponse"
+  | "raiseIntentResultResponse"
 
 /**
  * Union type of all DACP event message types

@@ -1,8 +1,7 @@
 import { createDACPSuccessResponse, createDACPEvent } from "../../dacp-protocol/dacp-message-creators"
-import { DACP_ERROR_TYPES } from "../../dacp-protocol/dacp-constants"
-import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
-import type { Context } from "@finos/fdc3"
+import type { BrowserTypes, Context } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
 import { FDC3ChannelError } from "../../errors/fdc3-errors"
 import { getInstance, getInstancesOnChannel } from "../../state/selectors"
@@ -15,14 +14,13 @@ import { storeContext, addContextListener, removeContextListener } from "../../s
  * Note: Message validation happens at router level before this handler is called
  */
 export async function handleBroadcastRequest(
-  message: DACPMessage,
+  message: BrowserTypes.BroadcastRequest,
   context: DACPHandlerContext
 ): Promise<void> {
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const channelId = (message.payload as { channelId: string }).channelId
-    const broadcastContext = (message.payload as { context: Context }).context
+    const { channelId, context: broadcastContext } = message.payload
 
     // Validate that the instance is a member of the channel they're broadcasting to
     const state = getState()
@@ -59,15 +57,6 @@ export async function handleBroadcastRequest(
   } catch (error) {
     logger.error("DACP: Broadcast request failed", error)
 
-    // Ensure message has requestUuid for error response
-    const messageWithUuid: DACPMessage = {
-      ...message,
-      meta: {
-        ...message.meta,
-        requestUuid: message.meta?.requestUuid || "",
-      },
-    }
-
     // BroadcastResponse schema doesn't validate error payloads, but use ChannelError for consistency
     // Common errors: MalformedContext, ApiTimeout
     let errorType: ChannelError = ChannelError.ApiTimeout
@@ -80,7 +69,7 @@ export async function handleBroadcastRequest(
     }
 
     sendDACPErrorResponse({
-      message: messageWithUuid,
+      message,
       errorType,
       errorMessage,
       instanceId,
@@ -93,11 +82,14 @@ export async function handleBroadcastRequest(
  * Handles add context listener requests
  * Implements DACP addContextListenerRequest message handling
  */
-export function handleAddContextListener(message: DACPMessage, context: DACPHandlerContext): void {
+export function handleAddContextListener(
+  message: BrowserTypes.AddContextListenerRequest,
+  context: DACPHandlerContext
+): void {
   const { transport, instanceId, setState, logger } = context
 
   try {
-    const contextType = (message.payload as { contextType?: string }).contextType ?? "*" // Default to all contexts if not specified
+    const contextType = message.payload.contextType ?? "*" // Default to all contexts if not specified
 
     logger.info("DACP: Adding context listener", {
       instanceId,
@@ -132,14 +124,6 @@ export function handleAddContextListener(message: DACPMessage, context: DACPHand
   } catch (error) {
     logger.error("DACP: Add context listener failed", error)
 
-    const messageWithUuid: DACPMessage = {
-      ...message,
-      meta: {
-        ...message.meta,
-        requestUuid: message.meta?.requestUuid || "",
-      },
-    }
-
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to add context listener"
@@ -153,7 +137,7 @@ export function handleAddContextListener(message: DACPMessage, context: DACPHand
     }
 
     sendDACPErrorResponse({
-      message: messageWithUuid,
+      message,
       errorType,
       errorMessage,
       instanceId,
@@ -167,13 +151,13 @@ export function handleAddContextListener(message: DACPMessage, context: DACPHand
  * Implements DACP contextListenerUnsubscribeRequest message handling
  */
 export function handleContextListenerUnsubscribe(
-  message: DACPMessage,
+  message: BrowserTypes.ContextListenerUnsubscribeRequest,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const listenerUUID = (message.payload as { listenerUUID: string }).listenerUUID
+    const { listenerUUID } = message.payload
 
     logger.info("DACP: Unsubscribing context listener", {
       listenerUUID,
@@ -202,14 +186,6 @@ export function handleContextListenerUnsubscribe(
   } catch (error) {
     logger.error("DACP: Context listener unsubscribe failed", error)
 
-    const messageWithUuid: DACPMessage = {
-      ...message,
-      meta: {
-        ...message.meta,
-        requestUuid: message.meta?.requestUuid || "",
-      },
-    }
-
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to unsubscribe context listener"
@@ -223,7 +199,7 @@ export function handleContextListenerUnsubscribe(
     }
 
     sendDACPErrorResponse({
-      message: messageWithUuid,
+      message,
       errorType,
       errorMessage,
       instanceId,

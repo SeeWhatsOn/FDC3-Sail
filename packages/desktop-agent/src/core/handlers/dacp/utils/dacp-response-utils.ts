@@ -1,6 +1,6 @@
 import type { DACPMessage } from "../../types"
 import type { Transport } from "../../../interfaces/transport"
-import { createDACPErrorResponse } from "../../../dacp-protocol/dacp-message-creators"
+import { createDACPErrorResponse, type DACPRequestLike } from "../../../dacp-protocol/dacp-message-creators"
 import type { DACPErrorType } from "../../../dacp-protocol/dacp-constants"
 import type { DACPResponseType } from "../../../dacp-protocol/dacp-messages"
 import type { ResolveError, OpenError, ChannelError } from "@finos/fdc3"
@@ -38,7 +38,7 @@ export function sendDACPResponse(options: SendDACPResponseOptions): void {
  */
 export interface SendDACPErrorResponseOptions {
   /** Original request message (must have type and meta.requestUuid) */
-  message: DACPMessage
+  message: DACPRequestLike
   /** DACP error type or FDC3 error enum (e.g., ResolveError.NoAppsFound, OpenError.AppNotFound, ChannelError.NoChannelFound) */
   errorType: DACPErrorType | ResolveError | OpenError | ChannelError
   /** Human-readable error message */

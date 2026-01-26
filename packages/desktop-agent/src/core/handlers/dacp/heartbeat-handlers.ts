@@ -1,6 +1,7 @@
 import { createDACPEvent } from "../../dacp-protocol/dacp-message-creators"
 import { generateEventUuid } from "../../dacp-protocol/dacp-utils"
-import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { type DACPHandlerContext } from "../types"
+import type { BrowserTypes } from "@finos/fdc3"
 import { getHeartbeatState } from "../../state/selectors"
 import {
   startHeartbeat as startHeartbeatTransform,
@@ -106,7 +107,7 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
  * Handle heartbeatAcknowledgmentRequest
  */
 export function handleHeartbeatAcknowledgmentRequest(
-  _message: DACPMessage,
+  _message: BrowserTypes.HeartbeatAcknowledgementRequest,
   context: DACPHandlerContext
 ): void {
   const { instanceId, setState, logger } = context

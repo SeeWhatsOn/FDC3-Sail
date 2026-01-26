@@ -8,6 +8,13 @@ import type { ResolveError, OpenError, ChannelError } from "@finos/fdc3"
 import type { DACPResponseType } from "./dacp-messages"
 import type { DACPErrorType } from "./dacp-constants"
 
+export interface DACPRequestLike {
+  type: string
+  meta: {
+    requestUuid: string
+  }
+}
+
 /**
  * Creates a DACP error response following the specification format.
  * Accepts any object with meta.requestUuid (typically a DACPMessage).
@@ -18,7 +25,7 @@ import type { DACPErrorType } from "./dacp-constants"
  * - DACP uses generic "ChannelError" which doesn't map to a specific FDC3 enum value
  */
 export function createDACPErrorResponse(
-  originalRequest: { meta: { requestUuid: string; [key: string]: unknown } },
+  originalRequest: DACPRequestLike,
   errorType: DACPErrorType | ResolveError | OpenError | ChannelError,
   responseType: DACPResponseType,
   errorMessage?: string
@@ -42,7 +49,7 @@ export function createDACPErrorResponse(
  * Accepts any object with meta.requestUuid (typically a DACPMessage).
  */
 export function createDACPSuccessResponse(
-  originalRequest: { meta: { requestUuid: string; [key: string]: unknown } },
+  originalRequest: DACPRequestLike,
   responseType: DACPResponseType,
   payload: Record<string, unknown> = {}
 ) {

@@ -1,18 +1,18 @@
 import { createDACPSuccessResponse, createDACPEvent } from "../../dacp-protocol/dacp-message-creators"
-import { DACP_ERROR_TYPES } from "../../dacp-protocol/dacp-constants"
-import { type DACPHandlerContext, type DACPMessage } from "../types"
+import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import { getEventListeners } from "./event-handlers"
 import { getInstance, getUserChannel, getAppChannel, getAllUserChannels, getChannelContext } from "../../state/selectors"
 import { joinChannel, createAppChannel } from "../../state/mutators"
+import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
-import { NoChannelFoundError, ChannelAccessDeniedError, ChannelCreationFailedError, FDC3ChannelError } from "../../errors/fdc3-errors"
+import { FDC3ChannelError } from "../../errors/fdc3-errors"
 
 /**
  * Handles get current channel requests
  */
 export function handleGetCurrentChannelRequest(
-  message: DACPMessage,
+  message: BrowserTypes.GetCurrentChannelRequest,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, getState, logger } = context
@@ -53,14 +53,6 @@ export function handleGetCurrentChannelRequest(
     })
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    const messageWithUuid: DACPMessage = {
-      ...message,
-      meta: {
-        ...message.meta,
-        requestUuid: message.meta?.requestUuid || "",
-      },
-    }
-
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get current channel"
@@ -72,7 +64,7 @@ export function handleGetCurrentChannelRequest(
     }
 
     sendDACPErrorResponse({
-      message: messageWithUuid,
+      message,
       errorType,
       errorMessage,
       instanceId,
@@ -84,11 +76,14 @@ export function handleGetCurrentChannelRequest(
 /**
  * Handles join user channel requests
  */
-export function handleJoinUserChannelRequest(message: DACPMessage, context: DACPHandlerContext): void {
+export function handleJoinUserChannelRequest(
+  message: BrowserTypes.JoinUserChannelRequest,
+  context: DACPHandlerContext
+): void {
   const { transport, instanceId, getState, setState } = context
 
   try {
-    const { channelId } = message.payload as { channelId: string }
+    const { channelId } = message.payload
 
     // Validate channel exists in user channels
     const state = getState()
@@ -103,14 +98,6 @@ export function handleJoinUserChannelRequest(message: DACPMessage, context: DACP
 
     notifyChannelChanged(instanceId, channelId, context)
   } catch (error) {
-    const messageWithUuid: DACPMessage = {
-      ...message,
-      meta: {
-        ...message.meta,
-        requestUuid: message.meta?.requestUuid || "",
-      },
-    }
-
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to join user channel"
@@ -122,7 +109,7 @@ export function handleJoinUserChannelRequest(message: DACPMessage, context: DACP
     }
 
     sendDACPErrorResponse({
-      message: messageWithUuid,
+      message,
       errorType,
       errorMessage,
       instanceId,
@@ -135,7 +122,7 @@ export function handleJoinUserChannelRequest(message: DACPMessage, context: DACP
  * Handles leave current channel requests
  */
 export function handleLeaveCurrentChannelRequest(
-  message: DACPMessage,
+  message: BrowserTypes.LeaveCurrentChannelRequest,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, setState } = context
@@ -148,14 +135,6 @@ export function handleLeaveCurrentChannelRequest(
 
     notifyChannelChanged(instanceId, null, context)
   } catch (error) {
-    const messageWithUuid: DACPMessage = {
-      ...message,
-      meta: {
-        ...message.meta,
-        requestUuid: message.meta?.requestUuid || "",
-      },
-    }
-
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to leave current channel"
@@ -165,7 +144,7 @@ export function handleLeaveCurrentChannelRequest(
     }
 
     sendDACPErrorResponse({
-      message: messageWithUuid,
+      message,
       errorType,
       errorMessage,
       instanceId,
@@ -177,7 +156,10 @@ export function handleLeaveCurrentChannelRequest(
 /**
  * Handles get user channels requests
  */
-export function handleGetUserChannelsRequest(message: DACPMessage, context: DACPHandlerContext): void {
+export function handleGetUserChannelsRequest(
+  message: BrowserTypes.GetUserChannelsRequest,
+  context: DACPHandlerContext
+): void {
   const { transport, instanceId, getState } = context
 
   try {
@@ -188,14 +170,6 @@ export function handleGetUserChannelsRequest(message: DACPMessage, context: DACP
     })
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    const messageWithUuid: DACPMessage = {
-      ...message,
-      meta: {
-        ...message.meta,
-        requestUuid: message.meta?.requestUuid || "",
-      },
-    }
-
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get user channels"
@@ -205,7 +179,7 @@ export function handleGetUserChannelsRequest(message: DACPMessage, context: DACP
     }
 
     sendDACPErrorResponse({
-      message: messageWithUuid,
+      message,
       errorType,
       errorMessage,
       instanceId,
@@ -218,23 +192,23 @@ export function handleGetUserChannelsRequest(message: DACPMessage, context: DACP
  * Handles get current context requests
  */
 export function handleGetCurrentContextRequest(
-  message: DACPMessage,
+  message: BrowserTypes.GetCurrentContextRequest,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, getState, logger } = context
 
   try {
-    const payload = message.payload as { channelId?: string; contextType?: string }
+    const payload = message.payload
 
     const instance = getInstance(getState(), instanceId)
-    const channelId = payload.channelId || instance?.currentChannel
+    const channelId = payload.channelId ?? instance?.currentChannel
 
     if (!channelId) {
       throw new Error("No channel specified and app is not on a channel")
     }
 
     // Get the last broadcast context for the channel
-    const storedContext = getChannelContext(getState(), channelId, payload.contextType)
+    const storedContext = getChannelContext(getState(), channelId, payload.contextType ?? undefined)
 
     logger.debug("DACP: getCurrentContext", {
       channelId,
@@ -247,14 +221,6 @@ export function handleGetCurrentContextRequest(
     })
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    const messageWithUuid: DACPMessage = {
-      ...message,
-      meta: {
-        ...message.meta,
-        requestUuid: message.meta?.requestUuid || "",
-      },
-    }
-
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get current context"
@@ -266,7 +232,7 @@ export function handleGetCurrentContextRequest(
     }
 
     sendDACPErrorResponse({
-      message: messageWithUuid,
+      message,
       errorType,
       errorMessage,
       instanceId,
@@ -280,13 +246,13 @@ export function handleGetCurrentContextRequest(
  * Creates an app channel if it doesn't exist, or returns existing one
  */
 export function handleGetOrCreateChannelRequest(
-  message: DACPMessage,
+  message: BrowserTypes.GetOrCreateChannelRequest,
   context: DACPHandlerContext
 ): void {
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const { channelId } = message.payload as { channelId: string }
+    const { channelId } = message.payload
 
     // Get or create the app channel
     const state = getState()
@@ -309,14 +275,6 @@ export function handleGetOrCreateChannelRequest(
     })
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    const messageWithUuid: DACPMessage = {
-      ...message,
-      meta: {
-        ...message.meta,
-        requestUuid: message.meta?.requestUuid || "",
-      },
-    }
-
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.CreationFailed
     const errorMessage = error instanceof Error ? error.message : "Failed to get or create channel"
@@ -330,7 +288,7 @@ export function handleGetOrCreateChannelRequest(
     }
 
     sendDACPErrorResponse({
-      message: messageWithUuid,
+      message,
       errorType,
       errorMessage,
       instanceId,

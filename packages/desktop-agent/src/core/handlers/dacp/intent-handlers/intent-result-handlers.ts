@@ -6,20 +6,21 @@
 
 import { createDACPSuccessResponse } from "../../../dacp-protocol/dacp-message-creators"
 import { DACP_ERROR_TYPES } from "../../../dacp-protocol/dacp-constants"
-import { type DACPHandlerContext, type DACPMessage } from "../../types"
+import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
+import type { BrowserTypes } from "@finos/fdc3"
 import { getPendingIntent } from "../../../state/selectors"
 import { resolvePendingIntent } from "../../../state/mutators"
 import { pendingIntentPromises } from "./intent-helpers"
 
-export function handleIntentResultRequest(message: DACPMessage, context: DACPHandlerContext): void {
+export function handleIntentResultRequest(
+  message: BrowserTypes.IntentResultRequest,
+  context: DACPHandlerContext
+): void {
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const payload = message.payload as {
-      raiseIntentRequestUuid: string
-      intentResult?: unknown
-    }
+    const payload = message.payload
 
     logger.info("DACP: Processing intent result request", {
       requestUuid: message.meta.requestUuid,
