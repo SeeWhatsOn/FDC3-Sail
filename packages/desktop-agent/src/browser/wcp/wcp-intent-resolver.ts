@@ -1,0 +1,50 @@
+import type { IntentResolverPayload, IntentResolverResponse } from "./wcp-types"
+
+export interface PendingIntentResolution {
+  resolve: (response: IntentResolverResponse) => void
+  reject: (error: Error) => void
+  timeoutId: ReturnType<typeof setTimeout>
+}
+
+export function requestIntentResolution(
+  pendingIntentResolutions: Map<string, PendingIntentResolution>,
+  emitIntentResolverNeeded: (payload: IntentResolverPayload) => void,
+  payload: IntentResolverPayload,
+  timeoutMs: number
+): Promise<IntentResolverResponse> {
+  return new Promise((resolve, reject) => {
+    // Set up timeout to reject if UI doesn't respond
+    const timeoutId = setTimeout(() => {
+      pendingIntentResolutions.delete(payload.requestId)
+      reject(new Error(`Intent resolution timed out after ${timeoutMs}ms`))
+    }, timeoutMs)
+
+    // Store pending resolution
+    pendingIntentResolutions.set(payload.requestId, {
+      resolve,
+      reject,
+      timeoutId,
+    })
+
+    // Emit event to UI
+    emitIntentResolverNeeded(payload)
+  })
+}
+
+export function resolveIntentSelection(
+  pendingIntentResolutions: Map<string, PendingIntentResolution>,
+  response: IntentResolverResponse
+): void {
+  const pending = pendingIntentResolutions.get(response.requestId)
+  if (!pending) {
+    console.warn(`No pending intent resolution found for requestId: ${response.requestId}`)
+    return
+  }
+
+  // Clear timeout and remove from pending
+  clearTimeout(pending.timeoutId)
+  pendingIntentResolutions.delete(response.requestId)
+
+  // Resolve the promise with the user's selection
+  pending.resolve(response)
+}
