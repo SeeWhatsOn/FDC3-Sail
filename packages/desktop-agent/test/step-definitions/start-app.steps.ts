@@ -181,6 +181,7 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
     meta: {
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
+      messageOrigin: new URL(appUrl).origin,
     },
     payload: {
       instanceId: uuid,

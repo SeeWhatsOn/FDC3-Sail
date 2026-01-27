@@ -2,6 +2,7 @@ import { Before, DataTable, Given, Then, When } from "@cucumber/cucumber"
 import { CustomWorld } from "../world"
 import type { Context, AppIdentifier } from "@finos/fdc3"
 import { TEST_USER_CHANNELS } from "../support/channel-data"
+import { handleResolve } from "../support/testing-utils"
 
 export const APP_FIELD = "apps"
 
@@ -226,21 +227,24 @@ When("we wait for the listener timeout", async function (this: CustomWorld) {
 })
 
 Then("{string} is true", function (this: CustomWorld, propName: string) {
-  const value = this.props[propName]
+  const resolved = handleResolve(propName, this)
+  const value = typeof resolved === "string" ? this.props[resolved] : resolved
   if (value !== true) {
     throw new Error(`Expected ${propName} to be true, but got ${JSON.stringify(value)}`)
   }
 })
 
 Then("{string} is false", function (this: CustomWorld, propName: string) {
-  const value = this.props[propName]
+  const resolved = handleResolve(propName, this)
+  const value = typeof resolved === "string" ? this.props[resolved] : resolved
   if (value !== false) {
     throw new Error(`Expected ${propName} to be false, but got ${JSON.stringify(value)}`)
   }
 })
 
 Then("{string} is empty", function (this: CustomWorld, propName: string) {
-  const value = this.props[propName]
+  const resolved = handleResolve(propName, this)
+  const value = typeof resolved === "string" ? this.props[resolved] : resolved
   if (value !== null && value !== undefined && !(Array.isArray(value) && value.length === 0)) {
     throw new Error(`Expected ${propName} to be empty, but got ${JSON.stringify(value)}`)
   }
@@ -249,7 +253,8 @@ Then("{string} is empty", function (this: CustomWorld, propName: string) {
 Then(
   "{string} is an array of objects with the following contents",
   function (this: CustomWorld, propName: string, dataTable: DataTable) {
-    const value = this.props[propName]
+    const resolved = handleResolve(propName, this)
+    const value = typeof resolved === "string" ? this.props[resolved] : resolved
     if (!Array.isArray(value)) {
       throw new Error(`Expected ${propName} to be an array, but got ${JSON.stringify(value)}`)
     }

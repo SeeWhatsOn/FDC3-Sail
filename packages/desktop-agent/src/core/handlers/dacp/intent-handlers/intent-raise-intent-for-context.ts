@@ -27,9 +27,12 @@ export async function handleRaiseIntentForContextRequest(
     const payload = message.payload
     const validatedContext = payload.context
 
-    if (payload.app) {
-      const targetAppId = payload.app.appId
-      const targetInstanceId = payload.app.instanceId
+    const targetApp =
+      typeof payload.app === "string" ? { appId: payload.app } : payload.app ?? undefined
+
+    if (targetApp) {
+      const targetAppId = targetApp.appId
+      const targetInstanceId = targetApp.instanceId
 
       const apps = appDirectory.retrieveAppsById(targetAppId)
       if (apps.length === 0) {
@@ -59,7 +62,6 @@ export async function handleRaiseIntentForContextRequest(
       )
     }
 
-    const targetApp = payload.app
     const targetAppId = targetApp?.appId
     const directoryIntents = targetAppId
       ? getDirectoryIntentsForContext(appDirectory, targetAppId, validatedContext.type)
@@ -111,7 +113,7 @@ export async function handleRaiseIntentForContextRequest(
       intent: selectedIntent,
       context: validatedContext,
       source: { appId: source.appId, instanceId: source.instanceId },
-      target: payload.app,
+      target: targetApp,
     })
 
     let targetInstanceId: string

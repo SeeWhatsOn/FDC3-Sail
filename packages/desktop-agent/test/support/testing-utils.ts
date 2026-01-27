@@ -17,6 +17,13 @@ import { inspect } from "util"
 export function handleResolve(value: string, world: CustomWorld): string | null | undefined {
   if (!value) return value
 
+  if (value === "{lastIntentEventUuid}") {
+    const lastIntentEvent = [...world.mockTransport.getPostedMessages()]
+      .reverse()
+      .find(record => record.msg.type === "intentEvent")
+    return lastIntentEvent?.msg?.meta?.eventUuid
+  }
+
   // Handle special markers
   if (value === "{null}") return null
   if (value === "{empty}") return undefined

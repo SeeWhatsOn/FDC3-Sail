@@ -40,7 +40,7 @@ Feature: App Disconnection and Cleanup
     And we wait for a period of "100" ms
     And "appId: App1, instanceId: a1" is closed
     And we wait for a period of "100" ms
-    And "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "uuid7" and contextType "fdc3.portfolio" and raiseIntentUuid "ABC123" [IntentResolution.getResult]
+    And "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "{lastIntentEventUuid}" and contextType "fdc3.portfolio" and raiseIntentUuid "ABC123" [IntentResolution.getResult]
     Then messaging will have outgoing posts
       | msg.matches_type     | msg.meta.eventUuid | msg.meta.requestUuid | to.appId     | to.instanceId | msg.payload.raiseIntentRequestUuid | msg.payload.intentResolution.source.instanceId | msg.payload.intentResult.context.type |
       | intentEvent          | {empty}            | {null}               | PortfolioApp | l1            | ABC123                             | {null}                                         | {null}                                |
