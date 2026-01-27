@@ -547,7 +547,13 @@ export class AppDirectoryManager {
    * @returns Array of DirectoryApp objects with the given appId
    */
   retrieveAppsById(appId: string): DirectoryApp[] {
-    return this.allApps.filter(app => app.appId === appId)
+    const exactMatches = this.allApps.filter(app => app.appId === appId)
+    if (exactMatches.length > 0) {
+      return exactMatches
+    }
+
+    const normalizedAppId = appId.toLowerCase()
+    return this.allApps.filter(app => app.appId.toLowerCase() === normalizedAppId)
   }
 
   /**

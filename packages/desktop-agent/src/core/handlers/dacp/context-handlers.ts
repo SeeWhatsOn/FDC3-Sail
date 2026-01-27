@@ -4,8 +4,19 @@ import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-u
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
 import { FDC3ChannelError } from "../../errors/fdc3-errors"
-import { getAppChannel, getInstance, getInstancesOnChannel, getUserChannel } from "../../state/selectors"
-import { storeContext, addContextListener, joinChannel, removeContextListener } from "../../state/mutators"
+import { getAppChannel, getInstance, getInstancesOnChannel, getPrivateChannel, getUserChannel } from "../../state/selectors"
+import {
+  storeContext,
+  addContextListener,
+  joinChannel,
+  removeContextListener,
+  addPrivateChannelContextListener,
+  removePrivateChannelContextListener,
+  setPrivateChannelLastContext,
+  connectInstanceToPrivateChannel,
+} from "../../state/mutators"
+import { generateEventUuid } from "../../dacp-protocol/dacp-utils"
+import { notifyPrivateChannelAddContextListener, notifyPrivateChannelUnsubscribe } from "./private-channel-handlers"
 import { notifyContextListenerAdded } from "./utils/open-with-context"
 
 /**
@@ -32,19 +43,26 @@ export async function handleBroadcastRequest(
 
     const channelId = payloadChannelId ?? instance.currentChannel
     if (!channelId) {
-      throw new Error("No channel specified and app is not on a channel")
+      // No channel specified and app not joined - no-op per spec
+      const response = createDACPSuccessResponse(message, "broadcastResponse")
+      sendDACPResponse({ response, instanceId, transport })
+      return
     }
 
     const userChannel = getUserChannel(state, channelId)
     const appChannel = getAppChannel(state, channelId)
-    if (!userChannel && !appChannel) {
+    const privateChannel = getPrivateChannel(state, channelId)
+    if (!userChannel && !appChannel && !privateChannel) {
       throw new Error(`Channel ${channelId} does not exist`)
     }
 
     if (userChannel && instance.currentChannel !== channelId) {
-      throw new Error(
-        `Instance is not a member of channel ${channelId}. Current channel: ${instance.currentChannel ?? "none"}`
-      )
+      if (!payloadChannelId) {
+        // No-op for user channels when not joined and no channel specified
+        const response = createDACPSuccessResponse(message, "broadcastResponse")
+        sendDACPResponse({ response, instanceId, transport })
+        return
+      }
     }
 
     logger.info("DACP: Processing broadcast request", {
@@ -53,11 +71,21 @@ export async function handleBroadcastRequest(
       requestUuid: message.meta.requestUuid,
     })
 
-    // Store context using state transform
-    setState(state => storeContext(state, channelId, broadcastContext, instanceId))
+    // Store context using state transform (skip for private channels)
+    if (!privateChannel) {
+      setState(state => storeContext(state, channelId, broadcastContext, instanceId))
+    }
 
-    // Notify listeners on the channel
-    await notifyContextListeners(channelId, broadcastContext, context)
+    if (privateChannel) {
+      if (!privateChannel.connectedInstances.includes(instanceId)) {
+        throw new Error(`Instance ${instanceId} is not connected to private channel ${channelId}`)
+      }
+
+      setState(state => setPrivateChannelLastContext(state, channelId, broadcastContext.type, broadcastContext))
+      await notifyPrivateChannelContextListeners(channelId, broadcastContext, context)
+    } else {
+      await notifyContextListeners(channelId, broadcastContext, context)
+    }
 
     const response = createDACPSuccessResponse(message, "broadcastResponse")
 
@@ -108,13 +136,41 @@ export function handleAddContextListener(
       const state = getState()
       const userChannel = getUserChannel(state, channelId)
       const appChannel = getAppChannel(state, channelId)
+      const privateChannel = getPrivateChannel(state, channelId)
 
-      if (!userChannel && !appChannel) {
+      if (!userChannel && !appChannel && !privateChannel) {
         throw new Error(`Channel ${channelId} does not exist`)
       }
 
       if (appChannel) {
         setState(state => joinChannel(state, instanceId, channelId))
+      }
+
+      if (userChannel) {
+        setState(state => joinChannel(state, instanceId, channelId))
+      }
+
+      if (privateChannel) {
+        const privateContextType = payloadContextType ?? null
+        const listenerId = generateEventUuid()
+        const resolvedContextType = privateContextType === "*" ? null : privateContextType
+
+        if (!privateChannel.connectedInstances.includes(instanceId)) {
+          setState(state => connectInstanceToPrivateChannel(state, channelId, instanceId))
+        }
+
+        setState(state =>
+          addPrivateChannelContextListener(state, channelId, listenerId, instanceId, resolvedContextType)
+        )
+
+        notifyPrivateChannelAddContextListener(channelId, instanceId, resolvedContextType, context)
+
+        const response = createDACPSuccessResponse(message, "addContextListenerResponse", {
+          listenerUUID: listenerId,
+        })
+
+        sendDACPResponse({ response, instanceId, transport })
+        return
       }
     }
 
@@ -194,14 +250,38 @@ export function handleContextListenerUnsubscribe(
       requestUuid: message.meta?.requestUuid,
     })
 
-    // Check if listener exists before removing
-    const instance = getInstance(getState(), instanceId)
-    if (!instance || !instance.contextListeners.includes(listenerUUID)) {
-      throw new Error(`Context listener ${listenerUUID} not found for instance ${instanceId}`)
-    }
+    const state = getState()
+    const instance = getInstance(state, instanceId)
+    const hasInstanceListener = !!instance && instance.contextListeners.includes(listenerUUID)
 
-    // Remove context listener using state transform
-    setState(state => removeContextListener(state, instanceId, listenerUUID))
+    if (hasInstanceListener) {
+      setState(state => removeContextListener(state, instanceId, listenerUUID))
+    } else {
+      const privateChannels = Object.values(state.channels.private)
+      const privateChannelWithListener = privateChannels.find(channel =>
+        channel.contextListeners[listenerUUID]
+      )
+
+      if (!privateChannelWithListener) {
+        throw new Error(`Context listener ${listenerUUID} not found for instance ${instanceId}`)
+      }
+
+      const privateListener = privateChannelWithListener.contextListeners[listenerUUID]
+      if (privateListener.instanceId !== instanceId) {
+        throw new Error(`Context listener ${listenerUUID} not found for instance ${instanceId}`)
+      }
+
+      setState(state =>
+        removePrivateChannelContextListener(state, privateChannelWithListener.id, listenerUUID)
+      )
+      notifyPrivateChannelUnsubscribe(
+        privateChannelWithListener.id,
+        listenerUUID,
+        privateListener.contextType,
+        instanceId,
+        context
+      )
+    }
 
     const response = createDACPSuccessResponse(message, "contextListenerUnsubscribeResponse")
 
@@ -350,4 +430,57 @@ async function notifyContextListeners(
     failed,
     total: results.length,
   })
+}
+
+async function notifyPrivateChannelContextListeners(
+  channelId: string,
+  context: Context,
+  handlerContext: DACPHandlerContext
+): Promise<void> {
+  const { getState, logger } = handlerContext
+  const privateChannel = getPrivateChannel(getState(), channelId)
+
+  if (!privateChannel) {
+    return
+  }
+
+  const contextListeners = Object.values(privateChannel.contextListeners)
+
+  const notifications = contextListeners
+    .filter(listener => {
+      if (listener.instanceId === handlerContext.instanceId) {
+        return false
+      }
+
+      return listener.contextType === null || listener.contextType === context.type
+    })
+    .map(listener => {
+      const senderInstance = getInstance(getState(), handlerContext.instanceId)
+      const broadcastEvent = createDACPEvent("broadcastEvent", {
+        channelId,
+        context,
+        originatingApp: {
+          appId: senderInstance?.appId || "unknown",
+          instanceId: handlerContext.instanceId,
+        },
+      })
+
+      const broadcastEventWithRouting = {
+        ...broadcastEvent,
+        meta: {
+          ...broadcastEvent.meta,
+          destination: { instanceId: listener.instanceId },
+        },
+      }
+
+      logger.info("DACP: Sending private channel broadcast event", {
+        targetInstanceId: listener.instanceId,
+        channelId,
+        contextType: context.type,
+      })
+
+      handlerContext.transport.send(broadcastEventWithRouting)
+    })
+
+  await Promise.allSettled(notifications)
 }

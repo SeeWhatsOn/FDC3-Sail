@@ -140,6 +140,8 @@ function getHandlerForMessageType(messageType: string): RoutedHandler | null {
     privateChannelDisconnectRequest: privateChannelHandlers.handlePrivateChannelDisconnectRequest,
     privateChannelAddEventListenerRequest:
       privateChannelHandlers.handlePrivateChannelAddContextListenerRequest,
+    privateChannelUnsubscribeEventListenerRequest:
+      privateChannelHandlers.handlePrivateChannelUnsubscribeEventListenerRequest,
 
     // WCP handlers
     WCP4ValidateAppIdentity: wcpHandlers.handleWcp4ValidateAppIdentity,
@@ -184,7 +186,7 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
   // Cancel any pending intents involving this instance
   const state = getState()
   const pendingIntents = Object.values(state.intents.pending).filter(
-    p => p.sourceInstanceId === instanceId || p.targetInstanceId === instanceId
+    p => p.targetInstanceId === instanceId
   )
   pendingIntents.forEach(pending => {
     // Reject promise if it exists (from intent-helpers Map)
@@ -193,7 +195,7 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
       if (promiseData.timeoutHandle) {
         clearTimeout(promiseData.timeoutHandle)
       }
-      promiseData.reject(new Error("Intent cancelled - instance disconnected"))
+      promiseData.reject(new Error("Intent cancelled - target instance disconnected"))
       pendingIntentPromises.delete(pending.requestId)
     }
     setState(state => resolvePendingIntent(state, pending.requestId))
@@ -209,11 +211,7 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
   logger.info("Removed event listeners for disconnected instance", { instanceId })
 
   // Remove private channels
-  const removedPrivateChannels = privateChannelHandlers.removeInstancePrivateChannels(
-    instanceId,
-    getState,
-    setState
-  )
+  const removedPrivateChannels = privateChannelHandlers.removeInstancePrivateChannels(context)
   if (removedPrivateChannels > 0) {
     logger.info(`Removed ${removedPrivateChannels} private channels for disconnected instance`, {
       instanceId,

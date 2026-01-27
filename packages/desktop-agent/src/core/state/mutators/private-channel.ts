@@ -25,6 +25,8 @@ export const createPrivateChannel = (
       createdAt: new Date(),
       connectedInstances: [creatorInstanceId],
       contextListeners: {},
+      addContextListenerListeners: {},
+      unsubscribeListeners: {},
       disconnectListeners: {},
       lastContextByType: {},
       displayMetadata: {
@@ -74,6 +76,18 @@ export const disconnectInstanceFromPrivateChannel = (
       }
     })
 
+    Object.keys(privateChannel.addContextListenerListeners).forEach(listenerId => {
+      if (privateChannel.addContextListenerListeners[listenerId]?.instanceId === instanceId) {
+        delete privateChannel.addContextListenerListeners[listenerId]
+      }
+    })
+
+    Object.keys(privateChannel.unsubscribeListeners).forEach(listenerId => {
+      if (privateChannel.unsubscribeListeners[listenerId]?.instanceId === instanceId) {
+        delete privateChannel.unsubscribeListeners[listenerId]
+      }
+    })
+
     Object.keys(privateChannel.disconnectListeners).forEach(listenerId => {
       if (privateChannel.disconnectListeners[listenerId]?.instanceId === instanceId) {
         delete privateChannel.disconnectListeners[listenerId]
@@ -109,6 +123,80 @@ export const addPrivateChannelContextListener = (
         instanceId,
         contextType,
       }
+    }
+  })
+}
+
+export const addPrivateChannelAddContextListenerListener = (
+  state: AgentState,
+  channelId: string,
+  listenerId: string,
+  instanceId: string
+): AgentState => {
+  const channel = state.channels.private[channelId]
+  if (!channel) return state
+  if (!channel.connectedInstances.includes(instanceId)) return state
+
+  return produce(state, draft => {
+    const privateChannel = draft.channels.private[channelId]
+    if (privateChannel) {
+      privateChannel.addContextListenerListeners[listenerId] = {
+        listenerId,
+        instanceId,
+      }
+    }
+  })
+}
+
+export const removePrivateChannelAddContextListenerListener = (
+  state: AgentState,
+  channelId: string,
+  listenerId: string
+): AgentState => {
+  const channel = state.channels.private[channelId]
+  if (!channel) return state
+
+  return produce(state, draft => {
+    const privateChannel = draft.channels.private[channelId]
+    if (privateChannel) {
+      delete privateChannel.addContextListenerListeners[listenerId]
+    }
+  })
+}
+
+export const addPrivateChannelUnsubscribeListener = (
+  state: AgentState,
+  channelId: string,
+  listenerId: string,
+  instanceId: string
+): AgentState => {
+  const channel = state.channels.private[channelId]
+  if (!channel) return state
+  if (!channel.connectedInstances.includes(instanceId)) return state
+
+  return produce(state, draft => {
+    const privateChannel = draft.channels.private[channelId]
+    if (privateChannel) {
+      privateChannel.unsubscribeListeners[listenerId] = {
+        listenerId,
+        instanceId,
+      }
+    }
+  })
+}
+
+export const removePrivateChannelUnsubscribeListener = (
+  state: AgentState,
+  channelId: string,
+  listenerId: string
+): AgentState => {
+  const channel = state.channels.private[channelId]
+  if (!channel) return state
+
+  return produce(state, draft => {
+    const privateChannel = draft.channels.private[channelId]
+    if (privateChannel) {
+      delete privateChannel.unsubscribeListeners[listenerId]
     }
   })
 }

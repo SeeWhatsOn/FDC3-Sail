@@ -20,12 +20,12 @@ export function handleGetInfoRequest(
 
   try {
     const callerInstance = getInstance(getState(), instanceId)
-    const baseMetadata =
-      implementationMetadata ?? {
-        fdc3Version: "2.2",
-        provider: "FDC3-Sail",
-        providerVersion: "0.0.0",
-      }
+    // TODO: this should not fall back to default values if implementationMetadata is not provided. Should it error instead?
+    const baseMetadata = implementationMetadata ?? {
+      fdc3Version: "2.2",
+      provider: "FDC3-Sail",
+      providerVersion: "0.0.0",
+    }
     let appMetadata: BrowserTypes.AppMetadata | undefined
 
     if (callerInstance) {
@@ -71,13 +71,7 @@ export async function handleOpenRequest(
   message: BrowserTypes.OpenRequest,
   context: DACPHandlerContext
 ): Promise<void> {
-  const {
-    transport,
-    instanceId,
-    appDirectory,
-    appLauncher,
-    logger,
-  } = context
+  const { transport, instanceId, appDirectory, appLauncher, logger } = context
 
   try {
     const payload = message.payload
@@ -134,11 +128,11 @@ export async function handleOpenRequest(
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: openRequest failed", error)
-    
+
     // Extract FDC3 error type from error instance
     let errorType: OpenError = OpenError.ErrorOnLaunch
     const errorMessage = error instanceof Error ? error.message : "Failed to open app"
-    
+
     if (error instanceof AppNotFoundError) {
       errorType = error.errorType
     } else if (error instanceof ErrorOnLaunchError) {
@@ -146,7 +140,7 @@ export async function handleOpenRequest(
     } else if (errorMessage.includes("not found") || errorMessage.includes("App not found")) {
       errorType = OpenError.AppNotFound
     }
-    
+
     sendDACPErrorResponse({
       message,
       errorType,
@@ -231,7 +225,6 @@ export function handleGetAppMetadataRequest(
   const { transport, instanceId, getState, appDirectory, logger } = context
 
   try {
-
     // Parse request payload
     const payload = message.payload
     const appId = payload.app.appId
@@ -289,12 +282,12 @@ export function handleGetAppMetadataRequest(
     if (directoryApps.length > 0) {
       const appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0])
 
-        const response = createDACPSuccessResponse(message, "getAppMetadataResponse", {
-          appMetadata,
-        })
+      const response = createDACPSuccessResponse(message, "getAppMetadataResponse", {
+        appMetadata,
+      })
 
-        sendDACPResponse({ response, instanceId, transport })
-        return
+      sendDACPResponse({ response, instanceId, transport })
+      return
     }
 
     // Step 4: App not found anywhere - return error

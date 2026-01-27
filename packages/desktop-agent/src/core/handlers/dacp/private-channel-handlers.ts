@@ -8,8 +8,14 @@ import { FDC3ChannelError, ChannelCreationFailedError } from "../../errors/fdc3-
 import { getInstance, getPrivateChannel } from "../../state/selectors"
 import {
   createPrivateChannel,
+  connectInstanceToPrivateChannel,
   disconnectInstanceFromPrivateChannel,
-  addPrivateChannelContextListener,
+  addPrivateChannelAddContextListenerListener,
+  addPrivateChannelDisconnectListener,
+  addPrivateChannelUnsubscribeListener,
+  removePrivateChannelAddContextListenerListener,
+  removePrivateChannelDisconnectListener,
+  removePrivateChannelUnsubscribeListener,
 } from "../../state/mutators"
 
 /**
@@ -30,7 +36,7 @@ export function handleCreatePrivateChannelRequest(
     }
 
     // Generate channel ID
-    const channelId = `private-${crypto.randomUUID()}`
+    const channelId = generateEventUuid()
 
     // Create the private channel using state transform
     setState(state => createPrivateChannel(state, channelId, instance.appId, instanceId))
@@ -94,57 +100,22 @@ export function handlePrivateChannelDisconnectRequest(
 
     // Verify the instance is connected to this channel
     if (!channel.connectedInstances.includes(instanceId)) {
-      throw new Error(`Instance ${instanceId} is not connected to channel ${channelId}`)
+      setState(state => connectInstanceToPrivateChannel(state, channelId, instanceId))
     }
-
-    // Notify all disconnect listeners before disconnecting
-    const disconnectListeners = Object.values(channel.disconnectListeners)
-    disconnectListeners.forEach(listener => {
-      if (listener.instanceId !== instanceId) {
-        const disconnectEvent = createDACPEvent("privateChannelOnDisconnectEvent", {
-          channelId,
-          instanceId, // The instance that is disconnecting
-        })
-        // Add routing metadata
-        const disconnectEventWithRouting = {
-          ...disconnectEvent,
-          meta: {
-            ...disconnectEvent.meta,
-            destination: { instanceId: listener.instanceId },
-          },
-        }
-
-        transport.send(disconnectEventWithRouting)
-      }
-    })
 
     // Unsubscribe all context listeners for this instance
     const contextListenersToRemove = Object.values(channel.contextListeners).filter(
       listener => listener.instanceId === instanceId
     )
 
-    contextListenersToRemove.forEach(listener => {
-      // Notify other apps about unsubscribe
-      const unsubscribeEvent = createDACPEvent("privateChannelOnUnsubscribeEvent", {
-        channelId,
-        contextType: listener.contextType,
-      })
+    notifyPrivateChannelUnsubscribeInternal(
+      channel,
+      contextListenersToRemove,
+      instanceId,
+      transport
+    )
 
-      channel.connectedInstances.forEach(connectedInstanceId => {
-        if (connectedInstanceId !== instanceId) {
-          // Add routing metadata
-          const unsubscribeEventWithRouting = {
-            ...unsubscribeEvent,
-            meta: {
-              ...unsubscribeEvent.meta,
-              destination: { instanceId: connectedInstanceId },
-            },
-          }
-
-          transport.send(unsubscribeEventWithRouting)
-        }
-      })
-    })
+    notifyPrivateChannelDisconnectInternal(channel, instanceId, transport)
 
     // Disconnect the instance using state transform
     setState(state => disconnectInstanceFromPrivateChannel(state, channelId, instanceId))
@@ -152,7 +123,7 @@ export function handlePrivateChannelDisconnectRequest(
     logger.info("DACP: Instance disconnected from private channel", {
       channelId,
       instanceId,
-      notifiedListeners: disconnectListeners.length,
+      notifiedListeners: Object.values(channel.disconnectListeners).length,
     })
 
     // Send success response
@@ -192,10 +163,6 @@ export function handlePrivateChannelAddContextListenerRequest(
     const { privateChannelId, listenerType } = message.payload
     const channelId = privateChannelId
 
-    if (listenerType && listenerType !== "addContextListener") {
-      throw new Error(`Unsupported private channel listener type: ${listenerType}`)
-    }
-
     const state = getState()
     const channel = getPrivateChannel(state, channelId)
     if (!channel) {
@@ -203,40 +170,29 @@ export function handlePrivateChannelAddContextListenerRequest(
     }
 
     if (!channel.connectedInstances.includes(instanceId)) {
-      throw new Error(`Instance ${instanceId} is not connected to channel ${channelId}`)
+      setState(state => connectInstanceToPrivateChannel(state, channelId, instanceId))
     }
 
     const listenerId = generateEventUuid()
+    const resolvedListenerType = listenerType ?? "addContextListener"
 
-    // Add the listener using state transform
-    setState(state => addPrivateChannelContextListener(state, channelId, listenerId, instanceId, null))
+    if (resolvedListenerType === "addContextListener") {
+      setState(state =>
+        addPrivateChannelAddContextListenerListener(state, channelId, listenerId, instanceId)
+      )
+    } else if (resolvedListenerType === "disconnect") {
+      setState(state => addPrivateChannelDisconnectListener(state, channelId, listenerId, instanceId))
+    } else if (resolvedListenerType === "unsubscribe") {
+      setState(state => addPrivateChannelUnsubscribeListener(state, channelId, listenerId, instanceId))
+    } else {
+      throw new Error(`Unsupported private channel listener type: ${resolvedListenerType}`)
+    }
 
-    logger.info("DACP: Context listener added to private channel", {
+    logger.info("DACP: Private channel event listener added", {
       channelId,
       instanceId,
-      listenerType: listenerType ?? "addContextListener",
+      listenerType: resolvedListenerType,
       listenerId,
-    })
-
-    // Notify other connected apps about the new listener
-    const addListenerEvent = createDACPEvent("privateChannelOnAddContextListenerEvent", {
-      channelId,
-      contextType: null,
-    })
-
-    channel.connectedInstances.forEach(connectedInstanceId => {
-      if (connectedInstanceId !== instanceId) {
-        // Add routing metadata
-        const addListenerEventWithRouting = {
-          ...addListenerEvent,
-          meta: {
-            ...addListenerEvent.meta,
-            destination: { instanceId: connectedInstanceId },
-          },
-        }
-
-        transport.send(addListenerEventWithRouting)
-      }
     })
 
     // Send success response
@@ -274,14 +230,70 @@ export function handlePrivateChannelAddContextListenerRequest(
   }
 }
 
+export function handlePrivateChannelUnsubscribeEventListenerRequest(
+  message: BrowserTypes.PrivateChannelUnsubscribeEventListenerRequest,
+  context: DACPHandlerContext
+): void {
+  const { transport, instanceId, getState, setState, logger } = context
+
+  try {
+    const { listenerUUID } = message.payload
+    const state = getState()
+    const privateChannels = Object.values(state.channels.private)
+    const channel = privateChannels.find(candidate =>
+      candidate.addContextListenerListeners[listenerUUID] ||
+      candidate.unsubscribeListeners[listenerUUID] ||
+      candidate.disconnectListeners[listenerUUID]
+    )
+
+    if (!channel) {
+      throw new Error(`Private channel listener ${listenerUUID} not found`)
+    }
+
+    const isOwnedByInstance =
+      channel.addContextListenerListeners[listenerUUID]?.instanceId === instanceId ||
+      channel.unsubscribeListeners[listenerUUID]?.instanceId === instanceId ||
+      channel.disconnectListeners[listenerUUID]?.instanceId === instanceId
+
+    if (!isOwnedByInstance) {
+      throw new Error(`Private channel listener ${listenerUUID} not found for instance ${instanceId}`)
+    }
+
+    if (channel.addContextListenerListeners[listenerUUID]) {
+      setState(state =>
+        removePrivateChannelAddContextListenerListener(state, channel.id, listenerUUID)
+      )
+    } else if (channel.unsubscribeListeners[listenerUUID]) {
+      setState(state => removePrivateChannelUnsubscribeListener(state, channel.id, listenerUUID))
+    } else if (channel.disconnectListeners[listenerUUID]) {
+      setState(state => removePrivateChannelDisconnectListener(state, channel.id, listenerUUID))
+    }
+
+    const response = createDACPSuccessResponse(
+      message,
+      "privateChannelUnsubscribeEventListenerResponse"
+    )
+
+    sendDACPResponse({ response, instanceId, transport })
+  } catch (error) {
+    logger.error("DACP: Private channel unsubscribe event listener failed", error)
+    sendDACPErrorResponse({
+      message,
+      errorType: ChannelError.ApiTimeout,
+      errorMessage: error instanceof Error ? error.message : "Failed to unsubscribe private channel listener",
+      instanceId,
+      transport,
+    })
+  }
+}
+
 /**
  * Remove all private channels for an instance (called on disconnect)
  */
 export function removeInstancePrivateChannels(
-  instanceId: string,
-  getState: () => import("../../state/types").AgentState,
-  setState: (fn: (state: import("../../state/types").AgentState) => import("../../state/types").AgentState) => void
+  context: DACPHandlerContext
 ): number {
+  const { instanceId, getState, setState, transport } = context
   const state = getState()
   const privateChannels = Object.values(state.channels.private)
   const channelsToRemove = privateChannels.filter(channel =>
@@ -289,8 +301,147 @@ export function removeInstancePrivateChannels(
   )
 
   channelsToRemove.forEach(channel => {
+    const contextListenersToRemove = Object.values(channel.contextListeners).filter(
+      listener => listener.instanceId === instanceId
+    )
+
+    notifyPrivateChannelUnsubscribeInternal(
+      channel,
+      contextListenersToRemove,
+      instanceId,
+      transport
+    )
+
+    notifyPrivateChannelDisconnectInternal(channel, instanceId, transport)
     setState(state => disconnectInstanceFromPrivateChannel(state, channel.id, instanceId))
   })
 
   return channelsToRemove.length
+}
+
+export function notifyPrivateChannelAddContextListener(
+  channelId: string,
+  sourceInstanceId: string,
+  contextType: string | null,
+  context: DACPHandlerContext
+): void {
+  const { getState, transport } = context
+  const channel = getPrivateChannel(getState(), channelId)
+  if (!channel) {
+    return
+  }
+
+  const addListenerEvent = createDACPEvent("privateChannelOnAddContextListenerEvent", {
+    privateChannelId: channelId,
+    contextType,
+  })
+
+  Object.values(channel.addContextListenerListeners).forEach(listener => {
+    if (listener.instanceId === sourceInstanceId) {
+      return
+    }
+
+    const addListenerEventWithRouting = {
+      ...addListenerEvent,
+      meta: {
+        ...addListenerEvent.meta,
+        destination: { instanceId: listener.instanceId },
+      },
+    }
+
+    transport.send(addListenerEventWithRouting)
+  })
+}
+
+export function notifyPrivateChannelUnsubscribe(
+  channelId: string,
+  listenerId: string,
+  contextType: string | null,
+  sourceInstanceId: string,
+  context: DACPHandlerContext
+): void {
+  const { getState, transport } = context
+  const channel = getPrivateChannel(getState(), channelId)
+  if (!channel) {
+    return
+  }
+
+  notifyPrivateChannelUnsubscribeInternal(
+    channel,
+    [
+      {
+        listenerId,
+        instanceId: sourceInstanceId,
+        contextType,
+      },
+    ],
+    sourceInstanceId,
+    transport
+  )
+}
+
+function notifyPrivateChannelUnsubscribeInternal(
+  channel: NonNullable<ReturnType<typeof getPrivateChannel>>,
+  contextListenersToRemove: Array<{ listenerId: string; instanceId: string; contextType: string | null }>,
+  sourceInstanceId: string,
+  transport: DACPHandlerContext["transport"]
+): void {
+  if (contextListenersToRemove.length === 0) {
+    return
+  }
+
+  const unsubscribeListeners = Object.values(channel.unsubscribeListeners)
+
+  contextListenersToRemove.forEach(listener => {
+    const unsubscribeEvent = createDACPEvent("privateChannelOnUnsubscribeEvent", {
+      privateChannelId: channel.id,
+      contextType: listener.contextType ?? null,
+    })
+
+    unsubscribeListeners.forEach(unsubscribeListener => {
+      if (unsubscribeListener.instanceId === sourceInstanceId) {
+        return
+      }
+
+      const unsubscribeEventWithRouting = {
+        ...unsubscribeEvent,
+        meta: {
+          ...unsubscribeEvent.meta,
+          destination: { instanceId: unsubscribeListener.instanceId },
+        },
+      }
+
+      transport.send(unsubscribeEventWithRouting)
+    })
+  })
+}
+
+function notifyPrivateChannelDisconnectInternal(
+  channel: NonNullable<ReturnType<typeof getPrivateChannel>>,
+  sourceInstanceId: string,
+  transport: DACPHandlerContext["transport"]
+): void {
+  const disconnectListeners = Object.values(channel.disconnectListeners)
+
+  disconnectListeners.forEach(listener => {
+    if (listener.instanceId === sourceInstanceId) {
+      return
+    }
+
+    const disconnectEvent = createDACPEvent("privateChannelOnDisconnectEvent", {
+      privateChannelId: channel.id,
+      contextType: null,
+      instanceId: sourceInstanceId,
+    })
+
+    const disconnectEventWithRouting = {
+      ...disconnectEvent,
+      meta: {
+        ...disconnectEvent.meta,
+        destination: { instanceId: listener.instanceId },
+      },
+    }
+
+    transport.send(disconnectEventWithRouting)
+  })
 }

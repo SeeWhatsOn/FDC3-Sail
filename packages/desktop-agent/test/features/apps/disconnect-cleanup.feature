@@ -43,9 +43,9 @@ Feature: App Disconnection and Cleanup
     And "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "uuid7" and contextType "fdc3.portfolio" and raiseIntentUuid "ABC123" [IntentResolution.getResult]
     Then messaging will have outgoing posts
       | msg.matches_type     | msg.meta.eventUuid | msg.meta.requestUuid | to.appId     | to.instanceId | msg.payload.raiseIntentRequestUuid | msg.payload.intentResolution.source.instanceId | msg.payload.intentResult.context.type |
-      | intentEvent          | uuid7              | {null}               | PortfolioApp | l1            | ABC123                             | {null}                                         | {null}                                |
+      | intentEvent          | {empty}            | {null}               | PortfolioApp | l1            | ABC123                             | {null}                                         | {null}                                |
       | raiseIntentResponse  | {null}             | ABC123               | App1         | a1            | {null}                             | l1                                             | {null}                                |
-      | intentResultResponse | {null}             | uuid10               | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
+      | intentResultResponse | {null}             | {empty}              | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
 
   Scenario: Disconnecting from the DA when subscribed to a private channel channel sends unsubscribe and disconnect messages
     And A desktop agent

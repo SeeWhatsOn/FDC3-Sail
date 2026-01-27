@@ -193,6 +193,12 @@ export interface PrivateChannel extends BrowserTypes.Channel {
   /** Context listeners registered on this channel */
   contextListeners: Record<string, ContextListener>
 
+  /** Event listeners for addContextListener events */
+  addContextListenerListeners: Record<string, AddContextListenerListener>
+
+  /** Event listeners for unsubscribe callbacks */
+  unsubscribeListeners: Record<string, UnsubscribeListener>
+
   /** Disconnect listeners for onDisconnect callbacks */
   disconnectListeners: Record<string, DisconnectListener>
 
@@ -207,6 +213,22 @@ export interface PrivateChannel extends BrowserTypes.Channel {
   listenerId: string
   instanceId: string
   contextType: string | null // null means all types
+}
+
+/**
+ * Event listener for addContextListener on private channels
+ */
+interface AddContextListenerListener {
+  listenerId: string
+  instanceId: string
+}
+
+/**
+ * Unsubscribe listener for private channels
+ */
+interface UnsubscribeListener {
+  listenerId: string
+  instanceId: string
 }
 
 /**

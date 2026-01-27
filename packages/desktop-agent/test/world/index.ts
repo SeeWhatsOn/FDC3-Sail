@@ -62,6 +62,7 @@ export class CustomWorld extends World {
 
   // Test data storage (for sharing data between steps)
   props: TestProps = {}
+  private uuidCounter: number = 0
 
   constructor(options: IWorldOptions<unknown>) {
     super(options)
@@ -75,6 +76,16 @@ export class CustomWorld extends World {
    * Access state via desktopAgent.getState() for assertions.
    */
   initializeDesktopAgent(apps: DirectoryApp[], channels: UserChannelConfig[]): void {
+    this.uuidCounter = 0
+    const deterministicRandomUUID = () => `uuid${this.uuidCounter++}`
+    if (!globalThis.crypto) {
+      globalThis.crypto = {
+        randomUUID: deterministicRandomUUID as unknown as Crypto["randomUUID"],
+      } as Crypto
+    } else {
+      globalThis.crypto.randomUUID = deterministicRandomUUID as unknown as Crypto["randomUUID"]
+    }
+
 
     // Create MOCK external dependencies - avoid side effects
     this.mockTransport = new MockTransport()

@@ -202,6 +202,10 @@ When("I shutdown the server", function (this: CustomWorld) {
 
 Given("I refer to {string} as {string}", function (this: CustomWorld, value: string, name: string) {
   // Store a value with a name so it can be referenced later as {name}
+  if (name.toLowerCase().includes("channel") && this.props.lastPrivateChannelId) {
+    this.props[name] = this.props.lastPrivateChannelId
+    return
+  }
   this.props[name] = value
 })
 

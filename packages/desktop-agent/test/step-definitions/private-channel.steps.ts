@@ -52,6 +52,12 @@ When('{string} creates a private channel [fdc3.createPrivateChannel]', async fun
   };
 
   await this.mockTransport.receiveMessage(message);
+
+  const lastMessage = this.mockTransport.getLastMessage();
+  const channelId = (lastMessage?.msg?.payload as { channel?: { id?: string } } | undefined)?.channel?.id;
+  if (channelId) {
+    this.props.lastPrivateChannelId = channelId;
+  }
 });
 
 When('{string} removes event listener {string} [PrivateChannel.removeContextListener]', async function (this: CustomWorld, app: string, listenerUUID: string) {
