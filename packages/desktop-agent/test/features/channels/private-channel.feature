@@ -28,6 +28,7 @@ Feature: Relaying Private Channel Broadcast messages
       | broadcastEvent             | {channel1Id}          | AAPL                          | fdc3.instrument          | App2     | a2            |
       | broadcastResponse          | {null}                | {null}                        | {null}                   | App1     | a1            |
 
+  @conformance2.2
   Scenario: Event Listener created for addContextListener and unsubscribe
     When "appId: App2, instanceId: a2" adds an "addContextListener" event listener on "{channel1Id}" [PrivateChannel.addContextListener]
     And "App2/a2" adds an "unsubscribe" event listener on "{channel1Id}" [PrivateChannel.addContextListener]
@@ -45,6 +46,7 @@ Feature: Relaying Private Channel Broadcast messages
       | privateChannelOnUnsubscribeEvent   | {channel1Id}                 | fdc3.instrument         | App2     | a2            |
       | contextListenerUnsubscribeResponse | {null}                       | {null}                  | App1     | a1            |
 
+  @conformance2.2
   Scenario: Disconnecting from a channel sends unsubscribe and disconnect messages
     When "appId: App2, instanceId: a2" adds an "disconnect" event listener on "{channel1Id}" [PrivateChannel.addContextListener]
     And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
@@ -66,6 +68,7 @@ Feature: Relaying Private Channel Broadcast messages
       | privateChannelUnsubscribeEventListenerResponse | App2     | a2            | {null}                       | {null}                  | {null}                   |
       | addContextListenerResponse                     | App1     | a1            | {null}                       | {null}                  | uuid11                   |
 
+  @conformance2.2
   Scenario: I can't register an app channel with the same ID as a private channel
     When "appId: App2, instanceId: a2" creates or gets an app channel called "{channel1Id}" [fdc3.getOrCreateChannel]
     Then messaging will have outgoing posts

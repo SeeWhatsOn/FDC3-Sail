@@ -12,6 +12,7 @@ Feature: Intent Results Are Correctly Delivered
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: PortfolioApp, instanceId: l1" registers an intent listener for "ViewPortfolio" [fdc3.addIntentListener]
 
+  @conformance2.2
   Scenario: Waiting for an intent listener to be Added
     When "appId: PortfolioApp, instanceId: l1" raises an intent for "viewNews" with contextType "fdc3.instrument" on app "appId: App1, instanceId: a1" with requestUuid "ABC123" [fdc3.raiseIntent]
     And "appId: App1, instanceId: a1" registers an intent listener for "viewNews" [fdc3.addIntentListener]
@@ -23,6 +24,7 @@ Feature: Intent Results Are Correctly Delivered
       | raiseIntentResultResponse | {null}             | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
       | intentResultResponse      | {null}             | App1         | a1            | {null}                             | {null}                                         | {null}                                |
 
+  @conformance2.2
   Scenario: App Returns An Intent Response
     When "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: PortfolioApp, instanceId: l1" with requestUuid "ABC123" [fdc3.raiseIntent]
     When "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "uuid7" and contextType "fdc3.portfolio" and raiseIntentUuid "ABC123" [IntentResolution.getResult]
@@ -33,6 +35,7 @@ Feature: Intent Results Are Correctly Delivered
       | raiseIntentResultResponse | {null}             | ABC123               | App1         | a1            | {null}                             | {null}                                         | fdc3.portfolio                        |
       | intentResultResponse      | {null}             | uuid9                | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
 
+  @conformance2.2
   Scenario: App Returns An Intent Result
     When "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: PortfolioApp, instanceId: l1" with requestUuid "ABC123" [fdc3.raiseIntent]
     When "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "uuid7" and private channel "pc1" and raiseIntentUuid "ABC123" [IntentResolution.getResult]
@@ -43,6 +46,7 @@ Feature: Intent Results Are Correctly Delivered
       | raiseIntentResultResponse | {null}             | App1         | a1            | {null}                             | {null}                                         | pc1                                 |
       | intentResultResponse      | {null}             | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                              |
 
+  @conformance2.2
   Scenario: App Returns A Void Intent Result
     When "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: PortfolioApp, instanceId: l1" with requestUuid "ABC123" [fdc3.raiseIntent]
     When "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "uuid7" and void contents and raiseIntentUuid "ABC123" [IntentResolution.getResult]

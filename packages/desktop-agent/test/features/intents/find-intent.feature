@@ -39,6 +39,14 @@ Feature: Find Intent API
       | msg.matches_type   | msg.payload.appIntent.intent.name | msg.payload.appIntent.apps.length | to.instanceId |
       | findIntentResponse | ViewChart                         |                                 0 | a1            |
 
+  @conformance2.2
+  Scenario: Find Intent for non-existent intent returns NoAppsFound
+    When "appId: App1, instanceId: a1" finds intents with intent "nonExistentIntent" and contextType "fdc3.instrument" and result type "{empty}" [fdc3.findIntent]
+    Then messaging will have outgoing posts
+      | msg.matches_type   | msg.payload.error | to.instanceId |
+      | findIntentResponse | NoAppsFound       | a1            |
+
+  @conformance2.2
   Scenario: Successful Find Intents Request
     When "appId: App1, instanceId: a1" finds intents with intent "ViewChart" and contextType "{empty}" and result type "{empty}" [fdc3.findIntent]
     Then messaging will have outgoing posts
@@ -56,17 +64,40 @@ Feature: Find Intent API
       | msg.matches_type   | msg.payload.appIntent.intent.name | msg.payload.appIntent.apps.length | to.instanceId |
       | findIntentResponse | viewStock                         |                                 4 | a1            |
 
+  @conformance2.2
   Scenario: Find Intents by Context Request
     When "appId: App, instanceId: a1" finds intents with contextType "fdc3.portfolio" [fdc3.findIntentsByContext]
     Then messaging will have outgoing posts
       | msg.matches_type             | msg.payload.appIntents[0].intent.name | msg.payload.appIntents.length | to.instanceId | msg.payload.appIntents[0].intent.displayName |
       | findIntentsByContextResponse | ViewChart                             |                             4 | a1            | ViewChart                                    |
 
+  @conformance2.2
+  Scenario: Find Intents by Context for non-existent context returns NoAppsFound
+    When "appId: App, instanceId: a1" finds intents with contextType "nonExistentContext" [fdc3.findIntentsByContext]
+    Then messaging will have outgoing posts
+      | msg.matches_type             | msg.payload.error | to.instanceId |
+      | findIntentsByContextResponse | NoAppsFound       | a1            |
+
+  @conformance2.2
   Scenario: Find Intents by Context Request with multiple results
     When "appId: App, instanceId: a1" finds intents with contextType "fdc3.product" [fdc3.findIntentsByContext]
     Then messaging will have outgoing posts
       | msg.matches_type             | msg.payload.appIntents[0].intent.name | msg.payload.appIntents.length | to.instanceId | msg.payload.appIntents[0].apps.length |
       | findIntentsByContextResponse | viewStock                             |                             1 | a1            |                                     5 |
+
+  @conformance2.2
+  Scenario: Find Intent with matching context returns app metadata
+    When "appId: App1, instanceId: a1" finds intents with intent "ViewChart" and contextType "fdc3.portfolio" and result type "{empty}" [fdc3.findIntent]
+    Then messaging will have outgoing posts
+      | msg.matches_type   | msg.payload.appIntent.intent.name | msg.payload.appIntent.apps.length | msg.payload.appIntent.apps[0].appId | to.instanceId |
+      | findIntentResponse | ViewChart                         |                                 1 | portfolioApp                        | a1            |
+
+  @conformance2.2
+  Scenario: Find Intent with wrong context returns NoAppsFound
+    When "appId: App1, instanceId: a1" finds intents with intent "ViewChart" and contextType "fdc3.instrument" and result type "{empty}" [fdc3.findIntent]
+    Then messaging will have outgoing posts
+      | msg.matches_type   | msg.payload.error | to.instanceId |
+      | findIntentResponse | NoAppsFound       | a1            |
 
   Scenario: Find Intents by Context Request with multiple results which should not include an instance that has closed
     When "appId: analyticsApp, instanceId: b2" is closed
@@ -75,12 +106,14 @@ Feature: Find Intent API
       | msg.matches_type             | msg.payload.appIntents[0].intent.name | msg.payload.appIntents.length | to.instanceId | msg.payload.appIntents[0].apps.length |
       | findIntentsByContextResponse | viewStock                             |                             1 | a1            |                                     4 |
 
+  @conformance2.2
   Scenario: Successful Find Intents Request With Channel
     When "appId: App1, instanceId: a1" finds intents with intent "StreamChart" and contextType "fdc3.portfolio" and result type "channel" [fdc3.findIntent]
     Then messaging will have outgoing posts
       | msg.matches_type   | msg.payload.appIntent.intent.name | msg.payload.appIntent.apps.length | msg.payload.appIntent.apps[0].appId | to.instanceId |
       | findIntentResponse | StreamChart                       |                                 1 | portfolioApp                        | a1            |
 
+  @conformance2.2
   Scenario: Successful Find Intents Request With A Typed Channel
     When "appId: App1, instanceId: a1" finds intents with intent "StreamChart" and contextType "{empty}" and result type "channel<chart>" [fdc3.findIntent]
     Then messaging will have outgoing posts

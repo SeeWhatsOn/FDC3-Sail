@@ -28,6 +28,7 @@ Feature: App Channels
       | getOrCreateChannelResponse | sharedChannel          | app                      | a1            |
       | getOrCreateChannelResponse | sharedChannel          | app                      | a2            |
 
+  @conformance2.2
   Scenario: Broadcasting context on an app channel
     When "appId: App1, instanceId: a1" creates or gets an app channel called "dataChannel" [fdc3.getOrCreateChannel]
     And "appId: App2, instanceId: a2" adds a context listener on "dataChannel" with type "fdc3.instrument" [fdc3.addContextListener]
@@ -40,6 +41,7 @@ Feature: App Channels
       | broadcastEvent             | a2            | dataChannel           | fdc3.instrument          |
       | broadcastResponse          | a1            | {null}                | {null}                   |
 
+  @conformance2.2
   Scenario: Getting the latest context from an app channel
     When "appId: App1, instanceId: a1" creates or gets an app channel called "contextChannel" [fdc3.getOrCreateChannel]
     And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "contextChannel" [fdc3.broadcast]
@@ -58,6 +60,7 @@ Feature: App Channels
       | getOrCreateChannelResponse | {null}                   | a1            |
       | getCurrentContextResponse  | {null}                   | a2            |
 
+  @conformance2.2
   Scenario: Multiple context types on an app channel
     When "appId: App1, instanceId: a1" creates or gets an app channel called "multiContextChannel" [fdc3.getOrCreateChannel]
     And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "multiContextChannel" [fdc3.broadcast]
@@ -74,6 +77,7 @@ Feature: App Channels
       | getCurrentContextResponse  | fdc3.country             | Sweden                   | a2            |
       | getCurrentContextResponse  | fdc3.country             | Sweden                   | a2            |
 
+  @conformance2.2
   Scenario: Untyped context listener on app channel receives all context types
     When "appId: App1, instanceId: a1" creates or gets an app channel called "anyContextChannel" [fdc3.getOrCreateChannel]
     And "appId: App2, instanceId: a2" adds a context listener on "anyContextChannel" with type "{null}" [fdc3.addContextListener]
@@ -89,6 +93,7 @@ Feature: App Channels
       | broadcastEvent             | a2            | anyContextChannel      | fdc3.country             |
       | broadcastResponse          | a1            | {null}                 | {null}                   |
 
+  @conformance2.2
   Scenario: Unsubscribing from app channel context listener
     When "appId: App1, instanceId: a1" creates or gets an app channel called "unsubChannel" [fdc3.getOrCreateChannel]
     And "appId: App2, instanceId: a2" adds a context listener on "unsubChannel" with type "fdc3.instrument" [fdc3.addContextListener]
@@ -112,3 +117,35 @@ Feature: App Channels
       | getOrCreateChannelResponse | mychannel              | {null}                   | a2            |
       | broadcastResponse          | {null}                 | {null}                   | a1            |
       | getCurrentContextResponse  | {null}                 | {null}                   | a2            |
+
+  @conformance2.2
+  Scenario: Broadcasts do not cross app channels
+    When "appId: App1, instanceId: a1" creates or gets an app channel called "channelA" [fdc3.getOrCreateChannel]
+    And "appId: App2, instanceId: a2" adds a context listener on "channelA" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App1, instanceId: a1" creates or gets an app channel called "channelB" [fdc3.getOrCreateChannel]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "channelB" [fdc3.broadcast]
+    Then messaging will have outgoing posts
+      | msg.matches_type           | to.instanceId | msg.payload.channelId | msg.payload.context.type |
+      | getOrCreateChannelResponse | a1            | {null}                | {null}                   |
+      | addContextListenerResponse | a2            | {null}                | {null}                   |
+      | getOrCreateChannelResponse | a1            | {null}                | {null}                   |
+      | broadcastResponse          | a1            | {null}                | {null}                   |
+
+  @conformance2.2
+  Scenario: Multiple typed listeners on an app channel receive matching contexts
+    When "appId: App3, instanceId: a3" is opened with connection id "a3"
+    And "appId: App1, instanceId: a1" creates or gets an app channel called "multiListenerChannel" [fdc3.getOrCreateChannel]
+    And "appId: App2, instanceId: a2" adds a context listener on "multiListenerChannel" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App3, instanceId: a3" adds a context listener on "multiListenerChannel" with type "fdc3.country" [fdc3.addContextListener]
+    And we wait for a period of "100" ms
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "multiListenerChannel" [fdc3.broadcast]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.country" on "multiListenerChannel" [fdc3.broadcast]
+    Then messaging will have outgoing posts
+      | msg.matches_type           | to.instanceId | msg.payload.channelId    | msg.payload.context.type |
+      | getOrCreateChannelResponse | a1            | {null}                   | {null}                   |
+      | addContextListenerResponse | a2            | {null}                   | {null}                   |
+      | addContextListenerResponse | a3            | {null}                   | {null}                   |
+      | broadcastEvent             | a2            | multiListenerChannel     | fdc3.instrument          |
+      | broadcastResponse          | a1            | {null}                   | {null}                   |
+      | broadcastEvent             | a3            | multiListenerChannel     | fdc3.country             |
+      | broadcastResponse          | a1            | {null}                   | {null}                   |

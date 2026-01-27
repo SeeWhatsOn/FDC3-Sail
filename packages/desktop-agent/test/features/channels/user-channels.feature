@@ -30,6 +30,7 @@ Feature: Relaying Private Channel Broadcast messages
       | {null}                 | a1            | joinUserChannelResponse   |
       | one                    | a1            | getCurrentChannelResponse |
 
+  @conformance2.2
   Scenario: Adding a Typed Listener on a given User Channel
     When "appId: App, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
     And "appId: App, instanceId: a1" adds a context listener on "one" with type "fdc3.instrument" [fdc3.addContextListener]
@@ -39,6 +40,7 @@ Feature: Relaying Private Channel Broadcast messages
       | one                   | fdc3.instrument          | broadcastEvent    | a1            |
       | {null}                | {null}                   | broadcastResponse | a2            |
 
+  @conformance2.2
   Scenario: Adding an Un-Typed Listener on a given User Channel
     When "appId: App, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
     And "appId: App, instanceId: a1" adds a context listener on "one" with type "{null}" [fdc3.addContextListener]
@@ -48,6 +50,7 @@ Feature: Relaying Private Channel Broadcast messages
       | one                   | fdc3.instrument          | broadcastEvent    | a1            |
       | {null}                | {null}                   | broadcastResponse | a2            |
 
+  @conformance2.2
   Scenario: If you haven't joined a channel, your listener receives nothing
     When "appId: App, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
     And "appId: App, instanceId: a1" adds a context listener on "one" with type "{null}" [fdc3.addContextListener]
@@ -58,6 +61,7 @@ Feature: Relaying Private Channel Broadcast messages
       | addContextListenerResponse | a1            |
       | broadcastResponse          | a2            |
 
+  @conformance2.2
   Scenario: After unsubscribing, my listener shouldn't receive any more messages
     When "appId: App, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
     And "appId: App, instanceId: a1" adds a context listener on "one" with type "{null}" [fdc3.addContextListener]
@@ -70,6 +74,7 @@ Feature: Relaying Private Channel Broadcast messages
       | contextListenerUnsubscribeResponse | {null}                   |
       | broadcastResponse                  | {null}                   |
 
+  @conformance2.2
   Scenario: I should be able to leave a user channel, and not receive messages on it
     When "appId: App, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
     And "appId: App, instanceId: a1" adds a context listener on "one" with type "{null}" [fdc3.addContextListener]
@@ -95,6 +100,7 @@ Feature: Relaying Private Channel Broadcast messages
       | msg.payload.error | msg.type                |
       | NoChannelFound    | joinUserChannelResponse |
 
+  @conformance2.2
   Scenario: You can get the details of the last context type sent
     When "appId: App, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
     And "appId: App2, instanceId: a2" broadcasts "fdc3.instrument" on "one" [fdc3.broadcast]
@@ -110,6 +116,7 @@ Feature: Relaying Private Channel Broadcast messages
       | fdc3.country             | Sweden                   | getCurrentContextResponse |
       | {null}                   | {null}                   | getCurrentContextResponse |
 
+  @conformance2.2
   Scenario: Changing channel changes the listener channels too
     When "appId: App, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
     And "appId: App, instanceId: a1" adds a context listener on "one" with type "{null}" [fdc3.addContextListener]
@@ -130,3 +137,27 @@ Feature: Relaying Private Channel Broadcast messages
       | msg.payload.context.type | msg.payload.context.name | msg.matches_type          |
       | {null}                   | {null}                   | getCurrentContextResponse |
       | {null}                   | {null}                   | getCurrentContextResponse |
+
+  @conformance2.2
+  Scenario: Current context is delivered when joining a user channel
+    When "appId: App2, instanceId: a2" broadcasts "fdc3.instrument" on "one" [fdc3.broadcast]
+    And "appId: App, instanceId: a1" adds a context listener on "{null}" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
+    Then messaging will have outgoing posts
+      | msg.matches_type           | msg.payload.channelId | msg.payload.context.type | to.instanceId |
+      | broadcastResponse          | {null}                | {null}                   | a2            |
+      | addContextListenerResponse | {null}                | {null}                   | a1            |
+      | joinUserChannelResponse    | {null}                | {null}                   | a1            |
+      | broadcastEvent             | one                   | fdc3.instrument          | a1            |
+
+  @conformance2.2
+  Scenario: Current context is delivered when adding a listener on a joined channel
+    When "appId: App, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App2, instanceId: a2" broadcasts "fdc3.instrument" on "one" [fdc3.broadcast]
+    And "appId: App, instanceId: a1" adds a context listener on "{null}" with type "fdc3.instrument" [fdc3.addContextListener]
+    Then messaging will have outgoing posts
+      | msg.matches_type           | msg.payload.channelId | msg.payload.context.type | to.instanceId |
+      | joinUserChannelResponse    | {null}                | {null}                   | a1            |
+      | broadcastResponse          | {null}                | {null}                   | a2            |
+      | addContextListenerResponse | {null}                | {null}                   | a1            |
+      | broadcastEvent             | one                   | fdc3.instrument          | a1            |

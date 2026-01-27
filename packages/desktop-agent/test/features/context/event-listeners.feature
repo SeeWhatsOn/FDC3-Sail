@@ -13,6 +13,7 @@ Feature: Desktop Agent Event Listeners
       | msg.matches_type           | msg.payload.listenerUUID | to.instanceId |
       | addEventListenerResponse   | uuid3                    | a1            |
 
+  @conformance2.2
   Scenario: Receiving channelChanged event when another app joins a channel
     When "appId: App1, instanceId: a1" adds an event listener for "channelChanged" [fdc3.addEventListener]
     And "appId: App2, instanceId: a2" joins user channel "one" [fdc3.joinUserChannel]
