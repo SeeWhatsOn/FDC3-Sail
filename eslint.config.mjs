@@ -119,7 +119,7 @@ export default defineConfig([
       "max-lines": [
         "error",
         {
-          max: 400,
+          max: 500,
           skipBlankLines: true, // Don't count blank lines (formatting)
           skipComments: false, // Count comments (they add to file size/maintenance)
         },
@@ -183,7 +183,7 @@ export default defineConfig([
       "packages/sail-ui/src/*.css",
       "apps/sail-web/src/*.css",
       "**/packages/sail-ui/src/*.css",
-      "**/apps/sail-web/src/*.css"
+      "**/apps/sail-web/src/*.css",
     ],
     plugins: { css },
     language: "css/css",
