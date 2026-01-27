@@ -18,8 +18,7 @@ export const getAllUserChannels = (state: AgentState): Channel[] =>
 export const getAppChannel = (state: AgentState, channelId: string): Channel | undefined =>
   state.channels.app[channelId]
 
-export const getAllAppChannels = (state: AgentState): Channel[] =>
-  Object.values(state.channels.app)
+export const getAllAppChannels = (state: AgentState): Channel[] => Object.values(state.channels.app)
 
 export const getPrivateChannel = (
   state: AgentState,
