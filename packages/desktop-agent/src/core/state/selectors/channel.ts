@@ -44,9 +44,12 @@ export const getChannelContext = (
   // Return most recent context
   const allContexts = Object.values(channelContexts)
   if (allContexts.length === 0) return null
-  return allContexts.reduce((latest, current) =>
-    current.timestamp > latest.timestamp ? current : latest
-  ).context
+  return allContexts.reduce((latest, current) => {
+    if (current.timestampMs !== latest.timestampMs) {
+      return current.timestampMs > latest.timestampMs ? current : latest
+    }
+    return current.sequence > latest.sequence ? current : latest
+  }).context
 }
 
 export const getStoredContext = (

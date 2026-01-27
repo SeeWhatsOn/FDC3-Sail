@@ -8,6 +8,8 @@ import { produce } from "immer"
 import type { Context } from "@finos/fdc3"
 import type { AgentState } from "../types"
 
+let contextSequence = 0
+
 export const createAppChannel = (
   state: AgentState,
   channelId: string,
@@ -40,13 +42,19 @@ export const storeContext = (
   context: Context,
   sourceInstanceId: string
 ): AgentState => {
+  const timestampMs = Date.now()
+  // Preserve ordering for rapid broadcasts in the same millisecond without
+  // pretending we have real microsecond time.
+  const sequence = contextSequence++ % 1000
+
   return produce(state, draft => {
     if (!draft.channels.contexts[channelId]) {
       draft.channels.contexts[channelId] = {}
     }
     draft.channels.contexts[channelId][context.type] = {
       context,
-      timestamp: Date.now(),
+      timestampMs,
+      sequence,
       sourceInstanceId,
     }
   })

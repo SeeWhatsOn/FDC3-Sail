@@ -4,7 +4,15 @@ import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-u
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
 import { FDC3ChannelError } from "../../errors/fdc3-errors"
-import { getAppChannel, getInstance, getInstancesOnChannel, getPrivateChannel, getUserChannel } from "../../state/selectors"
+import {
+  getAppChannel,
+  getChannelContext,
+  getInstance,
+  getInstancesOnChannel,
+  getPrivateChannel,
+  getStoredContext,
+  getUserChannel,
+} from "../../state/selectors"
 import {
   storeContext,
   addContextListener,
@@ -56,13 +64,11 @@ export async function handleBroadcastRequest(
       throw new Error(`Channel ${channelId} does not exist`)
     }
 
-    if (userChannel && instance.currentChannel !== channelId) {
-      if (!payloadChannelId) {
-        // No-op for user channels when not joined and no channel specified
-        const response = createDACPSuccessResponse(message, "broadcastResponse")
-        sendDACPResponse({ response, instanceId, transport })
-        return
-      }
+    if (userChannel && instance.currentChannel !== channelId && !payloadChannelId) {
+      // No-op for DesktopAgent.broadcast when not joined to a user channel.
+      const response = createDACPSuccessResponse(message, "broadcastResponse")
+      sendDACPResponse({ response, instanceId, transport })
+      return
     }
 
     logger.info("DACP: Processing broadcast request", {
@@ -180,32 +186,39 @@ export function handleAddContextListener(
       requestUuid: message.meta.requestUuid,
     })
 
+    const listenerId = message.meta.requestUuid
+
     // Add context listener using state transform
-    setState(state => addContextListener(state, instanceId, contextType))
+    setState(state => addContextListener(state, instanceId, listenerId, contextType))
 
     notifyContextListenerAdded(instanceId, contextType, context)
 
     logger.info("DACP: Context listener registration result", {
       instanceId,
       contextType,
+      listenerId,
       added: true,
       requestUuid: message.meta.requestUuid,
     })
 
-    // The listenerUUID is the contextType itself for simplicity in unsubscribing.
-    const listenerUUID = contextType
-
     const response = createDACPSuccessResponse(message, "addContextListenerResponse", {
-      listenerUUID,
+      listenerUUID: listenerId,
     })
 
     sendDACPResponse({ response, instanceId, transport })
 
     logger.debug("DACP: Context listener added successfully", {
-      listenerUUID,
+      listenerUUID: listenerId,
       instanceId,
       requestUuid: message.meta.requestUuid,
     })
+
+    const stateAfterListener = getState()
+    const instanceAfterListener = getInstance(stateAfterListener, instanceId)
+    const joinedChannelId = instanceAfterListener?.currentChannel
+    if (joinedChannelId && getUserChannel(stateAfterListener, joinedChannelId)) {
+      deliverCurrentContextToListener(instanceId, joinedChannelId, contextType, context)
+    }
   } catch (error) {
     logger.error("DACP: Add context listener failed", error)
 
@@ -252,7 +265,7 @@ export function handleContextListenerUnsubscribe(
 
     const state = getState()
     const instance = getInstance(state, instanceId)
-    const hasInstanceListener = !!instance && instance.contextListeners.includes(listenerUUID)
+    const hasInstanceListener = !!instance && !!instance.contextListeners[listenerUUID]
 
     if (hasInstanceListener) {
       setState(state => removeContextListener(state, instanceId, listenerUUID))
@@ -343,20 +356,21 @@ async function notifyContextListeners(
       }
 
       // Check if the instance is listening for this context type
-      const listensForType =
-        instance.contextListeners.includes(context.type) || instance.contextListeners.includes("*")
+      const listensForType = Object.values(instance.contextListeners).some(
+        listenerContextType => listenerContextType === context.type || listenerContextType === "*"
+      )
 
       if (!listensForType) {
         logger.info("Instance not listening for context type", {
           instanceId: instance.instanceId,
           contextType: context.type,
-          registeredListeners: instance.contextListeners,
+          registeredListeners: Object.values(instance.contextListeners),
         })
       } else {
         logger.info("Instance IS listening for context type", {
           instanceId: instance.instanceId,
           contextType: context.type,
-          registeredListeners: instance.contextListeners,
+          registeredListeners: Object.values(instance.contextListeners),
         })
       }
 
@@ -430,6 +444,44 @@ async function notifyContextListeners(
     failed,
     total: results.length,
   })
+}
+
+function deliverCurrentContextToListener(
+  instanceId: string,
+  channelId: string,
+  contextType: string,
+  handlerContext: DACPHandlerContext
+): void {
+  const state = handlerContext.getState()
+  const contextToDeliver =
+    contextType === "*" ? getChannelContext(state, channelId) : getChannelContext(state, channelId, contextType)
+
+  if (!contextToDeliver) {
+    return
+  }
+
+  const storedContext = getStoredContext(state, channelId, contextToDeliver.type)
+  const sourceInstanceId = storedContext?.sourceInstanceId
+  const sourceInstance = sourceInstanceId ? getInstance(state, sourceInstanceId) : undefined
+
+  const broadcastEvent = createDACPEvent("broadcastEvent", {
+    channelId,
+    context: contextToDeliver,
+    originatingApp: {
+      appId: sourceInstance?.appId ?? "unknown",
+      instanceId: sourceInstanceId ?? "unknown",
+    },
+  })
+
+  const broadcastEventWithRouting = {
+    ...broadcastEvent,
+    meta: {
+      ...broadcastEvent.meta,
+      destination: { instanceId },
+    },
+  }
+
+  handlerContext.transport.send(broadcastEventWithRouting)
 }
 
 async function notifyPrivateChannelContextListeners(

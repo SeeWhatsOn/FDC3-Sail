@@ -49,8 +49,8 @@ export interface AppInstance {
   /** Current user channel (null if not joined to any channel) */
   currentChannel: string | null
 
-  /** Array of context types this instance listens for */
-  contextListeners: string[]
+  /** Context listeners keyed by listener UUID */
+  contextListeners: Record<string, string>
 
   /** Array of intents this instance listens for */
   intentListeners: string[]
@@ -163,7 +163,10 @@ export interface IntentResolutionRecord {
  */
 export interface StoredContext {
   context: Context
-  timestamp: number
+  /** Epoch timestamp in milliseconds. */
+  timestampMs: number
+  /** Sequence to preserve order within the same millisecond. */
+  sequence: number
   sourceInstanceId: string
 }
 

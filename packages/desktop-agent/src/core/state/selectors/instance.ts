@@ -34,7 +34,11 @@ export const getInstancesWithContextListener = (
   state: AgentState,
   contextType: string
 ): AppInstance[] =>
-  Object.values(state.instances).filter(i => i.contextListeners.includes(contextType))
+  Object.values(state.instances).filter(instance =>
+    Object.values(instance.contextListeners).some(
+      listenerContextType => listenerContextType === contextType || listenerContextType === "*"
+    )
+  )
 
 export const getInstancesWithIntentListener = (
   state: AgentState,

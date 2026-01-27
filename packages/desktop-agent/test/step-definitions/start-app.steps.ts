@@ -40,10 +40,10 @@ function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string
         updateInstanceState(
           connectInstance(currentState, {
             instanceId,
-            appId: meta.source.appId,
+          appId: meta.source.appId,
             metadata: {
-              appId: meta.source.appId,
-              name: meta.source.appId,
+            appId: meta.source.appId,
+            name: meta.source.appId,
             },
           }),
           instanceId,

@@ -137,8 +137,10 @@ function hasMatchingContextListener(
     return false
   }
 
-  // Listener registration is stored as context types or "*" for all.
-  return instance.contextListeners.includes(contextType) || instance.contextListeners.includes("*")
+  // Listener registration is stored as listenerId -> contextType (or "*" for all).
+  return Object.values(instance.contextListeners).some(
+    listenerContextType => listenerContextType === contextType || listenerContextType === "*"
+  )
 }
 
 function deliverOpenWithContext(

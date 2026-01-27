@@ -11,7 +11,9 @@ import {
   getAppChannel,
   getAllUserChannels,
   getChannelContext,
+  getStoredContext,
   getPrivateChannel,
+  getEventListener,
 } from "../../state/selectors"
 import { joinChannel, createAppChannel } from "../../state/mutators"
 import type { BrowserTypes } from "@finos/fdc3"
@@ -103,8 +105,18 @@ export function handleJoinUserChannelRequest(
 
     setState(state => joinChannel(state, instanceId, channelId))
 
-    const response = createDACPSuccessResponse(message, "joinUserChannelResponse")
+    const response = {
+      type: "joinUserChannelResponse",
+      payload: {},
+      meta: {
+        responseUuid: message.meta.requestUuid,
+        requestUuid: message.meta.requestUuid,
+        timestamp: new Date().toISOString(),
+      },
+    } as unknown as BrowserTypes.AgentResponseMessage
     sendDACPResponse({ response, instanceId, transport })
+
+    deliverCurrentContextToInstanceListeners(instanceId, channelId, context)
 
     notifyChannelChanged(instanceId, channelId, context)
   } catch (error) {
@@ -271,16 +283,20 @@ export function handleGetOrCreateChannelRequest(
     const appChannel = getAppChannel(state, channelId)
     const privateChannel = getPrivateChannel(state, channelId)
 
+    // App channel IDs must not overlap with user channels.
+    if (userChannel) {
+      throw new ChannelAccessDeniedError("AccessDenied")
+    }
+
     // Private channels are created via intent-based workflows, not this API.
     if (privateChannel) {
       throw new ChannelAccessDeniedError("AccessDenied")
     }
 
-    const existingChannel = userChannel ?? appChannel
-    if (existingChannel) {
+    if (appChannel) {
       // Return existing user/app channel without creating a new one.
       const response = createDACPSuccessResponse(message, "getOrCreateChannelResponse", {
-        channel: existingChannel,
+        channel: appChannel,
       })
       sendDACPResponse({ response, instanceId, transport })
       logger.debug("DACP: getOrCreateChannel", { channelId, existed: true })
@@ -319,6 +335,52 @@ export function handleGetOrCreateChannelRequest(
   }
 }
 
+function deliverCurrentContextToInstanceListeners(
+  instanceId: string,
+  channelId: string,
+  context: DACPHandlerContext
+): void {
+  const state = context.getState()
+  const instance = getInstance(state, instanceId)
+  if (!instance) {
+    return
+  }
+
+  Object.values(instance.contextListeners).forEach(listenerContextType => {
+    const contextToDeliver =
+      listenerContextType === "*"
+        ? getChannelContext(state, channelId)
+        : getChannelContext(state, channelId, listenerContextType)
+
+    if (!contextToDeliver) {
+      return
+    }
+
+    const storedContext = getStoredContext(state, channelId, contextToDeliver.type)
+    const sourceInstanceId = storedContext?.sourceInstanceId
+    const sourceInstance = sourceInstanceId ? getInstance(state, sourceInstanceId) : undefined
+
+    const broadcastEvent = createDACPEvent("broadcastEvent", {
+      channelId,
+      context: contextToDeliver,
+      originatingApp: {
+        appId: sourceInstance?.appId ?? "unknown",
+        instanceId: sourceInstanceId ?? "unknown",
+      },
+    })
+
+    const broadcastEventWithRouting = {
+      ...broadcastEvent,
+      meta: {
+        ...broadcastEvent.meta,
+        destination: { instanceId },
+      },
+    }
+
+    context.transport.send(broadcastEventWithRouting)
+  })
+}
+
 function notifyChannelChanged(
   instanceId: string,
   channelId: string | null,
@@ -331,6 +393,19 @@ function notifyChannelChanged(
     return
   }
 
+  const state = getState()
+  const subscribers = getEventListeners("channelChanged", context.getState)
+  const subscriberInstanceIds = new Set(
+    subscribers
+      .map(listenerId => getEventListener(state, listenerId))
+      .filter((listener): listener is NonNullable<ReturnType<typeof getEventListener>> => !!listener)
+      .map(listener => listener.instanceId)
+  )
+
+  if (subscriberInstanceIds.size === 0) {
+    return
+  }
+
   const channelChangedEvent = createDACPEvent("channelChangedEvent", {
     channelId,
     identity: {
@@ -339,40 +414,21 @@ function notifyChannelChanged(
     },
   })
 
-  // Add routing metadata
-  const channelChangedEventWithRouting = {
-    ...channelChangedEvent,
-    meta: {
-      ...channelChangedEvent.meta,
-      destination: { instanceId },
-    },
-  }
-
-  // Send to the app that changed channels
-  transport.send(channelChangedEventWithRouting)
-
-  // Also broadcast to all apps subscribed to channelChanged events
-  const subscribers = getEventListeners("channelChanged", context.getState)
-
-  subscribers.forEach((subscriberId: string) => {
-    // Don't send duplicate to the app that changed
-    if (subscriberId !== instanceId) {
-      // Add routing metadata
-      const channelChangedEventWithRouting = {
-        ...channelChangedEvent,
-        meta: {
-          ...channelChangedEvent.meta,
-          destination: { instanceId: subscriberId },
-        },
-      }
-
-      transport.send(channelChangedEventWithRouting)
+  subscriberInstanceIds.forEach(subscriberInstanceId => {
+    const channelChangedEventWithRouting = {
+      ...channelChangedEvent,
+      meta: {
+        ...channelChangedEvent.meta,
+        destination: { instanceId: subscriberInstanceId },
+      },
     }
+
+    transport.send(channelChangedEventWithRouting)
   })
 
   logger.debug("Channel changed event broadcast", {
     instanceId,
     channelId,
-    subscribers: subscribers.length,
+    subscribers: subscriberInstanceIds.size,
   })
 }
