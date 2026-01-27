@@ -53,6 +53,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     // 1. Extract origins from URLs
     const identityOrigin = new URL(identityUrl).origin
     const actualOrigin = new URL(actualUrl).origin
+    const messageOrigin = (message as { meta?: { messageOrigin?: string } }).meta?.messageOrigin
 
     // 2. Validate origins match (per FDC3 spec requirement)
     if (identityOrigin !== actualOrigin) {
@@ -65,9 +66,45 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
       return
     }
 
-    // TODO: Also validate MessageEvent.origin matches (requires context enhancement)
+    if (!messageOrigin) {
+      logger.error("[WCP4] Missing WCP1Hello message origin for validation")
+      sendFailureResponse(
+        context,
+        "Origin mismatch: WCP1Hello MessageEvent.origin must be provided",
+        wcp4Message.meta.connectionAttemptUuid
+      )
+      return
+    }
 
-    // 3. Look up app in app directory
+    if (messageOrigin !== identityOrigin) {
+      logger.error("[WCP4] Origin mismatch", {
+        identityOrigin,
+        actualOrigin,
+        messageOrigin,
+      })
+      sendFailureResponse(
+        context,
+        "Origin mismatch: MessageEvent.origin must match identityUrl and actualUrl",
+        wcp4Message.meta.connectionAttemptUuid
+      )
+      return
+    }
+
+    // 3. If reconnecting, validate instance exists before continuing
+    if (reconnectInstanceId && reconnectInstanceUuid) {
+      const existingInstance = getInstance(getState(), reconnectInstanceId)
+      if (!existingInstance) {
+        logger.warn("[WCP4] Instance not found for reconnection", reconnectInstanceId)
+        sendFailureResponse(
+          context,
+          "App Instance not found",
+          wcp4Message.meta.connectionAttemptUuid
+        )
+        return
+      }
+    }
+
+    // 4. Look up app in app directory
     const apps = appDirectory.allApps
 
     // Helper to normalize URLs for comparison (remove trailing slashes, etc.)
@@ -122,24 +159,15 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
 
     logger.info("[WCP4] App found in directory", appMetadata.appId)
 
-    // 4. Check if reconnecting to existing instance
+    // 5. Check if reconnecting to existing instance
     let instanceId: string
     let instanceUuid: string
 
     if (reconnectInstanceId && reconnectInstanceUuid) {
       // Attempt to reconnect to existing instance
-      const existingInstance = getInstance(getState(), reconnectInstanceId)
-
-      if (existingInstance) {
-        logger.info("[WCP4] Reconnecting to existing instance", reconnectInstanceId)
-        instanceId = reconnectInstanceId
-        instanceUuid = reconnectInstanceUuid
-      } else {
-        logger.warn("[WCP4] Instance not found for reconnection, creating new instance")
-        const newInstance = createAppInstance(context, appMetadata, identityUrl)
-        instanceId = newInstance.instanceId
-        instanceUuid = newInstance.instanceId // Use same for now
-      }
+      logger.info("[WCP4] Reconnecting to existing instance", reconnectInstanceId)
+      instanceId = reconnectInstanceId
+      instanceUuid = reconnectInstanceUuid
     } else {
       // Create new app instance
       const newInstance = createAppInstance(context, appMetadata, identityUrl)
@@ -336,7 +364,17 @@ function sendFailureResponse(
       instanceId,
       transport: context.transport,
     })
-  } else {
-    context.logger.error("[WCP4] Cannot send failure response: instanceId not established")
+    return
   }
+
+  // Fall back to sending without routing metadata when instanceId is unknown
+  const fallbackResponse = {
+    ...response,
+    meta: {
+      ...response.meta,
+      destination: { instanceId: `temp-${resolvedConnectionAttemptUuid}` },
+    },
+  }
+
+  context.transport.send(fallbackResponse)
 }

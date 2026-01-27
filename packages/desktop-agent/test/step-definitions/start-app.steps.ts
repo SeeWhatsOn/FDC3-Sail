@@ -105,6 +105,7 @@ When("{string} is closed", function (this: CustomWorld, app: string) {
     requestIntentResolution: this.mockIntentResolver.createCallback(),
     logger: consoleLogger,
     implementationMetadata: this.desktopAgent.getImplementationMetadata(),
+    openContextListenerTimeoutMs: 2000,
   }
 
   cleanupDACPHandlers(context)

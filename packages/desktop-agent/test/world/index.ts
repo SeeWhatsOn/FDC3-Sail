@@ -105,7 +105,8 @@ export class CustomWorld extends World {
           OriginatingAppMetadata: true,
           UserChannelMembershipAPIs: true,
         }
-      }
+      },
+      openContextListenerTimeoutMs: 2000,
     })
 
     // Wire up MockAppLauncher callback to register instances in state

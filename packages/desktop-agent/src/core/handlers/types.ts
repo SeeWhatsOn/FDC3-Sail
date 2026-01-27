@@ -169,6 +169,9 @@ export interface DACPHandlerContext {
 
   /** Implementation metadata for the desktop agent */
   implementationMetadata: DesktopAgentConfig["implementationMetadata"]
+
+  /** Timeout (ms) to wait for a context listener after open-with-context */
+  openContextListenerTimeoutMs: number
 }
 
 /**

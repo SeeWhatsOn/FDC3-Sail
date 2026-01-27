@@ -78,6 +78,7 @@ export function handleWCP1Hello(
     instanceId,
     appId: "unknown", // Will be set after WCP4 validation
     connectionAttemptUuid,
+    messageOrigin: event.origin,
     source: sourceWindow,
     port: channel.port2,
     connectedAt: new Date(),

@@ -6,6 +6,7 @@ import { ChannelError } from "@finos/fdc3"
 import { FDC3ChannelError } from "../../errors/fdc3-errors"
 import { getAppChannel, getInstance, getInstancesOnChannel, getUserChannel } from "../../state/selectors"
 import { storeContext, addContextListener, joinChannel, removeContextListener } from "../../state/mutators"
+import { notifyContextListenerAdded } from "./utils/open-with-context"
 
 /**
  * Handles broadcast requests to send context to a channel
@@ -125,6 +126,8 @@ export function handleAddContextListener(
 
     // Add context listener using state transform
     setState(state => addContextListener(state, instanceId, contextType))
+
+    notifyContextListenerAdded(instanceId, contextType, context)
 
     logger.info("DACP: Context listener registration result", {
       instanceId,

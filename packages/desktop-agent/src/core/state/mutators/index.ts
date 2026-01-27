@@ -65,3 +65,10 @@ export {
   updateHeartbeatSent,
   stopHeartbeat,
 } from "./heartbeat"
+
+// Open-with-context mutators
+export {
+  addPendingOpenWithContext,
+  setPendingOpenWithContextForInstance,
+  removePendingOpenWithContextByRequest,
+} from "./open-with-context"

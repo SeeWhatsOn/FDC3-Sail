@@ -245,6 +245,21 @@ export interface HeartbeatState {
 }
 
 // ============================================================================
+// OPEN WITH CONTEXT TYPES
+// ============================================================================
+
+/**
+ * Pending open-with-context request awaiting listener registration.
+ * Stored in state without timer handles so it remains serializable.
+ */
+export interface PendingOpenWithContext {
+  message: BrowserTypes.OpenRequest
+  appIdentifier: BrowserTypes.AppIdentifier
+  launchContext: Context
+  sourceInstanceId: string
+}
+
+// ============================================================================
 // UNIFIED AGENT STATE
 // ============================================================================
 
@@ -287,6 +302,12 @@ export interface AgentState {
 
   /** Heartbeat state keyed by instanceId */
   heartbeats: Record<string, HeartbeatState>
+
+  /** Open request coordination state */
+  open: {
+    /** Pending open-with-context requests keyed by target instanceId */
+    pendingWithContext: Record<string, PendingOpenWithContext[]>
+  }
 }
 
 // ============================================================================

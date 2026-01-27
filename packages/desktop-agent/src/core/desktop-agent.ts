@@ -22,6 +22,7 @@ import { InMemoryTransport } from "../transports/in-memory-transport"
 import type { AgentState, StateSetter } from "./state/types"
 import { createInitialState, createStateWithOverrides } from "./state/initial-state"
 import { consoleLogger, type Logger } from "./interfaces/logger"
+import { DACP_TIMEOUTS } from "./dacp-protocol/dacp-constants"
 
 type Channel = BrowserTypes.Channel
 
@@ -184,6 +185,12 @@ export interface DesktopAgentConfig {
     "fdc3Version" | "provider" | "providerVersion"
   > &
     Partial<Pick<BrowserTypes.ImplementationMetadata, "optionalFeatures">>
+
+  /**
+   * Timeout (ms) to wait for a context listener after open-with-context.
+   * Defaults to the FDC3 minimum (15s) but can be shortened for tests.
+   */
+  openContextListenerTimeoutMs?: number
 }
 
 /**
@@ -220,6 +227,7 @@ export class DesktopAgent {
   private isStarted: boolean = false
   private implementationMetadata?: DesktopAgentConfig["implementationMetadata"]
   private userChannels: BrowserTypes.Channel[]
+  private openContextListenerTimeoutMs: number
 
   constructor(config?: DesktopAgentConfig) {
     this.transport = config?.transport ?? new InMemoryTransport()
@@ -240,6 +248,8 @@ export class DesktopAgent {
         UserChannelMembershipAPIs: true,
       },
     }
+    this.openContextListenerTimeoutMs =
+      config?.openContextListenerTimeoutMs ?? DACP_TIMEOUTS.MINIMUM_APP_LAUNCH
     // Initialize state - use this.userChannels to ensure consistency
     this.state = config?.initialState
       ? createStateWithOverrides(config.initialState, this.userChannels)
@@ -388,6 +398,7 @@ export class DesktopAgent {
       validator: this.validator,
       logger: this.logger,
       implementationMetadata: this.implementationMetadata,
+      openContextListenerTimeoutMs: this.openContextListenerTimeoutMs,
     }
   }
   /**

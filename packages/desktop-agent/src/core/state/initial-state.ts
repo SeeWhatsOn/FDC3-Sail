@@ -34,6 +34,9 @@ export function createInitialState(userChannels: Channel[]): AgentState {
       byEventType: {},
     },
     heartbeats: {},
+    open: {
+      pendingWithContext: {},
+    },
   }
 }
 

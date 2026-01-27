@@ -140,6 +140,12 @@ export interface AppConnectionMetadata {
   connectionAttemptUuid: string
 
   /**
+   * MessageEvent.origin from the original WCP1Hello message
+   * Used for WCP4 app identity validation
+   */
+  messageOrigin: string
+
+  /**
    * Source window/iframe that initiated connection
    */
   source: Window

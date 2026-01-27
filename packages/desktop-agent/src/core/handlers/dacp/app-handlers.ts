@@ -7,6 +7,7 @@ import { OpenError } from "@finos/fdc3"
 import { AppNotFoundError, ErrorOnLaunchError } from "../../errors/fdc3-errors"
 import type { DirectoryApp } from "../../app-directory/types"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
+import { registerOpenWithContext } from "./utils/open-with-context"
 
 /**
  * Handles getInfoRequest to return implementation metadata.
@@ -15,12 +16,39 @@ export function handleGetInfoRequest(
   message: BrowserTypes.GetInfoRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, implementationMetadata, logger } = context
+  const { transport, instanceId, implementationMetadata, logger, getState, appDirectory } = context
 
   try {
+    const callerInstance = getInstance(getState(), instanceId)
+    const baseMetadata =
+      implementationMetadata ?? {
+        fdc3Version: "2.2",
+        provider: "FDC3-Sail",
+        providerVersion: "0.0.0",
+      }
+    let appMetadata: BrowserTypes.AppMetadata | undefined
+
+    if (callerInstance) {
+      const directoryApps = appDirectory.retrieveAppsById(callerInstance.appId)
+      if (directoryApps.length > 0) {
+        appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0], instanceId)
+      } else {
+        appMetadata = {
+          appId: callerInstance.appId,
+          name: callerInstance.metadata?.name ?? callerInstance.appId,
+          instanceId,
+          desktopAgent: baseMetadata.provider ?? "FDC3-Sail",
+        }
+      }
+    }
+
+    const resolvedImplementationMetadata = {
+      ...baseMetadata,
+      ...(appMetadata ? { appMetadata } : {}),
+    }
 
     const response = createDACPSuccessResponse(message, "getInfoResponse", {
-      implementationMetadata,
+      implementationMetadata: resolvedImplementationMetadata,
     })
 
     sendDACPResponse({ response, instanceId, transport })
@@ -43,7 +71,13 @@ export async function handleOpenRequest(
   message: BrowserTypes.OpenRequest,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, appDirectory, appLauncher, logger } = context
+  const {
+    transport,
+    instanceId,
+    appDirectory,
+    appLauncher,
+    logger,
+  } = context
 
   try {
     const payload = message.payload
@@ -84,7 +118,15 @@ export async function handleOpenRequest(
       instanceId: appIdentifier.instanceId,
     })
 
-    // Return app identifier to caller
+    if (!appIdentifier.instanceId) {
+      throw new Error("App launcher did not return an instanceId")
+    }
+
+    if (launchContext) {
+      registerOpenWithContext(message, appIdentifier, launchContext, context)
+      return
+    }
+
     const response = createDACPSuccessResponse(message, "openResponse", {
       appIdentifier,
     })

@@ -222,6 +222,9 @@ export class WCPConnector extends WCPEventEmitter {
    * 3. Bridge app transport to Desktop Agent transport
    * 4. Send WCP3Handshake with port1 to app
    * 5. Store connection metadata
+   *
+   * Note: WCP4 identity validation (origin + app directory URL match)
+   * happens in core handlers after the app sends WCP4ValidateAppIdentity.
    */
   private handleWCP1Hello(event: MessageEvent<WCP1HelloMessage>): void {
     handleWCP1HelloHandshake(event, this.getHandshakeContext())
@@ -235,19 +238,41 @@ export class WCPConnector extends WCPEventEmitter {
     message: AppRequestMessage | WebConnectionProtocolMessage,
     instanceId: string
   ): AppRequestMessage | WebConnectionProtocolMessage {
-    if ("meta" in message && message.meta && "source" in message.meta) {
-      return {
-        ...message,
-        meta: {
-          ...message.meta,
-          source: {
-            appId: (message.meta as { source?: { appId: string } }).source?.appId,
-            instanceId,
-          },
-        },
-      } as AppRequestMessage | WebConnectionProtocolMessage
+    const currentMeta =
+      "meta" in message && message.meta && typeof message.meta === "object" ? message.meta : undefined
+    const hasSourceField = !!currentMeta && "source" in currentMeta
+    const isIdentityValidation = message.type === "WCP4ValidateAppIdentity"
+    const storedMessageOrigin = isIdentityValidation
+      ? this.connections.get(instanceId)?.messageOrigin
+      : undefined
+
+    // If we have nothing to add or normalize, return early.
+    if (!hasSourceField && !storedMessageOrigin) {
+      return message
     }
-    return message
+
+    const nextMeta = {
+      ...(currentMeta ?? {}),
+    } as typeof message.meta
+
+    // Normalize meta.source.instanceId for DA routing while preserving appId.
+    if (hasSourceField) {
+      ;(nextMeta as { source?: { appId?: string; instanceId?: string } }).source = {
+        appId: (currentMeta as { source?: { appId?: string } }).source?.appId,
+        instanceId,
+      }
+    }
+
+    // For WCP4, ensure messageOrigin is propagated from the connection record.
+    const nextMetaRecord = nextMeta as unknown as Record<string, unknown>
+    if (storedMessageOrigin && !nextMetaRecord.messageOrigin) {
+      nextMetaRecord.messageOrigin = storedMessageOrigin
+    }
+
+    return {
+      ...message,
+      meta: nextMeta,
+    } as unknown as AppRequestMessage | WebConnectionProtocolMessage
   }
 
   /**
@@ -267,32 +292,19 @@ export class WCPConnector extends WCPEventEmitter {
   }
 
   /**
-   * Bridge messages between app MessagePort and Desktop Agent transport
-   *
-   * This sets up bidirectional message routing:
-   * - App → Desktop Agent: Add source metadata (instanceId) to identify message origin
-   * - Desktop Agent → App: Route by destination metadata (instanceId) to target app
-   *
-   * Message format: DACP messages with meta.source/destination.instanceId for routing
-   *
-   * Note: Uses dynamic instanceId lookup via transportToInstanceId map because
-   * the instanceId changes from temp-{uuid} to actual instanceId after WCP5 validation.
-   */
-  /**
    * Handle messages from Desktop Agent transport
    * Route to appropriate app based on destination metadata
+   *
+   * Note: message is unknown from Transport.onMessage by design - validates untrusted input
    *
    * Message routing logic:
    * - Messages with meta.destination.instanceId → route to specific app
    * - Messages without destination → broadcast or Desktop Agent internal (ignored here)
    * - Only routes to connected transports
    * - Intercepts WCP5ValidateAppIdentityResponse to migrate temp→actual instanceId
-   */
-  /**
-   * Handle messages from Desktop Agent transport
-   * Route to appropriate app based on destination metadata
    *
-   * Note: message is unknown from Transport.onMessage by design - validates untrusted input
+   * Uses dynamic instanceId lookup via transportToInstanceId map because the instanceId
+   * changes from temp-{uuid} to actual instanceId after WCP5 validation.
    */
   private handleDesktopAgentMessage(message: unknown): void {
     handleDesktopAgentMessageRouting(message, this.getRoutingContext())

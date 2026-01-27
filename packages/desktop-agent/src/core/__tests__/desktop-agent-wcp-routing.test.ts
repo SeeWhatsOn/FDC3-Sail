@@ -35,6 +35,7 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "test-uuid",
         timestamp: new Date().toISOString(),
+        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
@@ -54,5 +55,48 @@ describe("DesktopAgent WCP routing", () => {
     expect(response.meta?.destination?.instanceId).toBe("temp-test-uuid")
     expect(response.meta?.connectionAttemptUuid).toBe("test-uuid")
     expect(typeof response.meta?.timestamp).toBe("string")
+  })
+
+  it("rejects WCP4 when MessageEvent.origin does not match identityUrl origin", async () => {
+    const appDirectory = new AppDirectoryManager()
+    appDirectory.addApplications([
+      {
+        appId: "test-app",
+        title: "Test App",
+        type: "web",
+        details: {
+          url: "https://example.com/app",
+        },
+      },
+    ])
+
+    const transport = new MockTransport()
+    const agent = new DesktopAgent({
+      transport,
+      appDirectoryManager: appDirectory,
+    })
+
+    agent.start()
+
+    const message = {
+      type: "WCP4ValidateAppIdentity",
+      payload: {
+        identityUrl: "https://example.com/app",
+        actualUrl: "https://example.com/app",
+      },
+      meta: {
+        connectionAttemptUuid: "test-uuid",
+        timestamp: new Date().toISOString(),
+        messageOrigin: "https://malicious.example.com",
+      },
+    } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
+
+    await transport.receiveMessage(message)
+
+    expect(transport.sentMessages).toHaveLength(1)
+    const response = transport.getLastMessage() as { type: string; payload?: { message?: string } }
+
+    expect(response.type).toBe("WCP5ValidateAppIdentityFailedResponse")
+    expect(response.payload?.message).toContain("Origin mismatch")
   })
 })
