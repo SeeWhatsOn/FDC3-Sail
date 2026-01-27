@@ -5,7 +5,7 @@ import { APP_FIELD, contextMap, createMeta, getAppInstanceId } from "./generic.s
 import { handleResolve } from "../support/testing-utils"
 import { BrowserTypes } from "@finos/fdc3-schema"
 import { AppInstanceState } from "../../src/core/state/types"
-import { getInstance } from "../../src/core/state/selectors"
+import { getInstance, getInstancesByAppId } from "../../src/core/state/selectors"
 import { connectInstance, updateInstanceState } from "../../src/core/state/mutators"
 
 type FindIntentRequest = BrowserTypes.FindIntentRequest
@@ -28,11 +28,24 @@ type ListensFor = {
  * Helper to ensure app instance exists and is connected before sending messages
  */
 function ensureAppInstance(world: CustomWorld, appStr: string): string {
-  const instanceId = getAppInstanceId(world, appStr)
+  let instanceId = getAppInstanceId(world, appStr)
   const meta = createMeta(world, appStr)
 
   const state = world.getState()
-  const instance = getInstance(state, instanceId)
+  let instance = getInstance(state, instanceId)
+  if (!instance && meta.source?.appId) {
+    const existingInstances = getInstancesByAppId(state, meta.source.appId).filter(
+      candidate => candidate.state === AppInstanceState.CONNECTED
+    )
+    if (existingInstances.length === 1) {
+      instanceId = existingInstances[0].instanceId
+      if (!world.props.instances) {
+        world.props.instances = {}
+      }
+      world.props.instances[appStr] = instanceId
+      instance = getInstance(state, instanceId)
+    }
+  }
   if (!instance) {
     world.updateState(currentState =>
       updateInstanceState(
@@ -51,6 +64,21 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
   }
 
   return instanceId
+}
+
+function resolveIntentEventUuid(world: CustomWorld, value: string): string {
+  if (value === "{lastIntentEventUuid}") {
+    const lastIntentEvent = [...world.mockTransport.getPostedMessages()]
+      .reverse()
+      .find(record => record.msg.type === "intentEvent")
+    const eventUuid = lastIntentEvent?.msg.meta?.eventUuid
+    if (!eventUuid) {
+      throw new Error("No intentEvent found to resolve {lastIntentEventUuid}")
+    }
+    return eventUuid
+  }
+
+  return handleResolve(value, world) as string
 }
 
 function decamelize(str: string, separator: string) {
@@ -384,6 +412,7 @@ When(
   ) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
+    const resolvedEventUuid = resolveIntentEventUuid(this, eventUuid)
 
     const message: IntentResultRequest = {
       type: "intentResultRequest",
@@ -394,7 +423,7 @@ When(
         intentResult: {
           context: contextMap[contextType],
         },
-        intentEventUuid: eventUuid,
+        intentEventUuid: resolvedEventUuid,
         raiseIntentRequestUuid: raiseIntentUuid,
       },
     }
@@ -408,6 +437,7 @@ When(
   async function (this: CustomWorld, appStr: string, eventUuid: string, raiseIntentUuid: string) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
+    const resolvedEventUuid = resolveIntentEventUuid(this, eventUuid)
 
     const message: IntentResultRequest = {
       type: "intentResultRequest",
@@ -416,7 +446,7 @@ When(
       },
       payload: {
         intentResult: {},
-        intentEventUuid: eventUuid,
+        intentEventUuid: resolvedEventUuid,
         raiseIntentRequestUuid: raiseIntentUuid,
       },
     }
@@ -436,6 +466,7 @@ When(
   ) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
+    const resolvedEventUuid = resolveIntentEventUuid(this, eventUuid)
 
     const message: IntentResultRequest = {
       type: "intentResultRequest",
@@ -449,7 +480,7 @@ When(
             id: channelId,
           },
         },
-        intentEventUuid: eventUuid,
+        intentEventUuid: resolvedEventUuid,
         raiseIntentRequestUuid: raiseIntentUuid,
       },
     }

@@ -75,7 +75,11 @@ export class CustomWorld extends World {
    * Uses the new functional state management pattern.
    * Access state via desktopAgent.getState() for assertions.
    */
-  initializeDesktopAgent(apps: DirectoryApp[], channels: UserChannelConfig[]): void {
+  initializeDesktopAgent(
+    apps: DirectoryApp[],
+    channels: UserChannelConfig[],
+    heartbeatConfig?: { intervalMs?: number; timeoutMs?: number }
+  ): void {
     this.uuidCounter = 0
     const deterministicRandomUUID = () => `uuid${this.uuidCounter++}`
     if (!globalThis.crypto) {
@@ -117,8 +121,8 @@ export class CustomWorld extends World {
         },
       },
       openContextListenerTimeoutMs: 2000,
-      heartbeatIntervalMs: 500,
-      heartbeatTimeoutMs: 2000,
+      heartbeatIntervalMs: heartbeatConfig?.intervalMs ?? 30000,
+      heartbeatTimeoutMs: heartbeatConfig?.timeoutMs ?? 60000,
     })
 
     // Wire up MockAppLauncher callback to register instances in state

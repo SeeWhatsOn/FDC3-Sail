@@ -4,10 +4,8 @@
  * Re-exports all intent handler functions
  */
 
-export {
-  handleRaiseIntentRequest,
-  handleRaiseIntentForContextRequest,
-} from "./intent-raise-handlers"
+export { handleRaiseIntentRequest } from "./intent-raise-intent"
+export { handleRaiseIntentForContextRequest } from "./intent-raise-intent-for-context"
 
 export {
   handleAddIntentListener,

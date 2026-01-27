@@ -111,10 +111,12 @@ export function createMeta(cw: CustomWorld, appStr: string) {
     const instanceIdMatch = appStr.match(/instanceId:\s*(.+)/)
     const appId = appIdMatch?.[1]?.trim()
     const instanceId = instanceIdMatch?.[1]?.trim()
+    const resolvedInstanceId =
+      cw.props.instances && cw.props.instances[appStr] ? cw.props.instances[appStr] : instanceId
 
     if (appId) {
-      app = instanceId
-        ? { appId, instanceId, desktopAgent: desktopAgentName }
+      app = resolvedInstanceId
+        ? { appId, instanceId: resolvedInstanceId, desktopAgent: desktopAgentName }
         : { appId, desktopAgent: desktopAgentName }
     } else {
       throw new Error(`Invalid AppIdentifier format: ${appStr}`)
@@ -194,7 +196,10 @@ Given("A desktop agent with heartbeat checking", function (this: CustomWorld) {
 
   // Initialize DesktopAgent
   // TODO: Implement heartbeat checking in new architecture
-  this.initializeDesktopAgent(apps, TEST_USER_CHANNELS)
+  this.initializeDesktopAgent(apps, TEST_USER_CHANNELS, {
+    intervalMs: 500,
+    timeoutMs: 2000,
+  })
 })
 
 When("I shutdown the server", function (this: CustomWorld) {

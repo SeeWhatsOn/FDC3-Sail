@@ -1,7 +1,7 @@
 import { DataTable, Then, When } from "@cucumber/cucumber"
 import { CustomWorld } from "../world"
 import { contextMap, createMeta, getAppInstanceId } from "./generic.steps"
-import { matchData } from "../support/testing-utils"
+import { matchDataUnordered } from "../support/testing-utils"
 import { BrowserTypes } from "@finos/fdc3-schema"
 import type { GetInfoRequest } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { AppInstanceState } from "../../src/core/state/types"
@@ -209,7 +209,7 @@ Then("running apps will be", function (this: CustomWorld, dataTable: DataTable) 
     state: "connected",
   }))
 
-  matchData(this, apps, dataTable)
+  matchDataUnordered(this, apps, dataTable)
 })
 
 When(

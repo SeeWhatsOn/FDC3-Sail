@@ -88,6 +88,20 @@ export const addPendingIntent = (
   })
 }
 
+export const updatePendingIntentTarget = (
+  state: AgentState,
+  requestId: string,
+  targetInstanceId: string,
+  targetAppId: string
+): AgentState => {
+  if (!state.intents.pending[requestId]) return state
+
+  return produce(state, draft => {
+    draft.intents.pending[requestId].targetInstanceId = targetInstanceId
+    draft.intents.pending[requestId].targetAppId = targetAppId
+  })
+}
+
 export const resolvePendingIntent = (state: AgentState, requestId: string): AgentState => {
   if (!state.intents.pending[requestId]) return state
 

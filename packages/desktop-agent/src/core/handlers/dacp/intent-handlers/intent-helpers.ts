@@ -24,12 +24,19 @@ import { AppInstanceState } from "../../../state/types"
  * Key: requestId
  * Value: Promise resolve/reject functions and timeout handle
  */
+export type IntentRequestType = "raiseIntentRequest" | "raiseIntentForContextRequest"
+
+type TimeoutHandle = ReturnType<typeof setTimeout>
+
 export const pendingIntentPromises = new Map<
   string,
   {
     resolve: (result: unknown) => void
     reject: (error: Error) => void
-    timeoutHandle?: NodeJS.Timeout
+    timeoutHandle?: TimeoutHandle
+    deliveryTimeoutHandle?: TimeoutHandle
+    delivered?: boolean
+    requestType?: IntentRequestType
   }
 >()
 

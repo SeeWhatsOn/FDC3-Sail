@@ -195,6 +195,9 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
       if (promiseData.timeoutHandle) {
         clearTimeout(promiseData.timeoutHandle)
       }
+      if (promiseData.deliveryTimeoutHandle) {
+        clearTimeout(promiseData.deliveryTimeoutHandle)
+      }
       promiseData.reject(new Error("Intent cancelled - target instance disconnected"))
       pendingIntentPromises.delete(pending.requestId)
     }

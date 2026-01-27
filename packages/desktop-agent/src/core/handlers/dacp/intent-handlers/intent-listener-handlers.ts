@@ -11,10 +11,8 @@ import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-
 import type { BrowserTypes } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
 import { getInstance } from "../../../state/selectors"
-import {
-  registerIntentListener,
-  unregisterIntentListener,
-} from "../../../state/mutators"
+import { registerIntentListener, unregisterIntentListener } from "../../../state/mutators"
+import { deliverPendingIntentsForListener } from "./intent-delivery-helpers"
 
 export function handleAddIntentListener(
   message: BrowserTypes.AddIntentListenerRequest,
@@ -42,8 +40,8 @@ export function handleAddIntentListener(
       })
     )
 
-    // FDC3 spec requires listenerUUID (not listenerId) in the response payload
-    //TODO: change the var to match the spec - listenerId -> listenerUUID
+    deliverPendingIntentsForListener(context, payload.intent)
+
     const response = createDACPSuccessResponse(message, "addIntentListenerResponse", {
       listenerUUID: listenerId,
     })
@@ -51,11 +49,11 @@ export function handleAddIntentListener(
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Add intent listener failed", error)
-    
+
     // Use ResolveError for intent listener errors (AddIntentListenerResponse validates ResolveError enum values)
     let errorType: ResolveError = ResolveError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to add intent listener"
-    
+
     // Intent listener errors typically map to ApiTimeout or other ResolveError values
     if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
       errorType = ResolveError.TargetInstanceUnavailable
@@ -93,11 +91,12 @@ export function handleIntentListenerUnsubscribe(
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Intent listener unsubscribe failed", error)
-    
+
     // Use ResolveError for intent listener errors
     let errorType: ResolveError = ResolveError.ApiTimeout
-    const errorMessage = error instanceof Error ? error.message : "Failed to unsubscribe intent listener"
-    
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to unsubscribe intent listener"
+
     if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
       errorType = ResolveError.TargetInstanceUnavailable
     }
