@@ -9,7 +9,7 @@ import { DACP_ERROR_TYPES } from "../../../dacp-protocol/dacp-constants"
 import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
-import { getPendingIntent } from "../../../state/selectors"
+import { getInstance, getPendingIntent } from "../../../state/selectors"
 import { resolvePendingIntent } from "../../../state/mutators"
 import { pendingIntentPromises } from "./intent-helpers"
 
@@ -51,6 +51,7 @@ export function handleIntentResultRequest(
 
     // Resolve the pending intent with the result
     const intentResult = payload.intentResult
+    const sourceInstanceId = pendingIntent.sourceInstanceId
 
     // Get promise functions from Map and resolve
     const promiseData = pendingIntentPromises.get(originalRequestId)
@@ -65,9 +66,30 @@ export function handleIntentResultRequest(
     // Remove from state
     setState(state => resolvePendingIntent(state, originalRequestId))
 
-    // Send acknowledgment response
+    // Send acknowledgment response to the intent handler
     const response = createDACPSuccessResponse(message, "intentResultResponse")
     sendDACPResponse({ response, instanceId, transport })
+
+    // Send intent result to the raising app (DACP raiseIntentResultResponse)
+    const sourceInstance = getInstance(getState(), sourceInstanceId)
+    if (!sourceInstance) {
+      logger.warn("DACP: Source instance not found for intent result delivery", {
+        originalRequestId,
+        sourceInstanceId,
+      })
+    } else {
+      const resultResponse = createDACPSuccessResponse(
+        { type: "raiseIntentRequest", meta: { requestUuid: originalRequestId } },
+        "raiseIntentResultResponse",
+        { intentResult }
+      )
+
+      sendDACPResponse({
+        response: resultResponse,
+        instanceId: sourceInstanceId,
+        transport,
+      })
+    }
 
     logger.info("DACP: Intent result processed successfully", {
       originalRequestId,

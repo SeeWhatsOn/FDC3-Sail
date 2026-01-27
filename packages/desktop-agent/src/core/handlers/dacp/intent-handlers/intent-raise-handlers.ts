@@ -4,7 +4,10 @@
  * Handlers for raising intents (raiseIntent and raiseIntentForContext)
  */
 
-import { createDACPSuccessResponse, createIntentEvent } from "../../../dacp-protocol/dacp-message-creators"
+import {
+  createDACPSuccessResponse,
+  createIntentEvent,
+} from "../../../dacp-protocol/dacp-message-creators"
 import { type DACPHandlerContext, type IntentHandlerOption } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes, Context } from "@finos/fdc3"
@@ -17,14 +20,8 @@ import {
   UserCancelledError,
   FDC3ResolveError,
 } from "../../../errors/fdc3-errors"
-import {
-  getInstance,
-  getListenersForInstance,
-} from "../../../state/selectors"
-import {
-  addPendingIntent,
-  resolvePendingIntent,
-} from "../../../state/mutators"
+import { getInstance, getListenersForInstance } from "../../../state/selectors"
+import { addPendingIntent, resolvePendingIntent } from "../../../state/mutators"
 import {
   findIntentHandlers,
   findIntentsByContext,
@@ -78,7 +75,9 @@ export async function handleRaiseIntentRequest(
         const state = getState()
         const instance = getInstance(state, targetInstanceId)
         if (!instance || instance.state === AppInstanceState.TERMINATED) {
-          throw new TargetInstanceUnavailableError(`Instance not found or terminated: ${targetInstanceId}`)
+          throw new TargetInstanceUnavailableError(
+            `Instance not found or terminated: ${targetInstanceId}`
+          )
         }
       }
     }
@@ -95,10 +94,7 @@ export async function handleRaiseIntentRequest(
       intent: payload.intent,
       context: validatedContext,
       source: { appId: source.appId, instanceId: source.instanceId },
-      target:
-        typeof payload.app === "string"
-          ? { appId: payload.app }
-          : payload.app,
+      target: typeof payload.app === "string" ? { appId: payload.app } : payload.app,
     })
 
     // Safety check: Filter out listeners whose instances no longer exist
@@ -491,21 +487,12 @@ export async function handleRaiseIntentRequest(
       throw new NoAppsFoundError(`No handler found for intent: ${payload.intent}`)
     }
 
-    // Register pending intent and get promise for result
-    // Note: Promise functions are stored separately in pendingIntentPromises Map
-    // (they can't be serialized in state)
+    // Register pending intent for intentResultRequest correlation.
+    // We do not block the response on the intent result.
     const requestId = message.meta.requestUuid
-    let resolvePromise: (result: unknown) => void
-    let rejectPromise: (error: Error) => void
-    const resultPromise = new Promise<unknown>((resolve, reject) => {
-      resolvePromise = resolve
-      rejectPromise = reject
-    })
-
-    // Store promise functions in Map (they can't be serialized in state)
     pendingIntentPromises.set(requestId, {
-      resolve: resolvePromise!,
-      reject: rejectPromise!,
+      resolve: () => {},
+      reject: () => {},
     })
 
     // Store pending intent metadata in state (without promise functions)
@@ -521,15 +508,10 @@ export async function handleRaiseIntentRequest(
     )
 
     // Send intentEvent to target app
-    const intentEvent = createIntentEvent(
-      payload.intent,
-      validatedContext,
-      requestId,
-      {
-        appId: source.appId,
-        instanceId: source.instanceId,
-      }
-    )
+    const intentEvent = createIntentEvent(payload.intent, validatedContext, requestId, {
+      appId: source.appId,
+      instanceId: source.instanceId,
+    })
 
     logger.info("DACP: Sending intentEvent to target app", {
       targetInstanceId,
@@ -612,17 +594,27 @@ export async function handleRaiseIntentRequest(
 
     transport.send(intentEventWithRouting)
 
-    logger.info("DACP: intentEvent sent, waiting for intentResultRequest", {
+    logger.info("DACP: intentEvent sent, responding to source app", {
       targetInstanceId,
       requestUuid: requestId,
-      timeoutMs: 30000,
     })
 
-    // Set up timeout for pending intent
+    // Send response back to source app with intentResolution (non-blocking).
+    const response = createDACPSuccessResponse(message, "raiseIntentResponse", {
+      intentResolution: {
+        source: {
+          appId: targetAppId,
+          instanceId: targetInstanceId,
+        },
+        intent: payload.intent,
+      },
+    })
+
+    sendDACPResponse({ response, instanceId, transport })
+
+    // Set up timeout to clean up pending intent if no result arrives.
     const timeoutHandle = setTimeout(() => {
-      const promiseData = pendingIntentPromises.get(requestId)
-      if (promiseData) {
-        promiseData.reject(new Error("Intent result timeout"))
+      if (pendingIntentPromises.has(requestId)) {
         pendingIntentPromises.delete(requestId)
         setState(state => resolvePendingIntent(state, requestId))
       }
@@ -633,29 +625,6 @@ export async function handleRaiseIntentRequest(
     if (promiseData) {
       promiseData.timeoutHandle = timeoutHandle
     }
-
-    // Wait for the result from intentResultRequest handler
-    await resultPromise
-
-    // Get target app instance information
-    const finalState = getState()
-    const targetInstance = getInstance(finalState, targetInstanceId)
-    if (!targetInstance) {
-      throw new Error(`Target instance ${targetInstanceId} not found`)
-    }
-
-    // Send response back to source app with intentResolution
-    const response = createDACPSuccessResponse(message, "raiseIntentResponse", {
-      intentResolution: {
-        source: {
-          appId: targetInstance.appId,
-          instanceId: targetInstance.instanceId,
-        },
-        intent: payload.intent,
-      },
-    })
-
-    sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     const payload = message.payload
     const context = payload?.context as Record<string, unknown> | undefined
@@ -673,7 +642,10 @@ export async function handleRaiseIntentRequest(
 
     if (error instanceof FDC3ResolveError) {
       errorType = error.errorType
-    } else if (errorMessage.includes("No apps found") || errorMessage.includes("No handler found")) {
+    } else if (
+      errorMessage.includes("No apps found") ||
+      errorMessage.includes("No handler found")
+    ) {
       errorType = ResolveError.NoAppsFound
     } else if (errorMessage.includes("App not found in directory")) {
       errorType = ResolveError.TargetAppUnavailable
@@ -725,7 +697,9 @@ export async function handleRaiseIntentForContextRequest(
         const state = getState()
         const instance = getInstance(state, targetInstanceId)
         if (!instance || instance.state === AppInstanceState.TERMINATED) {
-          throw new TargetInstanceUnavailableError(`Instance not found or terminated: ${targetInstanceId}`)
+          throw new TargetInstanceUnavailableError(
+            `Instance not found or terminated: ${targetInstanceId}`
+          )
         }
       }
     }
@@ -740,7 +714,9 @@ export async function handleRaiseIntentForContextRequest(
     const intentMetadata = findIntentsByContext(getState(), appDirectory, validatedContext.type)
 
     if (intentMetadata.length === 0) {
-      throw new NoAppsFoundError(`No intents found to handle context type: ${validatedContext.type}`)
+      throw new NoAppsFoundError(
+        `No intents found to handle context type: ${validatedContext.type}`
+      )
     }
 
     // For now, use the first intent found
@@ -823,19 +799,11 @@ export async function handleRaiseIntentForContextRequest(
       throw new NoAppsFoundError(`No handler found for intent: ${selectedIntent}`)
     }
 
-    // Register pending intent and get promise for result
+    // Register pending intent for intentResultRequest correlation.
     const requestId = message.meta.requestUuid
-    let resolvePromise: (result: unknown) => void
-    let rejectPromise: (error: Error) => void
-    const resultPromise = new Promise<unknown>((resolve, reject) => {
-      resolvePromise = resolve
-      rejectPromise = reject
-    })
-
-    // Store promise functions in Map (can't be in state)
     pendingIntentPromises.set(requestId, {
-      resolve: resolvePromise!,
-      reject: rejectPromise!,
+      resolve: () => {},
+      reject: () => {},
     })
 
     // Store pending intent metadata in state (without promise functions)
@@ -850,11 +818,9 @@ export async function handleRaiseIntentForContextRequest(
       })
     )
 
-    // Set up timeout
+    // Set up timeout to clean up pending intent if no result arrives.
     const timeoutHandle = setTimeout(() => {
-      const promiseData = pendingIntentPromises.get(requestId)
-      if (promiseData) {
-        promiseData.reject(new Error("Intent result timeout"))
+      if (pendingIntentPromises.has(requestId)) {
         pendingIntentPromises.delete(requestId)
         setState(state => resolvePendingIntent(state, requestId))
       }
@@ -866,15 +832,10 @@ export async function handleRaiseIntentForContextRequest(
     }
 
     // Send intentEvent to target app
-    const intentEvent = createIntentEvent(
-      selectedIntent,
-      validatedContext,
-      requestId,
-      {
-        appId: source.appId,
-        instanceId: source.instanceId,
-      }
-    )
+    const intentEvent = createIntentEvent(selectedIntent, validatedContext, requestId, {
+      appId: source.appId,
+      instanceId: source.instanceId,
+    })
 
     logger.info("DACP: Sending intentEvent for context-first intent", {
       targetInstanceId,
@@ -893,22 +854,12 @@ export async function handleRaiseIntentForContextRequest(
 
     transport.send(intentEventWithRouting)
 
-    // Wait for result
-    await resultPromise
-
-    // Get target app instance information
-    const finalState = getState()
-    const targetInstance = getInstance(finalState, targetInstanceId)
-    if (!targetInstance) {
-      throw new Error(`Target instance ${targetInstanceId} not found`)
-    }
-
-    // Send response with intentResolution
+    // Send response with intentResolution (non-blocking).
     const response = createDACPSuccessResponse(message, "raiseIntentForContextResponse", {
       intentResolution: {
         source: {
-          appId: targetInstance.appId,
-          instanceId: targetInstance.instanceId,
+          appId: targetAppId,
+          instanceId: targetInstanceId,
         },
         intent: selectedIntent,
       },
@@ -924,7 +875,11 @@ export async function handleRaiseIntentForContextRequest(
 
     if (error instanceof FDC3ResolveError) {
       errorType = error.errorType
-    } else if (errorMessage.includes("No apps found") || errorMessage.includes("No handler found") || errorMessage.includes("No intents found")) {
+    } else if (
+      errorMessage.includes("No apps found") ||
+      errorMessage.includes("No handler found") ||
+      errorMessage.includes("No intents found")
+    ) {
       errorType = ResolveError.NoAppsFound
     } else if (errorMessage.includes("App not found in directory")) {
       errorType = ResolveError.TargetAppUnavailable

@@ -22,3 +22,4 @@ packages/desktop-agent/test-results.xml
 .gitignore
 AGENTS.md
 .cursor/
+FDC3_2_2_Spec.txt
