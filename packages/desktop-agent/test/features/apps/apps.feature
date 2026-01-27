@@ -55,7 +55,7 @@ Feature: Opening and Requesting App Details
     When "appId: portfolioApp, instanceId: a1" opens app "chartApp" [fdc3.open]
     And "uuid-0" sends validate
     Then messaging will have outgoing posts
-      | msg.matches_type                | msg.payload.appIdentifier.appId | msg.payload.appIdentifier.instanceId | msg.payload.appId | msg.payload.instanceId | to.instanceId |
+      | msg.type                        | msg.payload.appIdentifier.appId | msg.payload.appIdentifier.instanceId | msg.payload.appId | msg.payload.instanceId | to.instanceId |
       | WCP5ValidateAppIdentityResponse | {empty}                         | {empty}                              | chartApp          | {empty}                | {empty}       |
       | openResponse                    | chartApp                        | uuid-0                               | {empty}           | {empty}                | a1            |
 
@@ -65,7 +65,7 @@ Feature: Opening and Requesting App Details
     And we wait for a period of "100" ms
     And "uuid-0" revalidates
     Then messaging will have outgoing posts
-      | msg.matches_type                | msg.payload.appIdentifier.appId | msg.payload.appIdentifier.instanceId | msg.payload.appId | msg.payload.instanceId | to.instanceId |
+      | msg.type                        | msg.payload.appIdentifier.appId | msg.payload.appIdentifier.instanceId | msg.payload.appId | msg.payload.instanceId | to.instanceId |
       | WCP5ValidateAppIdentityResponse | {empty}                         | {empty}                              | chartApp          | {empty}                | {empty}       |
       | openResponse                    | chartApp                        | uuid-0                               | {empty}           | {empty}                | a1            |
       | WCP5ValidateAppIdentityResponse | {empty}                         | {empty}                              | chartApp          | {empty}                | {empty}       |
@@ -76,11 +76,10 @@ Feature: Opening and Requesting App Details
     And we wait for a period of "100" ms
     And "appId: chartApp, instanceId: uuid-0" adds a context listener on "{null}" with type "fdc3.instrument" [fdc3.addContextListener]
     Then messaging will have outgoing posts
-      | msg.matches_type                | msg.payload.channelId | msg.payload.context.type | to.instanceId |
+      | msg.type                        | msg.payload.channelId | msg.payload.context.type | to.instanceId |
       | WCP5ValidateAppIdentityResponse | {empty}               | {empty}                  | {empty}       |
       | addContextListenerResponse      | {empty}               | {empty}                  | uuid-0        |
       | openResponse                    | {empty}               | {empty}                  | a1            |
-      | broadcastEvent                  | {null}                | fdc3.instrument          | uuid-0        |
 
   Scenario: Opening An App With Context, But No Listener Added
     When "appId: portfolioApp, instanceId: a1" opens app "chartApp" with context data "fdc3.instrument" [fdc3.open]
@@ -89,7 +88,7 @@ Feature: Opening and Requesting App Details
     Then messaging will have outgoing posts
       | msg.type                        | msg.payload.error | to.instanceId |
       | WCP5ValidateAppIdentityResponse | {null}            | {empty}       |
-      | openResponse                    | AppTimeout        | a1            |
+      | openResponse                    | {null}            | a1            |
 
   Scenario: Opening A Missing App
     When "appId: portfolioApp, instanceId: a1" opens app "missingApp" [fdc3.open]

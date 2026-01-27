@@ -135,6 +135,8 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
       timestamp: new Date(),
     },
     payload: {
+      instanceId: uuid,
+      instanceUuid: uuid,
       actualUrl: appUrl,
       identityUrl: appUrl,
     },
