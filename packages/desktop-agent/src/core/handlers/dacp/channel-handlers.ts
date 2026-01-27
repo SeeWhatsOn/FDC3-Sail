@@ -1,12 +1,22 @@
-import { createDACPSuccessResponse, createDACPEvent } from "../../dacp-protocol/dacp-message-creators"
+import {
+  createDACPSuccessResponse,
+  createDACPEvent,
+} from "../../dacp-protocol/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import { getEventListeners } from "./event-handlers"
-import { getInstance, getUserChannel, getAppChannel, getAllUserChannels, getChannelContext } from "../../state/selectors"
+import {
+  getInstance,
+  getUserChannel,
+  getAppChannel,
+  getAllUserChannels,
+  getChannelContext,
+  getPrivateChannel,
+} from "../../state/selectors"
 import { joinChannel, createAppChannel } from "../../state/mutators"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
-import { FDC3ChannelError } from "../../errors/fdc3-errors"
+import { ChannelAccessDeniedError, FDC3ChannelError } from "../../errors/fdc3-errors"
 
 /**
  * Handles get current channel requests
@@ -56,7 +66,7 @@ export function handleGetCurrentChannelRequest(
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get current channel"
-    
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
@@ -101,7 +111,7 @@ export function handleJoinUserChannelRequest(
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to join user channel"
-    
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     } else if (errorMessage.includes("does not exist") || errorMessage.includes("not found")) {
@@ -138,7 +148,7 @@ export function handleLeaveCurrentChannelRequest(
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to leave current channel"
-    
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     }
@@ -173,7 +183,7 @@ export function handleGetUserChannelsRequest(
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get user channels"
-    
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     }
@@ -224,7 +234,7 @@ export function handleGetCurrentContextRequest(
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get current context"
-    
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
@@ -243,7 +253,8 @@ export function handleGetCurrentContextRequest(
 
 /**
  * Handles get or create channel requests
- * Creates an app channel if it doesn't exist, or returns existing one
+ * Returns existing user/app channel, or creates a new app channel
+ * It must not return or create private channels
  */
 export function handleGetOrCreateChannelRequest(
   message: BrowserTypes.GetOrCreateChannelRequest,
@@ -256,29 +267,40 @@ export function handleGetOrCreateChannelRequest(
 
     // Get or create the app channel
     const state = getState()
-    let channel = getAppChannel(state, channelId)
-    const existed = !!channel
+    const userChannel = getUserChannel(state, channelId)
+    const appChannel = getAppChannel(state, channelId)
+    const privateChannel = getPrivateChannel(state, channelId)
 
-    if (!channel) {
-      setState(state => createAppChannel(state, channelId))
-      const newState = getState()
-      channel = getAppChannel(newState, channelId)
+    // Private channels are created via intent-based workflows, not this API.
+    if (privateChannel) {
+      throw new ChannelAccessDeniedError("AccessDenied")
     }
 
-    logger.debug("DACP: getOrCreateChannel", {
-      channelId,
-      existed,
-    })
+    const existingChannel = userChannel ?? appChannel
+    if (existingChannel) {
+      // Return existing user/app channel without creating a new one.
+      const response = createDACPSuccessResponse(message, "getOrCreateChannelResponse", {
+        channel: existingChannel,
+      })
+      sendDACPResponse({ response, instanceId, transport })
+      logger.debug("DACP: getOrCreateChannel", { channelId, existed: true })
+      return
+    }
 
+    // Create a new app channel when no user/app channel exists.
+    setState(state => createAppChannel(state, channelId))
+    const newState = getState()
+    const newAppChannel = getAppChannel(newState, channelId)
     const response = createDACPSuccessResponse(message, "getOrCreateChannelResponse", {
-      channel,
+      channel: newAppChannel,
     })
     sendDACPResponse({ response, instanceId, transport })
+    logger.debug("DACP: getOrCreateChannel", { channelId, existed: false })
   } catch (error) {
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.CreationFailed
     const errorMessage = error instanceof Error ? error.message : "Failed to get or create channel"
-    
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {

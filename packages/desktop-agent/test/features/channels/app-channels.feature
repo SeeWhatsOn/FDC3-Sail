@@ -14,6 +14,12 @@ Feature: App Channels
       | msg.matches_type           | msg.payload.channel.id | msg.payload.channel.type | to.instanceId |
       | getOrCreateChannelResponse | myAppChannel           | app                      | a1            |
 
+  Scenario: App channel IDs cannot match user channel IDs
+    When "appId: App1, instanceId: a1" creates or gets an app channel called "one" [fdc3.getOrCreateChannel]
+    Then messaging will have outgoing posts
+      | msg.type                   | msg.payload.error | to.instanceId |
+      | getOrCreateChannelResponse | AccessDenied      | a1            |
+
   Scenario: Getting an existing app channel
     When "appId: App1, instanceId: a1" creates or gets an app channel called "sharedChannel" [fdc3.getOrCreateChannel]
     And "appId: App2, instanceId: a2" creates or gets an app channel called "sharedChannel" [fdc3.getOrCreateChannel]
