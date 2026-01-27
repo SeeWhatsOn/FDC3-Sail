@@ -74,14 +74,42 @@ function assertFieldValue(
 
   // Handle pattern matching for "matches_type" fields
   if (fieldName.includes("matches_type") || fieldName.includes("matches_")) {
+    if (expectedValue === undefined) {
+      try {
+        expect(actualValue).toBeTruthy()
+      } catch {
+        const contextMsg = context
+          ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
+          : ""
+        throw new Error(
+          `Field "${fieldName}" should be truthy but got: ${formatValue(actualValue)}${contextMsg}`
+        )
+      }
+      return
+    }
+
+    if (expectedValue === null) {
+      try {
+        expect(actualValue).toBeFalsy()
+      } catch {
+        const contextMsg = context
+          ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
+          : ""
+        throw new Error(
+          `Field "${fieldName}" should be null/undefined but got: ${formatValue(actualValue)}${contextMsg}`
+        )
+      }
+      return
+    }
+
     try {
-      expect(actualValue).toBeTruthy()
+      expect(actualValue).toEqual(expectedValue)
     } catch {
       const contextMsg = context
         ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
         : ""
       throw new Error(
-        `Field "${fieldName}" should be truthy but got: ${formatValue(actualValue)}${contextMsg}`
+        `Field "${fieldName}" mismatch:\n  Expected: ${formatValue(expectedValue)}\n  Received: ${formatValue(actualValue)}${contextMsg}`
       )
     }
     return
