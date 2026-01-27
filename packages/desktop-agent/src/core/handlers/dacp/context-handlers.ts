@@ -4,8 +4,8 @@ import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-u
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
 import { FDC3ChannelError } from "../../errors/fdc3-errors"
-import { getInstance, getInstancesOnChannel } from "../../state/selectors"
-import { storeContext, addContextListener, removeContextListener } from "../../state/mutators"
+import { getAppChannel, getInstance, getInstancesOnChannel, getUserChannel } from "../../state/selectors"
+import { storeContext, addContextListener, joinChannel, removeContextListener } from "../../state/mutators"
 
 /**
  * Handles broadcast requests to send context to a channel
@@ -20,7 +20,7 @@ export async function handleBroadcastRequest(
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const { channelId, context: broadcastContext } = message.payload
+    const { channelId: payloadChannelId, context: broadcastContext } = message.payload
 
     // Validate that the instance is a member of the channel they're broadcasting to
     const state = getState()
@@ -29,7 +29,18 @@ export async function handleBroadcastRequest(
       throw new Error("Instance not found")
     }
 
-    if (instance.currentChannel !== channelId) {
+    const channelId = payloadChannelId ?? instance.currentChannel
+    if (!channelId) {
+      throw new Error("No channel specified and app is not on a channel")
+    }
+
+    const userChannel = getUserChannel(state, channelId)
+    const appChannel = getAppChannel(state, channelId)
+    if (!userChannel && !appChannel) {
+      throw new Error(`Channel ${channelId} does not exist`)
+    }
+
+    if (userChannel && instance.currentChannel !== channelId) {
       throw new Error(
         `Instance is not a member of channel ${channelId}. Current channel: ${instance.currentChannel ?? "none"}`
       )
@@ -86,10 +97,25 @@ export function handleAddContextListener(
   message: BrowserTypes.AddContextListenerRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, setState, logger } = context
+  const { transport, instanceId, getState, setState, logger } = context
 
   try {
-    const contextType = message.payload.contextType ?? "*" // Default to all contexts if not specified
+    const { channelId, contextType: payloadContextType } = message.payload
+    const contextType = payloadContextType ?? "*" // Default to all contexts if not specified
+
+    if (channelId) {
+      const state = getState()
+      const userChannel = getUserChannel(state, channelId)
+      const appChannel = getAppChannel(state, channelId)
+
+      if (!userChannel && !appChannel) {
+        throw new Error(`Channel ${channelId} does not exist`)
+      }
+
+      if (appChannel) {
+        setState(state => joinChannel(state, instanceId, channelId))
+      }
+    }
 
     logger.info("DACP: Adding context listener", {
       instanceId,
