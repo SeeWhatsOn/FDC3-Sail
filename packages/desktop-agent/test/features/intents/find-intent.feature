@@ -30,14 +30,14 @@ Feature: Find Intent API
   Scenario: Unsuccessful Find Intents Request
     When "appId: App1, instanceId: a1" finds intents with intent "ViewChart" and contextType "fdc3.instrument" and result type "{empty}" [fdc3.findIntent]
     Then messaging will have outgoing posts
-      | msg.matches_type   | msg.payload.appIntent.intent.name | msg.payload.appIntent.apps.length | to.instanceId |
-      | findIntentResponse | ViewChart                         |                                 0 | a1            |
+      | msg.matches_type   | msg.payload.error | to.instanceId |
+      | findIntentResponse | NoAppsFound       | a1            |
 
   Scenario: Unsuccessful Find Intents Request With Result Type
     When "appId: App1, instanceId: a1" finds intents with intent "ViewChart" and contextType "{empty}" and result type "unknownContext" [fdc3.findIntent]
     Then messaging will have outgoing posts
-      | msg.matches_type   | msg.payload.appIntent.intent.name | msg.payload.appIntent.apps.length | to.instanceId |
-      | findIntentResponse | ViewChart                         |                                 0 | a1            |
+      | msg.matches_type   | msg.payload.error | to.instanceId |
+      | findIntentResponse | NoAppsFound       | a1            |
 
   @conformance2.2
   Scenario: Find Intent for non-existent intent returns NoAppsFound
@@ -123,8 +123,8 @@ Feature: Find Intent API
   Scenario: Unsuccessful Find Intents Request With an untyped Channel
     When "appId: App1, instanceId: a1" finds intents with intent "StreamInstrument" and contextType "{empty}" and result type "channel<spurious>" [fdc3.findIntent]
     Then messaging will have outgoing posts
-      | msg.matches_type   | msg.payload.appIntent.intent.name | msg.payload.appIntent.apps.length |
-      | findIntentResponse | streamAny                         |                                 0 |
+      | msg.matches_type   | msg.payload.error |
+      | findIntentResponse | NoAppsFound       |
 
   Scenario: Find Intent includes results for a running app with intent listener
     When "appId: App1, instanceId: a1" finds intents with intent "ViewPortfolio" and contextType "fdc3.portfolio" and result type "{empty}" [fdc3.findIntent]

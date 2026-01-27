@@ -19,11 +19,11 @@ type WebConnectionProtocol4ValidateAppIdentity =
 
 /**
  * Test fixture helper: Ensures an app instance exists before sending DACP messages.
- * 
+ *
  * This simulates an app that has already connected via WCP protocol.
  * In real scenarios, apps connect via WCP4ValidateAppIdentity before sending DACP messages.
  * For tests, we directly create the instance to set up the test fixture.
- * 
+ *
  * @param world - The Cucumber world context
  * @param appStr - The app identifier string (e.g., "App1" or "appId: App1, instanceId: a1")
  * @returns The instanceId that was created or already existed
@@ -32,25 +32,25 @@ function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string
   const meta = createMeta(world, appStr)
   const instanceId = getAppInstanceId(world, appStr)
 
-    const state = world.getState()
-    const existing = getInstance(state, instanceId)
-    if (!existing) {
-      // Test fixture setup: Create connected instance directly
-      world.updateState(currentState =>
-        updateInstanceState(
-          connectInstance(currentState, {
-            instanceId,
+  const state = world.getState()
+  const existing = getInstance(state, instanceId)
+  if (!existing) {
+    // Test fixture setup: Create connected instance directly
+    world.updateState(currentState =>
+      updateInstanceState(
+        connectInstance(currentState, {
+          instanceId,
           appId: meta.source.appId,
-            metadata: {
+          metadata: {
             appId: meta.source.appId,
             name: meta.source.appId,
-            },
-          }),
-          instanceId,
-          AppInstanceState.CONNECTED
-        )
+          },
+        }),
+        instanceId,
+        AppInstanceState.CONNECTED
       )
-    }
+    )
+  }
 
   return instanceId
 }
@@ -97,7 +97,7 @@ When("{string} is closed", function (this: CustomWorld, app: string) {
     transport: this.mockTransport,
     instanceId,
     getState: () => this.getState(),
-    setState: (fn) => {
+    setState: fn => {
       this.updateState(fn)
     },
     appDirectory: this.appDirectoryManager,
@@ -106,6 +106,8 @@ When("{string} is closed", function (this: CustomWorld, app: string) {
     logger: consoleLogger,
     implementationMetadata: this.desktopAgent.getImplementationMetadata(),
     openContextListenerTimeoutMs: 2000,
+    heartbeatIntervalMs: 500,
+    heartbeatTimeoutMs: 2000,
   }
 
   cleanupDACPHandlers(context)
@@ -125,15 +127,20 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
 
   // Get app URL from app directory to match what WCP4 handler expects
   const apps = this.appDirectoryManager.retrieveAppsById(instance.appId)
-  const appUrl = apps.length > 0 && apps[0].details && typeof apps[0].details === "object" && "url" in apps[0].details
-    ? (apps[0].details.url)
-    : `https://example.com/${instance.appId}`
+  const appUrl =
+    apps.length > 0 &&
+    apps[0].details &&
+    typeof apps[0].details === "object" &&
+    "url" in apps[0].details
+      ? apps[0].details.url
+      : `https://example.com/${instance.appId}`
 
-  const message: WebConnectionProtocol4ValidateAppIdentity = {
+  const message = {
     type: "WCP4ValidateAppIdentity",
     meta: {
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
+      messageOrigin: new URL(appUrl).origin,
     },
     payload: {
       instanceId: uuid,
@@ -141,7 +148,7 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
       actualUrl: appUrl,
       identityUrl: appUrl,
     },
-  }
+  } as unknown as WebConnectionProtocol4ValidateAppIdentity
 
   // Set to connected state
   this.updateState(currentState =>
@@ -188,7 +195,7 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
 
 Then("running apps will be", function (this: CustomWorld, dataTable: DataTable) {
   // Assertion: Verify internal state of connected app instances
-  // 
+  //
   // Note: This queries internal state directly rather than via DACP because:
   // 1. There's no FDC3 API to list "all running apps" (findInstances requires an appId)
   // 2. This is an integration test verifying the Desktop Agent's internal state management
@@ -210,7 +217,7 @@ When(
   async function (this: CustomWorld, appStr: string, open: string) {
     // Test fixture setup: Ensure calling app instance exists
     ensureAppInstanceForTesting(this, appStr)
-    
+
     const from = createMeta(this, appStr)
 
     // Send DACP openRequest message (corresponds to fdc3.open() API call)
@@ -234,7 +241,7 @@ When(
   async function (this: CustomWorld, appStr: string, open: string, context: string) {
     // Test fixture setup: Ensure calling app instance exists
     ensureAppInstanceForTesting(this, appStr)
-    
+
     const from = createMeta(this, appStr)
 
     // Send DACP openRequest message with context (corresponds to fdc3.open() API call)
@@ -259,7 +266,7 @@ When(
   async function (this: CustomWorld, appStr: string, open: string) {
     // Test fixture setup: Ensure calling app instance exists
     ensureAppInstanceForTesting(this, appStr)
-    
+
     const from = createMeta(this, appStr)
 
     // Send DACP getAppMetadataRequest message (corresponds to fdc3.getAppMetadata() API call)
@@ -283,7 +290,7 @@ When(
   async function (this: CustomWorld, appStr: string) {
     // Test fixture setup: Ensure calling app instance exists
     ensureAppInstanceForTesting(this, appStr)
-    
+
     const from = createMeta(this, appStr)
 
     // Send DACP getInfoRequest message (corresponds to fdc3.getInfo() API call)
@@ -302,7 +309,7 @@ When(
   async function (this: CustomWorld, appStr: string, open: string) {
     // Test fixture setup: Ensure calling app instance exists
     ensureAppInstanceForTesting(this, appStr)
-    
+
     const from = createMeta(this, appStr)
 
     // Send DACP findInstancesRequest message (corresponds to fdc3.findInstances() API call)

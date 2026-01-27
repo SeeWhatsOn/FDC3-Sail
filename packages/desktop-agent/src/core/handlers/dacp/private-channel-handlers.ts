@@ -49,7 +49,7 @@ export function handleCreatePrivateChannelRequest(
 
     // Return channel information to the creator
     const response = createDACPSuccessResponse(message, "createPrivateChannelResponse", {
-      channel: {
+      privateChannel: {
         id: channelId,
         type: "private",
       },

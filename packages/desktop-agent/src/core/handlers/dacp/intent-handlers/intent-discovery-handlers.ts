@@ -28,8 +28,12 @@ export function handleFindIntentRequest(
 
     const appIntents = createAppIntents(getState(), appDirectory, intent, contextType, resultType)
 
+    if (appIntents.length === 0) {
+      throw new Error(`No apps found to handle intent: ${intent}`)
+    }
+
     const response = createDACPSuccessResponse(message, "findIntentResponse", {
-      appIntent: appIntents[0] ?? { intent: { name: intent, displayName: intent }, apps: [] },
+      appIntent: appIntents[0],
     })
 
     sendDACPResponse({ response, instanceId, transport })
@@ -65,15 +69,15 @@ export function handleFindIntentsByContextRequest(
     const intentMetadata = findIntentsByContext(getState(), appDirectory, contextType)
 
     // Convert to AppIntent[] format
-    const appIntents = intentMetadata.map(metadata => {
-      const appIntentsForIntent = createAppIntents(getState(), appDirectory, metadata.name, contextType)
-      return (
-        appIntentsForIntent[0] || {
-          intent: { name: metadata.name, displayName: metadata.displayName || metadata.name },
-          apps: [],
-        }
+    const appIntents = intentMetadata
+      .map(metadata =>
+        createAppIntents(getState(), appDirectory, metadata.name, contextType)[0]
       )
-    })
+      .filter((appIntent): appIntent is NonNullable<typeof appIntent> => !!appIntent)
+
+    if (appIntents.length === 0) {
+      throw new Error(`No apps found to handle context type: ${contextType}`)
+    }
 
     const response = createDACPSuccessResponse(message, "findIntentsByContextResponse", {
       appIntents,

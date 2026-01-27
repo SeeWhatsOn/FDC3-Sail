@@ -71,7 +71,7 @@ export class CustomWorld extends World {
   /**
    * Initialize the DesktopAgent for a test scenario.
    * Called by setup steps (e.g., "Given a desktop agent")
-   * 
+   *
    * Uses the new functional state management pattern.
    * Access state via desktopAgent.getState() for assertions.
    */
@@ -85,7 +85,6 @@ export class CustomWorld extends World {
     } else {
       globalThis.crypto.randomUUID = deterministicRandomUUID as unknown as Crypto["randomUUID"]
     }
-
 
     // Create MOCK external dependencies - avoid side effects
     this.mockTransport = new MockTransport()
@@ -115,9 +114,11 @@ export class CustomWorld extends World {
           DesktopAgentBridging: false,
           OriginatingAppMetadata: true,
           UserChannelMembershipAPIs: true,
-        }
+        },
       },
       openContextListenerTimeoutMs: 2000,
+      heartbeatIntervalMs: 500,
+      heartbeatTimeoutMs: 2000,
     })
 
     // Wire up MockAppLauncher callback to register instances in state

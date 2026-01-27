@@ -77,8 +77,8 @@ Feature: Raising Intents For Context
       | msg.type                      | msg.payload.appIntents[0].intent.name | msg.payload.appIntents[1].intent.name | to.instanceId | to.appId |
       | raiseIntentForContextResponse | ViewPortfolio                         | ViewChart                             | a1            | App1     |
     Then messaging will have outgoing posts
-      | msg.payload.appIntents[0].apps[0].appId | msg.payload.appIntent.apps[0].instanceId |
-      | portfolioApp                            | {null}                                   |
+      | msg.payload.appIntents[0].apps[0].appId | msg.payload.appIntents[0].apps[0].instanceId |
+      | listenerApp                             | b1                                           |
     Then messaging will have outgoing posts
       | msg.payload.appIntents[1].apps[0].appId | msg.payload.appIntents[1].apps[0].instanceId |
       | listenerApp                             | b1                                           |
@@ -97,6 +97,9 @@ Feature: Raising Intents For Context
       | raiseIntentForContextResponse | ViewPortfolio                         | ViewChart                             | a1            | App1     |
     Then messaging will have outgoing posts
       | msg.payload.appIntents[0].apps[0].appId | msg.payload.appIntents[0].apps[0].instanceId |
+      | listenerApp                             | b1                                           |
+    Then messaging will have outgoing posts
+      | msg.payload.appIntents[0].apps[1].appId | msg.payload.appIntents[0].apps[1].instanceId |
       | App2                                    | a2                                           |
     Then messaging will have outgoing posts
       | msg.payload.appIntents[1].apps[0].appId | msg.payload.appIntents[1].apps[0].instanceId |

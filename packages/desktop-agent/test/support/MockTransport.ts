@@ -59,6 +59,7 @@ export class MockTransport implements Transport {
   private messageHandler?: MessageHandler
   private disconnectHandler?: DisconnectHandler
   private connected: boolean = true
+  private appIdsByInstanceId: Map<string, string> = new Map()
 
   // Message tracking
   public allMessages: MessageRecord[] = []
@@ -66,6 +67,14 @@ export class MockTransport implements Transport {
 
   send(message: unknown): void {
     const msg = message as DACPMessage
+
+    // Backfill destination appId from known instance mapping.
+    if (msg.meta?.destination?.instanceId && !msg.meta.destination.appId) {
+      const appId = this.appIdsByInstanceId.get(msg.meta.destination.instanceId)
+      if (appId) {
+        msg.meta.destination.appId = appId
+      }
+    }
 
     // Create record
     const record: MessageRecord = {
@@ -121,6 +130,12 @@ export class MockTransport implements Transport {
   async receiveMessage(message: unknown): Promise<void> {
     if (!this.messageHandler) {
       throw new Error("No message handler registered")
+    }
+    const incoming = message as DACPMessage
+    const sourceInstanceId = incoming.meta?.source?.instanceId
+    const sourceAppId = incoming.meta?.source?.appId
+    if (sourceInstanceId && sourceAppId) {
+      this.appIdsByInstanceId.set(sourceInstanceId, sourceAppId)
     }
     await this.messageHandler(message)
   }

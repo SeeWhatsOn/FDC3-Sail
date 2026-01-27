@@ -1,26 +1,27 @@
-import { When } from '@cucumber/cucumber';
-import { CustomWorld } from '../world';
-import { createMeta, getAppInstanceId } from './generic.steps';
-import { BrowserTypes } from '@finos/fdc3-schema';
-import { handleResolve } from '../support/testing-utils';
-import { AppInstanceState } from '../../src/core/state/types';
-import { getInstance } from '../../src/core/state/selectors';
-import { connectInstance, updateInstanceState } from '../../src/core/state/mutators';
+import { When } from "@cucumber/cucumber"
+import { CustomWorld } from "../world"
+import { createMeta, getAppInstanceId } from "./generic.steps"
+import { BrowserTypes } from "@finos/fdc3-schema"
+import { handleResolve } from "../support/testing-utils"
+import { AppInstanceState } from "../../src/core/state/types"
+import { getInstance } from "../../src/core/state/selectors"
+import { connectInstance, updateInstanceState } from "../../src/core/state/mutators"
 
-type CreatePrivateChannelRequest = BrowserTypes.CreatePrivateChannelRequest;
-type PrivateChannelAddEventListenerRequest = BrowserTypes.PrivateChannelAddEventListenerRequest;
-type PrivateChannelUnsubscribeEventListenerRequest = BrowserTypes.PrivateChannelUnsubscribeEventListenerRequest;
-type PrivateChannelDisconnectRequest = BrowserTypes.PrivateChannelDisconnectRequest;
+type CreatePrivateChannelRequest = BrowserTypes.CreatePrivateChannelRequest
+type PrivateChannelAddEventListenerRequest = BrowserTypes.PrivateChannelAddEventListenerRequest
+type PrivateChannelUnsubscribeEventListenerRequest =
+  BrowserTypes.PrivateChannelUnsubscribeEventListenerRequest
+type PrivateChannelDisconnectRequest = BrowserTypes.PrivateChannelDisconnectRequest
 
 /**
  * Helper to ensure app instance exists and is connected before sending messages
  */
 function ensureAppInstance(world: CustomWorld, appStr: string): string {
-  const instanceId = getAppInstanceId(world, appStr);
-  const meta = createMeta(world, appStr);
-  
-  const state = world.getState();
-  const instance = getInstance(state, instanceId);
+  const instanceId = getAppInstanceId(world, appStr)
+  const meta = createMeta(world, appStr)
+
+  const state = world.getState()
+  const instance = getInstance(state, instanceId)
   if (!instance) {
     world.updateState(currentState =>
       updateInstanceState(
@@ -35,79 +36,96 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
         instanceId,
         AppInstanceState.CONNECTED
       )
-    );
+    )
   }
-  
-  return instanceId;
+
+  return instanceId
 }
 
-When('{string} creates a private channel [fdc3.createPrivateChannel]', async function (this: CustomWorld, app: string) {
-  ensureAppInstance(this, app);
-  const meta = createMeta(this, app);
-  
-  const message: CreatePrivateChannelRequest = {
-    meta,
-    payload: {},
-    type: 'createPrivateChannelRequest',
-  };
+When(
+  "{string} creates a private channel [fdc3.createPrivateChannel]",
+  async function (this: CustomWorld, app: string) {
+    ensureAppInstance(this, app)
+    const meta = createMeta(this, app)
 
-  await this.mockTransport.receiveMessage(message);
+    const message: CreatePrivateChannelRequest = {
+      meta,
+      payload: {},
+      type: "createPrivateChannelRequest",
+    }
 
-  const lastMessage = this.mockTransport.getLastMessage();
-  const channelId = (lastMessage?.msg?.payload as { channel?: { id?: string } } | undefined)?.channel?.id;
-  if (channelId) {
-    this.props.lastPrivateChannelId = channelId;
+    await this.mockTransport.receiveMessage(message)
+
+    const lastMessage = this.mockTransport.getLastMessage()
+    const payload = lastMessage?.msg?.payload as
+      | { channel?: { id?: string }; privateChannel?: { id?: string } }
+      | undefined
+    const channelId = payload?.privateChannel?.id ?? payload?.channel?.id
+    if (channelId) {
+      this.props.lastPrivateChannelId = channelId
+    }
   }
-});
-
-When('{string} removes event listener {string} [PrivateChannel.removeContextListener]', async function (this: CustomWorld, app: string, listenerUUID: string) {
-  ensureAppInstance(this, app);
-  const meta = createMeta(this, app);
-  
-  const message: PrivateChannelUnsubscribeEventListenerRequest = {
-    meta,
-    payload: {
-      listenerUUID,
-    },
-    type: 'privateChannelUnsubscribeEventListenerRequest',
-  };
-
-  await this.mockTransport.receiveMessage(message);
-});
+)
 
 When(
-  '{string} adds an {string} event listener on {string} [PrivateChannel.addContextListener]',
+  "{string} removes event listener {string} [PrivateChannel.removeContextListener]",
+  async function (this: CustomWorld, app: string, listenerUUID: string) {
+    ensureAppInstance(this, app)
+    const meta = createMeta(this, app)
+
+    const message: PrivateChannelUnsubscribeEventListenerRequest = {
+      meta,
+      payload: {
+        listenerUUID: handleResolve(listenerUUID, this) ?? listenerUUID,
+      },
+      type: "privateChannelUnsubscribeEventListenerRequest",
+    }
+
+    await this.mockTransport.receiveMessage(message)
+  }
+)
+
+When(
+  "{string} adds an {string} event listener on {string} [PrivateChannel.addContextListener]",
   async function (this: CustomWorld, app: string, listenerType: string, channelId: string) {
-    ensureAppInstance(this, app);
-    const meta = createMeta(this, app);
-    
+    ensureAppInstance(this, app)
+    const meta = createMeta(this, app)
+
     const message: PrivateChannelAddEventListenerRequest = {
       meta,
       payload: {
         privateChannelId: handleResolve(channelId, this) as string,
-        listenerType: listenerType as BrowserTypes.PrivateChannelAddEventListenerRequest['payload']['listenerType'],
+        listenerType:
+          listenerType as BrowserTypes.PrivateChannelAddEventListenerRequest["payload"]["listenerType"],
       },
-      type: 'privateChannelAddEventListenerRequest',
-    };
+      type: "privateChannelAddEventListenerRequest",
+    }
 
-    await this.mockTransport.receiveMessage(message);
+    await this.mockTransport.receiveMessage(message)
+
+    const lastMessage = this.mockTransport.getLastMessage()
+    const listenerUUID = (lastMessage?.msg?.payload as { listenerUUID?: string } | undefined)
+      ?.listenerUUID
+    if (listenerUUID) {
+      this.props.lastPrivateChannelEventListenerId = listenerUUID
+    }
   }
-);
+)
 
 When(
-  '{string} disconnects from private channel {string} [PrivateChannel.disconnect]',
+  "{string} disconnects from private channel {string} [PrivateChannel.disconnect]",
   async function (this: CustomWorld, app: string, channelId: string) {
-    ensureAppInstance(this, app);
-    const meta = createMeta(this, app);
+    ensureAppInstance(this, app)
+    const meta = createMeta(this, app)
 
     const message: PrivateChannelDisconnectRequest = {
       meta,
       payload: {
         channelId: handleResolve(channelId, this) as string,
       },
-      type: 'privateChannelDisconnectRequest',
-    };
+      type: "privateChannelDisconnectRequest",
+    }
 
-    await this.mockTransport.receiveMessage(message);
+    await this.mockTransport.receiveMessage(message)
   }
-);
+)

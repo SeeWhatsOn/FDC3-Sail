@@ -191,6 +191,16 @@ export interface DesktopAgentConfig {
    * Defaults to the FDC3 minimum (15s) but can be shortened for tests.
    */
   openContextListenerTimeoutMs?: number
+
+  /**
+   * Heartbeat interval (ms). Defaults to 30s but can be shortened for tests.
+   */
+  heartbeatIntervalMs?: number
+
+  /**
+   * Heartbeat timeout (ms). Defaults to 60s but can be shortened for tests.
+   */
+  heartbeatTimeoutMs?: number
 }
 
 /**
@@ -228,6 +238,8 @@ export class DesktopAgent {
   private implementationMetadata?: DesktopAgentConfig["implementationMetadata"]
   private userChannels: BrowserTypes.Channel[]
   private openContextListenerTimeoutMs: number
+  private heartbeatIntervalMs: number
+  private heartbeatTimeoutMs: number
 
   constructor(config?: DesktopAgentConfig) {
     this.transport = config?.transport ?? new InMemoryTransport()
@@ -250,6 +262,8 @@ export class DesktopAgent {
     }
     this.openContextListenerTimeoutMs =
       config?.openContextListenerTimeoutMs ?? DACP_TIMEOUTS.MINIMUM_APP_LAUNCH
+    this.heartbeatIntervalMs = config?.heartbeatIntervalMs ?? 30000
+    this.heartbeatTimeoutMs = config?.heartbeatTimeoutMs ?? 60000
     // Initialize state - use this.userChannels to ensure consistency
     this.state = config?.initialState
       ? createStateWithOverrides(config.initialState, this.userChannels)
@@ -399,6 +413,8 @@ export class DesktopAgent {
       logger: this.logger,
       implementationMetadata: this.implementationMetadata,
       openContextListenerTimeoutMs: this.openContextListenerTimeoutMs,
+      heartbeatIntervalMs: this.heartbeatIntervalMs,
+      heartbeatTimeoutMs: this.heartbeatTimeoutMs,
     }
   }
   /**

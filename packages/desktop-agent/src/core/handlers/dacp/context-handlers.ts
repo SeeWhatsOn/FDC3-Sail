@@ -1,4 +1,7 @@
-import { createDACPSuccessResponse, createDACPEvent } from "../../dacp-protocol/dacp-message-creators"
+import {
+  createDACPSuccessResponse,
+  createDACPEvent,
+} from "../../dacp-protocol/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes, Context } from "@finos/fdc3"
@@ -24,7 +27,10 @@ import {
   connectInstanceToPrivateChannel,
 } from "../../state/mutators"
 import { generateEventUuid } from "../../dacp-protocol/dacp-utils"
-import { notifyPrivateChannelAddContextListener, notifyPrivateChannelUnsubscribe } from "./private-channel-handlers"
+import {
+  notifyPrivateChannelAddContextListener,
+  notifyPrivateChannelUnsubscribe,
+} from "./private-channel-handlers"
 import { notifyContextListenerAdded } from "./utils/open-with-context"
 
 /**
@@ -87,7 +93,9 @@ export async function handleBroadcastRequest(
         throw new Error(`Instance ${instanceId} is not connected to private channel ${channelId}`)
       }
 
-      setState(state => setPrivateChannelLastContext(state, channelId, broadcastContext.type, broadcastContext))
+      setState(state =>
+        setPrivateChannelLastContext(state, channelId, broadcastContext.type, broadcastContext)
+      )
       await notifyPrivateChannelContextListeners(channelId, broadcastContext, context)
     } else {
       await notifyContextListeners(channelId, broadcastContext, context)
@@ -107,7 +115,7 @@ export async function handleBroadcastRequest(
     // Common errors: MalformedContext, ApiTimeout
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Unknown broadcast error"
-    
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     } else if (errorMessage.includes("Malformed") || errorMessage.includes("invalid context")) {
@@ -166,7 +174,13 @@ export function handleAddContextListener(
         }
 
         setState(state =>
-          addPrivateChannelContextListener(state, channelId, listenerId, instanceId, resolvedContextType)
+          addPrivateChannelContextListener(
+            state,
+            channelId,
+            listenerId,
+            instanceId,
+            resolvedContextType
+          )
         )
 
         notifyPrivateChannelAddContextListener(channelId, instanceId, resolvedContextType, context)
@@ -225,11 +239,13 @@ export function handleAddContextListener(
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to add context listener"
-    
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     } else if (errorMessage.includes("Access denied") || errorMessage.includes("denied")) {
       errorType = ChannelError.AccessDenied
+    } else if (errorMessage.toLowerCase().includes("listener")) {
+      errorType = "ListenerNotFound" as ChannelError
     } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
       errorType = ChannelError.NoChannelFound
     }
@@ -271,8 +287,8 @@ export function handleContextListenerUnsubscribe(
       setState(state => removeContextListener(state, instanceId, listenerUUID))
     } else {
       const privateChannels = Object.values(state.channels.private)
-      const privateChannelWithListener = privateChannels.find(channel =>
-        channel.contextListeners[listenerUUID]
+      const privateChannelWithListener = privateChannels.find(
+        channel => channel.contextListeners[listenerUUID]
       )
 
       if (!privateChannelWithListener) {
@@ -310,12 +326,15 @@ export function handleContextListenerUnsubscribe(
 
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
-    const errorMessage = error instanceof Error ? error.message : "Failed to unsubscribe context listener"
-    
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to unsubscribe context listener"
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     } else if (errorMessage.includes("Access denied") || errorMessage.includes("denied")) {
       errorType = ChannelError.AccessDenied
+    } else if (errorMessage.toLowerCase().includes("listener")) {
+      errorType = "ListenerNotFound" as ChannelError
     } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
       errorType = ChannelError.NoChannelFound
     }
@@ -454,7 +473,9 @@ function deliverCurrentContextToListener(
 ): void {
   const state = handlerContext.getState()
   const contextToDeliver =
-    contextType === "*" ? getChannelContext(state, channelId) : getChannelContext(state, channelId, contextType)
+    contextType === "*"
+      ? getChannelContext(state, channelId)
+      : getChannelContext(state, channelId, contextType)
 
   if (!contextToDeliver) {
     return

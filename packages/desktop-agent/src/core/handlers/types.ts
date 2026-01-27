@@ -172,11 +172,19 @@ export interface DACPHandlerContext {
 
   /** Timeout (ms) to wait for a context listener after open-with-context */
   openContextListenerTimeoutMs: number
+
+  /** Heartbeat interval (ms) for sending heartbeat events */
+  heartbeatIntervalMs: number
+
+  /** Heartbeat timeout (ms) before considering an app unresponsive */
+  heartbeatTimeoutMs: number
 }
 
 /**
  * Type for DACP handler functions
  * Handlers receive validated messages from the router
  */
-export type DACPHandler = (message: DACPMessage, context: DACPHandlerContext) => void | Promise<void>
-
+export type DACPHandler = (
+  message: DACPMessage,
+  context: DACPHandlerContext
+) => void | Promise<void>

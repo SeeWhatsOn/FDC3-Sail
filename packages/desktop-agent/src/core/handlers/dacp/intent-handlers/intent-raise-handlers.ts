@@ -8,7 +8,7 @@ import {
   createDACPSuccessResponse,
   createIntentEvent,
 } from "../../../dacp-protocol/dacp-message-creators"
-import { type DACPHandlerContext, type IntentHandlerOption } from "../../types"
+import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
@@ -17,7 +17,6 @@ import {
   NoAppsFoundError,
   TargetAppUnavailableError,
   TargetInstanceUnavailableError,
-  UserCancelledError,
   FDC3ResolveError,
 } from "../../../errors/fdc3-errors"
 import { getInstance, getListenersForInstance } from "../../../state/selectors"
@@ -28,6 +27,7 @@ import {
   launchAppAndWaitForInstance,
   pendingIntentPromises,
 } from "./intent-helpers"
+import { createResolverAppIntent } from "./intent-resolver-helpers"
 
 export async function handleRaiseIntentRequest(
   message: BrowserTypes.RaiseIntentRequest,
@@ -170,246 +170,39 @@ export async function handleRaiseIntentRequest(
     let targetInstanceId: string
     let targetAppId: string
 
-    // Check if we need UI resolution (multiple handlers available)
-    const needsResolution =
-      finalHandlers.compatibleApps.length > 1 && context.requestIntentResolution
+    const targetApp =
+      typeof payload.app === "string"
+        ? { appId: payload.app }
+        : payload.app ?? undefined
 
-    if (needsResolution) {
-      // Build handler options for UI with app metadata
-      const handlerOptions: IntentHandlerOption[] = finalHandlers.compatibleApps.map(handler => {
-        const isRunning = "instanceId" in handler
-        const apps = appDirectory.retrieveAppsById(handler.appId)
-        const appInfo = apps[0] // Take first matching app
-        return {
-          appId: handler.appId,
-          instanceId: isRunning ? handler.instanceId : undefined,
-          title: appInfo?.title ?? handler.appId,
-          name: appInfo?.name,
-          description: appInfo?.description,
-          icons: appInfo?.icons,
-          isRunning,
-        }
-      })
+    if (targetApp?.instanceId) {
+      targetInstanceId = targetApp.instanceId
+      targetAppId = targetApp.appId
 
-      logger.info("DACP: Multiple handlers found, requesting UI resolution", {
+      const listenerReady = await waitForIntentListener({
+        getState,
+        instanceId: targetInstanceId,
         intent: payload.intent,
-        handlerCount: handlerOptions.length,
+        timeoutMs: context.openContextListenerTimeoutMs,
       })
 
-      // Request UI resolution
-      const resolution = await context.requestIntentResolution!({
-        requestId: message.meta.requestUuid,
-        intent: payload.intent,
-        context: validatedContext,
-        handlers: handlerOptions,
-      })
-
-      if (!resolution.selectedHandler) {
-        throw new UserCancelledError("Intent resolution cancelled by user")
+      if (!listenerReady) {
+        throw new Error("Intent listener not registered within timeout")
       }
-
-      targetAppId = resolution.selectedHandler.appId
-
-      // Re-query handlers after user selection to get current state
-      // (apps may have been launched/closed while user was selecting)
-      const currentState = getState()
-      const currentHandlers = findIntentHandlers(currentState, appDirectory, {
-        intent: payload.intent,
-        context: validatedContext,
-        source: { appId: source.appId, instanceId: source.instanceId },
-        target: { appId: targetAppId },
-      })
-
-      // Check if there's a running instance for the selected app
-      const runningInstance = currentHandlers.runningListeners.find(
-        listener => listener.appId === targetAppId
+    } else if (!targetApp && finalHandlers.compatibleApps.length > 1) {
+      const appIntent = createResolverAppIntent(
+        getState(),
+        appDirectory,
+        payload.intent,
+        validatedContext.type
       )
 
-      if (resolution.selectedHandler.instanceId) {
-        // User selected a specific running instance - verify it still exists
-        const selectedInstance = getInstance(currentState, resolution.selectedHandler.instanceId)
-        if (selectedInstance && selectedInstance.state !== AppInstanceState.TERMINATED) {
-          targetInstanceId = resolution.selectedHandler.instanceId
-          logger.info("DACP: Using user-selected running instance", {
-            targetInstanceId,
-            targetAppId,
-            instanceState: selectedInstance.state,
-          })
+      const response = createDACPSuccessResponse(message, "raiseIntentResponse", {
+        appIntent,
+      })
 
-          // Verify intent listener is registered on the selected instance
-          const listeners = getListenersForInstance(currentState, targetInstanceId).filter(
-            l => l.intentName === payload.intent && l.active
-          )
-
-          if (listeners.length === 0) {
-            logger.warn(
-              "DACP: No intent listener found on selected instance, waiting for registration",
-              {
-                targetInstanceId,
-                intent: payload.intent,
-              }
-            )
-
-            // Wait for listener to be registered (max 5 seconds for running instances)
-            const listenerWaitTime = 5000
-            const listenerCheckInterval = 100
-            const listenerWaitStart = Date.now()
-            let listenerRegistered = false
-
-            while (Date.now() - listenerWaitStart < listenerWaitTime) {
-              const waitState = getState()
-              const currentListeners = getListenersForInstance(waitState, targetInstanceId).filter(
-                l => l.intentName === payload.intent && l.active
-              )
-
-              if (currentListeners.length > 0) {
-                listenerRegistered = true
-                logger.info("DACP: Intent listener found on selected instance", {
-                  targetInstanceId,
-                  intent: payload.intent,
-                  listenerId: currentListeners[0].listenerId,
-                })
-                break
-              }
-
-              await new Promise(resolve => setTimeout(resolve, listenerCheckInterval))
-            }
-
-            if (!listenerRegistered) {
-              logger.warn(
-                "DACP: No intent listener registered on selected instance, sending intent event anyway",
-                {
-                  targetInstanceId,
-                  intent: payload.intent,
-                }
-              )
-            }
-          }
-        } else if (runningInstance) {
-          // Selected instance no longer exists, but there's another running instance
-          targetInstanceId = runningInstance.instanceId
-          logger.warn("DACP: Selected instance no longer available, using other running instance", {
-            selectedInstanceId: resolution.selectedHandler.instanceId,
-            targetInstanceId,
-            targetAppId,
-          })
-        } else {
-          // Selected instance gone, need to launch new one
-          logger.warn("DACP: Selected instance no longer available, launching new instance", {
-            selectedInstanceId: resolution.selectedHandler.instanceId,
-            targetAppId,
-          })
-          targetInstanceId = await launchAppAndWaitForInstance(
-            targetAppId,
-            context,
-            validatedContext
-          )
-        }
-      } else if (runningInstance) {
-        // User selected app but no specific instance - use running instance if available
-        targetInstanceId = runningInstance.instanceId
-        logger.info("DACP: Using existing running instance for selected app", {
-          targetInstanceId,
-          targetAppId,
-        })
-
-        // Verify intent listener is registered on this instance
-        const listeners = getListenersForInstance(currentState, targetInstanceId).filter(
-          l => l.intentName === payload.intent && l.active
-        )
-
-        if (listeners.length === 0) {
-          logger.warn(
-            "DACP: No intent listener found on running instance, waiting for registration",
-            {
-              targetInstanceId,
-              intent: payload.intent,
-            }
-          )
-
-          // Wait for listener to be registered (max 5 seconds for running instances)
-          const listenerWaitTime = 5000
-          const listenerCheckInterval = 100
-          const listenerWaitStart = Date.now()
-          let listenerRegistered = false
-
-          while (Date.now() - listenerWaitStart < listenerWaitTime) {
-            const waitState = getState()
-            const currentListeners = getListenersForInstance(waitState, targetInstanceId).filter(
-              l => l.intentName === payload.intent && l.active
-            )
-
-            if (currentListeners.length > 0) {
-              listenerRegistered = true
-              logger.info("DACP: Intent listener found on running instance", {
-                targetInstanceId,
-                intent: payload.intent,
-                listenerId: currentListeners[0].listenerId,
-              })
-              break
-            }
-
-            await new Promise(resolve => setTimeout(resolve, listenerCheckInterval))
-          }
-
-          if (!listenerRegistered) {
-            logger.warn(
-              "DACP: No intent listener registered on running instance, sending intent event anyway",
-              {
-                targetInstanceId,
-                intent: payload.intent,
-              }
-            )
-          }
-        }
-      } else {
-        // Need to launch the app
-        targetInstanceId = await launchAppAndWaitForInstance(targetAppId, context, validatedContext)
-
-        // Per FDC3 spec: Allow time for app to add intent listener after launch
-        // Wait up to 15 seconds for the app to register its intent listener
-        logger.info("DACP: Waiting for app to register intent listener (UI resolution path)", {
-          targetInstanceId,
-          intent: payload.intent,
-        })
-
-        const listenerWaitTime = 15000 // 15 seconds (FDC3 spec minimum)
-        const listenerCheckInterval = 100 // Check every 100ms
-        const listenerWaitStart = Date.now()
-        let listenerRegistered = false
-
-        while (Date.now() - listenerWaitStart < listenerWaitTime) {
-          // Check if a listener has been registered for this intent on this instance
-          const waitState = getState()
-          const listeners = getListenersForInstance(waitState, targetInstanceId).filter(
-            l => l.intentName === payload.intent && l.active
-          )
-
-          if (listeners.length > 0) {
-            listenerRegistered = true
-            logger.info("DACP: Intent listener registered (UI resolution path)", {
-              targetInstanceId,
-              intent: payload.intent,
-              listenerId: listeners[0].listenerId,
-            })
-            break
-          }
-
-          await new Promise(resolve => setTimeout(resolve, listenerCheckInterval))
-        }
-
-        if (!listenerRegistered) {
-          logger.warn(
-            "DACP: No intent listener registered within timeout (UI resolution path), sending intent event anyway",
-            {
-              targetInstanceId,
-              intent: payload.intent,
-              timeout: listenerWaitTime,
-            }
-          )
-          // Continue anyway - the app might handle the intent event when it registers the listener
-        }
-      }
+      sendDACPResponse({ response, instanceId, transport })
+      return
     } else if (finalHandlers.runningListeners.length > 0) {
       // Single handler or no UI - use a running listener (preferred)
       const listener = finalHandlers.runningListeners[0]
@@ -438,50 +231,15 @@ export async function handleRaiseIntentRequest(
         targetAppId,
       })
 
-      // Per FDC3 spec: Allow time for app to add intent listener after launch
-      // Wait up to 15 seconds for the app to register its intent listener
-      // This ensures the app is ready to receive the intent event
-      logger.info("DACP: Waiting for app to register intent listener", {
-        targetInstanceId,
+      const listenerReady = await waitForIntentListener({
+        getState,
+        instanceId: targetInstanceId,
         intent: payload.intent,
+        timeoutMs: context.openContextListenerTimeoutMs,
       })
 
-      const listenerWaitTime = 15000 // 15 seconds (FDC3 spec minimum)
-      const listenerCheckInterval = 100 // Check every 100ms
-      const listenerWaitStart = Date.now()
-      let listenerRegistered = false
-
-      while (Date.now() - listenerWaitStart < listenerWaitTime) {
-        // Check if a listener has been registered for this intent on this instance
-        const waitState = getState()
-        const listeners = getListenersForInstance(waitState, targetInstanceId).filter(
-          l => l.intentName === payload.intent && l.active
-        )
-
-        if (listeners.length > 0) {
-          listenerRegistered = true
-          logger.info("DACP: Intent listener registered", {
-            targetInstanceId,
-            intent: payload.intent,
-            listenerId: listeners[0].listenerId,
-          })
-          break
-        }
-
-        await new Promise(resolve => setTimeout(resolve, listenerCheckInterval))
-      }
-
-      if (!listenerRegistered) {
-        logger.warn(
-          "DACP: No intent listener registered within timeout, sending intent event anyway",
-          {
-            targetInstanceId,
-            intent: payload.intent,
-            timeout: listenerWaitTime,
-          }
-        )
-        // Continue anyway - the app might handle the intent event when it registers the listener
-        // or the app might be using a different mechanism to handle intents
+      if (!listenerReady) {
+        throw new Error("Intent listener not registered within timeout")
       }
     } else {
       throw new NoAppsFoundError(`No handler found for intent: ${payload.intent}`)
@@ -490,9 +248,16 @@ export async function handleRaiseIntentRequest(
     // Register pending intent for intentResultRequest correlation.
     // We do not block the response on the intent result.
     const requestId = message.meta.requestUuid
+    let resolvePromise: (result: unknown) => void = () => {}
+    let rejectPromise: (error: Error) => void = () => {}
+    void new Promise<unknown>((resolve, reject) => {
+      resolvePromise = resolve
+      rejectPromise = reject
+    })
+
     pendingIntentPromises.set(requestId, {
-      resolve: () => {},
-      reject: () => {},
+      resolve: resolvePromise,
+      reject: rejectPromise,
     })
 
     // Store pending intent metadata in state (without promise functions)
@@ -719,9 +484,48 @@ export async function handleRaiseIntentForContextRequest(
       )
     }
 
-    // For now, use the first intent found
-    // TODO: Implement UI resolution when multiple intents exist
-    const selectedIntent = intentMetadata[0].name
+    const targetApp = payload.app
+    const filteredIntents = targetApp
+      ? intentMetadata.filter(metadata => {
+          const handlersForIntent = findIntentHandlers(getState(), appDirectory, {
+            intent: metadata.name,
+            context: validatedContext,
+            source: { appId: source.appId, instanceId: source.instanceId },
+            target: targetApp,
+          })
+          return handlersForIntent.compatibleApps.length > 0
+        })
+      : intentMetadata
+
+    if (filteredIntents.length === 0) {
+      throw new NoAppsFoundError(
+        `No intents found to handle context type: ${validatedContext.type}`
+      )
+    }
+
+    // If multiple intents exist and no target specified, return appIntents so the caller can resolve.
+    if (!targetApp && filteredIntents.length > 1) {
+      const appIntents = filteredIntents
+        .map(metadata =>
+          createResolverAppIntent(getState(), appDirectory, metadata.name, validatedContext.type)
+        )
+        .filter(appIntent => appIntent.apps.length > 0)
+
+      if (appIntents.length === 0) {
+        throw new NoAppsFoundError(
+          `No apps found to handle context type: ${validatedContext.type}`
+        )
+      }
+
+      const response = createDACPSuccessResponse(message, "raiseIntentForContextResponse", {
+        appIntents,
+      })
+
+      sendDACPResponse({ response, instanceId, transport })
+      return
+    }
+
+    const selectedIntent = filteredIntents[0].name
 
     logger.info("DACP: Selected intent for context", {
       intent: selectedIntent,
@@ -745,7 +549,21 @@ export async function handleRaiseIntentForContextRequest(
     let targetInstanceId: string
     let targetAppId: string
 
-    if (handlers.runningListeners.length > 0) {
+    if (targetApp?.instanceId) {
+      targetInstanceId = targetApp.instanceId
+      targetAppId = targetApp.appId
+
+      const listenerReady = await waitForIntentListener({
+        getState,
+        instanceId: targetInstanceId,
+        intent: selectedIntent,
+        timeoutMs: context.openContextListenerTimeoutMs,
+      })
+
+      if (!listenerReady) {
+        throw new Error("Intent listener not registered within timeout")
+      }
+    } else if (handlers.runningListeners.length > 0) {
       const listener = handlers.runningListeners[0]
       targetInstanceId = listener.instanceId
       targetAppId = listener.appId
@@ -754,46 +572,15 @@ export async function handleRaiseIntentForContextRequest(
       targetAppId = appCapability.appId
       targetInstanceId = await launchAppAndWaitForInstance(targetAppId, context, validatedContext)
 
-      // Per FDC3 spec: Allow time for app to add intent listener after launch
-      // Wait up to 15 seconds for the app to register its intent listener
-      logger.info("DACP: Waiting for app to register intent listener (context-first)", {
-        targetInstanceId,
+      const listenerReady = await waitForIntentListener({
+        getState,
+        instanceId: targetInstanceId,
         intent: selectedIntent,
+        timeoutMs: context.openContextListenerTimeoutMs,
       })
 
-      const listenerWaitTime = 15000 // 15 seconds (FDC3 spec minimum)
-      const listenerCheckInterval = 100 // Check every 100ms
-      const listenerWaitStart = Date.now()
-      let listenerRegistered = false
-
-      while (Date.now() - listenerWaitStart < listenerWaitTime) {
-        const waitState = getState()
-        const listeners = getListenersForInstance(waitState, targetInstanceId).filter(
-          l => l.intentName === selectedIntent && l.active
-        )
-
-        if (listeners.length > 0) {
-          listenerRegistered = true
-          logger.info("DACP: Intent listener registered (context-first)", {
-            targetInstanceId,
-            intent: selectedIntent,
-            listenerId: listeners[0].listenerId,
-          })
-          break
-        }
-
-        await new Promise(resolve => setTimeout(resolve, listenerCheckInterval))
-      }
-
-      if (!listenerRegistered) {
-        logger.warn(
-          "DACP: No intent listener registered within timeout (context-first), sending intent event anyway",
-          {
-            targetInstanceId,
-            intent: selectedIntent,
-            timeout: listenerWaitTime,
-          }
-        )
+      if (!listenerReady) {
+        throw new Error("Intent listener not registered within timeout")
       }
     } else {
       throw new NoAppsFoundError(`No handler found for intent: ${selectedIntent}`)
@@ -801,9 +588,16 @@ export async function handleRaiseIntentForContextRequest(
 
     // Register pending intent for intentResultRequest correlation.
     const requestId = message.meta.requestUuid
+    let resolvePromise: (result: unknown) => void = () => {}
+    let rejectPromise: (error: Error) => void = () => {}
+    void new Promise<unknown>((resolve, reject) => {
+      resolvePromise = resolve
+      rejectPromise = reject
+    })
+
     pendingIntentPromises.set(requestId, {
-      resolve: () => {},
-      reject: () => {},
+      resolve: resolvePromise,
+      reject: rejectPromise,
     })
 
     // Store pending intent metadata in state (without promise functions)
@@ -897,4 +691,34 @@ export async function handleRaiseIntentForContextRequest(
       transport,
     })
   }
+}
+
+async function waitForIntentListener({
+  getState,
+  instanceId,
+  intent,
+  timeoutMs,
+}: {
+  getState: DACPHandlerContext["getState"]
+  instanceId: string
+  intent: string
+  timeoutMs: number
+}): Promise<boolean> {
+  const listenerCheckInterval = 100
+  const listenerWaitStart = Date.now()
+
+  while (Date.now() - listenerWaitStart < timeoutMs) {
+    const waitState = getState()
+    const listeners = getListenersForInstance(waitState, instanceId).filter(
+      l => l.intentName === intent && l.active
+    )
+
+    if (listeners.length > 0) {
+      return true
+    }
+
+    await new Promise(resolve => setTimeout(resolve, listenerCheckInterval))
+  }
+
+  return false
 }

@@ -37,7 +37,7 @@ export const pendingIntentPromises = new Map<
 /**
  * Helper to check if context type is compatible with supported types
  */
- function isContextTypeCompatible(supportedTypes: string[], contextType: string): boolean {
+export function isContextTypeCompatible(supportedTypes: string[], contextType: string): boolean {
   if (supportedTypes.length === 0) {
     return true // Accepts all context types
   }
@@ -45,9 +45,9 @@ export const pendingIntentPromises = new Map<
 }
 
 /**
- * Helper to check if result types match
+ * Helper to check if result types match, including channel types.
  */
- function isResultTypeCompatible(
+export function isResultTypeCompatible(
   actualResultType: string | undefined,
   requiredResultType: string | undefined
 ): boolean {
@@ -57,6 +57,15 @@ export const pendingIntentPromises = new Map<
   if (actualResultType === undefined) {
     return false
   }
+
+  if (requiredResultType === "channel") {
+    return actualResultType === "channel" || actualResultType.startsWith("channel<")
+  }
+
+  if (requiredResultType.startsWith("channel<")) {
+    return actualResultType === requiredResultType
+  }
+
   return actualResultType === requiredResultType
 }
 
@@ -220,10 +229,7 @@ export function createAppIntents(
         })
       : validRunningListeners
 
-  // Track which appIds have running instances
-  const runningAppIds = new Set(filteredRunningListeners.map(l => l.appId))
-
-  // First, add apps from directory (those without running instances will be added)
+  // First, add apps from directory in directory order
   allApps.forEach(app => {
     const intents = app.interop?.intents?.listensFor
     if (!intents || typeof intents !== "object") return
@@ -239,15 +245,11 @@ export function createAppIntents(
       typeof intentDef.resultType === "string" ? intentDef.resultType : undefined
     if (resultType !== undefined && !isResultTypeCompatible(actualResultType, resultType)) return
 
-    // Skip if this app has running instances (we'll add those separately)
-    if (runningAppIds.has(app.appId)) return
-
     if (!appIntentsMap.has(intentName)) {
       appIntentsMap.set(intentName, {
         intent: {
           name: intentName,
-          displayName:
-            typeof intentDef.displayName === "string" ? intentDef.displayName : intentName,
+          displayName: intentName,
         },
         apps: [],
       })
@@ -265,20 +267,10 @@ export function createAppIntents(
   // Then, add running instances with their instanceId
   if (filteredRunningListeners.length > 0) {
     if (!appIntentsMap.has(intentName)) {
-      // Get display name from first listener's app directory entry if available
-      const firstListener = filteredRunningListeners[0]
-      const apps = appDirectory.retrieveAppsById(firstListener.appId)
-      const appInfo = apps[0]
-      const intentDef = appInfo?.interop?.intents?.listensFor?.[intentName]
-      const displayName =
-        typeof intentDef === "object" && intentDef && "displayName" in intentDef
-          ? (intentDef.displayName as string)
-          : intentName
-
       appIntentsMap.set(intentName, {
         intent: {
           name: intentName,
-          displayName,
+          displayName: intentName,
         },
         apps: [],
       })
@@ -313,17 +305,9 @@ export function findIntentsByContext(
   appDirectory: AppDirectoryManager,
   contextType: string
 ): Array<{ name: string; displayName?: string }> {
-  const intentNames = new Set<string>()
+  const orderedIntentNames: string[] = []
+  const intentNameSet = new Set<string>()
 
-  // Get intents from active listeners
-  const allListeners = getAllIntentListeners(state)
-  allListeners.forEach(listener => {
-    if (listener.active && isContextTypeCompatible(listener.contextTypes, contextType)) {
-      intentNames.add(listener.intentName)
-    }
-  })
-
-  // Get intents from app directory
   const allApps = appDirectory.retrieveAllApps()
   allApps.forEach(app => {
     const intents = app.interop?.intents?.listensFor
@@ -332,15 +316,28 @@ export function findIntentsByContext(
       if (intentDef && typeof intentDef === "object" && "contexts" in intentDef) {
         const contextTypes = Array.isArray(intentDef.contexts) ? intentDef.contexts : []
         if (isContextTypeCompatible(contextTypes, contextType)) {
-          intentNames.add(intentName)
+          if (!intentNameSet.has(intentName)) {
+            intentNameSet.add(intentName)
+            orderedIntentNames.push(intentName)
+          }
         }
       }
     })
   })
 
-  return Array.from(intentNames).map(name => ({
+  const allListeners = getAllIntentListeners(state)
+  allListeners.forEach(listener => {
+    if (listener.active && isContextTypeCompatible(listener.contextTypes, contextType)) {
+      if (!intentNameSet.has(listener.intentName)) {
+        intentNameSet.add(listener.intentName)
+        orderedIntentNames.push(listener.intentName)
+      }
+    }
+  })
+
+  return orderedIntentNames.map(name => ({
     name,
-    displayName: name, // Could be enhanced to get from app directory
+    displayName: name,
   }))
 }
 

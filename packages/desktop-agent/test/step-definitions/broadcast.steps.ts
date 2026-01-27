@@ -58,6 +58,13 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
+
+    const lastMessage = this.mockTransport.getLastMessage()
+    const listenerUUID = (lastMessage?.msg?.payload as { listenerUUID?: string } | undefined)
+      ?.listenerUUID
+    if (listenerUUID) {
+      this.props.lastContextListenerId = listenerUUID
+    }
   }
 )
 
@@ -89,7 +96,7 @@ When(
     const message: ContextListenerUnsubscribeRequest = {
       meta,
       payload: {
-        listenerUUID: id,
+        listenerUUID: handleResolve(id, this) ?? id,
       },
       type: "contextListenerUnsubscribeRequest",
     }

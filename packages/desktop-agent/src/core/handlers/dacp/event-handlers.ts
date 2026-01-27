@@ -1,12 +1,15 @@
 import { createDACPSuccessResponse } from "../../dacp-protocol/dacp-message-creators"
-import { generateEventUuid } from "../../dacp-protocol/dacp-utils"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
 import { FDC3ChannelError } from "../../errors/fdc3-errors"
 import { getInstance, getEventListenersForType } from "../../state/selectors"
-import { addEventListener, removeEventListener, removeEventListenersForInstance } from "../../state/mutators"
+import {
+  addEventListener,
+  removeEventListener,
+  removeEventListenersForInstance,
+} from "../../state/mutators"
 import type { AgentState } from "../../state/types"
 
 /**
@@ -42,7 +45,7 @@ export function handleAddEventListenerRequest(
     // This ensures listeners registered with either name receive the same events
     const normalizedEventType = eventType === "USER_CHANNEL_CHANGED" ? "channelChanged" : eventType
 
-    const listenerId = generateEventUuid()
+    const listenerId = message.meta.requestUuid
 
     setState(state =>
       addEventListener(state, {
@@ -62,11 +65,11 @@ export function handleAddEventListenerRequest(
     logger.info("DACP: Event listener added", { instanceId, eventType, listenerId })
   } catch (error) {
     logger.error("DACP: Add event listener failed", error)
-    
+
     // Extract FDC3 error type from error instance
-    let errorType: ChannelError = ChannelError.ApiTimeout
+    let errorType: ChannelError = "ListenerError" as ChannelError
     const errorMessage = error instanceof Error ? error.message : "Failed to add event listener"
-    
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     } else if (errorMessage.includes("Access denied") || errorMessage.includes("denied")) {
@@ -110,11 +113,12 @@ export function handleEventListenerUnsubscribeRequest(
     logger.info("DACP: Event listener unsubscribed", { instanceId, listenerUUID })
   } catch (error) {
     logger.error("DACP: Event listener unsubscribe failed", error)
-    
+
     // Extract FDC3 error type from error instance
-    let errorType: ChannelError = ChannelError.ApiTimeout
-    const errorMessage = error instanceof Error ? error.message : "Failed to unsubscribe event listener"
-    
+    let errorType: ChannelError = "ListenerError" as ChannelError
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to unsubscribe event listener"
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     } else if (errorMessage.includes("Access denied") || errorMessage.includes("denied")) {
@@ -135,10 +139,7 @@ export function handleEventListenerUnsubscribeRequest(
  * Get listeners for an event type (exported for use by other handlers)
  * Note: This function now requires state to be passed in
  */
-export function getEventListeners(
-  eventType: string,
-  getState: () => AgentState
-): string[] {
+export function getEventListeners(eventType: string, getState: () => AgentState): string[] {
   return getEventListenersForType(getState(), eventType)
 }
 

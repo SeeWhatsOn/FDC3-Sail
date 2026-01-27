@@ -10,8 +10,8 @@ Feature: Relaying Private Channel Broadcast messages
   Scenario: Creating a new private channel
     When "appId: App2, instanceId: a1" creates a private channel [fdc3.createPrivateChannel]
     Then messaging will have outgoing posts
-      | msg.matches_type             | msg.payload.privateChannel.id | msg.payload.privateChannel.type | to.appId | to.instanceId |
-      | createPrivateChannelResponse | uuid6                         | private                         | App2     | a1            |
+      | msg.matches_type             | msg.payload.privateChannel.type | to.appId | to.instanceId |
+      | createPrivateChannelResponse | private                         | App2     | a1            |
 
   Scenario: Broadcast message to no-one
     When "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "{channel1Id}" [fdc3.broadcast]
@@ -35,12 +35,12 @@ Feature: Relaying Private Channel Broadcast messages
     And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
     And we wait for a period of "10" ms
     Then messaging will have outgoing posts
-      | msg.matches_type                        | to.appId | to.instanceId | msg.payload.privateChannelId | msg.payload.contextType | msg.payload.listenerUUID |
-      | privateChannelAddEventListenerResponse  | App2     | a2            | {null}                       | {null}                  | uuid6                    |
-      | privateChannelAddEventListenerResponse  | App2     | a2            | {null}                       | {null}                  | uuid9                    |
-      | privateChannelOnAddContextListenerEvent | App2     | a2            | {channel1Id}                 | fdc3.instrument         | {null}                   |
-      | addContextListenerResponse              | App1     | a1            | {null}                       | {null}                  | uuid12                   |
-    And "appId: App1, instanceId: a1" removes context listener with id "uuid12" [fdc3.removeContextListener]
+      | msg.matches_type                        | to.appId | to.instanceId | msg.payload.privateChannelId | msg.payload.contextType |
+      | privateChannelAddEventListenerResponse  | App2     | a2            | {null}                       | {null}                  |
+      | privateChannelAddEventListenerResponse  | App2     | a2            | {null}                       | {null}                  |
+      | privateChannelOnAddContextListenerEvent | App2     | a2            | {channel1Id}                 | fdc3.instrument         |
+      | addContextListenerResponse              | App1     | a1            | {null}                       | {null}                  |
+    And "appId: App1, instanceId: a1" removes context listener with id "{lastContextListenerId}" [fdc3.removeContextListener]
     Then messaging will have outgoing posts
       | msg.type                           | msg.payload.privateChannelId | msg.payload.contextType | to.appId | to.instanceId |
       | privateChannelOnUnsubscribeEvent   | {channel1Id}                 | fdc3.instrument         | App2     | a2            |
@@ -60,13 +60,13 @@ Feature: Relaying Private Channel Broadcast messages
 
   Scenario: addContextListener Event Listener add and removed, shouldn't fire when addContextListener called.
     When "appId: App2, instanceId: a2" adds an "addContextListener" event listener on "{channel1Id}" [PrivateChannel.addContextListener]
-    And "appId: App2, instanceId: a2" removes event listener "uuid6" [PrivateChannel.removeContextListener]
+    And "appId: App2, instanceId: a2" removes event listener "{lastPrivateChannelEventListenerId}" [PrivateChannel.removeContextListener]
     And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
     Then messaging will have outgoing posts
-      | msg.matches_type                               | to.appId | to.instanceId | msg.payload.privateChannelId | msg.payload.contextType | msg.payload.listenerUUID |
-      | privateChannelAddEventListenerResponse         | App2     | a2            | {null}                       | {null}                  | uuid6                    |
-      | privateChannelUnsubscribeEventListenerResponse | App2     | a2            | {null}                       | {null}                  | {null}                   |
-      | addContextListenerResponse                     | App1     | a1            | {null}                       | {null}                  | uuid11                   |
+      | msg.matches_type                               | to.appId | to.instanceId | msg.payload.privateChannelId | msg.payload.contextType |
+      | privateChannelAddEventListenerResponse         | App2     | a2            | {null}                       | {null}                  |
+      | privateChannelUnsubscribeEventListenerResponse | App2     | a2            | {null}                       | {null}                  |
+      | addContextListenerResponse                     | App1     | a1            | {null}                       | {null}                  |
 
   @conformance2.2
   Scenario: I can't register an app channel with the same ID as a private channel
@@ -83,8 +83,8 @@ Feature: Relaying Private Channel Broadcast messages
 
   Scenario: Can't unsubscribe an unconnected listener
     When "appId: App2, instanceId: a2" adds a context listener on "{channelId}" with type "fdc3.instrument" [fdc3.addContextListener]
-    And "appId: App2, instanceId: a2" removes context listener with id "uuid6" [fdc3.removeContextListener]
-    And "appId: App2, instanceId: a2" removes context listener with id "uuid6" [fdc3.removeContextListener]
+    And "appId: App2, instanceId: a2" removes context listener with id "{lastContextListenerId}" [fdc3.removeContextListener]
+    And "appId: App2, instanceId: a2" removes context listener with id "{lastContextListenerId}" [fdc3.removeContextListener]
     Then messaging will have outgoing posts
       | msg.type                           | to.appId | to.instanceId | msg.payload.error |
       | contextListenerUnsubscribeResponse | App2     | a2            | {null}            |
@@ -92,7 +92,7 @@ Feature: Relaying Private Channel Broadcast messages
 
   Scenario: Can't unsubscribe an someone else's listener
     When "appId: App2, instanceId: a2" adds a context listener on "{channelId}" with type "fdc3.instrument" [fdc3.addContextListener]
-    And "appId: App1, instanceId: a1" removes context listener with id "uuid6" [fdc3.removeContextListener]
+    And "appId: App1, instanceId: a1" removes context listener with id "{lastContextListenerId}" [fdc3.removeContextListener]
     Then messaging will have outgoing posts
       | msg.type                           | to.appId | to.instanceId | msg.payload.error |
       | addContextListenerResponse         | App2     | a2            | {null}            |

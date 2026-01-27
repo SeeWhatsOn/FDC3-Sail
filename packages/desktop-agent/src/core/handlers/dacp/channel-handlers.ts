@@ -398,7 +398,9 @@ function notifyChannelChanged(
   const subscriberInstanceIds = new Set(
     subscribers
       .map(listenerId => getEventListener(state, listenerId))
-      .filter((listener): listener is NonNullable<ReturnType<typeof getEventListener>> => !!listener)
+      .filter(
+        (listener): listener is NonNullable<ReturnType<typeof getEventListener>> => !!listener
+      )
       .map(listener => listener.instanceId)
   )
 
@@ -408,6 +410,7 @@ function notifyChannelChanged(
 
   const channelChangedEvent = createDACPEvent("channelChangedEvent", {
     channelId,
+    newChannelId: channelId,
     identity: {
       appId: instance.appId,
       instanceId: instance.instanceId,

@@ -113,7 +113,9 @@ export function createMeta(cw: CustomWorld, appStr: string) {
     const instanceId = instanceIdMatch?.[1]?.trim()
 
     if (appId) {
-      app = instanceId ? { appId, instanceId, desktopAgent: desktopAgentName } : { appId, desktopAgent: desktopAgentName }
+      app = instanceId
+        ? { appId, instanceId, desktopAgent: desktopAgentName }
+        : { appId, desktopAgent: desktopAgentName }
     } else {
       throw new Error(`Invalid AppIdentifier format: ${appStr}`)
     }
@@ -218,66 +220,69 @@ When("we wait for the listener timeout", async function (this: CustomWorld) {
   await new Promise(resolve => setTimeout(resolve, 2100))
 })
 
-Then('{string} is true', function (this: CustomWorld, propName: string) {
+Then("{string} is true", function (this: CustomWorld, propName: string) {
   const value = this.props[propName]
   if (value !== true) {
     throw new Error(`Expected ${propName} to be true, but got ${JSON.stringify(value)}`)
   }
 })
 
-Then('{string} is false', function (this: CustomWorld, propName: string) {
+Then("{string} is false", function (this: CustomWorld, propName: string) {
   const value = this.props[propName]
   if (value !== false) {
     throw new Error(`Expected ${propName} to be false, but got ${JSON.stringify(value)}`)
   }
 })
 
-Then('{string} is empty', function (this: CustomWorld, propName: string) {
+Then("{string} is empty", function (this: CustomWorld, propName: string) {
   const value = this.props[propName]
   if (value !== null && value !== undefined && !(Array.isArray(value) && value.length === 0)) {
     throw new Error(`Expected ${propName} to be empty, but got ${JSON.stringify(value)}`)
   }
 })
 
-Then('{string} is an array of objects with the following contents', function (this: CustomWorld, propName: string, dataTable: DataTable) {
-  const value = this.props[propName]
-  if (!Array.isArray(value)) {
-    throw new Error(`Expected ${propName} to be an array, but got ${JSON.stringify(value)}`)
-  }
-  
-  const expectedRaw = dataTable.hashes() as unknown
-  if (!Array.isArray(expectedRaw)) {
-    throw new Error(`Expected ${propName} expectations to be an array`)
-  }
-  const expected = expectedRaw as Array<Record<string, string>>
-
-  const valueArray = value as unknown[]
-  if (valueArray.length !== expected.length) {
-    throw new Error(`Expected array length ${expected.length}, but got ${valueArray.length}`)
-  }
-  
-  const isRecord = (input: unknown): input is Record<string, unknown> =>
-    typeof input === "object" && input !== null
-
-  // Simple comparison - could be enhanced
-  for (let i = 0; i < expected.length; i++) {
-    const expectedRow = expected[i]
-    const actualRow = valueArray[i]
-    if (!isRecord(actualRow)) {
-      throw new Error(
-        `Expected ${propName}[${i}] to be an object, but got ${JSON.stringify(actualRow)}`
-      )
+Then(
+  "{string} is an array of objects with the following contents",
+  function (this: CustomWorld, propName: string, dataTable: DataTable) {
+    const value = this.props[propName]
+    if (!Array.isArray(value)) {
+      throw new Error(`Expected ${propName} to be an array, but got ${JSON.stringify(value)}`)
     }
-    
-    for (const [key, expectedValue] of Object.entries(expectedRow)) {
-      const actualValue = actualRow[key]
-      if (actualValue !== expectedValue) {
+
+    const expectedRaw = dataTable.hashes() as unknown
+    if (!Array.isArray(expectedRaw)) {
+      throw new Error(`Expected ${propName} expectations to be an array`)
+    }
+    const expected = expectedRaw as Array<Record<string, string>>
+
+    const valueArray = value as unknown[]
+    if (valueArray.length !== expected.length) {
+      throw new Error(`Expected array length ${expected.length}, but got ${valueArray.length}`)
+    }
+
+    const isRecord = (input: unknown): input is Record<string, unknown> =>
+      typeof input === "object" && input !== null
+
+    // Simple comparison - could be enhanced
+    for (let i = 0; i < expected.length; i++) {
+      const expectedRow = expected[i]
+      const actualRow = valueArray[i]
+      if (!isRecord(actualRow)) {
         throw new Error(
-          `Expected ${propName}[${i}].${key} to be ${expectedValue}, but got ${String(
-            actualValue
-          )}`
+          `Expected ${propName}[${i}] to be an object, but got ${JSON.stringify(actualRow)}`
         )
+      }
+
+      for (const [key, expectedValue] of Object.entries(expectedRow)) {
+        const actualValue = actualRow[key]
+        if (actualValue !== expectedValue) {
+          throw new Error(
+            `Expected ${propName}[${i}].${key} to be ${expectedValue}, but got ${String(
+              actualValue
+            )}`
+          )
+        }
       }
     }
   }
-})
+)

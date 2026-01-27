@@ -13,12 +13,6 @@ import {
 import type { StateSetter } from "../../state/types"
 
 /**
- * Heartbeat configuration
- */
-const HEARTBEAT_INTERVAL = 30000 // 30 seconds
-const HEARTBEAT_TIMEOUT = 60000 // 60 seconds (2 missed heartbeats)
-
-/**
  * Map of instanceId -> interval handle
  * Interval handles are runtime state, not part of persistent state
  */
@@ -30,6 +24,8 @@ const heartbeatIntervals = new Map<string, NodeJS.Timeout>()
  */
 export function startHeartbeat(instanceId: string, context: DACPHandlerContext): void {
   const { transport, getState, setState, logger } = context
+  const heartbeatIntervalMs = context.heartbeatIntervalMs
+  const heartbeatTimeoutMs = context.heartbeatTimeoutMs
 
   // Stop any existing heartbeat
   stopHeartbeat(instanceId, setState)
@@ -78,7 +74,7 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
     const timeSinceLastAck = now - heartbeat.lastAcknowledgmentReceived
 
     // Check if instance has timed out
-    if (timeSinceLastAck > HEARTBEAT_TIMEOUT) {
+    if (timeSinceLastAck > heartbeatTimeoutMs) {
       logger.warn("Instance heartbeat timeout", {
         instanceId,
         timeSinceLastAck,
@@ -97,7 +93,7 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
       instanceId,
       missedHeartbeats: heartbeat.missedHeartbeats,
     })
-  }, HEARTBEAT_INTERVAL)
+  }, heartbeatIntervalMs)
 
   heartbeatIntervals.set(instanceId, intervalHandle)
   logger.info("Heartbeat started for instance", { instanceId })
