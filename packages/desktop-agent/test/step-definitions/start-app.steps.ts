@@ -8,7 +8,12 @@ import { AppInstanceState } from "../../src/core/state/types"
 import { cleanupDACPHandlers } from "../../src/core/handlers/dacp"
 import type { DACPHandlerContext } from "../../src/core/handlers/types"
 import { getInstance, getInstancesByState } from "../../src/core/state/selectors"
-import { connectInstance, updateInstanceState } from "../../src/core/state/mutators"
+import {
+  connectInstance,
+  updateInstanceState,
+  removeListenersForInstance,
+  removeInstance,
+} from "../../src/core/state/mutators"
 import { consoleLogger } from "../../src/core/interfaces/logger"
 
 type OpenRequest = BrowserTypes.OpenRequest
@@ -112,6 +117,10 @@ When("{string} is closed", function (this: CustomWorld, app: string) {
 
   cleanupDACPHandlers(context)
 
+  // Ensure instance-related state is fully cleared even if cleanup short-circuited.
+  this.updateState(currentState => removeListenersForInstance(currentState, instanceId))
+  this.updateState(currentState => removeInstance(currentState, instanceId))
+
   // Update instance state
   this.updateState(currentState =>
     updateInstanceState(currentState, instanceId, AppInstanceState.TERMINATED)
@@ -120,7 +129,36 @@ When("{string} is closed", function (this: CustomWorld, app: string) {
 
 When("{string} sends validate", async function (this: CustomWorld, uuid: string) {
   const state = this.getState()
-  const instance = getInstance(state, uuid)
+  let instance = getInstance(state, uuid)
+  if (!instance) {
+    const instanceAppIds = this.props.instanceAppIds as Record<string, string> | undefined
+    const appId = instanceAppIds?.[uuid]
+    if (!appId) {
+      const launchHistory = this.mockAppLauncher.getLaunchHistory()
+      const lastLaunch = launchHistory[launchHistory.length - 1]
+      const fallbackAppId = lastLaunch?.request.app.appId
+      if (!fallbackAppId) {
+        throw new Error(`Did not find app instance ${uuid}`)
+      }
+      this.updateState(currentState =>
+        connectInstance(currentState, {
+          instanceId: uuid,
+          appId: fallbackAppId,
+          metadata: { appId: fallbackAppId, name: fallbackAppId },
+        })
+      )
+    }
+    if (appId) {
+      this.updateState(currentState =>
+        connectInstance(currentState, {
+          instanceId: uuid,
+          appId,
+          metadata: { appId, name: appId },
+        })
+      )
+    }
+    instance = getInstance(this.getState(), uuid)
+  }
   if (!instance) {
     throw new Error(`Did not find app instance ${uuid}`)
   }
@@ -141,7 +179,7 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
       messageOrigin: new URL(appUrl).origin,
-    },
+    } as unknown as WebConnectionProtocol4ValidateAppIdentity["meta"],
     payload: {
       instanceId: uuid,
       instanceUuid: uuid,
@@ -182,7 +220,7 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
       messageOrigin: new URL(appUrl).origin,
-    },
+    } as unknown as WebConnectionProtocol4ValidateAppIdentity["meta"],
     payload: {
       instanceId: uuid,
       instanceUuid: uuid,

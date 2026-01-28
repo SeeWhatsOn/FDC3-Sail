@@ -48,11 +48,11 @@ Feature: Raising Intents For Context
   Scenario: Raising An Intent With Context To A Non-Running App
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.instrument" on app "portfolioApp" [fdc3.raiseIntentForContext]
     And "uuid-0" sends validate
-    And "appId: portfolioApp, instanceId: 0" registers an intent listener for "ViewInstrument" [fdc3.addIntentListener]
+    And "appId: portfolioApp, instanceId: uuid-0" registers an intent listener for "ViewInstrument" [fdc3.addIntentListener]
     Then messaging will have outgoing posts
       | msg.matches_type              | msg.payload.intent | to.instanceId | to.appId     | msg.payload.context.type |
-      | addIntentListenerResponse     | {null}             |             0 | portfolioApp | {null}                   |
-      | intentEvent                   | ViewInstrument     |             0 | portfolioApp | fdc3.instrument          |
+      | addIntentListenerResponse     | {null}             | uuid-0        | portfolioApp | {null}                   |
+      | intentEvent                   | ViewInstrument     | uuid-0        | portfolioApp | fdc3.instrument          |
       | raiseIntentForContextResponse | {null}             | a1            | App1         | {null}                   |
 
   Scenario: Raising an Intent With Context to a Non-Existent App Instance

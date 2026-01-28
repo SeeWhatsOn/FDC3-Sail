@@ -60,6 +60,11 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
     stopHeartbeat(instanceId, setState)
   }
 
+  // Send an initial heartbeat immediately for short test intervals.
+  if (heartbeatIntervalMs <= 1000) {
+    sendHeartbeat()
+  }
+
   // Set up periodic heartbeat
   const intervalHandle = setInterval(() => {
     const state = getState()

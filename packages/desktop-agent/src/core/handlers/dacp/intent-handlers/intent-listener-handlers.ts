@@ -40,13 +40,13 @@ export function handleAddIntentListener(
       })
     )
 
-    deliverPendingIntentsForListener(context, payload.intent)
-
     const response = createDACPSuccessResponse(message, "addIntentListenerResponse", {
       listenerUUID: listenerId,
     })
 
     sendDACPResponse({ response, instanceId, transport })
+
+    deliverPendingIntentsForListener(context, payload.intent)
   } catch (error) {
     logger.error("DACP: Add intent listener failed", error)
 

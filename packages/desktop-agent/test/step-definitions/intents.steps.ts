@@ -428,6 +428,7 @@ When(
       },
     }
 
+    this.props.lastIntentResultRequestUuid = message.meta?.requestUuid
     await this.mockTransport.receiveMessage(message)
   }
 )
@@ -451,6 +452,7 @@ When(
       },
     }
 
+    this.props.lastIntentResultRequestUuid = message.meta?.requestUuid
     await this.mockTransport.receiveMessage(message)
   }
 )
@@ -485,6 +487,7 @@ When(
       },
     }
 
+    this.props.lastIntentResultRequestUuid = message.meta?.requestUuid
     await this.mockTransport.receiveMessage(message)
   }
 )

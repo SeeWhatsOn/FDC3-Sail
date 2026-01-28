@@ -33,7 +33,7 @@ Feature: Intent Results Are Correctly Delivered
       | intentEvent               | {lastIntentEventUuid} | {null}               | PortfolioApp | l1            | ABC123                             | {null}                                         | {null}                                |
       | raiseIntentResponse       | {null}             | ABC123               | App1         | a1            | {null}                             | l1                                             | {null}                                |
       | raiseIntentResultResponse | {null}             | ABC123               | App1         | a1            | {null}                             | {null}                                         | fdc3.portfolio                        |
-      | intentResultResponse      | {null}             | uuid9                | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
+      | intentResultResponse      | {null}             | {lastIntentResultRequestUuid} | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
 
   @conformance2.2
   Scenario: App Returns An Intent Result

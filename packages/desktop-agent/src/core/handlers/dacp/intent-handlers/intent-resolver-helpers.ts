@@ -31,23 +31,26 @@ export function createResolverAppIntent(
   const apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }> = []
 
   const allApps = appDirectory.retrieveAllApps()
-  const directoryAppIds = new Set<string>()
-
-  allApps.forEach(app => {
+  const directoryMatches = allApps.filter(app => {
     const intents = app.interop?.intents?.listensFor
-    if (!intents || typeof intents !== "object") return
+    if (!intents || typeof intents !== "object") return false
     const intentDef = intents[intentName]
-    if (!intentDef || typeof intentDef !== "object" || !("contexts" in intentDef)) return
+    if (!intentDef || typeof intentDef !== "object" || !("contexts" in intentDef)) return false
 
     const contextTypes = Array.isArray(intentDef.contexts) ? intentDef.contexts : []
-    if (contextType && !isContextTypeCompatible(contextTypes, contextType)) return
+    if (contextType && !isContextTypeCompatible(contextTypes, contextType)) return false
 
     const actualResultType =
       typeof intentDef.resultType === "string" ? intentDef.resultType : undefined
-    if (resultType !== undefined && !isResultTypeCompatible(actualResultType, resultType)) return
+    if (resultType !== undefined && !isResultTypeCompatible(actualResultType, resultType)) return false
 
-    directoryAppIds.add(app.appId)
+    return true
+  })
 
+  const directoryAppIds = new Set(directoryMatches.map(app => app.appId))
+
+  // 1) Running instances for directory apps (directory order).
+  directoryMatches.forEach(app => {
     const instances = getInstancesByAppId(state, app.appId).filter(
       instance => instance.state !== AppInstanceState.TERMINATED
     )
@@ -62,6 +65,7 @@ export function createResolverAppIntent(
     })
   })
 
+  // 2) Running instances for dynamic listeners not in directory (registration order).
   let runningListeners = getActiveListenersForIntent(state, intentName)
   if (contextType) {
     runningListeners = runningListeners.filter(listener =>
@@ -93,30 +97,23 @@ export function createResolverAppIntent(
     apps.filter(entry => entry.instanceId).map(entry => entry.appId)
   )
 
-  const directoryMatches = allApps.filter(app => {
-    const intents = app.interop?.intents?.listensFor
-    if (!intents || typeof intents !== "object") return false
-    const intentDef = intents[intentName]
-    if (!intentDef || typeof intentDef !== "object" || !("contexts" in intentDef)) return false
-
-    const contextTypes = Array.isArray(intentDef.contexts) ? intentDef.contexts : []
-    if (contextType && !isContextTypeCompatible(contextTypes, contextType)) return false
-
-    const actualResultType =
-      typeof intentDef.resultType === "string" ? intentDef.resultType : undefined
-    if (resultType !== undefined && !isResultTypeCompatible(actualResultType, resultType)) return false
-
-    return true
-  })
-
+  // 3) Directory apps without running instances (directory order).
   const directoryAppsWithoutInstances = directoryMatches.filter(
     app => !runningInstanceAppIds.has(app.appId)
   )
+  directoryAppsWithoutInstances.forEach(app => {
+    apps.push({
+      appId: app.appId,
+      name: app.name,
+      version: app.version,
+    })
+  })
+
+  // 4) Directory apps with running instances (directory order).
   const directoryAppsWithInstances = directoryMatches.filter(app =>
     runningInstanceAppIds.has(app.appId)
   )
-
-  ;[...directoryAppsWithoutInstances, ...directoryAppsWithInstances].forEach(app => {
+  directoryAppsWithInstances.forEach(app => {
     apps.push({
       appId: app.appId,
       name: app.name,

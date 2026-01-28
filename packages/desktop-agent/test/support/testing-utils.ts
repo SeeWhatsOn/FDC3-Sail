@@ -21,7 +21,11 @@ export function handleResolve(value: string, world: CustomWorld): string | null 
     const lastIntentEvent = [...world.mockTransport.getPostedMessages()]
       .reverse()
       .find(record => record.msg.type === "intentEvent")
-    return lastIntentEvent?.msg?.meta?.eventUuid
+    const meta = lastIntentEvent?.msg?.meta as { eventUuid?: string } | undefined
+    return meta?.eventUuid
+  }
+  if (value === "{lastIntentResultRequestUuid}") {
+    return world.props.lastIntentResultRequestUuid as string | undefined
   }
 
   // Handle special markers

@@ -7,21 +7,18 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"),
     },
     // Allow imports without file extensions
-    extensions: ['.ts', '.js', '.json']
+    extensions: [".ts", ".js", ".json"],
   },
   // Ensure proper module resolution for Node.js packages
-  ssr: {
-    noExternal: ['@finos/fdc3-web-impl']
-  },
   build: {
-    target: 'node18',
+    target: "node22",
     lib: {
-      entry: 'src/main.ts',
-      formats: ['es'],
-      fileName: 'main'
+      entry: "src/main.ts",
+      formats: ["es"],
+      fileName: "main",
     },
     rollupOptions: {
-      external: ['socket.io', 'dotenv', 'http', /^node:.*/]
-    }
-  }
+      external: ["dotenv", "http", /^node:.*/],
+    },
+  },
 })

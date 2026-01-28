@@ -62,21 +62,21 @@ Feature: Raising Intents
   Scenario: Raising An Intent To A Non-Running App
     When "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "portfolioApp" [fdc3.raiseIntent]
     And "uuid-0" sends validate
-    And "appId: portfolioApp, instanceId: 0" registers an intent listener for "ViewPortfolio" [fdc3.addIntentListener]
+    And "appId: portfolioApp, instanceId: uuid-0" registers an intent listener for "ViewPortfolio" [fdc3.addIntentListener]
     Then messaging will have outgoing posts
       | msg.matches_type          | msg.payload.intent | to.instanceId | to.appId     | msg.payload.context.type |
-      | addIntentListenerResponse | {null}             |             0 | portfolioApp | {null}                   |
-      | intentEvent               | ViewPortfolio      |             0 | portfolioApp | fdc3.portfolio           |
+      | addIntentListenerResponse | {null}             | uuid-0        | portfolioApp | {null}                   |
+      | intentEvent               | ViewPortfolio      | uuid-0        | portfolioApp | fdc3.portfolio           |
       | raiseIntentResponse       | {null}             | a1            | App1         | {null}                   |
 
   Scenario: Raising An Intent That Applies to A Non-Running But Uniquely Identifiable App
     When "appId: App1, instanceId: a1" raises an intent for "ViewInstrument" with contextType "fdc3.instrument" [fdc3.raiseIntent]
     And "uuid-0" sends validate
-    And "appId: portfolioApp, instanceId: 0" registers an intent listener for "ViewInstrument" [fdc3.addIntentListener]
+    And "appId: portfolioApp, instanceId: uuid-0" registers an intent listener for "ViewInstrument" [fdc3.addIntentListener]
     Then messaging will have outgoing posts
       | msg.matches_type          | msg.payload.intent | to.instanceId | to.appId     | msg.payload.context.type |
-      | addIntentListenerResponse | {null}             |             0 | portfolioApp | {null}                   |
-      | intentEvent               | ViewInstrument     |             0 | portfolioApp | fdc3.instrument          |
+      | addIntentListenerResponse | {null}             | uuid-0        | portfolioApp | {null}                   |
+      | intentEvent               | ViewInstrument     | uuid-0        | portfolioApp | fdc3.instrument          |
       | raiseIntentResponse       | {null}             | a1            | App1         | {null}                   |
 
   Scenario: Raising an Intent to a Non-Existent App Instance
