@@ -1,0 +1,82 @@
+import { When } from "@cucumber/cucumber"
+import { CustomWorld } from "../world"
+import { createMeta, getAppInstanceId } from "./generic.steps"
+import { BrowserTypes } from "@finos/fdc3-schema"
+import { AppInstanceState } from "../../src/core/state/types"
+import { getInstance } from "../../src/core/state/selectors"
+import { connectInstance, updateInstanceState } from "../../src/core/state/mutators"
+
+type AddEventListenerRequest = BrowserTypes.AddEventListenerRequest
+type EventListenerUnsubscribeRequest = BrowserTypes.EventListenerUnsubscribeRequest
+
+/**
+ * Helper to ensure app instance exists and is connected before sending messages
+ */
+function ensureAppInstance(world: CustomWorld, appStr: string): string {
+  const instanceId = getAppInstanceId(world, appStr)
+  const meta = createMeta(world, appStr)
+
+  const state = world.getState()
+  const instance = getInstance(state, instanceId)
+  if (!instance) {
+    world.updateState(currentState =>
+      updateInstanceState(
+        connectInstance(currentState, {
+          instanceId,
+          appId: meta.source.appId,
+          metadata: {
+            appId: meta.source.appId,
+            name: meta.source.appId,
+          },
+        }),
+        instanceId,
+        AppInstanceState.CONNECTED
+      )
+    )
+  }
+
+  return instanceId
+}
+
+/**
+ * Add a Desktop Agent event listener (for DA-level events like channelChanged)
+ */
+When(
+  "{string} adds an event listener for {string} [fdc3.addEventListener]",
+  async function (this: CustomWorld, app: string, eventType: string) {
+    ensureAppInstance(this, app)
+    const meta = createMeta(this, app)
+
+    const message: AddEventListenerRequest = {
+      meta,
+      payload: {
+        type: eventType as AddEventListenerRequest["payload"]["type"],
+      },
+      type: "addEventListenerRequest",
+    }
+
+    await this.mockTransport.receiveMessage(message)
+  }
+)
+
+/**
+ * Unsubscribe from a Desktop Agent event listener
+ * Note: This is different from private channel event listeners
+ */
+When(
+  "{string} removes DA event listener {string} [fdc3.removeEventListener]",
+  async function (this: CustomWorld, app: string, listenerUUID: string) {
+    ensureAppInstance(this, app)
+    const meta = createMeta(this, app)
+
+    const message: EventListenerUnsubscribeRequest = {
+      meta,
+      payload: {
+        listenerUUID,
+      },
+      type: "eventListenerUnsubscribeRequest",
+    }
+
+    await this.mockTransport.receiveMessage(message)
+  }
+)

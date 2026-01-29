@@ -1,0 +1,32 @@
+{
+  "name": "@finos/sail-platform-sdk",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "SDK for the FDC3 Sail platform - wraps desktop-agent with Sail middleware and transports",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "unused:check": "knip",
+    "validate": "npm run typecheck && npm run lint && npm run format"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "@types/uuid": "^10.0.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.3.2"
+  },
+  "dependencies": {
+    "@finos/fdc3": "^2.2.0",
+    "@finos/sail-desktop-agent": "0.0.1",
+    "@opentelemetry/api": "^1.9.0",
+    "zod": "^4.1.11"
+  }
+}

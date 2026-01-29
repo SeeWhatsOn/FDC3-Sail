@@ -1,0 +1,23 @@
+{
+  "name": "@finos/sail-server",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "FDC3 Sail Server - Backend server application for FDC3 Sail",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "vite-node --watch src/main.ts",
+    "build": "vite build",
+    "build:tsc": "tsc",
+    "start": "vite-node src/main.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "typescript": "^5.3.2",
+    "vite": "^7.1.5",
+    "vite-node": "^3.2.4"
+  },
+  "dependencies": {},
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.root.json",
+  "files": [],
+  "references": [
+    { "path": "./packages/desktop-agent" },
+    { "path": "./packages/sail-platform-sdk" },
+    { "path": "./packages/sail-ui" },
+    { "path": "./apps/sail-web" },
+    { "path": "./apps/sail-electron" },
+    { "path": "./apps/sail-server" }
+  ]
+}

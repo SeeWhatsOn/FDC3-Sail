@@ -1,0 +1,40 @@
+default:
+  format:
+    - html:cucumber-report.html
+    - "@cucumber/pretty-formatter"
+    - junit:test-results.xml
+  paths:
+    - test/features/**/*.feature
+  require:
+    - test/step-definitions/*.steps.ts
+    - test/support/*.ts
+    - test/world/index.ts
+  requireModule:
+    - tsx/cjs
+  tags: "not @failing"
+
+# Profile for running all features (default behavior)
+all:
+  format:
+    - "@cucumber/pretty-formatter"
+  paths:
+    - test/features/**/*.feature
+  require:
+    - test/step-definitions/*.steps.ts
+    - test/support/*.ts
+    - test/world/index.ts
+  requireModule:
+    - tsx/cjs
+  tags: "not @failing"
+
+# Profile for running a single feature (no default paths)
+single:
+  format:
+    - "@cucumber/pretty-formatter"
+  require:
+    - test/step-definitions/*.steps.ts
+    - test/support/*.ts
+    - test/world/index.ts
+  requireModule:
+    - tsx/cjs
+  tags: "not @failing"
