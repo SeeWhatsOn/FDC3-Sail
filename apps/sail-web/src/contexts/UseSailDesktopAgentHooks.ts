@@ -1,5 +1,5 @@
 import { useContext } from "react"
-import type { SailPlatform } from "@finos/sail-platform-sdk"
+import type { SailPlatform } from "@finos/sail-platform-api"
 
 import type { AppDirectoryStore } from "../stores/app-directory-store"
 import type { ConnectionStore } from "../stores/connection-store"

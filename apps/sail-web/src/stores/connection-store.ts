@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
-import type { AppConnectionMetadata, SailPlatform } from "@finos/sail-platform-sdk"
+import type { AppConnectionMetadata, SailPlatform } from "@finos/sail-platform-api"
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected"
 

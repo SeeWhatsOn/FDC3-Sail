@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@finos/fdc3": "^2.2.0",
-    "@finos/sail-platform-sdk": "*",
+    "@finos/sail-platform-api": "*",
     "@tailwindcss/vite": "^4.1.12",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

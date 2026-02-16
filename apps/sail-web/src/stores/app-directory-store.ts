@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
 import type { DirectoryApp } from "../types/common"
-import type { SailPlatform } from "@finos/sail-platform-sdk"
+import type { SailPlatform } from "@finos/sail-platform-api"
 
 interface AppDirectoryState {
   apps: DirectoryApp[]

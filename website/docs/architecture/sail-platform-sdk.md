@@ -4,15 +4,15 @@ sidebar_position: 3
 
 # Sail Platform SDK Architecture
 
-## Package: @finos/sail-platform-sdk
+## Package: @finos/sail-platform-api
 
 **Purpose**: Sail platform services - creates and manages the Desktop Agent and provides Sail-specific features
 
-**Location**: `packages/sail-platform-sdk/`
+**Location**: `packages/sail-platform-api/`
 
 ## Overview
 
-The `sail-platform-sdk` package is the **main entry point** for using Sail. It:
+The `sail-platform-api` package is the **main entry point** for using Sail. It:
 
 1. **Creates and manages the Desktop Agent** - `SailPlatform` holds the `DesktopAgent` instance
 2. **Manages WCP connections** - Creates and manages `WCPConnector` for app connections
@@ -25,7 +25,7 @@ The `sail-platform-sdk` package is the **main entry point** for using Sail. It:
 ## Package Structure
 
 ```
-packages/sail-platform-sdk/
+packages/sail-platform-api/
 ├── src/
 │   ├── sail-platform.ts               # Main entry point - SailPlatform class
 │   ├── sail-browser-desktop-agent.ts  # Low-level browser wrapper (advanced)
@@ -44,7 +44,7 @@ packages/sail-platform-sdk/
 `SailPlatform` is the primary API for using Sail:
 
 ```typescript
-import { SailPlatform } from "@finos/sail-platform-sdk"
+import { SailPlatform } from "@finos/sail-platform-api"
 
 const platform = new SailPlatform({
   // REQUIRED: How to launch apps
@@ -165,7 +165,7 @@ const platform = new SailPlatform({
 For advanced use cases where you need more control:
 
 ```typescript
-import { createSailBrowserDesktopAgent } from "@finos/sail-platform-sdk"
+import { createSailBrowserDesktopAgent } from "@finos/sail-platform-api"
 
 const { desktopAgent, wcpConnector, start, stop } = createSailBrowserDesktopAgent({
   apps: directoryApps,

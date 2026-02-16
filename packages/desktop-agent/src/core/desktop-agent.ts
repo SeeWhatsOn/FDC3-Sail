@@ -161,7 +161,7 @@ export interface DesktopAgentConfig {
   /**
    * Optional message validator for validating DACP messages.
    * OPTIONAL - if not provided, messages are processed without schema validation.
-   * Implementations can inject Zod, AJV, or custom validators from sail-platform-sdk.
+   * Implementations can inject Zod, AJV, or custom validators from sail-platform-api.
    */
   validator?: MessageValidator
 

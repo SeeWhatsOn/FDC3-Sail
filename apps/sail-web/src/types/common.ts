@@ -5,7 +5,7 @@ export type {
   WebAppDetails,
   AppHosting,
   InstanceID,
-} from "@finos/sail-platform-sdk"
+} from "@finos/sail-platform-api"
 
 // Sail app-specific message constants
 export const AppManagementMessages = {

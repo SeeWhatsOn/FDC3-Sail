@@ -6,7 +6,7 @@
   "scripts": {
     "clean": "npm run clean --workspaces",
     "build": "npm run build --workspaces --if-present",
-    "dev:web": "concurrently \"npm run dev --workspace=@finos/sail-desktop-agent\" \"npm run build:watch --workspace=@finos/sail-platform-sdk\" \"npm run dev --workspace=@finos/fdc3-sail-server\" \"npm run dev --workspace=@finos/fdc3-sail-web\"",
+    "dev:web": "concurrently \"npm run dev --workspace=@finos/sail-desktop-agent\" \"npm run build:watch --workspace=@finos/sail-platform-api\" \"npm run dev --workspace=@finos/fdc3-sail-server\" \"npm run dev --workspace=@finos/fdc3-sail-web\"",
     "dev:desktop": "concurrently \"npm run dev --workspace=@finos/fdc3-sail-server\" \"npm run dev --workspace=@finos/fdc3-sail-electron\" \"npm run dev --workspace=apps/example-fdc3-apps\"",
     "docs:dev": "npm run start --workspace=@finos/fdc3-sail-docs",
     "docs:build": "npm run build --workspace=@finos/fdc3-sail-docs",
@@ -22,7 +22,7 @@
   "workspaces": [
     "packages/desktop-agent",
     "packages/sail-ui",
-    "packages/sail-platform-sdk",
+    "packages/sail-platform-api",
     "apps/sail-web",
     "apps/sail-electron",
     "apps/sail-server",

@@ -106,7 +106,7 @@ Use when Desktop Agent runs on a Node.js server:
 ```typescript
 // Browser client
 import { createWCPClient } from '@finos/fdc3-sail-desktop-agent/browser'
-import { SocketIOClientTransport } from '@finos/sail-platform-sdk'
+import { SocketIOClientTransport } from '@finos/sail-platform-api'
 
 const transport = new SocketIOClientTransport({ 
   url: 'wss://your-server.com',
@@ -128,7 +128,7 @@ start()
 ```typescript
 // Server
 import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
-import { SocketIOServerTransport } from '@finos/sail-platform-sdk'
+import { SocketIOServerTransport } from '@finos/sail-platform-api'
 
 const transport = new SocketIOServerTransport(io, userId)
 const agent = new DesktopAgent({ transport })
@@ -142,7 +142,7 @@ Use when Desktop Agent runs in a Web Worker for isolation:
 ```typescript
 // Main thread
 import { createWCPClient } from '@finos/fdc3-sail-desktop-agent/browser'
-import { WebWorkerTransport } from '@finos/sail-platform-sdk'
+import { WebWorkerTransport } from '@finos/sail-platform-api'
 
 const worker = new Worker('desktop-agent-worker.js')
 const transport = new WebWorkerTransport(worker)
@@ -348,4 +348,4 @@ Apache-2.0
 
 - [FDC3 Specification](https://fdc3.finos.org/docs/api/spec)
 - [@finos/fdc3-get-agent](https://www.npmjs.com/package/@finos/fdc3) - Browser-side FDC3 API
-- [Sail Platform SDK](../sail-platform-sdk/) - Transport implementations
+- [Sail Platform SDK](../sail-platform-api/) - Transport implementations

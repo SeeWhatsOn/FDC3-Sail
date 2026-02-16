@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { SailPlatform } from "@finos/sail-platform-sdk"
+import type { SailPlatform } from "@finos/sail-platform-api"
 
 import { ChannelSelector } from "../components/ChannelSelector"
 import { SailDesktopAgentProvider, SailPlatformProvider } from "../contexts"

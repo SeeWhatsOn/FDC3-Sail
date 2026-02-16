@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
-import type { SailPlatform } from "@finos/sail-platform-sdk"
+import type { SailPlatform } from "@finos/sail-platform-api"
 
 /**
  * Handler option for intent resolution

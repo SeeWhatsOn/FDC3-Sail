@@ -46,7 +46,7 @@ npm run dev:desktop
 FDC3-Sail/
 ├── packages/
 │   ├── desktop-agent/       # Pure FDC3 Desktop Agent (@finos/sail-desktop-agent)
-│   ├── sail-platform-sdk/   # Platform services & wrappers (@finos/sail-platform-sdk)
+│   ├── sail-platform-api/   # Platform services & wrappers (@finos/sail-platform-api)
 │   └── sail-ui/             # Shared UI components
 ├── apps/
 │   ├── sail-web/            # Sail UI (React frontend)

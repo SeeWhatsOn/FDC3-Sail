@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react"
-import type { SailPlatform } from "@finos/sail-platform-sdk"
+import type { SailPlatform } from "@finos/sail-platform-api"
 
 import { createAppDirectoryStore } from "../stores/app-directory-store"
 import { createConnectionStore } from "../stores/connection-store"

@@ -1,5 +1,5 @@
 {
-  "name": "@finos/sail-platform-sdk",
+  "name": "@finos/sail-platform-api",
   "version": "0.0.1",
   "type": "module",
   "description": "SDK for the FDC3 Sail platform - wraps desktop-agent with Sail middleware and transports",

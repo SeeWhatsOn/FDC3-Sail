@@ -1,5 +1,5 @@
 import { SidebarProvider } from "sail-ui"
-import type { SailPlatform } from "@finos/sail-platform-sdk"
+import type { SailPlatform } from "@finos/sail-platform-api"
 
 import { AppSidebar } from "./components/sidebar/AppSidebar"
 import { ThemeProvider } from "./components/theme/theme-provider"

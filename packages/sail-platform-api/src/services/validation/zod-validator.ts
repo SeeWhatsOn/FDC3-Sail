@@ -7,7 +7,7 @@
  *
  * @example
  * ```typescript
- * import { createZodValidator } from "@finos/sail-platform-sdk"
+ * import { createZodValidator } from "@finos/sail-platform-api"
  * import { DesktopAgent } from "@finos/sail-desktop-agent"
  *
  * const agent = new DesktopAgent({

@@ -14,7 +14,7 @@
  * - Validates directory responses against FDC3 schema
  *
  * NOTE: File system operations are not part of the FDC3 spec and are handled
- * by utilities in @finos/sail-platform-sdk for Node.js environments.
+ * by utilities in @finos/sail-platform-api for Node.js environments.
  *
  * @see https://fdc3.finos.org/docs/2.0/app-directory/spec
  */
@@ -27,10 +27,7 @@ import type { DirectoryApp, DirectoryData, DirectoryIntent, WebAppDetails } from
  * @param required - The required result type
  * @returns true if types match (both undefined or both the same string)
  */
-function genericResultTypeSame(
-  real: string | undefined,
-  required: string | undefined
-): boolean {
+function genericResultTypeSame(real: string | undefined, required: string | undefined): boolean {
   if (required === undefined) {
     return true
   }
@@ -205,7 +202,9 @@ export class AppDirectoryManager {
       }
 
       // Parse JSON response
-      const data = (await response.json()) as DirectoryData | { applications?: DirectoryApp[]; message?: string }
+      const data = (await response.json()) as
+        | DirectoryData
+        | { applications?: DirectoryApp[]; message?: string }
 
       // FDC3 spec: /v2/apps returns AllApplicationsResponse with applications array
       // Support both formats: { applications: [...] } and direct array (for compatibility)
@@ -239,7 +238,7 @@ export class AppDirectoryManager {
       throw new Error(
         `Invalid directory URL: ${url}. ` +
           `Must be a valid http/https REST endpoint. ` +
-          `For file system operations, use utilities from @finos/sail-platform-sdk.`
+          `For file system operations, use utilities from @finos/sail-platform-api.`
       )
     }
 
@@ -331,7 +330,7 @@ export class AppDirectoryManager {
       throw new Error(
         `Invalid directory URLs provided: ${invalidUrls.join(", ")}. ` +
           `Must be valid http/https REST endpoints. ` +
-          `For file system operations, use utilities from @finos/sail-platform-sdk.`
+          `For file system operations, use utilities from @finos/sail-platform-api.`
       )
     }
 
@@ -524,8 +523,8 @@ export class AppDirectoryManager {
    */
   retrieveApps(
     contextType: string | undefined,
-    intentName?: string ,
-    resultType?: string 
+    intentName?: string,
+    resultType?: string
   ): DirectoryApp[] {
     // Early return if no filters provided
     if (contextType === undefined && intentName === undefined && resultType === undefined) {
@@ -535,7 +534,9 @@ export class AppDirectoryManager {
     // Get unique app IDs from matching intents
     // Convert optional parameters to required undefined for retrieveIntents
     const appIds = new Set(
-      this.retrieveIntents(contextType, intentName ?? undefined, resultType ?? undefined).map(intent => intent.appId)
+      this.retrieveIntents(contextType, intentName ?? undefined, resultType ?? undefined).map(
+        intent => intent.appId
+      )
     )
 
     return this.allApps.filter(app => appIds.has(app.appId))

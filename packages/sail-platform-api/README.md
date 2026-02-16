@@ -1,11 +1,11 @@
-# @finos/sail-platform-sdk
+# @finos/sail-platform-api
 
 Platform SDK for FDC3 Sail. This package provides browser-side Desktop Agent integration and platform-specific features for the Sail application.
 
 ## Installation
 
 ```bash
-npm install @finos/sail-platform-sdk
+npm install @finos/sail-platform-api
 ```
 
 ## What's Included
@@ -22,7 +22,7 @@ npm install @finos/sail-platform-sdk
 The `createSailBrowserDesktopAgent` factory creates a browser-based Desktop Agent with WCP (Web Connection Protocol) support for connecting FDC3 apps running in iframes.
 
 ```typescript
-import { createSailBrowserDesktopAgent, SailAppLauncher } from "@finos/sail-platform-sdk"
+import { createSailBrowserDesktopAgent, SailAppLauncher } from "@finos/sail-platform-api"
 
 // Create app launcher (handles opening apps in your UI)
 const appLauncher = new SailAppLauncher({
@@ -53,7 +53,7 @@ const { desktopAgent, wcpConnector } = result
 The `SailPlatformClient` provides APIs for Sail-specific features like workspace management and layout persistence.
 
 ```typescript
-import { SailPlatformClient } from "@finos/sail-platform-sdk"
+import { SailPlatformClient } from "@finos/sail-platform-api"
 
 // Create client (uses localStorage by default)
 const client = new SailPlatformClient()
@@ -77,7 +77,7 @@ await client.updateConfig({ theme: "dark" })
 Validate FDC3 DACP messages using auto-generated Zod schemas.
 
 ```typescript
-import { validateDACPMessage, safeParseDACPMessage } from "@finos/sail-platform-sdk"
+import { validateDACPMessage, safeParseDACPMessage } from "@finos/sail-platform-api"
 
 // Throws on invalid message
 validateDACPMessage(message)

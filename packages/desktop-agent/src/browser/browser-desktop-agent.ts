@@ -8,7 +8,7 @@
  * showing how to wire up the core components (DesktopAgent, WCPConnector,
  * InMemoryTransport) together.
  *
- * For Sail-specific usage, see `SailPlatform` in @finos/sail-platform-sdk which
+ * For Sail-specific usage, see `SailPlatform` in @finos/sail-platform-api which
  * inlines this logic with Sail-specific customizations.
  *
  * Provides two patterns:

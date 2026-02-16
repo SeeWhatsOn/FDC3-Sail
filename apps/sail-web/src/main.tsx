@@ -1,6 +1,6 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { SailAppLauncher, SailPlatform } from "@finos/sail-platform-sdk"
+import { SailAppLauncher, SailPlatform } from "@finos/sail-platform-api"
 import type { AppMetadata } from "@finos/fdc3"
 
 import "./index.css"

@@ -16,7 +16,7 @@ FDC3 Sail implements the FDC3 2.2 standard using a modular, transport-agnostic a
 
 ### 2. Separation of Concerns
 - **Pure FDC3 engine** (`@finos/sail-desktop-agent`) - no platform-specific code
-- **Platform services** (`@finos/sail-platform-sdk`) - Sail-specific features and wrappers
+- **Platform services** (`@finos/sail-platform-api`) - Sail-specific features and wrappers
 - Clear boundaries between FDC3 operations and proprietary features
 
 ### 3. Transport Agnostic
@@ -40,7 +40,7 @@ FDC3 Sail implements the FDC3 2.2 standard using a modular, transport-agnostic a
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  LAYER 2: Platform Services (@finos/sail-platform-sdk)      │
+│  LAYER 2: Platform Services (@finos/sail-platform-api)      │
 │  - Desktop Agent wrappers (SailBrowserDesktopAgent)         │
 │  - Transport implementations (Socket.IO, MessagePort)       │
 │  - Platform API (Workspaces, Layouts)                       │
@@ -147,4 +147,4 @@ FDC3 Sail uses **Option 2: External UI Control** from the FDC3 specification:
 ## Learn More
 
 - [Desktop Agent Architecture](./desktop-agent) - Core FDC3 implementation
-- [Sail Platform SDK Architecture](./sail-platform-sdk) - Platform services and wrappers
+- [Sail Platform SDK Architecture](./sail-platform-api) - Platform services and wrappers
