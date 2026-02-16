@@ -65,7 +65,7 @@
  * import { createWCPClient } from '@finos/fdc3-sail-desktop-agent/browser'
  * import { WebWorkerTransport } from '@finos/sail-platform-api'
  *
- * const worker = new Worker('desktop-agent-worker.js')
+ * const worker = new Worker('sail-desktop-agent-worker.js')
  * const transport = new WebWorkerTransport(worker)
  * const { wcpConnector, start } = createWCPClient({ transport })
  *

@@ -100,7 +100,7 @@ This will:
 1. Read official FDC3 JSON schemas from `@finos/fdc3-schema`
 2. Resolve all schema references
 3. Generate runtime Zod validation schemas
-4. Output to: `packages/desktop-agent/src/handlers/validation/dacp-schemas.ts`
+4. Output to: `packages/sail-desktop-agent/src/handlers/validation/dacp-schemas.ts`
 
 The generated file includes 78+ message schemas covering requests, responses, and events for the entire DACP protocol.
 

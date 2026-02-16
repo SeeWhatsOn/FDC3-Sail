@@ -8,7 +8,7 @@ sidebar_position: 2
 
 **Purpose**: Pure, environment-agnostic FDC3 2.2 Desktop Agent implementation
 
-**Location**: `packages/desktop-agent/`
+**Location**: `packages/sail-desktop-agent/`
 
 ## Design Philosophy
 
@@ -42,10 +42,10 @@ The only runtime dependencies are:
 ## Package Structure
 
 ```
-packages/desktop-agent/
+packages/sail-desktop-agent/
 ├── src/
 │   ├── core/                           # Main export (environment-agnostic)
-│   │   ├── desktop-agent.ts            # Main DesktopAgent class
+│   │   ├── sail-desktop-agent.ts            # Main DesktopAgent class
 │   │   ├── handlers/
 │   │   │   └── dacp/                   # DACP message handlers
 │   │   ├── state/                      # Functional state management

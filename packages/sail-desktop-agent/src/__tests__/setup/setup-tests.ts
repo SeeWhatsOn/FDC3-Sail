@@ -1,7 +1,7 @@
 /**
  * Test Setup Configuration
  *
- * Global test setup for the desktop-agent package tests.
+ * Global test setup for the sail-desktop-agent package tests.
  * Configures testing environment and shared utilities.
  */
 

@@ -46,10 +46,10 @@ The package follows a clean three-layer architecture:
 ### Directory Structure
 
 ```
-packages/desktop-agent/
+packages/sail-desktop-agent/
 ├── src/
 │   ├── core/                      # Pure FDC3 Desktop Agent (environment-agnostic)
-│   │   ├── desktop-agent.ts       # Main DesktopAgent class
+│   │   ├── sail-desktop-agent.ts       # Main DesktopAgent class
 │   │   ├── handlers/              # DACP message handlers
 │   │   │   └── dacp/              # All FDC3 operation handlers
 │   │   ├── state/                 # State registries
@@ -60,7 +60,7 @@ packages/desktop-agent/
 │   │   ├── interfaces/            # Transport & AppLauncher interfaces
 │   │   └── app-directory/         # FDC3 App Directory management
 │   ├── browser/                   # Browser-specific code
-│   │   ├── browser-desktop-agent.ts  # Factory functions
+│   │   ├── browser-sail-desktop-agent.ts  # Factory functions
 │   │   └── wcp/                   # WCP implementation
 │   │       ├── wcp-connector.ts   # WCP1-6 protocol handler
 │   │       └── message-port-transport.ts
@@ -144,7 +144,7 @@ Use when Desktop Agent runs in a Web Worker for isolation:
 import { createWCPClient } from '@finos/fdc3-sail-desktop-agent/browser'
 import { WebWorkerTransport } from '@finos/sail-platform-api'
 
-const worker = new Worker('desktop-agent-worker.js')
+const worker = new Worker('sail-desktop-agent-worker.js')
 const transport = new WebWorkerTransport(worker)
 
 const { wcpConnector, start } = createWCPClient({ transport })

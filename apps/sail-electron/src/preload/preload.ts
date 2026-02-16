@@ -1,5 +1,5 @@
 import { contextBridge } from "electron"
-import { fdc3 } from "./desktop-agent-proxy"
+import { fdc3 } from "./sail-desktop-agent-proxy"
 
 // Add a test ping function to verify preload is working
 contextBridge.exposeInMainWorld("sailTest", {

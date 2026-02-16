@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from "uuid"
 /**
  * Extended app metadata that includes directory details.
  * The AppLauncher interface types this as AppMetadata, but the actual
- * data passed by the desktop-agent is DirectoryApp which includes details.
+ * data passed by the sail-desktop-agent is DirectoryApp which includes details.
  */
 type AppMetadataWithDetails = AppMetadata & Partial<Pick<DirectoryApp, "details">>
 
@@ -53,7 +53,7 @@ export class SailAppLauncher implements AppLauncher {
     // Generate instance ID if not targeting existing instance
     const instanceId = request.app.instanceId || uuidv4()
 
-    // Cast to extended type (actual data from desktop-agent is DirectoryApp)
+    // Cast to extended type (actual data from sail-desktop-agent is DirectoryApp)
     const metadata = appMetadata as AppMetadataWithDetails
 
     // Determine launch URL from app metadata

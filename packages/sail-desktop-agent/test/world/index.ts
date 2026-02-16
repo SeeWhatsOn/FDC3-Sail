@@ -127,8 +127,7 @@ export class CustomWorld extends World {
 
     // Wire up MockAppLauncher callback to register instances in state
     this.mockAppLauncher.onInstanceCreated = (instanceId, appId) => {
-      const instanceAppIds =
-        (this.props.instanceAppIds as Record<string, string> | undefined) ?? {}
+      const instanceAppIds = (this.props.instanceAppIds as Record<string, string> | undefined) ?? {}
       instanceAppIds[instanceId] = appId
       this.props.instanceAppIds = instanceAppIds
       this.updateState(state =>

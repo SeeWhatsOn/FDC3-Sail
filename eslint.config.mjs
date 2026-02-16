@@ -117,7 +117,7 @@ export default defineConfig([
 
   // Desktop Agent package: enforce max-lines rule for maintainability
   {
-    files: ["packages/desktop-agent/**/*.ts", "packages/sail-platform-api/**/*.ts"],
+    files: ["packages/sail-desktop-agent/**/*.ts", "packages/sail-platform-api/**/*.ts"],
     rules: {
       "max-lines": [
         "error",
@@ -133,8 +133,8 @@ export default defineConfig([
   // Allow larger generated/tests in constrained spots
   {
     files: [
-      "packages/desktop-agent/src/browser/__tests__/**/*.ts",
-      "packages/desktop-agent/src/core/app-directory/app-directory-manager.ts",
+      "packages/sail-desktop-agent/src/browser/__tests__/**/*.ts",
+      "packages/sail-desktop-agent/src/core/app-directory/app-directory-manager.ts",
       "packages/sail-platform-api/src/services/validation/dacp-schemas.ts",
     ],
     rules: {

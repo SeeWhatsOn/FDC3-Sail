@@ -2,7 +2,7 @@
   "name": "@finos/sail-platform-api",
   "version": "0.0.1",
   "type": "module",
-  "description": "SDK for the FDC3 Sail platform - wraps desktop-agent with Sail middleware and transports",
+  "description": "SDK for the FDC3 Sail platform - wraps sail-desktop-agent with Sail middleware and transports",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

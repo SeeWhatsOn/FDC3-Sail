@@ -9,6 +9,6 @@ build
 .rollup.cache
 FDC3-Sail.pem
 *.tsbuildinfo
-packages/desktop-agent/cucumber-report.html
-packages/desktop-agent/test-results.xml
+packages/sail-desktop-agent/cucumber-report.html
+packages/sail-desktop-agent/test-results.xml
 

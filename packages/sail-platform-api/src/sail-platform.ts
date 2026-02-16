@@ -14,10 +14,7 @@ import {
   type DirectoryApp,
   type Transport,
 } from "@finos/sail-desktop-agent"
-import {
-  WCPConnector,
-  type AppConnectionMetadata,
-} from "@finos/sail-desktop-agent/browser"
+import { WCPConnector, type AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
 import { createInMemoryTransportPair } from "@finos/sail-desktop-agent/transports"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { v4 as uuidv4 } from "uuid"

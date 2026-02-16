@@ -20,13 +20,12 @@
     "validate": "npm run typecheck && npm run lint && npm run build"
   },
   "workspaces": [
-    "packages/desktop-agent",
+    "packages/sail-desktop-agent",
     "packages/sail-ui",
     "packages/sail-platform-api",
     "apps/sail-web",
     "apps/sail-electron",
     "apps/sail-server",
-    "apps/example-fdc3-apps",
     "website"
   ],
   "devDependencies": {

@@ -3,7 +3,7 @@
   "extends": "./tsconfig.root.json",
   "files": [],
   "references": [
-    { "path": "./packages/desktop-agent" },
+    { "path": "./packages/sail-desktop-agent" },
     { "path": "./packages/sail-platform-api" },
     { "path": "./packages/sail-ui" },
     { "path": "./apps/sail-web" },

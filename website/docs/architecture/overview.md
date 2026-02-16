@@ -27,7 +27,7 @@ FDC3 Sail implements the FDC3 2.2 standard using a modular, transport-agnostic a
 ### 4. Environment Independent
 - Desktop Agent package has no browser or Node.js dependencies
 - Pure TypeScript that runs anywhere JavaScript runs
-- Browser-specific code isolated to `desktop-agent/browser` submodule
+- Browser-specific code isolated to `sail-desktop-agent/browser` submodule
 
 ## Three-Layer Architecture
 
@@ -146,5 +146,5 @@ FDC3 Sail uses **Option 2: External UI Control** from the FDC3 specification:
 
 ## Learn More
 
-- [Desktop Agent Architecture](./desktop-agent) - Core FDC3 implementation
+- [Desktop Agent Architecture](./sail-desktop-agent) - Core FDC3 implementation
 - [Sail Platform SDK Architecture](./sail-platform-api) - Platform services and wrappers

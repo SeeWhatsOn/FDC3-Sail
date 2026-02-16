@@ -13,10 +13,7 @@ export type {
   IntentHandler,
 } from "./intent-resolver"
 
-export type {
-  ChannelSelector,
-  ChannelSelectionRequest,
-} from "./channel-selector"
+export type { ChannelSelector, ChannelSelectionRequest } from "./channel-selector"
 
-// Re-export AppLauncher from desktop-agent for convenience
+// Re-export AppLauncher from sail-desktop-agent for convenience
 export type { AppLauncher } from "@finos/sail-desktop-agent"

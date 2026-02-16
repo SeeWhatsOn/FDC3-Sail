@@ -4,7 +4,7 @@
 ## Overview
 
 This plan restructures FDC3-Sail into a clean two-layer architecture:
-1. **Pure FDC3 Desktop Agent** (`@finos/fdc3-desktop-agent`) - Reusable by anyone
+1. **Pure FDC3 Desktop Agent** (`@finos/fdc3-sail-desktop-agent`) - Reusable by anyone
 2. **Sail Platform** - Custom implementation built on top
 
 ---
@@ -57,10 +57,10 @@ Rename and clarify the purpose of `sail-api` package. It's an SDK (tools/impleme
 - [ ] Update root `package.json` workspaces
 - [ ] Update all import statements across the codebase
 - [ ] Update README to clarify purpose:
-  - Wraps pure desktop-agent with Sail middleware
+  - Wraps pure sail-desktop-agent with Sail middleware
   - Provides transport implementations (Socket.IO)
   - Provides platform features (workspaces, layouts, config)
-- [ ] Document the relationship: `desktop-agent` (pure) → `sail-platform-sdk` (Sail extensions)
+- [ ] Document the relationship: `sail-desktop-agent` (pure) → `sail-platform-sdk` (Sail extensions)
 
 **Acceptance Criteria:**
 - Clear documentation of SDK purpose
@@ -69,7 +69,7 @@ Rename and clarify the purpose of `sail-api` package. It's an SDK (tools/impleme
 
 ---
 
-### Issue 3: Clean up `desktop-agent` package dependencies
+### Issue 3: Clean up `sail-desktop-agent` package dependencies
 
 **Status:** ✅ Completed
 **Type:** Refactor
@@ -77,7 +77,7 @@ Rename and clarify the purpose of `sail-api` package. It's an SDK (tools/impleme
 **Estimated effort:** Medium
 
 **Description:**
-Remove Sail-specific and transport-specific dependencies from the pure desktop-agent package.
+Remove Sail-specific and transport-specific dependencies from the pure sail-desktop-agent package.
 
 **Current dependencies to review:**
 ```json
@@ -100,7 +100,7 @@ Remove Sail-specific and transport-specific dependencies from the pure desktop-a
 - [ ] Document the "pure package" policy in README
 
 **Acceptance Criteria:**
-- `socket.io` not in desktop-agent dependencies
+- `socket.io` not in sail-desktop-agent dependencies
 - Package can be used without Sail
 - Clear dependency policy documented
 
@@ -164,7 +164,7 @@ src/
 │
 ├── browser/                        # Browser Desktop Agent
 │   ├── index.ts                    # Exports createBrowserDesktopAgent
-│   ├── browser-desktop-agent.ts    # Main factory
+│   ├── browser-sail-desktop-agent.ts    # Main factory
 │   │
 │   └── wcp/                        # WCP internals (coupled)
 │       ├── index.ts
@@ -212,10 +212,10 @@ MessagePortTransport is tightly coupled to WCPConnector by design (WCP spec uses
 - [ ] Move/recreate Socket.IO transport implementation
 - [ ] Export from `@finos/sail-platform-sdk/transports`
 - [ ] Update `sail-server` imports
-- [ ] Remove any socket.io references from desktop-agent
+- [ ] Remove any socket.io references from sail-desktop-agent
 
 **Acceptance Criteria:**
-- `socket.io` not imported by desktop-agent
+- `socket.io` not imported by sail-desktop-agent
 - sail-server works with SDK transport
 - Clean separation maintained
 
@@ -229,7 +229,7 @@ MessagePortTransport is tightly coupled to WCPConnector by design (WCP spec uses
 **Estimated effort:** Medium
 
 **Description:**
-Create a transport wrapper pattern in sail-platform-sdk for middleware (auth, logging, metrics) without modifying core desktop-agent.
+Create a transport wrapper pattern in sail-platform-sdk for middleware (auth, logging, metrics) without modifying core sail-desktop-agent.
 
 **Tasks:**
 - [ ] Create `MiddlewareTransport` class in sail-platform-sdk:
@@ -254,7 +254,7 @@ Create a transport wrapper pattern in sail-platform-sdk for middleware (auth, lo
 - [ ] Document the middleware pattern
 
 **Acceptance Criteria:**
-- Middleware works without modifying core desktop-agent
+- Middleware works without modifying core sail-desktop-agent
 - Auth/logging can be added at Sail layer
 - Pattern documented with examples
 
@@ -278,7 +278,7 @@ Create a Docusaurus documentation site in `docs/` folder.
   │   ├── getting-started/
   │   ├── architecture/
   │   ├── packages/
-  │   │   ├── desktop-agent.md
+  │   │   ├── sail-desktop-agent.md
   │   │   ├── sail-platform-sdk.md
   │   │   └── sail-ui.md
   │   └── guides/
@@ -296,7 +296,7 @@ Create a Docusaurus documentation site in `docs/` folder.
 
 ---
 
-### Issue 9: Port desktop-agent tests to Cucumber/Gherkin
+### Issue 9: Port sail-desktop-agent tests to Cucumber/Gherkin
 
 **Type:** Testing  
 **Priority:** Medium  
@@ -306,10 +306,10 @@ Create a Docusaurus documentation site in `docs/` folder.
 Add BDD-style tests using Cucumber/Gherkin that align with FDC3 specification language.
 
 **Tasks:**
-- [ ] Add Cucumber dependencies to desktop-agent
+- [ ] Add Cucumber dependencies to sail-desktop-agent
 - [ ] Create test structure:
   ```
-  packages/desktop-agent/
+  packages/sail-desktop-agent/
   ├── test/
   │   ├── features/
   │   │   ├── channels.feature
@@ -343,12 +343,12 @@ Update README files across all packages to reflect new architecture.
 
 **Tasks:**
 - [ ] Root README - Architecture overview, quick start
-- [ ] desktop-agent README:
+- [ ] sail-desktop-agent README:
   - [ ] Clarify "pure FDC3" positioning
   - [ ] Document subpath exports (./browser, ./transports)
   - [ ] Add usage examples for different environments
 - [ ] sail-platform-sdk README:
-  - [ ] Document relationship to desktop-agent
+  - [ ] Document relationship to sail-desktop-agent
   - [ ] Middleware documentation
   - [ ] Transport implementations
 - [ ] sail-web README - Application setup
@@ -361,14 +361,14 @@ Update README files across all packages to reflect new architecture.
 
 ---
 
-### Issue 11: Add Logger interface and implementation to desktop-agent
+### Issue 11: Add Logger interface and implementation to sail-desktop-agent
 
 **Type:** Feature  
 **Priority:** Medium  
 **Estimated effort:** Small
 
 **Description:**
-Add a structured logging interface to the desktop-agent package to improve debugging, monitoring, and observability. The logger should be injectable to maintain the pure architecture principle.
+Add a structured logging interface to the sail-desktop-agent package to improve debugging, monitoring, and observability. The logger should be injectable to maintain the pure architecture principle.
 
 **Proposed interface:**
 ```typescript
@@ -532,7 +532,7 @@ Re-evaluate the use of Electron for desktop deployment. Electron is essentially 
 ```
 1. Issue 1: Rename sail → sail-web (no deps)
 2. Issue 2: Rename sail-api → sail-platform-sdk (no deps)
-3. Issue 3: Clean desktop-agent deps (depends on 2)
+3. Issue 3: Clean sail-desktop-agent deps (depends on 2)
 4. Issue 6: Move Socket.IO transport (depends on 2, 3)
 5. Issue 5: Reorganize browser/ folder (no deps)
 6. Issue 4: Validator injection (depends on 3)
@@ -552,7 +552,7 @@ Re-evaluate the use of Electron for desktop deployment. Electron is essentially 
 - Full FDC3 conformance test suite (tests currently broken upstream)
 - Moving dockview layout to sail-ui (stays in sail-web)
 - Zero-dependency core (Zod acceptable)
-- Separate desktop-agent-browser package (subpaths work fine)
+- Separate sail-desktop-agent-browser package (subpaths work fine)
 
 ---
 

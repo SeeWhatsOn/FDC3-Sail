@@ -9,11 +9,8 @@
 
 import type { AppIdentifier, AppIntent, Context } from "@finos/fdc3"
 
-// Re-export DirectoryApp and WebAppDetails from desktop-agent for consistency
-export type {
-  DirectoryApp,
-  WebAppDetails,
-} from "@finos/sail-desktop-agent"
+// Re-export DirectoryApp and WebAppDetails from sail-desktop-agent for consistency
+export type { DirectoryApp, WebAppDetails } from "@finos/sail-desktop-agent"
 
 // ============================================================================
 // SAIL INSTANCE MANAGEMENT

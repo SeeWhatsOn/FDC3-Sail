@@ -28,7 +28,7 @@ The `sail-platform-api` package is the **main entry point** for using Sail. It:
 packages/sail-platform-api/
 ├── src/
 │   ├── sail-platform.ts               # Main entry point - SailPlatform class
-│   ├── sail-browser-desktop-agent.ts  # Low-level browser wrapper (advanced)
+│   ├── sail-browser-sail-desktop-agent.ts  # Low-level browser wrapper (advanced)
 │   ├── index.ts                       # Exports
 │   ├── client/                        # Platform storage client
 │   ├── services/                      # Service implementations
