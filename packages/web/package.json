@@ -6,7 +6,8 @@
     "clean": "rimraf dist",
     "build": "tsc && vite build",
     "dev": "nodemon -w src/server -x tsx src/server/main.ts  --trace-uncaught",
-    "prod": "pm2 start pm2.config.js"
+    "prod": "pm2 start pm2.config.js",
+    "test:e2e": "playwright test"
   },
   "main": "src/server/main.js",
   "types": "src/server/main.d.ts",

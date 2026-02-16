@@ -9,3 +9,7 @@ build
 .rollup.cache
 tsconfig.tsbuildinfo
 FDC3-Sail.pem
+packages/web/playwright-report/index.html
+packages/web/playwright-report/data/8b0bd5323b18f9d8a8e309bc337ab680a3665339.zip
+packages/web/playwright-report/trace/codeMirrorModule.DYBRYzYX.css
+packages/web/playwright-report/trace/codicon.DCmgc-ay.ttf
