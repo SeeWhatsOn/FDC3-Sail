@@ -3,7 +3,7 @@
  * Used by Sail UI to send messages on behalf of app instances
  */
 
-import { v4 as uuidv4 } from "uuid"
+import { generateUuid } from "@finos/sail-platform-api"
 
 /**
  * Create a joinUserChannelRequest DACP message
@@ -15,7 +15,7 @@ export function createJoinUserChannelRequest(channelId: string) {
       channelId,
     },
     meta: {
-      requestUuid: uuidv4(),
+      requestUuid: generateUuid(),
       timestamp: new Date(),
     },
   }
@@ -29,7 +29,7 @@ export function createLeaveCurrentChannelRequest() {
     type: "leaveCurrentChannelRequest" as const,
     payload: {},
     meta: {
-      requestUuid: uuidv4(),
+      requestUuid: generateUuid(),
       timestamp: new Date(),
     },
   }

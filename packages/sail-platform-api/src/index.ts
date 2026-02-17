@@ -77,6 +77,9 @@ export {
   type WebAppDetails,
 } from "@finos/sail-desktop-agent"
 
+// Utilities
+export { generateUuid } from "./utils/uuid"
+
 // Validation utilities for downstream consumers
 export {
   createZodValidator,

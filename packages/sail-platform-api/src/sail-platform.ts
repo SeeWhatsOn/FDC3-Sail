@@ -17,7 +17,7 @@ import {
 import { WCPConnector, type AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
 import { createInMemoryTransportPair } from "@finos/sail-desktop-agent/transports"
 import type { BrowserTypes, Context } from "@finos/fdc3"
-import { v4 as uuidv4 } from "uuid"
+import { generateUuid } from "./utils/uuid"
 
 import type { IntentResolver, IntentResolutionRequest } from "./interfaces/intent-resolver"
 import type { ChannelSelector } from "./interfaces/channel-selector"
@@ -317,7 +317,7 @@ export class SailPlatform {
     }
 
     return new Promise<void>((resolve, reject) => {
-      const requestUuid = uuidv4()
+      const requestUuid = generateUuid()
       const timeout = setTimeout(() => {
         cleanup()
         reject(new Error(`Channel change timeout for instance ${instanceId}`))

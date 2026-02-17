@@ -8,7 +8,7 @@
 
 import type { AppLauncher, DirectoryApp } from "@finos/sail-desktop-agent"
 import type { AppMetadata, AppIdentifier, BrowserTypes } from "@finos/fdc3"
-import { v4 as uuidv4 } from "uuid"
+import { generateUuid } from "../../utils/uuid"
 
 /**
  * Extended app metadata that includes directory details.
@@ -51,7 +51,7 @@ export class SailAppLauncher implements AppLauncher {
     appMetadata: AppMetadata
   ): Promise<AppIdentifier> {
     // Generate instance ID if not targeting existing instance
-    const instanceId = request.app.instanceId || uuidv4()
+    const instanceId = request.app.instanceId || generateUuid()
 
     // Cast to extended type (actual data from sail-desktop-agent is DirectoryApp)
     const metadata = appMetadata as AppMetadataWithDetails
