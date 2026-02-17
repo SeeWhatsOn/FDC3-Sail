@@ -1,1 +1,8 @@
-{}
+{
+    "ignoreBinaries": [
+        "prettier",
+        "eslint",
+        "tsc",
+        "vitest"
+    ]
+}
