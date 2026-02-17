@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@finos/fdc3": "^2.2.0",
-    "@finos/sail-platform-api": "*",
+    "@finos/sail-platform-api": "workspace:*",
+    "@finos/sail-ui": "workspace:*",
     "@tailwindcss/vite": "^4.1.12",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -30,7 +31,6 @@
     "lucide-react": "^0.542.0",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0",
-    "sail-ui": "*",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.0.0",
     "tw-animate-css": "^1.3.7",
