@@ -10,7 +10,7 @@ export default defineConfig({
     extensions: [".tsx", ".ts", ".jsx", ".js", ".json"],
     alias: {
       "@": path.resolve(__dirname, "../../packages/sail-ui/src"),
-      "sail-ui": path.resolve(__dirname, "../../packages/sail-ui/src"),
+      "@finos/sail-ui": path.resolve(__dirname, "../../packages/sail-ui/src"),
     },
   },
   optimizeDeps: {

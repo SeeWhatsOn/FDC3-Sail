@@ -1,4 +1,4 @@
-import { Sheet, SheetContent } from "sail-ui"
+import { Sheet, SheetContent } from "@finos/sail-ui"
 
 import { AppDirectory } from "../app-directory/AppDirectory"
 import { WorkspaceDirectory } from "../workspace-directory/WorkspaceDirectory"

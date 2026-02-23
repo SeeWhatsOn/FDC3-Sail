@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "sail-ui"
-import { Skeleton } from "sail-ui"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@finos/sail-ui"
+import { Skeleton } from "@finos/sail-ui"
 import { ExternalLink } from "lucide-react"
 import type { IDockviewPanelProps } from "dockview-react"
 

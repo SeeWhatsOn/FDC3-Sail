@@ -1,5 +1,5 @@
 {
-  "name": "@finos/fdc3-sail-docs",
+  "name": "@finos/sail-docs",
   "version": "0.0.0",
   "private": true,
   "scripts": {

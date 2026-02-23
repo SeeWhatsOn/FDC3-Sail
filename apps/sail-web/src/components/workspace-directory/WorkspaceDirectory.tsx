@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "sail-ui"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@finos/sail-ui"
 import { LayoutGrid, ExternalLink, Play } from "lucide-react"
 
 import type { AppPanel } from "../layout-grid/types"

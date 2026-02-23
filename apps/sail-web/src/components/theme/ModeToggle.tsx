@@ -1,6 +1,11 @@
 import { Moon, Sun } from "lucide-react"
-import { Button } from "sail-ui"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "sail-ui"
+import { Button } from "@finos/sail-ui"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@finos/sail-ui"
 
 import { useTheme } from "./theme-provider"
 

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { Popover, PopoverContent, PopoverTrigger } from "sail-ui"
+import { Popover, PopoverContent, PopoverTrigger } from "@finos/sail-ui"
 import { Check, Circle, X } from "lucide-react"
 
 import { useSailPlatform } from "../../contexts"

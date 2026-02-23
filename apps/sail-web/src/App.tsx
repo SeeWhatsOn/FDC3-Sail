@@ -1,4 +1,4 @@
-import { SidebarProvider } from "sail-ui"
+import { SidebarProvider } from "@finos/sail-ui"
 import type { SailPlatform } from "@finos/sail-platform-api"
 
 import { AppSidebar } from "./components/sidebar/AppSidebar"

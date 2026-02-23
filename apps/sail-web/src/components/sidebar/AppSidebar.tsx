@@ -10,9 +10,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "sail-ui"
+} from "@finos/sail-ui"
 import { Home, Zap, Settings, ChevronUp, User2, LayoutGrid } from "lucide-react"
-import { LogoSail } from "sail-ui"
+import { LogoSail } from "@finos/sail-ui"
 import React from "react"
 
 import { ModeToggle } from "../theme/ModeToggle"

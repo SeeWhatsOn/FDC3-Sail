@@ -1,5 +1,5 @@
 import { Plus, LayoutGrid } from "lucide-react"
-import { Button, LogoSail } from "sail-ui"
+import { Button, LogoSail } from "@finos/sail-ui"
 
 import { useUIStore } from "../../../stores/ui-store"
 

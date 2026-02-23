@@ -40,7 +40,7 @@
     "dockview-react": "^4.7.0",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0",
-    "sail-ui": "*",
+    "@finos/sail-ui": "workspace:*",
     "tailwindcss": "^4.0.0",
     "zustand": "^5.0.0"
   },

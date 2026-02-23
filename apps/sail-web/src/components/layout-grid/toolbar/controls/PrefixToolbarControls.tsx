@@ -1,5 +1,5 @@
 import { Menu } from "lucide-react"
-import { useSidebar } from "sail-ui"
+import { useSidebar } from "@finos/sail-ui"
 
 import { Icon } from "./Icon"
 import "./controls.css"

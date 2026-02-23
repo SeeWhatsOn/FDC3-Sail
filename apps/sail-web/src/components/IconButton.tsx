@@ -1,4 +1,4 @@
-import { LogoSail } from "sail-ui"
+import { LogoSail } from "@finos/sail-ui"
 import { useState, useRef, useEffect, useCallback } from "react"
 
 interface Position {

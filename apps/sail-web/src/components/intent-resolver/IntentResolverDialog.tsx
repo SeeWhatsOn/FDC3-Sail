@@ -1,5 +1,5 @@
 import { Check, AppWindow } from "lucide-react"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "sail-ui"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@finos/sail-ui"
 
 import { useIntentResolverStore } from "../../contexts"
 
