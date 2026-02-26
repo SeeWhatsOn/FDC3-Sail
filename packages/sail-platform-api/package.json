@@ -3,11 +3,19 @@
   "version": "0.0.1",
   "type": "module",
   "description": "SDK for the FDC3 Sail platform - wraps sail-desktop-agent with Sail middleware and transports",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/finos/FDC3-Sail",
+  "repository": "github:finos/FDC3-Sail",
+  "bugs": "https://github.com/finos/FDC3-Sail/issues",
+  "files": ["dist", "README.md"],
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "build:watch": "tsc --watch",
+    "build": "tsdown",
+    "dev": "tsdown --watch",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -20,7 +28,7 @@
   "devDependencies": {},
   "dependencies": {
     "@finos/fdc3": "^2.2.0",
-    "@finos/sail-desktop-agent": "workspace:*",
+    "@finos/sail-desktop-agent": "*",
     "zod": "^4.1.11"
   }
 }

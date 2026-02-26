@@ -20,8 +20,8 @@
   },
   "dependencies": {
     "@finos/fdc3": "^2.2.0",
-    "@finos/sail-platform-api": "workspace:*",
-    "@finos/sail-ui": "workspace:*",
+    "@finos/sail-platform-api": "*",
+    "@finos/sail-ui": "*",
     "@tailwindcss/vite": "^4.1.12",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -40,7 +40,7 @@
     "dockview-react": "^4.7.0",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0",
-    "@finos/sail-ui": "workspace:*",
+    "@finos/sail-ui": "*",
     "tailwindcss": "^4.0.0",
     "zustand": "^5.0.0"
   },

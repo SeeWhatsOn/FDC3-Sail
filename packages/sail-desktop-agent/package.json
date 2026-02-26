@@ -21,10 +21,8 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsc",
-    "build:watch": "tsc --watch",
-    "dev": "tsc --watch",
-    "clean": "rimraf dist",
+    "build": "tsdown",
+    "dev": "tsdown --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:cucumber": "cucumber-js",
@@ -40,5 +38,12 @@
     "immer": "^10.1.1"
   },
   "author": "",
-  "license": "ISC"
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/finos/FDC3-Sail",
+  "repository": "github:finos/FDC3-Sail",
+  "bugs": "https://github.com/finos/FDC3-Sail/issues",
+  "files": ["dist", "README.md"],
+  "publishConfig": {
+    "access": "public"
+  }
 }
