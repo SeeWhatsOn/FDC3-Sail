@@ -1,5 +1,5 @@
 import { DataTable, Given, When } from "@cucumber/cucumber"
-import { CustomWorld } from "../world"
+import { CustomWorld } from "../world/index.ts"
 import type { DirectoryApp } from "../../src/core/app-directory/types"
 import { APP_FIELD, contextMap, createMeta, getAppInstanceId } from "./generic.steps"
 import { handleResolve } from "../support/testing-utils"

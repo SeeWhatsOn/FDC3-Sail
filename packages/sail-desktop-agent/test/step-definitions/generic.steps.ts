@@ -1,5 +1,5 @@
 import { Before, DataTable, Given, Then, When } from "@cucumber/cucumber"
-import { CustomWorld } from "../world"
+import { CustomWorld } from "../world/index.ts"
 import type { Context, AppIdentifier } from "@finos/fdc3"
 import { TEST_USER_CHANNELS } from "../support/channel-data"
 import { handleResolve } from "../support/testing-utils"

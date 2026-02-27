@@ -1,5 +1,5 @@
 import { Given, Then } from "@cucumber/cucumber"
-import { CustomWorld } from "../world"
+import { CustomWorld } from "../world/index.ts"
 import type {
   HeartbeatAcknowledgementRequest,
   WebConnectionProtocol6Goodbye,

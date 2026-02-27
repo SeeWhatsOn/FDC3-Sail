@@ -5,7 +5,7 @@
  * but with test-friendly IDs ("one", "two", "three") to match feature file expectations.
  */
 
-import type { UserChannelConfig } from "../world"
+import type { UserChannelConfig } from "../world/index.ts"
 
 /**
  * Default user channels for testing.

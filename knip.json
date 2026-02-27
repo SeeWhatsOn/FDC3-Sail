@@ -1,8 +1,12 @@
 {
-    "ignoreBinaries": [
-        "prettier",
-        "eslint",
-        "tsc",
-        "vitest"
-    ]
+    "workspaces": {
+        "packages/sail-desktop-agent": {
+            "ignoreDependencies": ["tsx"],
+            "entry": [
+                "test/step-definitions/*.steps.ts",
+                "test/support/*.ts",
+                "test/world/index.ts"
+            ]
+        }
+    }
 }

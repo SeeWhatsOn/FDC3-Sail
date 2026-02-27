@@ -1,5 +1,5 @@
 import { DataTable, Then } from "@cucumber/cucumber"
-import { CustomWorld } from "../world"
+import { CustomWorld } from "../world/index.ts"
 import expect from "expect"
 import { handleResolve, matchDataSubset, matchDataUnordered } from "../support/testing-utils"
 

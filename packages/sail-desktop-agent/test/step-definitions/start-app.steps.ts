@@ -1,5 +1,5 @@
 import { DataTable, Then, When } from "@cucumber/cucumber"
-import { CustomWorld } from "../world"
+import { CustomWorld } from "../world/index.ts"
 import { contextMap, createMeta, getAppInstanceId } from "./generic.steps"
 import { matchDataUnordered } from "../support/testing-utils"
 import { BrowserTypes } from "@finos/fdc3-schema"

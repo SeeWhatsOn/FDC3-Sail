@@ -5,7 +5,7 @@
  */
 
 import { DataTable } from "@cucumber/cucumber"
-import { CustomWorld } from "../world"
+import { CustomWorld } from "../world/index.ts"
 import { get } from "lodash"
 import expect from "expect"
 import { inspect } from "util"
@@ -301,11 +301,7 @@ export function matchDataUnordered(
  * Match data from test against expected values in DataTable, allowing extra messages.
  * Does not require the actual length to match the expected length.
  */
-export function matchDataSubset(
-  world: CustomWorld,
-  actual: unknown[],
-  dataTable: DataTable
-): void {
+export function matchDataSubset(world: CustomWorld, actual: unknown[], dataTable: DataTable): void {
   const expected = dataTable.hashes()
   const remaining = [...actual]
 
