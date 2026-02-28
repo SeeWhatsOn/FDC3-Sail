@@ -17,8 +17,8 @@ The Electron package is part of the FDC3-Sail monorepo. To install dependencies:
 # From the project root
 npm install
 
-# Or specifically for electron package
-cd packages/electron
+# Or specifically for the electron app
+cd apps/sail-electron
 npm install
 ```
 

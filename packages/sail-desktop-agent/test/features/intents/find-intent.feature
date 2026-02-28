@@ -66,21 +66,21 @@ Feature: Find Intent API
 
   @conformance2.2
   Scenario: Find Intents by Context Request
-    When "appId: App, instanceId: a1" finds intents with contextType "fdc3.portfolio" [fdc3.findIntentsByContext]
+    When "appId: App, instanceId: a1" finds intents with contextType "fdc3.portfolio" and result type "{empty}" [fdc3.findIntentsByContext]
     Then messaging will have outgoing posts
       | msg.matches_type             | msg.payload.appIntents[0].intent.name | msg.payload.appIntents.length | to.instanceId | msg.payload.appIntents[0].intent.displayName |
       | findIntentsByContextResponse | ViewChart                             |                             4 | a1            | ViewChart                                    |
 
   @conformance2.2
   Scenario: Find Intents by Context for non-existent context returns NoAppsFound
-    When "appId: App, instanceId: a1" finds intents with contextType "nonExistentContext" [fdc3.findIntentsByContext]
+    When "appId: App, instanceId: a1" finds intents with contextType "nonExistentContext" and result type "{empty}" [fdc3.findIntentsByContext]
     Then messaging will have outgoing posts
       | msg.matches_type             | msg.payload.error | to.instanceId |
       | findIntentsByContextResponse | NoAppsFound       | a1            |
 
   @conformance2.2
   Scenario: Find Intents by Context Request with multiple results
-    When "appId: App, instanceId: a1" finds intents with contextType "fdc3.product" [fdc3.findIntentsByContext]
+    When "appId: App, instanceId: a1" finds intents with contextType "fdc3.product" and result type "{empty}" [fdc3.findIntentsByContext]
     Then messaging will have outgoing posts
       | msg.matches_type             | msg.payload.appIntents[0].intent.name | msg.payload.appIntents.length | to.instanceId | msg.payload.appIntents[0].apps.length |
       | findIntentsByContextResponse | viewStock                             |                             1 | a1            |                                     5 |
@@ -101,7 +101,7 @@ Feature: Find Intent API
 
   Scenario: Find Intents by Context Request with multiple results which should not include an instance that has closed
     When "appId: analyticsApp, instanceId: b2" is closed
-    When "appId: App, instanceId: a1" finds intents with contextType "fdc3.product" [fdc3.findIntentsByContext]
+    When "appId: App, instanceId: a1" finds intents with contextType "fdc3.product" and result type "{empty}" [fdc3.findIntentsByContext]
     Then messaging will have outgoing posts
       | msg.matches_type             | msg.payload.appIntents[0].intent.name | msg.payload.appIntents.length | to.instanceId | msg.payload.appIntents[0].apps.length |
       | findIntentsByContextResponse | viewStock                             |                             1 | a1            |                                     4 |
@@ -154,3 +154,24 @@ Feature: Find Intent API
       | findIntentResponse | ViewPortfolio                     | a1            |
     Then "findIntentResponse" response intent "ViewPortfolio" includes app "portfolioApp" with instanceId "{null}"
     Then "findIntentResponse" response intent "ViewPortfolio" does not include app "App1" with instanceId "b1"
+
+  @conformance2.2
+  Scenario: Find Intents by Context with resultType filter returns only matching intents
+    When "appId: App1, instanceId: a1" finds intents with contextType "fdc3.portfolio" and result type "channel" [fdc3.findIntentsByContext]
+    Then messaging will have outgoing posts
+      | msg.matches_type             | msg.payload.appIntents.length | msg.payload.appIntents[0].intent.name | to.instanceId |
+      | findIntentsByContextResponse | 2                             | StreamChart                           | a1            |
+
+  @conformance2.2 @failing
+  Scenario: Find Intent With Malformed Context Returns MalformedContext
+    When "appId: App1, instanceId: a1" finds intents with intent "ViewChart" and contextType "fdc3.malformed" and result type "{empty}" [fdc3.findIntent]
+    Then messaging will have outgoing posts
+      | msg.matches_type   | msg.payload.error | to.instanceId |
+      | findIntentResponse | MalformedContext  | a1            |
+
+  @conformance2.2 @failing
+  Scenario: Find Intents By Context With Malformed Context Returns MalformedContext
+    When "appId: App1, instanceId: a1" finds intents with contextType "fdc3.malformed" and result type "{empty}" [fdc3.findIntentsByContext]
+    Then messaging will have outgoing posts
+      | msg.matches_type             | msg.payload.error | to.instanceId |
+      | findIntentsByContextResponse | MalformedContext  | a1            |

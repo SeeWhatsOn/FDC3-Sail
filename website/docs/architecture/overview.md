@@ -146,5 +146,5 @@ FDC3 Sail uses **Option 2: External UI Control** from the FDC3 specification:
 
 ## Learn More
 
-- [Desktop Agent Architecture](./sail-desktop-agent) - Core FDC3 implementation
-- [Sail Platform SDK Architecture](./sail-platform-api) - Platform services and wrappers
+- [Desktop Agent Architecture](./desktop-agent) - Core FDC3 implementation
+- [Sail Platform SDK Architecture](./sail-platform-sdk) - Platform services and wrappers

@@ -1,4 +1,5 @@
 import type { WCPConnectorEvents } from "./wcp-types"
+import { consoleLogger } from "../../core/interfaces/logger"
 
 export class WCPEventEmitter {
   private handlers: { [K in keyof WCPConnectorEvents]?: Set<WCPConnectorEvents[K]> } = {}
@@ -50,7 +51,7 @@ export class WCPEventEmitter {
       try {
         ;(handler as (...args: Parameters<WCPConnectorEvents[EventName]>) => void)(...args)
       } catch (error) {
-        console.error(`Error in ${event} handler:`, error)
+        consoleLogger.error(`Error in ${event} handler:`, error)
       }
     }
   }

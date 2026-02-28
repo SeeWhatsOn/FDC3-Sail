@@ -74,6 +74,20 @@ Feature: Desktop Agent Event Listeners
       | channelChangedEvent      | a1            | one                      |
       | joinUserChannelResponse  | a2            | {null}                   |
 
+  @conformance2.2
+  @failing
+  Scenario: addEventListener with null type subscribes to all event types
+    When "appId: App1, instanceId: a1" adds an event listener for all event types [fdc3.addEventListener]
+    And "appId: App2, instanceId: a2" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App2, instanceId: a2" leaves the current user channel [fdc3.leaveCurrentChannel]
+    Then messaging will have outgoing posts
+      | msg.matches_type            | to.instanceId | msg.payload.newChannelId |
+      | addEventListenerResponse    | a1            | {null}                   |
+      | channelChangedEvent         | a1            | one                      |
+      | joinUserChannelResponse     | a2            | {null}                   |
+      | channelChangedEvent         | a1            | {null}                   |
+      | leaveCurrentChannelResponse | a2            | {null}                   |
+
   Scenario: Adding event listener for unsupported event type returns error
     When "appId: App1, instanceId: a1" adds an event listener for "unsupportedEvent" [fdc3.addEventListener]
     Then messaging will have outgoing posts

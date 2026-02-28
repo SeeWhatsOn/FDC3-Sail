@@ -1,4 +1,5 @@
 import type { AppMetadata, BrowserTypes } from "@finos/fdc3"
+import type { Logger } from "../../core/interfaces/logger"
 import type {
   AppRequestMessage,
   AgentEventMessage,
@@ -118,6 +119,12 @@ export interface WCPConnectorOptions {
    * Defaults to false.
    */
   debug?: boolean
+
+  /**
+   * Logger instance for WCP connector operations.
+   * OPTIONAL - defaults to consoleLogger if not provided.
+   */
+  logger?: Logger
 }
 
 /**

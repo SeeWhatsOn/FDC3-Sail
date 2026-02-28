@@ -2,12 +2,12 @@
  * DACP Constants
  *
  * Standard timeouts and error types for the DACP protocol.
- * 
+ *
  * IMPORTANT: For FDC3-compliant error handling, use FDC3 error enums directly:
  * - Use `OpenError` enum for app launch errors (e.g., `OpenError.ErrorOnLaunch`, not "AppLaunchFailed")
  * - Use `ChannelError` enum for channel errors (e.g., `ChannelError.NoChannelFound`, `ChannelError.AccessDenied`)
  * - Use `ResolveError` enum for intent errors (e.g., `ResolveError.NoAppsFound`, `ResolveError.IntentDeliveryFailed`)
- * 
+ *
  * The values below are kept for protocol-specific errors or backward compatibility.
  * New code should use FDC3 error enums from `@finos/fdc3` package.
  */
@@ -22,7 +22,7 @@ export const DACP_TIMEOUTS = {
 // DACP error types (FDC3-compliant values only)
 // NOTE: For FDC3 compliance, prefer using FDC3 error enums directly:
 // - OpenError (for app operations)
-// - ChannelError (for channel operations)  
+// - ChannelError (for channel operations)
 // - ResolveError (for intent operations)
 // - ResultError (for intent result operations)
 export const DACP_ERROR_TYPES = {

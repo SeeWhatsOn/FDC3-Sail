@@ -1,6 +1,7 @@
 import type { MessagePortTransport } from "./message-port-transport"
 import type { WebConnectionProtocolMessage } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type { AppConnectionMetadata, WCPConnectorEvents, WCPConnectorOptions } from "./wcp-types"
+import type { Logger } from "../../core/interfaces/logger"
 
 type EmitFunction = <EventName extends keyof WCPConnectorEvents>(
   event: EventName,
@@ -15,10 +16,7 @@ export interface WCPConnectionContext {
   pendingDisconnects: Map<string, ReturnType<typeof setTimeout>>
   recentlyDisconnected: Map<string, { metadata: AppConnectionMetadata; disconnectedAt: number }>
   emit: EmitFunction
-  log: (
-    message: string,
-    data?: Record<string, string | number | boolean | null | undefined>
-  ) => void
+  logger: Logger
 }
 
 /**
@@ -26,7 +24,7 @@ export interface WCPConnectionContext {
  * Implements delayed disconnect with grace period for reconnection
  */
 export function handleWCP6Goodbye(context: WCPConnectionContext, instanceId: string): void {
-  context.log(`Received WCP6Goodbye from app instance ${instanceId}`)
+  context.logger.debug(`Received WCP6Goodbye from app instance ${instanceId}`)
 
   // NOTE: WCP6Goodbye is sent by FDC3 get-agent library on pagehide events with persisted=false.
   // This includes false positives like tab moves, navigation, etc. where the app is still active.
@@ -98,9 +96,12 @@ export function disconnectAppByInstanceId(context: WCPConnectionContext, instanc
         },
       }
       appTransport.send(goodbyeMessage)
-      context.log(`Sent WCP6Goodbye to instance ${instanceId}`)
+      context.logger.debug(`Sent WCP6Goodbye to instance ${instanceId}`)
     } catch (error) {
-      console.warn(`[WCPConnector] Failed to send WCP6Goodbye to instance ${instanceId}:`, error)
+      context.logger.warn(
+        `[WCPConnector] Failed to send WCP6Goodbye to instance ${instanceId}:`,
+        error
+      )
       // Continue with disconnection even if goodbye fails
     }
   }
@@ -143,7 +144,9 @@ export function updateConnectionMetadata(
 ): void {
   const metadata = context.connections.get(tempInstanceId)
   if (!metadata) {
-    console.warn(`Cannot update connection metadata: temp instanceId ${tempInstanceId} not found`)
+    context.logger.warn(
+      `Cannot update connection metadata: temp instanceId ${tempInstanceId} not found`
+    )
     return
   }
 
@@ -152,13 +155,15 @@ export function updateConnectionMetadata(
   if (pendingDisconnect) {
     clearTimeout(pendingDisconnect)
     context.pendingDisconnects.delete(actualInstanceId)
-    context.log(`Cancelled pending disconnect for instance ${actualInstanceId} - reconnection detected`)
+    context.logger.debug(
+      `Cancelled pending disconnect for instance ${actualInstanceId} - reconnection detected`
+    )
   }
 
   // Check if this is a reconnection to a recently disconnected instance
   const recentlyDisconnectedEntry = context.recentlyDisconnected.get(actualInstanceId)
   if (recentlyDisconnectedEntry) {
-    context.log(
+    context.logger.debug(
       `Restoring recently disconnected instance ${actualInstanceId} - reconnection within grace period`
     )
     // Restore the original metadata
@@ -183,7 +188,9 @@ export function updateConnectionMetadata(
     // Update reverse lookup so bridgeTransports uses the actual instanceId
     context.transportToInstanceId.set(appTransport, actualInstanceId)
   } else {
-    console.warn(`Transport not found for temp instanceId ${tempInstanceId} during metadata update`)
+    context.logger.warn(
+      `Transport not found for temp instanceId ${tempInstanceId} during metadata update`
+    )
   }
 
   // Fire connected event now that validation is complete

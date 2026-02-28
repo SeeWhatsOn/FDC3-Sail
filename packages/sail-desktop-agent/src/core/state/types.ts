@@ -212,7 +212,7 @@ export interface PrivateChannel extends BrowserTypes.Channel {
 /**
  * Context listener on a private channel
  */
- interface ContextListener {
+interface ContextListener {
   listenerId: string
   instanceId: string
   contextType: string | null // null means all types
@@ -237,7 +237,7 @@ interface UnsubscribeListener {
 /**
  * Disconnect listener for private channels
  */
- interface DisconnectListener {
+interface DisconnectListener {
   listenerId: string
   instanceId: string
 }
@@ -342,7 +342,7 @@ export interface AgentState {
 /**
  * Function type for updating agent state.
  * Takes a transform function that receives the current state and returns the new state.
- * 
+ *
  * @example
  * ```typescript
  * setState((state) => ({

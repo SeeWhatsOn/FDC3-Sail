@@ -9,6 +9,7 @@
  */
 
 import type { Transport, MessageHandler, DisconnectHandler } from "../core/interfaces/transport"
+import { consoleLogger } from "../core/interfaces/logger"
 
 /**
  * In-memory transport for same-process communication.
@@ -80,10 +81,10 @@ export class InMemoryTransport implements Transport {
           // Deep clone the message to prevent shared references
           const clonedMessage = this.deepClone(message)
           void Promise.resolve(this.peer.messageHandler(clonedMessage)).catch(error => {
-            console.error("Error in peer message handler:", error)
+            consoleLogger.error("Error in peer message handler:", error)
           })
         } catch (error) {
-          console.error("Error in peer message handler:", error)
+          consoleLogger.error("Error in peer message handler:", error)
         }
       }
     }, 0)
@@ -143,7 +144,7 @@ export class InMemoryTransport implements Transport {
           try {
             this.peer.disconnectHandler()
           } catch (error) {
-            console.error("Error in peer disconnect handler:", error)
+            consoleLogger.error("Error in peer disconnect handler:", error)
           }
         }
       }, 0)
@@ -154,7 +155,7 @@ export class InMemoryTransport implements Transport {
       try {
         this.disconnectHandler()
       } catch (error) {
-        console.error("Error in disconnect handler:", error)
+        consoleLogger.error("Error in disconnect handler:", error)
       }
     }
 
@@ -179,7 +180,7 @@ export class InMemoryTransport implements Transport {
     } catch (error) {
       // structuredClone throws for functions, DOM nodes, etc.
       // This is actually good - we want to know if we're trying to clone unsupported types
-      console.error("Cannot clone message - contains unsupported types:", error)
+      consoleLogger.error("Cannot clone message - contains unsupported types:", error)
       throw error
     }
   }

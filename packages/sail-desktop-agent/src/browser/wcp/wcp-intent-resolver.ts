@@ -1,4 +1,5 @@
 import type { IntentResolverPayload, IntentResolverResponse } from "./wcp-types"
+import { consoleLogger } from "../../core/interfaces/logger"
 
 export interface PendingIntentResolution {
   resolve: (response: IntentResolverResponse) => void
@@ -37,7 +38,7 @@ export function resolveIntentSelection(
 ): void {
   const pending = pendingIntentResolutions.get(response.requestId)
   if (!pending) {
-    console.warn(`No pending intent resolution found for requestId: ${response.requestId}`)
+    consoleLogger.warn(`No pending intent resolution found for requestId: ${response.requestId}`)
     return
   }
 

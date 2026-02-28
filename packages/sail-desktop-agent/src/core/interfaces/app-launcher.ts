@@ -33,8 +33,5 @@ export interface AppLauncher {
    * @returns Promise resolving to launched app identifier
    * @throws Error if launch fails (Desktop Agent will convert to FDC3 error response)
    */
-  launch(
-    request: BrowserTypes.OpenRequestPayload,
-    appMetadata: AppMetadata
-  ): Promise<AppIdentifier>
- }
+  launch(request: BrowserTypes.OpenRequestPayload, appMetadata: AppMetadata): Promise<AppIdentifier>
+}

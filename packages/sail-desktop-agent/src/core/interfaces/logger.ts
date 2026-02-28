@@ -30,6 +30,16 @@ export const consoleLogger: Logger = {
 }
 
 /**
+ * Logger that discards all output — useful in tests.
+ */
+export const noopLogger: Logger = {
+  error: () => undefined,
+  warn: () => undefined,
+  info: () => undefined,
+  debug: () => undefined,
+}
+
+/**
  * Creates a logger with a prefix.
  */
 export function createPrefixedLogger(prefix: string, baseLogger: Logger = consoleLogger): Logger {

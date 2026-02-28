@@ -54,6 +54,7 @@ export default defineConfig([
       "**/rollup.config.{ts,mts,cts}",
       "**/webpack.config.{ts,mts,cts}",
       "**/esbuild.config.{ts,mts,cts}",
+      "**/tsdown.config.{ts,mts,cts}",
     ],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
@@ -74,6 +75,7 @@ export default defineConfig([
       "**/rollup.config.{ts,mts,cts}",
       "**/webpack.config.{ts,mts,cts}",
       "**/esbuild.config.{ts,mts,cts}",
+      "**/tsdown.config.{ts,mts,cts}",
     ], // Exclude build config files from project service
     plugins: {
       unicorn,

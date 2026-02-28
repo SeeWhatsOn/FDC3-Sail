@@ -45,7 +45,10 @@ export function createInitialState(userChannels: Channel[]): AgentState {
  * @param overrides - Partial state to merge
  * @param userChannels - User channels to use (required - DesktopAgent provides defaults)
  */
-export function createStateWithOverrides(overrides: Partial<AgentState>, userChannels: Channel[]): AgentState {
+export function createStateWithOverrides(
+  overrides: Partial<AgentState>,
+  userChannels: Channel[]
+): AgentState {
   return deepMerge(createInitialState(userChannels), overrides)
 }
 
@@ -74,4 +77,3 @@ function deepMerge<T extends object>(target: T, source: Partial<T>): T {
   }
   return result
 }
-

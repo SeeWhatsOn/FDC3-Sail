@@ -8,3 +8,5 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 *.tsbuildinfo
+**/cucumber-report.html
+**/test-results.xml

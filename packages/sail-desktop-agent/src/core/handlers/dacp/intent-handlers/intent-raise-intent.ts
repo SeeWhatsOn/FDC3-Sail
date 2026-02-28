@@ -100,7 +100,12 @@ export async function handleRaiseIntentRequest(
     if (
       targetAppId &&
       isTargetRunning &&
-      !isDirectoryIntentCompatible(appDirectory, targetAppId, payload.intent, validatedContext.type) &&
+      !isDirectoryIntentCompatible(
+        appDirectory,
+        targetAppId,
+        payload.intent,
+        validatedContext.type
+      ) &&
       handlers.runningListeners.length === 0
     ) {
       throw new NoAppsFoundError(`No apps found to handle intent: ${payload.intent}`)
@@ -116,7 +121,9 @@ export async function handleRaiseIntentRequest(
     if (targetApp?.instanceId) {
       targetInstanceId = targetApp.instanceId
     } else if (targetAppId) {
-      const runningListener = handlers.runningListeners.find(listener => listener.appId === targetAppId)
+      const runningListener = handlers.runningListeners.find(
+        listener => listener.appId === targetAppId
+      )
       if (runningListener) {
         targetInstanceId = runningListener.instanceId
       } else if (runningInstances.length > 0) {

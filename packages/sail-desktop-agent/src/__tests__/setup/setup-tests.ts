@@ -6,7 +6,7 @@
  */
 
 // Global test configuration
-globalThis.console.log = (...args) => {
+globalThis.console.log = (...args: unknown[]) => {
   // Suppress console.log during tests unless VERBOSE_TESTS is set
   if (process.env.VERBOSE_TESTS) {
     console.info(...args)

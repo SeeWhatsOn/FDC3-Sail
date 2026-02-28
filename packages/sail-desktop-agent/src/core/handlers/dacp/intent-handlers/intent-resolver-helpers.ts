@@ -42,7 +42,8 @@ export function createResolverAppIntent(
 
     const actualResultType =
       typeof intentDef.resultType === "string" ? intentDef.resultType : undefined
-    if (resultType !== undefined && !isResultTypeCompatible(actualResultType, resultType)) return false
+    if (resultType !== undefined && !isResultTypeCompatible(actualResultType, resultType))
+      return false
 
     return true
   })

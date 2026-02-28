@@ -82,7 +82,7 @@ npm install @finos/fdc3-sail-desktop-agent
 Use when Desktop Agent runs in the browser alongside your UI:
 
 ```typescript
-import { createBrowserDesktopAgent } from '@finos/fdc3-sail-desktop-agent/browser'
+import { createBrowserDesktopAgent } from "@finos/fdc3-sail-desktop-agent/browser"
 
 const { desktopAgent, wcpConnector, start, stop } = createBrowserDesktopAgent({
   wcpOptions: {
@@ -90,7 +90,7 @@ const { desktopAgent, wcpConnector, start, stop } = createBrowserDesktopAgent({
     getIntentResolverUrl: () => false,
     getChannelSelectorUrl: () => false,
   },
-  appDirectories: ['https://example.com/apps.json'],
+  appDirectories: ["https://example.com/apps.json"],
 })
 
 // Start Desktop Agent and WCP Connector
@@ -105,12 +105,12 @@ Use when Desktop Agent runs on a Node.js server:
 
 ```typescript
 // Browser client
-import { createWCPClient } from '@finos/fdc3-sail-desktop-agent/browser'
-import { SocketIOClientTransport } from '@finos/sail-platform-api'
+import { createWCPClient } from "@finos/fdc3-sail-desktop-agent/browser"
+import { SocketIOClientTransport } from "@finos/sail-platform-api"
 
-const transport = new SocketIOClientTransport({ 
-  url: 'wss://your-server.com',
-  auth: { userId: 'user123' }
+const transport = new SocketIOClientTransport({
+  url: "wss://your-server.com",
+  auth: { userId: "user123" },
 })
 
 const { wcpConnector, start } = createWCPClient({
@@ -118,7 +118,7 @@ const { wcpConnector, start } = createWCPClient({
   wcpOptions: {
     getIntentResolverUrl: () => false,
     getChannelSelectorUrl: () => false,
-  }
+  },
 })
 
 start()
@@ -127,8 +127,8 @@ start()
 
 ```typescript
 // Server
-import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
-import { SocketIOServerTransport } from '@finos/sail-platform-api'
+import { DesktopAgent } from "@finos/fdc3-sail-desktop-agent"
+import { SocketIOServerTransport } from "@finos/sail-platform-api"
 
 const transport = new SocketIOServerTransport(io, userId)
 const agent = new DesktopAgent({ transport })
@@ -141,10 +141,10 @@ Use when Desktop Agent runs in a Web Worker for isolation:
 
 ```typescript
 // Main thread
-import { createWCPClient } from '@finos/fdc3-sail-desktop-agent/browser'
-import { WebWorkerTransport } from '@finos/sail-platform-api'
+import { createWCPClient } from "@finos/fdc3-sail-desktop-agent/browser"
+import { WebWorkerTransport } from "@finos/sail-platform-api"
 
-const worker = new Worker('sail-desktop-agent-worker.js')
+const worker = new Worker("sail-desktop-agent-worker.js")
 const transport = new WebWorkerTransport(worker)
 
 const { wcpConnector, start } = createWCPClient({ transport })
@@ -156,9 +156,9 @@ start()
 For full control over component setup:
 
 ```typescript
-import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
-import { WCPConnector } from '@finos/fdc3-sail-desktop-agent/browser'
-import { createInMemoryTransportPair } from '@finos/fdc3-sail-desktop-agent/transports'
+import { DesktopAgent } from "@finos/fdc3-sail-desktop-agent"
+import { WCPConnector } from "@finos/fdc3-sail-desktop-agent/browser"
+import { createInMemoryTransportPair } from "@finos/fdc3-sail-desktop-agent/transports"
 
 // Create linked transport pair
 const [daTransport, wcpTransport] = createInMemoryTransportPair()
@@ -184,11 +184,13 @@ wcpConnector.start()
 ## FDC3 API Coverage
 
 ### Context Management
+
 - `broadcast()` - Broadcast context to channel
 - `addContextListener()` - Listen for context on channels
 - `getCurrentContext()` - Get current context for channel
 
 ### Channel Management
+
 - `getCurrentChannel()` - Get current user channel
 - `joinUserChannel()` - Join user channel
 - `leaveCurrentChannel()` - Leave current channel
@@ -196,6 +198,7 @@ wcpConnector.start()
 - `getOrCreateChannel()` - Get or create app channel
 
 ### Intent Management
+
 - `raiseIntent()` - Raise intent with optional target
 - `raiseIntentForContext()` - Raise intent by context type
 - `addIntentListener()` - Listen for specific intents
@@ -203,12 +206,14 @@ wcpConnector.start()
 - `findIntentsByContext()` - Find intents for context type
 
 ### App Management
+
 - `getInfo()` - Get desktop agent metadata
 - `open()` - Launch applications
 - `findInstances()` - Find running app instances
 - `getAppMetadata()` - Get app metadata from directory
 
 ### Private Channels
+
 - `createPrivateChannel()` - Create private channels
 - Private channel context listeners
 - Private channel disconnect handling
@@ -251,10 +256,12 @@ interface Transport {
 ```
 
 **Built-in Transports:**
+
 - `InMemoryTransport` - Same-process communication
 - `MessagePortTransport` - Browser MessagePort API
 
 **Platform SDK Transports:**
+
 - `SocketIOClientTransport` - Browser to server
 - `SocketIOServerTransport` - Server-side Socket.IO
 
@@ -312,10 +319,7 @@ npm run build --workspace=@finos/fdc3-sail-desktop-agent
 1. Create handler in `src/core/handlers/dacp/`:
 
 ```typescript
-export function handleNewFeatureRequest(
-  message: unknown,
-  context: DACPHandlerContext
-): void {
+export function handleNewFeatureRequest(message: unknown, context: DACPHandlerContext): void {
   // Validate, process, send response
 }
 ```
@@ -334,10 +338,12 @@ const handlerMap = {
 ## Dependencies
 
 ### Runtime
+
 - `@finos/fdc3` - Official FDC3 types
 - `@finos/fdc3-schema` - FDC3 JSON schemas and type guards
 
 ### Peer Dependencies
+
 - `zod` - Runtime validation (optional, for schema validation)
 
 ## License
@@ -348,4 +354,4 @@ Apache-2.0
 
 - [FDC3 Specification](https://fdc3.finos.org/docs/api/spec)
 - [@finos/fdc3-get-agent](https://www.npmjs.com/package/@finos/fdc3) - Browser-side FDC3 API
-- [Sail Platform SDK](../sail-platform-api/) - Transport implementations
+- [Sail Platform API](../sail-platform-api/) - Middleware, app launcher, and Sail integrations

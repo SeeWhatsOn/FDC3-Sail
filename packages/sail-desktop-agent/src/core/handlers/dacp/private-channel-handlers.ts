@@ -1,4 +1,7 @@
-import { createDACPSuccessResponse, createDACPEvent } from "../../dacp-protocol/dacp-message-creators"
+import {
+  createDACPSuccessResponse,
+  createDACPEvent,
+} from "../../dacp-protocol/dacp-message-creators"
 import { generateEventUuid } from "../../dacp-protocol/dacp-utils"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
@@ -58,11 +61,11 @@ export function handleCreatePrivateChannelRequest(
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Create private channel failed", error)
-    
+
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.CreationFailed
     const errorMessage = error instanceof Error ? error.message : "Failed to create private channel"
-    
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     } else if (error instanceof ChannelCreationFailedError) {
@@ -131,11 +134,12 @@ export function handlePrivateChannelDisconnectRequest(
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Private channel disconnect failed", error)
-    
+
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
-    const errorMessage = error instanceof Error ? error.message : "Failed to disconnect from private channel"
-    
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to disconnect from private channel"
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     }
@@ -181,13 +185,15 @@ export function handlePrivateChannelAddContextListenerRequest(
         addPrivateChannelAddContextListenerListener(state, channelId, listenerId, instanceId)
       )
     } else if (resolvedListenerType === "disconnect") {
-      setState(state => addPrivateChannelDisconnectListener(state, channelId, listenerId, instanceId))
-    } else if (resolvedListenerType === "unsubscribe") {
-      setState(state => addPrivateChannelUnsubscribeListener(state, channelId, listenerId, instanceId))
-    } else {
-      throw new Error(
-        "Unsupported private channel listener type: " + String(resolvedListenerType)
+      setState(state =>
+        addPrivateChannelDisconnectListener(state, channelId, listenerId, instanceId)
       )
+    } else if (resolvedListenerType === "unsubscribe") {
+      setState(state =>
+        addPrivateChannelUnsubscribeListener(state, channelId, listenerId, instanceId)
+      )
+    } else {
+      throw new Error("Unsupported private channel listener type: " + String(resolvedListenerType))
     }
 
     logger.info("DACP: Private channel event listener added", {
@@ -198,22 +204,19 @@ export function handlePrivateChannelAddContextListenerRequest(
     })
 
     // Send success response
-    const response = createDACPSuccessResponse(
-      message,
-      "privateChannelAddEventListenerResponse",
-      {
-        listenerUUID: listenerId,
-      }
-    )
+    const response = createDACPSuccessResponse(message, "privateChannelAddEventListenerResponse", {
+      listenerUUID: listenerId,
+    })
 
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Private channel add context listener failed", error)
-    
+
     // Extract FDC3 error type from error instance
     let errorType: ChannelError = ChannelError.ApiTimeout
-    const errorMessage = error instanceof Error ? error.message : "Failed to add context listener to private channel"
-    
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to add context listener to private channel"
+
     if (error instanceof FDC3ChannelError) {
       errorType = error.errorType
     } else if (errorMessage.includes("Access denied") || errorMessage.includes("denied")) {
@@ -242,10 +245,11 @@ export function handlePrivateChannelUnsubscribeEventListenerRequest(
     const { listenerUUID } = message.payload
     const state = getState()
     const privateChannels = Object.values(state.channels.private)
-    const channel = privateChannels.find(candidate =>
-      candidate.addContextListenerListeners[listenerUUID] ||
-      candidate.unsubscribeListeners[listenerUUID] ||
-      candidate.disconnectListeners[listenerUUID]
+    const channel = privateChannels.find(
+      candidate =>
+        candidate.addContextListenerListeners[listenerUUID] ||
+        candidate.unsubscribeListeners[listenerUUID] ||
+        candidate.disconnectListeners[listenerUUID]
     )
 
     if (!channel) {
@@ -258,7 +262,9 @@ export function handlePrivateChannelUnsubscribeEventListenerRequest(
       channel.disconnectListeners[listenerUUID]?.instanceId === instanceId
 
     if (!isOwnedByInstance) {
-      throw new Error(`Private channel listener ${listenerUUID} not found for instance ${instanceId}`)
+      throw new Error(
+        `Private channel listener ${listenerUUID} not found for instance ${instanceId}`
+      )
     }
 
     if (channel.addContextListenerListeners[listenerUUID]) {
@@ -282,7 +288,8 @@ export function handlePrivateChannelUnsubscribeEventListenerRequest(
     sendDACPErrorResponse({
       message,
       errorType: ChannelError.ApiTimeout,
-      errorMessage: error instanceof Error ? error.message : "Failed to unsubscribe private channel listener",
+      errorMessage:
+        error instanceof Error ? error.message : "Failed to unsubscribe private channel listener",
       instanceId,
       transport,
     })
@@ -292,9 +299,7 @@ export function handlePrivateChannelUnsubscribeEventListenerRequest(
 /**
  * Remove all private channels for an instance (called on disconnect)
  */
-export function removeInstancePrivateChannels(
-  context: DACPHandlerContext
-): number {
+export function removeInstancePrivateChannels(context: DACPHandlerContext): number {
   const { instanceId, getState, setState, transport } = context
   const state = getState()
   const privateChannels = Object.values(state.channels.private)
@@ -384,7 +389,11 @@ export function notifyPrivateChannelUnsubscribe(
 
 function notifyPrivateChannelUnsubscribeInternal(
   channel: NonNullable<ReturnType<typeof getPrivateChannel>>,
-  contextListenersToRemove: Array<{ listenerId: string; instanceId: string; contextType: string | null }>,
+  contextListenersToRemove: Array<{
+    listenerId: string
+    instanceId: string
+    contextType: string | null
+  }>,
   sourceInstanceId: string,
   transport: DACPHandlerContext["transport"]
 ): void {

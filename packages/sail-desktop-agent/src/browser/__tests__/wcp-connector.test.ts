@@ -224,7 +224,9 @@ describe("WCPConnector", () => {
 
       window.dispatchEvent(event)
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith("WCP1Hello received from null source, ignoring")
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("WCP1Hello received from null source, ignoring")
+      )
 
       consoleWarnSpy.mockRestore()
     })
@@ -378,7 +380,7 @@ describe("WCPConnector", () => {
       connector.updateConnectionMetadata("temp-test-uuid", "actual-123", "app.test")
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error in appConnected handler:",
+        "[DACP ERROR] Error in appConnected handler:",
         expect.any(Error)
       )
 

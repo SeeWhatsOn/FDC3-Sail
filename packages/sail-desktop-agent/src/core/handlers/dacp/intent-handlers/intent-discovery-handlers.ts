@@ -9,10 +9,7 @@ import { DACP_ERROR_TYPES } from "../../../dacp-protocol/dacp-constants"
 import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
-import {
-  createAppIntents,
-  findIntentsByContext,
-} from "./intent-helpers"
+import { createAppIntents, findIntentsByContext } from "./intent-helpers"
 
 export function handleFindIntentRequest(
   message: BrowserTypes.FindIntentRequest,
@@ -58,22 +55,25 @@ export function handleFindIntentsByContextRequest(
   try {
     const payload = message.payload
     const contextType = payload.context?.type
+    const resultType = payload.resultType ?? undefined
 
     if (!contextType) {
       throw new Error("Context type is required for findIntentsByContext")
     }
 
-    logger.info("DACP: Finding intents for context type", { contextType })
+    logger.info("DACP: Finding intents for context type", { contextType, resultType })
 
     // Find all intents that can handle this context type
     const intentMetadata = findIntentsByContext(getState(), appDirectory, contextType)
 
-    // Convert to AppIntent[] format
+    // Convert to AppIntent[] format, applying resultType filter via createAppIntents
     const appIntents = intentMetadata
-      .map(metadata =>
-        createAppIntents(getState(), appDirectory, metadata.name, contextType)[0]
+      .map(
+        metadata =>
+          createAppIntents(getState(), appDirectory, metadata.name, contextType, resultType)[0]
       )
       .filter((appIntent): appIntent is NonNullable<typeof appIntent> => !!appIntent)
+      .filter(appIntent => appIntent.apps.length > 0)
 
     if (appIntents.length === 0) {
       throw new Error(`No apps found to handle context type: ${contextType}`)
@@ -89,7 +89,8 @@ export function handleFindIntentsByContextRequest(
     sendDACPErrorResponse({
       message,
       errorType: DACP_ERROR_TYPES.NO_APPS_FOUND,
-      errorMessage: error instanceof Error ? error.message : "Failed to find intents for context type",
+      errorMessage:
+        error instanceof Error ? error.message : "Failed to find intents for context type",
       instanceId,
       transport,
     })

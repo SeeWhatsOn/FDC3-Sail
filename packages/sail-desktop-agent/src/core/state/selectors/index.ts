@@ -54,12 +54,7 @@ export {
 } from "./event"
 
 // Heartbeat selectors
-export {
-  getHeartbeatState,
-  getAllHeartbeatStates,
-} from "./heartbeat"
+export { getHeartbeatState, getAllHeartbeatStates } from "./heartbeat"
 
 // Stats selectors
-export {
-  getStats,
-} from "./stats"
+export { getStats } from "./stats"

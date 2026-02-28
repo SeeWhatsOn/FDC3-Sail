@@ -1,6 +1,9 @@
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { OpenError } from "@finos/fdc3"
-import { createDACPEvent, createDACPSuccessResponse } from "../../../dacp-protocol/dacp-message-creators"
+import {
+  createDACPEvent,
+  createDACPSuccessResponse,
+} from "../../../dacp-protocol/dacp-message-creators"
 import { sendDACPResponse, sendDACPErrorResponse } from "./dacp-response-utils"
 import type { DACPHandlerContext } from "../../types"
 import { getInstance } from "../../../state/selectors"

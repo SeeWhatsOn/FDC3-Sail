@@ -93,6 +93,10 @@ export const contextMap: Record<string, Context> = {
       endTime: new Date("2024-12-31").toISOString(),
     },
   },
+  // Intentionally missing required `type` field — used in MalformedContext conformance scenarios
+  "fdc3.malformed": { bogus: true } as unknown as Context,
+  // fdc3.nothing — used to raise an intent without context (FDC3 2.2 spec §intents)
+  "fdc3.nothing": { type: "fdc3.nothing" },
 }
 
 /**
@@ -191,6 +195,17 @@ Given("A desktop agent", function (this: CustomWorld) {
   // or when you need a fresh desktop agent mid-scenario)
   this.initializeDesktopAgent(apps, TEST_USER_CHANNELS)
 })
+
+Given("the mock intent resolver will cancel the resolution", function (this: CustomWorld) {
+  this.mockIntentResolver.cancelNextResolution()
+})
+
+Given(
+  "the app launcher will fail on launch for {string}",
+  function (this: CustomWorld, appId: string) {
+    this.mockAppLauncher.setAppToFailOnLaunch(appId)
+  }
+)
 
 Given("A desktop agent with heartbeat checking", function (this: CustomWorld) {
   const apps = this.props[APP_FIELD] ?? []

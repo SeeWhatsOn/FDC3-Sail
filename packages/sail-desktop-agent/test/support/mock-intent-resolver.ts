@@ -22,6 +22,7 @@ import type {
 export class MockIntentResolver {
   private nextChoice: { instanceId?: string; appId: string } | null = null
   private resolutionHistory: IntentResolutionRequest[] = []
+  private shouldCancelNext: boolean = false
 
   /**
    * Program the next resolution choice.
@@ -36,6 +37,15 @@ export class MockIntentResolver {
    */
   clearChoice(): void {
     this.nextChoice = null
+  }
+
+  /**
+   * Configure the resolver to simulate user cancellation on the next call.
+   * The callback will return selectedHandler: null, which the DA should
+   * translate to ResolveError.UserCancelledResolution.
+   */
+  cancelNextResolution(): void {
+    this.shouldCancelNext = true
   }
 
   /**
@@ -61,6 +71,15 @@ export class MockIntentResolver {
     return (request: IntentResolutionRequest): Promise<IntentResolutionResponse> => {
       // Track the request for test verification
       this.resolutionHistory.push(request)
+
+      // Simulate user cancellation if configured
+      if (this.shouldCancelNext) {
+        this.shouldCancelNext = false
+        return Promise.resolve({
+          requestId: request.requestId,
+          selectedHandler: null,
+        })
+      }
 
       // Auto-resolve if only one handler available
       if (request.handlers.length === 1) {

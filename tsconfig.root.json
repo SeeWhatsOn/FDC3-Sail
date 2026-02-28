@@ -7,17 +7,16 @@
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
-
     "lib": ["ES2023", "DOM"],
     "target": "ESNext",
-    "composite": true,
-    "incremental": true,
-
+    "noEmit": true,
+    "composite": false,
+    "incremental": false,
+    "allowImportingTsExtensions": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strict": true,
     "noFallthroughCasesInSwitch": true,
-
     "skipLibCheck": true,
     "declaration": true,
     "declarationMap": true

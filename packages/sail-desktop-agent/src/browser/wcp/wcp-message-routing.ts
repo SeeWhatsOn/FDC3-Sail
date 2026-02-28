@@ -5,6 +5,7 @@ import type {
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { MessagePortTransport } from "./message-port-transport"
 import { isAgentMessage, isAppMessage, type WCPConnectorEvents } from "./wcp-types"
+import type { Logger } from "../../core/interfaces/logger"
 
 type EmitFunction = <EventName extends keyof WCPConnectorEvents>(
   event: EventName,
@@ -16,11 +17,12 @@ export interface WCPRoutingContext {
   messagePortTransports: Map<string, MessagePortTransport>
   transportToInstanceId: Map<MessagePortTransport, string>
   emit: EmitFunction
-  log: (
-    message: string,
-    data?: Record<string, string | number | boolean | null | undefined>
+  logger: Logger
+  updateConnectionMetadata: (
+    tempInstanceId: string,
+    actualInstanceId: string,
+    appId: string
   ) => void
-  updateConnectionMetadata: (tempInstanceId: string, actualInstanceId: string, appId: string) => void
   handleWCP6Goodbye: (instanceId: string) => void
   enrichMessageWithSource: (
     message: AppRequestMessage | WebConnectionProtocolMessage,
@@ -41,20 +43,23 @@ export interface WCPRoutingContext {
  * Note: Uses dynamic instanceId lookup via transportToInstanceId map because
  * the instanceId changes from temp-{uuid} to actual instanceId after WCP5 validation.
  */
-export function bridgeTransports(appTransport: MessagePortTransport, context: WCPRoutingContext): void {
+export function bridgeTransports(
+  appTransport: MessagePortTransport,
+  context: WCPRoutingContext
+): void {
   // App → Desktop Agent: Enrich messages with source instanceId
   // Note: message is unknown from Transport.onMessage by design - validates untrusted input
   appTransport.onMessage((message: unknown) => {
     // Type guard: validate message structure using type guard
     if (!isAppMessage(message)) {
-      console.warn("Received invalid message from app, ignoring", message)
+      context.logger.warn("Received invalid message from app, ignoring", message)
       return
     }
 
     // Look up current instanceId dynamically (may have changed after WCP5 migration)
     const currentInstanceId = context.transportToInstanceId.get(appTransport)
     if (!currentInstanceId) {
-      console.warn("Cannot route message: transport not found in reverse lookup")
+      context.logger.warn("Cannot route message: transport not found in reverse lookup")
       return
     }
 
@@ -99,7 +104,7 @@ export function bridgeTransports(appTransport: MessagePortTransport, context: WC
 export function handleDesktopAgentMessage(message: unknown, context: WCPRoutingContext): void {
   // Type guard: validate message structure using type guard
   if (!isAgentMessage(message)) {
-    console.warn("Received invalid message from Desktop Agent, ignoring", message)
+    context.logger.warn("Received invalid message from Desktop Agent, ignoring", message)
     return
   }
 
@@ -114,7 +119,7 @@ export function handleDesktopAgentMessage(message: unknown, context: WCPRoutingC
     destinationId = message.meta.destination.instanceId as string | undefined
   }
 
-  context.log("Received message from Desktop Agent", {
+  context.logger.debug("Received message from Desktop Agent", {
     messageType: message.type,
     destinationId: destinationId ?? "",
     hasDestination: !!destinationId,
@@ -122,7 +127,7 @@ export function handleDesktopAgentMessage(message: unknown, context: WCPRoutingC
 
   if (!destinationId) {
     // Broadcast message or Desktop Agent internal message - not routed to apps
-    context.log("No destinationId, skipping routing", { messageType: message.type })
+    context.logger.debug("No destinationId, skipping routing", { messageType: message.type })
     return
   }
 
@@ -152,7 +157,9 @@ export function handleDesktopAgentMessage(message: unknown, context: WCPRoutingC
       if (appTransport && appTransport.isConnected()) {
         appTransport.send(message)
       } else {
-        console.warn(`Cannot route WCP5 response to app ${actualInstanceId}: transport not found`)
+        context.logger.warn(
+          `Cannot route WCP5 response to app ${actualInstanceId}: transport not found`
+        )
       }
       return
     }
@@ -225,10 +232,7 @@ export function handleDesktopAgentMessage(message: unknown, context: WCPRoutingC
         message.payload.context &&
         typeof message.payload.context === "object"
       ) {
-        if (
-          "type" in message.payload.context &&
-          typeof message.payload.context.type === "string"
-        ) {
+        if ("type" in message.payload.context && typeof message.payload.context.type === "string") {
           logMetadata.contextType = message.payload.context.type
         }
         if ("name" in message.payload.context) {
@@ -252,32 +256,29 @@ export function handleDesktopAgentMessage(message: unknown, context: WCPRoutingC
         message.payload.context &&
         typeof message.payload.context === "object"
       ) {
-        if (
-          "type" in message.payload.context &&
-          typeof message.payload.context.type === "string"
-        ) {
+        if ("type" in message.payload.context && typeof message.payload.context.type === "string") {
           logMetadata.contextType = message.payload.context.type
         }
       }
     }
 
-    context.log("Routing message to app", logMetadata)
+    context.logger.debug("Routing message to app", logMetadata)
 
     try {
       appTransport.send(message)
-      context.log("Message sent successfully to app transport", {
+      context.logger.debug("Message sent successfully to app transport", {
         destinationId,
         messageType: message.type,
       })
     } catch (error) {
-      console.error("[WCPConnector] Error sending message to app transport", {
+      context.logger.error("[WCPConnector] Error sending message to app transport", {
         destinationId,
         messageType: message.type,
         error,
       })
     }
   } else {
-    console.warn(
+    context.logger.warn(
       `[WCPConnector] Cannot route message to app ${destinationId}: transport not found or disconnected`,
       {
         messageType: message.type,

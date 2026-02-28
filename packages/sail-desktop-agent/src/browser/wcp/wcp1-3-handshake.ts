@@ -29,7 +29,7 @@ export function handleWCP1Hello(
 ): void {
   // Validate event source exists (required for postMessage)
   if (!event.source) {
-    console.warn("WCP1Hello received from null source, ignoring")
+    context.logger.warn("WCP1Hello received from null source, ignoring")
     return
   }
 
@@ -64,7 +64,7 @@ export function handleWCP1Hello(
     // This is expected for apps hosted on different origins
     // Connection will still work, just without host identifier
     if (error instanceof Error && error.name === "SecurityError") {
-      context.log(
+      context.logger.debug(
         `Cannot access window.name for cross-origin iframe from ${event.origin}, hostIdentifier will be undefined`
       )
     } else {
@@ -111,7 +111,7 @@ export function handleWCP1Hello(
   setTimeout(() => {
     const connection = context.connections.get(instanceId)
     if (connection && connection.appId === "unknown") {
-      console.warn(
+      context.logger.warn(
         `[WCPConnector] Connection ${instanceId} timed out waiting for WCP4 validation, cleaning up`
       )
       context.disconnectApp(instanceId)

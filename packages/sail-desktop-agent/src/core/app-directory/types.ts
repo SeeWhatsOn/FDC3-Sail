@@ -4,7 +4,7 @@
  * These types are based on the FDC3 App Directory OpenAPI specification.
  * See: /appd.schema.json (local copy of the FDC3 App Directory schema)
  * Source: https://github.com/finos/FDC3/blob/main/schemas/api/appDirectory.schema.json
-  *
+ *
  * Duplicated here to avoid dependency on @finos/fdc3-web-impl which is being deprecated.
  *
  * NOTE: These types should ideally be exported from an official FDC3 package

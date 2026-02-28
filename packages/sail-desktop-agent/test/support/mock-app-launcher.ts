@@ -23,6 +23,7 @@ export class MockAppLauncher implements AppLauncher {
     metadata: AppMetadata
   }> = []
   private failApps: Set<string> = new Set()
+  private errorOnLaunchApps: Set<string> = new Set()
 
   // Callbacks for test coordination
   public onAppLaunched?: (instanceId: string, appId: string) => void | Promise<void>
@@ -46,6 +47,10 @@ export class MockAppLauncher implements AppLauncher {
       throw new Error("AppNotFound")
     }
 
+    if (this.errorOnLaunchApps.has(appId)) {
+      throw new Error("Launch failed: process error")
+    }
+
     // Generate instance ID
     const instanceId = `uuid-${this.nextInstanceId++}`
 
@@ -66,10 +71,17 @@ export class MockAppLauncher implements AppLauncher {
   }
 
   /**
-   * Configure specific app to fail on launch
+   * Configure specific app to fail on launch (simulates AppNotFound)
    */
   setAppToFail(appId: string): void {
     this.failApps.add(appId)
+  }
+
+  /**
+   * Configure specific app to fail with ErrorOnLaunch (e.g. process crash)
+   */
+  setAppToFailOnLaunch(appId: string): void {
+    this.errorOnLaunchApps.add(appId)
   }
 
   /**
@@ -77,6 +89,7 @@ export class MockAppLauncher implements AppLauncher {
    */
   clearFailures(): void {
     this.failApps.clear()
+    this.errorOnLaunchApps.clear()
   }
 
   /**

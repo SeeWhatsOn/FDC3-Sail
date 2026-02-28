@@ -140,11 +140,26 @@ Feature: Opening and Requesting App Details
       | openResponse | AppNotFound       | a1            |
 
   @conformance2.2
+  Scenario: Opening An App That Fails To Launch Returns ErrorOnLaunch
+    Given the app launcher will fail on launch for "chartApp"
+    When "appId: portfolioApp, instanceId: a1" opens app "chartApp" [fdc3.open]
+    Then messaging will have outgoing posts
+      | msg.matches_type | msg.payload.error | to.instanceId |
+      | openResponse     | ErrorOnLaunch     | a1            |
+
+  @conformance2.2
   Scenario: Find Instances with No Apps Running
-    And "appId: portfolioApp, instanceId: a1" findsInstances of "App1" [fdc3.findInstances]
+    And "appId: portfolioApp, instanceId: a1" findsInstances of "chartApp" [fdc3.findInstances]
     Then messaging will have outgoing posts
       | msg.matches_type      | msg.payload.appIdentifiers.length | to.instanceId |
       | findInstancesResponse |                                 0 | a1            |
+
+  @conformance2.2
+  Scenario: Find Instances for Unknown App Returns NoAppsFound
+    And "appId: portfolioApp, instanceId: a1" findsInstances of "unknownApp" [fdc3.findInstances]
+    Then messaging will have outgoing posts
+      | msg.matches_type      | msg.payload.error | to.instanceId |
+      | findInstancesResponse | NoAppsFound       | a1            |
 
   @conformance2.2
   Scenario: Find Instances with Some Apps Running
@@ -155,6 +170,13 @@ Feature: Opening and Requesting App Details
     Then messaging will have outgoing posts
       | msg.matches_type      | msg.payload.appIdentifiers.length | msg.payload.appIdentifiers[0].instanceId | msg.payload.appIdentifiers[1].instanceId | to.instanceId | msg.payload.appId |
       | findInstancesResponse |                                 2 | b1                                       | b2                                       | a1            | {null}            |
+
+  @conformance2.2 @failing
+  Scenario: Opening An App With Malformed Context Returns MalformedContext
+    When "appId: portfolioApp, instanceId: a1" opens app "chartApp" with context data "fdc3.malformed" [fdc3.open]
+    Then messaging will have outgoing posts
+      | msg.matches_type | msg.payload.error | to.instanceId |
+      | openResponse     | MalformedContext  | a1            |
 
   Scenario: Unknown App Attempts Reconnect
     When "uuid-0" revalidates

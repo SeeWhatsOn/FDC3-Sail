@@ -140,7 +140,7 @@ describe("InMemoryTransport", () => {
       await new Promise(resolve => setTimeout(resolve, 10))
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error in peer message handler:",
+        "[DACP ERROR] Error in peer message handler:",
         expect.any(Error)
       )
 
@@ -176,7 +176,7 @@ describe("InMemoryTransport", () => {
       transport1.disconnect()
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error in disconnect handler:",
+        "[DACP ERROR] Error in disconnect handler:",
         expect.any(Error)
       )
 

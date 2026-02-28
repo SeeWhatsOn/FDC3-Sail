@@ -22,7 +22,7 @@
     "test:watch": "vitest --watch",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "validate": "npm run typecheck && npm run lint && npm run build"
+    "validate": "npm run validate --workspaces --if-present && npm run build"
   },
   "workspaces": [
     "packages/sail-desktop-agent",

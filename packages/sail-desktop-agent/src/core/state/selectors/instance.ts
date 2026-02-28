@@ -10,8 +10,7 @@ import { AppInstanceState } from "../types"
 export const getInstance = (state: AgentState, instanceId: string): AppInstance | undefined =>
   state.instances[instanceId]
 
-export const getAllInstances = (state: AgentState): AppInstance[] =>
-  Object.values(state.instances)
+export const getAllInstances = (state: AgentState): AppInstance[] => Object.values(state.instances)
 
 export const getInstancesByAppId = (state: AgentState, appId: string): AppInstance[] =>
   Object.values(state.instances).filter(i => i.appId === appId)

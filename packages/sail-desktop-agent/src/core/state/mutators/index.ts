@@ -33,12 +33,7 @@ export {
 } from "./intent"
 
 // Channel mutators
-export {
-  createAppChannel,
-  removeAppChannel,
-  storeContext,
-  clearChannelContexts,
-} from "./channel"
+export { createAppChannel, removeAppChannel, storeContext, clearChannelContexts } from "./channel"
 
 // Private channel mutators
 export {
@@ -57,11 +52,7 @@ export {
 } from "./private-channel"
 
 // Event mutators
-export {
-  addEventListener,
-  removeEventListener,
-  removeEventListenersForInstance,
-} from "./event"
+export { addEventListener, removeEventListener, removeEventListenersForInstance } from "./event"
 
 // Heartbeat mutators
 export {

@@ -124,7 +124,7 @@ describe("MessagePortTransport", () => {
       await new Promise(resolve => setTimeout(resolve, 50))
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "[MessagePortTransport] Error in message handler:",
+        "[DACP ERROR] [MessagePortTransport] Error in message handler:",
         expect.any(Error),
         { messageType: "test" }
       )
@@ -170,7 +170,7 @@ describe("MessagePortTransport", () => {
       transport.disconnect()
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error in disconnect handler:",
+        "[DACP ERROR] Error in disconnect handler:",
         expect.any(Error)
       )
 

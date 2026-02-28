@@ -21,6 +21,15 @@ Feature: Relaying Broadcast messages
       | broadcastEvent             | App2     | a2            | one                   | fdc3.instrument          | AAPL                          |
       | broadcastResponse          | App1     | a1            | {null}                | {null}                   | {null}                        |
 
+  @conformance2.2
+  Scenario: Broadcast Event Includes OriginatingApp Metadata
+    When "appId: App2, instanceId: a2" adds a context listener on "one" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "one" [fdc3.broadcast]
+    Then messaging will have outgoing posts
+      | msg.matches_type  | to.appId | to.instanceId | msg.payload.originatingApp.appId | msg.payload.originatingApp.instanceId |
+      | broadcastEvent    | App2     | a2            | App1                             | a1                                    |
+      | broadcastResponse | App1     | a1            | {null}                           | {null}                                |
+
   Scenario: Broadcast message sent but listener has unsubscribed
     When "appId: App2, instanceId: a2" adds a context listener on "one" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App2, instanceId: a2" removes context listener with id "uuid3" [fdc3.removeContextListener]
@@ -37,3 +46,20 @@ Feature: Relaying Broadcast messages
     Then messaging will have outgoing posts
       | msg.matches_type          | to.appId | to.instanceId | msg.payload.context.id.ticker | msg.payload.context.type |
       | getCurrentContextResponse | App1     | a1            | AAPL                          | fdc3.instrument          |
+
+  @conformance2.2
+  Scenario: Broadcast Is A No-Op When Not Joined To A User Channel
+    When "appId: App2, instanceId: a2" adds a context listener on "one" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "{null}" [fdc3.broadcast]
+    Then messaging will have outgoing posts
+      | msg.matches_type           | to.instanceId |
+      | addContextListenerResponse | a2            |
+      | broadcastResponse          | a1            |
+    And messaging will have 2 posts
+
+  @conformance2.2 @failing
+  Scenario: Broadcast With Malformed Context Returns MalformedContext Error
+    When "appId: App1, instanceId: a1" broadcasts "fdc3.malformed" on "one" [fdc3.broadcast]
+    Then messaging will have outgoing posts
+      | msg.matches_type  | msg.payload.error | to.instanceId |
+      | broadcastResponse | MalformedContext  | a1            |

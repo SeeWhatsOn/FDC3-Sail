@@ -34,16 +34,16 @@ export function handleAddEventListenerRequest(
     }
 
     // Validate event type
-    // FDC3 2.2 supports USER_CHANNEL_CHANGED event type
-    // We also support "channelChanged" as an alias for compatibility
-    const validEventTypes = ["channelChanged", "USER_CHANNEL_CHANGED"]
+    // FDC3 2.2 uses "USER_CHANNEL_CHANGED" as the canonical event type name.
+    // We also accept "userChannelChanged" (camelCase) and "channelChanged" for compatibility.
+    const validEventTypes = ["channelChanged", "USER_CHANNEL_CHANGED", "userChannelChanged"]
     if (!validEventTypes.includes(eventType)) {
       throw new Error(`Unsupported event type: ${eventType}`)
     }
 
-    // Normalize event type: USER_CHANNEL_CHANGED -> channelChanged
-    // This ensures listeners registered with either name receive the same events
-    const normalizedEventType = eventType === "USER_CHANNEL_CHANGED" ? "channelChanged" : eventType
+    // Normalize all variants to "channelChanged" so listeners receive the same events
+    // regardless of which variant was used to register.
+    const normalizedEventType = "channelChanged"
 
     const listenerId = message.meta.requestUuid
 

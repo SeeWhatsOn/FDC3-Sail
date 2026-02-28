@@ -22,6 +22,8 @@
 
 import { DesktopAgent } from "../core"
 import type { DesktopAgentConfig, Transport } from "../core"
+import { consoleLogger } from "../core/interfaces/logger"
+import type { Logger } from "../core/interfaces/logger"
 import { WCPConnector } from "./wcp/wcp-connector"
 import type { WCPConnectorOptions } from "./wcp/wcp-connector"
 import { createInMemoryTransportPair } from "../transports/in-memory-transport"
@@ -44,6 +46,12 @@ export interface WCPClientOptions {
    * WCP connector configuration
    */
   wcpOptions?: WCPConnectorOptions
+
+  /**
+   * Logger instance for WCP and Desktop Agent operations.
+   * OPTIONAL - defaults to consoleLogger if not provided.
+   */
+  logger?: Logger
 }
 
 /**
@@ -95,21 +103,19 @@ export interface WCPClientResult {
  * ```
  */
 export function createWCPClient(options: WCPClientOptions): WCPClientResult {
-  const wcpConnector = new WCPConnector(options.transport, options.wcpOptions)
+  const logger = options.logger ?? consoleLogger
+  const wcpConnector = new WCPConnector(options.transport, { ...options.wcpOptions, logger })
 
-  // Set up event handlers for logging/debugging
   wcpConnector.on("appConnected", metadata => {
-    console.log(`[WCPClient] App connected: ${metadata.appId} (${metadata.instanceId})`)
+    logger.info(`[WCPClient] App connected: ${metadata.appId} (${metadata.instanceId})`)
   })
 
   wcpConnector.on("appDisconnected", instanceId => {
-    // Cleanup is handled via WCP6Goodbye message through transport
-    // No direct Desktop Agent manipulation needed
-    console.log(`[WCPClient] App disconnected: ${instanceId}`)
+    logger.info(`[WCPClient] App disconnected: ${instanceId}`)
   })
 
   wcpConnector.on("handshakeFailed", (error, connectionAttemptUuid) => {
-    console.error(`[WCPClient] WCP handshake failed for ${connectionAttemptUuid}:`, error)
+    logger.error(`[WCPClient] WCP handshake failed for ${connectionAttemptUuid}:`, error)
   })
 
   return {
@@ -129,8 +135,10 @@ export function createWCPClient(options: WCPClientOptions): WCPClientResult {
  * Extends core DesktopAgentConfig for appLauncher and userChannels,
  * adds browser-specific options for WCP and app directories.
  */
-export interface BrowserDesktopAgentOptions
-  extends Pick<DesktopAgentConfig, "appLauncher" | "userChannels"> {
+export interface BrowserDesktopAgentOptions extends Pick<
+  DesktopAgentConfig,
+  "appLauncher" | "userChannels"
+> {
   /**
    * WCP connector configuration
    */
@@ -140,6 +148,12 @@ export interface BrowserDesktopAgentOptions
    * App directories to load (URIs to directory JSON files or URLs)
    */
   appDirectories?: string[]
+
+  /**
+   * Logger instance for WCP and Desktop Agent operations.
+   * OPTIONAL - defaults to consoleLogger if not provided.
+   */
+  logger?: Logger
 }
 
 /**
@@ -226,13 +240,15 @@ export interface BrowserDesktopAgentResult {
 export function createBrowserDesktopAgent(
   options?: BrowserDesktopAgentOptions
 ): BrowserDesktopAgentResult {
+  const logger = options?.logger ?? consoleLogger
+
   // Create in-memory transport pair
   // daTransport: Used by Desktop Agent
   // connectorTransport: Used by WCP Connector
   const [daTransport, connectorTransport] = createInMemoryTransportPair()
 
   // Create WCP Connector first (so we can reference its methods)
-  const wcpConnector = new WCPConnector(connectorTransport, options?.wcpOptions)
+  const wcpConnector = new WCPConnector(connectorTransport, { ...options?.wcpOptions, logger })
 
   // Build Desktop Agent configuration
   // Wire up WCPConnector's requestIntentResolution for UI-based intent resolution
@@ -240,6 +256,7 @@ export function createBrowserDesktopAgent(
     transport: daTransport,
     appLauncher: options?.appLauncher,
     userChannels: options?.userChannels,
+    logger,
     // Enable UI-based intent resolution via WCPConnector
     requestIntentResolution: request => wcpConnector.requestIntentResolution(request),
   }
@@ -255,22 +272,16 @@ export function createBrowserDesktopAgent(
     }
   }
 
-  // Set up event forwarding from WCP Connector
-  // These are for external observers (e.g., UI updates)
-  // Cleanup is now handled via WCP6Goodbye message through transport
   wcpConnector.on("appConnected", metadata => {
-    console.log(`[BrowserDA] App connected: ${metadata.appId} (${metadata.instanceId})`)
+    logger.info(`[BrowserDA] App connected: ${metadata.appId} (${metadata.instanceId})`)
   })
 
   wcpConnector.on("appDisconnected", instanceId => {
-    // Cleanup is handled via WCP6Goodbye message through transport
-    // The Desktop Agent's WCP6Goodbye handler calls cleanupDACPHandlers
-    // No direct manipulation of Desktop Agent internals needed
-    console.log(`[BrowserDA] App disconnected: ${instanceId}`)
+    logger.info(`[BrowserDA] App disconnected: ${instanceId}`)
   })
 
   wcpConnector.on("handshakeFailed", (error, connectionAttemptUuid) => {
-    console.error(`[BrowserDA] WCP handshake failed for ${connectionAttemptUuid}:`, error)
+    logger.error(`[BrowserDA] WCP handshake failed for ${connectionAttemptUuid}:`, error)
   })
 
   /**

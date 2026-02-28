@@ -17,6 +17,13 @@ Feature: Basic Tests
       |                                            2.2 | cucumber-provider                           | a1            | getInfoResponse  |
 
   @conformance2.2
+  Scenario: GetInfo returns optionalFeatures capability flags
+    When "appId: appA, instanceId: a1" requests info on the DesktopAgent [fdc3.getInfo]
+    Then messaging will have outgoing posts
+      | msg.matches_type | to.instanceId | msg.payload.implementationMetadata.optionalFeatures.DesktopAgentBridging | msg.payload.implementationMetadata.optionalFeatures.OriginatingAppMetadata | msg.payload.implementationMetadata.optionalFeatures.UserChannelMembershipAPIs |
+      | getInfoResponse  | a1            | false                                                                     | true                                                                        | true                                                                          |
+
+  @conformance2.2
   Scenario: GetUserChannels returns user channels
     When "appId: appA, instanceId: a1" gets the list of user channels [fdc3.getUserChannels]
     Then messaging will have outgoing posts

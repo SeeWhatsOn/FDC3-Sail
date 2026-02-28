@@ -9,6 +9,7 @@
  */
 
 import type { Transport, MessageHandler, DisconnectHandler } from "../../core/interfaces/transport"
+import { consoleLogger } from "../../core/interfaces/logger"
 
 /**
  * Transport implementation using MessagePort API.
@@ -84,16 +85,19 @@ export class MessagePortTransport implements Transport {
         ? (message as { type: unknown }).type
         : "unknown"
 
-    console.log("[MessagePortTransport] Sending message", {
+    consoleLogger.debug("[MessagePortTransport] Sending message", {
       messageType,
       connected: this.connected,
     })
 
     try {
       this.port.postMessage(message)
-      console.log("[MessagePortTransport] Message posted successfully", { messageType })
+      consoleLogger.debug("[MessagePortTransport] Message posted successfully", { messageType })
     } catch (error) {
-      console.error("[MessagePortTransport] Error sending message through MessagePort:", error)
+      consoleLogger.error(
+        "[MessagePortTransport] Error sending message through MessagePort:",
+        error
+      )
       // If posting fails, treat as disconnection
       this.handleDisconnect()
       throw error
@@ -163,7 +167,7 @@ export class MessagePortTransport implements Transport {
       try {
         this.disconnectHandler()
       } catch (error) {
-        console.error("Error in disconnect handler:", error)
+        consoleLogger.error("Error in disconnect handler:", error)
       }
     }
   }
@@ -182,7 +186,7 @@ export class MessagePortTransport implements Transport {
         ? (message as { type: unknown }).type
         : "unknown"
 
-    console.log("[MessagePortTransport] Received message", {
+    consoleLogger.debug("[MessagePortTransport] Received message", {
       messageType,
       hasHandler: !!this.messageHandler,
       connected: this.connected,
@@ -192,7 +196,7 @@ export class MessagePortTransport implements Transport {
     if (messageType === "broadcastEvent" && message && typeof message === "object") {
       const msg = message as Record<string, unknown>
       const payload = msg.payload as Record<string, unknown> | undefined
-      console.log("[MessagePortTransport] BroadcastEvent details", {
+      consoleLogger.debug("[MessagePortTransport] BroadcastEvent details", {
         type: msg.type,
         hasPayload: !!payload,
         channelId: payload?.channelId,
@@ -208,17 +212,21 @@ export class MessagePortTransport implements Transport {
         // Handle promise if handler is async
         if (result instanceof Promise) {
           void result.catch(error => {
-            console.error("[MessagePortTransport] Error in async message handler:", error, {
+            consoleLogger.error("[MessagePortTransport] Error in async message handler:", error, {
               messageType,
             })
           })
         }
-        console.log("[MessagePortTransport] Message handler executed successfully", { messageType })
+        consoleLogger.debug("[MessagePortTransport] Message handler executed successfully", {
+          messageType,
+        })
       } catch (error) {
-        console.error("[MessagePortTransport] Error in message handler:", error, { messageType })
+        consoleLogger.error("[MessagePortTransport] Error in message handler:", error, {
+          messageType,
+        })
       }
     } else {
-      console.warn("[MessagePortTransport] No message handler registered", { messageType })
+      consoleLogger.warn("[MessagePortTransport] No message handler registered", { messageType })
     }
   }
 
@@ -226,7 +234,7 @@ export class MessagePortTransport implements Transport {
    * Handle message error event
    */
   private handleError(event: MessageEvent): void {
-    console.error("MessagePort error:", event)
+    consoleLogger.error("MessagePort error:", event)
     // Treat errors as disconnection
     this.handleDisconnect()
   }
@@ -245,7 +253,7 @@ export class MessagePortTransport implements Transport {
       try {
         this.disconnectHandler()
       } catch (error) {
-        console.error("Error in disconnect handler:", error)
+        consoleLogger.error("Error in disconnect handler:", error)
       }
     }
   }

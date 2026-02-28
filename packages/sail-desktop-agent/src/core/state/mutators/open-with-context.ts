@@ -54,9 +54,7 @@ export const removePendingOpenWithContextByRequest = (
       return
     }
 
-    const remaining = list.filter(
-      pending => pending.message.meta.requestUuid !== requestUuid
-    )
+    const remaining = list.filter(pending => pending.message.meta.requestUuid !== requestUuid)
 
     if (remaining.length === 0) {
       delete draft.open.pendingWithContext[targetInstanceId]

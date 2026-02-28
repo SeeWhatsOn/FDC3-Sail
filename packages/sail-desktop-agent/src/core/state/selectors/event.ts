@@ -20,5 +20,4 @@ export const getEventListenersForType = (state: AgentState, eventType: string): 
 export const getEventListenersForInstance = (
   state: AgentState,
   instanceId: string
-): EventListener[] =>
-  Object.values(state.events.listeners).filter(l => l.instanceId === instanceId)
+): EventListener[] => Object.values(state.events.listeners).filter(l => l.instanceId === instanceId)

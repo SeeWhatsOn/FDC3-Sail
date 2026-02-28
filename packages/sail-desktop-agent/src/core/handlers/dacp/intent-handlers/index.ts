@@ -17,7 +17,4 @@ export {
   handleFindIntentsByContextRequest,
 } from "./intent-discovery-handlers"
 
-export {
-  handleIntentResultRequest,
-} from "./intent-result-handlers"
-
+export { handleIntentResultRequest } from "./intent-result-handlers"

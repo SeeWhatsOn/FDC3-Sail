@@ -132,6 +132,36 @@ Feature: App Channels
       | broadcastResponse          | a1            | {null}                | {null}                   |
 
   @conformance2.2
+  Scenario: Broadcasting on an app channel does not echo back to the sender
+    When "appId: App1, instanceId: a1" creates or gets an app channel called "selfChannel" [fdc3.getOrCreateChannel]
+    And "appId: App1, instanceId: a1" adds a context listener on "selfChannel" with type "fdc3.instrument" [fdc3.addContextListener]
+    And we wait for a period of "100" ms
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "selfChannel" [fdc3.broadcast]
+    Then messaging will have outgoing posts
+      | msg.matches_type           | to.instanceId |
+      | getOrCreateChannelResponse | a1            |
+      | addContextListenerResponse | a1            |
+      | broadcastResponse          | a1            |
+    And messaging will have 3 posts
+
+  # Contrast with fdc3.addContextListener (DA-level): when a DA-level listener is added while
+  # already joined to a user channel, the existing context IS auto-delivered. Channel.addContextListener
+  # on an app (or any named) channel must NOT auto-deliver prior context — callers must use
+  # getCurrentContext() to retrieve it explicitly.
+  @conformance2.2
+  Scenario: Channel.addContextListener does not auto-deliver prior context
+    When "appId: App1, instanceId: a1" creates or gets an app channel called "priorContextChannel" [fdc3.getOrCreateChannel]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "priorContextChannel" [fdc3.broadcast]
+    And "appId: App2, instanceId: a2" adds a context listener on "priorContextChannel" with type "fdc3.instrument" [fdc3.addContextListener]
+    And we wait for a period of "100" ms
+    Then messaging will have outgoing posts
+      | msg.matches_type           | to.instanceId |
+      | getOrCreateChannelResponse | a1            |
+      | broadcastResponse          | a1            |
+      | addContextListenerResponse | a2            |
+    And messaging will have 3 posts
+
+  @conformance2.2
   Scenario: Multiple typed listeners on an app channel receive matching contexts
     When "appId: App3, instanceId: a3" is opened with connection id "a3"
     And "appId: App1, instanceId: a1" creates or gets an app channel called "multiListenerChannel" [fdc3.getOrCreateChannel]

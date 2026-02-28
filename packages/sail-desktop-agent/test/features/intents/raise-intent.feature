@@ -14,12 +14,17 @@ Feature: Raising Intents
       | uniqueIntent | fdc3.instrument | {empty}     |
     And "unusedApp" is an app with the following intents
       | Intent Name | Context Type | Result Type |
+    And "nothingApp" is an app with the following intents
+      | Intent Name | Context Type | Result Type |
+      | StartChat   | fdc3.nothing | {empty}     |
     And A desktop agent
     And "appId: uniqueIntentApp, instanceId: c1" is opened with connection id "c1"
     And "appId: uniqueIntentApp, instanceId: c1" registers an intent listener for "uniqueIntent" [fdc3.addIntentListener]
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: listenerApp, instanceId: b1" is opened with connection id "b1"
     And "appId: listenerApp, instanceId: b1" registers an intent listener for "ViewPortfolio" [fdc3.addIntentListener]
+    And "appId: nothingApp, instanceId: n1" is opened with connection id "n1"
+    And "appId: nothingApp, instanceId: n1" registers an intent listener for "StartChat" [fdc3.addIntentListener]
 
   @conformance2.2
   Scenario: Context Not Handled By App
@@ -117,6 +122,7 @@ Feature: Raising Intents
       | uniqueIntentApp | c1         |
       | listenerApp     | b1         |
       | App1            | a1         |
+      | nothingApp      | n1         |
       | portfolioApp    | uuid-0     |
     Then messaging will have outgoing posts
       | msg.type            | msg.payload.error    | to.instanceId | to.appId |
@@ -167,3 +173,26 @@ Feature: Raising Intents
     Then messaging will have outgoing posts
       | msg.payload.error | msg.type            |
       | NoAppsFound       | raiseIntentResponse |
+
+  @conformance2.2 @failing
+  Scenario: User Cancels The Intent Resolver Returns UserCancelledResolution
+    Given the mock intent resolver will cancel the resolution
+    When "appId: App1, instanceId: a1" raises an intent for "ViewChart" with contextType "fdc3.portfolio" [fdc3.raiseIntent]
+    Then messaging will have outgoing posts
+      | msg.matches_type    | msg.payload.error       | to.instanceId |
+      | raiseIntentResponse | UserCancelledResolution | a1            |
+
+  @conformance2.2 @failing
+  Scenario: Raising An Intent With Malformed Context Returns MalformedContext
+    When "appId: App1, instanceId: a1" raises an intent for "ViewChart" with contextType "fdc3.malformed" [fdc3.raiseIntent]
+    Then messaging will have outgoing posts
+      | msg.matches_type    | msg.payload.error | to.instanceId |
+      | raiseIntentResponse | MalformedContext  | a1            |
+
+  @conformance2.2
+  Scenario: Raising An Intent With fdc3.nothing Context Auto-Resolves
+    When "appId: App1, instanceId: a1" raises an intent for "StartChat" with contextType "fdc3.nothing" [fdc3.raiseIntent]
+    Then messaging will have outgoing posts
+      | msg.matches_type    | msg.payload.context.type | msg.payload.intent | msg.payload.originatingApp.appId | msg.payload.originatingApp.instanceId | msg.payload.intentResolution.intent | to.instanceId | to.appId   | msg.payload.intentResolution.source.appId |
+      | intentEvent         | fdc3.nothing             | StartChat          | App1                             | a1                                    | {null}                              | n1            | nothingApp | {null}                                    |
+      | raiseIntentResponse | {null}                   | {null}             | {null}                           | {null}                                | StartChat                           | a1            | App1       | nothingApp                                |

@@ -23,7 +23,11 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
     "test": "vitest",
     "test:cucumber": "cucumber-js",
     "test:cucumber:report": "FORCE_COLOR=false cucumber-js --publish",

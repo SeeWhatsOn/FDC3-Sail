@@ -45,7 +45,10 @@ export function attemptIntentDelivery(
     return true
   }
 
-  if (requireListener && !isIntentListenerReady(context, pendingIntent.targetInstanceId, pendingIntent.intentName)) {
+  if (
+    requireListener &&
+    !isIntentListenerReady(context, pendingIntent.targetInstanceId, pendingIntent.intentName)
+  ) {
     return false
   }
 
@@ -71,10 +74,15 @@ export function attemptIntentDelivery(
     return false
   }
 
-  const intentEvent = createIntentEvent(pendingIntent.intentName, pendingIntent.context, requestId, {
-    appId: sourceInstance.appId,
-    instanceId: sourceInstance.instanceId,
-  })
+  const intentEvent = createIntentEvent(
+    pendingIntent.intentName,
+    pendingIntent.context,
+    requestId,
+    {
+      appId: sourceInstance.appId,
+      instanceId: sourceInstance.instanceId,
+    }
+  )
 
   transport.send({
     ...intentEvent,
@@ -170,7 +178,12 @@ export function deliverPendingIntentsForListener(
   pendingIntents.forEach(pending => {
     if (pending.targetInstanceId !== context.instanceId) {
       context.setState(state =>
-        updatePendingIntentTarget(state, pending.requestId, context.instanceId, listenerInstance.appId)
+        updatePendingIntentTarget(
+          state,
+          pending.requestId,
+          context.instanceId,
+          listenerInstance.appId
+        )
       )
     }
     attemptIntentDelivery(context, pending.requestId, true)

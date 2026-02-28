@@ -7,10 +7,7 @@
 import { produce } from "immer"
 import type { AgentState, EventListener } from "../types"
 
-export const addEventListener = (
-  state: AgentState,
-  listener: EventListener
-): AgentState => {
+export const addEventListener = (state: AgentState, listener: EventListener): AgentState => {
   return produce(state, draft => {
     draft.events.listeners[listener.listenerId] = listener
 
@@ -31,9 +28,7 @@ export const removeEventListener = (state: AgentState, listenerId: string): Agen
     // Remove from byEventType index
     const typeListeners = draft.events.byEventType[listener.eventType]
     if (typeListeners) {
-      draft.events.byEventType[listener.eventType] = typeListeners.filter(
-        id => id !== listenerId
-      )
+      draft.events.byEventType[listener.eventType] = typeListeners.filter(id => id !== listenerId)
       // Clean up empty arrays
       if (draft.events.byEventType[listener.eventType].length === 0) {
         delete draft.events.byEventType[listener.eventType]

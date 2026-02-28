@@ -13,13 +13,20 @@
  */
 
 import type { Transport } from "../../core/interfaces/transport"
+import {
+  type Logger,
+  consoleLogger,
+} from "../../core/interfaces/logger"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type {
   AppRequestMessage,
   WebConnectionProtocolMessage,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type { MessagePortTransport } from "./message-port-transport"
-import { handleWCP1Hello as handleWCP1HelloHandshake, type WCPHandshakeContext } from "./wcp1-3-handshake"
+import {
+  handleWCP1Hello as handleWCP1HelloHandshake,
+  type WCPHandshakeContext,
+} from "./wcp1-3-handshake"
 import {
   handleDesktopAgentMessage as handleDesktopAgentMessageRouting,
   type WCPRoutingContext,
@@ -122,6 +129,7 @@ export class WCPConnector extends WCPEventEmitter {
   constructor(desktopAgentTransport: Transport, options?: WCPConnectorOptions) {
     super()
     this.desktopAgentTransport = desktopAgentTransport
+    const logger: Logger = options?.logger ?? consoleLogger
     this.options = {
       getIntentResolverUrl: options?.getIntentResolverUrl ?? (() => false),
       getChannelSelectorUrl: options?.getChannelSelectorUrl ?? (() => false),
@@ -130,22 +138,11 @@ export class WCPConnector extends WCPEventEmitter {
       disconnectGracePeriod: options?.disconnectGracePeriod ?? 2000,
       intentResolutionTimeout: options?.intentResolutionTimeout ?? 60000,
       debug: options?.debug ?? false,
+      logger,
     }
 
     // Listen to Desktop Agent transport for messages to route to apps
     this.desktopAgentTransport.onMessage(this.handleDesktopAgentMessage.bind(this))
-  }
-
-  /**
-   * Internal debug logging method
-   */
-  private log(
-    message: string,
-    data?: Record<string, string | number | boolean | null | undefined>
-  ): void {
-    if (this.options.debug) {
-      console.log(`[WCPConnector] ${message}`, data)
-    }
   }
 
   /**
@@ -207,9 +204,10 @@ export class WCPConnector extends WCPEventEmitter {
 
     try {
       this.handleWCP1Hello(event as MessageEvent<WCP1HelloMessage>)
-    } catch (error) {
-      console.error("Error handling WCP1Hello:", error)
-      this.emit("handshakeFailed", error as Error, event.data.meta.connectionAttemptUuid)
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err))
+      this.options.logger.error("Error handling WCP1Hello:", error)
+      this.emit("handshakeFailed", error, event.data.meta.connectionAttemptUuid)
     }
   }
 
@@ -239,7 +237,9 @@ export class WCPConnector extends WCPEventEmitter {
     instanceId: string
   ): AppRequestMessage | WebConnectionProtocolMessage {
     const currentMeta =
-      "meta" in message && message.meta && typeof message.meta === "object" ? message.meta : undefined
+      "meta" in message && message.meta && typeof message.meta === "object"
+        ? message.meta
+        : undefined
     const hasSourceField = !!currentMeta && "source" in currentMeta
     const isIdentityValidation = message.type === "WCP4ValidateAppIdentity"
     const storedMessageOrigin = isIdentityValidation
@@ -401,7 +401,7 @@ export class WCPConnector extends WCPEventEmitter {
       messagePortTransports: this.messagePortTransports,
       transportToInstanceId: this.transportToInstanceId,
       emit: this.emit.bind(this),
-      log: this.log.bind(this),
+      logger: this.options.logger,
       updateConnectionMetadata: this.updateConnectionMetadata.bind(this),
       handleWCP6Goodbye: this.handleWCP6Goodbye.bind(this),
       enrichMessageWithSource: this.enrichMessageWithSource.bind(this),
@@ -418,7 +418,7 @@ export class WCPConnector extends WCPEventEmitter {
       pendingDisconnects: this.pendingDisconnects,
       recentlyDisconnected: this.recentlyDisconnected,
       emit: this.emit.bind(this),
-      log: this.log.bind(this),
+      logger: this.options.logger,
     }
   }
 

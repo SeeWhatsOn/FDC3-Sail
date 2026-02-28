@@ -20,6 +20,7 @@
  */
 
 import type { DirectoryApp, DirectoryData, DirectoryIntent, WebAppDetails } from "./types"
+import { consoleLogger } from "../interfaces/logger"
 
 /**
  * Helper function to check if result types match
@@ -298,7 +299,7 @@ export class AppDirectoryManager {
         error instanceof Error ? error.message : String(error)
       }`
 
-      console.error(errorMessage)
+      consoleLogger.error(errorMessage)
       throw new Error(errorMessage) // Re-throw to ensure caller is aware of the failure
     }
   }
@@ -320,7 +321,7 @@ export class AppDirectoryManager {
     if (urls.length === 0) {
       this.allApps = []
       this.directoryUrls = []
-      console.log("No directories provided - cleared all applications and directory URLs")
+      consoleLogger.info("No directories provided - cleared all applications and directory URLs")
       return
     }
 
@@ -355,12 +356,12 @@ export class AppDirectoryManager {
 
     // Log results summary
     const successCount = results.filter(result => result.status === "fulfilled").length
-    console.log(
+    consoleLogger.info(
       `Loaded ${this.allApps.length} apps from ${successCount}/${urls.length} directory source(s)`
     )
 
     if (errors.length > 0) {
-      console.warn("Some directories failed to load:", errors)
+      consoleLogger.warn("Some directories failed to load:", errors)
     }
   }
 

@@ -13,7 +13,11 @@ import {
 } from "../../../errors/fdc3-errors"
 import { getAllIntentListeners, getInstance, getInstancesByAppId } from "../../../state/selectors"
 import { addPendingIntent, resolvePendingIntent } from "../../../state/mutators"
-import { findIntentHandlers, findIntentsByContext, launchAppAndWaitForInstance } from "./intent-helpers"
+import {
+  findIntentHandlers,
+  findIntentsByContext,
+  launchAppAndWaitForInstance,
+} from "./intent-helpers"
 import { createResolverAppIntent } from "./intent-resolver-helpers"
 import { getDirectoryIntentsForContext } from "./intent-directory-helpers"
 import {
@@ -33,7 +37,7 @@ export async function handleRaiseIntentForContextRequest(
     const validatedContext = payload.context
 
     const targetApp =
-      typeof payload.app === "string" ? { appId: payload.app } : payload.app ?? undefined
+      typeof payload.app === "string" ? { appId: payload.app } : (payload.app ?? undefined)
 
     if (targetApp) {
       const targetAppId = targetApp.appId
@@ -112,9 +116,7 @@ export async function handleRaiseIntentForContextRequest(
         .filter(appIntent => appIntent.apps.length > 0)
 
       if (appIntents.length === 0) {
-        throw new NoAppsFoundError(
-          `No apps found to handle context type: ${validatedContext.type}`
-        )
+        throw new NoAppsFoundError(`No apps found to handle context type: ${validatedContext.type}`)
       }
 
       const response = createDACPSuccessResponse(message, "raiseIntentForContextResponse", {
@@ -140,7 +142,9 @@ export async function handleRaiseIntentForContextRequest(
     if (targetApp?.instanceId) {
       targetInstanceId = targetApp.instanceId
     } else if (targetAppId) {
-      const runningListener = handlers.runningListeners.find(listener => listener.appId === targetAppId)
+      const runningListener = handlers.runningListeners.find(
+        listener => listener.appId === targetAppId
+      )
       const runningInstances = getInstancesByAppId(state, targetAppId).filter(
         instance => instance.state !== AppInstanceState.TERMINATED
       )
@@ -191,8 +195,7 @@ export async function handleRaiseIntentForContextRequest(
     // Check if we need to wait for the listener to be ready
     // This matches the behavior in raiseIntent handler
     const shouldWaitForListener =
-      targetInstanceIsLaunched ||
-      !isIntentListenerReady(context, targetInstanceId, selectedIntent)
+      targetInstanceIsLaunched || !isIntentListenerReady(context, targetInstanceId, selectedIntent)
 
     if (shouldWaitForListener) {
       queueIntentDelivery(context, requestId, true)

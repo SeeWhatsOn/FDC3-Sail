@@ -37,10 +37,12 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "lint": "eslint .",
+    "format": "prettier --check .",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc",
+    "validate": "npm run typecheck && npm run lint && npm run format"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

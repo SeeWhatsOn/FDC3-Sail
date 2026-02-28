@@ -60,6 +60,27 @@ When(
 )
 
 /**
+ * Add a Desktop Agent event listener for ALL event types (null type per FDC3 spec)
+ */
+When(
+  "{string} adds an event listener for all event types [fdc3.addEventListener]",
+  async function (this: CustomWorld, app: string) {
+    ensureAppInstance(this, app)
+    const meta = createMeta(this, app)
+
+    const message: AddEventListenerRequest = {
+      meta,
+      payload: {
+        type: null,
+      },
+      type: "addEventListenerRequest",
+    }
+
+    await this.mockTransport.receiveMessage(message)
+  }
+)
+
+/**
  * Unsubscribe from a Desktop Agent event listener
  * Note: This is different from private channel event listeners
  */

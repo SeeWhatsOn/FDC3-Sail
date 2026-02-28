@@ -6,6 +6,7 @@
 
 import { DACPTimeoutError } from "./dacp-errors"
 import { DACP_TIMEOUTS } from "./dacp-constants"
+import { consoleLogger } from "../interfaces/logger"
 
 /**
  * Wraps a promise with a timeout, rejecting with DACPTimeoutError if exceeded.
@@ -51,14 +52,14 @@ export function logDACPMessage(
         source,
       }
 
-      console.log(`[DACP ${direction.toUpperCase()}]`, logEntry)
+      consoleLogger.debug(`[DACP ${direction.toUpperCase()}]`, logEntry)
     } else {
-      console.warn(`[DACP INVALID ${direction.toUpperCase()}]`, {
+      consoleLogger.warn(`[DACP INVALID ${direction.toUpperCase()}]`, {
         message: "Invalid message format",
         source,
       })
     }
   } catch (error) {
-    console.error(`[DACP LOG ERROR]`, error)
+    consoleLogger.error(`[DACP LOG ERROR]`, error)
   }
 }

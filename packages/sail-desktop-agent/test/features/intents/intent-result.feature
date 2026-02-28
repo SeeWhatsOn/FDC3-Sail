@@ -56,3 +56,19 @@ Feature: Intent Results Are Correctly Delivered
       | raiseIntentResponse       | {null}             | App1         | a1            | {null}                             | l1                                             | {null}                                |
       | raiseIntentResultResponse | {null}             | App1         | a1            | {null}                             | {null}                                         | {null}                                |
       | intentResultResponse      | {null}             | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
+
+  @conformance2.2 @failing
+  Scenario: IntentResolution.getResult() rejects with NoResultReturned when handler returns nothing
+    When "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: PortfolioApp, instanceId: l1" with requestUuid "RES001" [fdc3.raiseIntent]
+    And "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "{lastIntentEventUuid}" and no result returned and raiseIntentUuid "RES001" [IntentResolution.getResult]
+    Then messaging will include outgoing posts
+      | msg.matches_type          | to.appId | to.instanceId | msg.payload.error |
+      | raiseIntentResultResponse | App1     | a1            | NoResultReturned  |
+
+  @conformance2.2 @failing
+  Scenario: IntentResolution.getResult() rejects with IntentHandlerRejected when handler promise rejects
+    When "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: PortfolioApp, instanceId: l1" with requestUuid "RES002" [fdc3.raiseIntent]
+    And "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "{lastIntentEventUuid}" and handler rejection and raiseIntentUuid "RES002" [IntentResolution.getResult]
+    Then messaging will include outgoing posts
+      | msg.matches_type          | to.appId | to.instanceId | msg.payload.error     |
+      | raiseIntentResultResponse | App1     | a1            | IntentHandlerRejected |

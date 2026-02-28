@@ -84,4 +84,3 @@ export function createTestPromise<T>(
     reject: rejectFunc!,
   }
 }
-

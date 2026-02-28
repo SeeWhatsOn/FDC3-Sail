@@ -147,6 +147,22 @@ function assertFieldValue(
     return
   }
 
+  // If expected looks like a boolean, convert for comparison
+  if ((expectedValue === "true" || expectedValue === "false") && typeof actualValue === "boolean") {
+    const booleanValue = expectedValue === "true"
+    try {
+      expect(actualValue).toBe(booleanValue)
+    } catch {
+      const contextMsg = context
+        ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
+        : ""
+      throw new Error(
+        `Field "${fieldName}" expected boolean ${booleanValue} but got: ${formatValue(actualValue)}${contextMsg}`
+      )
+    }
+    return
+  }
+
   // If expected looks like a number, convert for comparison
   const numericValue = Number(expectedValue)
   if (!isNaN(numericValue) && typeof actualValue === "number") {

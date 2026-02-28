@@ -17,7 +17,6 @@ import {
 } from "../../../state/selectors"
 import { AppInstanceState } from "../../../state/types"
 
-
 /**
  * Helper to check if context type is compatible with supported types
  */
@@ -47,8 +46,7 @@ export function isResultTypeCompatible(
 
   if (normalizedRequiredResultType === "channel") {
     return (
-      normalizedActualResultType === "channel" ||
-      normalizedActualResultType.startsWith("channel<")
+      normalizedActualResultType === "channel" || normalizedActualResultType.startsWith("channel<")
     )
   }
 
@@ -81,13 +79,16 @@ export function findIntentHandlers(
     resultType?: string
     displayName?: string
   }>
-  compatibleApps: (IntentListener | {
-    intentName: string
-    appId: string
-    contextTypes: string[]
-    resultType?: string
-    displayName?: string
-  })[]
+  compatibleApps: (
+    | IntentListener
+    | {
+        intentName: string
+        appId: string
+        contextTypes: string[]
+        resultType?: string
+        displayName?: string
+      }
+  )[]
 } {
   const { intent, context, target, source } = request
 
@@ -142,7 +143,7 @@ export function findIntentHandlers(
 
   // Combine and deduplicate (prefer running listeners)
   const runningAppIds = new Set(runningListeners.map(l => l.appId))
-  const compatibleApps: (IntentListener | typeof availableApps[0])[] = [
+  const compatibleApps: (IntentListener | (typeof availableApps)[0])[] = [
     ...runningListeners,
     ...availableApps.filter(app => !runningAppIds.has(app.appId)),
   ]

@@ -11,7 +11,12 @@ import { AppInstanceState } from "../types"
 
 export const connectInstance = (
   state: AgentState,
-  params: { instanceId: string; appId: string; metadata: AppMetadata; instanceMetadata?: AppInstance["instanceMetadata"] }
+  params: {
+    instanceId: string
+    appId: string
+    metadata: AppMetadata
+    instanceMetadata?: AppInstance["instanceMetadata"]
+  }
 ): AgentState => {
   if (state.instances[params.instanceId]) {
     throw new Error(`Instance ${params.instanceId} already exists`)

@@ -18,14 +18,9 @@ export const getActiveListenersForIntent = (
   state: AgentState,
   intentName: string
 ): IntentListener[] =>
-  Object.values(state.intents.listeners).filter(
-    l => l.intentName === intentName && l.active
-  )
+  Object.values(state.intents.listeners).filter(l => l.intentName === intentName && l.active)
 
-export const getListenersForInstance = (
-  state: AgentState,
-  instanceId: string
-): IntentListener[] =>
+export const getListenersForInstance = (state: AgentState, instanceId: string): IntentListener[] =>
   Object.values(state.intents.listeners).filter(l => l.instanceId === instanceId)
 
 export const getListenersForApp = (state: AgentState, appId: string): IntentListener[] =>
@@ -39,10 +34,8 @@ export const getListenersForContextType = (
     l => l.contextTypes.length === 0 || l.contextTypes.includes(contextType)
   )
 
-export const getPendingIntent = (
-  state: AgentState,
-  requestId: string
-): PendingIntent | undefined => state.intents.pending[requestId]
+export const getPendingIntent = (state: AgentState, requestId: string): PendingIntent | undefined =>
+  state.intents.pending[requestId]
 
 export const getAllPendingIntents = (state: AgentState): PendingIntent[] =>
   Object.values(state.intents.pending)

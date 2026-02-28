@@ -23,7 +23,7 @@ describe("AppDirectoryManager", () => {
     interop: {
       intents: {
         listensFor: {
-          "ViewContact": {
+          ViewContact: {
             contexts: ["fdc3.contact"],
             resultType: "fdc3.contact",
           },
@@ -42,7 +42,7 @@ describe("AppDirectoryManager", () => {
     interop: {
       intents: {
         listensFor: {
-          "ViewChart": {
+          ViewChart: {
             contexts: ["fdc3.instrument"],
           },
         },
@@ -60,7 +60,7 @@ describe("AppDirectoryManager", () => {
     interop: {
       intents: {
         listensFor: {
-          "ViewContact": {
+          ViewContact: {
             contexts: ["fdc3.contact", "fdc3.instrument"],
             resultType: "fdc3.contact",
           },
@@ -403,17 +403,15 @@ describe("AppDirectoryManager", () => {
 
       await directory.loadDirectory("https://example.com")
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("/v2/apps")
-      )
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("/v2/apps"))
     })
 
     it("should throw error on fetch failure", async () => {
       global.fetch = vi.fn().mockRejectedValue(new Error("Network error"))
 
-      await expect(
-        directory.loadDirectory("https://example.com/v2/apps")
-      ).rejects.toThrow("Failed to load applications")
+      await expect(directory.loadDirectory("https://example.com/v2/apps")).rejects.toThrow(
+        "Failed to load applications"
+      )
     })
 
     it("should throw error on HTTP error response", async () => {
@@ -425,9 +423,9 @@ describe("AppDirectoryManager", () => {
 
       global.fetch = vi.fn().mockResolvedValue(mockResponse)
 
-      await expect(
-        directory.loadDirectory("https://example.com/v2/apps")
-      ).rejects.toThrow("Failed to fetch")
+      await expect(directory.loadDirectory("https://example.com/v2/apps")).rejects.toThrow(
+        "Failed to fetch"
+      )
     })
   })
 
@@ -468,28 +466,24 @@ describe("AppDirectoryManager", () => {
         json: vi.fn().mockResolvedValue([mockApp2]),
       }
 
-      global.fetch = vi.fn()
+      global.fetch = vi
+        .fn()
         .mockResolvedValueOnce(mockResponse1)
         .mockResolvedValueOnce(mockResponse2)
 
-      await directory.replace([
-        "https://example.com/v2/apps",
-        "https://example2.com/v2/apps",
-      ])
+      await directory.replace(["https://example.com/v2/apps", "https://example2.com/v2/apps"])
 
       expect(directory.allApps.length).toBeGreaterThanOrEqual(2)
     })
 
     it("should throw error for invalid URLs", async () => {
-      await expect(
-        directory.replace(["not-a-url"])
-      ).rejects.toThrow("Invalid directory URLs")
+      await expect(directory.replace(["not-a-url"])).rejects.toThrow("Invalid directory URLs")
     })
 
     it("should throw error if urls is not an array", async () => {
-      await expect(
-        directory.replace("not-an-array" as unknown as string[])
-      ).rejects.toThrow("URLs must be an array")
+      await expect(directory.replace("not-an-array" as unknown as string[])).rejects.toThrow(
+        "URLs must be an array"
+      )
     })
   })
 

@@ -12,6 +12,20 @@ Feature: Relaying Private Channel Broadcast messages
       | msg.payload.userChannels[0].id | msg.payload.userChannels[1].id | msg.payload.userChannels[2].id | msg.payload.userChannels[3].id | msg.payload.userChannels[4].id | msg.payload.userChannels[5].id | msg.payload.userChannels[6].id | msg.payload.userChannels[7].id | msg.payload.userChannels[0].type | to.instanceId | msg.matches_type        |
       | one                            | two                            | three                          | fdc3.channel.4                 | fdc3.channel.5                 | fdc3.channel.6                 | fdc3.channel.7                 | fdc3.channel.8                 | user                             | a1            | getUserChannelsResponse |
 
+  @conformance2.2
+  Scenario: User channels include displayMetadata
+    When "appId: App1, instanceId: a1" gets the list of user channels [fdc3.getUserChannels]
+    Then messaging will have outgoing posts
+      | msg.matches_type        | to.instanceId | msg.payload.userChannels[0].displayMetadata.name | msg.payload.userChannels[0].displayMetadata.color | msg.payload.userChannels[1].displayMetadata.name | msg.payload.userChannels[2].displayMetadata.name |
+      | getUserChannelsResponse | a1            | Channel 1                                        | #FF0000                                           | Channel 2                                        | Channel 3                                        |
+
+  @conformance2.2
+  Scenario: User Channels include displayMetadata
+    When "appId: App1, instanceId: a1" gets the list of user channels [fdc3.getUserChannels]
+    Then messaging will have outgoing posts
+      | msg.payload.userChannels[0].displayMetadata.name | msg.payload.userChannels[1].displayMetadata.name | msg.payload.userChannels[2].displayMetadata.name | msg.payload.userChannels[3].displayMetadata.name | msg.payload.userChannels[4].displayMetadata.name | msg.payload.userChannels[5].displayMetadata.name | msg.payload.userChannels[6].displayMetadata.name | msg.payload.userChannels[7].displayMetadata.name | msg.matches_type        | to.instanceId |
+      | Channel 1                                        | Channel 2                                        | Channel 3                                        | Channel 4                                        | Channel 5                                        | Channel 6                                        | Channel 7                                        | Channel 8                                        | getUserChannelsResponse | a1            |
+
   Scenario: Initial User Channel
         At startup, the user channel shouldn't be set
 
@@ -161,3 +175,15 @@ Feature: Relaying Private Channel Broadcast messages
       | broadcastResponse          | {null}                | {null}                   | a2            |
       | addContextListenerResponse | {null}                | {null}                   | a1            |
       | broadcastEvent             | one                   | fdc3.instrument          | a1            |
+
+  @conformance2.2
+  Scenario: Broadcasting on a user channel does not echo back to the sender
+    When "appId: App, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App, instanceId: a1" adds a context listener on "one" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App, instanceId: a1" broadcasts "fdc3.instrument" on "one" [fdc3.broadcast]
+    Then messaging will have outgoing posts
+      | msg.matches_type           | to.instanceId |
+      | joinUserChannelResponse    | a1            |
+      | addContextListenerResponse | a1            |
+      | broadcastResponse          | a1            |
+    And messaging will have 3 posts

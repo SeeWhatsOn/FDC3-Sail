@@ -26,10 +26,7 @@ export const registerIntentListener = (
   })
 }
 
-export const unregisterIntentListener = (
-  state: AgentState,
-  listenerId: string
-): AgentState => {
+export const unregisterIntentListener = (state: AgentState, listenerId: string): AgentState => {
   if (!state.intents.listeners[listenerId]) return state
 
   return produce(state, draft => {
@@ -37,10 +34,7 @@ export const unregisterIntentListener = (
   })
 }
 
-export const removeListenersForInstance = (
-  state: AgentState,
-  instanceId: string
-): AgentState => {
+export const removeListenersForInstance = (state: AgentState, instanceId: string): AgentState => {
   const toRemove = Object.values(state.intents.listeners)
     .filter(l => l.instanceId === instanceId)
     .map(l => l.listenerId)
@@ -52,10 +46,7 @@ export const removeListenersForInstance = (
   })
 }
 
-export const updateIntentListenerActivity = (
-  state: AgentState,
-  listenerId: string
-): AgentState => {
+export const updateIntentListenerActivity = (state: AgentState, listenerId: string): AgentState => {
   if (!state.intents.listeners[listenerId]) return state
 
   return produce(state, draft => {

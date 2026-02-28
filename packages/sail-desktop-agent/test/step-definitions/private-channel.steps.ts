@@ -86,7 +86,7 @@ When(
 )
 
 When(
-  "{string} adds an {string} event listener on {string} [PrivateChannel.addContextListener]",
+  "{string} adds an {string} event listener on {string} [PrivateChannel.addEventListener]",
   async function (this: CustomWorld, app: string, listenerType: string, channelId: string) {
     ensureAppInstance(this, app)
     const meta = createMeta(this, app)

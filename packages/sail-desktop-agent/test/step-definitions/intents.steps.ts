@@ -159,8 +159,8 @@ When(
 )
 
 When(
-  "{string} finds intents with contextType {string} [fdc3.findIntentsByContext]",
-  async function (this: CustomWorld, appStr: string, contextType: string) {
+  "{string} finds intents with contextType {string} and result type {string} [fdc3.findIntentsByContext]",
+  async function (this: CustomWorld, appStr: string, contextType: string, resultType: string) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
 
@@ -168,6 +168,7 @@ When(
       meta,
       payload: {
         context: contextMap[contextType],
+        resultType: handleResolve(resultType, this) ?? undefined,
       },
       type: "findIntentsByContextRequest",
     }
