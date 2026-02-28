@@ -13,10 +13,7 @@
  */
 
 import type { Transport } from "../../core/interfaces/transport"
-import {
-  type Logger,
-  consoleLogger,
-} from "../../core/interfaces/logger"
+import { type Logger, consoleLogger } from "../../core/interfaces/logger"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type {
   AppRequestMessage,
