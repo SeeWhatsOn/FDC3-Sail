@@ -12,15 +12,13 @@ FDC3 Sail is an npm workspace monorepo:
 
 ```
 FDC3-Sail/
-├── packages/           # Reusable libraries
+├── packages/          
 │   ├── sail-desktop-agent/  # Pure FDC3 2.2 Desktop Agent (@finos/sail-desktop-agent)
 │   ├── sail-platform-api/  # Platform services & transports (@finos/sail-platform-api)
-│   └── sail-ui/        # Shared React components
-├── apps/               # Deployable applications
-│   ├── sail-web/       # Browser-based Sail UI (@finos/fdc3-sail-web)
-│   ├── sail-server/    # Node.js backend server (@finos/fdc3-sail-server)
-│   ├── sail-electron/  # Electron desktop wrapper (@finos/fdc3-sail-electron)
-│   └── example-fdc3-apps/  # Example apps for testing
+│   ├── sail-ui/        # Shared React components
+│   ├── sail-web/       # Browser-based Sail UI (@finos/sail-web)
+│   ├── sail-server/    # Node.js backend server (@finos/sail-server)
+│   └── sail-electron/  # Electron desktop wrapper (@finos/sail-electron)
 └── website/            # Documentation (Docusaurus)
 ```
 

@@ -30,7 +30,6 @@ This starts multiple processes:
 - Platform SDK (watch mode)
 - Sail Server
 - Sail Web UI
-- Example FDC3 Apps
 
 Access Sail at **http://localhost:8090**
 
@@ -45,10 +44,9 @@ npm run dev:desktop
 ```
 FDC3-Sail/
 ├── packages/
-│   ├── sail-desktop-agent/       # Pure FDC3 Desktop Agent (@finos/sail-desktop-agent)
+│   ├── sail-desktop-agent/  # Pure FDC3 Desktop Agent (@finos/sail-desktop-agent)
 │   ├── sail-platform-api/   # Platform services & wrappers (@finos/sail-platform-api)
-│   └── sail-ui/             # Shared UI components
-├── apps/
+│   ├── sail-ui/             # Shared UI components
 │   ├── sail-web/            # Sail UI (React frontend)
 │   ├── sail-server/         # Server runtime (Node.js backend)
 │   └── sail-electron/       # Electron desktop wrapper

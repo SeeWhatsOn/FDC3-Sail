@@ -34,9 +34,9 @@ FDC3 Sail implements the FDC3 2.2 standard using a modular, transport-agnostic a
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  LAYER 3: Application Layer                                 │
-│  - Sail UI (apps/sail-web)                                  │
-│  - Sail Server (apps/sail-server)                           │
-│  - Sail Electron (apps/sail-electron)                       │
+│  - Sail UI (packages/sail-web)                              │
+│  - Sail Server (packages/sail-server)                       │
+│  - Sail Electron (packages/sail-electron)                   │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐

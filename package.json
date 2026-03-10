@@ -28,9 +28,9 @@
     "packages/sail-desktop-agent",
     "packages/sail-ui",
     "packages/sail-platform-api",
-    "apps/sail-web",
-    "apps/sail-electron",
-    "apps/sail-server",
+    "packages/sail-web",
+    "packages/sail-electron",
+    "packages/sail-server",
     "website"
   ],
   "devDependencies": {
