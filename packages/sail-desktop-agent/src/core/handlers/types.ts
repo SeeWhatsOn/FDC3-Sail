@@ -205,12 +205,3 @@ export interface DACPHandlerContext {
    */
   pendingIntentPromises: Map<string, PendingIntentPromiseEntry>
 }
-
-/**
- * Type for DACP handler functions
- * Handlers receive validated messages from the router
- */
-export type DACPHandler = (
-  message: DACPMessage,
-  context: DACPHandlerContext
-) => void | Promise<void>
