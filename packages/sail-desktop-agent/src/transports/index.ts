@@ -8,18 +8,6 @@
  *
  * - **InMemoryTransport** - For same-process communication (any environment)
  *
- * ## Tree-Shaking
- *
- * Each transport can be imported individually to minimize bundle size:
- *
- * ```typescript
- * // ✅ Only InMemoryTransport included
- * import { createInMemoryTransportPair } from '@finos/fdc3-sail-desktop-agent/transports'
- *
- * // ❌ Avoid importing from root package for transports
- * import { InMemoryTransport } from '@finos/fdc3-sail-desktop-agent'
- * ```
- *
  * ## Usage
  *
  * ### InMemoryTransport (Browser Desktop Agent)

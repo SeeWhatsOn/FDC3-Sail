@@ -1,11 +1,19 @@
-import { withDACPTimeout, logDACPMessage } from "../../dacp-protocol/dacp-utils"
+import { BridgingError } from "@finos/fdc3"
+
 import { DACP_TIMEOUTS } from "../../dacp-protocol/dacp-constants"
-import { type DACPHandlerContext, type MessageType } from "../types"
+import {
+  DACPProcessingError,
+  DACPTimeoutError,
+  DACPValidationError,
+} from "../../dacp-protocol/dacp-errors"
+import { withDACPTimeout, logDACPMessage } from "../../dacp-protocol/dacp-utils"
 import {
   resolvePendingIntent,
   removeListenersForInstance,
   removeInstance,
 } from "../../state/mutators"
+import { type DACPHandlerContext, type MessageType } from "../types"
+import { sendDACPErrorResponse } from "./utils/dacp-response-utils"
 
 // Import all DACP handlers
 import * as contextHandlers from "./context-handlers"
@@ -41,8 +49,12 @@ export async function routeDACPMessage(
           messageType,
           errors: validationResult.errors,
         })
-        // TODO: Let the handler deal with the invalid message - it will send appropriate error response or should this be handled here?
-        // We need to add some basic checking here or use a default validator to check things like a uuid is present etc
+        sendErrorResponseIfRequestLike(
+          message,
+          context,
+          BridgingError.MalformedMessage,
+          "Invalid message structure"
+        )
         return
       }
     }
@@ -58,19 +70,67 @@ export async function routeDACPMessage(
       `DACP ${resolvedMessageType} handling`
     )
   } catch (error) {
-    // Use console.error as fallback since we don't have context here
+    const err =
+      error instanceof DACPValidationError || error instanceof DACPTimeoutError
+        ? error
+        : new DACPProcessingError(
+            "DACP processing failed",
+            error instanceof Error ? error : undefined
+          )
     logger.error("DACP message routing failed:", {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+      originalError: err instanceof DACPProcessingError ? err.originalError : undefined,
       messageType:
         typeof message === "object" && message !== null && "type" in message
           ? (message as { type: string }).type
           : "unknown",
       messageData: message,
     })
+    if (err instanceof DACPValidationError) {
+      sendErrorResponseIfRequestLike(
+        message,
+        context,
+        BridgingError.MalformedMessage,
+        "Invalid message structure"
+      )
+    } else if (err instanceof DACPTimeoutError) {
+      sendErrorResponseIfRequestLike(
+        message,
+        context,
+        BridgingError.ResponseTimedOut,
+        "Request timed out"
+      )
+    } else {
+      sendErrorResponseIfRequestLike(
+        message,
+        context,
+        BridgingError.MalformedMessage,
+        "Message processing failed"
+      )
+    }
+  }
+}
 
-    // Note: Individual handlers are responsible for sending error responses to the client
-    // The router doesn't send responses directly to avoid conflicts
+/**
+ * Sends a DACP error response when the message has a request-like shape (type + meta.requestUuid).
+ * Used for validation failures, timeouts, and unexpected processing errors.
+ */
+function sendErrorResponseIfRequestLike(
+  message: unknown,
+  context: DACPHandlerContext,
+  errorType: (typeof BridgingError)[keyof typeof BridgingError],
+  errorMessage: string
+): void {
+  const req = message as { type?: string; meta?: { requestUuid?: string } }
+  if (req?.type && req.meta?.requestUuid) {
+    sendDACPErrorResponse({
+      message: { type: req.type, meta: { requestUuid: req.meta.requestUuid } },
+      errorType,
+      errorMessage,
+      instanceId: context.instanceId,
+      transport: context.transport,
+    })
   }
 }
 

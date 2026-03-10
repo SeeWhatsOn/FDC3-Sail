@@ -27,6 +27,20 @@ all:
     - tsx/cjs
   tags: "not @failing"
 
+# Profile for running only scenarios tagged @failing (for fixing them)
+failing:
+  format:
+    - "@cucumber/pretty-formatter"
+  paths:
+    - test/features/**/*.feature
+  require:
+    - test/step-definitions/*.steps.ts
+    - test/support/*.ts
+    - test/world/index.ts
+  requireModule:
+    - tsx/cjs
+  tags: "@failing"
+
 # Profile for running a single feature (no default paths)
 single:
   format:

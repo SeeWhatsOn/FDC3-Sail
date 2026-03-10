@@ -6,30 +6,45 @@ import { ResolveError } from "@finos/fdc3"
 import { AppInstanceState } from "../../../state/types"
 import {
   NoAppsFoundError,
-  TargetAppUnavailableError,
-  TargetInstanceUnavailableError,
-  FDC3ResolveError,
   IntentDeliveryFailedError,
+  UserCancelledError,
 } from "../../../errors/fdc3-errors"
 import { getInstance, getInstancesByAppId } from "../../../state/selectors"
-import { addPendingIntent, resolvePendingIntent } from "../../../state/mutators"
 import { findIntentHandlers, launchAppAndWaitForInstance } from "./intent-helpers"
-import { createResolverAppIntent } from "./intent-resolver-helpers"
+import { createResolverAppIntent, appsToIntentHandlerOptions } from "./intent-resolver-helpers"
 import { isDirectoryIntentCompatible } from "./intent-directory-helpers"
+import { isValidContext } from "../utils/context-validation"
 import {
-  attemptIntentDelivery,
-  queueIntentDelivery,
-  isIntentListenerReady,
-} from "./intent-delivery-helpers"
+  attachPendingIntentTimeout,
+  cleanupPendingIntentRequest,
+  mapIntentRaiseErrorToResolveError,
+  normalizeTargetApp,
+  registerPendingIntentPromise,
+  registerPendingIntentState,
+  resolveAppTargetInstance,
+  schedulePendingIntentDelivery,
+  validateRequestedTargetAvailability,
+} from "./intent-raise-shared"
 
 export async function handleRaiseIntentRequest(
   message: BrowserTypes.RaiseIntentRequest,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, getState, setState, appDirectory, logger } = context
+  const { transport, instanceId, getState, appDirectory, logger } = context
 
   try {
     const payload = message.payload
+
+    if (payload.context !== undefined && !isValidContext(payload.context)) {
+      sendDACPErrorResponse({
+        message,
+        errorType: ResolveError.MalformedContext,
+        errorMessage: "Invalid context: context must be an object with a string type property",
+        instanceId,
+        transport,
+      })
+      return
+    }
 
     const contextPayload = payload.context as Record<string, unknown>
     logger.info("DACP: Processing raise intent request", {
@@ -52,25 +67,10 @@ export async function handleRaiseIntentRequest(
       validatedContext: JSON.stringify(validatedContextRecord),
     })
 
-    if (payload.app) {
-      const targetAppId = typeof payload.app === "string" ? payload.app : payload.app.appId
-      const targetInstanceId = typeof payload.app === "object" ? payload.app.instanceId : undefined
-
-      const apps = appDirectory.retrieveAppsById(targetAppId)
-      if (apps.length === 0) {
-        throw new TargetAppUnavailableError(`App not found in directory: ${targetAppId}`)
-      }
-
-      if (targetInstanceId) {
-        const state = getState()
-        const instance = getInstance(state, targetInstanceId)
-        if (!instance || instance.state === AppInstanceState.TERMINATED) {
-          throw new TargetInstanceUnavailableError(
-            `Instance not found or terminated: ${targetInstanceId}`
-          )
-        }
-      }
-    }
+    const targetApp: { appId: string; instanceId?: string } | undefined = normalizeTargetApp(
+      payload.app as unknown
+    )
+    validateRequestedTargetAvailability(context, targetApp)
 
     const source = getInstance(getState(), instanceId)
     if (!source) {
@@ -82,11 +82,8 @@ export async function handleRaiseIntentRequest(
       intent: payload.intent,
       context: validatedContext,
       source: { appId: source.appId, instanceId: source.instanceId },
-      target: typeof payload.app === "string" ? { appId: payload.app } : payload.app,
+      target: targetApp,
     })
-
-    const targetApp =
-      typeof payload.app === "string" ? { appId: payload.app } : (payload.app ?? undefined)
 
     const targetAppId = targetApp?.appId
     const runningInstances = targetAppId
@@ -118,20 +115,20 @@ export async function handleRaiseIntentRequest(
     let targetInstanceId: string
     let targetInstanceIsLaunched = false
 
+    // Resolve target instance in priority order: explicit instance -> targeted app -> resolver selection -> running listener -> launch.
     if (targetApp?.instanceId) {
       targetInstanceId = targetApp.instanceId
     } else if (targetAppId) {
       const runningListener = handlers.runningListeners.find(
         listener => listener.appId === targetAppId
       )
-      if (runningListener) {
-        targetInstanceId = runningListener.instanceId
-      } else if (runningInstances.length > 0) {
-        targetInstanceId = runningInstances[0].instanceId
-      } else {
-        targetInstanceIsLaunched = true
-        targetInstanceId = await launchAppAndWaitForInstance(targetAppId, context, validatedContext)
-      }
+      const resolvedTarget = await resolveAppTargetInstance(context, {
+        appId: targetAppId,
+        validatedContext,
+        runningListenerInstanceId: runningListener?.instanceId,
+      })
+      targetInstanceId = resolvedTarget.targetInstanceId
+      targetInstanceIsLaunched = resolvedTarget.targetInstanceIsLaunched
     } else if (handlers.compatibleApps.length > 1) {
       const appIntent = createResolverAppIntent(
         getState(),
@@ -139,9 +136,34 @@ export async function handleRaiseIntentRequest(
         payload.intent,
         validatedContext.type
       )
-      const response = createDACPSuccessResponse(message, "raiseIntentResponse", { appIntent })
-      sendDACPResponse({ response, instanceId, transport })
-      return
+      if (context.requestIntentResolution) {
+        const requestId = message.meta.requestUuid
+        const handlerOptions = appsToIntentHandlerOptions(getState(), appIntent.apps)
+        const resolution = await context.requestIntentResolution({
+          requestId,
+          intent: payload.intent,
+          context: validatedContext,
+          handlers: handlerOptions,
+        })
+        // When resolver returns no selection we treat it as user cancellation (FDC3 ResolveError.UserCancelled).
+        // TODO: selectedHandler is the only signal; consider explicit outcome (e.g. 'cancelled' | 'timeout') and unit test.
+
+        if (resolution.selectedHandler === null) {
+          throw new UserCancelledError("User cancelled intent resolution")
+        }
+        const selected = resolution.selectedHandler
+        const resolvedTarget = await resolveAppTargetInstance(context, {
+          appId: selected.appId,
+          validatedContext,
+          preferredInstanceId: selected.instanceId,
+        })
+        targetInstanceId = resolvedTarget.targetInstanceId
+        targetInstanceIsLaunched = resolvedTarget.targetInstanceIsLaunched
+      } else {
+        const response = createDACPSuccessResponse(message, "raiseIntentResponse", { appIntent })
+        sendDACPResponse({ response, instanceId, transport })
+        return
+      }
     } else if (handlers.runningListeners.length > 0) {
       targetInstanceId = handlers.runningListeners[0].instanceId
     } else if (handlers.availableApps.length > 0) {
@@ -157,60 +179,34 @@ export async function handleRaiseIntentRequest(
 
     const requestId = message.meta.requestUuid
 
-    // Store pending intent state (resolve/reject not needed - we use timeouts and direct responses)
-    context.pendingIntentPromises.set(requestId, {
-      resolve: () => {},
-      reject: () => {},
-      requestType: "raiseIntentRequest",
-    })
+    registerPendingIntentPromise(context, requestId, "raiseIntentRequest")
 
     const targetInstance = getInstance(getState(), targetInstanceId)
     const resolvedTargetAppId = targetInstance?.appId ?? targetAppId ?? source.appId
 
-    setState(state =>
-      addPendingIntent(state, {
-        requestId,
-        intentName: payload.intent,
-        context: validatedContext,
-        sourceInstanceId: instanceId,
-        targetInstanceId,
-        targetAppId: resolvedTargetAppId,
-      })
+    // Keep pending intent in both runtime map (timeouts/delivery state) and serializable state (routing/result lifecycle).
+    registerPendingIntentState(context, {
+      requestId,
+      intentName: payload.intent,
+      context: validatedContext,
+      sourceInstanceId: instanceId,
+      targetInstanceId,
+      targetAppId: resolvedTargetAppId,
+    })
+
+    // Newly launched apps may not have registered listeners yet, so queue delivery until ready.
+    schedulePendingIntentDelivery(
+      context,
+      requestId,
+      targetInstanceId,
+      payload.intent,
+      targetInstanceIsLaunched
     )
 
-    const shouldWaitForListener =
-      targetInstanceIsLaunched || !isIntentListenerReady(context, targetInstanceId, payload.intent)
-
-    if (shouldWaitForListener) {
-      queueIntentDelivery(context, requestId, true)
-    } else {
-      attemptIntentDelivery(context, requestId, false)
-    }
-
-    const timeoutHandle = setTimeout(() => {
-      if (context.pendingIntentPromises.has(requestId)) {
-        context.pendingIntentPromises.delete(requestId)
-        setState(state => resolvePendingIntent(state, requestId))
-      }
-    }, 30000)
-
-    const promiseData = context.pendingIntentPromises.get(requestId)
-    if (promiseData) {
-      promiseData.timeoutHandle = timeoutHandle
-    }
+    attachPendingIntentTimeout(context, requestId)
   } catch (error) {
-    // Clean up any partial pending intent state
     const requestId = message.meta.requestUuid
-    const pendingEntry = context.pendingIntentPromises.get(requestId)
-    if (pendingEntry) {
-      if (pendingEntry.timeoutHandle) {
-        clearTimeout(pendingEntry.timeoutHandle)
-      }
-      if (pendingEntry.deliveryTimeoutHandle) {
-        clearTimeout(pendingEntry.deliveryTimeoutHandle)
-      }
-      context.pendingIntentPromises.delete(requestId)
-    }
+    cleanupPendingIntentRequest(context, requestId)
 
     const payload = message.payload
     const contextPayload = payload?.context as Record<string, unknown> | undefined
@@ -222,18 +218,8 @@ export async function handleRaiseIntentRequest(
       contextHasName: typeof contextPayload?.name === "string",
     })
 
-    let errorType: ResolveError = ResolveError.IntentDeliveryFailed
+    const errorType = mapIntentRaiseErrorToResolveError(error)
     const errorMessage = error instanceof Error ? error.message : String(error)
-
-    if (error instanceof NoAppsFoundError) {
-      errorType = ResolveError.NoAppsFound
-    } else if (error instanceof TargetAppUnavailableError) {
-      errorType = ResolveError.TargetAppUnavailable
-    } else if (error instanceof TargetInstanceUnavailableError) {
-      errorType = ResolveError.TargetInstanceUnavailable
-    } else if (error instanceof FDC3ResolveError) {
-      errorType = error.errorType
-    }
 
     sendDACPErrorResponse({
       message,

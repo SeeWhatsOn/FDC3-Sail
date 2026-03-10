@@ -4,7 +4,7 @@ import {
 } from "../../dacp-protocol/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
-import { getEventListeners } from "./event-handlers"
+import { getEventListeners, ALL_DA_EVENT_TYPES } from "./event-handlers"
 import {
   getInstance,
   getUserChannel,
@@ -18,7 +18,11 @@ import {
 import { joinChannel, createAppChannel } from "../../state/mutators"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
-import { ChannelAccessDeniedError, FDC3ChannelError } from "../../errors/fdc3-errors"
+import {
+  ChannelAccessDeniedError,
+  FDC3ChannelError,
+  NoChannelFoundError,
+} from "../../errors/fdc3-errors"
 
 /**
  * Handles get current channel requests
@@ -100,7 +104,7 @@ export function handleJoinUserChannelRequest(
     // Validate channel exists in user channels
     const state = getState()
     if (!getUserChannel(state, channelId)) {
-      throw new Error(`Channel ${channelId} does not exist`)
+      throw new NoChannelFoundError(`Channel ${channelId} does not exist`)
     }
 
     // Avoid duplicate current-context delivery on redundant joins (e.g. reconnect flows).
@@ -232,7 +236,7 @@ export function handleGetCurrentContextRequest(
     const channelId = payload.channelId ?? instance?.currentChannel
 
     if (!channelId) {
-      throw new Error("No channel specified and app is not on a channel")
+      throw new NoChannelFoundError("No channel specified and app is not on a channel")
     }
 
     // Get the last broadcast context for the channel
@@ -400,7 +404,9 @@ function notifyChannelChanged(
   }
 
   const state = getState()
-  const subscribers = getEventListeners("channelChanged", context.getState)
+  const channelListeners = getEventListeners("channelChanged", context.getState)
+  const allListeners = getEventListeners(ALL_DA_EVENT_TYPES, context.getState)
+  const subscribers = [...new Set([...channelListeners, ...allListeners])]
   const subscriberInstanceIds = new Set(
     subscribers
       .map(listenerId => getEventListener(state, listenerId))

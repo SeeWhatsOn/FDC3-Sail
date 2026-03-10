@@ -98,7 +98,7 @@ Feature: Raising Intents For Context
     Then "raiseIntentForContextResponse" response intent "ViewChart" includes app "portfolioApp" with instanceId "{null}"
     Then "raiseIntentForContextResponse" response intent "ViewChart" includes app "listenerApp" with instanceId "{null}"
 
-  @conformance2.2 @failing
+  @conformance2.2
   Scenario: User Cancels The Intent Resolver Returns UserCancelledResolution
     Given the mock intent resolver will cancel the resolution
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.portfolio" [fdc3.raiseIntentForContext]
@@ -106,7 +106,7 @@ Feature: Raising Intents For Context
       | msg.matches_type              | msg.payload.error       | to.instanceId |
       | raiseIntentForContextResponse | UserCancelledResolution | a1            |
 
-  @conformance2.2 @failing
+  @conformance2.2
   Scenario: Raising An Intent For Context With Malformed Context Returns MalformedContext
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.malformed" [fdc3.raiseIntentForContext]
     Then messaging will have outgoing posts

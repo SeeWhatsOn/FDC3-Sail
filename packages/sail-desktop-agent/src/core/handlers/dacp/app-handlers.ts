@@ -1,13 +1,13 @@
 import { createDACPSuccessResponse } from "../../dacp-protocol/dacp-message-creators"
-import { DACP_ERROR_TYPES } from "../../dacp-protocol/dacp-constants"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
-import { OpenError } from "@finos/fdc3"
+import { OpenError, ResolveError } from "@finos/fdc3"
 import { AppNotFoundError, ErrorOnLaunchError } from "../../errors/fdc3-errors"
 import type { DirectoryApp } from "../../app-directory/types"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
 import { registerOpenWithContext } from "./utils/open-with-context"
+import { isValidContext } from "./utils/context-validation"
 
 /**
  * Handles getInfoRequest to return implementation metadata.
@@ -56,7 +56,7 @@ export function handleGetInfoRequest(
     logger.error("DACP: getInfoRequest failed", error)
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.API_TIMEOUT,
+      errorType: OpenError.ApiTimeout,
       errorMessage: error instanceof Error ? error.message : "Failed to get implementation info",
       instanceId,
       transport,
@@ -84,6 +84,17 @@ export async function handleOpenRequest(
     const appId = payload.app.appId
     const targetInstanceId = payload.app.instanceId
     const launchContext = payload.context
+
+    if (launchContext !== undefined && !isValidContext(launchContext)) {
+      sendDACPErrorResponse({
+        message,
+        errorType: OpenError.MalformedContext,
+        errorMessage: "Invalid context: context must be an object with a string type property",
+        instanceId,
+        transport,
+      })
+      return
+    }
 
     // Get app metadata from directory
     const apps = appDirectory.retrieveAppsById(appId)
@@ -139,6 +150,8 @@ export async function handleOpenRequest(
       errorType = error.errorType
     } else if (errorMessage.includes("not found") || errorMessage.includes("App not found")) {
       errorType = OpenError.AppNotFound
+    } else if (errorMessage.includes("Invalid context") || errorMessage.includes("Malformed")) {
+      errorType = OpenError.MalformedContext
     }
 
     sendDACPErrorResponse({
@@ -183,7 +196,7 @@ export function handleFindInstancesRequest(
     logger.error("DACP: findInstancesRequest failed", error)
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.APP_NOT_FOUND,
+      errorType: OpenError.AppNotFound,
       errorMessage: error instanceof Error ? error.message : "Failed to find app instances",
       instanceId,
       transport,
@@ -296,7 +309,7 @@ export function handleGetAppMetadataRequest(
     logger.error("DACP: getAppMetadataRequest failed", error)
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.TARGET_APP_UNAVAILABLE,
+      errorType: ResolveError.TargetAppUnavailable,
       errorMessage: error instanceof Error ? error.message : "Failed to get app metadata",
       instanceId,
       transport,

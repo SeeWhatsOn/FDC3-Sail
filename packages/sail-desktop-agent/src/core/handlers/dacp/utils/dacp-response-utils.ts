@@ -4,9 +4,7 @@ import {
   createDACPErrorResponse,
   type DACPRequestLike,
 } from "../../../dacp-protocol/dacp-message-creators"
-import type { DACPErrorType } from "../../../dacp-protocol/dacp-constants"
 import type { DACPResponseType } from "../../../dacp-protocol/dacp-messages"
-import type { ResolveError, OpenError, ChannelError } from "@finos/fdc3"
 
 /**
  * Options for sending a DACP response
@@ -42,8 +40,8 @@ export function sendDACPResponse(options: SendDACPResponseOptions): void {
 export interface SendDACPErrorResponseOptions {
   /** Original request message (must have type and meta.requestUuid) */
   message: DACPRequestLike
-  /** DACP error type or FDC3 error enum (e.g., ResolveError.NoAppsFound, OpenError.AppNotFound, ChannelError.NoChannelFound) */
-  errorType: DACPErrorType | ResolveError | OpenError | ChannelError
+  /** FDC3 response payload error (use OpenError, ResolveError, ChannelError, ResultError, BridgingError from @finos/fdc3) */
+  errorType: BrowserTypes.ResponsePayloadError
   /** Human-readable error message */
   errorMessage: string
   /** The target instance ID for routing */

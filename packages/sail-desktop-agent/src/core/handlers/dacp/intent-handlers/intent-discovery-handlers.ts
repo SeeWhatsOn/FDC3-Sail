@@ -5,11 +5,12 @@
  */
 
 import { createDACPSuccessResponse } from "../../../dacp-protocol/dacp-message-creators"
-import { DACP_ERROR_TYPES } from "../../../dacp-protocol/dacp-constants"
 import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
+import { ResolveError } from "@finos/fdc3"
 import { createAppIntents, findIntentsByContext } from "./intent-helpers"
+import { isValidContext } from "../utils/context-validation"
 
 export function handleFindIntentRequest(
   message: BrowserTypes.FindIntentRequest,
@@ -19,6 +20,16 @@ export function handleFindIntentRequest(
 
   try {
     const payload = message.payload
+    if (payload.context !== undefined && !isValidContext(payload.context)) {
+      sendDACPErrorResponse({
+        message,
+        errorType: ResolveError.MalformedContext,
+        errorMessage: "Invalid context: context must be an object with a string type property",
+        instanceId,
+        transport,
+      })
+      return
+    }
     const intent = payload.intent
     const contextType = payload.context?.type
     const resultType = payload.resultType
@@ -38,7 +49,7 @@ export function handleFindIntentRequest(
     logger.error("DACP: Find intent request failed", error)
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.NO_APPS_FOUND,
+      errorType: ResolveError.NoAppsFound,
       errorMessage: error instanceof Error ? error.message : "Failed to find apps for intent",
       instanceId,
       transport,
@@ -54,12 +65,18 @@ export function handleFindIntentsByContextRequest(
 
   try {
     const payload = message.payload
-    const contextType = payload.context?.type
-    const resultType = payload.resultType ?? undefined
-
-    if (!contextType) {
-      throw new Error("Context type is required for findIntentsByContext")
+    if (!isValidContext(payload.context)) {
+      sendDACPErrorResponse({
+        message,
+        errorType: ResolveError.MalformedContext,
+        errorMessage: "Invalid context: context must be an object with a string type property",
+        instanceId,
+        transport,
+      })
+      return
     }
+    const contextType = payload.context.type
+    const resultType = payload.resultType ?? undefined
 
     logger.info("DACP: Finding intents for context type", { contextType, resultType })
 
@@ -88,7 +105,7 @@ export function handleFindIntentsByContextRequest(
     logger.error("DACP: Find intents by context request failed", error)
     sendDACPErrorResponse({
       message,
-      errorType: DACP_ERROR_TYPES.NO_APPS_FOUND,
+      errorType: ResolveError.NoAppsFound,
       errorMessage:
         error instanceof Error ? error.message : "Failed to find intents for context type",
       instanceId,

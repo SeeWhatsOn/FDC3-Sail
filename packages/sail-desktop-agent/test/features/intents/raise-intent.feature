@@ -174,7 +174,7 @@ Feature: Raising Intents
       | msg.payload.error | msg.type            |
       | NoAppsFound       | raiseIntentResponse |
 
-  @conformance2.2 @failing
+  @conformance2.2
   Scenario: User Cancels The Intent Resolver Returns UserCancelledResolution
     Given the mock intent resolver will cancel the resolution
     When "appId: App1, instanceId: a1" raises an intent for "ViewChart" with contextType "fdc3.portfolio" [fdc3.raiseIntent]
@@ -182,7 +182,7 @@ Feature: Raising Intents
       | msg.matches_type    | msg.payload.error       | to.instanceId |
       | raiseIntentResponse | UserCancelledResolution | a1            |
 
-  @conformance2.2 @failing
+  @conformance2.2
   Scenario: Raising An Intent With Malformed Context Returns MalformedContext
     When "appId: App1, instanceId: a1" raises an intent for "ViewChart" with contextType "fdc3.malformed" [fdc3.raiseIntent]
     Then messaging will have outgoing posts

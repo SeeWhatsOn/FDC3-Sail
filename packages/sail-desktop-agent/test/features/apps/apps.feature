@@ -171,7 +171,7 @@ Feature: Opening and Requesting App Details
       | msg.matches_type      | msg.payload.appIdentifiers.length | msg.payload.appIdentifiers[0].instanceId | msg.payload.appIdentifiers[1].instanceId | to.instanceId | msg.payload.appId |
       | findInstancesResponse |                                 2 | b1                                       | b2                                       | a1            | {null}            |
 
-  @conformance2.2 @failing
+  @conformance2.2
   Scenario: Opening An App With Malformed Context Returns MalformedContext
     When "appId: portfolioApp, instanceId: a1" opens app "chartApp" with context data "fdc3.malformed" [fdc3.open]
     Then messaging will have outgoing posts

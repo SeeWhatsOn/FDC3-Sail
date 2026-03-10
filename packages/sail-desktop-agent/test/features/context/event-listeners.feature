@@ -75,7 +75,6 @@ Feature: Desktop Agent Event Listeners
       | joinUserChannelResponse  | a2            | {null}                   |
 
   @conformance2.2
-  @failing
   Scenario: addEventListener with null type subscribes to all event types
     When "appId: App1, instanceId: a1" adds an event listener for all event types [fdc3.addEventListener]
     And "appId: App2, instanceId: a2" joins user channel "one" [fdc3.joinUserChannel]

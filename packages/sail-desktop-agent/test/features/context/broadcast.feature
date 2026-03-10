@@ -57,7 +57,7 @@ Feature: Relaying Broadcast messages
       | broadcastResponse          | a1            |
     And messaging will have 2 posts
 
-  @conformance2.2 @failing
+  @conformance2.2
   Scenario: Broadcast With Malformed Context Returns MalformedContext Error
     When "appId: App1, instanceId: a1" broadcasts "fdc3.malformed" on "one" [fdc3.broadcast]
     Then messaging will have outgoing posts

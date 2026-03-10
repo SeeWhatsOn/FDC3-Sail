@@ -57,7 +57,7 @@ Feature: Intent Results Are Correctly Delivered
       | raiseIntentResultResponse | {null}             | App1         | a1            | {null}                             | {null}                                         | {null}                                |
       | intentResultResponse      | {null}             | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
 
-  @conformance2.2 @failing
+  @conformance2.2
   Scenario: IntentResolution.getResult() rejects with NoResultReturned when handler returns nothing
     When "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: PortfolioApp, instanceId: l1" with requestUuid "RES001" [fdc3.raiseIntent]
     And "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "{lastIntentEventUuid}" and no result returned and raiseIntentUuid "RES001" [IntentResolution.getResult]
@@ -65,7 +65,7 @@ Feature: Intent Results Are Correctly Delivered
       | msg.matches_type          | to.appId | to.instanceId | msg.payload.error |
       | raiseIntentResultResponse | App1     | a1            | NoResultReturned  |
 
-  @conformance2.2 @failing
+  @conformance2.2
   Scenario: IntentResolution.getResult() rejects with IntentHandlerRejected when handler promise rejects
     When "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: PortfolioApp, instanceId: l1" with requestUuid "RES002" [fdc3.raiseIntent]
     And "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "{lastIntentEventUuid}" and handler rejection and raiseIntentUuid "RES002" [IntentResolution.getResult]

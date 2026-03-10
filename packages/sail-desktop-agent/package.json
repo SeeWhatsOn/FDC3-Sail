@@ -28,7 +28,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "test": "vitest",
+    "test": "vitest run && cucumber-js",
     "test:cucumber": "cucumber-js",
     "test:cucumber:report": "FORCE_COLOR=false cucumber-js --publish",
     "test:cucumber:watch": "cucumber-js --watch",

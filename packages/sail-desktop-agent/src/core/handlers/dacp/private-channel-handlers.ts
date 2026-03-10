@@ -7,7 +7,11 @@ import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
-import { FDC3ChannelError, ChannelCreationFailedError } from "../../errors/fdc3-errors"
+import {
+  FDC3ChannelError,
+  ChannelCreationFailedError,
+  NoChannelFoundError,
+} from "../../errors/fdc3-errors"
 import { getInstance, getPrivateChannel } from "../../state/selectors"
 import {
   createPrivateChannel,
@@ -98,7 +102,7 @@ export function handlePrivateChannelDisconnectRequest(
     const state = getState()
     const channel = getPrivateChannel(state, channelId)
     if (!channel) {
-      throw new Error(`Private channel ${channelId} not found`)
+      throw new NoChannelFoundError(`Private channel ${channelId} not found`)
     }
 
     // Verify the instance is connected to this channel
@@ -170,7 +174,7 @@ export function handlePrivateChannelAddContextListenerRequest(
     const state = getState()
     const channel = getPrivateChannel(state, channelId)
     if (!channel) {
-      throw new Error(`Private channel ${channelId} not found`)
+      throw new NoChannelFoundError(`Private channel ${channelId} not found`)
     }
 
     if (!channel.connectedInstances.includes(instanceId)) {

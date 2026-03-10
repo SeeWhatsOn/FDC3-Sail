@@ -7,12 +7,34 @@
 import type { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import type { AgentState } from "../../../state/types"
 import { AppInstanceState } from "../../../state/types"
+import type { IntentHandlerOption } from "../../types"
 import {
   getActiveListenersForIntent,
   getInstance,
   getInstancesByAppId,
 } from "../../../state/selectors"
 import { isContextTypeCompatible, isResultTypeCompatible } from "./intent-helpers"
+
+/**
+ * Convert resolver app list to IntentHandlerOption[] for requestIntentResolution.
+ * isRunning is true when the app has an instanceId and that instance is not terminated.
+ */
+export function appsToIntentHandlerOptions(
+  state: AgentState,
+  apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }>
+): IntentHandlerOption[] {
+  return apps.map(app => {
+    const isRunning =
+      !!app.instanceId && getInstance(state, app.instanceId)?.state !== AppInstanceState.TERMINATED
+    return {
+      appId: app.appId,
+      name: app.name,
+      version: app.version,
+      instanceId: app.instanceId,
+      isRunning,
+    }
+  })
+}
 
 /**
  * Helper to create AppIntent objects for intent resolver responses.

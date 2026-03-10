@@ -4,9 +4,8 @@
  * Factory functions for creating DACP protocol messages following the FDC3 specification.
  */
 
-import type { BrowserTypes, ResolveError, OpenError, ChannelError } from "@finos/fdc3"
+import type { BrowserTypes } from "@finos/fdc3"
 import type { DACPResponseType } from "./dacp-messages"
-import type { DACPErrorType } from "./dacp-constants"
 
 export interface DACPRequestLike {
   type: string
@@ -18,15 +17,12 @@ export interface DACPRequestLike {
 /**
  * Creates a DACP error response following the specification format.
  * Accepts any object with meta.requestUuid (typically a DACPMessage).
- * errorType can be a DACPErrorType or an FDC3 error enum value (string).
- *
- * Note: DACP protocol may use some error strings that differ from FDC3 API enums:
- * - DACP uses "AppLaunchFailed" but FDC3 uses "ErrorOnLaunch" for the same concept
- * - DACP uses generic "ChannelError" which doesn't map to a specific FDC3 enum value
+ * errorType must be a valid ResponsePayloadError from the FDC3 schema (use
+ * OpenError, ResolveError, ChannelError, ResultError, BridgingError from @finos/fdc3).
  */
 export function createDACPErrorResponse(
   originalRequest: DACPRequestLike,
-  errorType: DACPErrorType | ResolveError | OpenError | ChannelError,
+  errorType: BrowserTypes.ResponsePayloadError,
   responseType: DACPResponseType,
   errorMessage?: string
 ): BrowserTypes.AgentResponseMessage {

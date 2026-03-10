@@ -12,6 +12,9 @@ import {
 } from "../../state/mutators"
 import type { AgentState } from "../../state/types"
 
+/** Sentinel event type: when addEventListener(type: null) is used, subscribe to all DA-level events (FDC3 2.2) */
+export const ALL_DA_EVENT_TYPES = "all"
+
 /**
  * Handles addEventListenerRequest for DA-level events
  */
@@ -29,21 +32,18 @@ export function handleAddEventListenerRequest(
     }
 
     const { type: eventType } = message.payload
-    if (!eventType) {
-      throw new Error("Event type is required")
-    }
 
-    // Validate event type
-    // FDC3 2.2 uses "USER_CHANNEL_CHANGED" as the canonical event type name.
-    // We also accept "userChannelChanged" (camelCase) and "channelChanged" for compatibility.
+    // FDC3 2.2: null/undefined type means subscribe to all DA-level events
     const validEventTypes = ["channelChanged", "USER_CHANNEL_CHANGED", "userChannelChanged"]
-    if (!validEventTypes.includes(eventType)) {
+    let normalizedEventType: string
+    if (eventType === null || eventType === undefined) {
+      normalizedEventType = ALL_DA_EVENT_TYPES
+    } else if (validEventTypes.includes(eventType)) {
+      // Normalize all variants to "channelChanged" so listeners receive the same events
+      normalizedEventType = "channelChanged"
+    } else {
       throw new Error(`Unsupported event type: ${eventType}`)
     }
-
-    // Normalize all variants to "channelChanged" so listeners receive the same events
-    // regardless of which variant was used to register.
-    const normalizedEventType = "channelChanged"
 
     const listenerId = message.meta.requestUuid
 
@@ -62,7 +62,11 @@ export function handleAddEventListenerRequest(
 
     sendDACPResponse({ response, instanceId, transport })
 
-    logger.info("DACP: Event listener added", { instanceId, eventType, listenerId })
+    logger.info("DACP: Event listener added", {
+      instanceId,
+      eventType: normalizedEventType,
+      listenerId,
+    })
   } catch (error) {
     logger.error("DACP: Add event listener failed", error)
 

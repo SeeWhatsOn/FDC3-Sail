@@ -11,7 +11,7 @@ import { ResolveError, OpenError, ChannelError } from "@finos/fdc3"
  * - Some differences exist:
  *   - DACP uses "AppLaunchFailed" but FDC3 uses "ErrorOnLaunch" for the same concept
  *   - DACP uses generic "ChannelError" which doesn't map to a specific FDC3 enum value
- * - The sendDACPErrorResponse utility accepts both DACPErrorType and FDC3 error enums
+ * - The sendDACPErrorResponse utility accepts BrowserTypes.ResponsePayloadError (FDC3 enums are valid)
  * - When using these error classes, the FDC3 enum value is extracted and used in DACP responses
  */
 

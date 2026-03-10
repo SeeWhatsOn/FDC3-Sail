@@ -6,7 +6,7 @@ import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
-import { FDC3ChannelError } from "../../errors/fdc3-errors"
+import { FDC3ChannelError, NoChannelFoundError } from "../../errors/fdc3-errors"
 import {
   getAppChannel,
   getChannelContext,
@@ -32,6 +32,7 @@ import {
   notifyPrivateChannelUnsubscribe,
 } from "./private-channel-handlers"
 import { notifyContextListenerAdded } from "./utils/open-with-context"
+import { isValidContext } from "./utils/context-validation"
 
 /**
  * Handles broadcast requests to send context to a channel
@@ -47,6 +48,17 @@ export async function handleBroadcastRequest(
 
   try {
     const { channelId: payloadChannelId, context: broadcastContext } = message.payload
+
+    if (!isValidContext(broadcastContext)) {
+      sendDACPErrorResponse({
+        message,
+        errorType: ChannelError.MalformedContext,
+        errorMessage: "Invalid context: context must be an object with a string type property",
+        instanceId,
+        transport,
+      })
+      return
+    }
 
     // Validate that the instance is a member of the channel they're broadcasting to
     const state = getState()
@@ -67,7 +79,7 @@ export async function handleBroadcastRequest(
     const appChannel = getAppChannel(state, channelId)
     const privateChannel = getPrivateChannel(state, channelId)
     if (!userChannel && !appChannel && !privateChannel) {
-      throw new Error(`Channel ${channelId} does not exist`)
+      throw new NoChannelFoundError(`Channel ${channelId} does not exist`)
     }
 
     if (userChannel && instance.currentChannel !== channelId && !payloadChannelId) {
@@ -153,7 +165,7 @@ export function handleAddContextListener(
       const privateChannel = getPrivateChannel(state, channelId)
 
       if (!userChannel && !appChannel && !privateChannel) {
-        throw new Error(`Channel ${channelId} does not exist`)
+        throw new NoChannelFoundError(`Channel ${channelId} does not exist`)
       }
 
       if (appChannel) {
