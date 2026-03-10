@@ -151,7 +151,7 @@ export async function handleRaiseIntentForContextRequest(
       validatedContext.type
     )
 
-    let selectedIntent = intentCandidates[0]
+    const selectedIntent = intentCandidates[0]
     let targetInstanceId: string | undefined
     let targetInstanceIsLaunched = false
 
@@ -163,6 +163,8 @@ export async function handleRaiseIntentForContextRequest(
       }
 
       if (context.requestIntentResolution) {
+        // Keep cancellation semantics for environments that provide an out-of-band resolver callback,
+        // but always return chooser data to the requesting app for multi-intent context resolution.
         const firstIntent = intentCandidates[0]
         const firstAppIntent = createResolverAppIntent(
           getState(),
@@ -186,23 +188,13 @@ export async function handleRaiseIntentForContextRequest(
         if (resolution.selectedHandler === null) {
           throw new UserCancelledError("User cancelled intent resolution")
         }
-        selectedIntent = firstIntent
-        const selected = resolution.selectedHandler
-        const resolvedTarget = await resolveAppTargetInstance(context, {
-          appId: selected.appId,
-          validatedContext,
-          preferredInstanceId: selected.instanceId,
-        })
-        targetInstanceId = resolvedTarget.targetInstanceId
-        targetInstanceIsLaunched = resolvedTarget.targetInstanceIsLaunched
       }
-      if (!context.requestIntentResolution) {
-        const response = createDACPSuccessResponse(message, "raiseIntentForContextResponse", {
-          appIntents,
-        })
-        sendDACPResponse({ response, instanceId, transport })
-        return
-      }
+
+      const response = createDACPSuccessResponse(message, "raiseIntentForContextResponse", {
+        appIntents,
+      })
+      sendDACPResponse({ response, instanceId, transport })
+      return
     } else {
       const state = getState()
       const handlers = findIntentHandlers(state, appDirectory, {

@@ -51,6 +51,12 @@ export function createResolverAppIntent(
   apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }>
 } {
   const apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }> = []
+  let runningListeners = getActiveListenersForIntent(state, intentName)
+  if (contextType) {
+    runningListeners = runningListeners.filter(listener =>
+      isContextTypeCompatible(listener.contextTypes, contextType)
+    )
+  }
 
   const allApps = appDirectory.retrieveAllApps()
   const directoryMatches = allApps.filter(app => {
@@ -89,13 +95,6 @@ export function createResolverAppIntent(
   })
 
   // 2) Running instances for dynamic listeners not in directory (registration order).
-  let runningListeners = getActiveListenersForIntent(state, intentName)
-  if (contextType) {
-    runningListeners = runningListeners.filter(listener =>
-      isContextTypeCompatible(listener.contextTypes, contextType)
-    )
-  }
-
   const validRunningListeners = runningListeners.filter(listener => {
     const instance = getInstance(state, listener.instanceId)
     return instance && instance.state !== AppInstanceState.TERMINATED

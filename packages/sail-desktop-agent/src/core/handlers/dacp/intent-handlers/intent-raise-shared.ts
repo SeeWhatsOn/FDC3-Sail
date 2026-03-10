@@ -9,7 +9,11 @@ import {
   TargetAppUnavailableError,
   TargetInstanceUnavailableError,
 } from "../../../errors/fdc3-errors"
-import { attemptIntentDelivery, isIntentListenerReady, queueIntentDelivery } from "./intent-delivery-helpers"
+import {
+  attemptIntentDelivery,
+  isIntentListenerReady,
+  queueIntentDelivery,
+} from "./intent-delivery-helpers"
 import type { DACPHandlerContext, IntentRequestType } from "../../types"
 import { launchAppAndWaitForInstance } from "./intent-helpers"
 
@@ -34,9 +38,7 @@ type ResolveAppTargetInstanceOptions = {
   runningListenerInstanceId?: string
 }
 
-export function normalizeTargetApp(
-  target: unknown
-): NormalizedTargetApp | undefined {
+export function normalizeTargetApp(target: unknown): NormalizedTargetApp | undefined {
   if (!target) {
     return undefined
   }

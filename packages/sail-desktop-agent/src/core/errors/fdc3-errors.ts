@@ -69,7 +69,7 @@ export class IntentDeliveryFailedError extends FDC3ResolveError {
  */
 export class UserCancelledError extends FDC3ResolveError {
   constructor(message: string) {
-    super(ResolveError.UserCancelled, message)
+    super((ResolveError.UserCancelled || "UserCancelledResolution") as ResolveError, message)
   }
 }
 

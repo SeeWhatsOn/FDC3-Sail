@@ -11,7 +11,7 @@ import {
 } from "../../../errors/fdc3-errors"
 import { getInstance, getInstancesByAppId } from "../../../state/selectors"
 import { findIntentHandlers, launchAppAndWaitForInstance } from "./intent-helpers"
-import { createResolverAppIntent, appsToIntentHandlerOptions } from "./intent-resolver-helpers"
+import { appsToIntentHandlerOptions, createResolverAppIntent } from "./intent-resolver-helpers"
 import { isDirectoryIntentCompatible } from "./intent-directory-helpers"
 import { isValidContext } from "../utils/context-validation"
 import {
@@ -137,33 +137,19 @@ export async function handleRaiseIntentRequest(
         validatedContext.type
       )
       if (context.requestIntentResolution) {
-        const requestId = message.meta.requestUuid
-        const handlerOptions = appsToIntentHandlerOptions(getState(), appIntent.apps)
         const resolution = await context.requestIntentResolution({
-          requestId,
+          requestId: message.meta.requestUuid,
           intent: payload.intent,
           context: validatedContext,
-          handlers: handlerOptions,
+          handlers: appsToIntentHandlerOptions(getState(), appIntent.apps),
         })
-        // When resolver returns no selection we treat it as user cancellation (FDC3 ResolveError.UserCancelled).
-        // TODO: selectedHandler is the only signal; consider explicit outcome (e.g. 'cancelled' | 'timeout') and unit test.
-
-        if (resolution.selectedHandler === null) {
+        if (resolution.selectedHandler == null) {
           throw new UserCancelledError("User cancelled intent resolution")
         }
-        const selected = resolution.selectedHandler
-        const resolvedTarget = await resolveAppTargetInstance(context, {
-          appId: selected.appId,
-          validatedContext,
-          preferredInstanceId: selected.instanceId,
-        })
-        targetInstanceId = resolvedTarget.targetInstanceId
-        targetInstanceIsLaunched = resolvedTarget.targetInstanceIsLaunched
-      } else {
-        const response = createDACPSuccessResponse(message, "raiseIntentResponse", { appIntent })
-        sendDACPResponse({ response, instanceId, transport })
-        return
       }
+      const response = createDACPSuccessResponse(message, "raiseIntentResponse", { appIntent })
+      sendDACPResponse({ response, instanceId, transport })
+      return
     } else if (handlers.runningListeners.length > 0) {
       targetInstanceId = handlers.runningListeners[0].instanceId
     } else if (handlers.availableApps.length > 0) {
