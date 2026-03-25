@@ -9,7 +9,10 @@
     "electron:start": "npm run dev -w packages/electron",
     "test": "npm run test --workspaces --if-present",
     "lint": "eslint .",
-    "start": "concurrently -n \"WEB,ELECTRON\" -c \"blue,green\" \"npm run web:dev\" \"wait-on -l -i 1000 -t 60000 -w 1000 tcp:localhost:8090 && npm run electron:start\""
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "start": "concurrently -n \"WEB,ELECTRON\" -c \"blue,green\" \"npm run web:dev\" \"wait-on -l -i 1000 -t 60000 -w 1000 tcp:localhost:8090 && npm run electron:start\"",
+    "prepare": "husky"
   },
   "workspaces": [
     "packages/da-impl",
@@ -21,10 +24,17 @@
     "@eslint/js": "^9.22.0",
     "concurrently": "^8.2.2",
     "eslint": "^9.22.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.3.3",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.26.1"
   },
   "dependencies": {
     "wait-on": "^8.0.3"
+  },
+  "lint-staged": {
+    "packages/*/src/**/*.{ts,tsx}": "eslint --fix --max-warnings=0",
+    "**/*": "prettier --ignore-unknown --write"
   }
 }
