@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
       - name: Open Source Project Security Baseline Scanner
-        uses: seewhatson/osps-baseline-action@c3551283b66237c2946466135afd9a5def166e45 #v1.3.2
+        uses: seewhatson/osps-baseline-action@66c57eade6b2b027657e453ee3def2747dabe73c #v1.3.2
         with:
           owner: ${{ github.repository_owner }}
           repo: ${{ github.event.repository.name }}
