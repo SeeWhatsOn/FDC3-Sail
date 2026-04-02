@@ -21,7 +21,8 @@ jobs:
         uses: seewhatson/osps-baseline-action@sarif-fix
         with:
             scanner-build-from-source: true
-            scanner-source-ref: v0.14.1   # or main, or a commit SHA
+            #v0.14.1 - working version
+            scanner-source-ref: v0.17.0   # or main, or a commit SHA
             owner: ${{ github.repository_owner }}
             repo: ${{ github.event.repository.name }}
             token: ${{ secrets.PVTR_GITHUB_TOKEN }}
