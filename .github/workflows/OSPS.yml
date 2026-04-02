@@ -22,7 +22,7 @@ jobs:
         with:
             scanner-build-from-source: true
             #v0.14.1 - working version
-            scanner-source-ref: v0.22.1   # or main, or a commit SHA
+            scanner-source-ref: v0.22.0   # or main, or a commit SHA
             owner: ${{ github.repository_owner }}
             repo: ${{ github.event.repository.name }}
             token: ${{ secrets.PVTR_GITHUB_TOKEN }}
