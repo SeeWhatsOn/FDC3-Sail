@@ -15,10 +15,10 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
       
       - name: Open Source Project Security Baseline Scanner
-        uses: revanite-io/osps-baseline-action@v1.0.0
+        uses: revanite-io/osps-baseline-action@v1.1.0
         with:
             owner: ${{ github.repository_owner }}
             repo: ${{ github.event.repository.name }}
