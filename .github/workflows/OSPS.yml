@@ -21,7 +21,7 @@ jobs:
         # uses: seewhatson/osps-baseline-action@sarif-fix
         uses: revanite-io/osps-baseline-action@v1.3.2
         with:
-            scanner-build-from-source: true
+            #scanner-build-from-source: true
             #v0.14.1 - working version
             #scanner-source-ref: v0.22.1   # or main, or a commit SHA
             owner: ${{ github.repository_owner }}
