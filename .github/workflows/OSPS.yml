@@ -28,7 +28,7 @@ jobs:
             repo: ${{ github.event.repository.name }}
             token: ${{ secrets.PVTR_GITHUB_TOKEN }}
             catalog: "osps-baseline-2026-02"
-            upload-sarif: true
+            upload-sarif: "true"
       
       - name: Upload Assessment Results
         if: always()
