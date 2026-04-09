@@ -22,6 +22,28 @@ const TITLEBAR_HEIGHT = 32 // Height in pixels for the titlebar area
 // Define path to titlebar HTML in static folder
 const titlebarHtmlPath = path.join(__dirname, "..", "static", "titlebar.html")
 
+function buildChildWindowOptions(
+  options: Electron.BrowserWindowConstructorOptions,
+): Electron.BrowserWindowConstructorOptions {
+  return {
+    x: options.x,
+    y: options.y,
+    minWidth: options.minWidth,
+    minHeight: options.minHeight,
+    maxWidth: options.maxWidth,
+    maxHeight: options.maxHeight,
+    width: typeof options.width === "number" ? options.width : 600,
+    height: typeof options.height === "number" ? options.height : 400,
+    show: options.show,
+    backgroundColor: options.backgroundColor,
+    title: options.title,
+    // remove the default titlebar
+    titleBarStyle: "hidden",
+    // expose window controls in Windows/Linux
+    ...(process.platform !== "darwin" ? { titleBarOverlay: true } : {}),
+  }
+}
+
 async function createWindow() {
   // Create the main window with hidden titlebar but visible native controls
   const win = new BaseWindow({
@@ -144,15 +166,8 @@ async function createWindow() {
     return {
       action: "allow",
       createWindow: (options) => {
-        const win2 = new BaseWindow({
-          ...options,
-          width: 600,
-          height: 400,
-          // remove the default titlebar
-          titleBarStyle: "hidden",
-          // expose window controls in Windows/Linux
-          ...(process.platform !== "darwin" ? { titleBarOverlay: true } : {}),
-        })
+        // Avoid passing through arbitrary window.open features and keep webPreferences controlled.
+        const win2 = new BaseWindow(buildChildWindowOptions(options))
 
         // Create titlebar and content views for new window
         const newTitlebarView = new WebContentsView({
