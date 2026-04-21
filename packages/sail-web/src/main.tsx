@@ -1,8 +1,9 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { SailAppLauncher, SailPlatform } from "@finos/sail-platform-api"
+import { SailAppLauncher, SailPlatform, type DirectoryApp } from "@finos/sail-platform-api"
 import type { AppMetadata } from "@finos/fdc3"
 
+import defaultAppDirectory from "../../../fdc3-app-directory.json"
 import "./index.css"
 import App from "./App"
 import { useWorkspaceStore } from "./stores/workspace-store"
@@ -85,11 +86,8 @@ if (isChannelSelectorE2e) {
   const platform = new SailPlatform({
     debug: true,
     appLauncher,
+    apps: defaultAppDirectory.applications as unknown as DirectoryApp[],
   })
-
-  // Note: Apps can be loaded into the app directory via:
-  // const appDirectory = platform.agent.getAppDirectory()
-  // appDirectory.add(appDefinition)
 
   // Start the agent - this begins listening for WCP1Hello messages
   platform.start()
