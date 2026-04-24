@@ -16,6 +16,10 @@ defaults:
 jobs:
   lint-format-build:
     runs-on: ubuntu-latest
+    # setup-node cache: npm persists/restores npm cache via the Actions cache API
+    permissions:
+      contents: read
+      actions: write
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
