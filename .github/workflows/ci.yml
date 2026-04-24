@@ -38,3 +38,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Property tests (common)
+        run: npm run test -w @finos/fdc3-sail-common
