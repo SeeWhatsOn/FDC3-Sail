@@ -164,9 +164,11 @@ FDC3 is an open standard and there are other desktop agents available. You can f
 FDC3 Sail holds regular project meetings to discuss development progress, roadmap, and community contributions.
 
 **Join Meeting:**
+
 - [Join FDC3 Sail Meeting](https://zoom-lfx.platform.linuxfoundation.org/meeting/95252800112?password=90638454-991c-4ab0-8aed-791fc372623c)
 
 **Register for Meeting Series:**
+
 - [Register for FDC3 Sail Meetings (add to calendar)](https://zoom-lfx.platform.linuxfoundation.org/meeting/95252800112?password=90638454-991c-4ab0-8aed-791fc372623c&invite=true)
 
 Meeting agendas and minutes are tracked through GitHub issues with the `meeting` label.
