@@ -11,14 +11,17 @@ This guide will help you set up the FDC3 Microsoft Entra integration using your 
 ## Step 1: Create App Registration
 
 1. **Go to Azure Portal**
+
    - Navigate to [portal.azure.com](https://portal.azure.com)
    - Sign in with your Microsoft account
 
 2. **Access Entra ID**
+
    - Search for "Entra ID" in the search bar
    - Click on "Microsoft Entra ID"
 
 3. **Create New App Registration**
+
    - Click "App registrations" in the left menu
    - Click "New registration"
    - Fill in the details:
@@ -34,6 +37,7 @@ This guide will help you set up the FDC3 Microsoft Entra integration using your 
 ## Step 2: Configure Authentication
 
 1. **Add Redirect URI**
+
    - In your app registration, go to "Authentication"
    - Under "Single-page application", click "Add URI"
    - Add: `http://localhost:4006`
@@ -48,6 +52,7 @@ This guide will help you set up the FDC3 Microsoft Entra integration using your 
 ## Step 3: Set API Permissions
 
 1. **Add Microsoft Graph Permissions**
+
    - Go to "API permissions"
    - Click "Add a permission"
    - Select "Microsoft Graph"

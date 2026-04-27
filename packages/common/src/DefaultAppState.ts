@@ -1,6 +1,7 @@
 import { AppOpenDetails, AppState } from "./AppState"
 import { AppHosting } from "./app-hosting"
 import { DirectoryApp, WebAppDetails, State } from "@finos/fdc3-sail-da-impl"
+import { normalizeIdentityUrl } from "./normalizeIdentityUrl"
 import { SailAppStateArgs } from "./message-types"
 import { WebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { ServerState } from "./ServerState"
@@ -43,7 +44,7 @@ export class DefaultAppState implements AppState {
   }
 
   getDirectoryAppForUrl(identityUrl: string): DirectoryApp | undefined {
-    const strippedIdentityUrl = identityUrl.replace(/\/$/, "")
+    const strippedIdentityUrl = normalizeIdentityUrl(identityUrl)
     const applications: DirectoryApp[] = this.cs?.getKnownApps() ?? []
     const firstMatchingApp = applications.find((x) => {
       const d = x.details as WebAppDetails
