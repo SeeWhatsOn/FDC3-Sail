@@ -62,6 +62,30 @@ jobs:
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Debug SARIF and upload context
+        if: always()
+        run: |
+          set -euo pipefail
+          f="reports/semgrep.sarif"
+          echo "event=${{ github.event_name }}"
+          echo "repo=${{ github.repository }}"
+          echo "head_repo=${{ github.event.pull_request.head.repo.full_name || '' }}"
+          if [ -f "$f" ]; then
+            echo "sarif_exists=true"
+            ls -l "$f"
+            wc -c "$f"
+            python -c "import json; d=json.load(open('reports/semgrep.sarif','r',encoding='utf-8')); print(f\"sarif_runs={len(d.get('runs', []))}\"); print(f\"sarif_version={d.get('version')}\")"
+          else
+            echo "sarif_exists=false"
+          fi
+
+      - name: Upload SARIF artifact (debug)
+        if: always() && steps.sarif.outputs.ok == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-sarif
+          path: reports/semgrep.sarif
+
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
         uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 #v4.35.2
         if: |
