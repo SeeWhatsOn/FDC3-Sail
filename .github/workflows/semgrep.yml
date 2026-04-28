@@ -30,12 +30,22 @@ jobs:
       - name: Semgrep CI (Docker)
         run: |
           mkdir -p reports
-          docker run --rm \
-            -e SEMGREP_APP_TOKEN \
-            -v "$PWD:/src" \
-            -w /src \
-            semgrep/semgrep:latest \
-            semgrep ci --sarif --sarif-output=reports/semgrep.sarif
+          if [ -n "${SEMGREP_APP_TOKEN:-}" ]; then
+            echo "Running semgrep ci with Semgrep AppSec Platform token"
+            docker run --rm \
+              -e SEMGREP_APP_TOKEN \
+              -v "$PWD:/src" \
+              -w /src \
+              semgrep/semgrep:latest \
+              semgrep ci --sarif --sarif-output=reports/semgrep.sarif --no-suppress-errors
+          else
+            echo "SEMGREP_APP_TOKEN not set; running semgrep scan with p/ci rules"
+            docker run --rm \
+              -v "$PWD:/src" \
+              -w /src \
+              semgrep/semgrep:latest \
+              semgrep scan --config p/ci --sarif --sarif-output=reports/semgrep.sarif --error
+          fi
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
