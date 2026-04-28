@@ -21,26 +21,25 @@ jobs:
       contents: read
       actions: read
       security-events: write
-    # Do not use a job-level container: semgrep/semgrep has no Node.js, so
-    # github/codeql-action/upload-sarif runs on the host and cannot see files
-    # written only inside the container workspace (semgrep.sarif "missing").
+    # Keep job on host and run Semgrep via docker run. This ensures SARIF is
+    # written to the host workspace, where upload-sarif can access it.
     if: github.actor != 'dependabot[bot]'
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 #v6.2.0
-        with:
-          python-version: "3.12"
-      - name: Install Semgrep
-        run: python -m pip install --require-hashes -r .github/requirements-semgrep.txt
-      - name: Semgrep CI
+      - name: Semgrep CI (Docker)
         run: |
           mkdir -p reports
-          semgrep ci --sarif --sarif-output=reports/semgrep.sarif
+          docker run --rm \
+            -e SEMGREP_APP_TOKEN \
+            -v "$PWD:/src" \
+            -w /src \
+            semgrep/semgrep:latest \
+            semgrep ci --sarif --sarif-output=reports/semgrep.sarif
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
-      # failure() alone is unsafe: any earlier step failure (checkout, pip, …) still
+      # failure() alone is unsafe: any earlier step failure (checkout, semgrep, …) still
       # triggers upload-sarif, but semgrep.sarif was never written.
       - name: Check SARIF output
         id: sarif
