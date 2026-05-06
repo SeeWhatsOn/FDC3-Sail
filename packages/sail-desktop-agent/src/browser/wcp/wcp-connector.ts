@@ -239,33 +239,28 @@ export class WCPConnector extends WCPEventEmitter {
         : undefined
     const hasSourceField = !!currentMeta && "source" in currentMeta
     const isIdentityValidation = message.type === "WCP4ValidateAppIdentity"
-    const storedMessageOrigin = isIdentityValidation
-      ? this.connections.get(instanceId)?.messageOrigin
-      : undefined
-
-    // If we have nothing to add or normalize, return early.
-    if (!hasSourceField && !storedMessageOrigin) {
-      return message
-    }
+    const storedConnection = isIdentityValidation ? this.connections.get(instanceId) : undefined
+    const storedMessageOrigin = storedConnection?.messageOrigin
 
     const nextMeta = {
       ...(currentMeta ?? {}),
     } as typeof message.meta
 
-    // Normalize meta.source.instanceId for DA routing while preserving appId.
-    if (hasSourceField) {
-      ;(nextMeta as { source?: { appId?: string; instanceId?: string } }).source = {
-        appId: (currentMeta as { source?: { appId?: string } }).source?.appId,
-        instanceId,
-      }
+    // Always include source.instanceId for app->DesktopAgent routing.
+    // Some app messages (for example heartbeat acknowledgements) omit source.
+    ;(nextMeta as { source?: { appId?: string; instanceId?: string } }).source = {
+      appId: hasSourceField
+        ? (currentMeta as { source?: { appId?: string } }).source?.appId
+        : undefined,
+      instanceId,
     }
 
-    // For WCP4, ensure messageOrigin is propagated from the connection record.
+    // For WCP4, force messageOrigin from the original WCP1Hello event origin.
+    // This prevents apps from spoofing origin metadata during identity validation.
     const nextMetaRecord = nextMeta as unknown as Record<string, unknown>
-    if (storedMessageOrigin && !nextMetaRecord.messageOrigin) {
+    if (storedMessageOrigin) {
       nextMetaRecord.messageOrigin = storedMessageOrigin
     }
-
     return {
       ...message,
       meta: nextMeta,

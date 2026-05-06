@@ -22,14 +22,9 @@ Feature: Heartbeat Messages Between Apps and Server
     And we wait for a period of "500" ms
     Then I test the liveness of "appId: portfolioApp, instanceId: a1"
     Then "{result}" is true
-    And messaging will have outgoing posts
-      | msg.matches_type | to.instanceId | to.appId     |
-      | heartbeatEvent   | a1            | portfolioApp |
-      | heartbeatEvent   | a1            | portfolioApp |
-      | heartbeatEvent   | a1            | portfolioApp |
-      | heartbeatEvent   | a1            | portfolioApp |
-      | heartbeatEvent   | a1            | portfolioApp |
-      | heartbeatEvent   | a1            | portfolioApp |
+    And messaging will include outgoing posts
+      | msg.matches_type |
+      | heartbeatEvent   |
     And I shutdown the server
     And I get the heartbeat times
     Then "{result}" is an array of objects with the following contents

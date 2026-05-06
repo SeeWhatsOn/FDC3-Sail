@@ -137,7 +137,7 @@ export function createWCPClient(options: WCPClientOptions): WCPClientResult {
  */
 export interface BrowserDesktopAgentOptions extends Pick<
   DesktopAgentConfig,
-  "appLauncher" | "userChannels"
+  "appLauncher" | "userChannels" | "implementationMetadata"
 > {
   /**
    * WCP connector configuration
@@ -256,6 +256,7 @@ export function createBrowserDesktopAgent(
     transport: daTransport,
     appLauncher: options?.appLauncher,
     userChannels: options?.userChannels,
+    implementationMetadata: options?.implementationMetadata,
     logger,
     // Enable UI-based intent resolution via WCPConnector
     requestIntentResolution: request => wcpConnector.requestIntentResolution(request),

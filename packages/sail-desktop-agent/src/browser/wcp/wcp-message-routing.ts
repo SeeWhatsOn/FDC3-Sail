@@ -165,6 +165,17 @@ export function handleDesktopAgentMessage(message: unknown, context: WCPRoutingC
     }
   }
 
+  // On identity validation failure, route the failure response and then
+  // terminate the temporary MessageChannel as required by the WCP spec.
+  if (message.type === "WCP5ValidateAppIdentityFailedResponse") {
+    const appTransport = context.messagePortTransports.get(destinationId)
+    if (appTransport && appTransport.isConnected()) {
+      appTransport.send(message)
+    }
+    context.disconnectApp(destinationId)
+    return
+  }
+
   // Intercept channelChangedEvent to emit UI event
   // This allows the UI to update channel indicators
   if (message.type === "channelChangedEvent") {

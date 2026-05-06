@@ -181,5 +181,5 @@ Feature: Opening and Requesting App Details
   Scenario: Unknown App Attempts Reconnect
     When "uuid-0" revalidates
     Then messaging will have outgoing posts
-      | msg.type                              | msg.payload.message    |
-      | WCP5ValidateAppIdentityFailedResponse | App Instance not found |
+      | msg.type                              | msg.payload.message           |
+      | WCP5ValidateAppIdentityFailedResponse | App not found in app directory |

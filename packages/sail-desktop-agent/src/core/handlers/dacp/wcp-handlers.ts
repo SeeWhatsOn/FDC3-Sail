@@ -6,7 +6,6 @@
  * to validate their identity before sending DACP messages.
  */
 
-import type { AppMetadata } from "@finos/fdc3"
 import type {
   AppMetadata as SchemaAppMetadata,
   ImplementationMetadata,
@@ -20,10 +19,21 @@ import { startHeartbeat } from "./heartbeat-handlers"
 import { cleanupDACPHandlers } from "./index"
 import { getInstance } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
+import type { Transport } from "../../interfaces/transport"
+import type { DirectoryApp } from "../../app-directory/types"
 
 type Wcp4ValidateAppIdentity = WebConnectionProtocol4ValidateAppIdentity
 type WCP5ValidateAppIdentityResponse = WebConnectionProtocol5ValidateAppIdentitySuccessResponse
 type WCP5ValidateAppIdentityFailedResponse = WebConnectionProtocol5ValidateAppIdentityFailedResponse
+
+interface InstanceIdentityRecord {
+  appId: string
+  instanceUuid: string
+  origin: string
+  sourceWindow: unknown
+}
+
+const instanceIdentityRegistry = new WeakMap<Transport, Map<string, InstanceIdentityRecord>>()
 
 /**
  * Handles Wcp4Validateappidentity messages from FDC3 apps.
@@ -53,7 +63,11 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     // 1. Extract origins from URLs
     const identityOrigin = new URL(identityUrl).origin
     const actualOrigin = new URL(actualUrl).origin
-    const messageOrigin = (message as { meta?: { messageOrigin?: string } }).meta?.messageOrigin
+    const messageMeta = (message as {
+      meta?: { messageOrigin?: string; wcpSourceWindow?: unknown }
+    }).meta
+    const messageOrigin = messageMeta?.messageOrigin
+    const sourceWindow = messageMeta?.wcpSourceWindow
 
     // 2. Validate origins match (per FDC3 spec requirement)
     if (identityOrigin !== actualOrigin) {
@@ -90,62 +104,9 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
       return
     }
 
-    // 3. If reconnecting, validate instance exists before continuing
-    if (reconnectInstanceId && reconnectInstanceUuid) {
-      const existingInstance = getInstance(getState(), reconnectInstanceId)
-      if (!existingInstance) {
-        logger.warn("[WCP4] Instance not found for reconnection", reconnectInstanceId)
-        sendFailureResponse(
-          context,
-          "App Instance not found",
-          wcp4Message.meta.connectionAttemptUuid
-        )
-        return
-      }
-    }
-
-    // 4. Look up app in app directory
+    // 3. Look up app in app directory (spec: identityUrl is the lookup key)
     const apps = appDirectory.allApps
-
-    // Helper to normalize URLs for comparison (remove trailing slashes, etc.)
-    const normalizeUrl = (url: string): string => {
-      try {
-        const urlObj = new URL(url)
-        // Remove trailing slash from pathname
-        let pathname = urlObj.pathname
-        if (pathname.endsWith("/") && pathname.length > 1) {
-          pathname = pathname.slice(0, -1)
-        }
-        return `${urlObj.origin}${pathname}${urlObj.search}${urlObj.hash}`
-      } catch {
-        return url
-      }
-    }
-
-    // Find app by matching identityUrl or actualUrl (compare full URL path, not just origin)
-    const normalizedIdentityUrl = normalizeUrl(identityUrl)
-    const normalizedActualUrl = normalizeUrl(actualUrl)
-
-    const appMetadata = apps.find(app => {
-      // Check if app's URL matches
-      if (
-        app.details &&
-        typeof app.details === "object" &&
-        "url" in app.details &&
-        typeof app.details.url === "string"
-      ) {
-        try {
-          const normalizedAppUrl = normalizeUrl(app.details.url)
-          // Match if the normalized app URL matches either the identity URL or actual URL
-          return (
-            normalizedAppUrl === normalizedIdentityUrl || normalizedAppUrl === normalizedActualUrl
-          )
-        } catch {
-          return false
-        }
-      }
-      return false
-    })
+    const appMetadata = findBestAppMatchByIdentityUrl(identityUrl, apps)
 
     if (!appMetadata) {
       logger.error("[WCP4] App not found in directory for identity", identityUrl)
@@ -159,20 +120,44 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
 
     logger.info("[WCP4] App found in directory", appMetadata.appId)
 
-    // 5. Check if reconnecting to existing instance
+    // 4. Check if reconnecting to existing instance
     let instanceId: string
     let instanceUuid: string
+    const identityMap = getInstanceIdentityMap(transport)
 
-    if (reconnectInstanceId && reconnectInstanceUuid) {
-      // Attempt to reconnect to existing instance
+    const canReuseExistingIdentity =
+      reconnectInstanceId &&
+      reconnectInstanceUuid &&
+      sourceWindow &&
+      canReuseInstanceIdentity({
+        existingInstance: getInstance(getState(), reconnectInstanceId),
+        identityRecord: identityMap.get(reconnectInstanceId),
+        reconnectInstanceUuid,
+        expectedAppId: appMetadata.appId,
+        expectedOrigin: identityOrigin,
+        sourceWindow,
+      })
+
+    if (canReuseExistingIdentity && reconnectInstanceId) {
       logger.info("[WCP4] Reconnecting to existing instance", reconnectInstanceId)
       instanceId = reconnectInstanceId
       instanceUuid = reconnectInstanceUuid
+      identityMap.set(instanceId, {
+        appId: appMetadata.appId,
+        instanceUuid,
+        origin: identityOrigin,
+        sourceWindow,
+      })
     } else {
-      // Create new app instance
-      const newInstance = createAppInstance(context, appMetadata, identityUrl)
+      const newInstance = createAppInstance(context, appMetadata, identityUrl, identityOrigin, sourceWindow)
       instanceId = newInstance.instanceId
-      instanceUuid = newInstance.instanceId // Use same for now
+      instanceUuid = newInstance.instanceUuid
+      identityMap.set(instanceId, {
+        appId: appMetadata.appId,
+        instanceUuid,
+        origin: identityOrigin,
+        sourceWindow,
+      })
     }
 
     // Extract connectionAttemptUuid from WCP4 message or from temporary instanceId
@@ -262,10 +247,13 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
  */
 function createAppInstance(
   context: DACPHandlerContext,
-  appMetadata: AppMetadata,
-  identityUrl: string
+  appMetadata: DirectoryApp,
+  identityUrl: string,
+  identityOrigin: string,
+  sourceWindow: unknown
 ) {
   const instanceId = crypto.randomUUID()
+  const instanceUuid = crypto.randomUUID()
 
   // Register the instance using state transform
   context.setState(state =>
@@ -285,11 +273,14 @@ function createAppInstance(
 
   context.logger.info("[WCP4] Created new app instance", {
     instanceId,
+    instanceUuid,
     appId: appMetadata.appId,
     identityUrl,
+    identityOrigin,
+    hasSourceWindow: !!sourceWindow,
   })
 
-  return { instanceId }
+  return { instanceId, instanceUuid }
 }
 
 /**
@@ -377,4 +368,119 @@ function sendFailureResponse(
   }
 
   context.transport.send(fallbackResponse)
+}
+
+function getInstanceIdentityMap(transport: Transport): Map<string, InstanceIdentityRecord> {
+  let map = instanceIdentityRegistry.get(transport)
+  if (!map) {
+    map = new Map<string, InstanceIdentityRecord>()
+    instanceIdentityRegistry.set(transport, map)
+  }
+  return map
+}
+
+function canReuseInstanceIdentity(params: {
+  existingInstance: ReturnType<typeof getInstance>
+  identityRecord?: InstanceIdentityRecord
+  reconnectInstanceUuid: string
+  expectedAppId: string
+  expectedOrigin: string
+  sourceWindow: unknown
+}): boolean {
+  const {
+    existingInstance,
+    identityRecord,
+    reconnectInstanceUuid,
+    expectedAppId,
+    expectedOrigin,
+    sourceWindow,
+  } = params
+
+  if (!existingInstance || !identityRecord) {
+    return false
+  }
+
+  return (
+    identityRecord.instanceUuid === reconnectInstanceUuid &&
+    identityRecord.appId === expectedAppId &&
+    identityRecord.origin === expectedOrigin &&
+    identityRecord.sourceWindow === sourceWindow
+  )
+}
+
+function findBestAppMatchByIdentityUrl(
+  identityUrl: string,
+  apps: DirectoryApp[]
+): DirectoryApp | undefined {
+  const parsedIdentityUrl = new URL(identityUrl)
+  let bestMatch: { score: number; app: DirectoryApp } | undefined
+
+  for (const app of apps) {
+    const appUrl = getAppDirectoryUrl(app)
+
+    if (typeof appUrl !== "string") {
+      continue
+    }
+
+    const matchScore = scoreUrlMatch(parsedIdentityUrl, appUrl)
+    if (matchScore <= 0) {
+      continue
+    }
+
+    if (!bestMatch || matchScore > bestMatch.score) {
+      bestMatch = { score: matchScore, app }
+    }
+  }
+
+  return bestMatch?.app
+}
+
+function scoreUrlMatch(identityUrl: URL, appDirectoryUrl: string): number {
+  let parsedAppDUrl: URL
+  try {
+    parsedAppDUrl = new URL(appDirectoryUrl)
+  } catch {
+    return 0
+  }
+
+  if (parsedAppDUrl.origin !== identityUrl.origin) {
+    return 0
+  }
+
+  let score = 1
+
+  const appDPath = normalizePath(parsedAppDUrl.pathname)
+  if (appDPath) {
+    if (normalizePath(identityUrl.pathname) !== appDPath) {
+      return 0
+    }
+    score++
+  }
+
+  if (parsedAppDUrl.hash) {
+    if (identityUrl.hash !== parsedAppDUrl.hash) {
+      return 0
+    }
+    score++
+  }
+
+  for (const [key, value] of parsedAppDUrl.searchParams.entries()) {
+    if (identityUrl.searchParams.get(key) !== value) {
+      return 0
+    }
+    score++
+  }
+
+  return score
+}
+
+function normalizePath(pathname: string): string | null {
+  if (pathname === "/") {
+    return null
+  }
+  return pathname.endsWith("/") ? pathname.slice(0, -1) : pathname
+}
+
+function getAppDirectoryUrl(app: DirectoryApp): string | undefined {
+  return "url" in app.details && typeof app.details.url === "string" ? app.details.url : undefined
 }

@@ -493,6 +493,69 @@ describe("WCPConnector", () => {
       // Connector should still be running
       expect(connector.getIsStarted()).toBe(true)
     })
+
+    it("should override spoofed WCP4 messageOrigin with handshake origin", async () => {
+      connector = new WCPConnector(desktopAgentTransport)
+      connector.start()
+
+      const wcp1Hello = createWCP1Hello("origin-check-uuid")
+      const event = createMessageEvent(wcp1Hello)
+      window.dispatchEvent(event)
+
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      const connectorAccess = connector as unknown as {
+        enrichMessageWithSource: (
+          message: BrowserTypes.AppRequestMessage | BrowserTypes.WebConnectionProtocolMessage,
+          instanceId: string
+        ) => BrowserTypes.AppRequestMessage | BrowserTypes.WebConnectionProtocolMessage
+      }
+
+      const enriched = connectorAccess.enrichMessageWithSource(
+        {
+          type: "WCP4ValidateAppIdentity",
+          payload: {
+            identityUrl: "https://example.com/app",
+            actualUrl: "https://example.com/app",
+          },
+          meta: {
+            connectionAttemptUuid: "origin-check-uuid",
+            timestamp: new Date().toISOString(),
+            messageOrigin: "https://spoofed.example.com",
+          },
+        } as unknown as BrowserTypes.WebConnectionProtocolMessage,
+        "temp-origin-check-uuid"
+      ) as { meta?: { messageOrigin?: string } }
+
+      expect(enriched.meta?.messageOrigin).toBe("https://example.com")
+    })
+
+    it("should disconnect temp connection after WCP5 identity validation failure", async () => {
+      connector = new WCPConnector(desktopAgentTransport)
+      connector.start()
+
+      const wcp1Hello = createWCP1Hello("failure-disconnect-uuid")
+      window.dispatchEvent(createMessageEvent(wcp1Hello))
+
+      await new Promise(resolve => setTimeout(resolve, 50))
+      expect(connector.getConnection("temp-failure-disconnect-uuid")).toBeDefined()
+
+      const connectorAccess = connector as unknown as {
+        handleDesktopAgentMessage: (message: unknown) => void
+      }
+      connectorAccess.handleDesktopAgentMessage({
+        type: "WCP5ValidateAppIdentityFailedResponse",
+        payload: { message: "Origin mismatch" },
+        meta: {
+          connectionAttemptUuid: "failure-disconnect-uuid",
+          timestamp: new Date().toISOString(),
+          destination: { instanceId: "temp-failure-disconnect-uuid" },
+        },
+      })
+
+      await new Promise(resolve => setTimeout(resolve, 50))
+      expect(connector.getConnection("temp-failure-disconnect-uuid")).toBeUndefined()
+    })
   })
 
   describe("updateConnectionMetadata", () => {
