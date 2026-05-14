@@ -65,8 +65,24 @@ export class MockTransport implements Transport {
   public allMessages: MessageRecord[] = []
   private messagesByInstance: Map<string, MessageRecord[]> = new Map()
 
+  /**
+   * Last `instanceId` from an outgoing WCP5ValidateAppIdentityResponse (Desktop Agent → app).
+   * Tests use this because WCP4 may mint a new instance id that differs from a pre-seeded connection id.
+   *
+   * Nit (optional rename): if you start recording ids from other WCP5 message types, prefer a neutral
+   * name such as `lastIdentityValidatedInstanceId` so the field is not tied to a single response shape.
+   */
+  public lastWcp5ValidatedInstanceId: string | null = null
+
   send(message: unknown): void {
     const msg = message as DACPMessage
+
+    if (msg.type === "WCP5ValidateAppIdentityResponse") {
+      const id = (msg.payload as { instanceId?: string } | undefined)?.instanceId
+      if (id) {
+        this.lastWcp5ValidatedInstanceId = id
+      }
+    }
 
     // Backfill destination appId from known instance mapping.
     if (msg.meta?.destination?.instanceId && !msg.meta.destination.appId) {
@@ -181,6 +197,7 @@ export class MockTransport implements Transport {
   clear(): void {
     this.allMessages = []
     this.messagesByInstance.clear()
+    this.lastWcp5ValidatedInstanceId = null
   }
 
   /**

@@ -7,11 +7,6 @@ import {
   DACPValidationError,
 } from "../../dacp-protocol/dacp-errors"
 import { withDACPTimeout, logDACPMessage } from "../../dacp-protocol/dacp-utils"
-import {
-  resolvePendingIntent,
-  removeListenersForInstance,
-  removeInstance,
-} from "../../state/mutators"
 import { type DACPHandlerContext, type MessageType } from "../types"
 import { sendDACPErrorResponse } from "./utils/dacp-response-utils"
 
@@ -213,6 +208,8 @@ function getHandlerForMessageType(messageType: string): RoutedHandler | null {
   return (handlerMap as Record<string, RoutedHandler>)[messageType] || null
 }
 
+export { cleanupDACPHandlers } from "./cleanup"
+
 /**
  * Get appropriate timeout for message type
  */
@@ -231,63 +228,4 @@ function getTimeoutForMessageType(messageType: string): number {
 
   // Default timeout for other operations
   return DACP_TIMEOUTS.DEFAULT
-}
-
-/**
- * Cleanup function to be called when a DACP connection is closed.
- * Removes instance from state.
- */
-export function cleanupDACPHandlers(context: DACPHandlerContext): void {
-  const { instanceId, getState, setState, logger } = context
-
-  logger.info("Cleaning up DACP handlers for instance", { instanceId })
-
-  // Cancel any pending intents involving this instance
-  const state = getState()
-  const pendingIntents = Object.values(state.intents.pending).filter(
-    p => p.targetInstanceId === instanceId
-  )
-  pendingIntents.forEach(pending => {
-    // Reject promise if it exists (from intent-helpers Map)
-    const promiseData = context.pendingIntentPromises.get(pending.requestId)
-    if (promiseData) {
-      if (promiseData.timeoutHandle) {
-        clearTimeout(promiseData.timeoutHandle)
-      }
-      if (promiseData.deliveryTimeoutHandle) {
-        clearTimeout(promiseData.deliveryTimeoutHandle)
-      }
-      promiseData.reject(new Error("Intent cancelled - target instance disconnected"))
-      context.pendingIntentPromises.delete(pending.requestId)
-    }
-    setState(state => resolvePendingIntent(state, pending.requestId))
-  })
-  if (pendingIntents.length > 0) {
-    logger.info(`Cancelled ${pendingIntents.length} pending intents for disconnected instance`, {
-      instanceId,
-    })
-  }
-
-  // Remove event listeners
-  eventHandlers.removeInstanceEventListeners(instanceId, setState)
-  logger.info("Removed event listeners for disconnected instance", { instanceId })
-
-  // Remove private channels
-  const removedPrivateChannels = privateChannelHandlers.removeInstancePrivateChannels(context)
-  if (removedPrivateChannels > 0) {
-    logger.info(`Removed ${removedPrivateChannels} private channels for disconnected instance`, {
-      instanceId,
-    })
-  }
-
-  // Stop heartbeat
-  heartbeatHandlers.stopHeartbeat(instanceId, setState)
-
-  // Remove intent listeners
-  setState(state => removeListenersForInstance(state, instanceId))
-
-  // Remove instance from state
-  setState(state => removeInstance(state, instanceId))
-
-  logger.info("DACP handlers cleanup completed", { instanceId })
 }

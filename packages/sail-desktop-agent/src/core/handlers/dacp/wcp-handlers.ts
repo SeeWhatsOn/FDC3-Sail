@@ -16,7 +16,7 @@ import type {
 import type { DACPHandlerContext } from "../types"
 import { sendDACPResponse } from "./utils/dacp-response-utils"
 import { startHeartbeat } from "./heartbeat-handlers"
-import { cleanupDACPHandlers } from "./index"
+import { cleanupDACPHandlers } from "./cleanup"
 import { getInstance } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
 import type { Transport } from "../../interfaces/transport"

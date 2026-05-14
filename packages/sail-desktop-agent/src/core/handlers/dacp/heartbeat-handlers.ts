@@ -7,16 +7,16 @@ import {
   startHeartbeat as startHeartbeatTransform,
   acknowledgeHeartbeat,
   updateHeartbeatSent,
-  stopHeartbeat as stopHeartbeatTransform,
-  removeInstance,
 } from "../../state/mutators"
-import type { StateSetter } from "../../state/types"
+import { cleanupDACPHandlers } from "./cleanup"
+import {
+  stopHeartbeat,
+  setHeartbeatTimer,
+  clearHeartbeatTimer,
+} from "./heartbeat-runtime"
 
-/**
- * Map of instanceId -> interval handle
- * Interval handles are runtime state, not part of persistent state
- */
-const heartbeatIntervals = new Map<string, NodeJS.Timeout>()
+/** Re-export for callers that imported `stopHeartbeat` from this module. */
+export { stopHeartbeat } from "./heartbeat-runtime"
 
 /**
  * Start heartbeat for an instance
@@ -55,9 +55,8 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
 
   const onTimeout = () => {
     logger.warn("Instance failed heartbeat check, removing", { instanceId })
-    // Remove instance using state transform
-    setState(state => removeInstance(state, instanceId))
-    stopHeartbeat(instanceId, setState)
+    // WCP4 validation runs under a temp connection context; heartbeat is keyed by the real instanceId.
+    cleanupDACPHandlers({ ...context, instanceId })
   }
 
   // Send an initial heartbeat immediately for short test intervals.
@@ -70,8 +69,7 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
     const state = getState()
     const heartbeat = getHeartbeatState(state, instanceId)
     if (!heartbeat) {
-      clearInterval(intervalHandle)
-      heartbeatIntervals.delete(instanceId)
+      clearHeartbeatTimer(instanceId)
       return
     }
 
@@ -85,8 +83,7 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
         timeSinceLastAck,
         missedHeartbeats: heartbeat.missedHeartbeats,
       })
-      clearInterval(intervalHandle)
-      heartbeatIntervals.delete(instanceId)
+      clearHeartbeatTimer(instanceId)
       onTimeout()
       return
     }
@@ -100,7 +97,7 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
     })
   }, heartbeatIntervalMs)
 
-  heartbeatIntervals.set(instanceId, intervalHandle)
+  setHeartbeatTimer(instanceId, intervalHandle)
   logger.info("Heartbeat started for instance", { instanceId })
 }
 
@@ -124,20 +121,4 @@ export function handleHeartbeatAcknowledgmentRequest(
       error: error instanceof Error ? error.message : String(error),
     })
   }
-}
-
-/**
- * Stop heartbeat for an instance
- * Called when an instance disconnects
- */
-export function stopHeartbeat(instanceId: string, setState: StateSetter): void {
-  // Clear interval
-  const intervalHandle = heartbeatIntervals.get(instanceId)
-  if (intervalHandle) {
-    clearInterval(intervalHandle)
-    heartbeatIntervals.delete(instanceId)
-  }
-
-  // Remove from state
-  setState(state => stopHeartbeatTransform(state, instanceId))
 }

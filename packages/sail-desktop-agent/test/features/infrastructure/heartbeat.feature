@@ -48,6 +48,14 @@ Feature: Heartbeat Messages Between Apps and Server
     And I get the heartbeat times
     Then "{result}" is empty
 
+  Scenario: Heartbeat timeout clears DA event listeners
+    When "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"
+    And "a1" sends validate
+    And the WCP-validated instance for app "portfolioApp" adds an event listener for "channelChanged" [fdc3.addEventListener]
+    And we wait for a period of "3000" ms
+    Then no DA event listeners remain for the WCP-validated instance
+    And I shutdown the server
+
   Scenario: App says Goodbye
     When "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"
     And "a1" sends validate

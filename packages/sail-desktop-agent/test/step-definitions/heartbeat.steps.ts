@@ -1,12 +1,13 @@
-import { Given, Then } from "@cucumber/cucumber"
+import { Given, Then, When } from "@cucumber/cucumber"
 import { CustomWorld } from "../world/index.ts"
 import type {
+  AddEventListenerRequest,
   HeartbeatAcknowledgementRequest,
   WebConnectionProtocol6Goodbye,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { createMeta, getAppInstanceId } from "./generic.steps"
 import { AppInstanceState } from "../../src/core/state/types"
-import { getInstance } from "../../src/core/state/selectors"
+import { getInstance, getEventListenersForInstance } from "../../src/core/state/selectors"
 import { connectInstance, updateInstanceState } from "../../src/core/state/mutators"
 
 /**
@@ -81,6 +82,43 @@ Given("{string} sends a goodbye message", async function (this: CustomWorld, app
   await this.mockTransport.receiveMessage(message)
 })
 
+/**
+ * After WCP4/WCP5, the Desktop Agent may assign a new instance id (see createAppInstance).
+ * DACP from the app must use that id so heartbeat timeout cleanup matches event-listener state.
+ */
+When(
+  "the WCP-validated instance for app {string} adds an event listener for {string} [fdc3.addEventListener]",
+  async function (this: CustomWorld, appId: string, eventType: string) {
+    const instanceId = this.mockTransport.lastWcp5ValidatedInstanceId
+    if (!instanceId) {
+      throw new Error(
+        "No WCP5 validated instance id recorded; send WCP4 validate before this step."
+      )
+    }
+    const desktopAgentName =
+      this.desktopAgent.getImplementationMetadata()?.provider ?? "cucumber-provider"
+    const meta = {
+      requestUuid: this.createUUID(),
+      timestamp: new Date(),
+      source: {
+        appId,
+        instanceId,
+        desktopAgent: desktopAgentName,
+      },
+    }
+
+    const message: AddEventListenerRequest = {
+      meta,
+      payload: {
+        type: eventType as AddEventListenerRequest["payload"]["type"],
+      },
+      type: "addEventListenerRequest",
+    }
+
+    await this.mockTransport.receiveMessage(message)
+  }
+)
+
 Then("I test the liveness of {string}", function (this: CustomWorld, appStr: string) {
   const instanceId = getAppInstanceId(this, appStr)
 
@@ -102,4 +140,30 @@ Then("I get the heartbeat times", function (this: CustomWorld) {
     state: instance.state === AppInstanceState.CONNECTED ? "Connected" : "Disconnected",
   }))
   this.props["result"] = result
+})
+
+Then(
+  "no DA event listeners remain for {string}",
+  function (this: CustomWorld, appStr: string) {
+    const instanceId = getAppInstanceId(this, appStr)
+    const remaining = getEventListenersForInstance(this.getState(), instanceId)
+    if (remaining.length > 0) {
+      throw new Error(
+        `Expected no DA event listeners for ${instanceId}, but found: ${JSON.stringify(remaining)}`
+      )
+    }
+  }
+)
+
+Then("no DA event listeners remain for the WCP-validated instance", function (this: CustomWorld) {
+  const instanceId = this.mockTransport.lastWcp5ValidatedInstanceId
+  if (!instanceId) {
+    throw new Error("No WCP5 validated instance id recorded.")
+  }
+  const remaining = getEventListenersForInstance(this.getState(), instanceId)
+  if (remaining.length > 0) {
+    throw new Error(
+      `Expected no DA event listeners for WCP-validated instance ${instanceId}, but found: ${JSON.stringify(remaining)}`
+    )
+  }
 })
