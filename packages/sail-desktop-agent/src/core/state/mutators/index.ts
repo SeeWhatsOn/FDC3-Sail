@@ -10,7 +10,7 @@ export {
   updateInstanceState,
   updateInstanceActivity,
   removeInstance,
-  joinChannel,
+  joinUserChannel,
   addContextListener,
   removeContextListener,
   addIntentListener,

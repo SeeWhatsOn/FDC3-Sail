@@ -15,7 +15,7 @@ import {
   getPrivateChannel,
   getEventListener,
 } from "../../state/selectors"
-import { joinChannel, createAppChannel } from "../../state/mutators"
+import { joinUserChannel, createAppChannel } from "../../state/mutators"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
 import {
@@ -35,7 +35,7 @@ export function handleGetCurrentChannelRequest(
 
   try {
     const instance = getInstance(getState(), instanceId)
-    const channelId = instance?.currentChannel ?? null
+    const channelId = instance?.currentUserChannel ?? null
 
     // If no channel, return null
     if (!channelId) {
@@ -46,10 +46,9 @@ export function handleGetCurrentChannelRequest(
       return
     }
 
-    // Look up the channel object from state
-    // Try user channels first, then app channels
+    // Look up the channel object from state (user channel only — never app channels)
     const state = getState()
-    let channel = getUserChannel(state, channelId) ?? getAppChannel(state, channelId)
+    const channel = getUserChannel(state, channelId)
 
     // If channel not found in state, create a minimal channel object
     // This shouldn't happen in normal operation, but provides a fallback
@@ -58,10 +57,15 @@ export function handleGetCurrentChannelRequest(
         channelId,
         instanceId,
       })
-      channel = {
+      const fallback = {
         id: channelId,
-        type: "user", // Default to user channel if unknown
+        type: "user" as const,
       }
+      const response = createDACPSuccessResponse(message, "getCurrentChannelResponse", {
+        channel: fallback,
+      })
+      sendDACPResponse({ response, instanceId, transport })
+      return
     }
 
     const response = createDACPSuccessResponse(message, "getCurrentChannelResponse", {
@@ -109,9 +113,9 @@ export function handleJoinUserChannelRequest(
 
     // Avoid duplicate current-context delivery on redundant joins (e.g. reconnect flows).
     const instance = getInstance(state, instanceId)
-    const wasAlreadyOnChannel = instance?.currentChannel === channelId
+    const wasAlreadyOnChannel = instance?.currentUserChannel === channelId
 
-    setState(state => joinChannel(state, instanceId, channelId))
+    setState(state => joinUserChannel(state, instanceId, channelId))
 
     const response = {
       type: "joinUserChannelResponse",
@@ -160,7 +164,7 @@ export function handleLeaveCurrentChannelRequest(
   const { transport, instanceId, setState } = context
 
   try {
-    setState(state => joinChannel(state, instanceId, null))
+    setState(state => joinUserChannel(state, instanceId, null))
 
     const response = createDACPSuccessResponse(message, "leaveCurrentChannelResponse")
     sendDACPResponse({ response, instanceId, transport })
@@ -233,7 +237,7 @@ export function handleGetCurrentContextRequest(
     const payload = message.payload
 
     const instance = getInstance(getState(), instanceId)
-    const channelId = payload.channelId ?? instance?.currentChannel
+    const channelId = payload.channelId ?? instance?.currentUserChannel
 
     if (!channelId) {
       throw new NoChannelFoundError("No channel specified and app is not on a channel")
@@ -275,8 +279,8 @@ export function handleGetCurrentContextRequest(
 
 /**
  * Handles get or create channel requests
- * Returns existing user/app channel, or creates a new app channel
- * It must not return or create private channels
+ * Returns an existing app channel or creates one with the given id.
+ * Rejects ids that collide with a user channel or private channel.
  */
 export function handleGetOrCreateChannelRequest(
   message: BrowserTypes.GetOrCreateChannelRequest,
@@ -304,7 +308,7 @@ export function handleGetOrCreateChannelRequest(
     }
 
     if (appChannel) {
-      // Return existing user/app channel without creating a new one.
+      // Return existing app channel without creating a new one.
       const response = createDACPSuccessResponse(message, "getOrCreateChannelResponse", {
         channel: appChannel,
       })
@@ -313,7 +317,7 @@ export function handleGetOrCreateChannelRequest(
       return
     }
 
-    // Create a new app channel when no user/app channel exists.
+    // Create a new app channel when none exists for this id.
     setState(state => createAppChannel(state, channelId))
     const newState = getState()
     const newAppChannel = getAppChannel(newState, channelId)
@@ -356,7 +360,12 @@ function deliverCurrentContextToInstanceListeners(
     return
   }
 
-  Object.values(instance.contextListeners).forEach(listenerContextType => {
+  Object.entries(instance.contextListeners).forEach(([, spec]) => {
+    if (spec.channelId !== undefined && spec.channelId !== channelId) {
+      return
+    }
+
+    const listenerContextType = spec.contextType
     const contextToDeliver =
       listenerContextType === "*"
         ? getChannelContext(state, channelId)

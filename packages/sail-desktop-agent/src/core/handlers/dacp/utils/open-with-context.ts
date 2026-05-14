@@ -140,9 +140,10 @@ function hasMatchingContextListener(
     return false
   }
 
-  // Listener registration is stored as listenerId -> contextType (or "*" for all).
+  // Each entry is a listener registration: { contextType, optional channelId } keyed by listener id.
   return Object.values(instance.contextListeners).some(
-    listenerContextType => listenerContextType === contextType || listenerContextType === "*"
+    listenerRegistration =>
+      listenerRegistration.contextType === contextType || listenerRegistration.contextType === "*"
   )
 }
 

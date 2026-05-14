@@ -31,7 +31,7 @@ export const connectInstance = (
       state: AppInstanceState.PENDING,
       createdAt: now,
       lastActivity: now,
-      currentChannel: null,
+      currentUserChannel: null,
       contextListeners: {},
       intentListeners: [],
       privateChannels: [],
@@ -69,7 +69,7 @@ export const removeInstance = (state: AgentState, instanceId: string): AgentStat
   })
 }
 
-export const joinChannel = (
+export const joinUserChannel = (
   state: AgentState,
   instanceId: string,
   channelId: string | null
@@ -77,7 +77,7 @@ export const joinChannel = (
   if (!state.instances[instanceId]) return state
 
   return produce(state, draft => {
-    draft.instances[instanceId].currentChannel = channelId
+    draft.instances[instanceId].currentUserChannel = channelId
     draft.instances[instanceId].lastActivity = new Date()
   })
 }
@@ -86,13 +86,18 @@ export const addContextListener = (
   state: AgentState,
   instanceId: string,
   listenerId: string,
-  contextType: string
+  contextType: string,
+  channelId?: string | null
 ): AgentState => {
   if (!state.instances[instanceId]) return state
 
   return produce(state, draft => {
     const instance = draft.instances[instanceId]
-    instance.contextListeners[listenerId] = contextType
+    const entry =
+      channelId != null && channelId !== ""
+        ? { contextType, channelId }
+        : { contextType }
+    instance.contextListeners[listenerId] = entry
     instance.lastActivity = new Date()
   })
 }

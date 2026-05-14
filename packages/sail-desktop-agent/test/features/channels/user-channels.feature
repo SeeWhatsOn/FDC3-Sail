@@ -1,4 +1,4 @@
-Feature: Relaying Private Channel Broadcast messages
+Feature: User channels
 
   Background:
       This creates 8 user channels: "one", "two", "three", "fdc3.channel.4" through "fdc3.channel.8"
@@ -79,12 +79,12 @@ Feature: Relaying Private Channel Broadcast messages
   Scenario: After unsubscribing, my listener shouldn't receive any more messages
     When "appId: App, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
     And "appId: App, instanceId: a1" adds a context listener on "one" with type "{null}" [fdc3.addContextListener]
-    And "appId: App, instanceId: a1" removes context listener with id "uuid5" [fdc3.removeContextListener]
+    And "appId: App, instanceId: a1" removes context listener with id "{lastContextListenerId}" [fdc3.removeContextListener]
     And "appId: App2, instanceId: a2" broadcasts "fdc3.instrument" on "one" [fdc3.broadcast]
     Then messaging will have outgoing posts
       | msg.matches_type                   | msg.payload.listenerUUID |
       | joinUserChannelResponse            | {null}                   |
-      | addContextListenerResponse         | uuid5                    |
+      | addContextListenerResponse         | {lastContextListenerId}  |
       | contextListenerUnsubscribeResponse | {null}                   |
       | broadcastResponse                  | {null}                   |
 
@@ -187,3 +187,38 @@ Feature: Relaying Private Channel Broadcast messages
       | addContextListenerResponse | a1            |
       | broadcastResponse          | a1            |
     And messaging will have 3 posts
+
+  @conformance2.2
+  Scenario: App channel listener does not change current user channel
+    When "appId: App1, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App1, instanceId: a1" creates or gets an app channel called "workflow" [fdc3.getOrCreateChannel]
+    And "appId: App1, instanceId: a1" adds a context listener on "workflow" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App1, instanceId: a1" gets the current user channel [fdc3.getCurrentChannel]
+    Then messaging will include outgoing posts
+      | msg.matches_type          | to.instanceId | msg.payload.channel.id |
+      | getCurrentChannelResponse | a1            | one                    |
+
+  @conformance2.2
+  Scenario: Default broadcast still uses joined user channel after app channel listener registration
+    When "appId: App1, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App2, instanceId: a2" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App2, instanceId: a2" adds a context listener on "one" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App1, instanceId: a1" creates or gets an app channel called "workflow" [fdc3.getOrCreateChannel]
+    And "appId: App1, instanceId: a1" adds a context listener on "workflow" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" without channel id [fdc3.broadcast]
+    Then messaging will include outgoing posts
+      | msg.matches_type  | to.instanceId | msg.payload.channelId | msg.payload.context.type |
+      | broadcastEvent    | a2            | one                   | fdc3.instrument          |
+      | broadcastResponse | a1            | {null}                | {null}                   |
+
+  @conformance2.2
+  Scenario: App channel explicit broadcast still reaches listeners while joined to a user channel
+    When "appId: App1, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App1, instanceId: a1" creates or gets an app channel called "workflow" [fdc3.getOrCreateChannel]
+    And "appId: App2, instanceId: a2" adds a context listener on "workflow" with type "fdc3.instrument" [fdc3.addContextListener]
+    And we wait for a period of "100" ms
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "workflow" [fdc3.broadcast]
+    Then messaging will include outgoing posts
+      | msg.matches_type  | to.instanceId | msg.payload.channelId | msg.payload.context.type |
+      | broadcastEvent    | a2            | workflow              | fdc3.instrument          |
+      | broadcastResponse | a1            | {null}                | {null}                   |

@@ -11,15 +11,15 @@ import {
   getAppChannel,
   getChannelContext,
   getInstance,
-  getInstancesOnChannel,
   getPrivateChannel,
   getStoredContext,
   getUserChannel,
+  instanceContextListenerMatchesBroadcast,
 } from "../../state/selectors"
 import {
   storeContext,
   addContextListener,
-  joinChannel,
+  joinUserChannel,
   removeContextListener,
   addPrivateChannelContextListener,
   removePrivateChannelContextListener,
@@ -67,7 +67,7 @@ export async function handleBroadcastRequest(
       throw new Error("Instance not found")
     }
 
-    const channelId = payloadChannelId ?? instance.currentChannel
+    const channelId = payloadChannelId ?? instance.currentUserChannel
     if (!channelId) {
       // No channel specified and app not joined - no-op per spec
       const response = createDACPSuccessResponse(message, "broadcastResponse")
@@ -82,7 +82,7 @@ export async function handleBroadcastRequest(
       throw new NoChannelFoundError(`Channel ${channelId} does not exist`)
     }
 
-    if (userChannel && instance.currentChannel !== channelId && !payloadChannelId) {
+    if (userChannel && instance.currentUserChannel !== channelId && !payloadChannelId) {
       // No-op for DesktopAgent.broadcast when not joined to a user channel.
       const response = createDACPSuccessResponse(message, "broadcastResponse")
       sendDACPResponse({ response, instanceId, transport })
@@ -168,12 +168,8 @@ export function handleAddContextListener(
         throw new NoChannelFoundError(`Channel ${channelId} does not exist`)
       }
 
-      if (appChannel) {
-        setState(state => joinChannel(state, instanceId, channelId))
-      }
-
       if (userChannel) {
-        setState(state => joinChannel(state, instanceId, channelId))
+        setState(state => joinUserChannel(state, instanceId, channelId))
       }
 
       if (privateChannel) {
@@ -215,7 +211,9 @@ export function handleAddContextListener(
     const listenerId = message.meta.requestUuid
 
     // Add context listener using state transform
-    setState(state => addContextListener(state, instanceId, listenerId, contextType))
+    setState(state =>
+      addContextListener(state, instanceId, listenerId, contextType, message.payload.channelId)
+    )
 
     notifyContextListenerAdded(instanceId, contextType, context)
 
@@ -240,10 +238,15 @@ export function handleAddContextListener(
     })
 
     const stateAfterListener = getState()
-    const instanceAfterListener = getInstance(stateAfterListener, instanceId)
-    const joinedChannelId = instanceAfterListener?.currentChannel
-    if (joinedChannelId && getUserChannel(stateAfterListener, joinedChannelId)) {
-      deliverCurrentContextToListener(instanceId, joinedChannelId, contextType, context)
+    const requestedChannelId = message.payload.channelId
+    if (requestedChannelId && getUserChannel(stateAfterListener, requestedChannelId)) {
+      deliverCurrentContextToListener(instanceId, requestedChannelId, contextType, context)
+    } else if (!requestedChannelId) {
+      const inst = getInstance(stateAfterListener, instanceId)
+      const uc = inst?.currentUserChannel
+      if (uc && getUserChannel(stateAfterListener, uc)) {
+        deliverCurrentContextToListener(instanceId, uc, contextType, context)
+      }
     }
   } catch (error) {
     logger.error("DACP: Add context listener failed", error)
@@ -367,9 +370,29 @@ async function notifyContextListeners(
   handlerContext: DACPHandlerContext
 ): Promise<void> {
   const { getState, logger } = handlerContext
+  const state = getState()
+  const userChannel = getUserChannel(state, channelId)
+  const appChannel = getAppChannel(state, channelId)
 
-  // Find instances on the same channel
-  const instancesOnChannel = getInstancesOnChannel(getState(), channelId)
+  const instancesOnChannel = userChannel
+    ? Object.values(state.instances).filter(
+        instance =>
+          instance.currentUserChannel === channelId &&
+          Object.values(instance.contextListeners).some(
+            listener =>
+              instanceContextListenerMatchesBroadcast(listener, context.type) &&
+              (listener.channelId === undefined || listener.channelId === channelId)
+          )
+      )
+    : appChannel
+      ? Object.values(state.instances).filter(instance =>
+          Object.values(instance.contextListeners).some(
+            listener =>
+              listener.channelId === channelId &&
+              instanceContextListenerMatchesBroadcast(listener, context.type)
+          )
+        )
+      : []
 
   logger.info("DACP: Notifying context listeners", {
     channelId,
@@ -385,27 +408,7 @@ async function notifyContextListeners(
         logger.debug("Skipping sender instance", { instanceId: instance.instanceId })
         return false
       }
-
-      // Check if the instance is listening for this context type
-      const listensForType = Object.values(instance.contextListeners).some(
-        listenerContextType => listenerContextType === context.type || listenerContextType === "*"
-      )
-
-      if (!listensForType) {
-        logger.info("Instance not listening for context type", {
-          instanceId: instance.instanceId,
-          contextType: context.type,
-          registeredListeners: Object.values(instance.contextListeners),
-        })
-      } else {
-        logger.info("Instance IS listening for context type", {
-          instanceId: instance.instanceId,
-          contextType: context.type,
-          registeredListeners: Object.values(instance.contextListeners),
-        })
-      }
-
-      return listensForType
+      return true
     })
     .map(instance => {
       try {

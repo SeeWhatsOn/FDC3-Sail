@@ -123,3 +123,22 @@ When(
     await this.mockTransport.receiveMessage(message)
   }
 )
+
+When(
+  "{string} broadcasts {string} without channel id [fdc3.broadcast]",
+  async function (this: CustomWorld, app: string, contextType: string) {
+    ensureAppInstance(this, app)
+    const meta = createMeta(this, app)
+
+    // `BroadcastRequestPayload` types `channelId` as required; DACP omits it for DesktopAgent.broadcast (current user channel).
+    const message = {
+      meta,
+      payload: {
+        context: contextMap[contextType],
+      },
+      type: "broadcastRequest" as const,
+    } as BroadcastRequest
+
+    await this.mockTransport.receiveMessage(message)
+  }
+)

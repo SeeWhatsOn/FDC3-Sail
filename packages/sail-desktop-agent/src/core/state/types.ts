@@ -25,6 +25,16 @@ export enum AppInstanceState {
 }
 
 /**
+ * Stored registration for `addContextListener` (same fields as
+ * {@link BrowserTypes.AddContextListenerRequestPayload}), after normalization:
+ * `null` context type becomes `"*"`; null/empty `channelId` is omitted (listen on current user channel).
+ */
+export type InstanceContextListener = {
+  contextType: NonNullable<BrowserTypes.AddContextListenerRequestPayload["contextType"]>
+  channelId?: NonNullable<BrowserTypes.AddContextListenerRequestPayload["channelId"]>
+}
+
+/**
  * Core FDC3 app instance information
  */
 export interface AppInstance {
@@ -46,11 +56,11 @@ export interface AppInstance {
   /** Last activity timestamp for heartbeat tracking */
   lastActivity: Date
 
-  /** Current user channel (null if not joined to any channel) */
-  currentChannel: string | null
+  /** Current user channel from joinUserChannel / leave (never an app channel) */
+  currentUserChannel: string | null
 
   /** Context listeners keyed by listener UUID */
-  contextListeners: Record<string, string>
+  contextListeners: Record<string, InstanceContextListener>
 
   /** Array of intents this instance listens for */
   intentListeners: string[]

@@ -9,7 +9,7 @@ export {
   getInstance,
   getAllInstances,
   getInstancesByAppId,
-  getInstancesOnChannel,
+  instanceContextListenerMatchesBroadcast,
   getConnectedInstances,
   getInstancesByState,
   getInstancesWithContextListener,
