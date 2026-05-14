@@ -6,7 +6,12 @@ import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
-import { FDC3ChannelError, NoChannelFoundError } from "../../errors/fdc3-errors"
+import {
+  FDC3ChannelError,
+  NoChannelFoundError,
+  ChannelAccessDeniedError,
+  ListenerNotFoundChannelError,
+} from "../../errors/fdc3-errors"
 import {
   getAppChannel,
   getChannelContext,
@@ -102,15 +107,17 @@ export async function handleBroadcastRequest(
 
     if (privateChannel) {
       if (!privateChannel.connectedInstances.includes(instanceId)) {
-        throw new Error(`Instance ${instanceId} is not connected to private channel ${channelId}`)
+        throw new ChannelAccessDeniedError(
+          `Instance ${instanceId} is not connected to private channel ${channelId}`
+        )
       }
 
       setState(state =>
         setPrivateChannelLastContext(state, channelId, broadcastContext.type, broadcastContext)
       )
-      await notifyPrivateChannelContextListeners(channelId, broadcastContext, context)
+      notifyPrivateChannelContextListeners(channelId, broadcastContext, context)
     } else {
-      await notifyContextListeners(channelId, broadcastContext, context)
+      notifyContextListeners(channelId, broadcastContext, context)
     }
 
     const response = createDACPSuccessResponse(message, "broadcastResponse")
@@ -125,14 +132,9 @@ export async function handleBroadcastRequest(
 
     // BroadcastResponse schema doesn't validate error payloads, but use ChannelError for consistency
     // Common errors: MalformedContext, ApiTimeout
-    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorType =
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Unknown broadcast error"
-
-    if (error instanceof FDC3ChannelError) {
-      errorType = error.errorType
-    } else if (errorMessage.includes("Malformed") || errorMessage.includes("invalid context")) {
-      errorType = ChannelError.MalformedContext
-    }
 
     sendDACPErrorResponse({
       message,
@@ -251,19 +253,9 @@ export function handleAddContextListener(
   } catch (error) {
     logger.error("DACP: Add context listener failed", error)
 
-    // Extract FDC3 error type from error instance
-    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorType =
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to add context listener"
-
-    if (error instanceof FDC3ChannelError) {
-      errorType = error.errorType
-    } else if (errorMessage.includes("Access denied") || errorMessage.includes("denied")) {
-      errorType = ChannelError.AccessDenied
-    } else if (errorMessage.toLowerCase().includes("listener")) {
-      errorType = "ListenerNotFound" as ChannelError
-    } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
-      errorType = ChannelError.NoChannelFound
-    }
 
     sendDACPErrorResponse({
       message,
@@ -307,12 +299,16 @@ export function handleContextListenerUnsubscribe(
       )
 
       if (!privateChannelWithListener) {
-        throw new Error(`Context listener ${listenerUUID} not found for instance ${instanceId}`)
+        throw new ListenerNotFoundChannelError(
+          `Context listener ${listenerUUID} not found for instance ${instanceId}`
+        )
       }
 
       const privateListener = privateChannelWithListener.contextListeners[listenerUUID]
       if (privateListener.instanceId !== instanceId) {
-        throw new Error(`Context listener ${listenerUUID} not found for instance ${instanceId}`)
+        throw new ListenerNotFoundChannelError(
+          `Context listener ${listenerUUID} not found for instance ${instanceId}`
+        )
       }
 
       setState(state =>
@@ -339,20 +335,10 @@ export function handleContextListenerUnsubscribe(
   } catch (error) {
     logger.error("DACP: Context listener unsubscribe failed", error)
 
-    // Extract FDC3 error type from error instance
-    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorType =
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage =
       error instanceof Error ? error.message : "Failed to unsubscribe context listener"
-
-    if (error instanceof FDC3ChannelError) {
-      errorType = error.errorType
-    } else if (errorMessage.includes("Access denied") || errorMessage.includes("denied")) {
-      errorType = ChannelError.AccessDenied
-    } else if (errorMessage.toLowerCase().includes("listener")) {
-      errorType = "ListenerNotFound" as ChannelError
-    } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
-      errorType = ChannelError.NoChannelFound
-    }
 
     sendDACPErrorResponse({
       message,
@@ -364,11 +350,11 @@ export function handleContextListenerUnsubscribe(
   }
 }
 
-async function notifyContextListeners(
+function notifyContextListeners(
   channelId: string,
   context: Context,
   handlerContext: DACPHandlerContext
-): Promise<void> {
+): void {
   const { getState, logger } = handlerContext
   const state = getState()
   const userChannel = getUserChannel(state, channelId)
@@ -401,82 +387,77 @@ async function notifyContextListeners(
     instanceIds: instancesOnChannel.map(i => i.instanceId),
   })
 
-  const notifications = instancesOnChannel
-    .filter(instance => {
-      // Exclude the sender - they already have the context
-      if (instance.instanceId === handlerContext.instanceId) {
-        logger.debug("Skipping sender instance", { instanceId: instance.instanceId })
-        return false
+  const targets = instancesOnChannel.filter(instance => {
+    if (instance.instanceId === handlerContext.instanceId) {
+      logger.debug("Skipping sender instance", { instanceId: instance.instanceId })
+      return false
+    }
+    return true
+  })
+
+  let successful = 0
+  let failed = 0
+
+  targets.forEach(instance => {
+    try {
+      const senderInstance = getInstance(getState(), handlerContext.instanceId)
+
+      const broadcastEvent = createDACPEvent("broadcastEvent", {
+        channelId,
+        context,
+        originatingApp: {
+          appId: senderInstance?.appId || "unknown",
+          instanceId: handlerContext.instanceId,
+        },
+      })
+
+      const broadcastEventWithRouting = {
+        ...broadcastEvent,
+        meta: {
+          ...broadcastEvent.meta,
+          destination: { instanceId: instance.instanceId },
+        },
       }
-      return true
-    })
-    .map(instance => {
-      try {
-        // FDC3 agent library expects broadcastEvent (not contextEvent) with originatingApp
-        // Get the sender's instance info for originatingApp
-        const senderInstance = getInstance(getState(), handlerContext.instanceId)
 
-        const broadcastEvent = createDACPEvent("broadcastEvent", {
-          channelId,
-          context,
-          originatingApp: {
-            appId: senderInstance?.appId || "unknown",
-            instanceId: handlerContext.instanceId,
-          },
-        })
+      logger.info("DACP: Sending broadcast event to listener", {
+        targetInstanceId: instance.instanceId,
+        channelId,
+        contextType: context.type,
+        eventUuid: broadcastEvent.meta.eventUuid,
+        broadcastEventPayload: JSON.stringify(broadcastEvent.payload),
+      })
 
-        // Add routing metadata - WCPConnector will route based on destination.instanceId
-        const broadcastEventWithRouting = {
-          ...broadcastEvent,
-          meta: {
-            ...broadcastEvent.meta,
-            destination: { instanceId: instance.instanceId },
-          },
-        }
+      handlerContext.transport.send(broadcastEventWithRouting)
 
-        logger.info("DACP: Sending broadcast event to listener", {
-          targetInstanceId: instance.instanceId,
-          channelId,
-          contextType: context.type,
-          eventUuid: broadcastEvent.meta.eventUuid,
-          broadcastEventPayload: JSON.stringify(broadcastEvent.payload),
-        })
+      const broadcastPayload = (broadcastEvent as BrowserTypes.BroadcastEvent).payload
+      logger.debug("DACP: Broadcast event message structure", {
+        type: broadcastEventWithRouting.type,
+        hasPayload: !!broadcastPayload,
+        hasContext: !!broadcastPayload?.context,
+        contextType: broadcastPayload?.context?.type,
+      })
 
-        // Send via the handler context's transport (routes through WCPConnector)
-        // WCPConnector routes to the correct app based on meta.destination.instanceId
-        handlerContext.transport.send(broadcastEventWithRouting)
-
-        const broadcastPayload = (broadcastEvent as BrowserTypes.BroadcastEvent).payload
-        logger.debug("DACP: Broadcast event message structure", {
-          type: broadcastEventWithRouting.type,
-          hasPayload: !!broadcastPayload,
-          hasContext: !!broadcastPayload?.context,
-          contextType: broadcastPayload?.context?.type,
-        })
-
-        logger.debug("Broadcast event sent to listener", {
-          instanceId: instance.instanceId,
-          channelId,
-          contextType: context.type,
-        })
-      } catch (error) {
-        logger.error("Failed to notify context listener", {
-          instanceId: instance.instanceId,
-          error,
-        })
-      }
-    })
-
-  const results = await Promise.allSettled(notifications)
-  const successful = results.filter(r => r.status === "fulfilled").length
-  const failed = results.filter(r => r.status === "rejected").length
+      logger.debug("Broadcast event sent to listener", {
+        instanceId: instance.instanceId,
+        channelId,
+        contextType: context.type,
+      })
+      successful++
+    } catch (error) {
+      failed++
+      logger.error("Failed to notify context listener", {
+        instanceId: instance.instanceId,
+        error,
+      })
+    }
+  })
 
   logger.info("DACP: Context listener notification complete", {
     channelId,
     contextType: context.type,
     successful,
     failed,
-    total: results.length,
+    total: successful + failed,
   })
 }
 
@@ -520,11 +501,11 @@ function deliverCurrentContextToListener(
   handlerContext.transport.send(broadcastEventWithRouting)
 }
 
-async function notifyPrivateChannelContextListeners(
+function notifyPrivateChannelContextListeners(
   channelId: string,
   context: Context,
   handlerContext: DACPHandlerContext
-): Promise<void> {
+): void {
   const { getState, logger } = handlerContext
   const privateChannel = getPrivateChannel(getState(), channelId)
 
@@ -534,7 +515,7 @@ async function notifyPrivateChannelContextListeners(
 
   const contextListeners = Object.values(privateChannel.contextListeners)
 
-  const notifications = contextListeners
+  contextListeners
     .filter(listener => {
       if (listener.instanceId === handlerContext.instanceId) {
         return false
@@ -542,7 +523,7 @@ async function notifyPrivateChannelContextListeners(
 
       return listener.contextType === null || listener.contextType === context.type
     })
-    .map(listener => {
+    .forEach(listener => {
       const senderInstance = getInstance(getState(), handlerContext.instanceId)
       const broadcastEvent = createDACPEvent("broadcastEvent", {
         channelId,
@@ -569,6 +550,4 @@ async function notifyPrivateChannelContextListeners(
 
       handlerContext.transport.send(broadcastEventWithRouting)
     })
-
-  await Promise.allSettled(notifications)
 }

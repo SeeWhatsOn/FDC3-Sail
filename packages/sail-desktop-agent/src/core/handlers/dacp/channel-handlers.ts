@@ -73,15 +73,9 @@ export function handleGetCurrentChannelRequest(
     })
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    // Extract FDC3 error type from error instance
-    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorType =
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get current channel"
-
-    if (error instanceof FDC3ChannelError) {
-      errorType = error.errorType
-    } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
-      errorType = ChannelError.NoChannelFound
-    }
 
     sendDACPErrorResponse({
       message,
@@ -134,15 +128,9 @@ export function handleJoinUserChannelRequest(
 
     notifyChannelChanged(instanceId, channelId, context)
   } catch (error) {
-    // Extract FDC3 error type from error instance
-    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorType =
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to join user channel"
-
-    if (error instanceof FDC3ChannelError) {
-      errorType = error.errorType
-    } else if (errorMessage.includes("does not exist") || errorMessage.includes("not found")) {
-      errorType = ChannelError.NoChannelFound
-    }
 
     sendDACPErrorResponse({
       message,
@@ -171,13 +159,9 @@ export function handleLeaveCurrentChannelRequest(
 
     notifyChannelChanged(instanceId, null, context)
   } catch (error) {
-    // Extract FDC3 error type from error instance
-    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorType =
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to leave current channel"
-
-    if (error instanceof FDC3ChannelError) {
-      errorType = error.errorType
-    }
 
     sendDACPErrorResponse({
       message,
@@ -206,13 +190,9 @@ export function handleGetUserChannelsRequest(
     })
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    // Extract FDC3 error type from error instance
-    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorType =
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get user channels"
-
-    if (error instanceof FDC3ChannelError) {
-      errorType = error.errorType
-    }
 
     sendDACPErrorResponse({
       message,
@@ -257,15 +237,9 @@ export function handleGetCurrentContextRequest(
     })
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    // Extract FDC3 error type from error instance
-    let errorType: ChannelError = ChannelError.ApiTimeout
+    const errorType =
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get current context"
-
-    if (error instanceof FDC3ChannelError) {
-      errorType = error.errorType
-    } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
-      errorType = ChannelError.NoChannelFound
-    }
 
     sendDACPErrorResponse({
       message,
@@ -327,17 +301,9 @@ export function handleGetOrCreateChannelRequest(
     sendDACPResponse({ response, instanceId, transport })
     logger.debug("DACP: getOrCreateChannel", { channelId, existed: false })
   } catch (error) {
-    // Extract FDC3 error type from error instance
-    let errorType: ChannelError = ChannelError.CreationFailed
+    const errorType =
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.CreationFailed
     const errorMessage = error instanceof Error ? error.message : "Failed to get or create channel"
-
-    if (error instanceof FDC3ChannelError) {
-      errorType = error.errorType
-    } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
-      errorType = ChannelError.NoChannelFound
-    } else if (errorMessage.includes("denied") || errorMessage.includes("access")) {
-      errorType = ChannelError.AccessDenied
-    }
 
     sendDACPErrorResponse({
       message,

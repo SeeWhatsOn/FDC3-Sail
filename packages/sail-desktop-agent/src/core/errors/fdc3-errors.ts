@@ -153,3 +153,13 @@ export class ChannelCreationFailedError extends FDC3ChannelError {
     super(ChannelError.CreationFailed, message)
   }
 }
+
+/**
+ * DACP/desktop-agent: context listener id is unknown or not owned by this instance.
+ * Payload error string matches FDC3 conformance tests (`ListenerNotFound`).
+ */
+export class ListenerNotFoundChannelError extends FDC3ChannelError {
+  constructor(message: string) {
+    super("ListenerNotFound" as ChannelError, message)
+  }
+}

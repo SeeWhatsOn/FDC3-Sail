@@ -3,7 +3,11 @@ import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { OpenError, ResolveError } from "@finos/fdc3"
-import { AppNotFoundError, ErrorOnLaunchError } from "../../errors/fdc3-errors"
+import {
+  AppNotFoundError,
+  ErrorOnLaunchError,
+  FDC3OpenError,
+} from "../../errors/fdc3-errors"
 import type { DirectoryApp } from "../../app-directory/types"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
 import { registerOpenWithContext } from "./utils/open-with-context"
@@ -78,7 +82,7 @@ export async function handleOpenRequest(
 
     // Check if app launcher is available
     if (!appLauncher) {
-      throw new Error("App launching not available - no AppLauncher configured")
+      throw new ErrorOnLaunchError("App launching not available - no AppLauncher configured")
     }
 
     const appId = payload.app.appId
@@ -99,7 +103,7 @@ export async function handleOpenRequest(
     // Get app metadata from directory
     const apps = appDirectory.retrieveAppsById(appId)
     if (apps.length === 0) {
-      throw new Error(`App not found in directory: ${appId}`)
+      throw new AppNotFoundError(`App not found in directory: ${appId}`)
     }
     const appMetadata = apps[0]
 
@@ -124,7 +128,7 @@ export async function handleOpenRequest(
     })
 
     if (!appIdentifier.instanceId) {
-      throw new Error("App launcher did not return an instanceId")
+      throw new ErrorOnLaunchError("App launcher did not return an instanceId")
     }
 
     if (launchContext) {
@@ -140,19 +144,9 @@ export async function handleOpenRequest(
   } catch (error) {
     logger.error("DACP: openRequest failed", error)
 
-    // Extract FDC3 error type from error instance
-    let errorType: OpenError = OpenError.ErrorOnLaunch
+    const errorType =
+      error instanceof FDC3OpenError ? error.errorType : OpenError.ErrorOnLaunch
     const errorMessage = error instanceof Error ? error.message : "Failed to open app"
-
-    if (error instanceof AppNotFoundError) {
-      errorType = error.errorType
-    } else if (error instanceof ErrorOnLaunchError) {
-      errorType = error.errorType
-    } else if (errorMessage.includes("not found") || errorMessage.includes("App not found")) {
-      errorType = OpenError.AppNotFound
-    } else if (errorMessage.includes("Invalid context") || errorMessage.includes("Malformed")) {
-      errorType = OpenError.MalformedContext
-    }
 
     sendDACPErrorResponse({
       message,

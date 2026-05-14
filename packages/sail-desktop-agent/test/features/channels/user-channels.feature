@@ -13,18 +13,11 @@ Feature: User channels
       | one                            | two                            | three                          | fdc3.channel.4                 | fdc3.channel.5                 | fdc3.channel.6                 | fdc3.channel.7                 | fdc3.channel.8                 | user                             | a1            | getUserChannelsResponse |
 
   @conformance2.2
-  Scenario: User channels include displayMetadata
+  Scenario: User channels include displayMetadata for all predefined channels
     When "appId: App1, instanceId: a1" gets the list of user channels [fdc3.getUserChannels]
     Then messaging will have outgoing posts
-      | msg.matches_type        | to.instanceId | msg.payload.userChannels[0].displayMetadata.name | msg.payload.userChannels[0].displayMetadata.color | msg.payload.userChannels[1].displayMetadata.name | msg.payload.userChannels[2].displayMetadata.name |
-      | getUserChannelsResponse | a1            | Channel 1                                        | #FF0000                                           | Channel 2                                        | Channel 3                                        |
-
-  @conformance2.2
-  Scenario: User Channels include displayMetadata
-    When "appId: App1, instanceId: a1" gets the list of user channels [fdc3.getUserChannels]
-    Then messaging will have outgoing posts
-      | msg.payload.userChannels[0].displayMetadata.name | msg.payload.userChannels[1].displayMetadata.name | msg.payload.userChannels[2].displayMetadata.name | msg.payload.userChannels[3].displayMetadata.name | msg.payload.userChannels[4].displayMetadata.name | msg.payload.userChannels[5].displayMetadata.name | msg.payload.userChannels[6].displayMetadata.name | msg.payload.userChannels[7].displayMetadata.name | msg.matches_type        | to.instanceId |
-      | Channel 1                                        | Channel 2                                        | Channel 3                                        | Channel 4                                        | Channel 5                                        | Channel 6                                        | Channel 7                                        | Channel 8                                        | getUserChannelsResponse | a1            |
+      | msg.matches_type        | to.instanceId | msg.payload.userChannels[0].displayMetadata.name | msg.payload.userChannels[0].displayMetadata.color | msg.payload.userChannels[1].displayMetadata.name | msg.payload.userChannels[2].displayMetadata.name | msg.payload.userChannels[3].displayMetadata.name | msg.payload.userChannels[4].displayMetadata.name | msg.payload.userChannels[5].displayMetadata.name | msg.payload.userChannels[6].displayMetadata.name | msg.payload.userChannels[7].displayMetadata.name |
+      | getUserChannelsResponse | a1            | Channel 1                                        | #FF0000                                           | Channel 2                                        | Channel 3                                        | Channel 4                                        | Channel 5                                        | Channel 6                                        | Channel 7                                        | Channel 8                                        |
 
   Scenario: Initial User Channel
         At startup, the user channel shouldn't be set

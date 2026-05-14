@@ -86,6 +86,32 @@ When(
 )
 
 When(
+  "{string} adds a catch-all private channel event listener on {string} [PrivateChannel.addEventListener]",
+  async function (this: CustomWorld, app: string, channelId: string) {
+    ensureAppInstance(this, app)
+    const meta = createMeta(this, app)
+
+    const message: PrivateChannelAddEventListenerRequest = {
+      meta,
+      payload: {
+        privateChannelId: handleResolve(channelId, this) as string,
+        listenerType: null,
+      },
+      type: "privateChannelAddEventListenerRequest",
+    }
+
+    await this.mockTransport.receiveMessage(message)
+
+    const lastMessage = this.mockTransport.getLastMessage()
+    const listenerUUID = (lastMessage?.msg?.payload as { listenerUUID?: string } | undefined)
+      ?.listenerUUID
+    if (listenerUUID) {
+      this.props.lastPrivateChannelEventListenerId = listenerUUID
+    }
+  }
+)
+
+When(
   "{string} adds an {string} event listener on {string} [PrivateChannel.addEventListener]",
   async function (this: CustomWorld, app: string, listenerType: string, channelId: string) {
     ensureAppInstance(this, app)

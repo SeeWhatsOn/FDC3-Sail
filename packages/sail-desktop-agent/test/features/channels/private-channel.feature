@@ -29,6 +29,21 @@ Feature: Relaying Private Channel Broadcast messages
       | broadcastResponse          | {null}                | {null}                        | {null}                   | App1     | a1            |
 
   @conformance2.2
+  Scenario: Null lifecycle listener receives addContextListener unsubscribe and disconnect events
+    When "appId: App2, instanceId: a2" adds a catch-all private channel event listener on "{channel1Id}" [PrivateChannel.addEventListener]
+    And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
+    And we wait for a period of "10" ms
+    And "appId: App1, instanceId: a1" disconnects from private channel "{channel1Id}" [PrivateChannel.disconnect]
+    Then messaging will have outgoing posts
+      | msg.matches_type                        | to.appId | to.instanceId | msg.payload.privateChannelId | msg.payload.contextType |
+      | privateChannelAddEventListenerResponse  | App2     | a2            | {null}                       | {null}                  |
+      | privateChannelOnAddContextListenerEvent | App2     | a2            | {channel1Id}                 | fdc3.instrument         |
+      | addContextListenerResponse              | App1     | a1            | {null}                       | {null}                  |
+      | privateChannelOnUnsubscribeEvent        | App2     | a2            | {channel1Id}                 | fdc3.instrument         |
+      | privateChannelOnDisconnectEvent         | App2     | a2            | {channel1Id}                 | {null}                  |
+      | privateChannelDisconnectResponse        | App1     | a1            | {null}                       | {null}                  |
+
+  @conformance2.2
   Scenario: Event Listener created for addContextListener and unsubscribe
     When "appId: App2, instanceId: a2" adds an "addContextListener" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
     And "App2/a2" adds an "unsubscribe" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
@@ -82,7 +97,7 @@ Feature: Relaying Private Channel Broadcast messages
       | addContextListenerResponse | App2     | a2            | NoChannelFound    |
 
   Scenario: Can't unsubscribe an unconnected listener
-    When "appId: App2, instanceId: a2" adds a context listener on "{channelId}" with type "fdc3.instrument" [fdc3.addContextListener]
+    When "appId: App2, instanceId: a2" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App2, instanceId: a2" removes context listener with id "{lastContextListenerId}" [fdc3.removeContextListener]
     And "appId: App2, instanceId: a2" removes context listener with id "{lastContextListenerId}" [fdc3.removeContextListener]
     Then messaging will have outgoing posts
@@ -91,7 +106,7 @@ Feature: Relaying Private Channel Broadcast messages
       | contextListenerUnsubscribeResponse | App2     | a2            | ListenerNotFound  |
 
   Scenario: Can't unsubscribe an someone else's listener
-    When "appId: App2, instanceId: a2" adds a context listener on "{channelId}" with type "fdc3.instrument" [fdc3.addContextListener]
+    When "appId: App2, instanceId: a2" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App1, instanceId: a1" removes context listener with id "{lastContextListenerId}" [fdc3.removeContextListener]
     Then messaging will have outgoing posts
       | msg.type                           | to.appId | to.instanceId | msg.payload.error |

@@ -48,6 +48,8 @@ export {
   removePrivateChannelContextListener,
   addPrivateChannelDisconnectListener,
   removePrivateChannelDisconnectListener,
+  addPrivateChannelLifecycleCatchAllListener,
+  removePrivateChannelLifecycleCatchAllListener,
   setPrivateChannelLastContext,
 } from "./private-channel"
 

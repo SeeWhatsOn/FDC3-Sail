@@ -28,10 +28,15 @@ export const createPrivateChannel = (
       addContextListenerListeners: {},
       unsubscribeListeners: {},
       disconnectListeners: {},
+      lifecycleCatchAllListeners: {},
       lastContextByType: {},
       displayMetadata: {
         name: channelId,
       },
+    }
+    const creator = draft.instances[creatorInstanceId]
+    if (creator && !creator.privateChannels.includes(channelId)) {
+      creator.privateChannels.push(channelId)
     }
   })
 }
@@ -49,6 +54,10 @@ export const connectInstanceToPrivateChannel = (
     const privateChannel = draft.channels.private[channelId]
     if (privateChannel) {
       privateChannel.connectedInstances.push(instanceId)
+    }
+    const instance = draft.instances[instanceId]
+    if (instance && !instance.privateChannels.includes(channelId)) {
+      instance.privateChannels.push(channelId)
     }
   })
 }
@@ -94,12 +103,28 @@ export const disconnectInstanceFromPrivateChannel = (
       }
     })
 
+    Object.keys(privateChannel.lifecycleCatchAllListeners).forEach(listenerId => {
+      if (privateChannel.lifecycleCatchAllListeners[listenerId]?.instanceId === instanceId) {
+        delete privateChannel.lifecycleCatchAllListeners[listenerId]
+      }
+    })
+
+    const disconnectedInstance = draft.instances[instanceId]
+    if (disconnectedInstance) {
+      disconnectedInstance.privateChannels = disconnectedInstance.privateChannels.filter(
+        id => id !== channelId
+      )
+    }
+
     // Remove channel if no more connections or creator disconnected
     if (
       privateChannel.connectedInstances.length === 0 ||
       !privateChannel.connectedInstances.includes(privateChannel.creatorInstanceId)
     ) {
       delete draft.channels.private[channelId]
+      for (const instance of Object.values(draft.instances)) {
+        instance.privateChannels = instance.privateChannels.filter(id => id !== channelId)
+      }
     }
   })
 }
@@ -123,6 +148,43 @@ export const addPrivateChannelContextListener = (
         instanceId,
         contextType,
       }
+    }
+  })
+}
+
+export const addPrivateChannelLifecycleCatchAllListener = (
+  state: AgentState,
+  channelId: string,
+  listenerId: string,
+  instanceId: string
+): AgentState => {
+  const channel = state.channels.private[channelId]
+  if (!channel) return state
+  if (!channel.connectedInstances.includes(instanceId)) return state
+
+  return produce(state, draft => {
+    const privateChannel = draft.channels.private[channelId]
+    if (privateChannel) {
+      privateChannel.lifecycleCatchAllListeners[listenerId] = {
+        listenerId,
+        instanceId,
+      }
+    }
+  })
+}
+
+export const removePrivateChannelLifecycleCatchAllListener = (
+  state: AgentState,
+  channelId: string,
+  listenerId: string
+): AgentState => {
+  const channel = state.channels.private[channelId]
+  if (!channel) return state
+
+  return produce(state, draft => {
+    const privateChannel = draft.channels.private[channelId]
+    if (privateChannel) {
+      delete privateChannel.lifecycleCatchAllListeners[listenerId]
     }
   })
 }

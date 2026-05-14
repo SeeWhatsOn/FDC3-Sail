@@ -215,6 +215,12 @@ export interface PrivateChannel extends BrowserTypes.Channel {
   /** Disconnect listeners for onDisconnect callbacks */
   disconnectListeners: Record<string, DisconnectListener>
 
+  /**
+   * FDC3 2.2: PrivateChannel.addEventListener(null, handler) — one listener receives
+   * add-context-listener, unsubscribe, and disconnect lifecycle events.
+   */
+  lifecycleCatchAllListeners: Record<string, AddContextListenerListener>
+
   /** Last context broadcast per context type */
   lastContextByType: Record<string, Context>
 }

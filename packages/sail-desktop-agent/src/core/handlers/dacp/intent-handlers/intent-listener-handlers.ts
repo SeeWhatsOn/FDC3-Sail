@@ -10,6 +10,7 @@ import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
+import { FDC3ResolveError, TargetInstanceUnavailableError } from "../../../errors/fdc3-errors"
 import { getInstance } from "../../../state/selectors"
 import { registerIntentListener, unregisterIntentListener } from "../../../state/mutators"
 import { deliverPendingIntentsForListener } from "./intent-delivery-helpers"
@@ -25,7 +26,9 @@ export function handleAddIntentListener(
     const instance = getInstance(getState(), instanceId)
 
     if (!instance) {
-      throw new Error(`Instance ${instanceId} not found for adding intent listener`)
+      throw new TargetInstanceUnavailableError(
+        `Instance ${instanceId} not found for adding intent listener`
+      )
     }
 
     const listenerId = generateEventUuid()
@@ -51,13 +54,9 @@ export function handleAddIntentListener(
     logger.error("DACP: Add intent listener failed", error)
 
     // Use ResolveError for intent listener errors (AddIntentListenerResponse validates ResolveError enum values)
-    let errorType: ResolveError = ResolveError.ApiTimeout
+    const errorType =
+      error instanceof FDC3ResolveError ? error.errorType : ResolveError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to add intent listener"
-
-    // Intent listener errors typically map to ApiTimeout or other ResolveError values
-    if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
-      errorType = ResolveError.TargetInstanceUnavailable
-    }
 
     sendDACPErrorResponse({
       message,
@@ -82,7 +81,7 @@ export function handleIntentListenerUnsubscribe(
     const state = getState()
     const listener = state.intents.listeners[listenerUUID]
     if (!listener) {
-      throw new Error(`Intent listener ${listenerUUID} not found`)
+      throw new TargetInstanceUnavailableError(`Intent listener ${listenerUUID} not found`)
     }
 
     setState(state => unregisterIntentListener(state, listenerUUID))
@@ -93,13 +92,10 @@ export function handleIntentListenerUnsubscribe(
     logger.error("DACP: Intent listener unsubscribe failed", error)
 
     // Use ResolveError for intent listener errors
-    let errorType: ResolveError = ResolveError.ApiTimeout
+    const errorType =
+      error instanceof FDC3ResolveError ? error.errorType : ResolveError.ApiTimeout
     const errorMessage =
       error instanceof Error ? error.message : "Failed to unsubscribe intent listener"
-
-    if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
-      errorType = ResolveError.TargetInstanceUnavailable
-    }
 
     sendDACPErrorResponse({
       message,
