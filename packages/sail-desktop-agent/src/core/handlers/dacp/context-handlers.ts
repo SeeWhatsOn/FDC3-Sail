@@ -45,10 +45,10 @@ import { isValidContext } from "./utils/context-validation"
  *
  * Note: Message validation happens at router level before this handler is called
  */
-export async function handleBroadcastRequest(
+export function handleBroadcastRequest(
   message: BrowserTypes.BroadcastRequest,
   context: DACPHandlerContext
-): Promise<void> {
+): void {
   const { transport, instanceId, getState, setState, logger } = context
 
   try {
@@ -132,8 +132,7 @@ export async function handleBroadcastRequest(
 
     // BroadcastResponse schema doesn't validate error payloads, but use ChannelError for consistency
     // Common errors: MalformedContext, ApiTimeout
-    const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
+    const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Unknown broadcast error"
 
     sendDACPErrorResponse({
@@ -253,8 +252,7 @@ export function handleAddContextListener(
   } catch (error) {
     logger.error("DACP: Add context listener failed", error)
 
-    const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
+    const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to add context listener"
 
     sendDACPErrorResponse({
@@ -335,8 +333,7 @@ export function handleContextListenerUnsubscribe(
   } catch (error) {
     logger.error("DACP: Context listener unsubscribe failed", error)
 
-    const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
+    const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage =
       error instanceof Error ? error.message : "Failed to unsubscribe context listener"
 

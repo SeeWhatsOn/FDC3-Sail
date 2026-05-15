@@ -11,13 +11,13 @@
  *
  * ```typescript
  * // ✅ Core only (no browser code in bundle)
- * import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
+ * import { DesktopAgent } from '@finos/sail-desktop-agent'
  *
  * // ✅ Browser module (includes WCP connector)
- * import { createBrowserDesktopAgent } from '@finos/fdc3-sail-desktop-agent/browser'
+ * import { createBrowserDesktopAgent } from '@finos/sail-desktop-agent/browser'
  *
  * // ✅ Transports module
- * import { createInMemoryTransportPair } from '@finos/fdc3-sail-desktop-agent/transports'
+ * import { createInMemoryTransportPair } from '@finos/sail-desktop-agent/transports'
  * ```
  *
  * ## What's Exported
@@ -39,12 +39,12 @@
 export * from "./core"
 
 // NOTE: Browser-specific code is NOT exported here
-// Import from @finos/fdc3-sail-desktop-agent/browser for:
+// Import from @finos/sail-desktop-agent/browser for:
 // - createBrowserDesktopAgent()
 // - WCPConnector
 // - MessagePortTransport
 
 // NOTE: Transport implementations are NOT exported here
-// Import from @finos/fdc3-sail-desktop-agent/transports for:
+// Import from @finos/sail-desktop-agent/transports for:
 // - InMemoryTransport
 // - createInMemoryTransportPair()

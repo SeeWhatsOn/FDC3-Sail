@@ -13,7 +13,7 @@ This package provides a production-ready FDC3 Desktop Agent that manages applica
 - ✅ **Environment Agnostic**: Runs in browser, Node.js, Web Worker, or any JavaScript runtime
 - ✅ **WCP Support**: Full Web Connection Protocol (WCP1-6) implementation for browser apps
 - ✅ **Flexible Deployment**: Same code runs locally, on server, or in worker
-- ✅ **Type Safety**: Built with TypeScript and Zod validation
+- ✅ **Type Safety**: Built with TypeScript and injectable DACP/schema validation
 
 ## Architecture
 
@@ -49,30 +49,31 @@ The package follows a clean three-layer architecture:
 packages/sail-desktop-agent/
 ├── src/
 │   ├── core/                      # Pure FDC3 Desktop Agent (environment-agnostic)
-│   │   ├── sail-desktop-agent.ts       # Main DesktopAgent class
-│   │   ├── handlers/              # DACP message handlers
-│   │   │   └── dacp/              # All FDC3 operation handlers
-│   │   ├── state/                 # State registries
-│   │   │   ├── app-instance-registry.ts
-│   │   │   ├── intent-registry.ts
-│   │   │   ├── channel-context-registry.ts
-│   │   │   └── ...
-│   │   ├── interfaces/            # Transport & AppLauncher interfaces
-│   │   └── app-directory/         # FDC3 App Directory management
-│   ├── browser/                   # Browser-specific code
-│   │   ├── browser-sail-desktop-agent.ts  # Factory functions
-│   │   └── wcp/                   # WCP implementation
-│   │       ├── wcp-connector.ts   # WCP1-6 protocol handler
-│   │       └── message-port-transport.ts
-│   └── transports/                # Transport implementations
-│       └── in-memory-transport.ts # For same-process communication
-└── test/                          # Cucumber BDD tests
+│   │   ├── desktop-agent.ts           # Main DesktopAgent class
+│   │   ├── handlers/                  # DACP message handlers
+│   │   │   └── dacp/                  # All FDC3 operation handlers
+│   │   ├── state/                     # Immutable agent state (Immer-based updates)
+│   │   │   ├── types.ts
+│   │   │   ├── initial-state.ts
+│   │   │   ├── selectors/             # Read-only state projections
+│   │   │   └── mutators/              # State transition helpers
+│   │   ├── interfaces/                # Transport & AppLauncher interfaces
+│   │   └── app-directory/             # FDC3 App Directory management
+│   ├── browser/                       # Browser-specific code
+│   │   ├── browser-desktop-agent.ts   # Factory functions (local DA + WCP client)
+│   │   └── wcp/                       # WCP implementation
+│   │       ├── wcp-connector.ts       # WCP protocol handler & routing
+│   │       ├── message-port-transport.ts
+│   │       └── ...                    # Handshake, connection management, intent resolver UI
+│   └── transports/                    # Shared transport implementations
+│       └── in-memory-transport.ts     # Same-process linked transports
+└── test/                              # Cucumber BDD tests
 ```
 
 ## Installation
 
 ```bash
-npm install @finos/fdc3-sail-desktop-agent
+npm install @finos/sail-desktop-agent
 ```
 
 ## Quick Start
@@ -82,7 +83,7 @@ npm install @finos/fdc3-sail-desktop-agent
 Use when Desktop Agent runs in the browser alongside your UI:
 
 ```typescript
-import { createBrowserDesktopAgent } from "@finos/fdc3-sail-desktop-agent/browser"
+import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/browser"
 
 const { desktopAgent, wcpConnector, start, stop } = createBrowserDesktopAgent({
   wcpOptions: {
@@ -105,7 +106,7 @@ Use when Desktop Agent runs on a Node.js server:
 
 ```typescript
 // Browser client
-import { createWCPClient } from "@finos/fdc3-sail-desktop-agent/browser"
+import { createWCPClient } from "@finos/sail-desktop-agent/browser"
 import { SocketIOClientTransport } from "@finos/sail-platform-api"
 
 const transport = new SocketIOClientTransport({
@@ -127,7 +128,7 @@ start()
 
 ```typescript
 // Server
-import { DesktopAgent } from "@finos/fdc3-sail-desktop-agent"
+import { DesktopAgent } from "@finos/sail-desktop-agent"
 import { SocketIOServerTransport } from "@finos/sail-platform-api"
 
 const transport = new SocketIOServerTransport(io, userId)
@@ -141,7 +142,7 @@ Use when Desktop Agent runs in a Web Worker for isolation:
 
 ```typescript
 // Main thread
-import { createWCPClient } from "@finos/fdc3-sail-desktop-agent/browser"
+import { createWCPClient } from "@finos/sail-desktop-agent/browser"
 import { WebWorkerTransport } from "@finos/sail-platform-api"
 
 const worker = new Worker("sail-desktop-agent-worker.js")
@@ -156,9 +157,9 @@ start()
 For full control over component setup:
 
 ```typescript
-import { DesktopAgent } from "@finos/fdc3-sail-desktop-agent"
-import { WCPConnector } from "@finos/fdc3-sail-desktop-agent/browser"
-import { createInMemoryTransportPair } from "@finos/fdc3-sail-desktop-agent/transports"
+import { DesktopAgent } from "@finos/sail-desktop-agent"
+import { WCPConnector } from "@finos/sail-desktop-agent/browser"
+import { createInMemoryTransportPair } from "@finos/sail-desktop-agent/transports"
 
 // Create linked transport pair
 const [daTransport, wcpTransport] = createInMemoryTransportPair()
@@ -271,13 +272,13 @@ interface Transport {
 
 ```bash
 # Run Cucumber BDD tests
-npm run test:cucumber --workspace=@finos/fdc3-sail-desktop-agent
+npm run test:cucumber --workspace=@finos/sail-desktop-agent
 
 # Run unit tests
-npm run test --workspace=@finos/fdc3-sail-desktop-agent
+npm run test --workspace=@finos/sail-desktop-agent
 
 # Type checking
-npm run typecheck --workspace=@finos/fdc3-sail-desktop-agent
+npm run typecheck --workspace=@finos/sail-desktop-agent
 ```
 
 ### Test Architecture
@@ -304,7 +305,7 @@ expect(responses[0].payload.resolution).toBeDefined()
 ### Building
 
 ```bash
-npm run build --workspace=@finos/fdc3-sail-desktop-agent
+npm run build --workspace=@finos/sail-desktop-agent
 ```
 
 ### Key Design Principles

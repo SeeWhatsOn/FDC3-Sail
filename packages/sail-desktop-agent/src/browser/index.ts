@@ -21,17 +21,17 @@
  *
  * ```typescript
  * // ✅ Browser code included
- * import { createBrowserDesktopAgent } from '@finos/fdc3-sail-desktop-agent/browser'
+ * import { createBrowserDesktopAgent } from '@finos/sail-desktop-agent/browser'
  *
  * // ✅ Browser code NOT included (core only)
- * import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
+ * import { DesktopAgent } from '@finos/sail-desktop-agent'
  * ```
  *
  * ## Usage Patterns
  *
  * ### Pattern 1: Local Browser DA (Desktop Agent in same window)
  * ```typescript
- * import { createBrowserDesktopAgent } from '@finos/fdc3-sail-desktop-agent/browser'
+ * import { createBrowserDesktopAgent } from '@finos/sail-desktop-agent/browser'
  *
  * const { desktopAgent, wcpConnector, start } = createBrowserDesktopAgent({
  *   wcpOptions: {
@@ -45,7 +45,7 @@
  *
  * ### Pattern 2: Server Mode (Desktop Agent on server)
  * ```typescript
- * import { createWCPClient } from '@finos/fdc3-sail-desktop-agent/browser'
+ * import { createWCPClient } from '@finos/sail-desktop-agent/browser'
  * import { SocketIOClientTransport } from '@finos/sail-platform-api'
  *
  * const transport = new SocketIOClientTransport({ url: 'wss://server.com' })
@@ -62,7 +62,7 @@
  *
  * ### Pattern 3: Worker Mode (Desktop Agent in Web Worker)
  * ```typescript
- * import { createWCPClient } from '@finos/fdc3-sail-desktop-agent/browser'
+ * import { createWCPClient } from '@finos/sail-desktop-agent/browser'
  * import { WebWorkerTransport } from '@finos/sail-platform-api'
  *
  * const worker = new Worker('sail-desktop-agent-worker.js')
@@ -74,9 +74,9 @@
  *
  * ### Pattern 4: Manual Composition (Advanced)
  * ```typescript
- * import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
- * import { WCPConnector, MessagePortTransport } from '@finos/fdc3-sail-desktop-agent/browser'
- * import { createInMemoryTransportPair } from '@finos/fdc3-sail-desktop-agent/transports'
+ * import { DesktopAgent } from '@finos/sail-desktop-agent'
+ * import { WCPConnector, MessagePortTransport } from '@finos/sail-desktop-agent/browser'
+ * import { createInMemoryTransportPair } from '@finos/sail-desktop-agent/transports'
  *
  * const [daTransport, wcpTransport] = createInMemoryTransportPair()
  * const desktopAgent = new DesktopAgent({ transport: daTransport })

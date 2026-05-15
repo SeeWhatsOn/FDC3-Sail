@@ -12,9 +12,9 @@
  *
  * ### InMemoryTransport (Browser Desktop Agent)
  * ```typescript
- * import { createInMemoryTransportPair } from '@finos/fdc3-sail-desktop-agent/transports'
- * import { DesktopAgent } from '@finos/fdc3-sail-desktop-agent'
- * import { WCPConnector } from '@finos/fdc3-sail-desktop-agent/browser'
+ * import { createInMemoryTransportPair } from '@finos/sail-desktop-agent/transports'
+ * import { DesktopAgent } from '@finos/sail-desktop-agent'
+ * import { WCPConnector } from '@finos/sail-desktop-agent/browser'
  *
  * // Create linked transports
  * const [daTransport, wcpTransport] = createInMemoryTransportPair()
