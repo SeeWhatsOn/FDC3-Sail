@@ -1,0 +1,2051 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FDC3 2.2 Sail Desktop Agent Compliance Dashboard</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0f1419;
+        --panel: #171d24;
+        --panel-soft: #1d2530;
+        --text: #ecf2f8;
+        --muted: #a8b3bf;
+        --line: #2b3542;
+        --accent: #7ab7ff;
+        --pass: #63d297;
+        --gap: #ff7474;
+        --required: #ffb86b;
+        --test: #d6b4ff;
+        --platform: #77d7d7;
+        --optional: #b8c0cc;
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f6f8fb;
+          --panel: #ffffff;
+          --panel-soft: #f0f4f8;
+          --text: #16202a;
+          --muted: #5e6b78;
+          --line: #d7e0ea;
+          --accent: #005eb8;
+          --pass: #087a46;
+          --gap: #bf2222;
+          --required: #9b5200;
+          --test: #6f38a8;
+          --platform: #0b6d73;
+          --optional: #53606d;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+
+      header {
+        padding: 32px clamp(20px, 4vw, 56px) 24px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      main {
+        padding: 24px clamp(20px, 4vw, 56px) 52px;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        margin: 0;
+        line-height: 1.15;
+      }
+
+      h1 {
+        max-width: 1050px;
+        font-size: clamp(28px, 4vw, 44px);
+        letter-spacing: -0.03em;
+      }
+
+      h2 {
+        margin-top: 36px;
+        margin-bottom: 14px;
+        font-size: 22px;
+      }
+
+      h3 {
+        font-size: 16px;
+      }
+
+      h4 {
+        margin-top: 14px;
+        font-size: 13px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .subtitle {
+        max-width: 1050px;
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .meta,
+      .quick-links,
+      .evidence,
+      .toolbar,
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .meta {
+        margin-top: 20px;
+      }
+
+      .quick-links {
+        margin-top: 18px;
+      }
+
+      .pill,
+      .tag,
+      code {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel-soft);
+        color: var(--text);
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        padding: 3px 8px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        color: var(--muted);
+        font-family: inherit;
+        font-size: 13px;
+        padding: 5px 10px;
+      }
+
+      code {
+        border-radius: 6px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .stats {
+        grid-template-columns: repeat(6, minmax(120px, 1fr));
+      }
+
+      .two-col {
+        grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+        align-items: start;
+      }
+
+      .three-col {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .card,
+      details {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 18px;
+      }
+
+      details {
+        padding: 0;
+        overflow: hidden;
+      }
+
+      summary {
+        cursor: pointer;
+        padding: 16px 18px;
+        list-style: none;
+      }
+
+      summary::-webkit-details-marker {
+        display: none;
+      }
+
+      summary::after {
+        content: "Open";
+        float: right;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      details[open] summary::after {
+        content: "Close";
+      }
+
+      .detail-body {
+        padding: 0 18px 18px;
+        border-top: 1px solid var(--line);
+      }
+
+      .stat {
+        min-height: 110px;
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 34px;
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      .stat span,
+      .muted,
+      .why {
+        color: var(--muted);
+      }
+
+      .stat span {
+        display: block;
+        margin-top: 10px;
+        font-size: 13px;
+      }
+
+      .pass {
+        color: var(--pass);
+      }
+
+      .gap {
+        color: var(--gap);
+      }
+
+      .required {
+        color: var(--required);
+      }
+
+      .test {
+        color: var(--test);
+      }
+
+      .platform {
+        color: var(--platform);
+      }
+
+      .optional {
+        color: var(--optional);
+      }
+
+      .label,
+      .status {
+        display: inline-block;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 9px;
+      }
+
+      .label {
+        margin-bottom: 6px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .status.pass {
+        background: color-mix(in srgb, var(--pass) 16%, transparent);
+      }
+
+      .status.gap {
+        background: color-mix(in srgb, var(--gap) 16%, transparent);
+      }
+
+      .status.required {
+        background: color-mix(in srgb, var(--required) 16%, transparent);
+      }
+
+      .status.test {
+        background: color-mix(in srgb, var(--test) 16%, transparent);
+      }
+
+      .status.platform {
+        background: color-mix(in srgb, var(--platform) 16%, transparent);
+      }
+
+      .status.optional {
+        background: color-mix(in srgb, var(--optional) 16%, transparent);
+      }
+
+      .summary-item {
+        padding: 14px 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .summary-item:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      button {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+        font-size: 13px;
+        padding: 7px 11px;
+      }
+
+      button[aria-pressed="true"] {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .items {
+        display: grid;
+        gap: 12px;
+      }
+
+      .item {
+        display: grid;
+        gap: 10px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+      }
+
+      .item-head,
+      .task-head {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .task {
+        margin-bottom: 12px;
+      }
+
+      .task:last-child {
+        margin-bottom: 0;
+      }
+
+      .task-num {
+        color: var(--accent);
+        font-weight: 800;
+      }
+
+      ul,
+      ol {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      .matrix {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 8px 14px;
+        margin-top: 12px;
+      }
+
+      .matrix div:nth-child(odd) {
+        color: var(--muted);
+      }
+
+      .callout {
+        border-left: 3px solid var(--accent);
+        padding: 12px 14px;
+        background: var(--panel-soft);
+        border-radius: 10px;
+      }
+
+      .checkpoint {
+        border-left-color: var(--required);
+      }
+
+      .issue-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .issue-card {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 12px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+      }
+
+      .issue-card input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-top: 2px;
+        accent-color: var(--accent);
+      }
+
+      .issue-card.done {
+        opacity: 0.72;
+      }
+
+      .issue-card.done h3 {
+        text-decoration: line-through;
+      }
+
+      .issue-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 8px;
+      }
+
+      .issue-label {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 3px 8px;
+      }
+
+      .issue-body {
+        display: grid;
+        gap: 8px;
+      }
+
+      .progress {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .progress-bar {
+        flex: 1 1 240px;
+        height: 10px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel-soft);
+      }
+
+      .progress-bar span {
+        display: block;
+        width: 0%;
+        height: 100%;
+        background: var(--accent);
+      }
+
+      footer {
+        margin-top: 36px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 1040px) {
+        .stats,
+        .two-col,
+        .three-col {
+          grid-template-columns: 1fr;
+        }
+
+        .matrix {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>FDC3 2.2 Sail Desktop Agent Compliance Dashboard</h1>
+      <p class="subtitle">
+        Drill-down view of what works, what does not, why it matters, exactly where the changes need
+        to happen, and how each remediation task should be verified.
+      </p>
+      <div class="meta">
+        <span class="pill">Review: <code>FDC3_2_2_COMPLIANCE_REVIEW.md</code></span>
+        <span class="pill">Remediation: <code>FDC3_2_2_REMEDIATION_PLAN.md</code></span>
+        <span class="pill">Package: <code>@finos/sail-desktop-agent</code></span>
+      </div>
+      <nav class="quick-links" aria-label="Dashboard sections">
+        <a class="pill" href="#executive">Executive view</a>
+        <a class="pill" href="#blockers">Blockers</a>
+        <a class="pill" href="#issue-tracker">Issue tracker</a>
+        <a class="pill" href="#remediation">Remediation tasks</a>
+        <a class="pill" href="#coverage">Coverage map</a>
+        <a class="pill" href="#platform">Platform contract</a>
+        <a class="pill" href="#final-checkpoint">Final checklist</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="grid stats" aria-label="Compliance statistics">
+        <div class="card stat">
+          <strong class="pass">8</strong>
+          <span>Areas with solid implementation or existing tests</span>
+        </div>
+        <div class="card stat">
+          <strong class="gap">0</strong>
+          <span>Spec or correctness blockers remaining (none; channel semantics, private-channel catch-all, and heartbeat full cleanup are done)</span>
+        </div>
+        <div class="card stat">
+          <strong class="required">4</strong>
+          <span>Required production-readiness fixes</span>
+        </div>
+        <div class="card stat">
+          <strong class="test">8</strong>
+          <span>Missing or weak test areas</span>
+        </div>
+        <div class="card stat">
+          <strong class="platform">7</strong>
+          <span>Responsibilities delegated to the platform</span>
+        </div>
+        <div class="card stat">
+          <strong class="optional">6</strong>
+          <span>Optional cleanup items to track</span>
+        </div>
+      </section>
+
+      <section id="executive" class="grid two-col">
+        <div>
+          <h2>Executive View</h2>
+          <div class="card">
+            <div class="summary-item">
+              <span class="label pass">Working</span>
+              <p>
+                The core package has the right composable shape: transport abstraction, browser WCP
+                split, injected app launcher, app directory, validator, logger, user channels,
+                implementation metadata, and intent resolver callback.
+              </p>
+            </div>
+            <div class="summary-item">
+              <span class="label gap">Not Yet Compliant</span>
+              <p>
+                It should not claim full FDC3 2.2 compliance until remaining production-readiness
+                items (for example logging hygiene and docs alignment) are addressed.
+              </p>
+            </div>
+            <div class="summary-item">
+              <span class="label required">Production Risk</span>
+              <p>
+                DACP/WCP payload logging can expose sensitive context data. Documentation also
+                contains package-name drift and overstates built-in validation.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2>Dependency Order</h2>
+          <div class="card">
+            <ol>
+              <li>
+                <strong>Channel state model</strong> first, because it affects user and app channel
+                routing.
+              </li>
+              <li><strong>PrivateChannel catch-all listeners</strong> can run independently.</li>
+              <li>
+                <del
+                  ><strong>Heartbeat cleanup</strong> should coordinate with circular-import
+                  cleanup.</del
+                >
+                — done: timeout uses shared <code>cleanupDACPHandlers</code>; timers live in
+                <code>heartbeat-runtime.ts</code>.
+              </li>
+              <li><strong>Logging and docs</strong> can be done after behavior blockers.</li>
+              <li>
+                <strong>Platform contract tests</strong> come after the core contract stabilizes.
+              </li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section id="blockers">
+        <h2>Blockers And Drill-Down</h2>
+        <div class="toolbar" role="toolbar" aria-label="Filter compliance items">
+          <button type="button" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" data-filter="pass">Working</button>
+          <button type="button" data-filter="gap">Blockers</button>
+          <button type="button" data-filter="required">Required</button>
+          <button type="button" data-filter="test">Needs test</button>
+          <button type="button" data-filter="platform">Platform</button>
+          <button type="button" data-filter="optional">Optional</button>
+        </div>
+
+        <div class="items" id="items">
+          <article class="item" data-status="gap">
+            <div class="item-head">
+              <h3>User and app channel state are conflated</h3>
+              <span class="status gap">Blocker</span>
+            </div>
+            <p class="why">
+              <code>AppInstance.currentChannel</code> currently represents both current user channel
+              and app-channel listener participation. FDC3 treats
+              <code>getCurrentChannel()</code> and <code>leaveCurrentChannel()</code> as
+              user-channel APIs.
+            </p>
+            <details>
+              <summary>Where to change and why</summary>
+              <div class="detail-body">
+                <h4>Files likely touched</h4>
+                <div class="evidence">
+                  <code>src/core/state/types.ts</code>
+                  <code>src/core/state/mutators/instance.ts</code>
+                  <code>src/core/state/selectors/instance.ts</code>
+                  <code>src/core/handlers/dacp/channel-handlers.ts</code>
+                  <code>src/core/handlers/dacp/context-handlers.ts</code>
+                  <code>test/features/channels/user-channels.feature</code>
+                  <code>test/features/channels/app-channels.feature</code>
+                </div>
+                <h4>Specific changes</h4>
+                <ul>
+                  <li>Add a separate app-channel participation/listener routing structure.</li>
+                  <li>Keep current user channel membership distinct from app-channel listeners.</li>
+                  <li>
+                    Update selectors so app-channel broadcast fan-out does not rely on user-channel
+                    state.
+                  </li>
+                  <li>Update default broadcast to use the current user channel only.</li>
+                </ul>
+                <h4>Acceptance criteria</h4>
+                <ul>
+                  <li><code>getCurrentChannel()</code> reports only the current user channel.</li>
+                  <li>Adding an app-channel listener does not replace the current user channel.</li>
+                  <li>
+                    Default <code>broadcast()</code> still targets the joined user channel after
+                    app-channel listener registration.
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </article>
+
+          <article class="item" data-status="optional">
+            <div class="item-head">
+              <h3>Future API: app-channel clear context</h3>
+              <span class="status optional">Not FDC3 2.2</span>
+            </div>
+            <p class="why">
+              Exact FDC3 <code>v2.2</code> docs do not include
+              <code>Channel.clearContext()</code> or app-channel
+              <code>contextCleared</code> conformance tests. These appear in newer/next docs, so
+              they should be treated as future-version or Sail extension work, not a 2.2 blocker.
+            </p>
+            <details>
+              <summary>Why omitted from the 2.2 blocker list</summary>
+              <div class="detail-body">
+                <h4>Version evidence</h4>
+                <div class="evidence">
+                  <code>FDC3 v2.2 website/docs/api/ref/Channel.md</code>
+                  <code>FDC3 v2.2 website/docs/api/conformance/App-Channel-Tests.md</code>
+                  <code>FDC3 next docs include clearContext</code>
+                </div>
+                <h4>Decision</h4>
+                <ul>
+                  <li>Do not implement as part of FDC3 2.2 remediation.</li>
+                  <li>
+                    Keep as optional future API support if Sail chooses to track newer FDC3
+                    behavior.
+                  </li>
+                  <li>
+                    If implemented later, first confirm the app-facing proxy and schema emit a
+                    clear-context DACP message.
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </article>
+
+          <article class="item" data-status="pass">
+            <div class="item-head">
+              <h3>PrivateChannel catch-all lifecycle listener</h3>
+              <span class="status pass">Working</span>
+            </div>
+            <p class="why">
+              FDC3 2.2 <code>PrivateChannel.addEventListener(null, handler)</code> is implemented:
+              null registers a catch-all that receives add-context-listener, unsubscribe, and
+              disconnect lifecycle events. Typed listeners are unchanged.
+            </p>
+            <details>
+              <summary>Where to change and why</summary>
+              <div class="detail-body">
+                <h4>Files likely touched</h4>
+                <div class="evidence">
+                  <code>src/core/handlers/dacp/private-channel-handlers.ts</code>
+                  <code>src/core/state/types.ts</code>
+                  <code>src/core/state/mutators/private-channel.ts</code>
+                  <code>test/features/channels/private-channel.feature</code>
+                  <code>test/step-definitions/private-channel.steps.ts</code>
+                </div>
+                <h4>Specific changes</h4>
+                <ul>
+                  <li>Represent null listener subscriptions as catch-all lifecycle listeners.</li>
+                  <li>
+                    Emit add-context-listener, unsubscribe, and disconnect events to catch-all
+                    listeners.
+                  </li>
+                  <li>Keep explicit lifecycle listeners unchanged.</li>
+                </ul>
+                <h4>Acceptance criteria</h4>
+                <ul>
+                  <li>Null listener receives all three private-channel lifecycle event types.</li>
+                  <li>Unsupported private-channel event type still returns an error.</li>
+                </ul>
+              </div>
+            </details>
+          </article>
+
+          <article class="item" data-status="pass">
+            <div class="item-head">
+              <h3><del>Heartbeat timeout does not perform full cleanup</del></h3>
+              <span class="status pass">Resolved</span>
+            </div>
+            <p class="why">
+              Heartbeat timeout now calls the same <code>cleanupDACPHandlers</code> path as
+              WCP6Goodbye and transport disconnect (see <code>cleanup.ts</code> /
+              <code>heartbeat-runtime.ts</code>). Cucumber covers DA event listener teardown after
+              timeout.
+            </p>
+            <details>
+              <summary>Where to change and why</summary>
+              <div class="detail-body">
+                <h4>Files likely touched</h4>
+                <div class="evidence">
+                  <code>src/core/handlers/dacp/heartbeat-handlers.ts</code>
+                  <code>src/core/handlers/dacp/index.ts</code>
+                  <code>src/core/handlers/dacp/wcp-handlers.ts</code>
+                  <code>test/features/infrastructure/heartbeat.feature</code>
+                  <code>test/support/hooks.ts</code>
+                </div>
+                <h4>Specific changes</h4>
+                <ul>
+                  <li>
+                    Extract shared cleanup away from the DACP barrel to avoid circular import risk.
+                  </li>
+                  <li>Call full cleanup on heartbeat timeout.</li>
+                  <li>Delete heartbeat timers deterministically during scenario cleanup.</li>
+                  <li>
+                    Remove the Cucumber <code>process.exit(0)</code> workaround once teardown is
+                    deterministic.
+                  </li>
+                </ul>
+                <h4>Acceptance criteria</h4>
+                <ul>
+                  <li>
+                    No pending intent promise, event listener, context listener, private channel,
+                    heartbeat, or app instance state remains for a timed-out instance.
+                  </li>
+                  <li>Cucumber can complete without forced process exit.</li>
+                </ul>
+              </div>
+            </details>
+          </article>
+
+          <article class="item" data-status="required">
+            <div class="item-head">
+              <h3>Logging is not safely configurable or OTEL-ready</h3>
+              <span class="status required">Required</span>
+            </div>
+            <p class="why">
+              DACP/WCP messages are app-originating input and may contain client, trade, portfolio,
+              or other sensitive data. Logging must be configurable for off, production,
+              development, and explicit debug modes, while OpenTelemetry support should emit safe
+              structured logs/spans without coupling the pure core to a concrete exporter.
+            </p>
+            <details>
+              <summary>Where to change and why</summary>
+              <div class="detail-body">
+                <h4>OpenTelemetry design target</h4>
+                <ul>
+                  <li>
+                    Keep <code>@finos/sail-desktop-agent</code> core vendor-neutral: define a small
+                    observability interface and safe metadata model in core; adapt it to OTEL in
+                    <code>sail-platform-api</code> or a dedicated adapter.
+                  </li>
+                  <li>
+                    Follow the OTEL Logs Data Model fields: timestamp, severity text/number, body,
+                    attributes, event name, and optional trace/span context.
+                  </li>
+                  <li>
+                    Follow OTEL messaging semantic conventions where applicable:
+                    <code>messaging.system</code>, <code>messaging.operation.name</code>,
+                    <code>messaging.operation.type</code>, <code>messaging.message.id</code>, and
+                    <code>messaging.message.conversation_id</code>.
+                  </li>
+                  <li>
+                    Use Sail/FDC3-specific low-cardinality attributes such as
+                    <code>fdc3.message.type</code>, <code>fdc3.context.type</code>,
+                    <code>fdc3.intent.name</code>, <code>fdc3.channel.id</code>,
+                    <code>fdc3.source.instance_id</code>, and
+                    <code>fdc3.destination.instance_id</code>.
+                  </li>
+                </ul>
+                <h4>Files and functions needing updates</h4>
+                <div class="evidence">
+                  <code>src/core/interfaces/logger.ts</code>
+                  <code>src/core/desktop-agent.ts</code>
+                  <code>src/core/handlers/types.ts</code>
+                  <code>src/core/dacp-protocol/dacp-utils.ts</code>
+                  <code>src/core/handlers/dacp/context-handlers.ts</code>
+                  <code>src/core/handlers/dacp/intent-handlers/intent-raise-intent.ts</code>
+                  <code>src/core/handlers/dacp/wcp-handlers.ts</code>
+                  <code>src/browser/wcp/wcp-message-routing.ts</code>
+                  <code>src/browser/wcp/message-port-transport.ts</code>
+                  <code>src/browser/wcp/wcp-intent-resolver.ts</code>
+                  <code>src/core/app-directory/app-directory-manager.ts</code>
+                </div>
+                <h4>Current unsafe or insufficient logging</h4>
+                <ul>
+                  <li>
+                    <code>MessagePortTransport.handleMessage()</code> logs
+                    <code>fullMessage: JSON.stringify(message, null, 2)</code> for broadcast events.
+                  </li>
+                  <li>
+                    <code>wcp-message-routing.ts</code> logs raw invalid app and Desktop Agent
+                    messages when type guards fail.
+                  </li>
+                  <li>
+                    <code>logDACPMessage()</code> claims sensitive filtering but logs full
+                    <code>meta</code> and always uses global <code>consoleLogger</code>.
+                  </li>
+                  <li>
+                    <code>notifyContextListeners()</code> logs
+                    <code>broadcastEventPayload: JSON.stringify(broadcastEvent.payload)</code>.
+                  </li>
+                  <li>
+                    <code>handleRaiseIntentRequest()</code> logs serialized
+                    <code>contextPayload</code> and <code>validatedContext</code>.
+                  </li>
+                  <li>
+                    <code>handleWcp4ValidateAppIdentity()</code> logs full WCP4 payload and WCP5
+                    response payload instead of summarized identity-validation metadata.
+                  </li>
+                  <li>
+                    <code>MessagePortTransport</code>, <code>wcp-intent-resolver.ts</code>, and
+                    <code>app-directory-manager.ts</code> use global <code>consoleLogger</code> and
+                    can bypass caller logging controls.
+                  </li>
+                </ul>
+                <h4>Logs and telemetry to add</h4>
+                <ul>
+                  <li>DACP request processing span/event for each incoming request type.</li>
+                  <li>WCP identity validation span with success/failure result and error type.</li>
+                  <li>Message routing span/event for app-to-agent and agent-to-app routing.</li>
+                  <li>Broadcast fan-out event with target count, success count, and failure count.</li>
+                  <li>Intent resolution span covering resolver selection, app launch, and delivery.</li>
+                  <li>Cleanup event for WCP6 goodbye, transport disconnect, and heartbeat timeout.</li>
+                  <li>Validation rejection event for malformed messages without raw message bodies.</li>
+                </ul>
+              </div>
+            </details>
+          </article>
+
+          <article class="item" data-status="pass">
+            <div class="item-head">
+              <h3>Docs and package examples drifted</h3>
+              <span class="status pass">Resolved</span>
+            </div>
+            <p class="why">
+              README, JSDoc examples, and <code>package-docs-consistency.test.ts</code> use
+              <code>@finos/sail-desktop-agent</code> and describe injectable validation.
+            </p>
+            <details>
+              <summary>Where to change and why</summary>
+              <div class="detail-body">
+                <div class="evidence">
+                  <code>README.md</code>
+                  <code>src/index.ts</code>
+                  <code>package.json</code>
+                </div>
+                <ul>
+                  <li>
+                    Fix install/import examples to use <code>@finos/sail-desktop-agent</code>.
+                  </li>
+                  <li>Refresh README architecture tree to current files.</li>
+                  <li>Describe validation as injectable, not shipped Zod validation.</li>
+                  <li>Run <code>npm run validate -w @finos/sail-desktop-agent</code>.</li>
+                </ul>
+              </div>
+            </details>
+          </article>
+
+          <article class="item" data-status="test">
+            <div class="item-head">
+              <h3>Missing or weak conformance tests</h3>
+              <span class="status test">Needs test</span>
+            </div>
+            <p class="why">
+              Existing Cucumber coverage is broad, but several FDC3 2.2 edge cases are not locked.
+            </p>
+            <details>
+              <summary>Specific missing test areas</summary>
+              <div class="detail-body">
+                <ul>
+                  <li>App-channel <code>clearContext</code> and <code>contextCleared</code>.</li>
+                  <li>User channel membership surviving app-channel listener registration.</li>
+                  <li>
+                    Default <code>broadcast()</code> using current user channel, not last app
+                    channel touched.
+                  </li>
+                  <li>
+                    <code>PrivateChannel.addEventListener(null, handler)</code> catch-all behavior
+                    (conformance scenario in private-channel.feature).
+                  </li>
+                  <li>
+                    <del
+                      >Heartbeat timeout full cleanup across state registries and pending
+                      promises.</del
+                    >
+                  </li>
+                  <li>Exact FDC3 enum error strings across non-happy paths.</li>
+                  <li>Safe configurable logging and OTEL observability for untrusted messages.</li>
+                  <li>Platform/proxy destructured method binding.</li>
+                  <li>Rich intent matrix for channel and private-channel result flows.</li>
+                </ul>
+              </div>
+            </details>
+          </article>
+        </div>
+      </section>
+
+      <section id="issue-tracker">
+        <h2>GitHub-Style Issue Tracker</h2>
+        <div class="callout">
+          <strong>How to use this:</strong> each issue maps to one remediation task. Check an issue
+          when the acceptance criteria and verification command have passed. Checkbox state is saved
+          in this browser with <code>localStorage</code>. Issues marked complete in the repo always
+          appear checked on load; you can still toggle them to track local re-verification.
+        </div>
+        <div class="progress" aria-live="polite">
+          <strong id="tracker-count">0 of 6 complete</strong>
+          <div class="progress-bar" aria-hidden="true"><span id="tracker-progress"></span></div>
+        </div>
+
+        <div class="issue-list">
+          <article class="issue-card" data-issue-id="fdc3-da-001" data-completed-in-repo="true">
+            <input type="checkbox" id="fdc3-da-001" />
+            <div class="issue-body">
+              <label for="fdc3-da-001">
+                <h3>#1 Separate user-channel membership from app-channel participation</h3>
+              </label>
+              <p class="why">
+                Fix the state model so user-channel membership is not overwritten by app-channel
+                listener registration.
+              </p>
+              <div class="issue-meta">
+                <span class="issue-label gap">Blocker</span>
+                <span class="issue-label required">Medium</span>
+                <span class="issue-label">Phase 1</span>
+                <span class="issue-label">Depends: none</span>
+              </div>
+              <div class="evidence">
+                <code>src/core/state/types.ts</code>
+                <code>src/core/state/mutators/instance.ts</code>
+                <code>src/core/state/selectors/instance.ts</code>
+                <code>src/core/handlers/dacp/channel-handlers.ts</code>
+                <code>src/core/handlers/dacp/context-handlers.ts</code>
+              </div>
+              <p>
+                Done when <code>getCurrentChannel()</code> only reports user channels, default
+                <code>broadcast()</code> still uses the user channel, and app-channel broadcasts
+                still reach app-channel listeners.
+              </p>
+              <p>
+                <strong>Verify:</strong> <code>npm run test -w @finos/sail-desktop-agent</code>
+              </p>
+            </div>
+          </article>
+
+          <article class="issue-card" data-issue-id="fdc3-da-002" data-completed-in-repo="true">
+            <input type="checkbox" id="fdc3-da-002" />
+            <div class="issue-body">
+              <label for="fdc3-da-002">
+                <h3>#2 Implement PrivateChannel catch-all lifecycle listeners</h3>
+              </label>
+              <p class="why">
+                Support <code>PrivateChannel.addEventListener(null, handler)</code> as a catch-all
+                lifecycle subscription.
+              </p>
+              <div class="issue-meta">
+                <span class="issue-label gap">Blocker</span>
+                <span class="issue-label pass">Small</span>
+                <span class="issue-label">Phase 2</span>
+                <span class="issue-label">Depends: none</span>
+              </div>
+              <div class="evidence">
+                <code>src/core/handlers/dacp/private-channel-handlers.ts</code>
+                <code>src/core/state/types.ts</code>
+                <code>src/core/state/mutators/private-channel.ts</code>
+                <code>test/features/channels/private-channel.feature</code>
+              </div>
+              <p>
+                Done when a null private-channel event listener receives add-context-listener,
+                unsubscribe, and disconnect events, while explicit listeners remain unchanged.
+              </p>
+              <p>
+                <strong>Verify:</strong> <code>npm run test -w @finos/sail-desktop-agent</code>
+              </p>
+            </div>
+          </article>
+
+          <article class="issue-card" data-issue-id="fdc3-da-003" data-completed-in-repo="true">
+            <input type="checkbox" id="fdc3-da-003" />
+            <div class="issue-body">
+              <label for="fdc3-da-003">
+                <h3><del>#3 Route heartbeat timeout through full cleanup</del></h3>
+              </label>
+              <p class="why">
+                Make heartbeat timeout clean up the same state as WCP6Goodbye and transport
+                disconnect.
+              </p>
+              <div class="issue-meta">
+                <span class="issue-label pass">Resolved</span>
+                <span class="issue-label required">Medium</span>
+                <span class="issue-label">Phase 2</span>
+                <span class="issue-label">Depends: cleanup extraction</span>
+              </div>
+              <div class="evidence">
+                <code>src/core/handlers/dacp/cleanup.ts</code>
+                <code>src/core/handlers/dacp/heartbeat-handlers.ts</code>
+                <code>src/core/handlers/dacp/index.ts</code>
+                <code>src/core/handlers/dacp/wcp-handlers.ts</code>
+                <code>test/support/hooks.ts</code>
+              </div>
+              <p>
+                Done when timed-out instances leave no listener, private-channel, pending-intent,
+                heartbeat, or app-instance state behind and Cucumber no longer needs forced exit.
+              </p>
+              <p>
+                <strong>Verify:</strong> <code>npm run test -w @finos/sail-desktop-agent</code>
+              </p>
+            </div>
+          </article>
+
+          <article class="issue-card" data-issue-id="fdc3-da-004">
+            <input type="checkbox" id="fdc3-da-004" />
+            <div class="issue-body">
+              <label for="fdc3-da-004">
+                <h3>#4 Add safe configurable logging and OTEL observability</h3>
+              </label>
+              <p class="why">
+                Make DACP/WCP logging safe and configurable across off, production, development,
+                and explicit debug modes. Add an OTEL-ready observability interface so logs, spans,
+                and events can be exported without leaking context payloads by default.
+              </p>
+              <div class="issue-meta">
+                <span class="issue-label required">Required</span>
+                <span class="issue-label required">Medium</span>
+                <span class="issue-label">Phase 3</span>
+                <span class="issue-label">Depends: none</span>
+              </div>
+              <div class="evidence">
+                <code>src/core/interfaces/logger.ts</code>
+                <code>src/core/desktop-agent.ts</code>
+                <code>src/core/handlers/types.ts</code>
+                <code>src/core/handlers/dacp/wcp-handlers.ts</code>
+                <code>src/core/dacp-protocol/dacp-utils.ts</code>
+                <code>src/core/handlers/dacp/context-handlers.ts</code>
+                <code>src/core/handlers/dacp/intent-handlers/intent-raise-intent.ts</code>
+                <code>src/browser/wcp/wcp-message-routing.ts</code>
+                <code>src/browser/wcp/message-port-transport.ts</code>
+              </div>
+              <p>
+                Done when logging can be disabled, production mode emits safe metadata only,
+                development/debug modes are explicit, OTEL logs/spans/events can be emitted through
+                an adapter, and tests prove sensitive fields are not passed to logger or telemetry
+                attributes by default.
+              </p>
+              <p>
+                <strong>Verify:</strong> <code>npm run test -w @finos/sail-desktop-agent</code>
+              </p>
+            </div>
+          </article>
+
+          <article class="issue-card" data-issue-id="fdc3-da-005" data-completed-in-repo="true">
+            <input type="checkbox" id="fdc3-da-005" />
+            <div class="issue-body">
+              <label for="fdc3-da-005">
+                <h3>#5 Fix public docs and package drift</h3>
+              </label>
+              <p class="why">
+                Align README and source examples with the actual package name and injectable
+                validation architecture.
+              </p>
+              <div class="issue-meta">
+                <span class="issue-label required">Required</span>
+                <span class="issue-label pass">Small</span>
+                <span class="issue-label">Phase 3</span>
+                <span class="issue-label">Depends: none</span>
+              </div>
+              <div class="evidence">
+                <code>README.md</code>
+                <code>src/index.ts</code>
+                <code>package.json</code>
+              </div>
+              <p>
+                Done when examples use <code>@finos/sail-desktop-agent</code>, the README tree is
+                current, and validation is described as injectable rather than shipped Zod.
+              </p>
+              <p>
+                <strong>Verify:</strong>
+                <code>npm run validate -w @finos/sail-desktop-agent</code>
+              </p>
+            </div>
+          </article>
+
+          <article class="issue-card" data-issue-id="fdc3-da-006">
+            <input type="checkbox" id="fdc3-da-006" />
+            <div class="issue-body">
+              <label for="fdc3-da-006">
+                <h3>#6 Add platform integration contract tests</h3>
+              </label>
+              <p class="why">
+                Prove that <code>sail-platform-api</code> supplies the responsibilities
+                intentionally delegated by the pure desktop-agent package.
+              </p>
+              <div class="issue-meta">
+                <span class="issue-label platform">Platform</span>
+                <span class="issue-label required">Medium</span>
+                <span class="issue-label">Phase 3</span>
+                <span class="issue-label">Depends: #1-#5</span>
+              </div>
+              <div class="evidence">
+                <code>packages/sail-platform-api/**</code>
+                <code>packages/sail-desktop-agent/FDC3_2_2_COMPLIANCE_REVIEW.md</code>
+              </div>
+              <p>
+                Done when platform tests cover transport, validator, app launcher, resolver UI,
+                selector UI, and destructured app-facing <code>getAgent()</code> methods.
+              </p>
+              <p>
+                <strong>Verify:</strong> relevant <code>sail-platform-api</code> validation and
+                tests.
+              </p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="remediation">
+        <h2>Remediation Plan Drill-Down</h2>
+        <div class="callout checkpoint">
+          <strong>Completion rule:</strong> when every task below is complete and verified, update
+          <code>FDC3_2_2_COMPLIANCE_REVIEW.md</code> in the Linked Remediation Plan section and mark
+          the blocker status as complete there.
+        </div>
+
+        <h2>Phase 1: Channel Semantics</h2>
+        <details class="task" open>
+          <summary>
+            <span class="task-num">Task 1</span> Separate user-channel membership from app-channel
+            participation
+          </summary>
+          <div class="detail-body">
+            <p>
+              Split the current single-channel state model so <code>getCurrentChannel()</code>,
+              <code>leaveCurrentChannel()</code>, and default <code>broadcast()</code> operate only
+              on the current user channel, while app-channel context listeners still participate in
+              app-channel routing.
+            </p>
+            <div class="matrix">
+              <div>Dependencies</div>
+              <div>None</div>
+              <div>Estimated scope</div>
+              <div>Medium</div>
+              <div>Verification</div>
+              <div><code>npm run test -w @finos/sail-desktop-agent</code></div>
+            </div>
+            <h4>Files likely touched</h4>
+            <div class="evidence">
+              <code>packages/sail-desktop-agent/src/core/state/types.ts</code>
+              <code>packages/sail-desktop-agent/src/core/state/mutators/instance.ts</code>
+              <code>packages/sail-desktop-agent/src/core/state/selectors/instance.ts</code>
+              <code>packages/sail-desktop-agent/src/core/handlers/dacp/channel-handlers.ts</code>
+              <code>packages/sail-desktop-agent/src/core/handlers/dacp/context-handlers.ts</code>
+              <code>packages/sail-desktop-agent/test/features/channels/user-channels.feature</code>
+              <code>packages/sail-desktop-agent/test/features/channels/app-channels.feature</code>
+            </div>
+            <h4>No-ambiguity implementation notes</h4>
+            <ul>
+              <li>
+                Add <code>currentUserChannel: string | null</code> to <code>AppInstance</code>.
+              </li>
+              <li>
+                Initialize <code>currentUserChannel: null</code> in <code>connectInstance()</code>.
+              </li>
+              <li>
+                Replace generic <code>joinChannel()</code> usage for user channels with
+                <code>joinUserChannel(state, instanceId, channelId)</code> and
+                <code>leaveUserChannel(state, instanceId)</code>.
+              </li>
+              <li>
+                <code>handleGetCurrentChannelRequest()</code> must read only
+                <code>instance.currentUserChannel</code>.
+              </li>
+              <li>
+                <code>handleBroadcastRequest()</code> must use
+                <code>message.payload.channelId ?? instance.currentUserChannel</code>.
+              </li>
+              <li>
+                <code>handleAddContextListener()</code> must not call user-channel join logic when
+                <code>channelId</code> is an app channel.
+              </li>
+              <li>
+                Add or replace selector with
+                <code>getInstancesWithContextListenerOnChannel(state, channelId, contextType)</code
+                >; app-channel fan-out must be derived from app-channel listeners, not user-channel
+                membership.
+              </li>
+              <li>
+                Do not auto-deliver prior context for app-channel listener registration. Keep
+                current-context replay only for user-channel joins.
+              </li>
+            </ul>
+            <h4>Test scenarios to add first</h4>
+            <ul>
+              <li>
+                <strong>App channel listener does not change current user channel:</strong> join
+                user channel <code>one</code>, add listener on app channel <code>workflow</code>,
+                call <code>getCurrentChannel()</code>, expect <code>one</code>.
+              </li>
+              <li>
+                <strong>Default broadcast still uses joined user channel:</strong> after adding an
+                app-channel listener, broadcast without <code>channelId</code>, expect the
+                user-channel listener to receive it.
+              </li>
+              <li>
+                <strong>App channel broadcast still reaches app channel listeners:</strong> listener
+                on <code>workflow</code>, broadcast on <code>workflow</code>, expect delivery.
+              </li>
+            </ul>
+            <h4>Acceptance criteria</h4>
+            <ul>
+              <li><code>getCurrentChannel()</code> reports only the current user channel.</li>
+              <li>
+                Adding a listener on an app channel does not replace the current user channel.
+              </li>
+              <li>
+                Default <code>broadcast()</code> still targets the joined user channel after
+                app-channel listener registration.
+              </li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="task">
+          <summary>Omitted from FDC3 2.2 scope: app-channel clear context</summary>
+          <div class="detail-body">
+            <p>
+              Do not implement <code>Channel.clearContext()</code> or <code>contextCleared</code> as
+              part of FDC3 2.2 remediation. Exact FDC3 <code>v2.2</code> docs do not include those
+              APIs in <code>Channel.md</code> or the app-channel conformance tests. They appear in
+              newer/next docs and can be tracked separately as future-version support.
+            </p>
+            <div class="matrix">
+              <div>Decision</div>
+              <div>Omit from FDC3 2.2 blocker list.</div>
+              <div>Future condition</div>
+              <div>Only implement if Sail chooses to support newer FDC3 API behavior.</div>
+              <div>Verification</div>
+              <div>
+                If revisited later, first confirm the app-facing proxy and schema emit a
+                clear-context DACP message.
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="callout checkpoint">
+          <strong>Checkpoint: Channel Semantics</strong>
+          <ul>
+            <li>App-channel and user-channel features pass.</li>
+            <li>No regression in broadcast/current-context behavior.</li>
+            <li>Review file has channel blockers marked complete if satisfied.</li>
+          </ul>
+        </div>
+
+        <h2>Phase 2: Private Channels And Cleanup</h2>
+        <details class="task">
+          <summary>
+            <span class="task-num">Task 2</span> Implement PrivateChannel catch-all lifecycle
+            listeners
+          </summary>
+          <div class="detail-body">
+            <p>
+              Support FDC3 2.2 <code>PrivateChannel.addEventListener(null, handler)</code> so one
+              listener receives all lifecycle events.
+            </p>
+            <div class="matrix">
+              <div>Dependencies</div>
+              <div>None</div>
+              <div>Estimated scope</div>
+              <div>Small</div>
+              <div>Verification</div>
+              <div>
+                Add Cucumber scenarios in <code>private-channel.feature</code>; run package tests.
+              </div>
+            </div>
+            <h4>Files likely touched</h4>
+            <div class="evidence">
+              <code
+                >packages/sail-desktop-agent/src/core/handlers/dacp/private-channel-handlers.ts</code
+              >
+              <code>packages/sail-desktop-agent/src/core/state/types.ts</code>
+              <code>packages/sail-desktop-agent/src/core/state/mutators/private-channel.ts</code>
+              <code
+                >packages/sail-desktop-agent/test/features/channels/private-channel.feature</code
+              >
+              <code
+                >packages/sail-desktop-agent/test/step-definitions/private-channel.steps.ts</code
+              >
+            </div>
+            <h4>No-ambiguity implementation notes</h4>
+            <ul>
+              <li>
+                Add catch-all lifecycle listener storage to <code>PrivateChannel</code>, recommended
+                field:
+                <code
+                  >lifecycleListeners: Record&lt;string, PrivateChannelLifecycleListener&gt;</code
+                >.
+              </li>
+              <li>
+                Create a catch-all listener only when <code>message.payload.listenerType</code> is
+                <code>null</code> or <code>undefined</code>.
+              </li>
+              <li>Do not continue resolving null to <code>"addContextListener"</code>.</li>
+              <li>
+                Add mutators <code>addPrivateChannelLifecycleListener(...)</code> and
+                <code>removePrivateChannelLifecycleListener(...)</code>.
+              </li>
+              <li>
+                Update add-context-listener, unsubscribe, and disconnect notification helpers so
+                catch-all listeners receive all three lifecycle events.
+              </li>
+              <li>
+                Update unsubscribe logic to search and remove catch-all listener IDs as well as
+                typed listener IDs.
+              </li>
+            </ul>
+            <h4>Test scenarios to add first</h4>
+            <ul>
+              <li>
+                <strong>Null PrivateChannel event listener receives all lifecycle events:</strong>
+                App2 adds null event listener, App1 adds context listener, App1 unsubscribes, App1
+                disconnects, expect App2 receives all three lifecycle events.
+              </li>
+              <li>
+                <strong
+                  >Explicit PrivateChannel event listeners still receive only their event
+                  type.</strong
+                >
+              </li>
+            </ul>
+            <h4>Acceptance criteria</h4>
+            <ul>
+              <li>
+                Null listener receives <code>addContextListener</code>, <code>unsubscribe</code>,
+                and <code>disconnect</code> lifecycle events.
+              </li>
+              <li>Explicit lifecycle listeners still behave as before.</li>
+              <li>Unsupported private-channel event types still return an error.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="task">
+          <summary>
+            <span class="task-num">Task 3</span>
+            <del>Route heartbeat timeout through full cleanup</del> — done
+          </summary>
+          <div class="detail-body">
+            <p>
+              <strong>Resolved.</strong> Heartbeat timeout invokes shared
+              <code>cleanupDACPHandlers</code>; circular import addressed via
+              <code>cleanup.ts</code> and <code>heartbeat-runtime.ts</code>.
+            </p>
+            <div class="matrix">
+              <div>Dependencies</div>
+              <div>None, but coordinate with circular import cleanup.</div>
+              <div>Estimated scope</div>
+              <div>Medium</div>
+              <div>Verification</div>
+              <div>Add focused Vitest cleanup coverage; run package tests.</div>
+            </div>
+            <h4>Files likely touched</h4>
+            <div class="evidence">
+              <code>packages/sail-desktop-agent/src/core/handlers/dacp/heartbeat-handlers.ts</code>
+              <code>packages/sail-desktop-agent/src/core/handlers/dacp/index.ts</code>
+              <code>packages/sail-desktop-agent/src/core/handlers/dacp/wcp-handlers.ts</code>
+              <code
+                >packages/sail-desktop-agent/test/features/infrastructure/heartbeat.feature</code
+              >
+              <code>packages/sail-desktop-agent/test/support/hooks.ts</code>
+            </div>
+            <h4>No-ambiguity implementation notes</h4>
+            <ul>
+              <li>
+                Create <code>packages/sail-desktop-agent/src/core/handlers/dacp/cleanup.ts</code>.
+              </li>
+              <li>
+                Move <code>cleanupDACPHandlers()</code> from
+                <code>handlers/dacp/index.ts</code> into <code>cleanup.ts</code>.
+              </li>
+              <li>
+                Re-export cleanup from <code>handlers/dacp/index.ts</code> only if public
+                compatibility needs it.
+              </li>
+              <li>
+                Update <code>wcp-handlers.ts</code> to import cleanup from <code>./cleanup</code>,
+                not from the DACP barrel.
+              </li>
+              <li>
+                Update heartbeat timeout to call shared cleanup instead of
+                <code>removeInstance()</code> directly.
+              </li>
+              <li>
+                Preferred design: add a cleanup callback to the handler context, e.g.
+                <code>cleanupInstance(instanceId)</code>, and let heartbeat call that callback.
+              </li>
+              <li>
+                Acceptable fallback: import <code>cleanupDACPHandlers</code> from
+                <code>./cleanup</code> if it does not create a cycle.
+              </li>
+              <li>
+                Ensure cleanup stops heartbeat exactly once and cannot recurse forever if cleanup
+                itself calls <code>stopHeartbeat()</code>.
+              </li>
+              <li>
+                Remove <code>test/support/hooks.ts</code> forced <code>process.exit(0)</code> only
+                after tests prove heartbeat intervals clear.
+              </li>
+            </ul>
+            <h4>Vitest cleanup test shape</h4>
+            <ul>
+              <li>
+                Arrange a <code>DesktopAgent</code> with short heartbeat interval and timeout.
+              </li>
+              <li>
+                Seed a connected instance with context listener, DA event listener, private-channel
+                connection/listener, pending intent if practical, and heartbeat state.
+              </li>
+              <li>Let timeout fire or invoke the timeout path through a test hook.</li>
+              <li>Assert all state associated with the instance is gone.</li>
+            </ul>
+            <h4>Acceptance criteria</h4>
+            <ul>
+              <li>
+                Heartbeat timeout clears instance state, event listeners, context listeners,
+                private-channel connections, pending intents, and heartbeat state.
+              </li>
+              <li>Cleanup does not introduce circular import initialization risk.</li>
+              <li>Cucumber no longer needs process-level forced exit for heartbeat timers.</li>
+            </ul>
+          </div>
+        </details>
+
+        <div class="callout checkpoint">
+          <strong>Checkpoint: Lifecycle Safety</strong>
+          <ul>
+            <li>Private-channel features pass.</li>
+            <li>Heartbeat features pass.</li>
+            <li>No forced process exit is needed to complete Cucumber.</li>
+          </ul>
+        </div>
+
+        <h2>Phase 3: Hardening And Documentation</h2>
+        <details class="task">
+          <summary>
+            <span class="task-num">Task 4</span> Add safe configurable logging and OTEL
+            observability
+          </summary>
+          <div class="detail-body">
+            <p>
+              Replace ad hoc logging with a configurable observability layer. Production defaults
+              must emit safe metadata only; development and debug diagnostics must be explicit; OTEL
+              support should be adapter-based so core remains vendor-neutral.
+            </p>
+            <div class="matrix">
+              <div>Dependencies</div>
+              <div>None</div>
+              <div>Estimated scope</div>
+              <div>Medium</div>
+              <div>Verification</div>
+              <div>
+                Add logger/telemetry tests with sensitive context payloads; run package tests.
+              </div>
+            </div>
+            <h4>Files likely touched</h4>
+            <div class="evidence">
+              <code>packages/sail-desktop-agent/src/core/interfaces/logger.ts</code>
+              <code>packages/sail-desktop-agent/src/core/desktop-agent.ts</code>
+              <code>packages/sail-desktop-agent/src/core/handlers/types.ts</code>
+              <code>packages/sail-desktop-agent/src/core/dacp-protocol/dacp-utils.ts</code>
+              <code>packages/sail-desktop-agent/src/core/handlers/dacp/context-handlers.ts</code>
+              <code
+                >packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-raise-intent.ts</code
+              >
+              <code>packages/sail-desktop-agent/src/core/handlers/dacp/wcp-handlers.ts</code>
+              <code>packages/sail-desktop-agent/src/browser/wcp/wcp-message-routing.ts</code>
+              <code>packages/sail-desktop-agent/src/browser/wcp/message-port-transport.ts</code>
+              <code>packages/sail-desktop-agent/src/browser/wcp/wcp-intent-resolver.ts</code>
+              <code>packages/sail-desktop-agent/src/core/app-directory/app-directory-manager.ts</code>
+              <code>packages/sail-platform-api/**/otel*</code>
+            </div>
+            <h4>Recommended architecture</h4>
+            <ul>
+              <li>
+                Keep OpenTelemetry SDK dependencies out of the pure desktop-agent core. Core should
+                expose a small <code>Observability</code> or <code>TelemetrySink</code> interface
+                with safe structured events and optional span lifecycle hooks.
+              </li>
+              <li>
+                Implement OTEL wiring in <code>sail-platform-api</code> or a dedicated adapter that
+                maps Sail events to OTEL logs, spans, metrics, resources, and exporters.
+              </li>
+              <li>
+                Add config such as <code>observability.mode</code> with <code>off</code>,
+                <code>production</code>, <code>development</code>, and explicit
+                <code>debug</code>. Do not enable payload logging by default in any mode.
+              </li>
+              <li>
+                Map logger levels to OTEL severity ranges: debug to 5-8, info to 9-12, warn to
+                13-16, and error to 17-20.
+              </li>
+              <li>
+                Use OTEL messaging conventions for message-oriented spans:
+                <code>messaging.system</code>, <code>messaging.operation.name</code>,
+                <code>messaging.operation.type</code>, <code>messaging.message.id</code>, and
+                <code>messaging.message.conversation_id</code>.
+              </li>
+            </ul>
+            <h4>Concrete implementation contract</h4>
+            <ul>
+              <li>
+                The core package must not import <code>@opentelemetry/*</code>. If OTEL packages
+                are added, they belong in <code>sail-platform-api</code> or a dedicated adapter.
+              </li>
+              <li>
+                Add a core config shape equivalent to:
+                <code
+                  >observability?: { mode?: "off" | "production" | "development" | "debug";
+                  logger?: Logger; telemetry?: TelemetrySink }</code
+                >.
+              </li>
+              <li>
+                Add <code>TelemetrySink</code> in core with a minimal API:
+                <code>emit(event: ObservabilityEvent): void</code> and optional
+                <code>startSpan(name, attributes)</code> returning a small span-like object with
+                <code>end()</code>, <code>recordException(error)</code>, and
+                <code>setAttribute(key, value)</code>.
+              </li>
+              <li>
+                Add <code>ObservabilityEvent</code> with
+                <code>eventName</code>, <code>severity</code>, <code>message</code>,
+                <code>attributes</code>, optional <code>errorType</code>, and optional
+                <code>timestamp</code>. Attribute values must be primitives or arrays of
+                primitives.
+              </li>
+              <li>
+                Default mode is <code>production</code>. In production, emit warn/error/info
+                metadata only and suppress debug. In <code>off</code>, emit nothing. In
+                <code>development</code> and <code>debug</code>, emit extra lifecycle metadata but
+                still do not serialize full context or raw messages.
+              </li>
+            </ul>
+            <h4>Safe versus forbidden attributes</h4>
+            <ul>
+              <li>
+                Allowed by default: message type, request UUID, response UUID, event UUID, source
+                instance ID, destination instance ID, app ID, context type, intent name, channel ID,
+                booleans such as <code>hasPayload</code>/<code>hasContext</code>, counts, duration,
+                and low-cardinality error type.
+              </li>
+              <li>
+                Forbidden by default: <code>payload.context</code>, full <code>payload</code>, raw
+                message objects, raw <code>MessageEvent</code>, serialized JSON payloads, account
+                IDs, client names, trade IDs, portfolio IDs, positions, orders, tokens, credentials,
+                cookies, and arbitrary context properties beyond <code>type</code>.
+              </li>
+              <li>
+                Do not add an unsafe payload logging option in this task. If needed later, it must be
+                a separate explicitly named feature with production safeguards.
+              </li>
+            </ul>
+            <h4>Mode behavior matrix</h4>
+            <div class="matrix">
+              <div><code>off</code></div>
+              <div>No logger output, no telemetry events, no spans.</div>
+              <div><code>production</code></div>
+              <div>Default. Info/warn/error metadata only, no debug, no payload serialization.</div>
+              <div><code>development</code></div>
+              <div>
+                Adds lifecycle/routing details and debug-level metadata, still no raw payloads or
+                context serialization.
+              </div>
+              <div><code>debug</code></div>
+              <div>
+                Most verbose safe mode. Includes additional validation/routing state but still uses
+                the same redaction rules as production.
+              </div>
+            </div>
+            <h4>Test-first checklist</h4>
+            <ul>
+              <li>
+                Add <code>src/core/__tests__/observability-redaction.test.ts</code> first. It should
+                fail before implementation by proving sensitive values reach the current logger.
+              </li>
+              <li>
+                Add tests for <code>off</code>, <code>production</code>,
+                <code>development</code>, and <code>debug</code> mode behavior.
+              </li>
+              <li>
+                Add tests for DACP broadcast, raise intent, WCP4 validation, invalid app message
+                routing, and MessagePort broadcast receipt with
+                <code>accountNumber: "SECRET-123"</code> and
+                <code>clientName: "SECRET-CLIENT"</code>.
+              </li>
+              <li>
+                Add an adapter-facing unit test with a fake <code>TelemetrySink</code> and assert
+                OTEL-style attributes contain safe keys only.
+              </li>
+              <li>
+                Add a static consistency test that fails if <code>@opentelemetry/</code> imports
+                appear under <code>packages/sail-desktop-agent/src</code>.
+              </li>
+            </ul>
+            <h4>No-ambiguity implementation notes</h4>
+            <ul>
+              <li>
+                Create <code>summarizeDACPMessage(message)</code> / <code>summarizeWCPMessage(message)</code>
+                helpers returning only safe fields: message type, request/response/event IDs,
+                source/destination instance IDs, context type, intent name, channel ID, and
+                high-level booleans such as <code>hasPayload</code> and <code>hasContext</code>.
+              </li>
+              <li>
+                Introduce a structured event shape with fields for <code>eventName</code>,
+                <code>severity</code>, <code>message</code>, and safe <code>attributes</code>.
+              </li>
+              <li>
+                Replace full-message logging in router, WCP bridge, DACP utilities, broadcast, and
+                intent handlers with the summary helpers.
+              </li>
+              <li>
+                Do not log raw invalid messages. Log <code>typeof message</code>, detected
+                <code>type</code> if present, validation phase, and rejection reason.
+              </li>
+              <li>
+                Remove <code>fullMessage: JSON.stringify(...)</code>,
+                <code>broadcastEventPayload: JSON.stringify(...)</code>,
+                <code>contextPayload: JSON.stringify(...)</code>, and
+                <code>validatedContext: JSON.stringify(...)</code> from default logs.
+              </li>
+              <li>
+                Pass injected logger/observability into browser transports and app-directory paths
+                that currently use global <code>consoleLogger</code>.
+              </li>
+              <li>
+                Add telemetry around DACP request handling, WCP identity validation, app-to-agent
+                routing, agent-to-app routing, broadcast fan-out, intent resolution, malformed
+                message rejection, and cleanup.
+              </li>
+              <li>
+                Add tests with fake sensitive fields such as <code>accountNumber: "SECRET-123"</code>
+                and <code>clientName: "SECRET-CLIENT"</code>; assert neither logger calls nor
+                telemetry attributes contain those values by default.
+              </li>
+            </ul>
+            <h4>Logs and spans to add</h4>
+            <ul>
+              <li>
+                <strong>DACP request processing:</strong> one span/event per request type with
+                <code>fdc3.message.type</code>, request ID, source instance ID, and result.
+              </li>
+              <li>
+                <strong>WCP identity validation:</strong> span for WCP4/WCP5 with app ID, origin
+                match result, reconnect flag, and low-cardinality error type.
+              </li>
+              <li>
+                <strong>Routing:</strong> app-to-agent and agent-to-app route events with source,
+                destination, message type, and transport state.
+              </li>
+              <li>
+                <strong>Broadcast fan-out:</strong> event with channel ID, context type, target
+                count, success count, and failure count.
+              </li>
+              <li>
+                <strong>Intent resolution:</strong> span covering handler lookup, resolver callback,
+                launch path, delivery scheduling, and failure classification.
+              </li>
+              <li>
+                <strong>Cleanup:</strong> event for WCP6 goodbye, disconnect, and heartbeat timeout
+                with counts for listeners, private channels, pending intents, and heartbeat state
+                removed where available.
+              </li>
+            </ul>
+            <h4>Acceptance criteria</h4>
+            <ul>
+              <li>Logging can be disabled completely.</li>
+              <li>Production mode emits safe metadata only and never serializes full context.</li>
+              <li>Development/debug logging is explicit and still redacts sensitive context by default.</li>
+              <li>
+                OTEL adapter can emit logs/spans/events with OTEL-compatible severity, event names,
+                messaging attributes, and optional trace/span correlation.
+              </li>
+              <li>
+                Full <code>payload.context</code>, raw invalid messages, and browser
+                <code>MessageEvent</code> objects are not stringified by default.
+              </li>
+              <li>
+                Tests prove sensitive values do not reach logger arguments or telemetry attributes.
+              </li>
+              <li>
+                Comments and README/API docs accurately describe logging modes, OTEL adapter
+                expectations, and the no-payload default.
+              </li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="task">
+          <summary><span class="task-num">Task 5</span> Fix public docs and package drift</summary>
+          <div class="detail-body">
+            <p>
+              Align docs and examples with the actual package name, current file layout, and
+              injectable validation architecture.
+            </p>
+            <div class="matrix">
+              <div>Dependencies</div>
+              <div>None</div>
+              <div>Estimated scope</div>
+              <div>Small</div>
+              <div>Verification</div>
+              <div><code>npm run validate -w @finos/sail-desktop-agent</code></div>
+            </div>
+            <h4>Files likely touched</h4>
+            <div class="evidence">
+              <code>packages/sail-desktop-agent/README.md</code>
+              <code>packages/sail-desktop-agent/src/index.ts</code>
+            </div>
+            <h4>No-ambiguity implementation notes</h4>
+            <ul>
+              <li>
+                Replace every <code>@finos/fdc3-sail-desktop-agent</code> reference with
+                <code>@finos/sail-desktop-agent</code>.
+              </li>
+              <li>
+                Replace README "Built with TypeScript and Zod validation" with "Built with
+                TypeScript and injectable DACP/schema validation".
+              </li>
+              <li>
+                Update README tree to include <code>src/core/desktop-agent.ts</code>,
+                <code>src/core/state/{types,initial-state,selectors,mutators}</code>,
+                <code>src/browser/browser-desktop-agent.ts</code>, <code>src/browser/wcp/*</code>,
+                and <code>src/transports/in-memory-transport.ts</code>.
+              </li>
+              <li>
+                Ensure browser examples import from <code>@finos/sail-desktop-agent/browser</code>.
+              </li>
+              <li>
+                Ensure transport examples import from
+                <code>@finos/sail-desktop-agent/transports</code>.
+              </li>
+            </ul>
+            <h4>Acceptance criteria</h4>
+            <ul>
+              <li>README install/import examples use <code>@finos/sail-desktop-agent</code>.</li>
+              <li>README architecture tree matches current files.</li>
+              <li>README describes validation as injectable rather than shipped Zod validation.</li>
+              <li>
+                <code>src/index.ts</code> examples use the package name from
+                <code>package.json</code>.
+              </li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="task">
+          <summary>
+            <span class="task-num">Task 6</span> Add platform integration contract tests
+          </summary>
+          <div class="detail-body">
+            <p>
+              Prove the host platform supplies the responsibilities intentionally delegated by the
+              pure desktop-agent package.
+            </p>
+            <div class="matrix">
+              <div>Dependencies</div>
+              <div>Tasks 1-5 clarify the core contract.</div>
+              <div>Estimated scope</div>
+              <div>Medium</div>
+              <div>Verification</div>
+              <div>Run the relevant <code>sail-platform-api</code> validation and tests.</div>
+            </div>
+            <h4>Files likely touched</h4>
+            <div class="evidence">
+              <code>packages/sail-platform-api/**</code>
+              <code>packages/sail-desktop-agent/FDC3_2_2_COMPLIANCE_REVIEW.md</code>
+            </div>
+            <h4>No-ambiguity implementation notes</h4>
+            <ul>
+              <li>
+                Create or update a platform integration test suite that composes
+                <code>DesktopAgent</code> with real platform-provided pieces.
+              </li>
+              <li>
+                Assert transport sends app requests to the DesktopAgent and routes agent responses
+                back to the app.
+              </li>
+              <li>
+                Assert validator is supplied in production composition and malformed messages are
+                rejected.
+              </li>
+              <li>
+                Assert app launcher returns an <code>AppIdentifier</code> with
+                <code>instanceId</code>.
+              </li>
+              <li>Assert intent resolver UI callback is called when multiple handlers exist.</li>
+              <li>
+                Assert channel selector UI is wired or explicitly marked unsupported by design.
+              </li>
+              <li>
+                Assert app-facing <code>getAgent()</code> returns objects whose public methods work
+                when destructured.
+              </li>
+              <li>
+                After tests exist, update platform-responsibility checkboxes in
+                <code>FDC3_2_2_COMPLIANCE_REVIEW.md</code>.
+              </li>
+            </ul>
+            <h4>Acceptance criteria</h4>
+            <ul>
+              <li>Platform tests cover real transport composition.</li>
+              <li>Platform tests cover validator injection.</li>
+              <li>
+                Platform tests cover app launcher, intent resolver UI, channel selector UI, and
+                app-facing <code>getAgent()</code> method binding.
+              </li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+      <section id="coverage">
+        <h2>Coverage Map</h2>
+        <div class="grid two-col">
+          <div class="card">
+            <h3>Existing Coverage To Keep</h3>
+            <ul>
+              <li><code>test/features/basic/basic.feature</code>: smoke and core API surface.</li>
+              <li>
+                <code>test/features/apps/apps.feature</code>: open, lookup, launch failures,
+                timeout, malformed context, findInstances.
+              </li>
+              <li>
+                <code>test/features/apps/disconnect-cleanup.feature</code>: disconnect cleanup and
+                reconnect behavior.
+              </li>
+              <li>
+                <code>test/features/channels/user-channels.feature</code>: user channel join, leave,
+                listen, broadcast, negative cases.
+              </li>
+              <li>
+                <code>test/features/channels/app-channels.feature</code>: app channel creation,
+                isolation, listener behavior, current context.
+              </li>
+              <li>
+                <code>test/features/channels/private-channel.feature</code>: private channel
+                broadcast, lifecycle events, disconnect, negative cases.
+              </li>
+              <li>
+                <code>test/features/intents/*.feature</code>: discovery, raising, target selection,
+                resolver paths, results, malformed contexts, delivery failures.
+              </li>
+              <li>
+                <code>src/browser/__tests__/wcp-connector.test.ts</code> and
+                <code>src/core/__tests__/desktop-agent-wcp-routing.test.ts</code>: WCP routing and
+                identity validation.
+              </li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Coverage To Add</h3>
+            <ul>
+              <li>User-channel membership surviving app-channel listener registration.</li>
+              <li>Default <code>broadcast()</code> on current user channel.</li>
+              <li>PrivateChannel null lifecycle listener.</li>
+              <li><del>Heartbeat timeout full cleanup.</del> Done.</li>
+              <li>Exact standard error strings.</li>
+              <li>Safe configurable logging and OTEL observability.</li>
+              <li>Platform/proxy method binding and production composition.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="platform">
+        <h2>Platform Responsibilities</h2>
+        <div class="grid three-col">
+          <div class="card">
+            <h3>Runtime Composition</h3>
+            <ul>
+              <li>Production transport.</li>
+              <li>App launcher lifecycle.</li>
+              <li>App directory loading and population.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>User Experience</h3>
+            <ul>
+              <li>Intent resolver UI.</li>
+              <li>Channel selector UI.</li>
+              <li>App-facing <code>getAgent()</code> proxy behavior.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Safety Contract</h3>
+            <ul>
+              <li>Schema validator injection.</li>
+              <li>Method binding on app-facing objects.</li>
+              <li>Accurate implementation metadata.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="final-checkpoint">
+        <h2>Final Completion Checklist</h2>
+        <div class="card">
+          <ul>
+            <li><code>npm run validate -w @finos/sail-desktop-agent</code> passes.</li>
+            <li><code>npm run test -w @finos/sail-desktop-agent</code> passes.</li>
+            <li>Relevant platform validation and tests pass.</li>
+            <li>
+              <code>packages/sail-desktop-agent/FDC3_2_2_COMPLIANCE_REVIEW.md</code> has been
+              updated to mark completed blockers.
+            </li>
+            <li>Remaining non-blocking items are either fixed or explicitly deferred.</li>
+          </ul>
+        </div>
+      </section>
+
+      <footer>
+        Source files embedded into this dashboard:
+        <code>FDC3_2_2_COMPLIANCE_REVIEW.md</code>
+        and
+        <code>FDC3_2_2_REMEDIATION_PLAN.md</code>.
+      </footer>
+    </main>
+
+    <script>
+      const buttons = Array.from(document.querySelectorAll("[data-filter]"))
+      const items = Array.from(document.querySelectorAll(".item"))
+      const issueCards = Array.from(document.querySelectorAll(".issue-card"))
+      const issueCheckboxes = issueCards.map(card => card.querySelector('input[type="checkbox"]'))
+      const trackerCount = document.getElementById("tracker-count")
+      const trackerProgress = document.getElementById("tracker-progress")
+      const storageKey = "fdc3-sail-desktop-agent-compliance-tracker"
+
+      function readTrackerState() {
+        try {
+          return JSON.parse(localStorage.getItem(storageKey) || "{}")
+        } catch (_error) {
+          return {}
+        }
+      }
+
+      function writeTrackerState(state) {
+        localStorage.setItem(storageKey, JSON.stringify(state))
+      }
+
+      function updateTrackerUi() {
+        const completed = issueCheckboxes.filter(checkbox => checkbox.checked).length
+        const total = issueCheckboxes.length
+        const percentage = total === 0 ? 0 : Math.round((completed / total) * 100)
+
+        trackerCount.textContent = `${completed} of ${total} complete`
+        trackerProgress.style.width = `${percentage}%`
+
+        issueCards.forEach(card => {
+          const checkbox = card.querySelector('input[type="checkbox"]')
+          card.classList.toggle("done", checkbox.checked)
+        })
+      }
+
+      const trackerState = readTrackerState()
+      issueCheckboxes.forEach(checkbox => {
+        const card = checkbox.closest(".issue-card")
+        const completedInRepo = card?.dataset.completedInRepo === "true"
+        const stored = trackerState[checkbox.id]
+        // Repo-completed issues stay checked; otherwise explicit true in localStorage, or unchecked.
+        checkbox.checked = completedInRepo || stored === true
+        checkbox.addEventListener("change", () => {
+          const nextState = readTrackerState()
+          nextState[checkbox.id] = checkbox.checked
+          writeTrackerState(nextState)
+          updateTrackerUi()
+        })
+      })
+
+      updateTrackerUi()
+
+      buttons.forEach(button => {
+        button.addEventListener("click", () => {
+          const filter = button.dataset.filter
+
+          buttons.forEach(candidate =>
+            candidate.setAttribute("aria-pressed", String(candidate === button))
+          )
+
+          items.forEach(item => {
+            const visible = filter === "all" || item.dataset.status === filter
+            item.hidden = !visible
+          })
+        })
+      })
+    </script>
+  </body>
+</html>
