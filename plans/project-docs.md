@@ -3,7 +3,9 @@
 ## PRD source
 
 - `plans/prd-transport-platform-hardening.md` — derived from `REDACTED`
+- `plans/prd-desktop-agent-conformance-gaps.md` — unplanned P1: cleanup extensions, conformance BDD, validator/history/WCP policy, test trust
 - Original review notes: `.cursor/issues-discovered.md`
+- FDC3 review / remediation: `FDC3_2_2_COMPLIANCE_REVIEW.MD`, `FDC3_2_2_REMEDIATION_PLAN.MD`
 
 ## Architecture
 
@@ -33,9 +35,26 @@
 | DACP message unions    | `packages/sail-desktop-agent/src/core/dacp-protocol/dacp-messages.ts`              |
 
 
-## Out of scope for this workload
+## Out of scope for transport PRD only
+
+See `plans/prd-desktop-agent-conformance-gaps.md` for desktop-agent lifecycle and conformance items.
 
 - High-frequency FDC3 broadcast / market-data fanout; backpressure or batching in `InMemoryTransport` (defer unless product requires streaming over FDC3).
 - Electron `sail-electron` transport proxy build fix.
 - ESLint / Prettier repo-wide cleanup.
+
+## Work items (conformance / lifecycle PRD)
+
+| Slug | Focus |
+|------|--------|
+| `extend-cleanup-source-and-open-with-context` | P0 cleanup gaps (source pending, open-with-context) |
+| `cap-intents-history` | Bound `intents.history` |
+| `wcp1-hello-origin-allowlist` | Pre-WCP4 origin policy |
+| `wcp-identity-registry-pruning` | Stale WCP4 identity map |
+| `app-channel-context-history-bdd` | App-channel conformance scenarios |
+| `fdc3-error-enum-boundary-tests` | Standard error enums |
+| `conformance-traceability-map` | FINOS 2.2 → Cucumber map |
+| `bdd-wcp-integration-scenario` | Real WCP path test |
+| `align-wcp-instance-id-in-tests` | WCP5 instance id in steps |
+| `reduce-vitest-retry` | `retry: 0` in Vitest |
 
