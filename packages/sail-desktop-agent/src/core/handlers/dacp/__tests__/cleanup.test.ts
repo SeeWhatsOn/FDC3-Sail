@@ -10,7 +10,8 @@ import { connectInstance, addPendingIntent, updateInstanceState } from "../../..
 import { AppInstanceState } from "../../../state/types"
 import { createInitialState } from "../../../state/initial-state"
 import type { PendingIntentPromiseEntry } from "../../types"
-import { createDACPTestContext, testUserChannels } from "./test-context"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
+import { createDACPTestContext } from "./test-context"
 
 afterEach(() => {
   clearAllPendingOpenWithContextTimeoutsForTesting()
@@ -28,7 +29,7 @@ describe("cleanupDACPHandlers", () => {
       requestType: "raiseIntentRequest",
     })
 
-    let state = createInitialState(testUserChannels)
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     state = connectInstance(state, {
       instanceId: "a1",
       appId: "App1",
@@ -72,7 +73,7 @@ describe("cleanupDACPHandlers", () => {
       requestType: "raiseIntentRequest",
     })
 
-    let state = createInitialState(testUserChannels)
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     state = connectInstance(state, {
       instanceId: "a1",
       appId: "App1",
@@ -106,7 +107,7 @@ describe("cleanupDACPHandlers", () => {
   })
 
   it("clears open-with-context pending state and timeouts when the target instance disconnects", () => {
-    let state = createInitialState(testUserChannels)
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     state = connectInstance(state, {
       instanceId: "a1",
       appId: "portfolioApp",

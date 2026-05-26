@@ -8,6 +8,7 @@ import type { DirectoryApp } from "../../src/core/app-directory/types"
 import { AppDirectoryManager } from "../../src/core/app-directory/app-directory-manager"
 import type { AgentState } from "../../src/core/state/types"
 import { connectInstance } from "../../src/core/state/mutators"
+import { applyDesktopAgentStateUpdate } from "../support/agent-state"
 
 /**
  * User channel configuration for tests
@@ -152,11 +153,10 @@ export class CustomWorld extends World {
   }
 
   /**
-   * Update agent state (for test fixture setup).
-   * This uses DesktopAgent's test helper method.
+   * Update agent state for BDD fixture setup (see test/support/agent-state.ts).
    */
   updateState(fn: (state: AgentState) => AgentState): void {
-    this.desktopAgent.updateStateForTesting(fn)
+    applyDesktopAgentStateUpdate(this.desktopAgent, fn)
   }
 
   /**

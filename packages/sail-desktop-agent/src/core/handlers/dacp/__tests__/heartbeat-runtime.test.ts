@@ -5,16 +5,9 @@ import {
   setHeartbeatTimer,
   stopHeartbeat,
 } from "../heartbeat-runtime"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { createInitialState } from "../../../state/initial-state"
 import type { AgentState } from "../../../state/types"
-
-const testUserChannels = [
-  {
-    id: "one",
-    type: "user" as const,
-    displayMetadata: { name: "Channel 1", color: "#FF0000", glyph: "1" },
-  },
-]
 
 afterEach(() => {
   clearAllHeartbeatTimersForTesting()
@@ -22,7 +15,7 @@ afterEach(() => {
 
 describe("heartbeat-runtime", () => {
   it("removes interval handles when stopHeartbeat is called", () => {
-    let state = createInitialState(testUserChannels)
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     const setState = (fn: (s: AgentState) => AgentState) => {
       state = fn(state)
     }

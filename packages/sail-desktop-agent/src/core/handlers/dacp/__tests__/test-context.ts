@@ -1,18 +1,10 @@
-import type { BrowserTypes } from "@finos/fdc3"
 import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { consoleLogger } from "../../../interfaces/logger"
 import type { DACPHandlerContext, PendingIntentPromiseEntry } from "../../types"
 import { createInitialState } from "../../../state/initial-state"
 import type { AgentState, StateSetter } from "../../../state/types"
 import { InMemoryTransport } from "../../../../transports/in-memory-transport"
-
-const testUserChannels: BrowserTypes.Channel[] = [
-  {
-    id: "one",
-    type: "user",
-    displayMetadata: { name: "Channel 1", color: "#FF0000", glyph: "1" },
-  },
-]
 
 export function createDACPTestContext(options: {
   instanceId: string
@@ -22,7 +14,8 @@ export function createDACPTestContext(options: {
   context: DACPHandlerContext
   getState: () => AgentState
 } {
-  let state = options.initialState ?? createInitialState(testUserChannels)
+  let state = options.initialState ?? createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+
   const setState: StateSetter = callback => {
     state = callback(state)
   }
@@ -47,5 +40,3 @@ export function createDACPTestContext(options: {
 
   return { context, getState: () => state }
 }
-
-export { testUserChannels }

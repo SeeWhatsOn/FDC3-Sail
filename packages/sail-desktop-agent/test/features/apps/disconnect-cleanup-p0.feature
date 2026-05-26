@@ -10,7 +10,6 @@ Feature: P0 disconnect cleanup (production cleanup path)
     And A desktop agent
     And "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"
 
-  @p0-cleanup
   Scenario: Disconnecting the raising app clears pending intent state
     Given "App1" is an app with the following intents
       | Intent Name   | Context Type   | Result Type |
@@ -25,7 +24,6 @@ Feature: P0 disconnect cleanup (production cleanup path)
     Then the agent has no pending intents
     And no heartbeat timers are active
 
-  @p0-cleanup
   Scenario: Disconnecting target app before open-with-context listener clears pending state
     When "appId: portfolioApp, instanceId: a1" opens app "chartApp" with context data "fdc3.instrument" [fdc3.open]
     And "uuid-0" sends validate
@@ -34,7 +32,6 @@ Feature: P0 disconnect cleanup (production cleanup path)
     Then open-with-context pending is empty for instance "appId: chartApp, instanceId: uuid-0"
     And no open-with-context timeouts are scheduled
 
-  @p0-cleanup
   Scenario: Production disconnect stops heartbeat timers for the instance
     Given A desktop agent with heartbeat checking
     When "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"

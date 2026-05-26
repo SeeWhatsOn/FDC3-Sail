@@ -1,26 +1,15 @@
-import { After, AfterAll } from "@cucumber/cucumber"
-import { getActiveHeartbeatTimerCount } from "../../src/core/handlers/dacp/heartbeat-runtime"
+import { After } from "@cucumber/cucumber"
+import { clearAllHeartbeatTimersForTesting } from "../../src/core/handlers/dacp/heartbeat-runtime"
+import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../src/core/handlers/dacp/utils/open-with-context"
 
 /**
- * P0: Scenarios tagged @p0-cleanup must leave no module-level heartbeat timers behind.
+ * Reset module-level timers after every scenario so the Cucumber process can exit
+ * cleanly (heartbeat and open-with-context scenarios schedule real timeouts).
+ *
+ * Assertions that cleanup worked belong in feature steps (e.g. "no heartbeat timers
+ * are active"), not on scenario tags — see AGENTS.md (Cucumber tags).
  */
-After({ tags: "@p0-cleanup" }, function () {
-  const activeTimers = getActiveHeartbeatTimerCount()
-  if (activeTimers > 0) {
-    throw new Error(
-      `${activeTimers} heartbeat timer(s) still active after scenario — expected 0 (see heartbeat-runtime.ts)`
-    )
-  }
-})
-
-/**
- * Force process exit after all tests complete when stray timers remain.
- * Prefer the After hook above passing so the process exits naturally.
- */
-AfterAll(function () {
-  const activeTimers = getActiveHeartbeatTimerCount()
-  if (activeTimers === 0) {
-    return
-  }
-  setImmediate(() => process.exit(0))
+After(function () {
+  clearAllHeartbeatTimersForTesting()
+  clearAllPendingOpenWithContextTimeoutsForTesting()
 })

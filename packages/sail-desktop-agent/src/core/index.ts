@@ -17,6 +17,7 @@
 // Core Desktop Agent
 export { DesktopAgent } from "./desktop-agent"
 export type { DesktopAgentConfig } from "./desktop-agent"
+export { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
 
 // Interfaces (types only - no implementations)
 export type { Transport, MessageHandler, DisconnectHandler } from "./interfaces/transport"
