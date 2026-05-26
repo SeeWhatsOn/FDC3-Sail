@@ -1,5 +1,5 @@
 ---
-title: "App-channel context history conformance BDD"
+title: "App-channel context history conformance BDD gaps"
 slug: app-channel-context-history-bdd
 type: enhancement
 status: draft
@@ -18,27 +18,32 @@ tags: [fdc3, conformance2.2]
 
 ## Goal
 
-Add Cucumber coverage for app-channel typed/untyped context history and ordering gaps listed in `FDC3_2_2_COMPLIANCE_REVIEW.MD`.
+Add Cucumber scenarios for **remaining** FDC3 2.2 app-channel context history / ordering variants from the conformance pack — not a from-scratch app-channel suite.
+
+## User or system context
+
+`test/features/channels/app-channels.feature` already covers multiple types, untyped listeners, and several conformance flows. `FDC3_2_2_COMPLIANCE_REVIEW.MD` flags **matrix gaps**, not zero coverage.
 
 ## Reference docs
 
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 6)
 - FINOS FDC3 2.2 App-Channel-Tests (external pack)
+- `plans/work-items/conformance-traceability-map.md` (coordinate — list which rows this closes)
 
 ## Behavior spec
 
-Scenarios derived from conformance pack: multiple context types on one app channel, getCurrentContext / stored context ordering, listener delivery vs. history.
-
-Tag with `@conformance2.2` and `@app-channels`.
+For each gap row in the traceability map marked partial/missing:
+- Add scenario(s) with `@conformance2.2` and `@app-channels`
+- Assert messaging tables match pack expectations
 
 ## Out of scope
 
-- `Channel.clearContext()` (not 2.2 per remediation plan).
+- `Channel.clearContext()` (not FDC3 2.2 per remediation plan).
 
 ## Test guidance
 
-RED: add scenarios first against current implementation; fix handlers only if scenarios fail for spec-correct reasons.
+RED: add scenarios against current code; fix handlers only when failure is spec-correct.
 
 ## Blocked decisions
 
-Which exact conformance rows to import — maintain traceability map (sibling work item).
+Which exact conformance rows to import in v3 scope — use traceability map to bound work.

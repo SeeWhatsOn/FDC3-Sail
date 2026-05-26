@@ -10,6 +10,7 @@ file_manifest:
   - packages/sail-desktop-agent/test/
   - packages/sail-desktop-agent/src/browser/browser-desktop-agent.ts
   - packages/sail-desktop-agent/src/browser/__tests__/
+  - packages/sail-platform-api/
 depends_on:
   - extend-cleanup-source-and-open-with-context
 integration_branch: ""
@@ -20,22 +21,32 @@ tags: [fdc3, wcp]
 
 ## Goal
 
-Prove at least one end-to-end path: WCP1 → WCP4 → DACP (e.g. getInfo or addContextListener) without `MockTransport`, so wiring regressions between `WCPConnector` and `DesktopAgent` are caught.
+Add at least one test that exercises **WCPConnector ↔ DesktopAgent** wiring (not `MockTransport` only), **or** document release sign-off that `FDC3_2_2_REMEDIATION_PLAN.MD` Task 6 platform integration tests are sufficient.
+
+## User or system context
+
+Vitest (`wcp-connector.test.ts`) covers WCP units. Cucumber uses `MockTransport` and does not catch bridge regressions between browser WCP and core agent.
 
 ## Reference docs
 
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 9)
-- `FDC3_2_2_REMEDIATION_PLAN.MD` Task 6 (platform integration — coordinate to avoid duplicate)
 
 ## Behavior spec
 
-Option A: Vitest integration test with `createBrowserDesktopAgent` + synthetic `postMessage` WCP1Hello.
-Option B: Cucumber profile with jsdom/window mock — only if stable in CI.
+**Option A (preferred for this package):** Vitest integration with `createBrowserDesktopAgent` + synthetic `postMessage` WCP1Hello.
+
+**Option B:** Explicit deferral note in PRD/compliance review pointing to `sail-platform-api` Task 6 acceptance criteria.
+
+**Option C:** Cucumber + jsdom — only if stable in CI.
 
 ## Out of scope
 
-- Full FINOS conformance pack over WCP.
+- Full FINOS conformance pack over WCP in this package.
+
+## Test guidance
+
+Coordinate with platform team to avoid duplicating Task 6 suite.
 
 ## Blocked decisions
 
-Vitest-only vs. Cucumber; whether platform Task 6 satisfies this item for release sign-off.
+Owner: `@finos/sail-desktop-agent` vs `@finos/sail-platform-api` for release gate.

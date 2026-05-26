@@ -1,5 +1,5 @@
 ---
-title: "FDC3 error enum boundary tests"
+title: "Extend FDC3 error enum boundary tests"
 slug: fdc3-error-enum-boundary-tests
 type: enhancement
 status: draft
@@ -20,7 +20,11 @@ tags: [fdc3, conformance2.2]
 
 ## Goal
 
-Lock standard FDC3 error enum values on DACP error responses and promise rejection paths so regressions cannot return wrong strings or generic casts.
+**Extend and lock** standard FDC3 error enum values on DACP error responses and promise rejection paths. Reduce ad-hoc string casts at handler boundaries.
+
+## User or system context
+
+Many features already assert errors (e.g. `MalformedContext`, `NoAppsFound`, `IntentDeliveryFailed` in intent/app features). Gap is **coverage completeness and consistency**, not absence of error tests.
 
 ## Reference docs
 
@@ -29,16 +33,18 @@ Lock standard FDC3 error enum values on DACP error responses and promise rejecti
 
 ## Behavior spec
 
-Representative matrix: `MalformedContext`, `NoAppsFound`, `TargetAppUnavailable`, `IntentDeliveryFailed`, `AppTimeout`, `UserCancelledResolution` — assert `msg.payload.error` or rejection `errorType` matches `@finos/fdc3` enum.
+Build a small matrix (table-driven Vitest and/or Cucumber) for representative operations:
+- broadcast / open / raiseIntent / findIntent / channel listener errors
+- Assert `msg.payload.error` or rejection type matches `@finos/fdc3` enum
 
 ## Out of scope
 
-- Full combinatorial exhaust of every handler branch.
+- Wiring Zod validator in platform (remediation Task 6).
 
 ## Test guidance
 
-Prefer extending existing feature files over duplicating scenarios; add Vitest table tests for pure mapping helpers if any.
+Audit existing feature files first; only add scenarios for uncovered enum/surface pairs.
 
 ## Blocked decisions
 
-Whether to assert exact error **message** strings from spec or only enum values.
+Assert enum only vs. exact spec error message strings.

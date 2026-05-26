@@ -47,14 +47,16 @@ See `plans/prd-desktop-agent-conformance-gaps.md` for desktop-agent lifecycle an
 
 | Slug | Focus |
 |------|--------|
-| `extend-cleanup-source-and-open-with-context` | P0 cleanup gaps (source pending, open-with-context) |
-| `cap-intents-history` | Bound `intents.history` |
+| `extend-cleanup-source-and-open-with-context` | **Verified red:** source pending + open-with-context target cleanup |
+| `cap-intents-history` | Bound `intents.history` (append-only today) |
 | `wcp1-hello-origin-allowlist` | Pre-WCP4 origin policy |
-| `wcp-identity-registry-pruning` | Stale WCP4 identity map |
-| `app-channel-context-history-bdd` | App-channel conformance scenarios |
-| `fdc3-error-enum-boundary-tests` | Standard error enums |
+| `wcp-identity-registry-pruning` | **Investigate** inner identity map pruning |
+| `app-channel-context-history-bdd` | **Gap-fill** app-channel BDD (not greenfield) |
+| `fdc3-error-enum-boundary-tests` | **Extend** error enum coverage (partial today) |
 | `conformance-traceability-map` | FINOS 2.2 → Cucumber map |
-| `bdd-wcp-integration-scenario` | Real WCP path test |
-| `align-wcp-instance-id-in-tests` | WCP5 instance id in steps |
-| `reduce-vitest-retry` | `retry: 0` in Vitest |
+| `bdd-wcp-integration-scenario` | Real WCP path or defer to platform Task 6 |
+| `align-wcp-instance-id-in-tests` | **Investigate** heartbeat/WCP test hygiene first |
+| `reduce-vitest-retry` | `retry: 0` after transport + cleanup green |
+
+Remediation Tasks 1–2 and partial Task 3 are **not** duplicated here — see PRD relationship table.
 

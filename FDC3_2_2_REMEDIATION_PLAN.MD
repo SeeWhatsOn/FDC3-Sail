@@ -1,6 +1,6 @@
 # FDC3 2.2 Remediation Plan: Sail Desktop Agent
 
-This implementation plan follows the review in `packages/sail-desktop-agent/FDC3_2_2_COMPLIANCE_REVIEW.md`.
+This implementation plan follows the review in `FDC3_2_2_COMPLIANCE_REVIEW.MD` (repo root). Additional unplanned items: `plans/prd-desktop-agent-conformance-gaps.md`.
 
 ## Completion Rule
 
@@ -133,10 +133,14 @@ When every task below is complete and verified, update the review artifact's **L
 
 **Description:** Align heartbeat timeout cleanup with WCP6Goodbye and transport disconnect cleanup to prevent leaked listeners, pending intents, private-channel state, and heartbeat timers.
 
+**Status on `v3-pre` (partial):** `cleanup.ts` exists; heartbeat timeout and `disconnectInstance` call `cleanupDACPHandlers`. Hooks clear module-level timers after each scenario. **Remaining gaps** (source pending intents, open-with-context) are tracked in `plans/prd-desktop-agent-conformance-gaps.md` / work item `extend-cleanup-source-and-open-with-context`.
+
 **Acceptance criteria:**
-- [ ] Heartbeat timeout clears instance state, event listeners, context listeners, private-channel connections, pending intents, and heartbeat state.
-- [ ] Cleanup does not introduce circular import initialization risk.
-- [ ] Cucumber no longer needs process-level forced exit for heartbeat timers.
+- [x] Heartbeat timeout calls shared `cleanupDACPHandlers` (not `removeInstance()` only).
+- [x] `cleanup.ts` leaf module avoids circular import with `wcp-handlers`.
+- [x] Cucumber uses timer reset in hooks instead of forced `process.exit(0)` on every run.
+- [ ] Full cleanup includes **source** pending intents and **open-with-context** state (see conformance-gaps PRD).
+- [ ] All Task 3 Vitest/Cucumber assertions green without vacuous heartbeat checks.
 
 **Verification:**
 - [ ] Add focused Vitest cleanup coverage.

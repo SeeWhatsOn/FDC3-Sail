@@ -18,21 +18,29 @@ tags: [fdc3, conformance2.2]
 
 ## Goal
 
-Publish a maintainable map from FINOS FDC3 2.2 conformance test areas / IDs to in-repo Cucumber scenarios (or explicit “missing” / “partial”).
+Publish a maintainable map from FINOS FDC3 2.2 conformance areas to in-repo Cucumber scenarios, with honest status: covered | partial | missing | n/a.
+
+## User or system context
+
+`@conformance2.2` tags exist on many scenarios but do not by themselves prove full pack coverage. This map drives items 6–7 and release narrative.
 
 ## Reference docs
 
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 8)
-- `AGENTS.md` Cucumber tags
 
 ## Deliverable
 
-Markdown table (or CSV in `docs/`) with columns: conformance ID/name, feature file, scenario name, status (covered | partial | missing | n/a), notes.
+Markdown table under `packages/sail-desktop-agent/docs/conformance-traceability.md` (or repo `docs/`) with columns:
+
+- Conformance area / test name (from FINOS pack or `fdc3-expert` knowledge base)
+- Feature file + scenario name (if any)
+- Status
+- Notes / owner work item slug
 
 ## Out of scope
 
-- Automating FINOS pack execution inside this repo (may live in platform/toolbox).
+- Toolbox `fdc3-conformance` UI progress work (see `.cursor/plans/fdc3-conformance-progress_*.plan.md`).
 
 ## Blocked decisions
 
-Source of truth for conformance IDs (local `fdc3-expert` vs. published FINOS list).
+Authoritative list source: local `fdc3-expert` vs. published FINOS conformance artifact version pin.

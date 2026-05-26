@@ -10,8 +10,7 @@ file_manifest:
   - packages/sail-desktop-agent/src/core/state/mutators/intent.ts
   - packages/sail-desktop-agent/src/core/state/types.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/
-depends_on:
-  - extend-cleanup-source-and-open-with-context
+depends_on: []
 integration_branch: ""
 branch: fix/cap-intents-history
 external_tracker: ""

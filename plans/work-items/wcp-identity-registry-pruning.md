@@ -1,5 +1,5 @@
 ---
-title: "Prune stale WCP instance identity registry entries"
+title: "Investigate and prune WCP instance identity registry entries"
 slug: wcp-identity-registry-pruning
 type: bug
 status: draft
@@ -19,23 +19,32 @@ tags: [fdc3, wcp]
 
 ## Goal
 
-Ensure `instanceIdentityRegistry` (WeakMap per transport) does not retain stale identity records after failed WCP4, handshake timeout, or disconnect.
+**Investigate first**, then prune if needed: `instanceIdentityRegistry` inner maps use `identityMap.set` but no `identityMap.delete` in `wcp-handlers.ts` today.
+
+## User or system context
+
+Compliance review lists this as optional cleanup. Outer registry is `WeakMap<Transport, Map<string, InstanceIdentityRecord>>` — not the same as an unbounded global leak. Confirm with tests or profiling on long-lived transports before treating as P1 bug.
 
 ## Reference docs
 
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 5)
-- `FDC3_2_2_COMPLIANCE_REVIEW.MD` (optional cleanup)
 
 ## Behavior spec
 
-Given failed WCP4 or handshake timeout cleanup
-When instance will not reconnect
-Then identity map has no entry for that instanceId
+**Phase 1 — investigate**
+
+Given failed WCP4, handshake timeout, or `cleanupDACPHandlers` for an instance
+When cleanup completes
+Then document whether `identityMap` still holds that `instanceId`
+
+**Phase 2 — fix (only if investigation confirms leak)**
+
+Delete identity entries on the same paths that remove the instance from agent state.
 
 ## Test guidance
 
-Unit test in `desktop-agent-wcp-routing.test.ts` or dedicated wcp-handlers test.
+Add a focused unit test that simulates failed handshake / disconnect and asserts inner map size or key absence. Downgrade work item if WeakMap + transport lifecycle makes retention acceptable.
 
 ## Blocked decisions
 
-(none)
+Severity after investigation — may close as no-op or optional cleanup.

@@ -7,87 +7,105 @@
 
 ## Goal / outcome
 
-Close planning gaps not covered by `plans/prd-transport-platform-hardening.md` or `FDC3_2_2_REMEDIATION_PLAN.MD` so lifecycle cleanup, conformance evidence, validation boundaries, and test trust are explicit, testable, and schedulable.
+Close planning gaps not covered by `plans/prd-transport-platform-hardening.md` or `FDC3_2_2_REMEDIATION_PLAN.MD` so remaining lifecycle cleanup, conformance evidence, validation boundaries, and test trust are explicit, testable, and schedulable.
 
 ## Relationship to other plans
 
-| Existing plan | Overlap | This PRD |
-|---------------|---------|----------|
-| `FDC3_2_2_REMEDIATION_PLAN.MD` Task 3 | General heartbeat / `cleanupDACPHandlers` | Extends cleanup for **source** pending intents and **open-with-context** module state |
-| `FDC3_2_2_REMEDIATION_PLAN.MD` Task 4 | Logging redaction | No duplicate — same goal |
-| `FDC3_2_2_REMEDIATION_PLAN.MD` Task 6 | Platform validator + `getAgent()` | Validator wiring stays there; enum lock tests are **core** boundary tests here |
-| `plans/prd-transport-platform-hardening.md` | MessagePort / InMemory / platform channel API | No duplicate — WCP origin allowlist is complementary |
+| Existing plan | Status on `v3-pre` | This PRD |
+|---------------|-------------------|----------|
+| `FDC3_2_2_REMEDIATION_PLAN.MD` Task 1 (user vs app channel) | Largely implemented (`currentUserChannel`, revised BDD) | **Do not re-plan** — track completion via remediation checklist |
+| `FDC3_2_2_REMEDIATION_PLAN.MD` Task 2 (PrivateChannel null listener) | Implemented (`lifecycleCatchAllListeners` + BDD) | **Do not re-plan** |
+| `FDC3_2_2_REMEDIATION_PLAN.MD` Task 3 (heartbeat / `cleanupDACPHandlers`) | **Partially done** — heartbeat timeout and `disconnectInstance` call shared cleanup; hooks clear module timers | **Extends** cleanup for **source** pending intents and **open-with-context** (not a repeat of Task 3) |
+| `FDC3_2_2_REMEDIATION_PLAN.MD` Task 4 (logging redaction) | Not done | **No duplicate** — same goal; implement via Task 4 |
+| `FDC3_2_2_REMEDIATION_PLAN.MD` Task 6 (platform validator + `getAgent()`) | Validator exists in platform-api but not wired in `SailPlatform` | **No duplicate** for wiring; item 7 here is **core enum boundary tests** only |
+| `plans/prd-transport-platform-hardening.md` | Draft work-items | **No duplicate** — MessagePort / InMemory / platform channel API; WCP origin allowlist here is complementary |
+
+**Note:** `FDC3_2_2_REMEDIATION_PLAN.MD` references `packages/sail-desktop-agent/FDC3_2_2_COMPLIANCE_REVIEW.md`; the review file lives at repo root: `FDC3_2_2_COMPLIANCE_REVIEW.MD`.
 
 ## In scope (PRD items)
 
 ### Lifecycle cleanup (finish P0 — prerequisite for P1 sign-off)
 
-1. **`cleanupDACPHandlers` — raising instance** — When `sourceInstanceId` disconnects, clear `intents.pending`, reject/clear `pendingIntentPromises`, and cancel timeouts (Vitest + Cucumber already red in `disconnect-cleanup-p0.feature`).
-2. **`cleanupDACPHandlers` — open-with-context** — On disconnect of source or target, clear `state.open.pendingWithContext` and module `pendingOpenWithContextTimeouts` (Vitest + Cucumber red).
+1. **`cleanupDACPHandlers` — raising instance (source pending intents)** — When `sourceInstanceId` disconnects, clear matching `intents.pending` entries, reject/clear `pendingIntentPromises`, and cancel timeouts. **Verified:** Vitest + Cucumber red today; `cleanup.ts` only filters `targetInstanceId`.
+
+2. **`cleanupDACPHandlers` — open-with-context (target disconnect, required)** — When the **target** instance disconnects, clear `state.open.pendingWithContext[targetInstanceId]` and module `pendingOpenWithContextTimeouts`. **Verified:** red tests today. **Follow-up (optional):** if the **source** instance disconnects while open-with-context is pending, cancel entries where `sourceInstanceId` matches — not covered by current red tests; add scenario before treating as required.
 
 ### Memory and security boundaries
 
-3. **`intents.history` bound** — Cap, TTL, or prune on resolve/disconnect so long-lived Desktop Agent sessions do not grow memory without bound.
-4. **WCP1Hello origin policy** — Host-configurable allowlist (or deny-by-default) before allocating MessageChannel / temp connection; document interaction with WCP4 origin checks.
-5. **WCP identity registry pruning** — Remove stale `InstanceIdentityRecord` entries after failed handshake, timeout, or disconnect on long-lived transports.
+3. **`intents.history` bound** — Cap, TTL, or prune on resolve/disconnect so long-lived Desktop Agent sessions do not grow memory without bound. **Verified:** `recordIntentResolution` still append-only.
+
+4. **WCP1Hello origin policy** — Host-configurable allowlist before allocating MessageChannel / temp connection; document interaction with WCP4 origin checks. **Verified:** no allowlist in `WCPConnector` today.
+
+5. **WCP identity registry pruning (investigate)** — `wcp-handlers` uses `identityMap.set` with no `delete`. Confirm whether stale `InstanceIdentityRecord` entries accumulate on long-lived transports (outer structure is `WeakMap<Transport, Map<...>>` — severity TBD). Plan investigation before treating as a confirmed leak.
 
 ### Conformance and test trust
 
-6. **App-channel context history matrix** — BDD scenarios for typed/untyped context history and ordering per FDC3 2.2 app-channel conformance (gaps called out in `FDC3_2_2_COMPLIANCE_REVIEW.MD`).
-7. **FDC3 error enum boundary tests** — Lock `ResolveError`, `OpenError`, `ChannelError` (and related) on promise rejections and DACP error responses; reduce string casts at boundaries.
-8. **Conformance traceability map** — Machine- or human-readable map: FINOS 2.2 conformance test ID → `test/features/**` scenario (and explicit “not implemented” rows).
-9. **BDD through real WCP path** — At least one Cucumber or integration scenario via `createBrowserDesktopAgent` / `WCPConnector` (not only `MockTransport`), or document deferral to `sail-platform-api` Task 6 with acceptance criteria.
-10. **WCP-validated instance id in tests** — Steps use `lastWcp5ValidatedInstanceId` (or equivalent) for validate / goodbye / disconnect when WCP reassigns instance ids.
+6. **App-channel context history — fill conformance gaps** — Extend BDD for typed/untyped context history and ordering variants called out in `FDC3_2_2_COMPLIANCE_REVIEW.MD`. **Not greenfield:** `app-channels.feature` already has substantial coverage; this item closes **matrix gaps**, not “no app-channel tests.”
+
+7. **FDC3 error enum boundary tests — extend and lock** — Strengthen tests so `ResolveError`, `OpenError`, `ChannelError` (and related) are asserted on promise rejections and DACP error responses. **Not greenfield:** many scenarios already cover e.g. `MalformedContext`, `NoAppsFound`; goal is **systematic boundary coverage**, fewer string casts.
+
+8. **Conformance traceability map** — Human- or machine-readable map: FINOS 2.2 conformance test area / ID → `test/features/**` scenario, with rows marked covered | partial | missing | n/a. Distinct from `.cursor/plans/fdc3-conformance-progress_*.plan.md` (toolbox UI completion signal).
+
+9. **BDD or integration through real WCP path** — At least one test via `createBrowserDesktopAgent` / `WCPConnector` (not only `MockTransport`), **or** explicit sign-off that `FDC3_2_2_REMEDIATION_PLAN.MD` Task 6 platform integration tests satisfy this for release.
+
+10. **WCP / heartbeat test hygiene (investigate first)** — Some failures (e.g. multiple active heartbeat timers) may be due to **test design** (re-initializing `DesktopAgent`, duplicate validate) rather than product bug. Investigate with a minimal scenario (single agent, one validate, one goodbye/disconnect) before changing production code. Use `mockTransport.lastWcp5ValidatedInstanceId` where WCP assigns a canonical id.
 
 ### Tooling hygiene
 
-11. **Vitest `retry: 1`** — Remove or narrow retries once transport/cleanup suites are stable so flakes are visible.
+11. **Vitest `retry: 1`** — Remove or narrow retries after cleanup and transport work items are green so flakes are visible. **Verified:** `vitest.config.ts` still has `retry: 1`.
 
 ## Out of scope
 
 - Transport half-open disconnect, MessagePort reentrancy, and platform `sendDACPMessageOnBehalfOf` (see `plans/prd-transport-platform-hardening.md`).
+- Re-opening remediation Tasks 1–2 (user channel, private channel) unless regression found.
 - FDC3 3.0 / `Channel.clearContext()` as a 2.2 blocker (per remediation plan scope correction).
 - Electron `sail-electron` proxy build.
 - Repo-wide ESLint/Prettier.
 
 ## Success criteria
 
-- Vitest `src/core/handlers/dacp/__tests__/cleanup.test.ts` and Cucumber `disconnect-cleanup-p0.feature` are green without weakening assertions.
-- `intents.history` size is bounded under a documented policy with a unit test.
-- WCP1Hello from disallowed origins does not allocate a MessageChannel (or is rejected before bridge) when allowlist is configured.
-- New or updated BDD covers app-channel history gaps; conformance map lists coverage status for each 2.2 pack test area.
-- Error boundary tests fail if handler returns wrong enum string for representative operations.
-- `npm run test -w @finos/sail-desktop-agent` passes with `retry: 0` (or documented exception for specific files).
+- Vitest `cleanup.test.ts` and Cucumber disconnect-cleanup scenarios for items 1–2 are green **without weakening assertions**.
+- Optional: Cucumber scenarios tightened (e.g. heartbeat assertion only after validate; source-side open-with-context if required).
+- `intents.history` bounded under a documented policy with a unit test.
+- WCP1Hello from disallowed origins does not allocate a MessageChannel when allowlist is configured.
+- Conformance map published; app-channel and error-enum gaps explicitly listed as partial vs missing.
+- `npm run test -w @finos/sail-desktop-agent` passes with `retry: 0` (or documented exceptions).
 
 ## BDD scenarios (product-level)
 
 ```text
-Given App1 has raised an intent to PortfolioApp and the intent is still pending
-When App1 disconnects from the DA via production cleanup
-Then the agent has no pending intents and no pending promise entries for that request
+# Item 1 — required (red today)
+Given App1 raised an intent to PortfolioApp and the intent is still pending (not yet resolved)
+When App1 disconnects via disconnectInstance or WCP6Goodbye
+Then the agent has no pending intents for that request
 
+# Item 2 — required (red today)
 Given portfolioApp opened chartApp with context and chart has not added a listener
-When the chart instance disconnects from the DA
-Then open-with-context pending for that target is empty and no open-with-context timeouts remain scheduled
+When the chart target instance disconnects
+Then open-with-context pending for that target is empty and no open-with-context timeouts remain
 
-Given a Desktop Agent that has resolved many intents over time
-When history exceeds the configured cap
-Then oldest intent resolution records are pruned and memory stays bounded
+# Item 2 — optional follow-up
+Given portfolioApp opened chartApp with context and is waiting on chart
+When portfolioApp (source) disconnects before chart adds a listener
+Then pending open-with-context for that open is cancelled and timeouts cleared
 
-Given WCP connector configured with allowedOrigins ["https://apps.example.com"]
-When a WCP1Hello arrives from "https://evil.example.com"
-Then no MessageChannel is created and no temp connection is registered
+# Item 3
+Given many intent resolutions recorded
+When count exceeds configured cap
+Then oldest history entries are pruned
 
-Given FINOS app-channel conformance scenario X for context history
-When the matching Cucumber scenario in sail-desktop-agent runs
-Then messaging assertions match the conformance pack expectation
+# Item 4
+Given WCP allowedOrigins ["https://apps.example.com"]
+When WCP1Hello from "https://evil.example.com"
+Then no MessageChannel is created
 ```
 
 ## Risks / unknowns
 
-- Whether WCP1 origin allowlist belongs in `WCPConnector` options vs. host shell only.
-- Whether one BDD WCP scenario duplicates platform Task 6 integration tests (avoid triple maintenance).
-- FINOS conformance pack version pin vs. `@conformance2.2` tags in features.
+- WCP1 origin allowlist on `WCPConnector` vs. host shell only.
+- Item 9 vs. Task 6 — avoid three overlapping integration suites without an owner.
+- Item 5 severity after investigation may downgrade to optional cleanup.
+- Item 10 may result in test-only changes, not product changes.
 
 ## Suggested vertical slices
 
@@ -106,7 +124,7 @@ Then messaging assertions match the conformance pack expectation
 
 ## Reference
 
-- `FDC3_2_2_COMPLIANCE_REVIEW.MD`
+- `FDC3_2_2_COMPLIANCE_REVIEW.MD` (repo root)
 - `FDC3_2_2_REMEDIATION_PLAN.MD`
 - `packages/sail-desktop-agent/test/features/apps/disconnect-cleanup-p0.feature`
-- `AGENTS.md` (testing conventions, Cucumber tags)
+- `AGENTS.md` (testing conventions; prefer `disconnectInstance` / goodbye over manual cleanup shims)

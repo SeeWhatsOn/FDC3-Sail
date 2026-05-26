@@ -16,16 +16,22 @@ depends_on: []
 integration_branch: ""
 branch: fix/cleanup-source-and-open-with-context
 external_tracker: ""
-tags: [fdc3, lifecycle, p0]
+tags: [fdc3, lifecycle]
 ---
 
 ## Goal
 
-Make `cleanupDACPHandlers` / `disconnectInstance` clear all instance-related pending work: intents where the instance is **source** or **target**, and open-with-context state plus module timeout handles.
+Extend `cleanupDACPHandlers` / `disconnectInstance` beyond today's target-only pending-intent filter:
+
+1. **Required:** clear pending intents when disconnecting instance is `sourceInstanceId`.
+2. **Required:** clear `open.pendingWithContext[targetInstanceId]` and `pendingOpenWithContextTimeouts` when the **target** instance disconnects.
+3. **Optional follow-up:** cancel open-with-context when **source** disconnects (add BDD first).
 
 ## User or system context
 
-Vitest and `disconnect-cleanup-p0.feature` are red. Task 3 in `FDC3_2_2_REMEDIATION_PLAN.MD` covers heartbeat path but not these two gaps.
+Vitest (`cleanup.test.ts`) and Cucumber (`disconnect-cleanup-p0.feature`) are **red on v3-pre** for items 1–2.
+
+`FDC3_2_2_REMEDIATION_PLAN.MD` Task 3 is **partially complete** (heartbeat uses `cleanupDACPHandlers`; module timers cleared in hooks). This work item is **not** a repeat of Task 3.
 
 ## Reference docs
 
@@ -34,22 +40,32 @@ Vitest and `disconnect-cleanup-p0.feature` are red. Task 3 in `FDC3_2_2_REMEDIAT
 
 ## Behavior spec
 
-Given a pending intent with `sourceInstanceId` equal to the disconnecting instance
-When `cleanupDACPHandlers` runs
-Then `intents.pending` has no entry for that requestId, promise map entry removed, timeouts cleared, reject called if applicable
+**Required — source pending intent**
 
-Given open-with-context pending on target instance X
-When instance X disconnects
-Then `open.pendingWithContext[X]` is cleared and `pendingOpenWithContextTimeouts` has no entry for that request
+Given `intents.pending[requestId]` with `sourceInstanceId === instanceId` being cleaned up
+When `cleanupDACPHandlers` runs
+Then that pending entry is removed, `pendingIntentPromises` entry cleared, timeouts cleared, `reject` called if a promise entry exists
+
+**Required — open-with-context target**
+
+Given `open.pendingWithContext[targetInstanceId]` has entries
+When `cleanupDACPHandlers` runs for `instanceId === targetInstanceId`
+Then that bucket is empty and `pendingOpenWithContextTimeouts` has no handles for those `requestUuid` values
+
+**Optional — open-with-context source**
+
+Given pending open entries where `sourceInstanceId === instanceId`
+When source disconnects
+Then pending removed and timeouts cleared (add Vitest + Cucumber before implementing)
 
 ## Out of scope
 
-- New Cucumber tags; use existing steps and `disconnectInstance`.
+- Re-implementing heartbeat cleanup (already calls `cleanupDACPHandlers`).
 
 ## Test guidance
 
-GREEN existing `cleanup.test.ts` and `disconnect-cleanup-p0.feature` without changing assertions to match buggy behavior.
+GREEN existing failing tests without weakening assertions. Consider tightening Cucumber scenario 1 so `no heartbeat timers` runs only when heartbeat was started (avoid vacuous pass).
 
 ## Blocked decisions
 
-(none)
+Whether source-side open-with-context cancel is required for v3 or deferred.
