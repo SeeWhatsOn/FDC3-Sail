@@ -12,6 +12,11 @@ metadata:
 
 # Work Item Management
 
+> **Watson workflow:** Prefer `ww-work-items` as the canonical skill. It
+> includes `kind: task | spike | epic`, draft validation by kind, and
+> integration with `/ww-plan` and `/ww-deliver`. This skill remains for
+> teams not using the full WW stack. Planning depth: `ww-planning-stack`.
+
 Local markdown work items are the durable source of truth for this
 workflow. They are not GitHub Issues or Jira tickets, so do not invent
 tracker-style IDs. Use descriptive filenames and titles. External tracker

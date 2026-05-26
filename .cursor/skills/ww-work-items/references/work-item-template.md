@@ -6,6 +6,7 @@ Use this section order for local work items:
 ---
 title: "Short imperative title"
 slug: short-descriptive-slug
+kind: task                 # task | spike | epic — see work-item-kinds.md
 type: feature              # feature | bug | chore
 status: approved           # see lifecycle in SKILL.md
 loop_count: 0
@@ -37,6 +38,12 @@ When [action]
 Then [observable outcome]
 
 Repeat for every required behaviour, including edge cases.
+For `kind: spike`, use Phase 1 (investigate) and Phase 2 (fix) if needed.
+For `kind: epic`, omit — use `## Child work items` instead.
+
+## Child work items
+Required for `kind: epic` only. Table of child slugs, kinds, depends_on,
+status.
 
 ## Out of scope
 - Item

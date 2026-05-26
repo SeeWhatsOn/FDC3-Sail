@@ -7,13 +7,17 @@ fields are missing, ask focused questions instead of guessing.
 
 - Persona / user: who benefits or operates the feature.
 - Goal / outcome: what changes and why it matters.
-- In scope: behaviors or capabilities included in this workload.
+- Relationship to other plans: table of existing PRDs/remediation docs →
+  status → action (extend | no duplicate | defer).
+- In scope: behaviors or capabilities included in this workload (prefer
+  stable IDs: `PRD-01`, …).
 - Out of scope: explicit non-goals.
 - Success criteria: observable outcomes that prove value.
 - BDD scenarios: Given / When / Then behavior candidates.
 - Risks / unknowns: product, technical, security, or operational risks.
 - Constraints: platform, security, API, deadline, or team constraints.
-- Suggested vertical slices: smallest independently reviewable steps.
+- Suggested vertical slices: map each ID to `task` | `spike` | `epic` and
+  planned work item slug.
 
 ## Optional
 
@@ -22,12 +26,19 @@ fields are missing, ask focused questions instead of guessing.
 - Migration or deprecation notes.
 - Analytics, telemetry, or support requirements.
 
+## Optional but recommended
+
+- Commands: test, build, lint from `package.json` / `AGENTS.md`.
+- Release brief link: `plans/release-*.md` or `project-docs.md` section.
+
 ## Validation
 
 Before drafting work items:
 
-1. Confirm the PRD has enough behavior detail to produce BDD specs.
-2. Identify unanswered questions that block safe slicing.
-3. Decide whether missing details are blockers or can become work-item
+1. Run [prd-accuracy-gate.md](prd-accuracy-gate.md) and record the gate
+   table.
+2. Confirm the PRD has enough behavior detail to produce BDD specs.
+3. Identify unanswered questions that block safe slicing.
+4. Decide whether missing details are blockers, `kind: spike`, or work-item
    `## Blocked decisions`.
 

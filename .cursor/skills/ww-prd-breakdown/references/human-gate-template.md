@@ -5,6 +5,7 @@ Present each draft work item like this:
 ```text
 WORK ITEM: [title]
 Slug: [slug]
+Kind: [task|spike|epic]
 Type: [feature|bug|chore]
 
 Goal:
@@ -18,6 +19,11 @@ Files likely touched:
 
 Out of scope:
 [items]
+
+Child work items (epic only):
+[table or "n/a"]
+
+Deliverable via /ww-deliver: [yes | no — epics always no]
 
 Reply with:
 approve

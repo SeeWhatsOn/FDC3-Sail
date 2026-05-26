@@ -5,9 +5,9 @@ description: >
   PRDs. Use when creating descriptive work items, validating drafts
   before approval, updating delivery state, routing review verdicts,
   surfacing blocked decisions, staging for human review, extracting
-  learnings, or moving work to dead-letter. Keywords: ww, watson
-  workflow, work item, plans/work-items, BDD, Given/When/Then, status
-  lifecycle.
+  learnings, or moving work to dead-letter. For planning depth (PRD vs
+  epic vs task), load ww-planning-stack. Keywords: ww, watson workflow,
+  work item, plans/work-items, BDD, Given/When/Then, status lifecycle.
 metadata:
   author: watson
   workflow: ww
@@ -68,6 +68,15 @@ unless explicitly asked.
 
 Orchestrator and subagent load limits are in
 [references/context-budget.md](references/context-budget.md).
+
+## Work Item Kinds
+
+`kind: task | spike | epic` controls deliverability. See
+[references/work-item-kinds.md](references/work-item-kinds.md).
+
+- **task** — default; `/ww-deliver` when `status: approved`
+- **spike** — investigate first; deliver only when fix phase is spec'd
+- **epic** — parent only; never `/ww-deliver`; children are separate files
 
 ## Canonical Work Item Format
 

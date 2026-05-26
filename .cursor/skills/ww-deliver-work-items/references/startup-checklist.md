@@ -12,6 +12,7 @@ Progress:
 - [ ] Integration branch chosen and recorded on work items
 - [ ] Queue built (slug filter or all `status: approved`)
 - [ ] Queue validated:
+  - [ ] No `kind: epic` items in queue (remove or deliver children)
   - [ ] Every `depends_on` slug exists
   - [ ] No circular dependencies
   - [ ] Overlapping `file_manifest` entries are sequenced, not parallel

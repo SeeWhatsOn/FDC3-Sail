@@ -70,9 +70,13 @@ Read and follow
 Build the queue:
 
 - with a slug: only that work item
-- without a slug: all `plans/work-items/*.md` with `status: approved`
+- without a slug: all `plans/work-items/*.md` with `status: approved` and
+  `kind` not `epic` (default `task` if `kind` omitted)
 
 Order by dependencies and filename.
+
+**Never deliver** `kind: epic`. If asked, deliver an approved child slug
+instead.
 
 Default to one human review gate per work item. `--auto-until-review`
 may run unattended between delivery phases, but never past the human

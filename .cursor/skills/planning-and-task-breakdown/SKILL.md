@@ -19,6 +19,10 @@ Decompose work into small, verifiable tasks with explicit acceptance criteria. G
 
 **When NOT to use:** Single-file changes with obvious scope, or when the spec already contains well-defined tasks.
 
+**Watson workflow:** When `plans/work-items/` exists, slicing and dependencies
+are owned by `ww-prd-breakdown` (`/ww-plan`) using `planning-and-task-breakdown`
+as a loaded orchestrator skill — do not create a parallel task list in chat.
+
 ## The Planning Process
 
 ### Step 1: Enter Plan Mode

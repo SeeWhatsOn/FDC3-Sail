@@ -19,6 +19,7 @@ Task arrives
     ├── Don't know what you want yet? ──────→ interview-me
     ├── Have a rough concept, need variants? → idea-refine
     ├── New project/feature/change? ──→ spec-driven-development
+    ├── PRD → work items → deliver (Watson)? → ww-planning-stack → /ww-plan → /ww-deliver
     ├── Have a spec, need tasks? ──────→ planning-and-task-breakdown
     ├── Implementing code? ────────────→ incremental-implementation
     │   ├── UI work? ─────────────────→ frontend-ui-engineering
@@ -130,11 +131,32 @@ These are the subtle errors that look like productivity but create problems:
 
 3. **Multiple skills can apply.** A feature implementation might involve `idea-refine` → `spec-driven-development` → `planning-and-task-breakdown` → `incremental-implementation` → `test-driven-development` → `code-review-and-quality` → `shipping-and-launch` in sequence.
 
+   For repos using `plans/` and local work items, prefer the Watson stack:
+   `interview-me` → `ww-planning-stack` → `ww-prd-breakdown` (`/ww-plan`) →
+   human approve → `ww-deliver-work-items` (`/ww-deliver`).
+
 4. **When in doubt, start with a spec.** If the task is non-trivial and there's no spec, begin with `spec-driven-development`.
+
+## Watson workflow (local work items)
+
+When the repo uses `plans/work-items/`:
+
+```
+1.  interview-me              → Scope and release bar
+2.  ww-planning-stack        → Choose brief / PRD / ADR / epic / task depth
+3.  spec-driven-development  → Optional upstream spec (or PRD body)
+4.  ww-prd-breakdown (/ww-plan) → PRD accuracy gate → draft work items
+5.  Human approve            → status: approved per slug
+6.  ww-deliver-work-items    → RED → GREEN → staged → commit
+```
+
+Optional: `documentation-and-adrs` between steps 3–4 for contract decisions.
+
+Do not skip human approve or PRD accuracy gate on brownfield workloads.
 
 ## Lifecycle Sequence
 
-For a complete feature, the typical skill sequence is:
+For a complete feature (generic), the typical skill sequence is:
 
 ```
 1.  interview-me                → Extract what the user actually wants
@@ -161,7 +183,11 @@ Not every task needs every skill. A bug fix might only need: `debugging-and-erro
 | Define | interview-me | Surface what the user actually wants before any plan, spec, or code exists |
 | Define | idea-refine | Refine ideas through structured divergent and convergent thinking |
 | Define | spec-driven-development | Requirements and acceptance criteria before code |
+| Plan | ww-planning-stack | PRD vs epic vs task; connects WW to spec-driven |
+| Plan | ww-prd-breakdown | `/ww-plan`: PRD → local work items with BDD |
+| Plan | ww-work-items | Work item format, kinds, approval lifecycle |
 | Plan | planning-and-task-breakdown | Decompose into small, verifiable tasks |
+| Deliver | ww-deliver-work-items | `/ww-deliver`: approved items only |
 | Build | incremental-implementation | Thin vertical slices, test each before expanding |
 | Build | source-driven-development | Verify against official docs before implementing |
 | Build | doubt-driven-development | Adversarial fresh-context review of every non-trivial decision |

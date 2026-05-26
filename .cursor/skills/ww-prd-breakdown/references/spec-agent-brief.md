@@ -17,6 +17,7 @@ tests or production code.
 
 title:              [work item title]
 slug:               [descriptive filename slug]
+kind:               [task | spike | epic]
 goal:               [one sentence goal]
 type:               [feature | bug | chore]
 tags:               [from work-item-tags.md or empty]
