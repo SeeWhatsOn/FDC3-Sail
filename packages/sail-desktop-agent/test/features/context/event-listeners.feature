@@ -15,30 +15,30 @@ Feature: Desktop Agent Event Listeners
   @conformance2.2
   Scenario: Receiving channelChanged event when another app joins a channel
     When "appId: App1, instanceId: a1" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
-    And "appId: App2, instanceId: a2" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App2, instanceId: a2" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
       | msg.matches_type         | to.instanceId | msg.payload.newChannelId |
       | addEventListenerResponse | a1            | {null}                   |
-      | channelChangedEvent      | a1            | one                      |
+      | channelChangedEvent      | a1            | fdc3.channel.1           |
       | joinUserChannelResponse  | a2            | {null}                   |
 
   Scenario: Receiving channelChanged event when I join a channel
     When "appId: App1, instanceId: a1" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
-    And "appId: App1, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App1, instanceId: a1" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
       | msg.matches_type         | to.instanceId | msg.payload.newChannelId |
       | addEventListenerResponse | a1            | {null}                   |
-      | channelChangedEvent      | a1            | one                      |
+      | channelChangedEvent      | a1            | fdc3.channel.1           |
       | joinUserChannelResponse  | a1            | {null}                   |
 
   Scenario: Receiving channelChanged event when leaving a channel
     When "appId: App1, instanceId: a1" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
-    And "appId: App1, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App1, instanceId: a1" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     And "appId: App1, instanceId: a1" leaves the current user channel [fdc3.leaveCurrentChannel]
     Then messaging will have outgoing posts
       | msg.matches_type            | to.instanceId | msg.payload.newChannelId |
       | addEventListenerResponse    | a1            | {null}                   |
-      | channelChangedEvent         | a1            | one                      |
+      | channelChangedEvent         | a1            | fdc3.channel.1           |
       | joinUserChannelResponse     | a1            | {null}                   |
       | channelChangedEvent         | a1            | {null}                   |
       | leaveCurrentChannelResponse | a1            | {null}                   |
@@ -46,7 +46,7 @@ Feature: Desktop Agent Event Listeners
   Scenario: Unsubscribing from event listener
     When "appId: App1, instanceId: a1" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
     And "appId: App1, instanceId: a1" removes DA event listener "uuid3" [fdc3.removeEventListener]
-    And "appId: App2, instanceId: a2" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App2, instanceId: a2" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
       | msg.matches_type                 | to.instanceId |
       | addEventListenerResponse         | a1            |
@@ -56,33 +56,33 @@ Feature: Desktop Agent Event Listeners
   Scenario: Multiple apps listening for channel changes
     When "appId: App1, instanceId: a1" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
     And "appId: App2, instanceId: a2" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
-    And "appId: App1, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App1, instanceId: a1" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
       | msg.matches_type         | to.instanceId | msg.payload.newChannelId |
       | addEventListenerResponse | a1            | {null}                   |
       | addEventListenerResponse | a2            | {null}                   |
-      | channelChangedEvent      | a1            | one                      |
-      | channelChangedEvent      | a2            | one                      |
+      | channelChangedEvent      | a1            | fdc3.channel.1           |
+      | channelChangedEvent      | a2            | fdc3.channel.1           |
       | joinUserChannelResponse  | a1            | {null}                   |
 
   Scenario: Adding event listener with userChannelChanged type (FDC3 2.2 standard)
     When "appId: App1, instanceId: a1" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
-    And "appId: App2, instanceId: a2" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App2, instanceId: a2" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
       | msg.matches_type         | to.instanceId | msg.payload.newChannelId |
       | addEventListenerResponse | a1            | {null}                   |
-      | channelChangedEvent      | a1            | one                      |
+      | channelChangedEvent      | a1            | fdc3.channel.1           |
       | joinUserChannelResponse  | a2            | {null}                   |
 
   @conformance2.2
   Scenario: addEventListener with null type subscribes to all event types
     When "appId: App1, instanceId: a1" adds an event listener for all event types [fdc3.addEventListener]
-    And "appId: App2, instanceId: a2" joins user channel "one" [fdc3.joinUserChannel]
+    And "appId: App2, instanceId: a2" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     And "appId: App2, instanceId: a2" leaves the current user channel [fdc3.leaveCurrentChannel]
     Then messaging will have outgoing posts
       | msg.matches_type            | to.instanceId | msg.payload.newChannelId |
       | addEventListenerResponse    | a1            | {null}                   |
-      | channelChangedEvent         | a1            | one                      |
+      | channelChangedEvent         | a1            | fdc3.channel.1           |
       | joinUserChannelResponse     | a2            | {null}                   |
       | channelChangedEvent         | a1            | {null}                   |
       | leaveCurrentChannelResponse | a2            | {null}                   |
