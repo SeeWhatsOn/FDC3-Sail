@@ -1,14 +1,26 @@
-import { AfterAll } from "@cucumber/cucumber"
+import { After, AfterAll } from "@cucumber/cucumber"
+import { getActiveHeartbeatTimerCount } from "../../src/core/handlers/dacp/heartbeat-runtime"
 
 /**
- * Force process exit after all tests complete.
- *
- * The DesktopAgent registers setInterval heartbeat timers per connected app instance.
- * These timers are stored in a module-level map in heartbeat-runtime.ts and persist
- * across scenarios since there is no explicit cleanup between them. Without this hook
- * the Node.js event loop stays alive for up to 90 seconds (30s interval × 3 missed
- * heartbeats before timeout) after the last scenario finishes.
+ * P0: Scenarios tagged @p0-cleanup must leave no module-level heartbeat timers behind.
+ */
+After({ tags: "@p0-cleanup" }, function () {
+  const activeTimers = getActiveHeartbeatTimerCount()
+  if (activeTimers > 0) {
+    throw new Error(
+      `${activeTimers} heartbeat timer(s) still active after scenario — expected 0 (see heartbeat-runtime.ts)`
+    )
+  }
+})
+
+/**
+ * Force process exit after all tests complete when stray timers remain.
+ * Prefer the After hook above passing so the process exits naturally.
  */
 AfterAll(function () {
+  const activeTimers = getActiveHeartbeatTimerCount()
+  if (activeTimers === 0) {
+    return
+  }
   setImmediate(() => process.exit(0))
 })

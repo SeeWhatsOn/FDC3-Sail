@@ -426,6 +426,20 @@ export class DesktopAgent {
   getState(): AgentState {
     return this.state
   }
+
+  /**
+   * @internal Build a DACP handler context for tests (same as production routing).
+   */
+  createHandlerContextForTesting(instanceId: string): DACPHandlerContext {
+    return this.createHandlerContext(instanceId)
+  }
+
+  /**
+   * @internal Pending intent promise map for tests asserting lifecycle cleanup.
+   */
+  getPendingIntentPromisesForTesting(): Map<string, PendingIntentPromiseEntry> {
+    return this.pendingIntentPromises
+  }
   /**
    * Update state (for testing purposes only).
    * In production, state is only updated through handler contexts.
