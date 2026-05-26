@@ -1,0 +1,68 @@
+---
+title: "Fix MessagePortTransport listener removal"
+slug: fix-messageport-bound-listeners
+type: bug
+status: draft
+loop_count: 0
+loop_limit: 3
+last_agent: ""
+file_manifest:
+  - packages/sail-desktop-agent/src/browser/wcp/message-port-transport.ts
+  - packages/sail-desktop-agent/src/browser/__tests__/message-port-transport.test.ts
+depends_on: []
+integration_branch: ""
+branch: fix/messageport-bound-listeners
+external_tracker: ""
+tags: [fdc3]
+---
+
+## Goal
+
+Store stable bound handler references so `removeEventListener` actually detaches `message` and `messageerror` listeners, reducing retention under iframe churn.
+
+## User or system context
+
+Listeners are added and removed with fresh `.bind(this)` calls, so identities never match. `port.close()` mitigates delivery but closures can linger while `recentDisconnected` holds port references.
+
+## Reference docs
+
+- `plans/project-docs.md`
+- Pattern reference: `WCPConnector.boundHandleWindowMessage`
+
+## Behavior spec
+
+Given a MessagePortTransport with listeners attached
+When `disconnect()` or centralized cleanup runs
+Then `removeEventListener` is called with the same function references used in `addEventListener`
+
+Given disconnect after messages were received
+When inspecting the port (test spy)
+Then no `message` or `messageerror` handlers remain attached before GC
+
+## Out of scope
+
+- Reentrancy and error close logic (sibling work items; integrate without conflict).
+
+## TypeScript interfaces
+
+```typescript
+// Illustrative — match project style
+private readonly boundHandleMessage = ...
+private readonly boundHandleError = ...
+```
+
+## Test guidance
+
+RED: spy `addEventListener` / `removeEventListener` and assert referential equality of handler arguments.
+
+## Blocked decisions
+
+(none)
+
+## Loop history
+
+## Staged for review
+
+## Escalation notes
+
+## Learnings extracted
