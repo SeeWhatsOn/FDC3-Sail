@@ -5,16 +5,8 @@ import { matchDataUnordered } from "../support/testing-utils"
 import { BrowserTypes } from "@finos/fdc3-schema"
 import type { GetInfoRequest } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { AppInstanceState } from "../../src/core/state/types"
-import { cleanupDACPHandlers } from "../../src/core/handlers/dacp"
-import type { DACPHandlerContext } from "../../src/core/handlers/types"
 import { getInstance, getInstancesByState } from "../../src/core/state/selectors"
-import {
-  connectInstance,
-  updateInstanceState,
-  removeListenersForInstance,
-  removeInstance,
-} from "../../src/core/state/mutators"
-import { consoleLogger } from "../../src/core/interfaces/logger"
+import { connectInstance, updateInstanceState } from "../../src/core/state/mutators"
 
 type OpenRequest = BrowserTypes.OpenRequest
 type GetAppMetadataRequest = BrowserTypes.GetAppMetadataRequest
@@ -96,36 +88,7 @@ When(
 
 When("{string} is closed", function (this: CustomWorld, app: string) {
   const instanceId = getAppInstanceId(this, app)
-
-  // Run cleanup handlers
-  const context: DACPHandlerContext = {
-    transport: this.mockTransport,
-    instanceId,
-    getState: () => this.getState(),
-    setState: fn => {
-      this.updateState(fn)
-    },
-    appDirectory: this.appDirectoryManager,
-    appLauncher: this.mockAppLauncher,
-    requestIntentResolution: this.mockIntentResolver.createCallback(),
-    logger: consoleLogger,
-    implementationMetadata: this.desktopAgent.getImplementationMetadata(),
-    openContextListenerTimeoutMs: 2000,
-    heartbeatIntervalMs: 500,
-    heartbeatTimeoutMs: 2000,
-    pendingIntentPromises: new Map(),
-  }
-
-  cleanupDACPHandlers(context)
-
-  // Ensure instance-related state is fully cleared even if cleanup short-circuited.
-  this.updateState(currentState => removeListenersForInstance(currentState, instanceId))
-  this.updateState(currentState => removeInstance(currentState, instanceId))
-
-  // Update instance state
-  this.updateState(currentState =>
-    updateInstanceState(currentState, instanceId, AppInstanceState.TERMINATED)
-  )
+  this.desktopAgent.disconnectInstance(instanceId)
 })
 
 When("{string} sends validate", async function (this: CustomWorld, uuid: string) {

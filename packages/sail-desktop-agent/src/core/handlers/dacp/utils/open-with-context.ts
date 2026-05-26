@@ -19,6 +19,19 @@ import {
 // inspected/cleared alongside other agent state.
 const pendingOpenWithContextTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
+/** @internal Returns scheduled open-with-context timeout count (for tests). */
+export function getPendingOpenWithContextTimeoutCount(): number {
+  return pendingOpenWithContextTimeouts.size
+}
+
+/** @internal Clears all open-with-context timeouts (tests only). */
+export function clearAllPendingOpenWithContextTimeoutsForTesting(): void {
+  for (const handle of pendingOpenWithContextTimeouts.values()) {
+    clearTimeout(handle)
+  }
+  pendingOpenWithContextTimeouts.clear()
+}
+
 export function registerOpenWithContext(
   message: BrowserTypes.OpenRequest,
   appIdentifier: BrowserTypes.AppIdentifier,

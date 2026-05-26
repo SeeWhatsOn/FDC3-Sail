@@ -3,20 +3,12 @@ import { DesktopAgent } from "../../src/core/desktop-agent"
 import { MockTransport } from "../support/mock-transport"
 import { MockAppLauncher } from "../support/mock-app-launcher"
 import { MockIntentResolver } from "../support/mock-intent-resolver"
-import type { DisplayMetadata, BrowserTypes } from "@finos/fdc3"
+import type { BrowserTypes } from "@finos/fdc3"
 import type { DirectoryApp } from "../../src/core/app-directory/types"
 import { AppDirectoryManager } from "../../src/core/app-directory/app-directory-manager"
 import type { AgentState } from "../../src/core/state/types"
 import { connectInstance } from "../../src/core/state/mutators"
-
-/**
- * User channel configuration for tests
- */
-export interface UserChannelConfig {
-  id: string
-  type: "user"
-  displayMetadata?: DisplayMetadata
-}
+import { applyDesktopAgentStateUpdate } from "../support/agent-state"
 
 /**
  * Test properties stored in World for sharing data between Cucumber steps.
@@ -77,7 +69,7 @@ export class CustomWorld extends World {
    */
   initializeDesktopAgent(
     apps: DirectoryApp[],
-    channels: UserChannelConfig[],
+    channels: BrowserTypes.Channel[],
     heartbeatConfig?: { intervalMs?: number; timeoutMs?: number }
   ): void {
     this.uuidCounter = 0
@@ -109,7 +101,7 @@ export class CustomWorld extends World {
       appDirectoryManager: this.appDirectoryManager,
       apps: apps,
       // User channels
-      userChannels: channels as BrowserTypes.Channel[],
+      userChannels: channels,
       implementationMetadata: {
         fdc3Version: "2.2",
         provider: "cucumber-provider",
@@ -152,11 +144,10 @@ export class CustomWorld extends World {
   }
 
   /**
-   * Update agent state (for test fixture setup).
-   * This uses DesktopAgent's test helper method.
+   * Update agent state for BDD fixture setup (see test/support/agent-state.ts).
    */
   updateState(fn: (state: AgentState) => AgentState): void {
-    this.desktopAgent.updateStateForTesting(fn)
+    applyDesktopAgentStateUpdate(this.desktopAgent, fn)
   }
 
   /**

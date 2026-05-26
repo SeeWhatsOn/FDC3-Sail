@@ -12,3 +12,4 @@ FDC3-Sail.pem
 packages/sail-desktop-agent/cucumber-report.html
 packages/sail-desktop-agent/test-results.xml
 
+packages/da-impl/coverage/*

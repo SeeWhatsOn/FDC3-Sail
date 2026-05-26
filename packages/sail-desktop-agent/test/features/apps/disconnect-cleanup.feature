@@ -7,23 +7,23 @@ Feature: App Disconnection and Cleanup
     Given A desktop agent
     When "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
-    And "appId: App2, instanceId: a2" adds a context listener on "one" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App2, instanceId: a2" adds a context listener on "fdc3.channel.1" with type "fdc3.instrument" [fdc3.addContextListener]
     And we wait for a period of "100" ms
-    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "one" [fdc3.broadcast]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "fdc3.channel.1" [fdc3.broadcast]
     Then messaging will include outgoing posts
       | msg.matches_type           | to.appId | to.instanceId | msg.payload.channelId | msg.payload.context.type | msg.payload.context.id.ticker |
       | addContextListenerResponse | App2     | a2            | {null}                | {null}                   | {null}                        |
-      | broadcastEvent             | App2     | a2            | one                   | fdc3.instrument          | AAPL                          |
+      | broadcastEvent             | App2     | a2            | fdc3.channel.1        | fdc3.instrument          | AAPL                          |
       | broadcastResponse          | App1     | a1            | {null}                | {null}                   | {null}                        |
     And "appId: App2, instanceId: a2" is closed
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
-    And "appId: App2, instanceId: a2" adds a context listener on "one" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App2, instanceId: a2" adds a context listener on "fdc3.channel.1" with type "fdc3.instrument" [fdc3.addContextListener]
     And we wait for a period of "100" ms
-    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "one" [fdc3.broadcast]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "fdc3.channel.1" [fdc3.broadcast]
     Then messaging will include outgoing posts
       | msg.matches_type           | to.appId | to.instanceId | msg.payload.channelId | msg.payload.context.type | msg.payload.context.id.ticker |
       | addContextListenerResponse | App2     | a2            | {null}                | {null}                   | {null}                        |
-      | broadcastEvent             | App2     | a2            | one                   | fdc3.instrument          | AAPL                          |
+      | broadcastEvent             | App2     | a2            | fdc3.channel.1        | fdc3.instrument          | AAPL                          |
       | broadcastResponse          | App1     | a1            | {null}                | {null}                   | {null}                        |
 
   @conformance2.2

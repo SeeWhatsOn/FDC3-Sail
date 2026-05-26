@@ -24,86 +24,7 @@ import type { AgentState, StateSetter } from "./state/types"
 import { createInitialState, createStateWithOverrides } from "./state/initial-state"
 import { consoleLogger, type Logger } from "./interfaces/logger"
 import { DACP_TIMEOUTS } from "./dacp-protocol/dacp-constants"
-
-type Channel = BrowserTypes.Channel
-
-/**
- * Default FDC3 user channels (fdc3.channel.1 through fdc3.channel.8)
- */
-const defaultUserChannels: Channel[] = [
-  {
-    id: "fdc3.channel.1",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 1",
-      color: "#FF0000",
-      glyph: "1",
-    },
-  },
-  {
-    id: "fdc3.channel.2",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 2",
-      color: "#FF8800",
-      glyph: "2",
-    },
-  },
-  {
-    id: "fdc3.channel.3",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 3",
-      color: "#FFFF00",
-      glyph: "3",
-    },
-  },
-  {
-    id: "fdc3.channel.4",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 4",
-      color: "#00FF00",
-      glyph: "4",
-    },
-  },
-  {
-    id: "fdc3.channel.5",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 5",
-      color: "#00FFFF",
-      glyph: "5",
-    },
-  },
-  {
-    id: "fdc3.channel.6",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 6",
-      color: "#0000FF",
-      glyph: "6",
-    },
-  },
-  {
-    id: "fdc3.channel.7",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 7",
-      color: "#FF00FF",
-      glyph: "7",
-    },
-  },
-  {
-    id: "fdc3.channel.8",
-    type: "user",
-    displayMetadata: {
-      name: "Channel 8",
-      color: "#800080",
-      glyph: "8",
-    },
-  },
-]
+import { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
 
 /**
  * Structure of DACP message metadata for routing
@@ -250,7 +171,7 @@ export class DesktopAgent {
     this.requestIntentResolution = config?.requestIntentResolution
     this.validator = config?.validator
     this.logger = config?.logger ?? consoleLogger
-    this.userChannels = config?.userChannels ?? defaultUserChannels
+    this.userChannels = config?.userChannels ?? DEFAULT_FDC3_USER_CHANNELS
     this.implementationMetadata = config?.implementationMetadata ?? {
       // TODO: Get this from the env or move to a config file.
       fdc3Version: "2.2",
@@ -426,16 +347,15 @@ export class DesktopAgent {
   getState(): AgentState {
     return this.state
   }
+
   /**
-   * Update state (for testing purposes only).
-   * In production, state is only updated through handler contexts.
+   * Tear down DACP state for an app instance (pending intents, listeners, heartbeat, registry).
+   * Same path as WCP6 goodbye and heartbeat timeout cleanup.
    */
-  updateStateForTesting(callback: (state: AgentState) => AgentState): void {
-    const setState: StateSetter = (cb: (state: AgentState) => AgentState) => {
-      this.state = cb(this.state)
-    }
-    setState(callback)
+  disconnectInstance(instanceId: string): void {
+    cleanupDACPHandlers(this.createHandlerContext(instanceId))
   }
+
   /** Export state as JSON string (for debugging/persistence) */
   exportState(): string {
     return JSON.stringify(this.state, null, 2)

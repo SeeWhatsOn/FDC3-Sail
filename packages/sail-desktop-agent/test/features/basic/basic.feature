@@ -28,7 +28,7 @@ Feature: Basic Tests
     When "appId: appA, instanceId: a1" gets the list of user channels [fdc3.getUserChannels]
     Then messaging will have outgoing posts
       | msg.payload.userChannels[0].id | msg.payload.userChannels[0].type | to.instanceId | msg.matches_type        |
-      | one                            | user                             | a1            | getUserChannelsResponse |
+      | fdc3.channel.1                 | user                             | a1            | getUserChannelsResponse |
 
   @conformance2.2
   Scenario: Context listener for a specific type can be created
@@ -60,14 +60,14 @@ Feature: Basic Tests
 
   @conformance2.2
   Scenario: User channel can be joined and left
-    When "appId: appA, instanceId: a1" joins user channel "one" [fdc3.joinUserChannel]
+    When "appId: appA, instanceId: a1" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     And "appId: appA, instanceId: a1" gets the current user channel [fdc3.getCurrentChannel]
     And "appId: appA, instanceId: a1" leaves the current user channel [fdc3.leaveCurrentChannel]
     And "appId: appA, instanceId: a1" gets the current user channel [fdc3.getCurrentChannel]
     Then messaging will have outgoing posts
       | msg.matches_type            | msg.payload.channel.id | msg.payload.channelId | msg.payload.identity.instanceId | to.instanceId |
       | joinUserChannelResponse     | {null}                 | {null}                | {null}                          | a1            |
-      | getCurrentChannelResponse   | one                    | {null}                | {null}                          | a1            |
+      | getCurrentChannelResponse   | fdc3.channel.1         | {null}                | {null}                          | a1            |
       | leaveCurrentChannelResponse | {null}                 | {null}                | {null}                          | a1            |
       | getCurrentChannelResponse   | {null}                 | {null}                | {null}                          | a1            |
 

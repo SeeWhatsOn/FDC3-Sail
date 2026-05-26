@@ -1,41 +1,39 @@
 /**
- * Test channel data
+ * Default FDC3 user channels per the FDC3 2.2 spec recommendation
+ * (fdc3.channel.1 through fdc3.channel.8 with standard displayMetadata).
  *
- * User channel fixtures for testing, based on FDC3 specification defaults
- * but with test-friendly IDs ("one", "two", "three") to match feature file expectations.
+ * Single source of truth for DesktopAgent defaults and tests that model production.
  */
 
-import type { UserChannelConfig } from "../world/index.ts"
+import type { BrowserTypes } from "@finos/fdc3"
 
-/**
- * Default user channels for testing.
- * Based on FDC3 specification defaults.
- */
-export const TEST_USER_CHANNELS: UserChannelConfig[] = [
+type Channel = BrowserTypes.Channel
+
+export const DEFAULT_FDC3_USER_CHANNELS: Channel[] = [
   {
-    id: "one",
+    id: "fdc3.channel.1",
     type: "user",
     displayMetadata: {
       name: "Channel 1",
-      color: "#FF0000", // red
+      color: "#FF0000",
       glyph: "1",
     },
   },
   {
-    id: "two",
+    id: "fdc3.channel.2",
     type: "user",
     displayMetadata: {
       name: "Channel 2",
-      color: "#FF8800", // orange
+      color: "#FF8800",
       glyph: "2",
     },
   },
   {
-    id: "three",
+    id: "fdc3.channel.3",
     type: "user",
     displayMetadata: {
       name: "Channel 3",
-      color: "#FFFF00", // yellow
+      color: "#FFFF00",
       glyph: "3",
     },
   },
@@ -44,7 +42,7 @@ export const TEST_USER_CHANNELS: UserChannelConfig[] = [
     type: "user",
     displayMetadata: {
       name: "Channel 4",
-      color: "#00FF00", // green
+      color: "#00FF00",
       glyph: "4",
     },
   },
@@ -53,7 +51,7 @@ export const TEST_USER_CHANNELS: UserChannelConfig[] = [
     type: "user",
     displayMetadata: {
       name: "Channel 5",
-      color: "#00FFFF", // cyan
+      color: "#00FFFF",
       glyph: "5",
     },
   },
@@ -62,7 +60,7 @@ export const TEST_USER_CHANNELS: UserChannelConfig[] = [
     type: "user",
     displayMetadata: {
       name: "Channel 6",
-      color: "#0000FF", // blue
+      color: "#0000FF",
       glyph: "6",
     },
   },
@@ -71,7 +69,7 @@ export const TEST_USER_CHANNELS: UserChannelConfig[] = [
     type: "user",
     displayMetadata: {
       name: "Channel 7",
-      color: "#FF00FF", // magenta
+      color: "#FF00FF",
       glyph: "7",
     },
   },
@@ -80,7 +78,7 @@ export const TEST_USER_CHANNELS: UserChannelConfig[] = [
     type: "user",
     displayMetadata: {
       name: "Channel 8",
-      color: "#800080", // purple
+      color: "#800080",
       glyph: "8",
     },
   },

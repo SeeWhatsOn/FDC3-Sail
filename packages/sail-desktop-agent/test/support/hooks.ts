@@ -1,14 +1,15 @@
-import { AfterAll } from "@cucumber/cucumber"
+import { After } from "@cucumber/cucumber"
+import { clearAllHeartbeatTimersForTesting } from "../../src/core/handlers/dacp/heartbeat-runtime"
+import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../src/core/handlers/dacp/utils/open-with-context"
 
 /**
- * Force process exit after all tests complete.
+ * Reset module-level timers after every scenario so the Cucumber process can exit
+ * cleanly (heartbeat and open-with-context scenarios schedule real timeouts).
  *
- * The DesktopAgent registers setInterval heartbeat timers per connected app instance.
- * These timers are stored in a module-level map in heartbeat-runtime.ts and persist
- * across scenarios since there is no explicit cleanup between them. Without this hook
- * the Node.js event loop stays alive for up to 90 seconds (30s interval × 3 missed
- * heartbeats before timeout) after the last scenario finishes.
+ * Assertions that cleanup worked belong in feature steps (e.g. "no heartbeat timers
+ * are active"), not on scenario tags — see AGENTS.md (Cucumber tags).
  */
-AfterAll(function () {
-  setImmediate(() => process.exit(0))
+After(function () {
+  clearAllHeartbeatTimersForTesting()
+  clearAllPendingOpenWithContextTimeoutsForTesting()
 })

@@ -1,7 +1,7 @@
 import { Before, DataTable, Given, Then, When } from "@cucumber/cucumber"
 import { CustomWorld } from "../world/index.ts"
 import type { Context, AppIdentifier } from "@finos/fdc3"
-import { TEST_USER_CHANNELS } from "../support/channel-data"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../src/core/default-user-channels"
 import { handleResolve } from "../support/testing-utils"
 
 export const APP_FIELD = "apps"
@@ -185,7 +185,7 @@ Before(function (this: CustomWorld) {
   const apps = this.props[APP_FIELD] ?? []
 
   // Initialize DesktopAgent with clean architecture
-  this.initializeDesktopAgent(apps, TEST_USER_CHANNELS)
+  this.initializeDesktopAgent(apps, DEFAULT_FDC3_USER_CHANNELS)
 })
 
 Given("A desktop agent", function (this: CustomWorld) {
@@ -193,7 +193,7 @@ Given("A desktop agent", function (this: CustomWorld) {
 
   // Reinitialize DesktopAgent (useful when apps are defined after the Before hook runs,
   // or when you need a fresh desktop agent mid-scenario)
-  this.initializeDesktopAgent(apps, TEST_USER_CHANNELS)
+  this.initializeDesktopAgent(apps, DEFAULT_FDC3_USER_CHANNELS)
 })
 
 Given("the mock intent resolver will cancel the resolution", function (this: CustomWorld) {
@@ -212,7 +212,7 @@ Given("A desktop agent with heartbeat checking", function (this: CustomWorld) {
 
   // Initialize DesktopAgent
   // TODO: Implement heartbeat checking in new architecture
-  this.initializeDesktopAgent(apps, TEST_USER_CHANNELS, {
+  this.initializeDesktopAgent(apps, DEFAULT_FDC3_USER_CHANNELS, {
     intervalMs: 500,
     timeoutMs: 2000,
   })
