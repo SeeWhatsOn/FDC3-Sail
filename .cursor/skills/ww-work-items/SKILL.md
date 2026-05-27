@@ -5,8 +5,8 @@ description: >
   PRDs. Use when creating descriptive work items, validating drafts
   before approval, updating delivery state, routing review verdicts,
   surfacing blocked decisions, staging for human review, extracting
-  learnings, or moving work to dead-letter. For planning depth (PRD vs
-  epic vs task), load ww-planning-stack. Keywords: ww, watson workflow,
+  learnings, or moving work to dead-letter. For planning shape (PRD vs
+  optional epic vs work item), load ww-planning-stack. Keywords: ww, watson workflow,
   work item, plans/work-items, BDD, Given/When/Then, status lifecycle.
 metadata:
   author: watson
@@ -29,7 +29,7 @@ Never assume current state; read the file first.
 
 ```text
 plans/
-  project-docs.md
+  prd-example-workload.md
   work-items/
     add-context-broadcast-handler.md
     resolve-order-race-condition.md
@@ -212,6 +212,11 @@ VERDICT: FAIL: implementation
 Increment `loop_count` only on reviewer FAIL verdicts. Do not increment
 for implementation retries, verifier failures, or human-requested
 changes.
+
+Verification failures route back to the implementer without incrementing
+`loop_count`. Test command failures during implementation stay with the
+implementer unless the reviewer later classifies the failure as
+`FAIL: test-gap`.
 
 When `loop_count >= loop_limit`, run the escalation procedure below.
 

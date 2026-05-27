@@ -15,7 +15,7 @@ metadata:
 > **Watson workflow:** Prefer `ww-work-items` as the canonical skill. It
 > includes `kind: task | spike | epic`, draft validation by kind, and
 > integration with `/ww-plan` and `/ww-deliver`. This skill remains for
-> teams not using the full WW stack. Planning depth: `ww-planning-stack`.
+> teams not using the full WW flow. Planning shape: `ww-planning-stack`.
 
 Local markdown work items are the durable source of truth for this
 workflow. They are not GitHub Issues or Jira tickets, so do not invent
@@ -30,7 +30,7 @@ Never assume current state; read the file first.
 
 ```text
 plans/
-  project-docs.md
+  prd-example-workload.md
   work-items/
     add-context-broadcast-handler.md
     resolve-order-race-condition.md
@@ -95,7 +95,13 @@ needs to understand before starting.
 
 ## Reference docs
 
-Links or paths from `plans/project-docs.md` relevant to this work item.
+Links or paths to the PRD, parent epic when applicable, ADRs, README,
+AGENTS.md sections, or source files relevant to this work item.
+
+## Parent context
+
+Short PRD or epic excerpt that explains how this work item fits the whole
+system. Keep this concise so delivery agents do not need the full PRD.
 
 ## Behavior spec
 
@@ -103,7 +109,7 @@ Given [context]
 When [action]
 Then [observable outcome]
 
-Repeat for every required behaviour, including edge cases.
+Repeat for every behavior change, including edge cases.
 
 ## Out of scope
 

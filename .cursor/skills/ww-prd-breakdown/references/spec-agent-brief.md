@@ -26,7 +26,7 @@ user_or_system:     [who or what depends on this]
 file_manifest:      [likely files or areas]
 depends_on:         [work item slugs or empty]
 loop_limit:         [number, default 3]
-relevant_docs:      [entries from plans/project-docs.md]
+relevant_docs:      [PRD, epic, ADR, README, AGENTS.md, or source links]
 project_context:    [relevant AGENTS.md sections]
 revision_feedback:  [empty on first draft, or human feedback]
 ```

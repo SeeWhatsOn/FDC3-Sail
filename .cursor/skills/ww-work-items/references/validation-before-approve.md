@@ -14,11 +14,13 @@ column below.
 - [ ] `loop_limit` is set (default 3)
 - [ ] Slug matches filename (`plans/work-items/<slug>.md`)
 - [ ] `tags` uses only allowed values from [work-item-tags.md](work-item-tags.md), or is empty
+- [ ] `## Reference docs` includes PRD path and parent epic path when applicable
+- [ ] `## Parent context` is concise enough for delivery subagents
 
 ## task
 
 - [ ] Goal is one sentence and testable
-- [ ] Every required behaviour has Given/When/Then blocks
+- [ ] Every behavior change has Given/When/Then blocks
 - [ ] `file_manifest` lists concrete paths (or explicit "TBD" with reason)
 - [ ] `## TypeScript interfaces` present (or "none")
 - [ ] No executable test code in the body
@@ -34,6 +36,8 @@ column below.
 ## epic
 
 - [ ] Goal is one sentence describing the grouped outcome
+- [ ] Epic is justified by 3+ child items, phased delivery, multiple agents,
+  shared architecture context, or cross-cutting behavior
 - [ ] `## Child work items` table lists every child slug
 - [ ] Each child slug has its own draft file (or is explicitly "TBD next plan pass")
 - [ ] `## TypeScript interfaces` is "none"

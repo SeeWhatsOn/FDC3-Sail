@@ -1,99 +1,101 @@
 ---
 name: ww-planning-stack
 description: >
-  Watson planning stack: when to use release briefs, domain PRDs, ADRs,
-  epics, spikes, and local work items — and how they connect to
-  spec-driven-development and optional GitHub issues. Use before /ww-plan,
-  when choosing document types, or when improving planning workflow.
-  Keywords: ww, planning stack, PRD, epic, work item, release brief,
-  specification driven, task packet.
+  Watson planning shape: choose the lightest useful path from PRD to
+  optional epic to deliverable work items. Use before /ww-plan when deciding
+  whether a product goal needs a PRD, an epic, a spike, or direct work items.
+  Keywords: ww, planning shape, PRD, epic, work item, spike, task packet.
 metadata:
   author: watson
   workflow: ww
   phase: planning
 ---
 
-# WW Planning Stack
+# WW Planning Shape
 
-Meta-skill for **which artifact to write** and **how planning flows into
-delivery**. Implementation lives in `ww-prd-breakdown`, `ww-work-items`, and
-`ww-deliver-work-items`.
+Use this as a routing guide. The default flow is:
+
+```text
+PRD -> optional Epic -> Work Item -> /ww-deliver
+```
+
+Keep the structure as small as possible while leaving enough context for a
+normal developer or agent subagent to deliver safely.
 
 ## When to use
 
-- Starting a new workload and unsure whether you need a PRD, spec, epic, or
-  issue
-- Onboarding agents to the Watson workflow
-- After a planning pass that felt too flat (eleven equal tickets, duplicate
-  plans, draft items merged without approval)
+- Starting a workload and deciding what planning artifacts are needed.
+- A PRD is too vague to split safely.
+- A planning pass produced one giant task or too many tiny equal tasks.
+- Agents need clear parent context without loading every document.
 
-## Stack overview
+## Artifact roles
 
-```text
-Release brief (optional, 1 page)
-    └── Domain PRD (per theme: feature, hardening, transport)
-            ├── ADR (optional, per architectural decision)
-            ├── Epic work item (optional, groups 3+ child tasks)
-            │       └── Child work items (task | spike)
-            └── Work items (task | spike) — default delivery unit
-                    └── RED tests → /ww-deliver → GREEN
-Optional: GitHub Epic/Issue (external_tracker on work items only)
-```
+| Artifact | Purpose | Default? |
+|----------|---------|----------|
+| PRD | Product goal, success criteria, edge cases, constraints, architecture direction, and slicing table | yes |
+| Epic | Coordination container for several related child work items | only when useful |
+| Work item | Deliverable packet for a developer or agent subagent | yes |
+| Spike | Work item for unknowns that need investigation before implementation | when unknowns block safe delivery |
+| ADR | Durable architecture decision record | only for decisions that must outlive the PRD |
 
-**Do not create four full documents for every slice.** Use the minimum
-depth that leaves nothing critical to guess at delivery time.
+The PRD is the source of truth. Prefer adding concise architecture and
+implementation direction to the PRD over creating extra documents.
 
-## Layer guide
+## When to create an epic
 
-| Layer | File pattern | Purpose | Agent implements? |
-|-------|----------------|---------|-------------------|
-| Release brief | `plans/release-*.md` or section in `project-docs.md` | P0/P1 bar, themes, links to domain PRDs | No |
-| Domain PRD | `plans/prd-*.md` | Persona, scope, dedup, success criteria, product G/W/T | No — decompose only |
-| ADR | `docs/decisions/ADR-*.md` | Why for contracts, security, caps | No |
-| Epic | `plans/work-items/*-epic.md` with `kind: epic` | Groups children, tracks matrix gaps | No — children deliver |
-| Spike | `kind: spike` | Investigate; output doc or child tasks | Sometimes (doc-only) |
-| Task | `kind: task` (default) | One PR-sized packet with G/W/T | Yes via `/ww-deliver` |
-| GitHub issue | Tracker | Human sprint board | Mirror only |
+- Create an epic when there are 3+ related child work items, multiple
+  subagents or roles need the same parent context, delivery is phased, or the
+  work shares one architecture/behavior boundary.
+- Skip the epic for a single bug, one small feature, or 1-2 obvious tasks.
+- Never deliver an epic directly. Deliver approved child work items.
 
-## Choosing depth
+## Choosing the lightest shape
 
-| Situation | Minimum stack |
-|-----------|----------------|
-| Single bug, obvious fix | Task work item only (or skip plans, use TDD) |
-| Release hardening on existing code | Release brief + domain PRD + tasks |
-| New public API or host contract | Domain PRD + ADR + tasks |
-| Conformance / matrix / many scenarios | Domain PRD + **epic** + traceability spike/task first |
-| Greenfield product surface | `spec-driven-development` spec → domain PRD → tasks |
+| Situation | Use |
+|-----------|-----|
+| Small bug or obvious change | One work item, or skip planning and use normal TDD |
+| Product behavior change | PRD -> work items |
+| Several related deliverables | PRD -> epic -> child work items |
+| Unknown scope or risk | PRD -> spike, then child work items if needed |
+| Durable API/security/platform decision | PRD + optional ADR -> work items |
 
-## Watson command map
+## PRD expectations
 
-| Human intent | Command / skill |
-|--------------|-----------------|
-| Clarify goals | `interview-me` |
-| Write or refine PRD | `spec-driven-development` + `ww-prd-breakdown` (`/ww-plan`) |
-| Verify PRD against repo | `ww-prd-breakdown` → `prd-accuracy-gate.md` |
-| Split into work items | `/ww-plan` (`ww-prd-breakdown`) |
-| Approve packets | Human `approve` per item (human-gate-template) |
-| Implement approved slice | `/ww-deliver` (`ww-deliver-work-items`) |
+The PRD should be understandable by product people, architects, senior
+developers, and agents. Include:
 
-## Integration with other skills
+- user/persona, goal, scope, success criteria, and edge cases
+- architecture/implementation direction from the human when provided
+- constraints, risks, unknowns, and open questions
+- behavior scenarios when behavior changes
+- a slicing table mapping requirements to `task`, `spike`, or `epic`
 
-| Skill | Role in stack |
-|-------|----------------|
-| `spec-driven-development` | Upstream: objective, commands, boundaries before or inside PRD |
-| `planning-and-task-breakdown` | Vertical slices, dependency order while drafting items |
-| `documentation-and-adrs` | ADRs when PRD items imply irreversible decisions |
-| `test-driven-development` | RED phase inside `/ww-deliver` or before deliver when hardening |
-| `work-item-management` | Legacy mirror of `ww-work-items`; prefer `ww-work-items` for WW |
+Use `interview-me` before or during PRD drafting when the goal, user,
+success criteria, architecture direction, or edge cases are unclear.
+
+## Example: TODO app
+
+- PRD: "Add collaborative TODO lists with sharing, roles, audit history, and
+  offline sync."
+- Epic: "List sharing and permissions" because it groups several related
+  child tasks.
+- Work item: "Enforce viewer/editor permissions on TODO mutations."
+- Work item: "Add invite-by-email flow for list sharing."
+
+No epic is needed for "Add due-date sorting" if it can be delivered as one
+or two obvious work items.
 
 ## Anti-patterns
 
-- Implementing the whole PRD in one agent session
-- Eleven work items with equal weight when some are epics (traceability,
-  conformance matrix)
-- `status: approved` or committing plans without human gate
-- Skipping PRD accuracy gate on brownfield repos (duplicate remediation plans)
-- Sending `/ww-deliver` an epic parent slug
+- Creating documents because the stack allows them, not because delivery
+  needs them.
+- Hiding architecture direction in a separate document when a short PRD
+  section would do.
+- Creating an epic for every work item.
+- Implementing the whole PRD in one delivery session.
+- Sending `/ww-deliver` an epic parent slug.
+- Skipping PRD accuracy checks on brownfield work.
 - Inventing GitHub issue IDs in work item frontmatter
 
 ## References

@@ -2,8 +2,10 @@
 
 When launching each subagent, read
 [agent-skill-map.md](agent-skill-map.md) and send the matching block.
-Pass a **work item slice** (Goal, Behavior spec, Test guidance, tags,
-file_manifest) — not the full PRD.
+Pass a **work item slice** plus concise parent context. Include Goal,
+Parent context, Behavior spec, Test guidance, tags, and file_manifest; do
+not pass the full PRD unless a subagent reports ambiguity that cannot be
+resolved from the slice.
 
 Every subagent report must end with `## Learnings proposed` per
 [learnings-proposed-format.md](../../ww-work-items/references/learnings-proposed-format.md).
@@ -14,7 +16,7 @@ Every subagent report must end with `## Learnings proposed` per
 SKILLS TO LOAD:
 - test-driven-development
 
-WORK ITEM (Goal, Behavior spec, Test guidance, tags only):
+WORK ITEM (Goal, Parent context, Behavior spec, Test guidance, tags only):
 [paste slice]
 
 TASK: Turn the behavior spec into failing executable tests. Do not
@@ -59,7 +61,7 @@ SKILLS TO LOAD:
 ```text
 UI SURFACE: [yes|no] — [matching files if yes]
 RED TESTS: [test files and names]
-WORK ITEM (Goal, Behavior spec, Test guidance, tags only): [paste slice]
+WORK ITEM (Goal, Parent context, Behavior spec, Test guidance, tags only): [paste slice]
 FILE MANIFEST: [from frontmatter]
 PROJECT CONTEXT: [relevant AGENTS.md sections only — MUST include
 TypeScript And Code Style comment rules and human-review guidance]
@@ -87,7 +89,7 @@ Return full test, typecheck, and lint output.
 ```text
 DO NOT LOAD SKILLS. Use this checklist only.
 
-WORK ITEM (Goal, Behavior spec, file_manifest only): [paste slice]
+WORK ITEM (Goal, Parent context, Behavior spec, file_manifest only): [paste slice]
 FILE MANIFEST: [from frontmatter]
 IMPLEMENTATION REPORT: [from implement-agent]
 
@@ -128,7 +130,7 @@ SKILLS TO LOAD:
 ```
 
 ```text
-WORK ITEM (Goal, Behavior spec only): [paste slice]
+WORK ITEM (Goal, Parent context, Behavior spec only): [paste slice]
 DIFF SUMMARY: [files + one-line purpose]
 VERIFICATION: [PASS line from verifier]
 UI SURFACE: [yes|no]

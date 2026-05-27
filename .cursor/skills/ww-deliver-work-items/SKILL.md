@@ -147,6 +147,11 @@ For each eligible work item, track:
 ## Verdict Routing
 
 Follow `ww-work-items` → Typed Verdict Routing and Escalation Procedure.
+If Phase C verification fails, route the report back to `implement-agent`
+before Phase D and do not increment `loop_count`. If Phase D returns
+`FAIL: test-gap`, route back to Phase A. If Phase D returns
+`FAIL: implementation`, route back to Phase B. Stop when `loop_count`
+reaches `loop_limit`.
 
 ## Human Review Responses
 
