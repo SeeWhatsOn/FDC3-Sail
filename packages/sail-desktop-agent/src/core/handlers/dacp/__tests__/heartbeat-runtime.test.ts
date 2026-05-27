@@ -1,13 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { startHeartbeat } from "../heartbeat-handlers"
 import {
   clearAllHeartbeatTimersForTesting,
   getActiveHeartbeatTimerCount,
   setHeartbeatTimer,
   stopHeartbeat,
 } from "../heartbeat-runtime"
+import { connectInstance, updateInstanceState } from "../../../state/mutators"
+import { AppInstanceState } from "../../../state/types"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { createInitialState } from "../../../state/initial-state"
 import type { AgentState } from "../../../state/types"
+import { createDACPTestContext } from "./test-context"
+import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 
 afterEach(() => {
   clearAllHeartbeatTimersForTesting()
@@ -51,5 +56,35 @@ describe("heartbeat scenario isolation", () => {
     setHeartbeatTimer("orphan", setInterval(() => {}, 1000))
     clearAllHeartbeatTimersForTesting()
     expect(getActiveHeartbeatTimerCount()).toBe(0)
+  })
+})
+
+describe("startHeartbeat disconnect alignment", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("keys heartbeat timers by the instanceId passed to startHeartbeat, not the handler context id", () => {
+    const tempInstanceId = "temp-connection-uuid"
+    const canonicalInstanceId = "canonical-instance-from-wcp5"
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    state = connectInstance(state, {
+      instanceId: canonicalInstanceId,
+      appId: "TestApp",
+      metadata: { appId: "TestApp", name: "TestApp" },
+    })
+    state = updateInstanceState(state, canonicalInstanceId, AppInstanceState.CONNECTED)
+
+    const { context, getState } = createDACPTestContext({
+      instanceId: tempInstanceId,
+      initialState: state,
+    })
+    const heartbeatContext = { ...context, transport: new MockTransport() }
+
+    startHeartbeat(canonicalInstanceId, heartbeatContext)
+
+    expect(getActiveHeartbeatTimerCount()).toBe(1)
+    expect(getState().heartbeats[canonicalInstanceId]).toBeDefined()
+    expect(getState().heartbeats[tempInstanceId]).toBeUndefined()
   })
 })
