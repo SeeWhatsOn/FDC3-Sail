@@ -19,12 +19,6 @@ Write a structured specification before writing any code. The spec is the shared
 
 **When NOT to use:** Single-line fixes, typo corrections, or changes where requirements are unambiguous and self-contained.
 
-**Watson workflow:** If the repo uses `plans/work-items/`, treat this skill as
-upstream to `ww-planning-stack` and `ww-prd-breakdown` — write or enrich the
-domain PRD (objective, commands, boundaries), then run `/ww-plan` for
-task packets. Do not implement the full spec in one pass; deliver via
-`/ww-deliver` per approved work item.
-
 ## The Gated Workflow
 
 Spec-driven development has four phases. Do not advance to the next phase until the current one is validated.
@@ -156,11 +150,7 @@ Break the plan into discrete, implementable tasks:
 - Tasks are ordered by dependency, not by perceived importance
 - No task should require changing more than ~5 files
 
-**If using Watson (`plans/work-items/`):** Phase 3 is `/ww-plan`, not ad-hoc
-checkboxes. Each approved work item is one task packet with Given/When/Then.
-Use `kind: epic` + children for matrix-scale work. See `ww-planning-stack`.
-
-**Generic task template (non-WW repos):**
+**Task template:**
 ```markdown
 - [ ] Task: [Description]
   - Acceptance: [What must be true when done]
