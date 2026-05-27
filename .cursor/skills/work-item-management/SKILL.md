@@ -71,7 +71,7 @@ Use this section order for local work items:
 title: "Short imperative title"
 slug: short-descriptive-slug
 type: feature # feature | bug | chore
-status: approved # see lifecycle below
+status: draft # human approval changes this to approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -202,7 +202,7 @@ test syntax is unclear, run the full test command rather than guessing.
 
 ## Blocked Decision Procedure
 
-When an implementation agent reports ambiguity:
+When any delivery subagent reports ambiguity:
 
 1. Write the question under `## Blocked decisions`.
 2. Set `status: blocked`.
@@ -247,9 +247,13 @@ VERDICT: FAIL: implementation
 - `FAIL: implementation`: increment `loop_count`, append loop history,
   route to the implementer.
 
-Increment `loop_count` only on reviewer FAIL verdicts. Do not increment
-for implementation retries, verifier failures, or human-requested
-changes.
+Increment `loop_count` on reviewer FAIL verdicts. Do not increment for
+implementation retries, first verifier failures, or human-requested changes.
+
+Verification failures route back to the implementer without incrementing
+`loop_count` once per distinct issue. If the same verification failure
+repeats after an implementation retry, treat it as `FAIL: implementation`:
+increment `loop_count`, append loop history, and route to the implementer.
 
 ## Escalation Procedure
 
