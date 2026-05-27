@@ -12,7 +12,6 @@ export const getStats = (state: AgentState) => ({
   connectedInstances: getConnectedInstances(state).length,
   intentListeners: Object.keys(state.intents.listeners).length,
   pendingIntents: Object.keys(state.intents.pending).length,
-  intentResolutions: Object.keys(state.intents.history).length,
   userChannels: Object.keys(state.channels.user).length,
   appChannels: Object.keys(state.channels.app).length,
   privateChannels: Object.keys(state.channels.private).length,

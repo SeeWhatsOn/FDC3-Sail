@@ -1,49 +1,69 @@
 ---
-title: "Bound intents.history growth"
+title: "Remove unused intents.history dead code"
 slug: cap-intents-history
-type: enhancement
-status: draft
+kind: task
+type: chore
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
 file_manifest:
-  - packages/sail-desktop-agent/src/core/state/mutators/intent.ts
   - packages/sail-desktop-agent/src/core/state/types.ts
-  - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/
+  - packages/sail-desktop-agent/src/core/state/mutators/intent.ts
+  - packages/sail-desktop-agent/src/core/state/mutators/index.ts
+  - packages/sail-desktop-agent/src/core/state/selectors/intent.ts
+  - packages/sail-desktop-agent/src/core/state/selectors/index.ts
+  - packages/sail-desktop-agent/src/core/state/selectors/stats.ts
+  - packages/sail-desktop-agent/src/core/state/initial-state.ts
 depends_on: []
 integration_branch: ""
-branch: fix/cap-intents-history
+branch: cursor/remove-intents-history-398c
 external_tracker: ""
-tags: [fdc3, lifecycle]
+tags: [fdc3]
 ---
 
 ## Goal
 
-Prevent unbounded growth of `state.intents.history` in long-running Desktop Agent sessions.
+Remove `intents.history`, `IntentResolutionRecord`, `recordIntentResolution`, and related selectors — not required by FDC3 2.2 and never wired in production.
 
 ## User or system context
 
-Every `recordIntentResolution` appends forever; trading desktops may run days without reload.
+FDC3 returns `IntentResolution` to the raising app per call; the agent does not need a durable resolution log in `AgentState`. Observability belongs in OTEL/log pipelines, not unbounded in-memory history.
 
 ## Reference docs
 
-- `plans/prd-desktop-agent-conformance-gaps.md` (item 3)
-- `FDC3_2_2_COMPLIANCE_REVIEW.MD` (optional cleanup / QA)
+- `plans/prd-desktop-agent-conformance-gaps.md` (item 3 — superseded by removal)
+- FDC3 2.2 `api/ref/Metadata.md` (`IntentResolution`)
+
+## Parent context
+
+From `plans/prd-desktop-agent-conformance-gaps.md`: Close lifecycle cleanup, conformance evidence, validation boundaries, and test trust before P1 sign-off and v3 release.
 
 ## Behavior spec
 
-Given N intent resolutions recorded
-When N exceeds configured cap (or age TTL)
-Then oldest entries are removed and selectors still return recent resolutions by requestId
+Given agent state initialization and intent raise/resolve flows
+When code is updated
+Then `AgentState.intents` has only `listeners` and `pending`
+And no exports reference `recordIntentResolution` or history selectors
 
 ## Out of scope
 
-- Persisting history to disk.
+- OTEL instrumentation for intent resolution events (future observability work).
+- Capping or persisting resolution history elsewhere.
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 
-Unit test: record cap+1 resolutions, assert map size <= cap.
+Run `npm test -w @finos/sail-desktop-agent` and `npm run typecheck -w @finos/sail-desktop-agent`.
 
 ## Blocked decisions
 
-Cap by count vs. TTL vs. both — default recommendation: max 500 entries FIFO unless product specifies otherwise.
+None.
+
+## Loop history
+
+- 2026-05-27: revised from cap/TTL to full removal per human gate
+- 2026-05-27: approved by human
