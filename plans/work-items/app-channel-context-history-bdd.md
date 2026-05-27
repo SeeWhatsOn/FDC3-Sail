@@ -9,7 +9,8 @@ last_agent: ""
 file_manifest:
   - packages/sail-desktop-agent/test/features/channels/app-channels.feature
   - packages/sail-desktop-agent/test/step-definitions/
-depends_on: []
+depends_on:
+  - conformance-traceability-map
 integration_branch: ""
 branch: test/app-channel-context-history
 external_tracker: ""

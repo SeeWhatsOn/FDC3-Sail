@@ -1,9 +1,20 @@
 # Project docs
 
+## Planning index
+
+| Track | PRD | Status on `v3-pre` |
+|-------|-----|-------------------|
+| **P0** | `plans/prd-desktop-agent-conformance-gaps.md` items 1–2 | **Impl:** PR #14 (`extend-cleanup-source-and-open-with-context`) |
+| **P1** | `plans/prd-desktop-agent-conformance-gaps.md` | Draft work items (items 3–11) |
+| **P2** | `plans/prd-desktop-agent-release-p2.md` | New — logging, docs, metadata defaults, test timing |
+| **Transport** | `plans/prd-transport-platform-hardening.md` | 8 draft work items (separate epic) |
+| **Remediation** | `FDC3_2_2_REMEDIATION_PLAN.MD` | Tasks 1–2 done; Task 3 partial (P0 finishes cleanup); Tasks 4–6 → P2 / platform |
+
 ## PRD source
 
-- `plans/prd-transport-platform-hardening.md` — derived from `REDACTED`
-- `plans/prd-desktop-agent-conformance-gaps.md` — unplanned P1: cleanup extensions, conformance BDD, validator/history/WCP policy, test trust
+- `plans/prd-transport-platform-hardening.md` — MessagePort, InMemory, platform channel API
+- `plans/prd-desktop-agent-conformance-gaps.md` — P1: cleanup extensions, conformance BDD, WCP policy, test trust
+- `plans/prd-desktop-agent-release-p2.md` — P2: log redaction, README, metadata defaults, platform pointers
 - Original review notes: `.cursor/issues-discovered.md`
 - FDC3 review / remediation: `FDC3_2_2_COMPLIANCE_REVIEW.MD`, `FDC3_2_2_REMEDIATION_PLAN.MD`
 
@@ -59,4 +70,15 @@ See `plans/prd-desktop-agent-conformance-gaps.md` for desktop-agent lifecycle an
 | `reduce-vitest-retry` | `retry: 0` after transport + cleanup green |
 
 Remediation Tasks 1–2 and partial Task 3 are **not** duplicated here — see PRD relationship table.
+
+## Work items (P2 release PRD)
+
+| Slug | Focus |
+|------|--------|
+| `dacp-wcp-log-redaction` | Metadata-only DACP/WCP logging (Task 4) |
+| `align-readme-package-and-validation-docs` | Package name, arch tree, injectable validation (Task 5) |
+| `centralize-implementation-metadata-defaults` | Consistent `getInfo` / WCP5 version defaults |
+| `fix-in-memory-transport-test-timing` | **Spike:** replace fixed sleeps in transport tests |
+
+P2-04 (ListenerError casts) coordinates with P1 `fdc3-error-enum-boundary-tests`. Platform items P2-10–12 remain in remediation Task 6 — no desktop-agent work items.
 
