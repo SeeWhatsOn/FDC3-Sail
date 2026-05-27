@@ -16,8 +16,11 @@ metadata:
 Use this as a routing guide. The default flow is:
 
 ```text
-PRD -> optional Epic -> Work Item -> /ww-deliver
+PRD -> optional Epic -> Work Item -> /ww-approve -> /ww-deliver
 ```
+
+If work items already exist as `draft` (planning stopped early), use
+`/ww-approve` before `/ww-deliver`.
 
 Keep the structure as small as possible while leaving enough context for a
 normal developer or agent subagent to deliver safely.

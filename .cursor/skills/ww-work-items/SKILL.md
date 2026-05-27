@@ -107,7 +107,7 @@ present the human gate until all boxes pass.
 
 ```text
 draft
-  -> approved       human approved this work item for delivery
+  -> approved       human approved this work item for delivery (/ww-approve or /ww-plan gate)
        -> in-progress
             -> blocked     waiting for human decision
             -> staged      tests green, changes staged, human review needed
@@ -117,8 +117,9 @@ draft
 ```
 
 The planning workflow (`/ww-plan`) may create `draft` work items. Only
-human approval changes them to `approved`. The delivery workflow
-(`/ww-deliver`) only starts items with `status: approved`.
+human approval changes them to `approved` (during `/ww-plan` gates or
+`/ww-approve` when resuming). The delivery workflow (`/ww-deliver`) only
+starts items with `status: approved`.
 
 Only the delivery orchestrator changes delivery status after approval.
 The planning orchestrator creates and revises draft work items.
@@ -128,7 +129,7 @@ Do not persist a transient `loop` status. Keep the work item
 
 ## Project Health Check
 
-Before `/ww-plan` or `/ww-deliver`, check for:
+Before `/ww-plan`, `/ww-approve`, or `/ww-deliver`, check for:
 
 ```text
 Hard requirements:

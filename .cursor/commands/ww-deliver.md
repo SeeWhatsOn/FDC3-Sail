@@ -19,6 +19,7 @@ Read and follow these skills in order:
 1. Run the full delivery workflow from `ww-deliver-work-items`.
 2. If the user provided a slug argument, deliver only that work item.
 3. Otherwise deliver all `status: approved` work items in dependency order.
+   If the queue is empty, stop and suggest `/ww-approve` (or `/ww-approve --catalog-only`).
 4. Stop at each human review gate; do not commit without explicit `approve`.
 5. If `--auto-until-review` is present, run RED → GREEN → verification
    → review without pausing between phases, then stop at the human
