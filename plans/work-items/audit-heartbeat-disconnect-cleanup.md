@@ -66,3 +66,7 @@ Extend Vitest on `heartbeat-runtime` / `cleanup` for each disconnect entry point
 ## Blocked decisions
 
 None.
+
+## Loop history
+
+- 2026-05-27: approved by human
