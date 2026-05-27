@@ -58,6 +58,7 @@ All commands from the repo root — see `package.json` `scripts` for the full li
   - `test/support/dacp-handler-context.ts` — `createHandlerContextForWorld()` when a step must call DACP handlers with the agent’s real pending-intent map.
   - `CustomWorld.updateState()` delegates to `applyDesktopAgentStateUpdate`; prefer `disconnectInstance()` or DACP messages when testing production paths.
 - **Test-only cleanup hooks** belong next to the code under test (e.g. `clearAllHeartbeatTimersForTesting()` in `heartbeat-runtime.ts`), not on `DesktopAgent`.
+- **WCP4 temp vs WCP5 canonical ids:** During identity validation, DACP handler `context.instanceId` may still be the temp connection id while `startHeartbeat` and `state.heartbeats` use the canonical WCP5 `instanceId`. Disconnect cleanup must resolve the canonical id (see `resolveCleanupInstanceId` in `cleanup.ts`).
 - **FDC3 default user channels** are defined once in `src/core/default-user-channels.ts` as `DEFAULT_FDC3_USER_CHANNELS`. Production, Vitest, and Cucumber (`generic.steps` / `CustomWorld.initializeDesktopAgent`) import that constant directly — feature files use spec IDs (`fdc3.channel.1`, …).
 
 ### Cucumber tags (`packages/sail-desktop-agent`)
