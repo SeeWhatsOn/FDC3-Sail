@@ -168,7 +168,7 @@ End with a report that includes:
 
 - approved work item slugs and titles
 - dependency order for delivery
-- pointer to `/ww-deliver` or `/ww-deliver <slug>`
+- pointer to `/ww-approve` (batch or per slug), then `/ww-deliver` or `/ww-deliver <slug>`
 
 ## What You Must Never Do
 

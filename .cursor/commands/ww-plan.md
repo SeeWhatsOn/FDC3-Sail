@@ -21,7 +21,7 @@ Also load `interview-me` if intent, scope, or constraints are unclear.
 1. Run the full planning workflow from `ww-prd-breakdown`.
 2. Use the PRD path, attached doc, or goal from the user's message as input.
 3. Present each work item draft for human approval before writing it.
-4. End with the handoff report pointing to `/ww-deliver`.
+4. End with the handoff report pointing to `/ww-approve` and `/ww-deliver`.
 
 ## Usage
 
