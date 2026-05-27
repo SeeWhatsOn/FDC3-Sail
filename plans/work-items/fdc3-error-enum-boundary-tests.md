@@ -16,7 +16,7 @@ depends_on:
 integration_branch: ""
 branch: test/fdc3-error-enums
 external_tracker: ""
-tags: [fdc3, conformance2.2]
+tags: [fdc3]
 ---
 
 ## Goal
@@ -32,6 +32,10 @@ Many features already assert errors (e.g. `MalformedContext`, `NoAppsFound`, `In
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 7)
 - `FDC3_2_2_COMPLIANCE_REVIEW.MD` (Needs test: standard enum messages)
 
+## Parent context
+
+From `plans/prd-desktop-agent-conformance-gaps.md`: Close lifecycle cleanup, conformance evidence, validation boundaries, and test trust before P1 sign-off and v3 release.
+
 ## Behavior spec
 
 Build a small matrix (table-driven Vitest and/or Cucumber) for representative operations:
@@ -41,6 +45,10 @@ Build a small matrix (table-driven Vitest and/or Cucumber) for representative op
 ## Out of scope
 
 - Wiring Zod validator in platform (remediation Task 6).
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 

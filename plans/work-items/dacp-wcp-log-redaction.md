@@ -34,6 +34,10 @@ Production Desktop Agents must not log sensitive financial context fields from u
 - `plans/prd-desktop-agent-release-p2.md` (P2-01)
 - `FDC3_2_2_REMEDIATION_PLAN.MD` Task 4
 
+## Parent context
+
+From `plans/prd-desktop-agent-release-p2.md`: Post-P1 hardening — logging redaction, README/package alignment, metadata defaults, and test hygiene.
+
 ## Behavior spec
 
 Given a DACP message with context containing a sensitive field
@@ -44,6 +48,10 @@ Then logs contain only metadata (type, ids, contextType, flags) and never the se
 
 - Platform-api logging
 - Repo-wide log policy outside sail-desktop-agent
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 

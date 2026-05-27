@@ -15,7 +15,7 @@ depends_on: []
 integration_branch: ""
 branch: chore/centralize-implementation-metadata
 external_tracker: ""
-tags: [fdc3, conformance2.2]
+tags: [fdc3]
 ---
 
 ## Goal
@@ -31,6 +31,10 @@ Compliance review notes `3.0.0` vs `0.0.1` vs `0.0.0` fallbacks across `desktop-
 - `plans/prd-desktop-agent-release-p2.md` (P2-03)
 - `FDC3_2_2_COMPLIANCE_REVIEW.MD` (getInfo metadata)
 
+## Parent context
+
+From `plans/prd-desktop-agent-release-p2.md`: Post-P1 hardening — logging redaction, README/package alignment, metadata defaults, and test hygiene.
+
 ## Behavior spec
 
 Given a Desktop Agent constructed with default config
@@ -42,6 +46,10 @@ And WCP5 responses use the same default when app metadata is merged
 
 - Changing FDC3 optional feature flags semantics
 - Platform-api metadata
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 

@@ -30,6 +30,10 @@ Integrators copy README examples; wrong package names and “Zod validation” c
 - `plans/prd-desktop-agent-release-p2.md` (P2-02)
 - `FDC3_2_2_REMEDIATION_PLAN.MD` Task 5
 
+## Parent context
+
+From `plans/prd-desktop-agent-release-p2.md`: Post-P1 hardening — logging redaction, README/package alignment, metadata defaults, and test hygiene.
+
 ## Behavior spec
 
 Given a new integrator reads `packages/sail-desktop-agent/README.md`
@@ -41,6 +45,10 @@ And validation is described as injectable, not built-in Zod
 
 - Docusaurus website (`website/`)
 - Other workspace packages' READMEs
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 

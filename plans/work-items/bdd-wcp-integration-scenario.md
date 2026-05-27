@@ -16,7 +16,7 @@ depends_on:
 integration_branch: ""
 branch: test/wcp-integration-path
 external_tracker: ""
-tags: [fdc3, wcp]
+tags: [fdc3]
 ---
 
 ## Goal
@@ -31,6 +31,10 @@ Vitest (`wcp-connector.test.ts`) covers WCP units. Cucumber uses `MockTransport`
 
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 9)
 
+## Parent context
+
+From `plans/prd-desktop-agent-conformance-gaps.md`: Close lifecycle cleanup, conformance evidence, validation boundaries, and test trust before P1 sign-off and v3 release.
+
 ## Behavior spec
 
 **Option A (preferred for this package):** Vitest integration with `createBrowserDesktopAgent` + synthetic `postMessage` WCP1Hello.
@@ -42,6 +46,10 @@ Vitest (`wcp-connector.test.ts`) covers WCP units. Cucumber uses `MockTransport`
 ## Out of scope
 
 - Full FINOS conformance pack over WCP in this package.
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 

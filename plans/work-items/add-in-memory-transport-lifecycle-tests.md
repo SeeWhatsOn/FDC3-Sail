@@ -31,6 +31,10 @@ Tests still note peer notification as unimplemented while implementation partial
 - `plans/project-docs.md`
 - Depends on disconnect fix behavior from `fix-in-memory-transport-half-open-disconnect`
 
+## Parent context
+
+From `plans/prd-transport-platform-hardening.md`: Harden InMemory/MessagePort transports and replace platform DACP impersonation for reliable disconnect and authority-safe APIs.
+
 ## Behavior spec
 
 Given a pair where A disconnects

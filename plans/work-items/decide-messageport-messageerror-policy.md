@@ -31,6 +31,10 @@ Today `messageerror` triggers full transport disconnect, which may drop an other
 - `plans/project-docs.md`
 - `.cursor/issues-discovered.md`
 
+## Parent context
+
+From `plans/prd-transport-platform-hardening.md`: Harden InMemory/MessagePort transports and replace platform DACP impersonation for reliable disconnect and authority-safe APIs.
+
 ## Behavior spec
 
 Given an active MessagePort app connection

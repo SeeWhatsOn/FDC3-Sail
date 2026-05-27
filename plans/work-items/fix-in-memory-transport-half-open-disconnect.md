@@ -30,6 +30,10 @@ Ensure disconnecting one side of an in-memory transport pair fully tears down bo
 - `plans/prd-transport-platform-hardening.md`
 - `.cursor/issues-discovered.md` (InMemoryTransport section)
 
+## Parent context
+
+From `plans/prd-transport-platform-hardening.md`: Harden InMemory/MessagePort transports and replace platform DACP impersonation for reliable disconnect and authority-safe APIs.
+
 ## Behavior spec
 
 Given a connected in-memory transport pair

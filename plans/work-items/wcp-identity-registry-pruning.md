@@ -1,6 +1,7 @@
 ---
 title: "Investigate and prune WCP instance identity registry entries"
 slug: wcp-identity-registry-pruning
+kind: spike
 type: bug
 status: draft
 loop_count: 0
@@ -14,7 +15,7 @@ depends_on:
 integration_branch: ""
 branch: fix/wcp-identity-registry-pruning
 external_tracker: ""
-tags: [fdc3, wcp]
+tags: [fdc3]
 ---
 
 ## Goal
@@ -29,6 +30,10 @@ Compliance review lists this as optional cleanup. Outer registry is `WeakMap<Tra
 
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 5)
 
+## Parent context
+
+From `plans/prd-desktop-agent-conformance-gaps.md`: Close lifecycle cleanup, conformance evidence, validation boundaries, and test trust before P1 sign-off and v3 release.
+
 ## Behavior spec
 
 **Phase 1 — investigate**
@@ -40,6 +45,14 @@ Then document whether `identityMap` still holds that `instanceId`
 **Phase 2 — fix (only if investigation confirms leak)**
 
 Delete identity entries on the same paths that remove the instance from agent state.
+
+## Out of scope
+
+- Production identity map changes before Phase 1 investigation confirms a leak.
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 

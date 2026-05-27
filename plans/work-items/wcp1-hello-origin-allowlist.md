@@ -15,7 +15,7 @@ depends_on: []
 integration_branch: ""
 branch: feature/wcp-origin-allowlist
 external_tracker: ""
-tags: [fdc3, security, wcp]
+tags: [fdc3, security]
 ---
 
 ## Goal
@@ -30,6 +30,10 @@ Today any origin can start handshake; WCP4 blocks DACP but handshake window allo
 
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 4)
 
+## Parent context
+
+From `plans/prd-desktop-agent-conformance-gaps.md`: Close lifecycle cleanup, conformance evidence, validation boundaries, and test trust before P1 sign-off and v3 release.
+
 ## Behavior spec
 
 Given `allowedOrigins: ["https://trusted.example.com"]`
@@ -43,6 +47,10 @@ Then document default: allow all (current behavior) vs. deny all — pick one fo
 ## Out of scope
 
 - Replacing WCP4 identityUrl / MessageEvent.origin checks.
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 

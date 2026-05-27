@@ -28,6 +28,10 @@ Fixed sleeps hide races and slow CI; compliance review flagged optional cleanup.
 
 - `plans/prd-desktop-agent-release-p2.md` (P2-05)
 
+## Parent context
+
+From `plans/prd-desktop-agent-release-p2.md`: Post-P1 hardening — logging redaction, README/package alignment, metadata defaults, and test hygiene.
+
 ## Behavior spec
 
 **Phase 1 (spike)**
@@ -45,6 +49,10 @@ Then no test relies on arbitrary wall-clock sleep for correctness
 ## Out of scope
 
 - InMemoryTransport product behavior changes unless spike proves a bug
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 

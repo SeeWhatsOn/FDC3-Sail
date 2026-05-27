@@ -29,6 +29,10 @@ Listeners are added and removed with fresh `.bind(this)` calls, so identities ne
 - `plans/project-docs.md`
 - Pattern reference: `WCPConnector.boundHandleWindowMessage`
 
+## Parent context
+
+From `plans/prd-transport-platform-hardening.md`: Harden InMemory/MessagePort transports and replace platform DACP impersonation for reliable disconnect and authority-safe APIs.
+
 ## Behavior spec
 
 Given a MessagePortTransport with listeners attached

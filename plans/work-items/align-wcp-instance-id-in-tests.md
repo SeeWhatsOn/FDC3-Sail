@@ -1,6 +1,7 @@
 ---
 title: "Investigate WCP and heartbeat test hygiene"
 slug: align-wcp-instance-id-in-tests
+kind: spike
 type: bug
 status: draft
 loop_count: 0
@@ -18,7 +19,7 @@ depends_on:
 integration_branch: ""
 branch: test/wcp-heartbeat-hygiene
 external_tracker: ""
-tags: [fdc3, wcp]
+tags: [fdc3]
 ---
 
 ## Goal
@@ -35,6 +36,10 @@ tags: [fdc3, wcp]
 
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 10)
 
+## Parent context
+
+From `plans/prd-desktop-agent-conformance-gaps.md`: Close lifecycle cleanup, conformance evidence, validation boundaries, and test trust before P1 sign-off and v3 release.
+
 ## Behavior spec
 
 **Phase 1 — minimal repro**
@@ -46,6 +51,14 @@ Then `getActiveHeartbeatTimerCount() === 0`
 **Phase 2 — fix (test and/or product)**
 
 Only if Phase 1 shows a real bug: align steps to WCP5 instance id or fix cleanup not stopping timer for that id.
+
+## Out of scope
+
+- Rewriting unrelated BDD features outside heartbeat/WCP instance-id hygiene.
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 

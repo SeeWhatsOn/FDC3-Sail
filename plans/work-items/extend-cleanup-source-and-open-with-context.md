@@ -16,7 +16,7 @@ depends_on: []
 integration_branch: ""
 branch: fix/cleanup-source-and-open-with-context
 external_tracker: ""
-tags: [fdc3, lifecycle]
+tags: [fdc3]
 ---
 
 ## Goal
@@ -37,6 +37,10 @@ Vitest (`cleanup.test.ts`) and Cucumber (`disconnect-cleanup-p0.feature`) are **
 
 - `plans/prd-desktop-agent-conformance-gaps.md` (items 1–2)
 - `packages/sail-desktop-agent/src/core/handlers/dacp/cleanup.ts`
+
+## Parent context
+
+From `plans/prd-desktop-agent-conformance-gaps.md`: Close lifecycle cleanup, conformance evidence, validation boundaries, and test trust before P1 sign-off and v3 release.
 
 ## Behavior spec
 
@@ -61,6 +65,10 @@ Then pending removed and timeouts cleared (add Vitest + Cucumber before implemen
 ## Out of scope
 
 - Re-implementing heartbeat cleanup (already calls `cleanupDACPHandlers`).
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 

@@ -14,7 +14,7 @@ depends_on: []
 integration_branch: ""
 branch: fix/cap-intents-history
 external_tracker: ""
-tags: [fdc3, lifecycle]
+tags: [fdc3]
 ---
 
 ## Goal
@@ -30,6 +30,10 @@ Every `recordIntentResolution` appends forever; trading desktops may run days wi
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 3)
 - `FDC3_2_2_COMPLIANCE_REVIEW.MD` (optional cleanup / QA)
 
+## Parent context
+
+From `plans/prd-desktop-agent-conformance-gaps.md`: Close lifecycle cleanup, conformance evidence, validation boundaries, and test trust before P1 sign-off and v3 release.
+
 ## Behavior spec
 
 Given N intent resolutions recorded
@@ -39,6 +43,10 @@ Then oldest entries are removed and selectors still return recent resolutions by
 ## Out of scope
 
 - Persisting history to disk.
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 

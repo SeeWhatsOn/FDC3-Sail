@@ -14,7 +14,7 @@ depends_on:
 integration_branch: ""
 branch: test/app-channel-context-history
 external_tracker: ""
-tags: [fdc3, conformance2.2]
+tags: [fdc3]
 ---
 
 ## Goal
@@ -31,6 +31,10 @@ Add Cucumber scenarios for **remaining** FDC3 2.2 app-channel context history / 
 - FINOS FDC3 2.2 App-Channel-Tests (external pack)
 - `plans/work-items/conformance-traceability-map.md` (coordinate — list which rows this closes)
 
+## Parent context
+
+From `plans/prd-desktop-agent-conformance-gaps.md`: Close lifecycle cleanup, conformance evidence, validation boundaries, and test trust before P1 sign-off and v3 release.
+
 ## Behavior spec
 
 For each gap row in the traceability map marked partial/missing:
@@ -40,6 +44,10 @@ For each gap row in the traceability map marked partial/missing:
 ## Out of scope
 
 - `Channel.clearContext()` (not FDC3 2.2 per remediation plan).
+
+## TypeScript interfaces
+
+none
 
 ## Test guidance
 
