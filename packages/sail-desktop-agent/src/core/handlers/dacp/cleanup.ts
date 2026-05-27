@@ -7,6 +7,7 @@ import { type DACPHandlerContext } from "../types"
 import * as eventHandlers from "./event-handlers"
 import * as privateChannelHandlers from "./private-channel-handlers"
 import { stopHeartbeat } from "./heartbeat-runtime"
+import { clearPendingOpenWithContextForInstance } from "./utils/open-with-context"
 
 /**
  * Cleanup when a DACP connection is closed, heartbeat times out, or the app sends WCP6Goodbye.
@@ -18,10 +19,10 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
 
   logger.info("Cleaning up DACP handlers for instance", { instanceId })
 
-  // Cancel any pending intents involving this instance
+  // Cancel any pending intents involving this instance (as source or target)
   const state = getState()
   const pendingIntents = Object.values(state.intents.pending).filter(
-    p => p.targetInstanceId === instanceId
+    p => p.targetInstanceId === instanceId || p.sourceInstanceId === instanceId
   )
   pendingIntents.forEach(pending => {
     // Reject promise if it exists (from intent-helpers Map)
@@ -33,7 +34,11 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
       if (promiseData.deliveryTimeoutHandle) {
         clearTimeout(promiseData.deliveryTimeoutHandle)
       }
-      promiseData.reject(new Error("Intent cancelled - target instance disconnected"))
+      const disconnectRole =
+        pending.sourceInstanceId === instanceId ? "source" : "target"
+      promiseData.reject(
+        new Error(`Intent cancelled - ${disconnectRole} instance disconnected`)
+      )
       context.pendingIntentPromises.delete(pending.requestId)
     }
     setState(state => resolvePendingIntent(state, pending.requestId))
@@ -43,6 +48,8 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
       instanceId,
     })
   }
+
+  clearPendingOpenWithContextForInstance(instanceId, context)
 
   // Remove event listeners
   eventHandlers.removeInstanceEventListeners(instanceId, setState)

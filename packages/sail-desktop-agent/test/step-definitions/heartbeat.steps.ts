@@ -72,6 +72,10 @@ Given("{string} sends a goodbye message", async function (this: CustomWorld, app
   // Test fixture setup: Ensure app instance exists
   ensureAppInstanceForTesting(this, appStr)
   const meta = createMeta(this, appStr)
+  const validatedInstanceId = this.mockTransport.lastWcp5ValidatedInstanceId
+  if (validatedInstanceId) {
+    meta.source.instanceId = validatedInstanceId
+  }
 
   // Send DACP WCP6Goodbye message (this is what we're testing)
   const message: WebConnectionProtocol6Goodbye = {
