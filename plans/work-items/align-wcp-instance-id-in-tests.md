@@ -15,7 +15,7 @@ file_manifest:
   - packages/sail-desktop-agent/test/features/apps/disconnect-cleanup-p0.feature
   - packages/sail-desktop-agent/test/features/infrastructure/heartbeat.feature
 depends_on:
-  - extend-cleanup-source-and-open-with-context
+  - audit-heartbeat-disconnect-cleanup
 integration_branch: ""
 branch: test/wcp-heartbeat-hygiene
 external_tracker: ""
@@ -24,7 +24,7 @@ tags: [fdc3]
 
 ## Goal
 
-**Investigate first:** failures such as “2 heartbeat timers remain” may be caused by test design (multiple `A desktop agent` inits, validate on one id / disconnect on another) rather than missing `stopHeartbeat` in production.
+**Investigate first:** Cucumber heartbeat / cleanup failures may be test design (multiple agent inits, validate on one id / disconnect on another) rather than production bugs. Run after or in parallel with `audit-heartbeat-disconnect-cleanup`.
 
 ## User or system context
 
@@ -35,6 +35,11 @@ tags: [fdc3]
 ## Reference docs
 
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 10)
+- `plans/work-items/audit-heartbeat-disconnect-cleanup.md`
+
+## Parent context
+
+From `plans/prd-desktop-agent-conformance-gaps.md`: Close lifecycle cleanup, conformance evidence, validation boundaries, and test trust before P1 sign-off and v3 release.
 
 ## Parent context
 
@@ -48,9 +53,17 @@ Given a single `DesktopAgent` instance for the scenario
 When one validate, one goodbye (or disconnectInstance) for the same logical app
 Then `getActiveHeartbeatTimerCount() === 0`
 
-**Phase 2 — fix (test and/or product)**
+**Phase 2 — fix (test-only unless audit item found a product gap)**
 
-Only if Phase 1 shows a real bug: align steps to WCP5 instance id or fix cleanup not stopping timer for that id.
+Align steps to WCP5 instance id or tighten scenarios; do not weaken assertions.
+
+## Out of scope
+
+- Production heartbeat cleanup logic (see `audit-heartbeat-disconnect-cleanup`).
+
+## TypeScript interfaces
+
+none
 
 ## Out of scope
 
@@ -66,4 +79,4 @@ Do not assume product bug until minimal scenario passes/fails in isolation. Tigh
 
 ## Blocked decisions
 
-Whether any change is test-only vs. handler fix.
+Whether any change is test-only vs. handler fix (defer handler fixes to audit item).
