@@ -1,12 +1,11 @@
 ---
 name: ww-prd-breakdown
 description: >
-  Watson workflow planning phase: turn a PRD or product goal into small,
-  descriptive local markdown work items with BDD behavior specs. Use when
-  breaking down a PRD, planning features, writing work items, or authoring
-  Given/When/Then behaviour specs. Load ww-planning-stack first when unsure
-  which planning artifacts to create. Keywords: ww, watson workflow, ww-plan,
-  PRD breakdown, work items, BDD, planning phase.
+  Watson workflow planning phase: create or refine a PRD, then split it into
+  optional epics and small local markdown work items with BDD behavior specs.
+  Use when writing a PRD, breaking down a PRD, planning features, writing
+  work items, or authoring Given/When/Then behaviour specs. Keywords: ww,
+  watson workflow, ww-plan, PRD breakdown, epic, work items, BDD.
 disable-model-invocation: true
 metadata:
   author: watson
@@ -24,8 +23,9 @@ writes; specialist subagents provide focused drafts only when useful.
 
 ## Purpose
 
-Break a PRD into small work items that a normal developer can
-understand and deliver without senior-level inference from the PRD.
+Create or refine a PRD until it is clear enough to split, then break it into
+optional epics and small work items that a normal developer or agent
+subagent can deliver without senior-level inference.
 
 The planning phase writes local markdown work items. It does not write
 executable tests and does not write implementation code.
@@ -34,7 +34,7 @@ executable tests and does not write implementation code.
 
 Load in the top-level agent:
 
-- `ww-planning-stack` (when choosing PRD vs epic vs task depth)
+- `ww-planning-stack` (when choosing PRD vs epic vs work item shape)
 - `ww-work-items`
 - `context-engineering`
 - `planning-and-task-breakdown`
@@ -54,12 +54,13 @@ Track progress through the workflow:
 - [ ] Health check passed (`ww-work-items`)
 - [ ] Human chose `plans/` persistence policy: local-only default or
   versioned planning artifacts for this repo/workload
-- [ ] `plans/project-docs.md` built or updated ([references/project-docs-template.md](references/project-docs-template.md))
-- [ ] PRD validated against [references/prd-template.md](references/prd-template.md)
+- [ ] PRD created or refined against [references/prd-template.md](references/prd-template.md)
+- [ ] `interview-me` used when user, outcome, success, architecture direction,
+  edge cases, or constraints were unclear
 - [ ] PRD accuracy gate passed ([references/prd-accuracy-gate.md](references/prd-accuracy-gate.md))
 - [ ] Each PRD row classified (`task` | `spike` | `epic`) per `ww-work-items` → work-item-kinds
+- [ ] Epics used only where they add coordination value
 - [ ] Focused context loaded (`AGENTS.md`, PRD, existing work items)
-- [ ] Intent clarified with human (if needed)
 - [ ] Work items identified as small vertical slices
 - [ ] Each draft validated (`ww-work-items` → Draft Validation)
 - [ ] Each draft presented using [references/human-gate-template.md](references/human-gate-template.md)
@@ -73,12 +74,19 @@ when isolated drafting context is useful. Send the prompt from
 The top-level agent still owns review, validation, file writes, and
 approval gates.
 
-## PRD Validation
+## PRD Creation And Validation
 
-Before splitting, read
-[references/prd-template.md](references/prd-template.md). If persona,
-goal, scope, success criteria, or behavior scenarios are missing, ask
-focused questions. Non-blocking unknowns may become work-item
+Before splitting, read [references/prd-template.md](references/prd-template.md).
+If the PRD is missing user/persona, goal, scope, success criteria,
+architecture direction, behavior scenarios, constraints, or edge cases, use
+`interview-me` or ask focused questions.
+
+The PRD should be the main source of truth for product and architecture
+context. Prefer a concise PRD section over creating extra planning
+documents. Use ADRs only for durable architecture decisions that need to
+outlive the PRD.
+
+Non-blocking unknowns may become `kind: spike` work items or work-item
 `## Blocked decisions`.
 
 ## PRD Accuracy Gate
@@ -87,9 +95,9 @@ After PRD content is drafted and before work items, run
 [references/prd-accuracy-gate.md](references/prd-accuracy-gate.md).
 Brownfield workloads must not skip this step.
 
-Record the gate table in the PRD or `plans/project-docs.md`. Rows marked
-`investigate` become `kind: spike` work items. Rows that need multiple
-delivery PRs become `kind: epic` parents plus child tasks.
+Record the gate table in the PRD. Rows marked `investigate` become
+`kind: spike` work items. Rows that need several coordinated delivery
+packets may become `kind: epic` parents plus child tasks.
 
 ## Work Item Requirements
 
@@ -98,8 +106,10 @@ Each work item must include:
 - `kind: task | spike | epic` (see `ww-work-items` → work-item-kinds)
 - a clear goal
 - user or system context
-- reference docs
-- BDD-style Given/When/Then behavior specs (epics use child table instead)
+- reference docs, including PRD path and epic path when applicable
+- a short parent context summary from the PRD or epic
+- BDD-style Given/When/Then behavior specs when behavior changes (epics use
+  child table instead)
 - out-of-scope boundaries
 - TypeScript interfaces, or "none" (epics: "none")
 - test guidance for the delivery RED phase
@@ -108,8 +118,9 @@ Each work item must include:
 - loop limit
 - tags (optional — see `ww-work-items` → Work Item Tags)
 
-For `kind: epic`, also include `## Child work items` and create separate
-files for each child before handoff.
+For `kind: epic`, include `## Child work items` and create separate files
+for each child before handoff. Do not create an epic for a single small task
+or 1-2 obvious tasks.
 
 BDD behavior specs describe observable behaviour:
 

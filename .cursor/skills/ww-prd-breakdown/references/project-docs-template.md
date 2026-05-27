@@ -1,21 +1,22 @@
-# Project Docs Template
+# Optional Context Index Template
 
-Build or update `plans/project-docs.md` during `/ww-plan` before
-drafting work items.
+Use `plans/project-docs.md` only when the PRD would otherwise become a
+dumping ground for links. Keep the PRD as the source of truth; this file is
+only an index for large workloads.
 
 ```markdown
 # Project docs
 
 ## PRD source
-- [path or description of PRD / goal]
+- [path to PRD]
 
 ## Planning index
 
 | Artifact | Path | Status | Notes |
 |----------|------|--------|-------|
-| Release brief | plans/release-….md | draft / n/a | |
-| Domain PRD | plans/prd-….md | draft / approved | accuracy gate: pass/fail |
-| ADR | docs/decisions/… | n/a | |
+| PRD | plans/prd-….md | draft / approved | accuracy gate: pass/fail |
+| Epic | plans/work-items/…-epic.md | draft / approved | optional |
+| ADR | docs/decisions/… | n/a | only for durable decisions |
 
 ## Work items (this workload)
 
@@ -24,7 +25,7 @@ drafting work items.
 | example-task | task | draft | |
 
 ## Architecture
-- [key modules, boundaries, patterns a normal developer must know]
+- [links to key modules, boundaries, and patterns; do not duplicate PRD text]
 
 ## Conventions
 - [testing, naming, error handling — cite AGENTS.md sections where possible]

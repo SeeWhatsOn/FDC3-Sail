@@ -12,7 +12,8 @@ kind: task   # task | spike | epic  (default: task)
 ## task (default)
 
 - Completable in one focused session / one PR
-- Full Given/When/Then behavior spec required
+- Given/When/Then behavior spec required when user-visible behavior or
+  system behavior changes
 - Eligible for `/ww-deliver` when `status: approved`
 - Example: fix cleanup handler, cap history map
 
@@ -29,6 +30,12 @@ kind: task   # task | spike | epic  (default: task)
 ## epic
 
 - **Container only** — not implemented directly
+- Use only when coordination value is real: 3+ related child work items,
+  phased delivery, multiple agents or roles, shared architecture context, or
+  cross-cutting behavior
+- Skip for a single bug, one small feature, or 1-2 obvious tasks
+- Every child must directly support the epic outcome; unrelated tasks or
+  spikes stay directly under the PRD
 - Must include `## Child work items` with slugs (draft or approved)
 - `file_manifest` may list docs index paths only
 - **Excluded** from `/ww-deliver` queue
@@ -42,8 +49,10 @@ kind: task   # task | spike | epic  (default: task)
 | Check | task | spike | epic |
 |-------|------|-------|------|
 | Goal one sentence | yes | yes (or phased) | yes |
-| G/W/T per required behavior | yes | phase 2 yes | no (use child table) |
+| G/W/T per behavior change | yes | phase 2 yes | no (use child table) |
+| Parent context | concise PRD/epic excerpt | concise PRD/epic excerpt | concise PRD excerpt |
 | `## Child work items` | no | if spawning children | **required** |
+| Children support epic outcome | n/a | yes if spawning children | **yes** |
 | `/ww-deliver` | yes | if fix phase approved | **never** |
 | TypeScript interfaces | required or "none" | required or "none" | "none" |
 
@@ -56,6 +65,7 @@ kind: task   # task | spike | epic  (default: task)
 | epic | one `kind: epic` + one file per child task/spike |
 
 Do not fold an epic and all children into a single work item file.
+Do not create an epic just to preserve the hierarchy.
 
 ## Epic file pattern
 

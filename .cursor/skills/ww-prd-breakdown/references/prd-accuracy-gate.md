@@ -45,15 +45,16 @@ For each **in scope** PRD row, record evidence:
 
 ### 5. Deliverability
 
-- [ ] PRD has persona, goal, in/out of scope, success criteria, product-level
-  G/W/T (see `prd-template.md`)
+- [ ] PRD has persona, goal, in/out of scope, success criteria,
+  architecture/implementation direction, and product-level G/W/T where
+  behavior changes (see `prd-template.md`)
 - [ ] Commands block present or deferred with reason (test/build from
   `AGENTS.md` / `package.json`)
 - [ ] Open questions either resolved or assigned to spike items
 
 ## Output
 
-Append to the PRD or `plans/project-docs.md`:
+Append to the PRD:
 
 ```markdown
 ## PRD accuracy gate (date / branch)

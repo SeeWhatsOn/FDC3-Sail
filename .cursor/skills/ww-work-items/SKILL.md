@@ -5,8 +5,8 @@ description: >
   PRDs. Use when creating descriptive work items, validating drafts
   before approval, updating delivery state, routing review verdicts,
   surfacing blocked decisions, staging for human review, extracting
-  learnings, or moving work to dead-letter. For planning depth (PRD vs
-  epic vs task), load ww-planning-stack. Keywords: ww, watson workflow,
+  learnings, or moving work to dead-letter. For planning shape (PRD vs
+  optional epic vs work item), load ww-planning-stack. Keywords: ww, watson workflow,
   work item, plans/work-items, BDD, Given/When/Then, status lifecycle.
 metadata:
   author: watson
@@ -29,7 +29,7 @@ Never assume current state; read the file first.
 
 ```text
 plans/
-  project-docs.md
+  prd-example-workload.md
   work-items/
     add-context-broadcast-handler.md
     resolve-order-race-condition.md
@@ -161,7 +161,7 @@ test syntax is unclear, run the full test command rather than guessing.
 
 ## Blocked Decision Procedure
 
-When an implementation agent reports ambiguity:
+When any delivery subagent reports ambiguity:
 
 1. Write the question under `## Blocked decisions`.
 2. Set `status: blocked`.
@@ -209,9 +209,15 @@ VERDICT: FAIL: implementation
 - `FAIL: implementation`: increment `loop_count`, append loop history,
   route to the implementer.
 
-Increment `loop_count` only on reviewer FAIL verdicts. Do not increment
-for implementation retries, verifier failures, or human-requested
-changes.
+Increment `loop_count` on reviewer FAIL verdicts. Do not increment for
+implementation retries, first verifier failures, or human-requested changes.
+
+Verification failures route back to the implementer without incrementing
+`loop_count` once per distinct issue. If the same verification failure
+repeats after an implementation retry, treat it as `FAIL: implementation`:
+increment `loop_count`, append loop history, and route to the implementer.
+Test command failures during implementation stay with the implementer unless
+the reviewer later classifies the failure as `FAIL: test-gap`.
 
 When `loop_count >= loop_limit`, run the escalation procedure below.
 

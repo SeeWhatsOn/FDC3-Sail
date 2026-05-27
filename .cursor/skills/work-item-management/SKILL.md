@@ -15,7 +15,7 @@ metadata:
 > **Watson workflow:** Prefer `ww-work-items` as the canonical skill. It
 > includes `kind: task | spike | epic`, draft validation by kind, and
 > integration with `/ww-plan` and `/ww-deliver`. This skill remains for
-> teams not using the full WW stack. Planning depth: `ww-planning-stack`.
+> teams not using the full WW flow. Planning shape: `ww-planning-stack`.
 
 Local markdown work items are the durable source of truth for this
 workflow. They are not GitHub Issues or Jira tickets, so do not invent
@@ -30,7 +30,7 @@ Never assume current state; read the file first.
 
 ```text
 plans/
-  project-docs.md
+  prd-example-workload.md
   work-items/
     add-context-broadcast-handler.md
     resolve-order-race-condition.md
@@ -71,7 +71,7 @@ Use this section order for local work items:
 title: "Short imperative title"
 slug: short-descriptive-slug
 type: feature # feature | bug | chore
-status: approved # see lifecycle below
+status: draft # human approval changes this to approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -95,7 +95,13 @@ needs to understand before starting.
 
 ## Reference docs
 
-Links or paths from `plans/project-docs.md` relevant to this work item.
+Links or paths to the PRD, parent epic when applicable, ADRs, README,
+AGENTS.md sections, or source files relevant to this work item.
+
+## Parent context
+
+Short PRD or epic excerpt that explains how this work item fits the whole
+system. Keep this concise so delivery agents do not need the full PRD.
 
 ## Behavior spec
 
@@ -103,7 +109,7 @@ Given [context]
 When [action]
 Then [observable outcome]
 
-Repeat for every required behaviour, including edge cases.
+Repeat for every behavior change, including edge cases.
 
 ## Out of scope
 
@@ -196,7 +202,7 @@ test syntax is unclear, run the full test command rather than guessing.
 
 ## Blocked Decision Procedure
 
-When an implementation agent reports ambiguity:
+When any delivery subagent reports ambiguity:
 
 1. Write the question under `## Blocked decisions`.
 2. Set `status: blocked`.
@@ -241,9 +247,13 @@ VERDICT: FAIL: implementation
 - `FAIL: implementation`: increment `loop_count`, append loop history,
   route to the implementer.
 
-Increment `loop_count` only on reviewer FAIL verdicts. Do not increment
-for implementation retries, verifier failures, or human-requested
-changes.
+Increment `loop_count` on reviewer FAIL verdicts. Do not increment for
+implementation retries, first verifier failures, or human-requested changes.
+
+Verification failures route back to the implementer without incrementing
+`loop_count` once per distinct issue. If the same verification failure
+repeats after an implementation retry, treat it as `FAIL: implementation`:
+increment `loop_count`, append loop history, and route to the implementer.
 
 ## Escalation Procedure
 

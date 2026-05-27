@@ -1,6 +1,7 @@
 # Context Budget
 
-Keep each context focused. The work item is the handoff — not the PRD.
+Keep each context focused. The work item is the handoff; include a concise
+parent context excerpt instead of the full PRD.
 
 ## Orchestrator (`/ww-plan`, `/ww-deliver`)
 
@@ -16,13 +17,15 @@ Do not load TDD, review, implement, or domain skills in the orchestrator.
 
 ## Subagent brief — pass only
 
-- Work item: Goal, Behavior spec, Test guidance, tags, file_manifest
+- Work item: Goal, Parent context, Behavior spec, Test guidance, tags,
+  file_manifest
 - Relevant `AGENTS.md` sections (not the full file)
 - Phase artifact: RED test list, diff summary, or implementation report
 - `SKILLS TO LOAD`: max 2 skills for that phase
 
-Do not pass: full PRD, full `plans/project-docs.md`, or delivery
-orchestrator skills.
+Do not pass: full PRD, optional context index files, or delivery
+orchestrator skills unless a subagent reports ambiguity that cannot be
+resolved from the slice.
 
 ## Verifier override
 

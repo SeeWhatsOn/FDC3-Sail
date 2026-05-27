@@ -8,7 +8,7 @@ title: "Short imperative title"
 slug: short-descriptive-slug
 kind: task                 # task | spike | epic — see work-item-kinds.md
 type: feature              # feature | bug | chore
-status: approved           # see lifecycle in SKILL.md
+status: draft              # human approval changes this to approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -30,14 +30,19 @@ Who benefits, what system behaviour changes, and what normal developer
 needs to understand before starting.
 
 ## Reference docs
-Links or paths from `plans/project-docs.md` relevant to this work item.
+Links or paths to the PRD, parent epic when applicable, ADRs, README,
+AGENTS.md sections, or source files relevant to this work item.
+
+## Parent context
+Short PRD or epic excerpt that explains how this work item fits the whole
+system. Keep this concise so delivery subagents do not need the full PRD.
 
 ## Behavior spec
 Given [context]
 When [action]
 Then [observable outcome]
 
-Repeat for every required behaviour, including edge cases.
+Repeat for every behavior change, including edge cases.
 For `kind: spike`, use Phase 1 (investigate) and Phase 2 (fix) if needed.
 For `kind: epic`, omit — use `## Child work items` instead.
 
