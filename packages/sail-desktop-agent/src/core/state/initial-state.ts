@@ -21,7 +21,6 @@ export function createInitialState(userChannels: Channel[]): AgentState {
     intents: {
       listeners: {},
       pending: {},
-      history: {},
     },
     channels: {
       user: Object.fromEntries(channels.map(channel => [channel.id, channel])),

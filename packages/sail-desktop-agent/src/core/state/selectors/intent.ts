@@ -4,7 +4,7 @@
  * Pure functions for querying intent-related state.
  */
 
-import type { AgentState, IntentListener, PendingIntent, IntentResolutionRecord } from "../types"
+import type { AgentState, IntentListener, PendingIntent } from "../types"
 
 export const getIntentListener = (
   state: AgentState,
@@ -39,11 +39,3 @@ export const getPendingIntent = (state: AgentState, requestId: string): PendingI
 
 export const getAllPendingIntents = (state: AgentState): PendingIntent[] =>
   Object.values(state.intents.pending)
-
-export const getIntentResolution = (
-  state: AgentState,
-  requestId: string
-): IntentResolutionRecord | undefined => state.intents.history[requestId]
-
-export const getAllIntentResolutions = (state: AgentState): IntentResolutionRecord[] =>
-  Object.values(state.intents.history)

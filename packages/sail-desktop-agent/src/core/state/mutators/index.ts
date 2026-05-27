@@ -29,7 +29,6 @@ export {
   addPendingIntent,
   updatePendingIntentTarget,
   resolvePendingIntent,
-  recordIntentResolution,
 } from "./intent"
 
 // Channel mutators

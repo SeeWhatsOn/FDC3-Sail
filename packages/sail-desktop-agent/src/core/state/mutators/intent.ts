@@ -5,7 +5,7 @@
  */
 
 import { produce } from "immer"
-import type { AgentState, IntentListener, PendingIntent, IntentResolutionRecord } from "../types"
+import type { AgentState, IntentListener, PendingIntent } from "../types"
 
 export const registerIntentListener = (
   state: AgentState,
@@ -98,17 +98,5 @@ export const resolvePendingIntent = (state: AgentState, requestId: string): Agen
 
   return produce(state, draft => {
     delete draft.intents.pending[requestId]
-  })
-}
-
-export const recordIntentResolution = (
-  state: AgentState,
-  resolution: Omit<IntentResolutionRecord, "resolvedAt">
-): AgentState => {
-  return produce(state, draft => {
-    draft.intents.history[resolution.requestId] = {
-      ...resolution,
-      resolvedAt: new Date(),
-    }
   })
 }

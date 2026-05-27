@@ -144,26 +144,6 @@ export interface PendingIntent {
   raisedAt: Date
 }
 
-/**
- * Intent resolution record (internal state)
- */
-export interface IntentResolutionRecord {
-  /** Request that was resolved */
-  requestId: string
-
-  /** Selected app for handling the intent */
-  selectedApp: AppMetadata
-
-  /** Selected instance (if app was already running) */
-  selectedInstanceId?: string
-
-  /** Whether a new instance was launched */
-  wasLaunched: boolean
-
-  /** Resolution timestamp */
-  resolvedAt: Date
-}
-
 // ============================================================================
 // CHANNEL TYPES
 // ============================================================================
@@ -317,8 +297,6 @@ export interface AgentState {
     listeners: Record<string, IntentListener>
     /** Pending intents keyed by requestId */
     pending: Record<string, PendingIntent>
-    /** Intent resolution history keyed by requestId */
-    history: Record<string, IntentResolutionRecord>
   }
 
   /** Channel-related state */

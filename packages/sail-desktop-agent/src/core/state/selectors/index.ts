@@ -27,8 +27,6 @@ export {
   getListenersForContextType,
   getPendingIntent,
   getAllPendingIntents,
-  getIntentResolution,
-  getAllIntentResolutions,
 } from "./intent"
 
 // Channel selectors
