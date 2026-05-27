@@ -11,7 +11,8 @@ file_manifest:
   - packages/sail-desktop-agent/src/core/errors/fdc3-errors.ts
   - packages/sail-desktop-agent/test/features/
   - packages/sail-desktop-agent/src/core/handlers/dacp/__tests__/
-depends_on: []
+depends_on:
+  - conformance-traceability-map
 integration_branch: ""
 branch: test/fdc3-error-enums
 external_tracker: ""

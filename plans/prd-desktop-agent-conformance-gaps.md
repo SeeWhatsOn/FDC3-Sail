@@ -1,4 +1,6 @@
-# PRD: Desktop Agent conformance gaps and release hardening (unplanned P1)
+# PRD: Desktop Agent conformance gaps and release hardening (P1)
+
+> Deferred hardening (logging, README, metadata defaults, platform integration pointers): see `plans/prd-desktop-agent-release-p2.md`.
 
 ## Persona / user
 
