@@ -39,6 +39,8 @@ column below.
 - [ ] Epic is justified by 3+ child items, phased delivery, multiple agents,
   shared architecture context, or cross-cutting behavior
 - [ ] `## Child work items` table lists every child slug
+- [ ] Every child directly supports the epic outcome; unrelated spikes or
+  tasks remain directly under the PRD
 - [ ] Each child slug has its own draft file (or is explicitly "TBD next plan pass")
 - [ ] `## TypeScript interfaces` is "none"
 - [ ] Orchestrator will **not** queue this slug for `/ww-deliver`

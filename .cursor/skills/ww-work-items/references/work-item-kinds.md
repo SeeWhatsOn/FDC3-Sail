@@ -34,6 +34,8 @@ kind: task   # task | spike | epic  (default: task)
   phased delivery, multiple agents or roles, shared architecture context, or
   cross-cutting behavior
 - Skip for a single bug, one small feature, or 1-2 obvious tasks
+- Every child must directly support the epic outcome; unrelated tasks or
+  spikes stay directly under the PRD
 - Must include `## Child work items` with slugs (draft or approved)
 - `file_manifest` may list docs index paths only
 - **Excluded** from `/ww-deliver` queue
@@ -50,6 +52,7 @@ kind: task   # task | spike | epic  (default: task)
 | G/W/T per behavior change | yes | phase 2 yes | no (use child table) |
 | Parent context | concise PRD/epic excerpt | concise PRD/epic excerpt | concise PRD excerpt |
 | `## Child work items` | no | if spawning children | **required** |
+| Children support epic outcome | n/a | yes if spawning children | **yes** |
 | `/ww-deliver` | yes | if fix phase approved | **never** |
 | TypeScript interfaces | required or "none" | required or "none" | "none" |
 
