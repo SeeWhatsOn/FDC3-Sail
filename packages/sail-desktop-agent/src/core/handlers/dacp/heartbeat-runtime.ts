@@ -16,6 +16,11 @@ export function getActiveHeartbeatTimerCount(): number {
   return heartbeatIntervals.size
 }
 
+/** @internal Returns instanceIds with active heartbeat interval timers. */
+export function getActiveHeartbeatInstanceIds(): string[] {
+  return [...heartbeatIntervals.keys()]
+}
+
 /** @internal Clears all heartbeat intervals without touching agent state (tests only). */
 export function clearAllHeartbeatTimersForTesting(): void {
   for (const instanceId of [...heartbeatIntervals.keys()]) {
