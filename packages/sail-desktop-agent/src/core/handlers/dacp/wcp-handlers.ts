@@ -302,13 +302,8 @@ export function handleWCP6Goodbye(_message: unknown, context: DACPHandlerContext
 
   logger.info("[WCP6] Received goodbye from app instance", instanceId)
 
-  // Import cleanup function dynamically to avoid circular dependency
-  // The cleanup function handles:
-  // - Cancelling pending intents
-  // - Removing event listeners
-  // - Removing private channels
-  // - Stopping heartbeat
-  // - Removing from state
+  // Context may still carry the WCP4 temp connection id; cleanup resolves the canonical
+  // WCP5 instanceId because heartbeat is started on that id during WCP4 validation.
   cleanupDACPHandlers(context)
 
   logger.info("[WCP6] Cleanup completed for instance", instanceId)
