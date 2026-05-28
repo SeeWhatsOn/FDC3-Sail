@@ -2,18 +2,20 @@
 title: "Close MessagePort on error-driven disconnect"
 slug: fix-messageport-error-disconnect-cleanup
 type: bug
-status: approved
-loop_count: 0
+status: in-progress
+loop_count: 1
 loop_limit: 3
-last_agent: ""
+last_agent: test-engineer
 file_manifest:
   - packages/sail-desktop-agent/src/browser/wcp/message-port-transport.ts
   - packages/sail-desktop-agent/src/browser/wcp/wcp-connection-management.ts
   - packages/sail-desktop-agent/src/browser/__tests__/message-port-transport.test.ts
 depends_on:
   - fix-messageport-disconnect-reentrancy
-integration_branch: ""
-branch: fix/messageport-error-disconnect-cleanup
+integration_branch: v3-pre
+branch: cursor/fix-messageport-error-disconnect-cleanup-32fd
+review_via: pr
+relies_on_pr: "23, 25"
 external_tracker: ""
 tags: [fdc3]
 ---
@@ -65,9 +67,17 @@ RED: simulate `postMessage` failure and assert `port.close` and listener removal
 ## Loop history
 
 - 2026-05-27: approved by human (validation gaps waived)
+- 2026-05-28: RED — six new assertions in `message-port-transport.test.ts` for error-driven disconnect. Vitest (`npx vitest run src/browser/__tests__/message-port-transport.test.ts`): **5 failed / 23 passed** (28 total). Failures: `handleDisconnect()` sets `connected=false` and fires handler but never calls `port.close()` or `removeEventListener`; `disconnect()` early-returns when `connected` is already false so `disconnectApp()` cleanup leaves an open port with listeners. WCP map deletion via `disconnectApp` **passes** (reentrancy fix prerequisite met).
 
 ## Staged for review
 
 ## Escalation notes
 
 ## Learnings extracted
+
+### Proposed (pending GREEN)
+
+- **Root cause:** `handleDisconnect()` duplicates part of `disconnect()` (flips `connected`, calls handler) but skips listener removal and `port.close()`. `send()` catch path calls `handleDisconnect()` only. When `disconnectApp()` then calls `disconnect()`, the `if (!this.connected) return` guard prevents deferred cleanup.
+- **Smallest fix:** Extract shared idempotent `disposePort()` (or fold into `handleDisconnect`) with a `portDisposed` guard; call from both `handleDisconnect()` and `disconnect()`. `disconnect()` should run port cleanup even when `connected` is already false if `portDisposed` is false.
+- **WCP maps:** With reentrancy fix (maps cleared before `disconnect()`), `onDisconnect` → `disconnectApp` already removes `messagePortTransports` / `transportToInstanceId` / `connections` and emits `appDisconnected` once — no WCP-layer change required for map hygiene; transport must close the port on the error path.
+- **Test harness:** `createListenerTracker()` spies `addEventListener`/`removeEventListener` to assert zero remaining handlers; `createMinimalWCPContext()` wires `disconnectApp` through `onDisconnect` for integration-style RED without full `WCPConnector`.
