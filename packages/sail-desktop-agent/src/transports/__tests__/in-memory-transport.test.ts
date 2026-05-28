@@ -1,6 +1,22 @@
 import { describe, it, expect, vi } from "vitest"
 import { InMemoryTransport, createInMemoryTransportPair } from "../in-memory-transport"
 
+/** Planned API for spec B — cast until GREEN wires onDeliveryError on InMemoryTransport */
+type InMemoryTransportWithDeliveryError = InMemoryTransport & {
+  onDeliveryError(handler: (error: unknown) => void): void
+}
+
+function registerOnDeliveryError(
+  transport: InMemoryTransport,
+  handler: (error: unknown) => void
+): void {
+  ;(transport as InMemoryTransportWithDeliveryError).onDeliveryError(handler)
+}
+
+async function flushAsyncDelivery(): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, 0))
+}
+
 describe("InMemoryTransport", () => {
   describe("createInMemoryTransportPair", () => {
     it("should create two linked transports", () => {
@@ -95,20 +111,106 @@ describe("InMemoryTransport", () => {
       expect(handler).toHaveBeenCalledTimes(1)
     })
 
-    it("should handle structuredClone errors gracefully", async () => {
-      const [transport1] = createInMemoryTransportPair()
+  })
 
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+  describe("send delivery guarantees", () => {
+    describe("spec A — uncloneable payload fails before returning", () => {
+      it("throws synchronously when message contains a function property", () => {
+        const [transport1, transport2] = createInMemoryTransportPair()
+        const peerHandler = vi.fn()
+        transport2.onMessage(peerHandler)
 
-      // Try to send a function (not cloneable)
-      const messageWithFunction = { fn: () => {} }
+        const messageWithFunction = { fn: () => {} }
 
-      expect(() => transport1.send(messageWithFunction)).not.toThrow()
+        expect(() => transport1.send(messageWithFunction)).toThrow()
+        expect(peerHandler).not.toHaveBeenCalled()
+      })
 
-      // Should log error but not crash
-      await new Promise(resolve => setTimeout(resolve, 10))
+      it("throws synchronously when message has a circular reference", () => {
+        const [transport1, transport2] = createInMemoryTransportPair()
+        const peerHandler = vi.fn()
+        transport2.onMessage(peerHandler)
 
-      consoleErrorSpy.mockRestore()
+        const circular: Record<string, unknown> = { type: "test" }
+        circular.self = circular
+
+        expect(() => transport1.send(circular)).toThrow()
+        expect(peerHandler).not.toHaveBeenCalled()
+      })
+
+      it("throws before setTimeout delivery so peer onMessage is never scheduled", async () => {
+        const [transport1, transport2] = createInMemoryTransportPair()
+        const peerHandler = vi.fn()
+        transport2.onMessage(peerHandler)
+
+        expect(() => transport1.send({ fn: () => {} })).toThrow()
+
+        await flushAsyncDelivery()
+        expect(peerHandler).not.toHaveBeenCalled()
+      })
+    })
+
+    describe("spec B — peer handler failure observable to sender", () => {
+      it("notifies sender via onDeliveryError when peer handler throws synchronously", async () => {
+        const [transport1, transport2] = createInMemoryTransportPair()
+        const onDeliveryError = vi.fn()
+        registerOnDeliveryError(transport1, onDeliveryError)
+
+        transport2.onMessage(() => {
+          throw new Error("handler failed")
+        })
+
+        transport1.send({ type: "test" })
+        await flushAsyncDelivery()
+
+        expect(onDeliveryError).toHaveBeenCalledTimes(1)
+        expect(onDeliveryError).toHaveBeenCalledWith(expect.any(Error))
+        expect(onDeliveryError.mock.calls[0]?.[0]).toMatchObject({
+          message: "handler failed",
+        })
+      })
+
+      it("notifies sender via onDeliveryError when peer handler returns a rejected promise", async () => {
+        const [transport1, transport2] = createInMemoryTransportPair()
+        const onDeliveryError = vi.fn()
+        registerOnDeliveryError(transport1, onDeliveryError)
+
+        transport2.onMessage(() => Promise.reject(new Error("async handler failed")))
+
+        transport1.send({ type: "test" })
+        await flushAsyncDelivery()
+
+        expect(onDeliveryError).toHaveBeenCalledTimes(1)
+        expect(onDeliveryError).toHaveBeenCalledWith(expect.any(Error))
+        expect(onDeliveryError.mock.calls[0]?.[0]).toMatchObject({
+          message: "async handler failed",
+        })
+      })
+    })
+
+    describe("spec C — happy path", () => {
+      it("delivers a deep clone asynchronously without shared references", async () => {
+        const [transport1, transport2] = createInMemoryTransportPair()
+        const peerHandler = vi.fn()
+        transport2.onMessage(peerHandler)
+
+        const originalMessage = { nested: { value: "original" }, tags: ["a"] }
+        transport1.send(originalMessage)
+
+        expect(peerHandler).not.toHaveBeenCalled()
+
+        await flushAsyncDelivery()
+
+        expect(peerHandler).toHaveBeenCalledTimes(1)
+        const received = peerHandler.mock.calls[0]?.[0] as typeof originalMessage
+        expect(received).not.toBe(originalMessage)
+        expect(received.nested).not.toBe(originalMessage.nested)
+        expect(received.tags).not.toBe(originalMessage.tags)
+        expect(received.nested.value).toBe("original")
+
+        originalMessage.nested.value = "mutated"
+        expect(received.nested.value).toBe("original")
+      })
     })
   })
 

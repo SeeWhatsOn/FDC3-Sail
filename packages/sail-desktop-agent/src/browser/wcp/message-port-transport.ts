@@ -66,8 +66,10 @@ export class MessagePortTransport implements Transport {
 
     // Listen for messages
     this.port.addEventListener("message", this.boundHandleMessage)
+    this.port.addEventListener("message", this.boundHandleMessage)
 
     // Listen for errors (indicates connection issues)
+    this.port.addEventListener("messageerror", this.boundHandleError)
     this.port.addEventListener("messageerror", this.boundHandleError)
 
     // Note: MessagePorts don't have a built-in disconnect event

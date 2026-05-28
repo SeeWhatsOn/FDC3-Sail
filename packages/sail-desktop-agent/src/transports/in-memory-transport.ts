@@ -15,8 +15,8 @@ import { consoleLogger } from "../core/interfaces/logger"
  * In-memory transport for same-process communication.
  *
  * This transport enables direct function calls between two components
- * in the same process. Messages are passed synchronously without
- * serialization overhead.
+ * in the same process. Messages are deep-cloned and delivered asynchronously
+ * to the peer handler.
  *
  * Commonly used for:
  * - Browser Desktop Agent + WCP Connector in same window
@@ -37,9 +37,12 @@ import { consoleLogger } from "../core/interfaces/logger"
  * transport2.send({ hello: 'from transport2' })
  * ```
  */
+export type DeliveryErrorHandler = (error: unknown) => void
+
 export class InMemoryTransport implements Transport {
   private messageHandler?: MessageHandler
   private disconnectHandler?: DisconnectHandler
+  private deliveryErrorHandler?: DeliveryErrorHandler
   private connected: boolean = true
   private peer?: InMemoryTransport
 
@@ -55,7 +58,16 @@ export class InMemoryTransport implements Transport {
   }
 
   /**
-   * Send a message to the peer transport
+   * Send a message to the peer transport.
+   *
+   * Delivery semantics:
+   * - Validates connection state synchronously; throws if this transport or the peer is disconnected.
+   * - Deep-clones the message synchronously before scheduling delivery; throws if the payload
+   *   cannot be cloned (e.g. functions, circular references).
+   * - Delivers the clone to the peer's `onMessage` handler asynchronously on the next macrotask
+   *   (`setTimeout(0)`), so `send()` returns before the peer handler runs.
+   * - Peer handler failures (sync throw or rejected Promise) are logged and reported to any
+   *   handler registered via {@link onDeliveryError} on this (sender) transport.
    *
    * @param message - Message to send
    */
@@ -72,22 +84,37 @@ export class InMemoryTransport implements Transport {
       throw new Error("Cannot send message: Peer transport is disconnected")
     }
 
+    // Clone before scheduling delivery so uncloneable payloads fail synchronously in send().
+    const clonedMessage = this.deepClone(message)
+
     // Use setTimeout to make delivery async, preventing:
     // 1. Stack overflow with rapid back-and-forth messages
     // 2. Synchronous call stack issues that could block the event loop
     setTimeout(() => {
       if (this.peer?.isConnected() && this.peer?.messageHandler) {
         try {
-          // Deep clone the message to prevent shared references
-          const clonedMessage = this.deepClone(message)
           void Promise.resolve(this.peer.messageHandler(clonedMessage)).catch(error => {
             consoleLogger.error("Error in peer message handler:", error)
+            this.deliveryErrorHandler?.(error)
           })
         } catch (error) {
           consoleLogger.error("Error in peer message handler:", error)
+          this.deliveryErrorHandler?.(error)
         }
       }
     }, 0)
+  }
+
+  /**
+   * Register a handler for delivery failures on messages sent through this transport.
+   *
+   * Called when the peer's `onMessage` handler throws synchronously or returns a rejected Promise.
+   * Errors are also logged via the DACP console logger.
+   *
+   * @param handler - Function to call when peer delivery fails
+   */
+  onDeliveryError(handler: DeliveryErrorHandler): void {
+    this.deliveryErrorHandler = handler
   }
 
   /**
@@ -167,8 +194,13 @@ export class InMemoryTransport implements Transport {
    * Deep clone a message to prevent shared object references
    * between the two transports.
    *
+   * Why clone instead of JSON serialize/parse:
+   * - Preserve transport-style message isolation (sender/receiver never share references).
+   * - Preserve non-JSON values supported by structured clone semantics.
+   * - Fail fast on unsupported payloads rather than silently dropping/coercing fields.
+   *
    * This uses newer structuredClone API for better performance and security.
-   * NOTE:We may need to fallback to JSON serialization for environments that don't have structuredClone.
+   * NOTE: We may need to fallback to JSON serialization for environments that don't have structuredClone.
    */
   private deepClone(obj: unknown): unknown {
     if (typeof structuredClone === "undefined") {
@@ -176,12 +208,37 @@ export class InMemoryTransport implements Transport {
     }
 
     try {
+      // structuredClone accepts cycles; DACP payloads must be acyclic trees.
+      this.rejectCircularReferences(obj)
       return structuredClone(obj)
     } catch (error) {
       // structuredClone throws for functions, DOM nodes, etc.
-      // This is actually good - we want to know if we're trying to clone unsupported types
       consoleLogger.error("Cannot clone message - contains unsupported types:", error)
       throw error
+    }
+  }
+
+  /** Fail fast on cyclic object graphs before structuredClone would silently preserve them. */
+  private rejectCircularReferences(value: unknown, seen: WeakSet<object> = new WeakSet()): void {
+    if (value === null || typeof value !== "object") {
+      return
+    }
+
+    if (seen.has(value)) {
+      throw new TypeError("Cannot clone circular structure")
+    }
+
+    seen.add(value)
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        this.rejectCircularReferences(item, seen)
+      }
+      return
+    }
+
+    for (const key of Object.keys(value)) {
+      this.rejectCircularReferences((value as Record<string, unknown>)[key], seen)
     }
   }
 }
