@@ -5,6 +5,11 @@
 import { describe, expect, it } from "vitest"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { createInitialState } from "../initial-state"
+import {
+  addPendingIntent,
+  registerIntentListener,
+  resolvePendingIntent,
+} from "../mutators/intent"
 import * as intentMutators from "../mutators/intent"
 import * as stateMutators from "../mutators/index"
 import * as intentSelectors from "../selectors/intent"
@@ -28,19 +33,16 @@ const _intentsTypeContract = {
 }
 void _intentsTypeContract
 
-const FORBIDDEN_STATE_EXPORTS = [
-  "recordIntentResolution",
-  "IntentResolutionRecord",
-  "getIntentHistory",
-  "getIntentResolutionHistory",
-  "getResolvedIntents",
-] as const
+const FORBIDDEN_MUTATOR_EXPORTS = ["recordIntentResolution"] as const
+
+const FORBIDDEN_SELECTOR_EXPORTS = ["getIntentResolution", "getAllIntentResolutions"] as const
 
 function assertNoForbiddenExports(
   moduleExports: Record<string, unknown>,
-  moduleName: string
+  moduleName: string,
+  forbiddenExports: readonly string[]
 ): void {
-  for (const exportName of FORBIDDEN_STATE_EXPORTS) {
+  for (const exportName of forbiddenExports) {
     expect(
       Object.prototype.hasOwnProperty.call(moduleExports, exportName),
       `${moduleName} must not export ${exportName}`
@@ -48,23 +50,61 @@ function assertNoForbiddenExports(
   }
 }
 
+function expectIntentSliceKeys(intents: AgentState["intents"]): void {
+  expect(Object.keys(intents).sort()).toEqual(["listeners", "pending"])
+}
+
 describe("AgentState.intents contract", () => {
   it("initial state intents has only listeners and pending keys", () => {
     const intents = createInitialState(DEFAULT_FDC3_USER_CHANNELS).intents
 
-    expect(Object.keys(intents).sort()).toEqual(["listeners", "pending"])
+    expectIntentSliceKeys(intents)
     expect(intents.listeners).toEqual({})
     expect(intents.pending).toEqual({})
   })
 
   it("state mutator barrels do not export intent history APIs", () => {
-    assertNoForbiddenExports(intentMutators, "mutators/intent")
-    assertNoForbiddenExports(stateMutators, "mutators/index")
+    assertNoForbiddenExports(intentMutators, "mutators/intent", FORBIDDEN_MUTATOR_EXPORTS)
+    assertNoForbiddenExports(stateMutators, "mutators/index", FORBIDDEN_MUTATOR_EXPORTS)
   })
 
   it("state selector barrels do not export intent history selectors", () => {
-    assertNoForbiddenExports(intentSelectors, "selectors/intent")
-    assertNoForbiddenExports(stateSelectors, "selectors/index")
-    assertNoForbiddenExports(statsSelectors, "selectors/stats")
+    assertNoForbiddenExports(intentSelectors, "selectors/intent", FORBIDDEN_SELECTOR_EXPORTS)
+    assertNoForbiddenExports(stateSelectors, "selectors/index", FORBIDDEN_SELECTOR_EXPORTS)
+  })
+
+  it("getStats does not expose intent resolution history counters", () => {
+    const stats = statsSelectors.getStats(createInitialState(DEFAULT_FDC3_USER_CHANNELS))
+
+    expect(stats).not.toHaveProperty("intentResolutions")
+  })
+
+  it("intent raise and resolve flows leave intents with only listeners and pending", () => {
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+
+    state = registerIntentListener(state, {
+      listenerId: "listener-1",
+      intentName: "ViewChart",
+      instanceId: "target-instance",
+      appId: "ChartApp",
+      contextTypes: ["fdc3.instrument"],
+    })
+
+    state = addPendingIntent(state, {
+      requestId: "request-1",
+      intentName: "ViewChart",
+      context: { type: "fdc3.instrument", id: { ticker: "AAPL" } },
+      sourceInstanceId: "source-instance",
+      targetInstanceId: "target-instance",
+      targetAppId: "ChartApp",
+    })
+
+    expectIntentSliceKeys(state.intents)
+
+    state = resolvePendingIntent(state, "request-1")
+
+    expectIntentSliceKeys(state.intents)
+    expect(state.intents.pending).toEqual({})
+    expect(Object.keys(state.intents.listeners)).toEqual(["listener-1"])
   })
 })
