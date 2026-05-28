@@ -12,26 +12,26 @@ import type { AppConnectionMetadata } from "../wcp/wcp-types"
 import { consoleLogger } from "../../core/interfaces/logger"
 
 function createListenerTracker(port: MessagePort) {
-  const activeListeners = new Map<string, Set<EventListener>>()
+  const activeListeners = new Map<string, Set<EventListenerOrEventListenerObject>>()
 
-  const trackAdd = (type: string, listener: EventListener) => {
+  const trackAdd = (type: string, listener: EventListenerOrEventListenerObject) => {
     if (!activeListeners.has(type)) {
       activeListeners.set(type, new Set())
     }
     activeListeners.get(type)!.add(listener)
   }
 
-  const trackRemove = (type: string, listener: EventListener) => {
+  const trackRemove = (type: string, listener: EventListenerOrEventListenerObject) => {
     activeListeners.get(type)?.delete(listener)
   }
 
   vi.spyOn(port, "addEventListener").mockImplementation((type, listener, options) => {
-    trackAdd(type as string, listener as EventListener)
+    trackAdd(type, listener)
     return MessagePort.prototype.addEventListener.call(port, type, listener, options)
   })
 
   vi.spyOn(port, "removeEventListener").mockImplementation((type, listener, options) => {
-    trackRemove(type as string, listener as EventListener)
+    trackRemove(type, listener)
     return MessagePort.prototype.removeEventListener.call(port, type, listener, options)
   })
 
@@ -125,6 +125,70 @@ describe("MessagePortTransport", () => {
       expect(() => transport.send({ type: "test" })).toThrow("postMessage failed")
       // Should mark as disconnected
       expect(transport.isConnected()).toBe(false)
+    })
+  })
+
+  describe("messageerror policy (lenient)", () => {
+    it("keeps the transport connected when messageerror fires", () => {
+      const transport = new MessagePortTransport(port1)
+
+      port1.dispatchEvent(new MessageEvent("messageerror", { data: null }))
+
+      expect(transport.isConnected()).toBe(true)
+    })
+
+    it("does not call disconnect handler when messageerror fires", () => {
+      const transport = new MessagePortTransport(port1)
+      const disconnectHandler = vi.fn()
+      transport.onDisconnect(disconnectHandler)
+
+      port1.dispatchEvent(new MessageEvent("messageerror", { data: null }))
+
+      expect(disconnectHandler).not.toHaveBeenCalled()
+    })
+
+    it("logs messageerror at error level without tearing down the connection", () => {
+      const transport = new MessagePortTransport(port1)
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+      const errorEvent = new MessageEvent("messageerror", { data: null })
+
+      port1.dispatchEvent(errorEvent)
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith("[DACP ERROR] MessagePort error:", errorEvent)
+      expect(transport.isConnected()).toBe(true)
+
+      consoleErrorSpy.mockRestore()
+    })
+
+    it("does not close the port or remove listeners when messageerror fires", () => {
+      const tracker = createListenerTracker(port1)
+      const transport = new MessagePortTransport(port1)
+      const closeSpy = vi.spyOn(port1, "close")
+
+      port1.dispatchEvent(new MessageEvent("messageerror", { data: null }))
+
+      expect(closeSpy).not.toHaveBeenCalled()
+      expect(tracker.listenerCount("message")).toBe(1)
+      expect(tracker.listenerCount("messageerror")).toBe(1)
+      expect(transport.isConnected()).toBe(true)
+    })
+
+    it("continues to deliver messages after messageerror", () => {
+      return new Promise<void>(resolve => {
+        const transport1 = new MessagePortTransport(port1)
+        const transport2 = new MessagePortTransport(port2)
+        const testMessage = { type: "after-messageerror", payload: "still-works" }
+
+        port2.dispatchEvent(new MessageEvent("messageerror", { data: null }))
+        expect(transport2.isConnected()).toBe(true)
+
+        transport2.onMessage(msg => {
+          expect(msg).toEqual(testMessage)
+          resolve()
+        })
+
+        transport1.send(testMessage)
+      })
     })
   })
 
@@ -385,35 +449,33 @@ describe("MessagePortTransport", () => {
       expect(messageHandlerRemoved).toBe(messageHandlerAdded)
 
       const errorHandlerAdded = addSpy.mock.calls.find(call => call[0] === "messageerror")?.[1]
-      const errorHandlerRemoved = removeSpy.mock.calls.find(
-        call => call[0] === "messageerror"
-      )?.[1]
+      const errorHandlerRemoved = removeSpy.mock.calls.find(call => call[0] === "messageerror")?.[1]
 
       expect(errorHandlerAdded).toBeDefined()
       expect(errorHandlerRemoved).toBe(errorHandlerAdded)
     })
 
     it("removes all message and messageerror listeners from the port after disconnect", () => {
-      const activeListeners = new Map<string, Set<EventListener>>()
+      const activeListeners = new Map<string, Set<EventListenerOrEventListenerObject>>()
 
-      const trackAdd = (type: string, listener: EventListener) => {
+      const trackAdd = (type: string, listener: EventListenerOrEventListenerObject) => {
         if (!activeListeners.has(type)) {
           activeListeners.set(type, new Set())
         }
         activeListeners.get(type)!.add(listener)
       }
 
-      const trackRemove = (type: string, listener: EventListener) => {
+      const trackRemove = (type: string, listener: EventListenerOrEventListenerObject) => {
         activeListeners.get(type)?.delete(listener)
       }
 
       vi.spyOn(port1, "addEventListener").mockImplementation((type, listener, options) => {
-        trackAdd(type as string, listener as EventListener)
+        trackAdd(type, listener)
         return MessagePort.prototype.addEventListener.call(port1, type, listener, options)
       })
 
       vi.spyOn(port1, "removeEventListener").mockImplementation((type, listener, options) => {
-        trackRemove(type as string, listener as EventListener)
+        trackRemove(type, listener)
         return MessagePort.prototype.removeEventListener.call(port1, type, listener, options)
       })
 

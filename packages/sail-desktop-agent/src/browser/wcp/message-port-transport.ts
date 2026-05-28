@@ -66,10 +66,8 @@ export class MessagePortTransport implements Transport {
 
     // Listen for messages
     this.port.addEventListener("message", this.boundHandleMessage)
-    this.port.addEventListener("message", this.boundHandleMessage)
 
-    // Listen for errors (indicates connection issues)
-    this.port.addEventListener("messageerror", this.boundHandleError)
+    // Listen for deserialization failures (logged only; see handleError policy)
     this.port.addEventListener("messageerror", this.boundHandleError)
 
     // Note: MessagePorts don't have a built-in disconnect event
@@ -125,7 +123,7 @@ export class MessagePortTransport implements Transport {
    * Note: MessagePort doesn't have native disconnect detection.
    * This is typically triggered by:
    * - Explicit disconnect() call
-   * - Message posting errors
+   * - postMessage failures (fatal)
    * - DACP heartbeat timeout
    *
    * @param handler - Function to call when disconnected
@@ -252,12 +250,14 @@ export class MessagePortTransport implements Transport {
   }
 
   /**
-   * Handle message error event
+   * Handle messageerror (structured-clone / deserialization failure).
+   *
+   * Lenient policy: log at error level and keep the connection alive so one
+   * bad inbound payload does not tear down an otherwise healthy app session.
+   * Outbound postMessage failures remain fatal via send() → handleDisconnect().
    */
   private handleError(event: MessageEvent): void {
     consoleLogger.error("MessagePort error:", event)
-    // Treat errors as disconnection
-    this.handleDisconnect()
   }
 
   /**
