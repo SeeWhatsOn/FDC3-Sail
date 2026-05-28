@@ -144,7 +144,10 @@ FDC3 Sail uses **Option 2: External UI Control** from the FDC3 specification:
 - WCP3Handshake returns `channelSelectorUrl: false`, `intentResolverUrl: false`
 - Apps receive standard DACP events (e.g., `userChannelChangedEvent`)
 
+See [Channel selection: host chrome vs app-hosted UI](./channel-selection) for set/get flows, layering (`sail-platform-api` vs desktop-agent), and Pattern A vs Pattern B.
+
 ## Learn More
 
 - [Desktop Agent Architecture](./desktop-agent) - Core FDC3 implementation
 - [Sail Platform SDK Architecture](./sail-platform-sdk) - Platform services and wrappers
+- [Channel selection](./channel-selection) - Host chrome vs app-hosted selector

@@ -2,7 +2,7 @@
 title: "FDC3 2.2 conformance traceability map"
 slug: conformance-traceability-map
 type: docs
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -62,3 +62,7 @@ Review map accuracy against `test/features/`; no executable tests required unles
 ## Blocked decisions
 
 Authoritative list source: local `fdc3-expert` vs. published FINOS conformance artifact version pin.
+
+## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)

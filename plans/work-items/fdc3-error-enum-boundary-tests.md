@@ -2,7 +2,7 @@
 title: "Extend FDC3 error enum boundary tests"
 slug: fdc3-error-enum-boundary-tests
 type: enhancement
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -57,3 +57,7 @@ Audit existing feature files first; only add scenarios for uncovered enum/surfac
 ## Blocked decisions
 
 Assert enum only vs. exact spec error message strings.
+
+## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)

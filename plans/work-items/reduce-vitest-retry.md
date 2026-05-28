@@ -2,7 +2,7 @@
 title: "Reduce Vitest retry after suite stabilization"
 slug: reduce-vitest-retry
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -50,3 +50,7 @@ After `retry: 0`, run `npm test -w @finos/sail-desktop-agent` twice locally; res
 ## Blocked decisions
 
 Depends on transport PRD work items completing first.
+
+## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)

@@ -2,7 +2,7 @@
 title: "WCP1Hello origin allowlist before handshake"
 slug: wcp1-hello-origin-allowlist
 type: enhancement
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -59,3 +59,7 @@ Vitest on `WCPConnector` with spy on `MessageChannel` constructor.
 ## Blocked decisions
 
 Allowlist on `WCPConnectorOptions` vs. platform-only wrapper.
+
+## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)

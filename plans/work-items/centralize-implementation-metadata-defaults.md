@@ -3,7 +3,7 @@ title: "Centralize implementation metadata version defaults for getInfo"
 slug: centralize-implementation-metadata-defaults
 kind: task
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -58,3 +58,7 @@ Extend or add Vitest for `handleGetInfoRequest` and WCP5 metadata merge; align e
 ## Blocked decisions
 
 Canonical default for `providerVersion` when host omits config (product decision).
+
+## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)

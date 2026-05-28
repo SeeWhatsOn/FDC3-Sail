@@ -3,7 +3,7 @@ title: "Extend cleanupDACPHandlers for source pending intents and open-with-cont
 slug: extend-cleanup-source-and-open-with-context
 kind: task
 type: bug
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -70,10 +70,6 @@ Then pending removed, timeouts cleared, and no error sent to disconnected source
 
 none
 
-## TypeScript interfaces
-
-none
-
 ## Test guidance
 
 If implementing optional source cancel: RED Vitest in `cleanup.test.ts` first, then implement scan of all `pendingWithContext` buckets by `sourceInstanceId`.
@@ -85,3 +81,4 @@ Whether source-side open-with-context cancel is required for v3 or deferred (rec
 ## Loop history
 
 - 2026-05-27: items 1–2 verified implemented on v3-pre; item 3 remains optional
+- 2026-05-27: approved by human

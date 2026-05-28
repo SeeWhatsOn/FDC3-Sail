@@ -3,7 +3,7 @@ title: "Investigate and prune WCP instance identity registry entries"
 slug: wcp-identity-registry-pruning
 kind: spike
 type: bug
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -61,3 +61,7 @@ Add a focused unit test that simulates failed handshake / disconnect and asserts
 ## Blocked decisions
 
 Severity after investigation — may close as no-op or optional cleanup.
+
+## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)

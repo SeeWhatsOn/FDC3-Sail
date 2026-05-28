@@ -3,7 +3,7 @@ title: "Replace fixed sleeps in in-memory transport tests"
 slug: fix-in-memory-transport-test-timing
 kind: spike
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -61,3 +61,7 @@ Spike output: short note in work item `## Loop history` or PR description; follo
 ## Blocked decisions
 
 Whether `InMemoryTransport` needs a public `flush()` or `whenIdle()` helper for tests.
+
+## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)

@@ -2,7 +2,7 @@
 title: "Add InMemoryTransport peer lifecycle test coverage"
 slug: add-in-memory-transport-lifecycle-tests
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -63,6 +63,8 @@ RED: add Vitest cases only; run `npm test -w @finos/sail-desktop-agent` focused 
 (none)
 
 ## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)
 
 ## Staged for review
 

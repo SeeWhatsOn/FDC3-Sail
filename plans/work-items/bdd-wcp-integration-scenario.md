@@ -2,7 +2,7 @@
 title: "BDD or integration scenario through real WCPConnector"
 slug: bdd-wcp-integration-scenario
 type: enhancement
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -58,3 +58,7 @@ Coordinate with platform team to avoid duplicating Task 6 suite.
 ## Blocked decisions
 
 Owner: `@finos/sail-desktop-agent` vs `@finos/sail-platform-api` for release gate.
+
+## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)

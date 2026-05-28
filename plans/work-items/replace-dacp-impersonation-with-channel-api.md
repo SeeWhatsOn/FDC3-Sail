@@ -1,19 +1,19 @@
 ---
 title: "Replace sendDACPMessageOnBehalfOf with intention-level channel API"
 slug: replace-dacp-impersonation-with-channel-api
+kind: task
 type: feature
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
 file_manifest:
-  - packages/sail-platform-api/src/sail-browser-desktop-agent.ts
   - packages/sail-platform-api/src/sail-platform.ts
+  - packages/sail-platform-api/src/sail-browser-desktop-agent.ts
   - packages/sail-platform-api/src/index.ts
   - packages/sail-platform-api/README.md
-  - packages/sail-desktop-agent/src/browser/wcp/wcp-connector.ts
+  - website/docs/architecture/channel-selection.md
   - packages/sail-desktop-agent/src/browser/wcp/wcp-message-routing.ts
-  - packages/sail-desktop-agent/src/core/dacp-protocol/dacp-messages.ts
 depends_on: []
 integration_branch: ""
 branch: feature/platform-channel-api-no-impersonation
@@ -23,17 +23,38 @@ tags: [api, fdc3, security]
 
 ## Goal
 
-Remove authority-bypass risk from raw `(instanceId, message: unknown)` DACP impersonation and expose typed, lifecycle-safe channel operations aligned with WCP validation.
+Host chrome **set/get** for per-app user channels lives in **`@finos/sail-platform-api`** only. Remove public raw DACP impersonation; keep **`@finos/sail-desktop-agent`** protocol-pure (handlers + WCP, no Sail UI).
 
 ## User or system context
 
-`sail-browser-desktop-agent.ts` exposes `sendDACPMessageOnBehalfOf`, casts private `DesktopAgent.handleMessage`, and bypasses `bridgeTransports` validation/enrichment. UI or plugins could fabricate any app-originated protocol message. `SailPlatform.changeAppChannel` is the preferred direction but needs tightening.
+### Layering (human decision 2026-05-27)
+
+| Layer | Channel chrome responsibility |
+|-------|------------------------------|
+| **sail-web** | Renders `ChannelSelector`; calls platform APIs |
+| **sail-platform-api** | `changeAppChannel`, `getUserChannels`, **`getAppUserChannel`** (add), `onChannelChanged`; typed join/leave dispatch |
+| **sail-desktop-agent** | DACP handlers, state, events — **no** “on behalf of” public escape hatch |
+
+### Set / get today
+
+- **Set:** `SailPlatform.changeAppChannel(instanceId, channelId \| null)` — yes; typed join/leave toward DA.
+- **Get list:** `getUserChannels()` — yes.
+- **Get per instance:** sail-web uses **connection store** updated from `channelChanged` events — works but platform should expose **`getAppUserChannel(instanceId)`** reading agent state (no DACP round-trip, no impersonation).
+- **App iframe get:** app calls `fdc3.getCurrentChannel()` over MessagePort — unchanged.
+
+### Anti-pattern
+
+`sendDACPMessageOnBehalfOf(instanceId, unknown)` on `createSailBrowserDesktopAgent` — unused in repo; bypasses WCP. Remove or restrict to internal platform use replaced by typed APIs.
 
 ## Reference docs
 
-- `plans/project-docs.md`
+- `website/docs/architecture/channel-selection.md` (Pattern A vs B — maintain with this work)
 - `plans/prd-transport-platform-hardening.md`
-- `dacp-messages.ts` for `AppRequestMessage` unions
+- `plans/project-docs.md`
+
+## Parent context
+
+Transport/platform hardening: authority-safe host integration. FDC3 allows host-owned channel UI when `channelSelectorUrl: false`; implementation belongs in platform-api, not desktop-agent public surface.
 
 ## Parent context
 
@@ -41,47 +62,66 @@ From `plans/prd-transport-platform-hardening.md`: Harden InMemory/MessagePort tr
 
 ## Behavior spec
 
-Given a started Sail browser platform and a connected app instance
-When the consumer calls `platform.channels.setAppChannel(instanceId, channelId)` or equivalent public API
-Then the agent updates membership using validated app-originated request construction (metadata generated internally) and the call resolves or rejects with a clear error
+**Set — host chrome (existing, harden)**
 
-Given platform not started
-When any channel mutation API is invoked
-Then the call rejects before mutating Desktop Agent state (`ensureStarted` semantics)
+Given started `SailPlatform` and connected `instanceId`
+When host calls `changeAppChannel(instanceId, channelId)`
+Then DA processes join/leave via handlers; app receives `userChannelChanged`; connector emits `channelChanged` for chrome
 
-Given a need to dispatch app requests from the connector layer
-When an internal or public escape hatch is required
-Then it lives in `@finos/sail-desktop-agent` (e.g. `wcpConnector.dispatchAppRequest`) with type narrowing and disallowed message classes — not in platform-api as raw `unknown`
+**Get — host chrome (add)**
 
-Given `sendDACPMessageOnBehalfOf` existed on the public surface
+Given started platform and valid `instanceId`
+When host calls `getAppUserChannel(instanceId)`
+Then returns `string | null` from agent state (`currentUserChannel`) without sending DACP as the app
+
+**Remove impersonation**
+
+Given `sendDACPMessageOnBehalfOf` on public browser factory export
 When this work ships
-Then it is removed or deprecated with migration notes and call sites updated in-repo
+Then removed or deprecated; all in-repo hosts use `SailPlatform` channel APIs
+
+**Desktop-agent purity**
+
+Given need to dispatch app-originated requests from connector
+When required for platform join/leave
+Then use existing transport send + typed message builders in **platform-api** (current `changeAppChannel` pattern) — do **not** add Sail-specific public APIs on `DesktopAgent` for chrome
+
+**Documentation**
+
+Given `website/docs/architecture/channel-selection.md`
+When this work ships
+Then doc describes Pattern A (host chrome) vs Pattern B (`channelSelectorUrl`), set/get/listen table, and platform vs DA boundaries (keep in sync with code)
 
 ## Out of scope
 
-- Full `platform.channels.onChanged` event surface (follow-up unless required by in-repo call sites).
-- Server/worker transport implementations beyond what existing tests cover.
+- Implementing Pattern B selector iframe in sail-web (handshake URL path only; doc describes it).
+- `platform.channels.onChanged` event namespace unless required by call sites.
+- Docusaurus site build wiring beyond adding/updating markdown under `website/docs/`.
 
 ## TypeScript interfaces
 
 ```typescript
-// Target shape (illustrative — align with existing SailPlatform)
-setAppChannel(instanceId: string, channelId: string | null): Promise<void>
-// Optional future: createSelectionRequest(instanceId) — not required unless PRD call sites need it
-```
+// sail-platform-api — add
+getAppUserChannel(instanceId: string): string | null
 
-Use `AppRequestMessage` / narrowed unions from `dacp-messages.ts` for any low-level dispatch in desktop-agent.
+// existing
+changeAppChannel(instanceId: string, channelId: string | null): Promise<void>
+getUserChannels(): BrowserTypes.Channel[]
+```
 
 ## Test guidance
 
-RED: platform-api unit tests for started/not-started, invalid instanceId, success path; desktop-agent/WCP tests if dispatch moves to connector. Grep repo for `sendDACPMessageOnBehalfOf` and update consumers.
+Platform-api unit tests: `getAppUserChannel` after join/leave; `changeAppChannel` started/not-started; grep remove `sendDACPMessageOnBehalfOf`. No new chrome APIs on `DesktopAgent` public class.
 
 ## Blocked decisions
 
-- Whether a documented low-level `dispatchAppRequest` is required in v1 or only intention-level channel API suffices.
-- Deprecation window if external consumers exist outside repo.
+- Whether `getAppUserChannel` reads via package-private agent accessor vs. short-lived platform-only selector export from desktop-agent (prefer minimal read hook, not DACP).
 
 ## Loop history
+
+- 2026-05-27: revised — scope platform-api set/get + docs; DA stays pure; channel-selection.md added
+- 2026-05-27: revised per human — host chrome layering, Docusaurus two-pattern doc
+- 2026-05-27: approved by human
 
 ## Staged for review
 

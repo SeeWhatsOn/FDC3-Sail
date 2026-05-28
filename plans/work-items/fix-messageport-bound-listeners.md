@@ -2,7 +2,7 @@
 title: "Fix MessagePortTransport listener removal"
 slug: fix-messageport-bound-listeners
 type: bug
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -64,6 +64,8 @@ RED: spy `addEventListener` / `removeEventListener` and assert referential equal
 (none)
 
 ## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)
 
 ## Staged for review
 
