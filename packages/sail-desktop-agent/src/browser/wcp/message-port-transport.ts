@@ -44,6 +44,8 @@ export class MessagePortTransport implements Transport {
   private messageHandler?: MessageHandler
   private disconnectHandler?: DisconnectHandler
   private connected: boolean = true
+  /** True after listeners are removed and the port is closed (idempotent cleanup guard). */
+  private portDisposed: boolean = false
   private readonly boundHandleMessage = this.handleMessage.bind(this)
   private readonly boundHandleError = this.handleError.bind(this)
 
@@ -151,20 +153,35 @@ export class MessagePortTransport implements Transport {
    * Disconnect the transport and clean up resources
    */
   disconnect(): void {
-    if (!this.connected) {
+    if (this.portDisposed && !this.connected) {
       return
     }
 
+    const wasConnected = this.connected
     this.connected = false
+    this.disposePort()
 
-    // Remove event listeners
+    if (wasConnected) {
+      this.notifyDisconnectHandler()
+    }
+  }
+
+  /**
+   * Remove port listeners and close the port exactly once.
+   */
+  private disposePort(): void {
+    if (this.portDisposed) {
+      return
+    }
+
+    this.portDisposed = true
+
     this.port.removeEventListener("message", this.boundHandleMessage)
     this.port.removeEventListener("messageerror", this.boundHandleError)
-
-    // Close the port
     this.port.close()
+  }
 
-    // Call disconnect handler
+  private notifyDisconnectHandler(): void {
     if (this.disconnectHandler) {
       try {
         this.disconnectHandler()
@@ -242,21 +259,19 @@ export class MessagePortTransport implements Transport {
   }
 
   /**
-   * Handle disconnection
+   * Handle disconnection (error path or postMessage failure)
    */
   private handleDisconnect(): void {
-    if (!this.connected) {
+    if (this.portDisposed && !this.connected) {
       return
     }
 
+    const wasConnected = this.connected
     this.connected = false
+    this.disposePort()
 
-    if (this.disconnectHandler) {
-      try {
-        this.disconnectHandler()
-      } catch (error) {
-        consoleLogger.error("Error in disconnect handler:", error)
-      }
+    if (wasConnected) {
+      this.notifyDisconnectHandler()
     }
   }
 }
