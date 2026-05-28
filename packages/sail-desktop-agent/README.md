@@ -260,8 +260,16 @@ interface Transport {
 
 **Built-in Transports:**
 
-- `InMemoryTransport` - Same-process communication
+- `InMemoryTransport` - Same-process communication (see constraints below)
 - `MessagePortTransport` - Browser MessagePort API (WCP iframe connections). Inbound `messageerror` is logged only; outbound `postMessage` errors trigger full disconnect cleanup.
+
+#### InMemoryTransport constraints
+
+`InMemoryTransport` deep-clones every message with the platform **`structuredClone`** API. Runtimes without `structuredClone` cannot use this transport.
+
+For a browser or same-window production bridge, integrators **must** connect the Desktop Agent and WCP Connector with `createInMemoryTransportPair()` (one linked endpoint per side). `createBrowserDesktopAgent()` does this automatically. The **default** unpaired `new InMemoryTransport()` used when `DesktopAgent` is constructed without a `transport` option is **not for** production browser bridge use — it has no peer and `send()` cannot deliver DACP responses.
+
+FDC3 Sail is intended as a **control plane** for intents, channels, and context **coordination** (for example Custom-style dashboards with on the order of ~30 widget identities). It is **not for** high-frequency market-data streaming or fanout workloads; use dedicated data buses for those patterns.
 
 **Platform SDK Transports:**
 

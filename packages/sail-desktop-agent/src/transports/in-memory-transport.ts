@@ -4,8 +4,9 @@
  * Transport implementation for same-process communication.
  * Used when Desktop Agent and connection manager are in the same process.
  *
- * This transport is environment-agnostic and can be used in any JavaScript
- * runtime (browser, Node.js, Deno, etc.).
+ * Environment-agnostic when `structuredClone` is available (browser, Node.js 17+,
+ * Deno, etc.). **Requires `structuredClone` at runtime** for message cloning;
+ * runtimes without it cannot use this transport.
  */
 
 import type { Transport, MessageHandler, DisconnectHandler } from "../core/interfaces/transport"
@@ -14,9 +15,9 @@ import { consoleLogger } from "../core/interfaces/logger"
 /**
  * In-memory transport for same-process communication.
  *
+ * Requires `structuredClone` at runtime to deep-clone messages before delivery.
  * This transport enables direct function calls between two components
- * in the same process. Messages are deep-cloned and delivered asynchronously
- * to the peer handler.
+ * in the same process. Messages are delivered asynchronously to the peer handler.
  *
  * Commonly used for:
  * - Browser Desktop Agent + WCP Connector in same window

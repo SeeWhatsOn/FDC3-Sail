@@ -132,19 +132,16 @@ export interface DesktopAgentConfig {
  * transport mechanisms, UI frameworks, or runtime environments. All external
  * concerns are injected via the constructor.
  *
+ * When no `transport` is provided, the constructor defaults to an unpaired
+ * `new InMemoryTransport()`. That default is not suitable for production
+ * browser bridge use — browser deployments must use `createInMemoryTransportPair()`
+ * (see `createBrowserDesktopAgent()` in `@finos/sail-desktop-agent/browser`).
+ *
  * @example
  * ```typescript
- * const agent = new DesktopAgent()
- *
- * agent.start()
- *
- * OR
- *
- * const agent = new DesktopAgent({
- *   transport: new InMemoryTransport,
- *   appLauncher: new BrowserAppLauncher(),
- * })
- *
+ * // Browser same-window: prefer createBrowserDesktopAgent() or a transport pair
+ * const [daTransport] = createInMemoryTransportPair()
+ * const agent = new DesktopAgent({ transport: daTransport })
  * agent.start()
  * ```
  */
