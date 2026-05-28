@@ -186,6 +186,67 @@ describe("cleanupDACPHandlers", () => {
     expect(getState().open.pendingWithContext["uuid-0"]).toBeUndefined()
     expect(getPendingOpenWithContextTimeoutCount()).toBe(0)
   })
+
+  it("clears open-with-context pending state and timeouts when the source instance disconnects without sending an error", () => {
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    state = connectInstance(state, {
+      instanceId: "a1",
+      appId: "launcherApp",
+      metadata: { appId: "launcherApp", name: "launcherApp" },
+    })
+    state = connectInstance(state, {
+      instanceId: "uuid-0",
+      appId: "chartApp",
+      metadata: { appId: "chartApp", name: "chartApp" },
+    })
+    state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
+    state = updateInstanceState(state, "uuid-0", AppInstanceState.CONNECTED)
+
+    const transport = new MockTransport()
+    const { context, getState } = createDACPTestContext({
+      instanceId: "a1",
+      initialState: state,
+    })
+    const contextWithTransport = { ...context, transport }
+
+    const launchContext: Context = {
+      type: "fdc3.instrument",
+      id: { ticker: "AAPL" },
+    }
+
+    const message = {
+      type: "openRequest",
+      meta: {
+        requestUuid: "open-req-source-disconnect",
+        timestamp: new Date(),
+      },
+      payload: {
+        app: { appId: "chartApp", instanceId: "uuid-0" },
+        context: launchContext,
+      },
+    } as BrowserTypes.OpenRequest
+
+    registerOpenWithContext(
+      message,
+      { appId: "chartApp", instanceId: "uuid-0" },
+      launchContext,
+      contextWithTransport
+    )
+
+    expect(getState().open.pendingWithContext["uuid-0"]?.length).toBe(1)
+    expect(getPendingOpenWithContextTimeoutCount()).toBe(1)
+
+    cleanupDACPHandlers(contextWithTransport)
+
+    expect(getState().open.pendingWithContext["uuid-0"]).toBeUndefined()
+    expect(getPendingOpenWithContextTimeoutCount()).toBe(0)
+
+    const openErrorResponses = transport.sentMessages.filter(message => {
+      const typed = message as { type?: string; payload?: { error?: string } }
+      return typed.type === "openResponse" && typed.payload?.error !== undefined
+    })
+    expect(openErrorResponses).toHaveLength(0)
+  })
 })
 
 describe("heartbeat cleanup on disconnect", () => {
