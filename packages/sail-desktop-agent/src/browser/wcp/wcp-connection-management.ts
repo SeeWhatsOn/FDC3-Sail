@@ -1,6 +1,10 @@
 import type { MessagePortTransport } from "./message-port-transport"
 import type { WebConnectionProtocolMessage } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import type { AppConnectionMetadata, WCPConnectorEvents, WCPConnectorOptions } from "./wcp-types"
+import type {
+  AppConnectionMetadata,
+  ResolvedWCPConnectorOptions,
+  WCPConnectorEvents,
+} from "./wcp-types"
 import type { Logger } from "../../core/interfaces/logger"
 
 type EmitFunction = <EventName extends keyof WCPConnectorEvents>(
@@ -9,7 +13,7 @@ type EmitFunction = <EventName extends keyof WCPConnectorEvents>(
 ) => void
 
 export interface WCPConnectionContext {
-  options: Required<WCPConnectorOptions>
+  options: ResolvedWCPConnectorOptions
   connections: Map<string, AppConnectionMetadata>
   messagePortTransports: Map<string, MessagePortTransport>
   transportToInstanceId: Map<MessagePortTransport, string>

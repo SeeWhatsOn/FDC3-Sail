@@ -140,6 +140,15 @@ export interface WCPConnectorOptions {
 }
 
 /**
+ * WCPConnectorOptions with required defaults applied, except `allowedOrigins`
+ * which stays optional — undefined means permissive (allow all origins).
+ */
+export type ResolvedWCPConnectorOptions = Required<
+  Omit<WCPConnectorOptions, "allowedOrigins">
+> &
+  Pick<WCPConnectorOptions, "allowedOrigins">
+
+/**
  * Metadata about a connected app instance
  */
 export interface AppConnectionMetadata {
