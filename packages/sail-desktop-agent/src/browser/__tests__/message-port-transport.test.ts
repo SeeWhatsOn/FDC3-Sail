@@ -128,6 +128,73 @@ describe("MessagePortTransport", () => {
     })
   })
 
+  describe("messageerror policy (lenient)", () => {
+    it("keeps the transport connected when messageerror fires", () => {
+      const transport = new MessagePortTransport(port1)
+
+      port1.dispatchEvent(new MessageEvent("messageerror", { data: null }))
+
+      expect(transport.isConnected()).toBe(true)
+    })
+
+    it("does not call disconnect handler when messageerror fires", () => {
+      const transport = new MessagePortTransport(port1)
+      const disconnectHandler = vi.fn()
+      transport.onDisconnect(disconnectHandler)
+
+      port1.dispatchEvent(new MessageEvent("messageerror", { data: null }))
+
+      expect(disconnectHandler).not.toHaveBeenCalled()
+    })
+
+    it("logs messageerror at error level without tearing down the connection", () => {
+      const transport = new MessagePortTransport(port1)
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+      const errorEvent = new MessageEvent("messageerror", { data: null })
+
+      port1.dispatchEvent(errorEvent)
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "[DACP ERROR] MessagePort error:",
+        errorEvent
+      )
+      expect(transport.isConnected()).toBe(true)
+
+      consoleErrorSpy.mockRestore()
+    })
+
+    it("does not close the port or remove listeners when messageerror fires", () => {
+      const tracker = createListenerTracker(port1)
+      const transport = new MessagePortTransport(port1)
+      const closeSpy = vi.spyOn(port1, "close")
+
+      port1.dispatchEvent(new MessageEvent("messageerror", { data: null }))
+
+      expect(closeSpy).not.toHaveBeenCalled()
+      expect(tracker.listenerCount("message")).toBe(1)
+      expect(tracker.listenerCount("messageerror")).toBe(1)
+      expect(transport.isConnected()).toBe(true)
+    })
+
+    it("continues to deliver messages after messageerror", () => {
+      return new Promise<void>(resolve => {
+        const transport1 = new MessagePortTransport(port1)
+        const transport2 = new MessagePortTransport(port2)
+        const testMessage = { type: "after-messageerror", payload: "still-works" }
+
+        port2.dispatchEvent(new MessageEvent("messageerror", { data: null }))
+        expect(transport2.isConnected()).toBe(true)
+
+        transport2.onMessage(msg => {
+          expect(msg).toEqual(testMessage)
+          resolve()
+        })
+
+        transport1.send(testMessage)
+      })
+    })
+  })
+
   describe("error-driven disconnect (postMessage failure)", () => {
     it("closes the MessagePort when postMessage throws", () => {
       const transport = new MessagePortTransport(port1)
