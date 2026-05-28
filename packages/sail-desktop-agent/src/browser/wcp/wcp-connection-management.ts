@@ -117,10 +117,10 @@ export function disconnectAppByInstanceId(context: WCPConnectionContext, instanc
 export function disconnectApp(context: WCPConnectionContext, instanceId: string): void {
   const appTransport = context.messagePortTransports.get(instanceId)
   if (appTransport) {
-    appTransport.disconnect()
+    // Unregister before disconnect() so onDisconnect does not re-enter disconnectApp
     context.messagePortTransports.delete(instanceId)
-    // Clean up reverse lookup
     context.transportToInstanceId.delete(appTransport)
+    appTransport.disconnect()
   }
 
   context.connections.delete(instanceId)
