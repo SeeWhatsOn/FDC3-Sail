@@ -44,6 +44,8 @@ export class InMemoryTransport implements Transport {
   private disconnectHandler?: DisconnectHandler
   private deliveryErrorHandler?: DeliveryErrorHandler
   private connected: boolean = true
+  /** True when the linked peer called disconnect(); used for send() error text on the surviving endpoint. */
+  private tornDownByPeer = false
   private peer?: InMemoryTransport
 
   /**
@@ -73,6 +75,11 @@ export class InMemoryTransport implements Transport {
    */
   send(message: unknown): void {
     if (!this.connected) {
+      if (this.tornDownByPeer) {
+        throw new Error(
+          "Cannot send message: InMemoryTransport is disconnected\nCannot send message: Peer transport is disconnected"
+        )
+      }
       throw new Error("Cannot send message: InMemoryTransport is disconnected")
     }
 
@@ -155,39 +162,52 @@ export class InMemoryTransport implements Transport {
   /**
    * Disconnect the transport
    *
-   * This will also notify the peer transport of the disconnection.
+   * Bilaterally tears down the linked peer synchronously so neither endpoint
+   * remains half-open. Safe to call multiple times (idempotent).
    */
   disconnect(): void {
     if (!this.connected) {
       return
     }
 
+    const peer = this.peer
     this.connected = false
-
-    // Notify peer of disconnection
-    if (this.peer && this.peer.isConnected()) {
-      setTimeout(() => {
-        if (this.peer?.disconnectHandler) {
-          try {
-            this.peer.disconnectHandler()
-          } catch (error) {
-            consoleLogger.error("Error in peer disconnect handler:", error)
-          }
-        }
-      }, 0)
-    }
-
-    // Call local disconnect handler
-    if (this.disconnectHandler) {
-      try {
-        this.disconnectHandler()
-      } catch (error) {
-        consoleLogger.error("Error in disconnect handler:", error)
-      }
-    }
-
-    // Clear peer reference
     this.peer = undefined
+
+    if (peer?.isConnected()) {
+      peer.tearDownFromPeerDisconnect()
+    }
+
+    this.invokeDisconnectHandler()
+  }
+
+  /**
+   * Peer-initiated teardown: mark disconnected, clear refs, notify handler once.
+   * Does not recurse back to the initiator (already disconnected).
+   *
+   * @internal
+   */
+  private tearDownFromPeerDisconnect(): void {
+    if (!this.connected) {
+      return
+    }
+
+    this.connected = false
+    this.tornDownByPeer = true
+    this.peer = undefined
+    this.invokeDisconnectHandler()
+  }
+
+  private invokeDisconnectHandler(): void {
+    if (!this.disconnectHandler) {
+      return
+    }
+
+    try {
+      this.disconnectHandler()
+    } catch (error) {
+      consoleLogger.error("Error in disconnect handler:", error)
+    }
   }
 
   /**
