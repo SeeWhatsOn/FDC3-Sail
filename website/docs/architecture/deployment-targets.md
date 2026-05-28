@@ -8,14 +8,14 @@ FDC3 Sail supports two deployment targets for the Desktop Agent: a **Desktop Pro
 
 ## Overview
 
-| | DPWA (`sail-web`) | Electron (`sail-electron`) |
+| Capability | DPWA (`sail-web`) | Electron (`sail-electron`) |
 |---|---|---|
 | **Runtime** | Modern browser (Chrome, Edge) | Chromium bundled in Electron |
 | **Installation** | Installable PWA or opened in browser | Native installer / binary |
 | **OS integration** | Limited (web sandbox) | Full (file system, tray, notifications) |
-| **Auto-update** | Automatic via browser cache | Requires update mechanism |
+| **Updates** | Automatic via browser cache | Requires update mechanism |
 | **Distribution** | URL / CDN | Installer package |
-| **FDC3 compliance** | Full FDC3 2.2 | Full FDC3 2.2 |
+| **FDC3 compliance** | Full FDC3 2.2 support | Full FDC3 2.2 support |
 | **App isolation** | Browser cross-origin sandboxing | Electron renderer process isolation |
 
 ## How Shared Architecture Works
