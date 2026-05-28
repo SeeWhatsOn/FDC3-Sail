@@ -80,6 +80,42 @@ function extractDirectoryTreeBlock(markdown: string): string {
   return match?.[1] ?? ""
 }
 
+function extractMarkdownSection(markdown: string, heading: string): string {
+  const headingIndex = markdown.indexOf(heading)
+  if (headingIndex === -1) {
+    return ""
+  }
+  const afterHeading = markdown.slice(headingIndex + heading.length)
+  const nextHeading = afterHeading.search(/\n## /)
+  return nextHeading === -1 ? afterHeading : afterHeading.slice(0, nextHeading)
+}
+
+function readPackageSource(relativePath: string): string {
+  return readFileSync(path.join(packageRoot, relativePath), "utf-8")
+}
+
+function extractLeadingFileDoc(source: string): string {
+  return source.match(/^\/\*\*[\s\S]*?\*\//)?.[0] ?? ""
+}
+
+function extractBlockDocBefore(source: string, anchor: string): string {
+  const anchorIndex = source.indexOf(anchor)
+  if (anchorIndex === -1) {
+    return ""
+  }
+  const before = source.slice(0, anchorIndex)
+  const docStart = before.lastIndexOf("/**")
+  if (docStart === -1) {
+    return ""
+  }
+  const docEnd = before.indexOf("*/", docStart)
+  return docEnd === -1 ? "" : before.slice(docStart, docEnd + 2)
+}
+
+function extractClassDoc(source: string, className: string): string {
+  return extractBlockDocBefore(source, `export class ${className}`)
+}
+
 function expectedSubpathForSymbol(symbol: string): "" | "/browser" | "/transports" {
   if (BROWSER_SUBPATH_SYMBOLS.has(symbol)) {
     return "/browser"
@@ -217,6 +253,47 @@ describe("README.md integrator contract", () => {
     })
   })
 
+  describe("in-memory transport documentation", () => {
+    const transportSection = extractMarkdownSection(readme, "## Transport Interface")
+
+    it("states InMemoryTransport requires structuredClone at runtime", () => {
+      expect(
+        transportSection,
+        "Transport section should document structuredClone as a runtime requirement for InMemoryTransport",
+      ).toMatch(/structuredClone|structured\s+clone/i)
+    })
+
+    it("directs browser integrators to createInMemoryTransportPair for in-process bridge", () => {
+      expect(
+        transportSection,
+        "Transport section should require createInMemoryTransportPair() for browser / same-window production bridge",
+      ).toMatch(
+        /browser.*(?:must|should).*createInMemoryTransportPair|createInMemoryTransportPair\(\).*(?:browser|production|same[- ]window)/i,
+      )
+    })
+
+    it("warns that default unpaired InMemoryTransport is not for production browser bridge", () => {
+      expect(
+        transportSection,
+        "Transport section should warn against using unpaired new InMemoryTransport() as the production browser bridge",
+      ).toMatch(
+        /(?:default|unpaired|constructor|new\s+InMemoryTransport\(\)).*not\s+(?:for|suitable).*(?:production|browser)|not\s+(?:for|suitable)\s+production.*(?:browser|bridge).*InMemoryTransport/i,
+      )
+    })
+
+    it("frames FDC3 as coordination control plane, not high-frequency market-data fanout", () => {
+      expect(
+        transportSection,
+        "Transport section should describe FDC3 as a control/coordination plane",
+      ).toMatch(/control\s+plane|coordination/i)
+
+      expect(
+        transportSection,
+        "Transport section should clarify FDC3 is not for market-data or high-frequency streaming fanout",
+      ).toMatch(/not\s+(?:for|a).*(?:market[- ]?data|high[- ]frequency|fanout|streaming)/i)
+    })
+  })
+
   describe("directory structure tree", () => {
     const directoryTree = extractDirectoryTreeBlock(readme)
 
@@ -244,6 +321,57 @@ describe("README.md integrator contract", () => {
         expect(directoryTree).toContain(readmeFragment)
         expect(existsSync(path.join(packageRoot, diskPath))).toBe(true)
       },
+    )
+  })
+})
+
+describe("in-memory transport TSDoc contract", () => {
+  const inMemoryTransportSource = readPackageSource("src/transports/in-memory-transport.ts")
+  const inMemoryFileDoc = extractLeadingFileDoc(inMemoryTransportSource)
+  const inMemoryClassDoc = extractClassDoc(inMemoryTransportSource, "InMemoryTransport")
+  const desktopAgentSource = readPackageSource("src/core/desktop-agent.ts")
+  const desktopAgentClassDoc = extractClassDoc(desktopAgentSource, "DesktopAgent")
+
+  it("documents structuredClone as a runtime requirement in in-memory-transport.ts", () => {
+    const transportDocs = `${inMemoryFileDoc}\n${inMemoryClassDoc}`
+
+    expect(
+      transportDocs,
+      "in-memory-transport.ts file/class docs must state structuredClone is required",
+    ).toMatch(/requires?\s+`?structuredClone`?|structuredClone\s+is\s+required/i)
+  })
+
+  it("pairs broad runtime support claims with structuredClone requirement in file header", () => {
+    const claimsBroadRuntimeSupport =
+      /any JavaScript[\s\S]*?runtime/i.test(inMemoryFileDoc) ||
+      /environment-agnostic/i.test(inMemoryFileDoc)
+
+    if (claimsBroadRuntimeSupport) {
+      expect(
+        inMemoryFileDoc,
+        "File header must not claim universal runtime support without structuredClone requirement",
+      ).toMatch(/structuredClone/i)
+    }
+  })
+
+  it("documents browser production must use createInMemoryTransportPair in in-memory-transport.ts", () => {
+    const pairFactoryDoc = extractBlockDocBefore(
+      inMemoryTransportSource,
+      "export function createInMemoryTransportPair",
+    )
+
+    expect(
+      pairFactoryDoc,
+      "createInMemoryTransportPair TSDoc should direct browser/production integrators to the factory",
+    ).toMatch(/browser|production|same[- ]window|same[- ]process/i)
+  })
+
+  it("documents default unpaired InMemoryTransport is not for production browser bridge in desktop-agent.ts", () => {
+    expect(
+      desktopAgentClassDoc,
+      "DesktopAgent class docs must warn that default unpaired InMemoryTransport is not for production browser bridge",
+    ).toMatch(
+      /(?:default|unpaired|constructor|new\s+InMemoryTransport\(\)).*not\s+(?:for|suitable).*(?:production|browser)|not\s+(?:for|suitable)\s+production.*(?:browser|bridge).*InMemoryTransport/i,
     )
   })
 })
