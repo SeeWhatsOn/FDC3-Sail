@@ -347,6 +347,25 @@ describe("InMemoryTransport", () => {
       expect(transportB.isConnected()).toBe(false)
     })
 
+    it("when the peer initiates disconnect, the surviving endpoint reports disconnected and cannot send", async () => {
+      const [transportA, transportB] = createInMemoryTransportPair()
+      const onDisconnectA = vi.fn()
+      transportA.onDisconnect(onDisconnectA)
+
+      transportB.disconnect()
+      await flushAsyncDelivery()
+
+      expect(transportA.isConnected()).toBe(false)
+      expect(transportB.isConnected()).toBe(false)
+      expect(onDisconnectA).toHaveBeenCalledTimes(1)
+      expect(() => transportA.send({ type: "test" })).toThrow(
+        "Cannot send message: InMemoryTransport is disconnected"
+      )
+      expect(() => transportB.send({ type: "test" })).toThrow(
+        "Cannot send message: InMemoryTransport is disconnected"
+      )
+    })
+
     it("invokes each side disconnect handler at most once when one endpoint disconnects", async () => {
       const [transportA, transportB] = createInMemoryTransportPair()
       const onDisconnectA = vi.fn()
