@@ -262,10 +262,6 @@ describe("InMemoryTransport", () => {
       expect(handler).toHaveBeenCalledTimes(1)
     })
 
-    // Note: Peer notification on disconnect is not currently implemented
-    // because the peer reference is cleared immediately. This is acceptable
-    // since disconnection can be detected via send() throwing an error.
-
     it("should catch errors in disconnect handler", () => {
       const [transport1] = createInMemoryTransportPair()
 
@@ -337,6 +333,86 @@ describe("InMemoryTransport", () => {
       expect(() => transport2.send({ type: "test" })).toThrow(
         "Cannot send message: Peer transport is disconnected"
       )
+    })
+  })
+
+  describe("disconnect peer teardown", () => {
+    it("marks the peer transport disconnected when the local endpoint disconnects", async () => {
+      const [transportA, transportB] = createInMemoryTransportPair()
+
+      transportA.disconnect()
+      await flushAsyncDelivery()
+
+      expect(transportA.isConnected()).toBe(false)
+      expect(transportB.isConnected()).toBe(false)
+    })
+
+    it("invokes each side disconnect handler at most once when one endpoint disconnects", async () => {
+      const [transportA, transportB] = createInMemoryTransportPair()
+      const onDisconnectA = vi.fn()
+      const onDisconnectB = vi.fn()
+      transportA.onDisconnect(onDisconnectA)
+      transportB.onDisconnect(onDisconnectB)
+
+      transportA.disconnect()
+      await flushAsyncDelivery()
+
+      expect(onDisconnectA).toHaveBeenCalledTimes(1)
+      expect(onDisconnectB).toHaveBeenCalledTimes(1)
+    })
+
+    it("clears peer references on both endpoints so neither can send after disconnect", async () => {
+      const [transportA, transportB] = createInMemoryTransportPair()
+
+      transportA.disconnect()
+      await flushAsyncDelivery()
+
+      expect(() => transportA.send({ type: "test" })).toThrow(
+        "Cannot send message: InMemoryTransport is disconnected"
+      )
+      expect(() => transportB.send({ type: "test" })).toThrow(
+        "Cannot send message: InMemoryTransport is disconnected"
+      )
+    })
+
+    it("does not re-invoke disconnect handlers when local endpoint disconnects after peer disconnected", async () => {
+      const [transportA, transportB] = createInMemoryTransportPair()
+      const onDisconnectA = vi.fn()
+      const onDisconnectB = vi.fn()
+      transportA.onDisconnect(onDisconnectA)
+      transportB.onDisconnect(onDisconnectB)
+
+      transportB.disconnect()
+      await flushAsyncDelivery()
+
+      expect(onDisconnectA).toHaveBeenCalledTimes(1)
+      expect(onDisconnectB).toHaveBeenCalledTimes(1)
+
+      transportA.disconnect()
+      await flushAsyncDelivery()
+
+      expect(onDisconnectA).toHaveBeenCalledTimes(1)
+      expect(onDisconnectB).toHaveBeenCalledTimes(1)
+    })
+
+    it("is idempotent when disconnect is called again on an already-disconnected endpoint", async () => {
+      const [transportA, transportB] = createInMemoryTransportPair()
+      const onDisconnectA = vi.fn()
+      const onDisconnectB = vi.fn()
+      transportA.onDisconnect(onDisconnectA)
+      transportB.onDisconnect(onDisconnectB)
+
+      transportA.disconnect()
+      await flushAsyncDelivery()
+
+      expect(onDisconnectA).toHaveBeenCalledTimes(1)
+      expect(onDisconnectB).toHaveBeenCalledTimes(1)
+
+      transportA.disconnect()
+      await flushAsyncDelivery()
+
+      expect(onDisconnectA).toHaveBeenCalledTimes(1)
+      expect(onDisconnectB).toHaveBeenCalledTimes(1)
     })
   })
 
