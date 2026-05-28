@@ -9,10 +9,11 @@
 
 import {
   DesktopAgent,
-  type DesktopAgentConfig,
   type AppLauncher,
   type DirectoryApp,
   type Transport,
+  resolveDesktopAgentConfig,
+  type SailImplementationMetadata,
 } from "@finos/sail-desktop-agent"
 import { WCPConnector, type AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
 import { createInMemoryTransportPair } from "@finos/sail-desktop-agent/transports"
@@ -84,6 +85,26 @@ export interface SailPlatformConfig {
    * Custom user channels (defaults to standard FDC3 channels).
    */
   userChannels?: BrowserTypes.Channel[]
+
+  /**
+   * Override FDC3 implementation metadata (defaults to FDC3-Sail product values).
+   */
+  implementationMetadata?: Partial<SailImplementationMetadata>
+
+  /**
+   * Timeout (ms) to wait for a context listener after open-with-context.
+   */
+  openContextListenerTimeoutMs?: number
+
+  /**
+   * Heartbeat interval (ms).
+   */
+  heartbeatIntervalMs?: number
+
+  /**
+   * Heartbeat timeout (ms).
+   */
+  heartbeatTimeoutMs?: number
 
   // ===== Storage =====
 
@@ -209,13 +230,16 @@ export class SailPlatform {
     })
 
     // Build Desktop Agent configuration
-    const daConfig: DesktopAgentConfig = {
+    const daConfig = resolveDesktopAgentConfig({
       transport: daTransport,
       appLauncher: this.config.appLauncher,
       userChannels: this.config.userChannels,
-      // Wire intent resolution to WCPConnector for UI-based resolution
+      implementationMetadata: this.config.implementationMetadata,
+      openContextListenerTimeoutMs: this.config.openContextListenerTimeoutMs,
+      heartbeatIntervalMs: this.config.heartbeatIntervalMs,
+      heartbeatTimeoutMs: this.config.heartbeatTimeoutMs,
       requestIntentResolution: request => this._wcpConnector!.requestIntentResolution(request),
-    }
+    })
 
     // Create Desktop Agent
     this._desktopAgent = new DesktopAgent(daConfig)

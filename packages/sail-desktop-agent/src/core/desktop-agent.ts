@@ -100,13 +100,13 @@ export interface DesktopAgentConfig {
 
   /**
    * Implementation metadata for the desktop agent.
-   * Required - must be provided by environment-specific code.
+   * Required — use `resolveDesktopAgentConfig()` or pass explicit metadata.
    */
-  implementationMetadata?: Pick<
+  implementationMetadata: Pick<
     BrowserTypes.ImplementationMetadata,
     "fdc3Version" | "provider" | "providerVersion"
   > &
-    Partial<Pick<BrowserTypes.ImplementationMetadata, "optionalFeatures">>
+    Pick<Required<BrowserTypes.ImplementationMetadata>, "optionalFeatures">
 
   /**
    * Timeout (ms) to wait for a context listener after open-with-context.
@@ -134,16 +134,14 @@ export interface DesktopAgentConfig {
  *
  * @example
  * ```typescript
- * const agent = new DesktopAgent()
+ * import { resolveDesktopAgentConfig } from "./sail-default-config"
  *
- * agent.start()
- *
- * OR
- *
- * const agent = new DesktopAgent({
- *   transport: new InMemoryTransport,
- *   appLauncher: new BrowserAppLauncher(),
- * })
+ * const agent = new DesktopAgent(
+ *   resolveDesktopAgentConfig({
+ *     transport: new InMemoryTransport(),
+ *     appLauncher: new BrowserAppLauncher(),
+ *   })
+ * )
  *
  * agent.start()
  * ```
@@ -157,43 +155,40 @@ export class DesktopAgent {
   private validator?: MessageValidator
   private logger: Logger
   private isStarted: boolean = false
-  private implementationMetadata?: DesktopAgentConfig["implementationMetadata"]
+  private implementationMetadata: DesktopAgentConfig["implementationMetadata"]
   private userChannels: BrowserTypes.Channel[]
   private openContextListenerTimeoutMs: number
   private heartbeatIntervalMs: number
   private heartbeatTimeoutMs: number
   private pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
 
-  constructor(config?: DesktopAgentConfig) {
-    this.transport = config?.transport ?? new InMemoryTransport()
-    this.appDirectory = config?.appDirectoryManager ?? new AppDirectoryManager()
-    this.appLauncher = config?.appLauncher
-    this.requestIntentResolution = config?.requestIntentResolution
-    this.validator = config?.validator
-    this.logger = config?.logger ?? consoleLogger
-    this.userChannels = config?.userChannels ?? DEFAULT_FDC3_USER_CHANNELS
-    this.implementationMetadata = config?.implementationMetadata ?? {
-      // TODO: Get this from the env or move to a config file.
-      fdc3Version: "2.2",
-      provider: "FDC3-Sail",
-      providerVersion: "3.0.0",
-      optionalFeatures: {
-        DesktopAgentBridging: false,
-        OriginatingAppMetadata: true,
-        UserChannelMembershipAPIs: true,
-      },
+  constructor(config: DesktopAgentConfig) {
+    if (!config.implementationMetadata) {
+      throw new Error(
+        "DesktopAgentConfig.implementationMetadata is required. " +
+          "Use resolveDesktopAgentConfig() from sail-default-config or pass explicit metadata."
+      )
     }
+
+    this.transport = config.transport ?? new InMemoryTransport()
+    this.appDirectory = config.appDirectoryManager ?? new AppDirectoryManager()
+    this.appLauncher = config.appLauncher
+    this.requestIntentResolution = config.requestIntentResolution
+    this.validator = config.validator
+    this.logger = config.logger ?? consoleLogger
+    this.userChannels = config.userChannels ?? DEFAULT_FDC3_USER_CHANNELS
+    this.implementationMetadata = config.implementationMetadata
     this.openContextListenerTimeoutMs =
-      config?.openContextListenerTimeoutMs ?? DACP_TIMEOUTS.MINIMUM_APP_LAUNCH
-    this.heartbeatIntervalMs = config?.heartbeatIntervalMs ?? 30000
-    this.heartbeatTimeoutMs = config?.heartbeatTimeoutMs ?? 60000
+      config.openContextListenerTimeoutMs ?? DACP_TIMEOUTS.MINIMUM_APP_LAUNCH
+    this.heartbeatIntervalMs = config.heartbeatIntervalMs ?? 30_000
+    this.heartbeatTimeoutMs = config.heartbeatTimeoutMs ?? 60_000
     // Initialize state - use this.userChannels to ensure consistency
-    this.state = config?.initialState
+    this.state = config.initialState
       ? createStateWithOverrides(config.initialState, this.userChannels)
       : createInitialState(this.userChannels)
 
     // Initialize app directory with provided apps if any
-    if (config?.apps) {
+    if (config.apps) {
       for (const app of config.apps) {
         this.appDirectory.add(app)
       }

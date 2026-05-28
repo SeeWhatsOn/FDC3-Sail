@@ -184,14 +184,10 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     const baseImplementationMetadata = context.implementationMetadata
     const implementationMetadata: ImplementationMetadata = {
       appMetadata: appMetadataForImplementation,
-      fdc3Version: baseImplementationMetadata?.fdc3Version ?? "2.2",
-      provider: baseImplementationMetadata?.provider ?? "FDC3-Sail",
-      providerVersion: baseImplementationMetadata?.providerVersion ?? "0.0.1",
-      optionalFeatures: baseImplementationMetadata?.optionalFeatures ?? {
-        DesktopAgentBridging: false,
-        OriginatingAppMetadata: true,
-        UserChannelMembershipAPIs: true,
-      },
+      fdc3Version: baseImplementationMetadata.fdc3Version,
+      provider: baseImplementationMetadata.provider,
+      providerVersion: baseImplementationMetadata.providerVersion,
+      optionalFeatures: baseImplementationMetadata.optionalFeatures,
     }
 
     // 5. Send success response

@@ -1,5 +1,6 @@
 import { World, setWorldConstructor, type IWorldOptions } from "@cucumber/cucumber"
 import { DesktopAgent } from "../../src/core/desktop-agent"
+import { resolveDesktopAgentConfig } from "../../src/core/sail-default-config"
 import { MockTransport } from "../support/mock-transport"
 import { MockAppLauncher } from "../support/mock-app-launcher"
 import { MockIntentResolver } from "../support/mock-intent-resolver"
@@ -92,30 +93,23 @@ export class CustomWorld extends World {
     this.appDirectoryManager.addApplications(apps)
 
     // Create DesktopAgent with new state-based API
-    this.desktopAgent = new DesktopAgent({
-      // External dependencies (mocked)
-      transport: this.mockTransport,
-      appLauncher: this.mockAppLauncher,
-      requestIntentResolution: this.mockIntentResolver.createCallback(),
-      // App directory and apps
-      appDirectoryManager: this.appDirectoryManager,
-      apps: apps,
-      // User channels
-      userChannels: channels,
-      implementationMetadata: {
-        fdc3Version: "2.2",
-        provider: "cucumber-provider",
-        providerVersion: "1.0.0",
-        optionalFeatures: {
-          DesktopAgentBridging: false,
-          OriginatingAppMetadata: true,
-          UserChannelMembershipAPIs: true,
+    this.desktopAgent = new DesktopAgent(
+      resolveDesktopAgentConfig({
+        transport: this.mockTransport,
+        appLauncher: this.mockAppLauncher,
+        requestIntentResolution: this.mockIntentResolver.createCallback(),
+        appDirectoryManager: this.appDirectoryManager,
+        apps: apps,
+        userChannels: channels,
+        implementationMetadata: {
+          provider: "cucumber-provider",
+          providerVersion: "1.0.0",
         },
-      },
-      openContextListenerTimeoutMs: 2000,
-      heartbeatIntervalMs: heartbeatConfig?.intervalMs ?? 30000,
-      heartbeatTimeoutMs: heartbeatConfig?.timeoutMs ?? 60000,
-    })
+        openContextListenerTimeoutMs: 2000,
+        heartbeatIntervalMs: heartbeatConfig?.intervalMs ?? 30_000,
+        heartbeatTimeoutMs: heartbeatConfig?.timeoutMs ?? 60_000,
+      })
+    )
 
     // Wire up MockAppLauncher callback to register instances in state
     this.mockAppLauncher.onInstanceCreated = (instanceId, appId) => {

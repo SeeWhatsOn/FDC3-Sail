@@ -20,8 +20,9 @@
  * - Remote mode: SocketIO, WebWorker, or any Transport implementation
  */
 
-import { DesktopAgent } from "../core"
+import { DesktopAgent, resolveDesktopAgentConfig } from "../core"
 import type { DesktopAgentConfig, Transport } from "../core"
+import type { SailImplementationMetadata } from "../core/sail-default-config"
 import { consoleLogger } from "../core/interfaces/logger"
 import type { Logger } from "../core/interfaces/logger"
 import { WCPConnector } from "./wcp/wcp-connector"
@@ -137,8 +138,12 @@ export function createWCPClient(options: WCPClientOptions): WCPClientResult {
  */
 export interface BrowserDesktopAgentOptions extends Pick<
   DesktopAgentConfig,
-  "appLauncher" | "userChannels" | "implementationMetadata"
+  "appLauncher" | "userChannels"
 > {
+  /**
+   * Override FDC3 implementation metadata (FDC3-Sail defaults applied by factory).
+   */
+  implementationMetadata?: Partial<SailImplementationMetadata>
   /**
    * WCP connector configuration
    */
@@ -252,7 +257,7 @@ export function createBrowserDesktopAgent(
 
   // Build Desktop Agent configuration
   // Wire up WCPConnector's requestIntentResolution for UI-based intent resolution
-  const daConfig: DesktopAgentConfig = {
+  const daConfig = resolveDesktopAgentConfig({
     transport: daTransport,
     appLauncher: options?.appLauncher,
     userChannels: options?.userChannels,
@@ -260,7 +265,7 @@ export function createBrowserDesktopAgent(
     logger,
     // Enable UI-based intent resolution via WCPConnector
     requestIntentResolution: request => wcpConnector.requestIntentResolution(request),
-  }
+  })
 
   // Create Desktop Agent
   const desktopAgent = new DesktopAgent(daConfig)
