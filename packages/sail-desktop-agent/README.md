@@ -241,6 +241,8 @@ Browser app connection handshake:
 - **WCP5ValidateAppIdentityResponse** - Desktop Agent confirms
 - **WCP6Goodbye** - App disconnects gracefully
 
+**MessagePort `messageerror` policy (lenient):** When the browser fires `messageerror` on a WCP MessagePort (malformed or uncloneable inbound payload), `MessagePortTransport` logs the event at error level and **does not** disconnect the app. A single bad message must not drop an otherwise healthy connection. Outbound `postMessage` failures remain **fatal**: the transport closes the port, removes listeners, and invokes `onDisconnect` (same cleanup path as explicit disconnect).
+
 ## Transport Interface
 
 The Desktop Agent works with any transport implementing this interface:
@@ -259,7 +261,7 @@ interface Transport {
 **Built-in Transports:**
 
 - `InMemoryTransport` - Same-process communication
-- `MessagePortTransport` - Browser MessagePort API
+- `MessagePortTransport` - Browser MessagePort API (WCP iframe connections). Inbound `messageerror` is logged only; outbound `postMessage` errors trigger full disconnect cleanup.
 
 **Platform SDK Transports:**
 
