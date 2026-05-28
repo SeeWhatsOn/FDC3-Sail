@@ -19,6 +19,7 @@ import type { PendingIntentPromiseEntry } from "../../types"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { createDACPTestContext } from "./test-context"
 import { DesktopAgent } from "../../../desktop-agent"
+import { resolveDesktopAgentConfig } from "../../../sail-default-config"
 import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 
@@ -304,12 +305,14 @@ describe("heartbeat cleanup on disconnect", () => {
       },
     ])
     const transport = new MockTransport()
-    const agent = new DesktopAgent({
-      transport,
-      appDirectoryManager: appDirectory,
-      heartbeatIntervalMs: 500,
-      heartbeatTimeoutMs: 2000,
-    })
+    const agent = new DesktopAgent(
+      resolveDesktopAgentConfig({
+        transport,
+        appDirectoryManager: appDirectory,
+        heartbeatIntervalMs: 500,
+        heartbeatTimeoutMs: 2000,
+      })
+    )
     agent.start()
 
     const wcp4Message = {

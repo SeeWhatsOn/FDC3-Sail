@@ -18,6 +18,12 @@
 export { DesktopAgent } from "./desktop-agent"
 export type { DesktopAgentConfig } from "./desktop-agent"
 export { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
+export {
+  DEFAULT_SAIL_DESKTOP_AGENT_CONFIG,
+  DEFAULT_SAIL_IMPLEMENTATION_METADATA,
+  resolveDesktopAgentConfig,
+} from "./sail-default-config"
+export type { SailImplementationMetadata } from "./sail-default-config"
 
 // Interfaces (types only - no implementations)
 export type { Transport, MessageHandler, DisconnectHandler } from "./interfaces/transport"

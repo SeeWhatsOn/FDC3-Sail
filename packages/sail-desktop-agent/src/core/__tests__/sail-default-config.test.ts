@@ -1,0 +1,43 @@
+import { readFileSync } from "node:fs"
+import { describe, expect, it } from "vitest"
+import { MockTransport } from "../../__tests__/utils/mock-transport"
+import {
+  DEFAULT_SAIL_IMPLEMENTATION_METADATA,
+  resolveDesktopAgentConfig,
+} from "../sail-default-config"
+
+const { version: packageVersion } = JSON.parse(
+  readFileSync(new URL("../../../package.json", import.meta.url), "utf-8")
+) as { version: string }
+
+describe("DEFAULT_SAIL_IMPLEMENTATION_METADATA", () => {
+  it("uses the published package version as providerVersion", () => {
+    expect(DEFAULT_SAIL_IMPLEMENTATION_METADATA.providerVersion).toBe(packageVersion)
+  })
+})
+
+describe("resolveDesktopAgentConfig", () => {
+  it("applies FDC3-Sail product defaults when overrides omit implementationMetadata", () => {
+    const config = resolveDesktopAgentConfig({ transport: new MockTransport() })
+
+    expect(config.implementationMetadata).toEqual(DEFAULT_SAIL_IMPLEMENTATION_METADATA)
+    expect(config.implementationMetadata.provider).toBe("FDC3-Sail")
+  })
+
+  it("deep-merges partial implementationMetadata overrides", () => {
+    const config = resolveDesktopAgentConfig({
+      transport: new MockTransport(),
+      implementationMetadata: {
+        provider: "cucumber-provider",
+        providerVersion: "1.0.0",
+      },
+    })
+
+    expect(config.implementationMetadata.provider).toBe("cucumber-provider")
+    expect(config.implementationMetadata.providerVersion).toBe("1.0.0")
+    expect(config.implementationMetadata.fdc3Version).toBe("2.2")
+    expect(config.implementationMetadata.optionalFeatures).toEqual(
+      DEFAULT_SAIL_IMPLEMENTATION_METADATA.optionalFeatures
+    )
+  })
+})

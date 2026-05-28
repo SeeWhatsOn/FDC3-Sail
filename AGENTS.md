@@ -77,3 +77,18 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 **Do not use** priority-style tags (`@p0`, `@p0-cleanup`) for infrastructure — they do not describe FDC3 behavior. Cleanup assertions belong in steps (`Then no heartbeat timers are active`); process hygiene belongs in `After` hooks.
 
 **Optional features** (when bridging or similar lands): `@optional-bridging`, aligned with `implementationMetadata.optionalFeatures` in the agent.
+
+## Learned User Preferences
+
+- Keep `@finos/sail-desktop-agent` aligned with FDC3 2.2 spec behavior; Sail-specific extensions (e.g. WCP origin allowlists) belong in `@finos/sail-platform-api`, not the core library.
+- FDC3-Sail product defaults live in `packages/sail-desktop-agent/src/core/sail-default-config.ts` and merge via `resolveDesktopAgentConfig()` at factory entry points (`SailPlatform`, `createBrowserDesktopAgent`); do not add handler-level `??` fallbacks for implementation metadata.
+- `DesktopAgent` requires explicit `implementationMetadata`; missing metadata should fail fast at construction, not silently fall back in handlers.
+- Product identity (`provider`, `providerVersion`) should not use a separate JSON/YAML config file or CI env override; pass overrides through TypeScript factory/config APIs.
+- `providerVersion` tracks `@finos/sail-desktop-agent` `package.json` version so deployed npm semver and `getInfo()` stay in lock step.
+- Provider branding stays `FDC3-Sail` across library and platform layers unless a caller explicitly overrides metadata in config.
+
+## Learned Workspace Facts
+
+- Avoid `import ... with { type: "json" }` in this repo: the TypeScript parser treats `with` as a legacy statement and breaks module parsing (cascading false module-not-found and `error`-typed imports). Use plain `import pkg from "../../package.json"` with `resolveJsonModule`, or `readFileSync(new URL(..., import.meta.url))` in tests.
+- This monorepo uses npm workspaces (`npm install`, `npm test`), not pnpm; docs and scripts should match npm.
+- WCP origin allowlisting is not an FDC3 2.2 API surface; FDC3 requires responding to `WCP1Hello` with `WCP2LoadUrl` or `WCP3Handshake`, with identity validation at WCP4 — silent pre-filter reject is Sail policy, not spec behavior.

@@ -1,3 +1,4 @@
+import type { DesktopAgentConfig } from "../../desktop-agent"
 import { createDACPSuccessResponse } from "../../dacp-protocol/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
@@ -24,31 +25,38 @@ export function handleGetInfoRequest(
 
   try {
     const callerInstance = getInstance(getState(), instanceId)
-    // TODO: this should not fall back to default values if implementationMetadata is not provided. Should it error instead?
-    const baseMetadata = implementationMetadata ?? {
-      fdc3Version: "2.2",
-      provider: "FDC3-Sail",
-      providerVersion: "0.0.0",
-    }
+    const provider = implementationMetadata.provider
     let appMetadata: BrowserTypes.AppMetadata | undefined
 
     if (callerInstance) {
       const directoryApps = appDirectory.retrieveAppsById(callerInstance.appId)
       if (directoryApps.length > 0) {
-        appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0], instanceId)
+        appMetadata = convertDirectoryAppToAppMetadata(
+          directoryApps[0],
+          provider,
+          instanceId
+        )
       } else {
         appMetadata = {
           appId: callerInstance.appId,
           name: callerInstance.metadata?.name ?? callerInstance.appId,
           instanceId,
-          desktopAgent: baseMetadata.provider ?? "FDC3-Sail",
+          desktopAgent: provider,
         }
       }
     }
 
-    const resolvedImplementationMetadata = {
-      ...baseMetadata,
-      ...(appMetadata ? { appMetadata } : {}),
+    const resolvedImplementationMetadata: DesktopAgentConfig["implementationMetadata"] & {
+      appMetadata?: BrowserTypes.AppMetadata
+    } = {
+      fdc3Version: implementationMetadata.fdc3Version,
+      provider: implementationMetadata.provider,
+      providerVersion: implementationMetadata.providerVersion,
+      optionalFeatures: implementationMetadata.optionalFeatures,
+    }
+
+    if (appMetadata) {
+      resolvedImplementationMetadata.appMetadata = appMetadata
     }
 
     const response = createDACPSuccessResponse(message, "getInfoResponse", {
@@ -206,7 +214,11 @@ export function handleFindInstancesRequest(
  * @param instanceId - Optional instance ID if app is running
  * @returns AppMetadata object ready for DACP response
  */
-function convertDirectoryAppToAppMetadata(app: DirectoryApp, instanceId?: string) {
+function convertDirectoryAppToAppMetadata(
+  app: DirectoryApp,
+  provider: string,
+  instanceId?: string
+) {
   return {
     appId: app.appId,
     name: app.name,
@@ -217,7 +229,7 @@ function convertDirectoryAppToAppMetadata(app: DirectoryApp, instanceId?: string
     icons: app.icons || [],
     screenshots: app.screenshots || [],
     instanceId,
-    desktopAgent: instanceId ? "FDC3-Sail" : undefined,
+    desktopAgent: instanceId ? provider : undefined,
   }
 }
 
@@ -229,7 +241,8 @@ export function handleGetAppMetadataRequest(
   message: BrowserTypes.GetAppMetadataRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, appDirectory, logger } = context
+  const { transport, instanceId, getState, appDirectory, logger, implementationMetadata } = context
+  const provider = implementationMetadata.provider
 
   try {
     // Parse request payload
@@ -256,6 +269,7 @@ export function handleGetAppMetadataRequest(
         // Combine directory metadata with instance information
         const appMetadata = convertDirectoryAppToAppMetadata(
           directoryApp,
+          provider,
           runningInstance.instanceId
         )
 
@@ -273,7 +287,7 @@ export function handleGetAppMetadataRequest(
         appId: runningInstance.appId,
         name: runningInstance.appId,
         instanceId: runningInstance.instanceId,
-        desktopAgent: "FDC3-Sail",
+        desktopAgent: provider,
       }
 
       const response = createDACPSuccessResponse(message, "getAppMetadataResponse", {
@@ -287,7 +301,7 @@ export function handleGetAppMetadataRequest(
     // Step 3: No running instance - fallback to App Directory
     const directoryApps = appDirectory.retrieveAppsById(appId)
     if (directoryApps.length > 0) {
-      const appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0])
+      const appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0], provider)
 
       const response = createDACPSuccessResponse(message, "getAppMetadataResponse", {
         appMetadata,
