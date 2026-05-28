@@ -6,7 +6,7 @@
 
 import { DACPTimeoutError } from "./dacp-errors"
 import { DACP_TIMEOUTS } from "./dacp-constants"
-import { consoleLogger } from "../interfaces/logger"
+import { consoleLogger, type Logger, type LogPayloadDetail } from "../interfaces/logger"
 
 /**
  * Wraps a promise with a timeout, rejecting with DACPTimeoutError if exceeded.
@@ -33,33 +33,73 @@ export function generateEventUuid(): string {
   return crypto.randomUUID()
 }
 
+export interface DACPLoggingOptions {
+  logger: Logger
+  logPayloadDetail?: LogPayloadDetail
+}
+
 /**
- * Logs DACP messages for debugging (with sensitive data filtering).
+ * Build metadata-only fields for structured DACP/WCP logs (no sensitive context values).
+ */
+export function extractDACPMessageLogMetadata(message: unknown): Record<string, unknown> {
+  if (typeof message !== "object" || message === null) {
+    return { messageFormat: typeof message }
+  }
+
+  const msg = message as Record<string, unknown>
+  const meta = msg.meta as Record<string, unknown> | undefined
+  const payload = msg.payload as Record<string, unknown> | undefined
+  const context = payload?.context as Record<string, unknown> | undefined
+
+  const metadata: Record<string, unknown> = {
+    type: msg.type,
+    requestUuid: meta?.requestUuid,
+    eventUuid: meta?.eventUuid,
+  }
+
+  if (payload?.channelId !== undefined) {
+    metadata.channelId = payload.channelId
+  }
+
+  if (context) {
+    metadata.contextType = context.type
+    metadata.contextKeys = Object.keys(context)
+  }
+
+  return metadata
+}
+
+/**
+ * Logs DACP messages for debugging. Metadata-only at info/warn/error; full payloads
+ * only on {@link Logger.debug} when `logPayloadDetail` is `'full'`.
  */
 export function logDACPMessage(
   direction: "incoming" | "outgoing",
   message: unknown,
-  source?: string
+  source?: string,
+  options?: DACPLoggingOptions
 ): void {
-  try {
-    // Basic message logging without validation dependency
-    if (typeof message === "object" && message !== null) {
-      const msg = message as Record<string, unknown>
-      const logEntry = {
-        direction,
-        type: msg.type,
-        meta: msg.meta,
-        source,
-      }
+  const logger = options?.logger ?? consoleLogger
+  const logPayloadDetail = options?.logPayloadDetail ?? "metadata"
 
-      consoleLogger.debug(`[DACP ${direction.toUpperCase()}]`, logEntry)
+  try {
+    if (typeof message === "object" && message !== null) {
+      const metadata = extractDACPMessageLogMetadata(message)
+      logger.debug(`[DACP ${direction.toUpperCase()}]`, { ...metadata, source })
+
+      if (logPayloadDetail === "full") {
+        logger.debug(`[DACP ${direction.toUpperCase()} full payload]`, {
+          source,
+          fullMessage: JSON.stringify(message),
+        })
+      }
     } else {
-      consoleLogger.warn(`[DACP INVALID ${direction.toUpperCase()}]`, {
+      logger.warn(`[DACP INVALID ${direction.toUpperCase()}]`, {
         message: "Invalid message format",
         source,
       })
     }
   } catch (error) {
-    consoleLogger.error(`[DACP LOG ERROR]`, error)
+    logger.error(`[DACP LOG ERROR]`, error)
   }
 }

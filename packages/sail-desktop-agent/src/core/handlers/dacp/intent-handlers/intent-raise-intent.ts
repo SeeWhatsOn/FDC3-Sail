@@ -30,7 +30,8 @@ export async function handleRaiseIntentRequest(
   message: BrowserTypes.RaiseIntentRequest,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, getState, appDirectory, logger } = context
+  const { transport, instanceId, getState, appDirectory, logger, logPayloadDetail } = context
+  const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
 
   try {
     const payload = message.payload
@@ -48,13 +49,19 @@ export async function handleRaiseIntentRequest(
 
     const contextPayload = payload.context as Record<string, unknown>
     logger.info("DACP: Processing raise intent request", {
+      type: message.type,
       intent: payload.intent,
       requestUuid: message.meta.requestUuid,
       contextType: contextPayload?.type,
       contextKeys: contextPayload ? Object.keys(contextPayload) : [],
       hasName: typeof contextPayload?.name === "string",
-      contextPayload: JSON.stringify(contextPayload),
     })
+
+    if (resolvedLogPayloadDetail === "full") {
+      logger.debug("DACP: Processing raise intent request (full payload)", {
+        contextPayload: JSON.stringify(contextPayload),
+      })
+    }
 
     const validatedContext: Context = payload.context
 
@@ -64,7 +71,9 @@ export async function handleRaiseIntentRequest(
       hasId: !!validatedContext.id,
       hasName: typeof validatedContextRecord.name === "string",
       contextKeys: Object.keys(validatedContextRecord),
-      validatedContext: JSON.stringify(validatedContextRecord),
+      ...(resolvedLogPayloadDetail === "full"
+        ? { validatedContext: JSON.stringify(validatedContextRecord) }
+        : {}),
     })
 
     const targetApp: { appId: string; instanceId?: string } | undefined = normalizeTargetApp(

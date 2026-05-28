@@ -3,7 +3,7 @@ import type { Transport } from "../interfaces/transport"
 import type { AppLauncher } from "../interfaces/app-launcher"
 import type { AppDirectoryManager } from "../app-directory/app-directory-manager"
 import type { AgentState, StateSetter } from "../state/types"
-import type { Logger } from "../interfaces/logger"
+import type { Logger, LogPayloadDetail } from "../interfaces/logger"
 import type { DesktopAgentConfig } from "../desktop-agent"
 import type { DACPMessageType } from "../dacp-protocol/dacp-messages"
 
@@ -185,6 +185,12 @@ export interface DACPHandlerContext {
 
   /** Logger instance */
   logger: Logger
+
+  /**
+   * How much message/context detail structured logs include.
+   * Defaults to `'metadata'` when omitted (e.g. isolated handler tests).
+   */
+  logPayloadDetail?: LogPayloadDetail
 
   /** Implementation metadata for the desktop agent */
   implementationMetadata: DesktopAgentConfig["implementationMetadata"]
