@@ -2,7 +2,7 @@
 title: "WCP1Hello origin allowlist before handshake"
 slug: wcp1-hello-origin-allowlist
 type: enhancement
-status: approved
+status: in-progress
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -58,8 +58,27 @@ Vitest on `WCPConnector` with spy on `MessageChannel` constructor.
 
 ## Blocked decisions
 
-Allowlist on `WCPConnectorOptions` vs. platform-only wrapper.
+~~Allowlist on `WCPConnectorOptions` vs. platform-only wrapper.~~ Resolved: `allowedOrigins` on `WCPConnectorOptions`; Sail docs note undefined = permissive dev default.
+
+## RED evidence
+
+- Test files changed: `packages/sail-desktop-agent/src/browser/__tests__/wcp-connector.test.ts`
+- Command run: `nvm use 24 && npx vitest run packages/sail-desktop-agent/src/browser/__tests__/wcp-connector.test.ts`
+- Failure summary: **2 failed / 39 passed** (41 total). Untrusted-origin tests fail because `handleWCP1Hello` still creates `MessageChannel`, stores temp connection, and never emits `handshakeFailed` — allowlist option is typed but not enforced.
+- Expected reason: Origin check not yet implemented in `handleWindowMessage` / `handleWCP1Hello`; RED confirms spec gap before GREEN.
+- Unrelated tests: healthy (all 37 pre-existing + 2 permissive/trusted allowlist tests pass).
 
 ## Loop history
 
 - 2026-05-27: approved by human (validation gaps waived)
+- 2026-05-28: RED — four tests in `wcp-connector.test.ts` (`WCP1Hello origin allowlist`). Vitest: **2 failed / 39 passed**. `allowedOrigins` added to `WCPConnectorOptions`; Sail platform JSDoc documents undefined = allow-all dev default.
+
+## Learnings extracted
+
+### Proposed (pending GREEN)
+
+- **Check site:** Reject in `WCPConnector.handleWindowMessage` (before `handleWCP1Hello`) or at top of `handleWCP1Hello` in `wcp1-3-handshake.ts` — must run before `new MessageChannel()` (line 40). Connector-level check keeps handshake module origin-agnostic.
+- **Permissive default:** `allowedOrigins === undefined` → skip check (current behavior). Do not default to `[]` in constructor `Required<>` merge — preserves dev ergonomics; production passes explicit list via `wcpOptions`.
+- **Failure surface:** Emit `handshakeFailed(new Error('…origin…'), connectionAttemptUuid)` and return early; no temp entry in `connections` / `messagePortTransports` / `transportToInstanceId`.
+- **Constructor wiring:** Add `allowedOrigins: options?.allowedOrigins` to `this.options` merge; consider `Required<Omit<WCPConnectorOptions, 'allowedOrigins'>> & Pick<WCPConnectorOptions, 'allowedOrigins'>` so internal type stays `string[] | undefined`.
+- **Test harness:** `createMessageEvent(data, source, origin)` third arg; spy `MessageChannel` + `postMessage` for channel/WCP3 absence; trusted + permissive cases guard against over-blocking.
