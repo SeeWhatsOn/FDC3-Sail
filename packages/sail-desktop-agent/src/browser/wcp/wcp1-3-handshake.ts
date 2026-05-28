@@ -3,13 +3,13 @@ import { bridgeTransports } from "./wcp-message-routing"
 import type { WCPRoutingContext } from "./wcp-message-routing"
 import type {
   AppConnectionMetadata,
-  ResolvedWCPConnectorOptions,
   WCP1HelloMessage,
   WCP3HandshakeMessage,
+  WCPConnectorOptions,
 } from "./wcp-types"
 
 export interface WCPHandshakeContext extends WCPRoutingContext {
-  options: ResolvedWCPConnectorOptions
+  options: Required<WCPConnectorOptions>
   connections: Map<string, AppConnectionMetadata>
 }
 

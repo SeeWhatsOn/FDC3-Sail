@@ -5,6 +5,7 @@ import {
 } from "@finos/sail-desktop-agent/browser"
 import type { Transport } from "@finos/sail-desktop-agent"
 import { MiddlewarePipeline, type Middleware } from "./middleware/middleware"
+import { wireWcp4OriginAllowlist } from "./wcp4-origin-allowlist"
 export type { Middleware }
 
 /**
@@ -14,12 +15,18 @@ export interface SailBrowserDesktopAgentConfig
   extends Omit<BrowserDesktopAgentOptions, "wcpOptions"> {
   /**
    * WCP options with Sail-specific defaults.
-   *
-   * **Origin allowlist:** `allowedOrigins` is not set by Sail defaults — undefined
-   * keeps permissive dev behavior (any origin may handshake). Production deployments
-   * should pass `wcpOptions.allowedOrigins` with trusted app origins.
    */
   wcpOptions?: BrowserDesktopAgentOptions["wcpOptions"]
+
+  /**
+   * Optional Sail deployment policy: origins permitted to complete WCP4 identity
+   * validation. When set, connections from other `MessageEvent.origin` values receive
+   * `WCP5ValidateAppIdentityFailedResponse` (FDC3-compliant rejection path).
+   *
+   * When **undefined** (default), no additional origin allowlist is applied — only
+   * standard FDC3 WCP4 checks (origin consistency + App Directory match) apply.
+   */
+  allowedOrigins?: readonly string[]
 
   /**
    * Enable debug logging
@@ -87,6 +94,10 @@ export function createSailBrowserDesktopAgent(
     ...config,
     wcpOptions,
   })
+
+  if (config?.allowedOrigins !== undefined) {
+    wireWcp4OriginAllowlist(browserAgent.desktopAgent, config.allowedOrigins, config.debug)
+  }
 
   // Create middleware pipeline for future use
   const pipeline = new MiddlewarePipeline<unknown>()

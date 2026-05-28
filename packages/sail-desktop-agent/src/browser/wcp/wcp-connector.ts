@@ -48,7 +48,6 @@ import type {
   AppConnectionMetadata,
   IntentResolverPayload,
   IntentResolverResponse,
-  ResolvedWCPConnectorOptions,
   WCP1HelloMessage,
   WCPConnectorOptions,
 } from "./wcp-types"
@@ -93,7 +92,7 @@ export type {
  */
 export class WCPConnector extends WCPEventEmitter {
   private desktopAgentTransport: Transport
-  private options: ResolvedWCPConnectorOptions
+  private options: Required<WCPConnectorOptions>
   private isStarted: boolean = false
   private connections = new Map<string, AppConnectionMetadata>()
   private messagePortTransports = new Map<string, MessagePortTransport>()
@@ -137,7 +136,6 @@ export class WCPConnector extends WCPEventEmitter {
       intentResolutionTimeout: options?.intentResolutionTimeout ?? 60000,
       debug: options?.debug ?? false,
       logger,
-      allowedOrigins: options?.allowedOrigins,
     }
 
     // Listen to Desktop Agent transport for messages to route to apps
@@ -224,17 +222,6 @@ export class WCPConnector extends WCPEventEmitter {
    * happens in core handlers after the app sends WCP4ValidateAppIdentity.
    */
   private handleWCP1Hello(event: MessageEvent<WCP1HelloMessage>): void {
-    const { allowedOrigins } = this.options
-    if (allowedOrigins !== undefined && !allowedOrigins.includes(event.origin)) {
-      const { connectionAttemptUuid } = event.data.meta
-      this.emit(
-        "handshakeFailed",
-        new Error(`WCP1Hello rejected: origin "${event.origin}" is not allowed`),
-        connectionAttemptUuid
-      )
-      return
-    }
-
     handleWCP1HelloHandshake(event, this.getHandshakeContext())
   }
 

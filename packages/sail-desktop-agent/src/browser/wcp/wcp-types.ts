@@ -125,28 +125,7 @@ export interface WCPConnectorOptions {
    * OPTIONAL - defaults to consoleLogger if not provided.
    */
   logger?: Logger
-
-  /**
-   * Origins permitted to initiate WCP1Hello handshake.
-   *
-   * When set, WCP1Hello from any other `MessageEvent.origin` is rejected before
-   * creating a MessageChannel or temp connection entry.
-   *
-   * When **undefined** (default), all origins are allowed — permissive mode for
-   * local development. Production hosts (e.g. `createSailBrowserDesktopAgent`) should
-   * supply an explicit list.
-   */
-  allowedOrigins?: readonly string[]
 }
-
-/**
- * WCPConnectorOptions with required defaults applied, except `allowedOrigins`
- * which stays optional — undefined means permissive (allow all origins).
- */
-export type ResolvedWCPConnectorOptions = Required<
-  Omit<WCPConnectorOptions, "allowedOrigins">
-> &
-  Pick<WCPConnectorOptions, "allowedOrigins">
 
 /**
  * Metadata about a connected app instance
