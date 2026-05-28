@@ -44,6 +44,8 @@ export class MessagePortTransport implements Transport {
   private messageHandler?: MessageHandler
   private disconnectHandler?: DisconnectHandler
   private connected: boolean = true
+  private readonly boundHandleMessage = this.handleMessage.bind(this)
+  private readonly boundHandleError = this.handleError.bind(this)
 
   /**
    * Create a new MessagePort transport
@@ -61,10 +63,10 @@ export class MessagePortTransport implements Transport {
     this.port.start()
 
     // Listen for messages
-    this.port.addEventListener("message", this.handleMessage.bind(this))
+    this.port.addEventListener("message", this.boundHandleMessage)
 
     // Listen for errors (indicates connection issues)
-    this.port.addEventListener("messageerror", this.handleError.bind(this))
+    this.port.addEventListener("messageerror", this.boundHandleError)
 
     // Note: MessagePorts don't have a built-in disconnect event
     // Disconnect is detected via DACP heartbeat timeout
@@ -156,8 +158,8 @@ export class MessagePortTransport implements Transport {
     this.connected = false
 
     // Remove event listeners
-    this.port.removeEventListener("message", this.handleMessage.bind(this))
-    this.port.removeEventListener("messageerror", this.handleError.bind(this))
+    this.port.removeEventListener("message", this.boundHandleMessage)
+    this.port.removeEventListener("messageerror", this.boundHandleError)
 
     // Close the port
     this.port.close()
