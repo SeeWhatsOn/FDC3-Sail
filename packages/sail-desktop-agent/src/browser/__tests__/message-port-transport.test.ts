@@ -6,7 +6,64 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest"
+import { disconnectApp, type WCPConnectionContext } from "../wcp/wcp-connection-management"
 import { MessagePortTransport } from "../wcp/message-port-transport"
+import type { AppConnectionMetadata } from "../wcp/wcp-types"
+import { consoleLogger } from "../../core/interfaces/logger"
+
+function createListenerTracker(port: MessagePort) {
+  const activeListeners = new Map<string, Set<EventListener>>()
+
+  const trackAdd = (type: string, listener: EventListener) => {
+    if (!activeListeners.has(type)) {
+      activeListeners.set(type, new Set())
+    }
+    activeListeners.get(type)!.add(listener)
+  }
+
+  const trackRemove = (type: string, listener: EventListener) => {
+    activeListeners.get(type)?.delete(listener)
+  }
+
+  vi.spyOn(port, "addEventListener").mockImplementation((type, listener, options) => {
+    trackAdd(type as string, listener as EventListener)
+    return MessagePort.prototype.addEventListener.call(port, type, listener, options)
+  })
+
+  vi.spyOn(port, "removeEventListener").mockImplementation((type, listener, options) => {
+    trackRemove(type as string, listener as EventListener)
+    return MessagePort.prototype.removeEventListener.call(port, type, listener, options)
+  })
+
+  return {
+    activeListeners,
+    listenerCount(type: string) {
+      return activeListeners.get(type)?.size ?? 0
+    },
+  }
+}
+
+function createMinimalWCPContext(): WCPConnectionContext {
+  return {
+    options: {
+      getIntentResolverUrl: () => false,
+      getChannelSelectorUrl: () => false,
+      fdc3Version: "2.2",
+      handshakeTimeout: 5000,
+      disconnectGracePeriod: 2000,
+      intentResolutionTimeout: 60000,
+      debug: false,
+      logger: consoleLogger,
+    },
+    connections: new Map<string, AppConnectionMetadata>(),
+    messagePortTransports: new Map<string, MessagePortTransport>(),
+    transportToInstanceId: new Map<MessagePortTransport, string>(),
+    pendingDisconnects: new Map(),
+    recentlyDisconnected: new Map(),
+    emit: vi.fn(),
+    logger: consoleLogger,
+  }
+}
 
 describe("MessagePortTransport", () => {
   let channel: MessageChannel
@@ -68,6 +125,125 @@ describe("MessagePortTransport", () => {
       expect(() => transport.send({ type: "test" })).toThrow("postMessage failed")
       // Should mark as disconnected
       expect(transport.isConnected()).toBe(false)
+    })
+  })
+
+  describe("error-driven disconnect (postMessage failure)", () => {
+    it("closes the MessagePort when postMessage throws", () => {
+      const transport = new MessagePortTransport(port1)
+      const closeSpy = vi.spyOn(port1, "close")
+
+      vi.spyOn(port1, "postMessage").mockImplementation(() => {
+        throw new Error("postMessage failed")
+      })
+
+      expect(() => transport.send({ type: "test" })).toThrow("postMessage failed")
+
+      expect(closeSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it("removes message and messageerror listeners when postMessage throws", () => {
+      const tracker = createListenerTracker(port1)
+      const transport = new MessagePortTransport(port1)
+
+      vi.spyOn(port1, "postMessage").mockImplementation(() => {
+        throw new Error("postMessage failed")
+      })
+
+      expect(() => transport.send({ type: "test" })).toThrow("postMessage failed")
+
+      expect(tracker.listenerCount("message")).toBe(0)
+      expect(tracker.listenerCount("messageerror")).toBe(0)
+    })
+
+    it("closes the port exactly once when postMessage throws and disconnectApp runs afterward", () => {
+      const instanceId = "temp-error-disconnect-uuid"
+      const context = createMinimalWCPContext()
+      const transport = new MessagePortTransport(port1)
+      const closeSpy = vi.spyOn(port1, "close")
+
+      context.messagePortTransports.set(instanceId, transport)
+      context.transportToInstanceId.set(transport, instanceId)
+      transport.onDisconnect(() => disconnectApp(context, instanceId))
+
+      vi.spyOn(port1, "postMessage").mockImplementation(() => {
+        throw new Error("postMessage failed")
+      })
+
+      expect(() => transport.send({ type: "test" })).toThrow("postMessage failed")
+
+      expect(closeSpy).toHaveBeenCalledTimes(1)
+      expect(transport.isConnected()).toBe(false)
+    })
+
+    it("removes instance from WCP maps when postMessage throws and onDisconnect triggers disconnectApp", () => {
+      const instanceId = "temp-wcp-map-cleanup-uuid"
+      const context = createMinimalWCPContext()
+      const transport = new MessagePortTransport(port1)
+
+      context.messagePortTransports.set(instanceId, transport)
+      context.transportToInstanceId.set(transport, instanceId)
+      context.connections.set(instanceId, {
+        instanceId,
+        appId: "test-app",
+        connectionAttemptUuid: "wcp-map-cleanup-uuid",
+        messageOrigin: "https://example.com",
+        source: {} as Window,
+        port: port1,
+        connectedAt: new Date(),
+      })
+      transport.onDisconnect(() => disconnectApp(context, instanceId))
+
+      vi.spyOn(port1, "postMessage").mockImplementation(() => {
+        throw new Error("postMessage failed")
+      })
+
+      expect(() => transport.send({ type: "test" })).toThrow("postMessage failed")
+
+      expect(context.messagePortTransports.has(instanceId)).toBe(false)
+      expect(context.transportToInstanceId.has(transport)).toBe(false)
+      expect(context.connections.has(instanceId)).toBe(false)
+      expect(context.emit).toHaveBeenCalledWith("appDisconnected", instanceId)
+    })
+  })
+
+  describe("error-driven disconnect idempotency when connected is already false", () => {
+    it("disconnect still closes the port and removes listeners if error path set connected false without cleanup", () => {
+      const tracker = createListenerTracker(port1)
+      const transport = new MessagePortTransport(port1)
+      const closeSpy = vi.spyOn(port1, "close")
+
+      vi.spyOn(port1, "postMessage").mockImplementation(() => {
+        throw new Error("postMessage failed")
+      })
+
+      expect(() => transport.send({ type: "test" })).toThrow("postMessage failed")
+      expect(transport.isConnected()).toBe(false)
+
+      transport.disconnect()
+
+      expect(closeSpy).toHaveBeenCalledTimes(1)
+      expect(tracker.listenerCount("message")).toBe(0)
+      expect(tracker.listenerCount("messageerror")).toBe(0)
+    })
+
+    it("disconnect is a no-op for port close when error path already performed full cleanup", () => {
+      const transport = new MessagePortTransport(port1)
+      const closeSpy = vi.spyOn(port1, "close")
+      const disconnectHandler = vi.fn()
+      transport.onDisconnect(disconnectHandler)
+
+      vi.spyOn(port1, "postMessage").mockImplementation(() => {
+        throw new Error("postMessage failed")
+      })
+
+      expect(() => transport.send({ type: "test" })).toThrow("postMessage failed")
+
+      transport.disconnect()
+      transport.disconnect()
+
+      expect(closeSpy).toHaveBeenCalledTimes(1)
+      expect(disconnectHandler).toHaveBeenCalledTimes(1)
     })
   })
 
