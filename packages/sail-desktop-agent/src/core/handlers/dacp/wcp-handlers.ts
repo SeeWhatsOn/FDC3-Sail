@@ -21,6 +21,7 @@ import { getInstance } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
 import type { Transport } from "../../interfaces/transport"
 import type { DirectoryApp } from "../../app-directory/types"
+import { DEFAULT_IMPLEMENTATION_METADATA } from "../../default-implementation-metadata"
 
 type Wcp4ValidateAppIdentity = WebConnectionProtocol4ValidateAppIdentity
 type WCP5ValidateAppIdentityResponse = WebConnectionProtocol5ValidateAppIdentitySuccessResponse
@@ -181,17 +182,16 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
       screenshots: appMetadata.screenshots,
     }
 
-    const baseImplementationMetadata = context.implementationMetadata
+    const baseImplementationMetadata =
+      context.implementationMetadata ?? DEFAULT_IMPLEMENTATION_METADATA
     const implementationMetadata: ImplementationMetadata = {
       appMetadata: appMetadataForImplementation,
-      fdc3Version: baseImplementationMetadata?.fdc3Version ?? "2.2",
-      provider: baseImplementationMetadata?.provider ?? "FDC3-Sail",
-      providerVersion: baseImplementationMetadata?.providerVersion ?? "0.0.1",
-      optionalFeatures: baseImplementationMetadata?.optionalFeatures ?? {
-        DesktopAgentBridging: false,
-        OriginatingAppMetadata: true,
-        UserChannelMembershipAPIs: true,
-      },
+      fdc3Version: baseImplementationMetadata.fdc3Version,
+      provider: baseImplementationMetadata.provider,
+      providerVersion: baseImplementationMetadata.providerVersion,
+      optionalFeatures:
+        baseImplementationMetadata.optionalFeatures ??
+        DEFAULT_IMPLEMENTATION_METADATA.optionalFeatures,
     }
 
     // 5. Send success response

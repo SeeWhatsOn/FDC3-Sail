@@ -24,6 +24,7 @@ import type { AgentState, StateSetter } from "./state/types"
 import { createInitialState, createStateWithOverrides } from "./state/initial-state"
 import { consoleLogger, type Logger } from "./interfaces/logger"
 import { DACP_TIMEOUTS } from "./dacp-protocol/dacp-constants"
+import { DEFAULT_IMPLEMENTATION_METADATA } from "./default-implementation-metadata"
 import { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
 
 /**
@@ -172,17 +173,8 @@ export class DesktopAgent {
     this.validator = config?.validator
     this.logger = config?.logger ?? consoleLogger
     this.userChannels = config?.userChannels ?? DEFAULT_FDC3_USER_CHANNELS
-    this.implementationMetadata = config?.implementationMetadata ?? {
-      // TODO: Get this from the env or move to a config file.
-      fdc3Version: "2.2",
-      provider: "FDC3-Sail",
-      providerVersion: "3.0.0",
-      optionalFeatures: {
-        DesktopAgentBridging: false,
-        OriginatingAppMetadata: true,
-        UserChannelMembershipAPIs: true,
-      },
-    }
+    this.implementationMetadata =
+      config?.implementationMetadata ?? DEFAULT_IMPLEMENTATION_METADATA
     this.openContextListenerTimeoutMs =
       config?.openContextListenerTimeoutMs ?? DACP_TIMEOUTS.MINIMUM_APP_LAUNCH
     this.heartbeatIntervalMs = config?.heartbeatIntervalMs ?? 30000

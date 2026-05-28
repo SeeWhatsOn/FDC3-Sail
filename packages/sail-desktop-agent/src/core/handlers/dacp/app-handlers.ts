@@ -12,6 +12,7 @@ import type { DirectoryApp } from "../../app-directory/types"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
 import { registerOpenWithContext } from "./utils/open-with-context"
 import { isValidContext } from "./utils/context-validation"
+import { DEFAULT_IMPLEMENTATION_METADATA } from "../../default-implementation-metadata"
 
 /**
  * Handles getInfoRequest to return implementation metadata.
@@ -25,11 +26,7 @@ export function handleGetInfoRequest(
   try {
     const callerInstance = getInstance(getState(), instanceId)
     // TODO: this should not fall back to default values if implementationMetadata is not provided. Should it error instead?
-    const baseMetadata = implementationMetadata ?? {
-      fdc3Version: "2.2",
-      provider: "FDC3-Sail",
-      providerVersion: "0.0.0",
-    }
+    const baseMetadata = implementationMetadata ?? DEFAULT_IMPLEMENTATION_METADATA
     let appMetadata: BrowserTypes.AppMetadata | undefined
 
     if (callerInstance) {
