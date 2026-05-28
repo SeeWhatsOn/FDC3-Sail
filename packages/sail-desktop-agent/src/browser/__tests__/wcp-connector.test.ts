@@ -34,15 +34,11 @@ function createWCP1Hello(
 }
 
 // Helper to create a mock MessageEvent with source window
-function createMessageEvent(
-  data: unknown,
-  source: Window = window,
-  origin = "https://example.com"
-): MessageEvent {
+function createMessageEvent(data: unknown, source: Window = window): MessageEvent {
   return new MessageEvent("message", {
     data,
     source,
-    origin,
+    origin: "https://example.com",
   })
 }
 
