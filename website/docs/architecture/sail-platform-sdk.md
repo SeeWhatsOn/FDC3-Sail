@@ -81,12 +81,17 @@ await platform.workspaces.list()
 await platform.layouts.save(workspaceId, layout)
 await platform.sailConfig.get()
 
-// Change app channel (sends DACP on behalf of app)
-await platform.changeAppChannel(instanceId, 'red')
+// Change app channel (host chrome — platform sends typed join/leave for instance)
+await platform.changeAppChannel(instanceId, 'fdc3.channel.1')
+
+// List user channels; per-instance current channel via getAppUserChannel (when added) or onChannelChanged
+const channels = platform.getUserChannels()
 
 // Stop when done
 platform.stop()
 ```
+
+See [Channel selection](./channel-selection) for host chrome vs app-hosted selector URLs.
 
 ## Architecture
 

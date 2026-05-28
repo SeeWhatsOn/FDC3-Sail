@@ -2,7 +2,7 @@
 title: "Prevent duplicate appDisconnected on MessagePort disconnect"
 slug: fix-messageport-disconnect-reentrancy
 type: bug
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -32,6 +32,10 @@ Stop WCP from emitting duplicate `appDisconnected` events when owner-initiated d
 - `plans/project-docs.md`
 - `.cursor/issues-discovered.md` (MessagePortTransport section)
 
+## Parent context
+
+From `plans/prd-transport-platform-hardening.md`: Harden InMemory/MessagePort transports and replace platform DACP impersonation for reliable disconnect and authority-safe APIs.
+
 ## Behavior spec
 
 Given a connected WCP app instance
@@ -60,6 +64,8 @@ RED: update WCP connector tests to assert `toHaveBeenCalledTimes(1)` on disconne
 - Preferred fix: delete reverse lookup before `appTransport.disconnect()` vs. non-notifying dispose path — implementer picks smallest correct diff.
 
 ## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)
 
 ## Staged for review
 

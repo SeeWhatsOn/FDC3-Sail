@@ -3,7 +3,7 @@ title: "Replace fixed sleeps in in-memory transport tests"
 slug: fix-in-memory-transport-test-timing
 kind: spike
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -28,6 +28,10 @@ Fixed sleeps hide races and slow CI; compliance review flagged optional cleanup.
 
 - `plans/prd-desktop-agent-release-p2.md` (P2-05)
 
+## Parent context
+
+From `plans/prd-desktop-agent-release-p2.md`: Post-P1 hardening — logging redaction, README/package alignment, metadata defaults, and test hygiene.
+
 ## Behavior spec
 
 **Phase 1 (spike)**
@@ -46,6 +50,10 @@ Then no test relies on arbitrary wall-clock sleep for correctness
 
 - InMemoryTransport product behavior changes unless spike proves a bug
 
+## TypeScript interfaces
+
+none
+
 ## Test guidance
 
 Spike output: short note in work item `## Loop history` or PR description; follow-up task if code change is non-trivial.
@@ -53,3 +61,7 @@ Spike output: short note in work item `## Loop history` or PR description; follo
 ## Blocked decisions
 
 Whether `InMemoryTransport` needs a public `flush()` or `whenIdle()` helper for tests.
+
+## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)

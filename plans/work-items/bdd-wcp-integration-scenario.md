@@ -2,7 +2,7 @@
 title: "BDD or integration scenario through real WCPConnector"
 slug: bdd-wcp-integration-scenario
 type: enhancement
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -16,7 +16,7 @@ depends_on:
 integration_branch: ""
 branch: test/wcp-integration-path
 external_tracker: ""
-tags: [fdc3, wcp]
+tags: [fdc3]
 ---
 
 ## Goal
@@ -31,6 +31,10 @@ Vitest (`wcp-connector.test.ts`) covers WCP units. Cucumber uses `MockTransport`
 
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 9)
 
+## Parent context
+
+From `plans/prd-desktop-agent-conformance-gaps.md`: Close lifecycle cleanup, conformance evidence, validation boundaries, and test trust before P1 sign-off and v3 release.
+
 ## Behavior spec
 
 **Option A (preferred for this package):** Vitest integration with `createBrowserDesktopAgent` + synthetic `postMessage` WCP1Hello.
@@ -43,6 +47,10 @@ Vitest (`wcp-connector.test.ts`) covers WCP units. Cucumber uses `MockTransport`
 
 - Full FINOS conformance pack over WCP in this package.
 
+## TypeScript interfaces
+
+none
+
 ## Test guidance
 
 Coordinate with platform team to avoid duplicating Task 6 suite.
@@ -50,3 +58,7 @@ Coordinate with platform team to avoid duplicating Task 6 suite.
 ## Blocked decisions
 
 Owner: `@finos/sail-desktop-agent` vs `@finos/sail-platform-api` for release gate.
+
+## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)

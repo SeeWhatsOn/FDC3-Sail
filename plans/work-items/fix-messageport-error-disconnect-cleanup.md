@@ -2,7 +2,7 @@
 title: "Close MessagePort on error-driven disconnect"
 slug: fix-messageport-error-disconnect-cleanup
 type: bug
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -30,6 +30,10 @@ Ensure error-driven disconnect (`postMessage` failure, etc.) always removes list
 
 - `plans/project-docs.md`
 - `.cursor/issues-discovered.md`
+
+## Parent context
+
+From `plans/prd-transport-platform-hardening.md`: Harden InMemory/MessagePort transports and replace platform DACP impersonation for reliable disconnect and authority-safe APIs.
 
 ## Behavior spec
 
@@ -59,6 +63,8 @@ RED: simulate `postMessage` failure and assert `port.close` and listener removal
 (none)
 
 ## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)
 
 ## Staged for review
 

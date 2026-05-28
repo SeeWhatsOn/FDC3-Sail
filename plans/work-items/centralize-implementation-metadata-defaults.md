@@ -3,7 +3,7 @@ title: "Centralize implementation metadata version defaults for getInfo"
 slug: centralize-implementation-metadata-defaults
 kind: task
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -15,7 +15,7 @@ depends_on: []
 integration_branch: ""
 branch: chore/centralize-implementation-metadata
 external_tracker: ""
-tags: [fdc3, conformance2.2]
+tags: [fdc3]
 ---
 
 ## Goal
@@ -31,6 +31,10 @@ Compliance review notes `3.0.0` vs `0.0.1` vs `0.0.0` fallbacks across `desktop-
 - `plans/prd-desktop-agent-release-p2.md` (P2-03)
 - `FDC3_2_2_COMPLIANCE_REVIEW.MD` (getInfo metadata)
 
+## Parent context
+
+From `plans/prd-desktop-agent-release-p2.md`: Post-P1 hardening — logging redaction, README/package alignment, metadata defaults, and test hygiene.
+
 ## Behavior spec
 
 Given a Desktop Agent constructed with default config
@@ -43,6 +47,10 @@ And WCP5 responses use the same default when app metadata is merged
 - Changing FDC3 optional feature flags semantics
 - Platform-api metadata
 
+## TypeScript interfaces
+
+none
+
 ## Test guidance
 
 Extend or add Vitest for `handleGetInfoRequest` and WCP5 metadata merge; align existing Cucumber getInfo scenarios if defaults change.
@@ -50,3 +58,7 @@ Extend or add Vitest for `handleGetInfoRequest` and WCP5 metadata merge; align e
 ## Blocked decisions
 
 Canonical default for `providerVersion` when host omits config (product decision).
+
+## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)

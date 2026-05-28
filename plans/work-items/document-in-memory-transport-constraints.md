@@ -2,7 +2,7 @@
 title: "Document InMemoryTransport runtime and usage constraints"
 slug: document-in-memory-transport-constraints
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -30,6 +30,10 @@ File claims "any JS runtime" but requires `structuredClone`. `DesktopAgent` defa
 
 - `plans/project-docs.md`
 - `plans/prd-transport-platform-hardening.md`
+
+## Parent context
+
+From `plans/prd-transport-platform-hardening.md`: Harden InMemory/MessagePort transports and replace platform DACP impersonation for reliable disconnect and authority-safe APIs.
 
 ## Behavior spec
 
@@ -59,6 +63,8 @@ No new tests required unless docs claim behavior that should be asserted; option
 (none)
 
 ## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)
 
 ## Staged for review
 

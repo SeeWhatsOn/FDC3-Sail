@@ -2,7 +2,7 @@
 title: "Fix MessagePortTransport listener removal"
 slug: fix-messageport-bound-listeners
 type: bug
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -28,6 +28,10 @@ Listeners are added and removed with fresh `.bind(this)` calls, so identities ne
 
 - `plans/project-docs.md`
 - Pattern reference: `WCPConnector.boundHandleWindowMessage`
+
+## Parent context
+
+From `plans/prd-transport-platform-hardening.md`: Harden InMemory/MessagePort transports and replace platform DACP impersonation for reliable disconnect and authority-safe APIs.
 
 ## Behavior spec
 
@@ -60,6 +64,8 @@ RED: spy `addEventListener` / `removeEventListener` and assert referential equal
 (none)
 
 ## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)
 
 ## Staged for review
 

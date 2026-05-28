@@ -2,7 +2,7 @@
 title: "WCP1Hello origin allowlist before handshake"
 slug: wcp1-hello-origin-allowlist
 type: enhancement
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -15,7 +15,7 @@ depends_on: []
 integration_branch: ""
 branch: feature/wcp-origin-allowlist
 external_tracker: ""
-tags: [fdc3, security, wcp]
+tags: [fdc3, security]
 ---
 
 ## Goal
@@ -29,6 +29,10 @@ Today any origin can start handshake; WCP4 blocks DACP but handshake window allo
 ## Reference docs
 
 - `plans/prd-desktop-agent-conformance-gaps.md` (item 4)
+
+## Parent context
+
+From `plans/prd-desktop-agent-conformance-gaps.md`: Close lifecycle cleanup, conformance evidence, validation boundaries, and test trust before P1 sign-off and v3 release.
 
 ## Behavior spec
 
@@ -44,6 +48,10 @@ Then document default: allow all (current behavior) vs. deny all — pick one fo
 
 - Replacing WCP4 identityUrl / MessageEvent.origin checks.
 
+## TypeScript interfaces
+
+none
+
 ## Test guidance
 
 Vitest on `WCPConnector` with spy on `MessageChannel` constructor.
@@ -51,3 +59,7 @@ Vitest on `WCPConnector` with spy on `MessageChannel` constructor.
 ## Blocked decisions
 
 Allowlist on `WCPConnectorOptions` vs. platform-only wrapper.
+
+## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)

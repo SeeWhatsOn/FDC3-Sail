@@ -2,7 +2,7 @@
 title: "Fix half-open peer state on InMemoryTransport disconnect"
 slug: fix-in-memory-transport-half-open-disconnect
 type: bug
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -29,6 +29,10 @@ Ensure disconnecting one side of an in-memory transport pair fully tears down bo
 - `plans/project-docs.md`
 - `plans/prd-transport-platform-hardening.md`
 - `.cursor/issues-discovered.md` (InMemoryTransport section)
+
+## Parent context
+
+From `plans/prd-transport-platform-hardening.md`: Harden InMemory/MessagePort transports and replace platform DACP impersonation for reliable disconnect and authority-safe APIs.
 
 ## Behavior spec
 
@@ -63,6 +67,8 @@ RED: extend `in-memory-transport.test.ts` with peer `isConnected()` after local 
 (none)
 
 ## Loop history
+
+- 2026-05-27: approved by human (validation gaps waived)
 
 ## Staged for review
 
