@@ -194,8 +194,13 @@ export class InMemoryTransport implements Transport {
    * Deep clone a message to prevent shared object references
    * between the two transports.
    *
+   * Why clone instead of JSON serialize/parse:
+   * - Preserve transport-style message isolation (sender/receiver never share references).
+   * - Preserve non-JSON values supported by structured clone semantics.
+   * - Fail fast on unsupported payloads rather than silently dropping/coercing fields.
+   *
    * This uses newer structuredClone API for better performance and security.
-   * NOTE:We may need to fallback to JSON serialization for environments that don't have structuredClone.
+   * NOTE: We may need to fallback to JSON serialization for environments that don't have structuredClone.
    */
   private deepClone(obj: unknown): unknown {
     if (typeof structuredClone === "undefined") {
