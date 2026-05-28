@@ -13,7 +13,11 @@ export type { Middleware }
 export interface SailBrowserDesktopAgentConfig
   extends Omit<BrowserDesktopAgentOptions, "wcpOptions"> {
   /**
-   * WCP options with Sail-specific defaults
+   * WCP options with Sail-specific defaults.
+   *
+   * **Origin allowlist:** `allowedOrigins` is not set by Sail defaults — undefined
+   * keeps permissive dev behavior (any origin may handshake). Production deployments
+   * should pass `wcpOptions.allowedOrigins` with trusted app origins.
    */
   wcpOptions?: BrowserDesktopAgentOptions["wcpOptions"]
 

@@ -34,11 +34,15 @@ function createWCP1Hello(
 }
 
 // Helper to create a mock MessageEvent with source window
-function createMessageEvent(data: unknown, source: Window = window): MessageEvent {
+function createMessageEvent(
+  data: unknown,
+  source: Window = window,
+  origin = "https://example.com"
+): MessageEvent {
   return new MessageEvent("message", {
     data,
     source,
-    origin: "https://example.com",
+    origin,
   })
 }
 
@@ -849,6 +853,89 @@ describe("WCPConnector", () => {
       // Should not throw when stopping even with active connections
       expect(() => connector.stop()).not.toThrow()
       expect(connector.getConnections()).toHaveLength(0)
+    })
+  })
+
+  describe("WCP1Hello origin allowlist", () => {
+    const TRUSTED_ORIGIN = "https://trusted.example.com"
+    const UNTRUSTED_ORIGIN = "https://evil.example.com"
+
+    it("does not create MessageChannel when origin is not on allowedOrigins", async () => {
+      const messageChannelSpy = vi.spyOn(global, "MessageChannel")
+      const postMessageSpy = vi.spyOn(window, "postMessage")
+
+      connector = new WCPConnector(desktopAgentTransport, {
+        allowedOrigins: [TRUSTED_ORIGIN],
+      })
+      connector.start()
+
+      window.dispatchEvent(
+        createMessageEvent(createWCP1Hello("untrusted-origin-uuid"), window, UNTRUSTED_ORIGIN)
+      )
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      expect(messageChannelSpy).not.toHaveBeenCalled()
+      expect(postMessageSpy).not.toHaveBeenCalled()
+      expect(connector.getConnections()).toEqual([])
+
+      messageChannelSpy.mockRestore()
+      postMessageSpy.mockRestore()
+    })
+
+    it("emits handshakeFailed when origin is not on allowedOrigins", async () => {
+      const handshakeFailedHandler = vi.fn()
+
+      connector = new WCPConnector(desktopAgentTransport, {
+        allowedOrigins: [TRUSTED_ORIGIN],
+      })
+      connector.on("handshakeFailed", handshakeFailedHandler)
+      connector.start()
+
+      window.dispatchEvent(
+        createMessageEvent(createWCP1Hello("reject-uuid"), window, UNTRUSTED_ORIGIN)
+      )
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      expect(handshakeFailedHandler).toHaveBeenCalledTimes(1)
+      expect(handshakeFailedHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringMatching(/origin/i),
+        }),
+        "reject-uuid"
+      )
+    })
+
+    it("completes handshake when origin is on allowedOrigins", async () => {
+      const messageChannelSpy = vi.spyOn(global, "MessageChannel")
+
+      connector = new WCPConnector(desktopAgentTransport, {
+        allowedOrigins: [TRUSTED_ORIGIN],
+      })
+      connector.start()
+
+      window.dispatchEvent(
+        createMessageEvent(createWCP1Hello("trusted-uuid"), window, TRUSTED_ORIGIN)
+      )
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      expect(messageChannelSpy).toHaveBeenCalled()
+      expect(connector.getConnections()).toHaveLength(1)
+      expect(connector.getConnection("temp-trusted-uuid")).toBeDefined()
+
+      messageChannelSpy.mockRestore()
+    })
+
+    it("allows WCP1Hello from any origin when allowedOrigins is undefined", async () => {
+      connector = new WCPConnector(desktopAgentTransport)
+      connector.start()
+
+      window.dispatchEvent(
+        createMessageEvent(createWCP1Hello("permissive-uuid"), window, UNTRUSTED_ORIGIN)
+      )
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      expect(connector.getConnections()).toHaveLength(1)
+      expect(connector.getConnection("temp-permissive-uuid")).toBeDefined()
     })
   })
 
