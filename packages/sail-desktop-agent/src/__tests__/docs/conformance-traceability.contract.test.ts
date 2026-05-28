@@ -43,7 +43,7 @@ function parseMarkdownTable(markdown: string): { header: string[]; rows: string[
       .map((cell) => cell.trim())
 
   const header = splitRow(tableLines[0]!)
-  const isSeparator = (line: string) => /^\|[\s:-|]+\|$/.test(line)
+  const isSeparator = (line: string) => /^\|[\s:\-|]+\|$/.test(line)
   const rows = tableLines.slice(1).filter((line) => !isSeparator(line)).map(splitRow)
 
   return { header, rows }
