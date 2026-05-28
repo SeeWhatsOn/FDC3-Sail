@@ -12,26 +12,26 @@ import type { AppConnectionMetadata } from "../wcp/wcp-types"
 import { consoleLogger } from "../../core/interfaces/logger"
 
 function createListenerTracker(port: MessagePort) {
-  const activeListeners = new Map<string, Set<EventListener>>()
+  const activeListeners = new Map<string, Set<EventListenerOrEventListenerObject>>()
 
-  const trackAdd = (type: string, listener: EventListener) => {
+  const trackAdd = (type: string, listener: EventListenerOrEventListenerObject) => {
     if (!activeListeners.has(type)) {
       activeListeners.set(type, new Set())
     }
     activeListeners.get(type)!.add(listener)
   }
 
-  const trackRemove = (type: string, listener: EventListener) => {
+  const trackRemove = (type: string, listener: EventListenerOrEventListenerObject) => {
     activeListeners.get(type)?.delete(listener)
   }
 
   vi.spyOn(port, "addEventListener").mockImplementation((type, listener, options) => {
-    trackAdd(type as string, listener as EventListener)
+    trackAdd(type, listener)
     return MessagePort.prototype.addEventListener.call(port, type, listener, options)
   })
 
   vi.spyOn(port, "removeEventListener").mockImplementation((type, listener, options) => {
-    trackRemove(type as string, listener as EventListener)
+    trackRemove(type, listener)
     return MessagePort.prototype.removeEventListener.call(port, type, listener, options)
   })
 
@@ -154,10 +154,7 @@ describe("MessagePortTransport", () => {
 
       port1.dispatchEvent(errorEvent)
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "[DACP ERROR] MessagePort error:",
-        errorEvent
-      )
+      expect(consoleErrorSpy).toHaveBeenCalledWith("[DACP ERROR] MessagePort error:", errorEvent)
       expect(transport.isConnected()).toBe(true)
 
       consoleErrorSpy.mockRestore()
@@ -452,35 +449,33 @@ describe("MessagePortTransport", () => {
       expect(messageHandlerRemoved).toBe(messageHandlerAdded)
 
       const errorHandlerAdded = addSpy.mock.calls.find(call => call[0] === "messageerror")?.[1]
-      const errorHandlerRemoved = removeSpy.mock.calls.find(
-        call => call[0] === "messageerror"
-      )?.[1]
+      const errorHandlerRemoved = removeSpy.mock.calls.find(call => call[0] === "messageerror")?.[1]
 
       expect(errorHandlerAdded).toBeDefined()
       expect(errorHandlerRemoved).toBe(errorHandlerAdded)
     })
 
     it("removes all message and messageerror listeners from the port after disconnect", () => {
-      const activeListeners = new Map<string, Set<EventListener>>()
+      const activeListeners = new Map<string, Set<EventListenerOrEventListenerObject>>()
 
-      const trackAdd = (type: string, listener: EventListener) => {
+      const trackAdd = (type: string, listener: EventListenerOrEventListenerObject) => {
         if (!activeListeners.has(type)) {
           activeListeners.set(type, new Set())
         }
         activeListeners.get(type)!.add(listener)
       }
 
-      const trackRemove = (type: string, listener: EventListener) => {
+      const trackRemove = (type: string, listener: EventListenerOrEventListenerObject) => {
         activeListeners.get(type)?.delete(listener)
       }
 
       vi.spyOn(port1, "addEventListener").mockImplementation((type, listener, options) => {
-        trackAdd(type as string, listener as EventListener)
+        trackAdd(type, listener)
         return MessagePort.prototype.addEventListener.call(port1, type, listener, options)
       })
 
       vi.spyOn(port1, "removeEventListener").mockImplementation((type, listener, options) => {
-        trackRemove(type as string, listener as EventListener)
+        trackRemove(type, listener)
         return MessagePort.prototype.removeEventListener.call(port1, type, listener, options)
       })
 

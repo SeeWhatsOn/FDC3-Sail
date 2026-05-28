@@ -274,13 +274,13 @@ interface Transport {
 
 ```bash
 # Run Cucumber BDD tests
-npm run test:cucumber --workspace=@finos/sail-desktop-agent
+npm run test:cucumber -w @finos/sail-desktop-agent
 
 # Run unit tests
-npm run test --workspace=@finos/sail-desktop-agent
+npm run test -w @finos/sail-desktop-agent
 
 # Type checking
-npm run typecheck --workspace=@finos/sail-desktop-agent
+npm run typecheck -w @finos/sail-desktop-agent
 ```
 
 ### Test Architecture
@@ -307,7 +307,7 @@ expect(responses[0].payload.resolution).toBeDefined()
 ### Building
 
 ```bash
-npm run build --workspace=@finos/sail-desktop-agent
+npm run build -w @finos/sail-desktop-agent
 ```
 
 ### Key Design Principles
@@ -338,6 +338,22 @@ const handlerMap = {
 
 3. Add Cucumber tests in `test/features/` and `test/step-definitions/`.
 
+## Validation
+
+DACP message validation is **injectable**, not built into the agent. Pass an optional `validator` implementing `MessageValidator` when constructing `DesktopAgent` (or via handler context). Integrators supply their own implementation—for example a Zod-based validator from `@finos/sail-platform-api`, a no-op validator, or any custom schema checker.
+
+```typescript
+import { DesktopAgent, type MessageValidator } from "@finos/sail-desktop-agent"
+
+const validator: MessageValidator = {
+  validate(messageType, message) {
+    // Return { valid: true } or { valid: false, errors: [...] }
+  },
+}
+
+const agent = new DesktopAgent({ transport, validator })
+```
+
 ## Dependencies
 
 ### Runtime
@@ -347,7 +363,7 @@ const handlerMap = {
 
 ### Peer Dependencies
 
-- `zod` - Runtime validation (optional, for schema validation)
+- `zod` - Optional peer for integrators who inject Zod-based `MessageValidator` implementations
 
 ## License
 

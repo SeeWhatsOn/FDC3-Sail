@@ -13,3 +13,5 @@ packages/sail-desktop-agent/cucumber-report.html
 packages/sail-desktop-agent/test-results.xml
 
 packages/da-impl/coverage/*
+.cursor/hooks/state/*
+.cursor/hooks/state/continual-learning.json

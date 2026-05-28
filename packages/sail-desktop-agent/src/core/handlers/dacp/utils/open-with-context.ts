@@ -164,6 +164,46 @@ export function clearPendingOpenWithContextForInstance(
   )
 }
 
+/**
+ * Clears open-with-context pending entries whose source disconnected.
+ * Scans all target buckets; does not send an error response to the gone source.
+ */
+export function clearPendingOpenWithContextForSourceInstance(
+  sourceInstanceId: string,
+  context: DACPHandlerContext
+): void {
+  const pendingByInstance = context.getState().open.pendingWithContext
+  const bucketsToUpdate: Array<{ targetInstanceId: string; remaining: PendingOpenWithContext[] }> =
+    []
+
+  for (const [targetInstanceId, pendingList] of Object.entries(pendingByInstance)) {
+    const toRemove = pendingList.filter(pending => pending.sourceInstanceId === sourceInstanceId)
+    if (toRemove.length === 0) {
+      continue
+    }
+
+    toRemove.forEach(pending => {
+      clearPendingTimeout(pending.message.meta.requestUuid)
+    })
+    bucketsToUpdate.push({
+      targetInstanceId,
+      remaining: pendingList.filter(pending => pending.sourceInstanceId !== sourceInstanceId),
+    })
+  }
+
+  if (bucketsToUpdate.length === 0) {
+    return
+  }
+
+  context.setState(state => {
+    let nextState = state
+    for (const { targetInstanceId, remaining } of bucketsToUpdate) {
+      nextState = setPendingOpenWithContextForInstance(nextState, targetInstanceId, remaining)
+    }
+    return nextState
+  })
+}
+
 function hasMatchingContextListener(
   targetInstanceId: string,
   contextType: string,
