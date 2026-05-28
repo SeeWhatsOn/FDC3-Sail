@@ -194,6 +194,61 @@ describe("MessagePortTransport", () => {
     })
   })
 
+  describe("listener cleanup", () => {
+    it("removeEventListener uses the same handler references as addEventListener when disconnect runs", () => {
+      const addSpy = vi.spyOn(port1, "addEventListener")
+      const removeSpy = vi.spyOn(port1, "removeEventListener")
+
+      const transport = new MessagePortTransport(port1)
+      transport.disconnect()
+
+      const messageHandlerAdded = addSpy.mock.calls.find(call => call[0] === "message")?.[1]
+      const messageHandlerRemoved = removeSpy.mock.calls.find(call => call[0] === "message")?.[1]
+
+      expect(messageHandlerAdded).toBeDefined()
+      expect(messageHandlerRemoved).toBe(messageHandlerAdded)
+
+      const errorHandlerAdded = addSpy.mock.calls.find(call => call[0] === "messageerror")?.[1]
+      const errorHandlerRemoved = removeSpy.mock.calls.find(
+        call => call[0] === "messageerror"
+      )?.[1]
+
+      expect(errorHandlerAdded).toBeDefined()
+      expect(errorHandlerRemoved).toBe(errorHandlerAdded)
+    })
+
+    it("removes all message and messageerror listeners from the port after disconnect", () => {
+      const activeListeners = new Map<string, Set<EventListener>>()
+
+      const trackAdd = (type: string, listener: EventListener) => {
+        if (!activeListeners.has(type)) {
+          activeListeners.set(type, new Set())
+        }
+        activeListeners.get(type)!.add(listener)
+      }
+
+      const trackRemove = (type: string, listener: EventListener) => {
+        activeListeners.get(type)?.delete(listener)
+      }
+
+      vi.spyOn(port1, "addEventListener").mockImplementation((type, listener, options) => {
+        trackAdd(type as string, listener as EventListener)
+        return MessagePort.prototype.addEventListener.call(port1, type, listener, options)
+      })
+
+      vi.spyOn(port1, "removeEventListener").mockImplementation((type, listener, options) => {
+        trackRemove(type as string, listener as EventListener)
+        return MessagePort.prototype.removeEventListener.call(port1, type, listener, options)
+      })
+
+      const transport = new MessagePortTransport(port1)
+      transport.disconnect()
+
+      expect(activeListeners.get("message")?.size ?? 0).toBe(0)
+      expect(activeListeners.get("messageerror")?.size ?? 0).toBe(0)
+    })
+  })
+
   describe("disconnect", () => {
     it("should close the MessagePort", () => {
       const transport = new MessagePortTransport(port1)
