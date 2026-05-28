@@ -10,7 +10,7 @@ export default defineConfig({
     setupFiles: ["./src/__tests__/setup/setup-tests.ts"],
     reporters: ["default", "html"],
     // Retry configuration for flaky tests
-    retry: 1,
+    retry: 0,
     // Test isolation improvements
     isolate: true,
     // Pool configuration for better test isolation
