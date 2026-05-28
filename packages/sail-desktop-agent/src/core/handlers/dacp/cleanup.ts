@@ -7,7 +7,10 @@ import { type DACPHandlerContext } from "../types"
 import * as eventHandlers from "./event-handlers"
 import * as privateChannelHandlers from "./private-channel-handlers"
 import { getActiveHeartbeatInstanceIds, stopHeartbeat } from "./heartbeat-runtime"
-import { clearPendingOpenWithContextForInstance } from "./utils/open-with-context"
+import {
+  clearPendingOpenWithContextForInstance,
+  clearPendingOpenWithContextForSourceInstance,
+} from "./utils/open-with-context"
 
 /**
  * WCP4 validation runs under a temp connection id while heartbeat and instance state
@@ -81,6 +84,7 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
   }
 
   clearPendingOpenWithContextForInstance(instanceId, resolvedContext)
+  clearPendingOpenWithContextForSourceInstance(instanceId, resolvedContext)
 
   // Remove event listeners
   eventHandlers.removeInstanceEventListeners(instanceId, setState)
