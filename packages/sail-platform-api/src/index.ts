@@ -69,6 +69,10 @@ export {
 export {
   DesktopAgent,
   type DesktopAgentConfig,
+  DEFAULT_SAIL_DESKTOP_AGENT_CONFIG,
+  DEFAULT_SAIL_IMPLEMENTATION_METADATA,
+  resolveDesktopAgentConfig,
+  type SailImplementationMetadata,
   type Transport,
   type MessageHandler,
   type DisconnectHandler,
