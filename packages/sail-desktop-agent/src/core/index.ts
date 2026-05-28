@@ -16,7 +16,7 @@
 
 // Core Desktop Agent
 export { DesktopAgent } from "./desktop-agent"
-export type { DesktopAgentConfig } from "./desktop-agent"
+export type { DesktopAgentConfig, DesktopAgentOptions } from "./desktop-agent"
 export { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
 export {
   DEFAULT_SAIL_DESKTOP_AGENT_CONFIG,

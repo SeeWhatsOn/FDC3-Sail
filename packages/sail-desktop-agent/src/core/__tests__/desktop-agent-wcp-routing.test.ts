@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest"
 import type { BrowserTypes } from "@finos/fdc3"
 import { DesktopAgent } from "../desktop-agent"
-import { resolveDesktopAgentConfig } from "../sail-default-config"
 import { AppDirectoryManager } from "../app-directory/app-directory-manager"
 import { MockTransport } from "../../__tests__/utils/mock-transport"
 
@@ -17,12 +16,10 @@ describe("DesktopAgent WCP routing", () => {
     const appDirectory = new AppDirectoryManager()
     appDirectory.addApplications(apps)
     const transport = new MockTransport()
-    const agent = new DesktopAgent(
-      resolveDesktopAgentConfig({
-        transport,
-        appDirectoryManager: appDirectory,
-      })
-    )
+    const agent = new DesktopAgent({
+      transport,
+      appDirectoryManager: appDirectory,
+    })
     agent.start()
     return { agent, transport }
   }

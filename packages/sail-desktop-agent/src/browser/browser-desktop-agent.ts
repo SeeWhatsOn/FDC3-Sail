@@ -20,7 +20,7 @@
  * - Remote mode: SocketIO, WebWorker, or any Transport implementation
  */
 
-import { DesktopAgent, resolveDesktopAgentConfig } from "../core"
+import { DesktopAgent } from "../core"
 import type { DesktopAgentConfig, Transport } from "../core"
 import type { SailImplementationMetadata } from "../core/sail-default-config"
 import { consoleLogger } from "../core/interfaces/logger"
@@ -255,20 +255,14 @@ export function createBrowserDesktopAgent(
   // Create WCP Connector first (so we can reference its methods)
   const wcpConnector = new WCPConnector(connectorTransport, { ...options?.wcpOptions, logger })
 
-  // Build Desktop Agent configuration
-  // Wire up WCPConnector's requestIntentResolution for UI-based intent resolution
-  const daConfig = resolveDesktopAgentConfig({
+  const desktopAgent = new DesktopAgent({
     transport: daTransport,
     appLauncher: options?.appLauncher,
     userChannels: options?.userChannels,
     implementationMetadata: options?.implementationMetadata,
     logger,
-    // Enable UI-based intent resolution via WCPConnector
     requestIntentResolution: request => wcpConnector.requestIntentResolution(request),
   })
-
-  // Create Desktop Agent
-  const desktopAgent = new DesktopAgent(daConfig)
 
   // Load app directories if provided
   if (options?.appDirectories && options.appDirectories.length > 0) {
