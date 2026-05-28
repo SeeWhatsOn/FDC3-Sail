@@ -19,12 +19,14 @@ import type {
 } from "./handlers/types"
 import type { DirectoryApp } from "./app-directory/types"
 import type { BrowserTypes } from "@finos/fdc3"
-import { InMemoryTransport } from "../transports/in-memory-transport"
 import type { AgentState, StateSetter } from "./state/types"
 import { createInitialState, createStateWithOverrides } from "./state/initial-state"
 import { consoleLogger, type Logger } from "./interfaces/logger"
-import { DACP_TIMEOUTS } from "./dacp-protocol/dacp-constants"
-import { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
+import {
+  resolveDesktopAgentConfig,
+  type SailImplementationMetadata,
+} from "./sail-default-config"
+import { InMemoryTransport } from "../transports/in-memory-transport"
 
 /**
  * Structure of DACP message metadata for routing
@@ -39,90 +41,50 @@ interface DACPMessageMeta {
 }
 
 /**
- * Configuration for creating a Desktop Agent instance
+ * Options for creating a Desktop Agent. Omitted fields use FDC3-Sail product
+ * defaults from `sail-default-config.ts` (merged in the constructor).
  */
-export interface DesktopAgentConfig {
+export interface DesktopAgentOptions {
   /**
-   * Transport implementation for bidirectional message communication.
-   * REQUIRED - must be provided by environment-specific code.
+   * Transport for bidirectional message communication.
+   * Defaults to an unpaired `InMemoryTransport` (dev/tests only — use a pair in browser).
    */
-  transport: Transport
+  transport?: Transport
 
-  /**
-   * App launcher implementation for opening/launching FDC3 applications.
-   * OPTIONAL - if not provided, openRequest will fail gracefully.
-   */
   appLauncher?: AppLauncher
-
-  /**
-   * App directory manager for querying app metadata.
-   * OPTIONAL - defaults to new instance if not provided.
-   */
   appDirectoryManager?: AppDirectoryManager
-
-  /**
-   * Array of DirectoryApp entries to initialize the app directory with.
-   * OPTIONAL - if provided, apps will be added to the directory.
-   */
   apps?: DirectoryApp[]
-
-  /**
-   * Array of user channels to initialize the user channel registry with.
-   * OPTIONAL - if provided, these channels will be used instead of default FDC3 channels.
-   */
   userChannels?: BrowserTypes.Channel[]
-
-  /**
-   * Callback for requesting UI-based intent resolution when multiple handlers exist.
-   * OPTIONAL - if not provided, the first handler is automatically selected.
-   * Injected by browser/server implementations to enable intent resolver UI.
-   */
   requestIntentResolution?: IntentResolutionCallback
-
-  /**
-   * Optional message validator for validating DACP messages.
-   * OPTIONAL - if not provided, messages are processed without schema validation.
-   * Implementations can inject Zod, AJV, or custom validators from sail-platform-api.
-   */
   validator?: MessageValidator
-
-  /**
-   * Logger instance for DACP handlers.
-   * OPTIONAL - defaults to consoleLogger if not provided.
-   */
   logger?: Logger
-
-  /**
-   * Initial state (for testing/persistence).
-   * OPTIONAL - if provided, merges with default initial state.
-   */
   initialState?: Partial<AgentState>
 
-  /**
-   * Implementation metadata for the desktop agent.
-   * Required — use `resolveDesktopAgentConfig()` or pass explicit metadata.
-   */
-  implementationMetadata: Pick<
-    BrowserTypes.ImplementationMetadata,
-    "fdc3Version" | "provider" | "providerVersion"
-  > &
-    Pick<Required<BrowserTypes.ImplementationMetadata>, "optionalFeatures">
+  /** Partial overrides merged with {@link DEFAULT_SAIL_IMPLEMENTATION_METADATA}. */
+  implementationMetadata?: Partial<SailImplementationMetadata>
 
-  /**
-   * Timeout (ms) to wait for a context listener after open-with-context.
-   * Defaults to the FDC3 minimum (15s) but can be shortened for tests.
-   */
   openContextListenerTimeoutMs?: number
-
-  /**
-   * Heartbeat interval (ms). Defaults to 30s but can be shortened for tests.
-   */
   heartbeatIntervalMs?: number
-
-  /**
-   * Heartbeat timeout (ms). Defaults to 60s but can be shortened for tests.
-   */
   heartbeatTimeoutMs?: number
+}
+
+/**
+ * Fully resolved Desktop Agent configuration after Sail defaults are applied.
+ */
+export interface DesktopAgentConfig {
+  transport?: Transport
+  appLauncher?: AppLauncher
+  appDirectoryManager?: AppDirectoryManager
+  apps?: DirectoryApp[]
+  userChannels: BrowserTypes.Channel[]
+  requestIntentResolution?: IntentResolutionCallback
+  validator?: MessageValidator
+  logger?: Logger
+  initialState?: Partial<AgentState>
+  implementationMetadata: SailImplementationMetadata
+  openContextListenerTimeoutMs: number
+  heartbeatIntervalMs: number
+  heartbeatTimeoutMs: number
 }
 
 /**
@@ -132,17 +94,21 @@ export interface DesktopAgentConfig {
  * transport mechanisms, UI frameworks, or runtime environments. All external
  * concerns are injected via the constructor.
  *
+ * When no `transport` is provided, the constructor defaults to an unpaired
+ * `new InMemoryTransport()`. That default is not suitable for production
+ * browser bridge use — browser deployments must use `createInMemoryTransportPair()`
+ * (see `createBrowserDesktopAgent()` in `@finos/sail-desktop-agent/browser`).
+ *
  * @example
  * ```typescript
- * import { resolveDesktopAgentConfig } from "./sail-default-config"
+ * import { createInMemoryTransportPair } from "../transports/in-memory-transport"
  *
- * const agent = new DesktopAgent(
- *   resolveDesktopAgentConfig({
- *     transport: new InMemoryTransport(),
- *     appLauncher: new BrowserAppLauncher(),
- *   })
- * )
- *
+ * // Browser: prefer createBrowserDesktopAgent() or a transport pair
+ * const [daTransport] = createInMemoryTransportPair()
+ * const agent = new DesktopAgent({
+ *   transport: daTransport,
+ *   implementationMetadata: { provider: "My Desk" },
+ * })
  * agent.start()
  * ```
  */
@@ -155,20 +121,15 @@ export class DesktopAgent {
   private validator?: MessageValidator
   private logger: Logger
   private isStarted: boolean = false
-  private implementationMetadata: DesktopAgentConfig["implementationMetadata"]
+  private implementationMetadata: SailImplementationMetadata
   private userChannels: BrowserTypes.Channel[]
   private openContextListenerTimeoutMs: number
   private heartbeatIntervalMs: number
   private heartbeatTimeoutMs: number
   private pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
 
-  constructor(config: DesktopAgentConfig) {
-    if (!config.implementationMetadata) {
-      throw new Error(
-        "DesktopAgentConfig.implementationMetadata is required. " +
-          "Use resolveDesktopAgentConfig() from sail-default-config or pass explicit metadata."
-      )
-    }
+  constructor(options: DesktopAgentOptions) {
+    const config = resolveDesktopAgentConfig(options)
 
     this.transport = config.transport ?? new InMemoryTransport()
     this.appDirectory = config.appDirectoryManager ?? new AppDirectoryManager()
@@ -176,18 +137,15 @@ export class DesktopAgent {
     this.requestIntentResolution = config.requestIntentResolution
     this.validator = config.validator
     this.logger = config.logger ?? consoleLogger
-    this.userChannels = config.userChannels ?? DEFAULT_FDC3_USER_CHANNELS
+    this.userChannels = config.userChannels
     this.implementationMetadata = config.implementationMetadata
-    this.openContextListenerTimeoutMs =
-      config.openContextListenerTimeoutMs ?? DACP_TIMEOUTS.MINIMUM_APP_LAUNCH
-    this.heartbeatIntervalMs = config.heartbeatIntervalMs ?? 30_000
-    this.heartbeatTimeoutMs = config.heartbeatTimeoutMs ?? 60_000
-    // Initialize state - use this.userChannels to ensure consistency
+    this.openContextListenerTimeoutMs = config.openContextListenerTimeoutMs
+    this.heartbeatIntervalMs = config.heartbeatIntervalMs
+    this.heartbeatTimeoutMs = config.heartbeatTimeoutMs
     this.state = config.initialState
       ? createStateWithOverrides(config.initialState, this.userChannels)
       : createInitialState(this.userChannels)
 
-    // Initialize app directory with provided apps if any
     if (config.apps) {
       for (const app of config.apps) {
         this.appDirectory.add(app)
@@ -370,7 +328,7 @@ export class DesktopAgent {
   /**
    * Get the implementation metadata (for testing/inspection)
    */
-  getImplementationMetadata(): DesktopAgentConfig["implementationMetadata"] {
+  getImplementationMetadata(): SailImplementationMetadata {
     return this.implementationMetadata
   }
   /**

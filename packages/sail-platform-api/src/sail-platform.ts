@@ -12,7 +12,6 @@ import {
   type AppLauncher,
   type DirectoryApp,
   type Transport,
-  resolveDesktopAgentConfig,
   type SailImplementationMetadata,
 } from "@finos/sail-desktop-agent"
 import { WCPConnector, type AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
@@ -229,8 +228,7 @@ export class SailPlatform {
       fdc3Version: "2.2",
     })
 
-    // Build Desktop Agent configuration
-    const daConfig = resolveDesktopAgentConfig({
+    this._desktopAgent = new DesktopAgent({
       transport: daTransport,
       appLauncher: this.config.appLauncher,
       userChannels: this.config.userChannels,
@@ -240,9 +238,6 @@ export class SailPlatform {
       heartbeatTimeoutMs: this.config.heartbeatTimeoutMs,
       requestIntentResolution: request => this._wcpConnector!.requestIntentResolution(request),
     })
-
-    // Create Desktop Agent
-    this._desktopAgent = new DesktopAgent(daConfig)
 
     // Add initial apps to directory if provided
     if (this.config.apps && this.config.apps.length > 0) {

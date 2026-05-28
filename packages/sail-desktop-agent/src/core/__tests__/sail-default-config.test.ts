@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { MockTransport } from "../../__tests__/utils/mock-transport"
+import { DesktopAgent } from "../desktop-agent"
 import {
   DEFAULT_SAIL_IMPLEMENTATION_METADATA,
   resolveDesktopAgentConfig,
@@ -39,5 +40,23 @@ describe("resolveDesktopAgentConfig", () => {
     expect(config.implementationMetadata.optionalFeatures).toEqual(
       DEFAULT_SAIL_IMPLEMENTATION_METADATA.optionalFeatures
     )
+  })
+})
+
+describe("DesktopAgent constructor defaults", () => {
+  it("applies Sail defaults when only transport is provided", () => {
+    const agent = new DesktopAgent({ transport: new MockTransport() })
+    expect(agent.getImplementationMetadata()).toEqual(DEFAULT_SAIL_IMPLEMENTATION_METADATA)
+  })
+
+  it("deep-merges partial implementationMetadata from constructor options", () => {
+    const agent = new DesktopAgent({
+      transport: new MockTransport(),
+      implementationMetadata: { provider: "Acme" },
+    })
+    const metadata = agent.getImplementationMetadata()
+    expect(metadata.provider).toBe("Acme")
+    expect(metadata.providerVersion).toBe(DEFAULT_SAIL_IMPLEMENTATION_METADATA.providerVersion)
+    expect(metadata.optionalFeatures).toEqual(DEFAULT_SAIL_IMPLEMENTATION_METADATA.optionalFeatures)
   })
 })

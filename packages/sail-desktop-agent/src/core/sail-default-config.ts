@@ -2,14 +2,13 @@
  * FDC3-Sail product defaults for Desktop Agent configuration.
  *
  * Single source of truth for implementation metadata, user channels, and timing
- * defaults. Factory entry points (SailPlatform, createBrowserDesktopAgent) merge
- * these defaults with caller overrides before constructing DesktopAgent.
+ * defaults. `DesktopAgent` merges these with caller overrides in its constructor.
  */
 
 import type { BrowserTypes } from "@finos/fdc3"
 import pkg from "../../package.json"
 import { DACP_TIMEOUTS } from "./dacp-protocol/dacp-constants"
-import type { DesktopAgentConfig } from "./desktop-agent"
+import type { DesktopAgentConfig, DesktopAgentOptions } from "./desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
 
 export type SailImplementationMetadata = Pick<
@@ -29,19 +28,21 @@ export const DEFAULT_SAIL_IMPLEMENTATION_METADATA: SailImplementationMetadata = 
   },
 }
 
-/** Product defaults excluding transport (always supplied by the caller). */
+/** Product defaults merged into every `DesktopAgent` unless overridden. */
 export const DEFAULT_SAIL_DESKTOP_AGENT_CONFIG = {
   implementationMetadata: DEFAULT_SAIL_IMPLEMENTATION_METADATA,
   userChannels: DEFAULT_FDC3_USER_CHANNELS,
   openContextListenerTimeoutMs: DACP_TIMEOUTS.MINIMUM_APP_LAUNCH,
   heartbeatIntervalMs: 30_000,
   heartbeatTimeoutMs: 60_000,
-} satisfies Omit<
+} satisfies Pick<
   DesktopAgentConfig,
-  "transport" | "implementationMetadata"
-> & {
-  implementationMetadata: SailImplementationMetadata
-}
+  | "implementationMetadata"
+  | "userChannels"
+  | "openContextListenerTimeoutMs"
+  | "heartbeatIntervalMs"
+  | "heartbeatTimeoutMs"
+>
 
 function mergeImplementationMetadata(
   base: SailImplementationMetadata,
@@ -62,15 +63,11 @@ function mergeImplementationMetadata(
 }
 
 /**
- * Merge FDC3-Sail product defaults with caller overrides and return a complete
- * DesktopAgentConfig (including required implementationMetadata).
+ * Merge FDC3-Sail product defaults with caller options.
+ * Used by `DesktopAgent` constructor; exported for tests and pre-built config.
  */
-export function resolveDesktopAgentConfig(
-  overrides: Omit<DesktopAgentConfig, "implementationMetadata"> & {
-    implementationMetadata?: Partial<SailImplementationMetadata>
-  }
-): DesktopAgentConfig {
-  const { implementationMetadata, ...rest } = overrides
+export function resolveDesktopAgentConfig(options: DesktopAgentOptions): DesktopAgentConfig {
+  const { implementationMetadata, ...rest } = options
 
   return {
     ...DEFAULT_SAIL_DESKTOP_AGENT_CONFIG,

@@ -81,8 +81,8 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 ## Learned User Preferences
 
 - Keep `@finos/sail-desktop-agent` aligned with FDC3 2.2 spec behavior; Sail-specific extensions (e.g. WCP origin allowlists) belong in `@finos/sail-platform-api`, not the core library.
-- FDC3-Sail product defaults live in `packages/sail-desktop-agent/src/core/sail-default-config.ts` and merge via `resolveDesktopAgentConfig()` at factory entry points (`SailPlatform`, `createBrowserDesktopAgent`); do not add handler-level `??` fallbacks for implementation metadata.
-- `DesktopAgent` requires explicit `implementationMetadata`; missing metadata should fail fast at construction, not silently fall back in handlers.
+- FDC3-Sail product defaults live in `packages/sail-desktop-agent/src/core/sail-default-config.ts`; `new DesktopAgent(options)` merges them in the constructor (partial `implementationMetadata` overrides are deep-merged). Do not add handler-level `??` fallbacks for implementation metadata.
+- `resolveDesktopAgentConfig()` remains exported for tests and pre-built config; app code normally uses `new DesktopAgent({ transport, ... })` or `createBrowserDesktopAgent()` / `SailPlatform`.
 - Product identity (`provider`, `providerVersion`) should not use a separate JSON/YAML config file or CI env override; pass overrides through TypeScript factory/config APIs.
 - `providerVersion` tracks `@finos/sail-desktop-agent` `package.json` version so deployed npm semver and `getInfo()` stay in lock step.
 - Provider branding stays `FDC3-Sail` across library and platform layers unless a caller explicitly overrides metadata in config.
