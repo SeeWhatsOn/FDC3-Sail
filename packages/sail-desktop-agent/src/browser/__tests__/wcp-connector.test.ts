@@ -42,6 +42,36 @@ function createMessageEvent(data: unknown, source: Window = window): MessageEven
   })
 }
 
+/** Establish a WCP connection and return the temporary instanceId. */
+async function establishTempConnection(
+  connector: WCPConnector,
+  connectionAttemptUuid = "test-uuid"
+): Promise<string> {
+  window.dispatchEvent(createMessageEvent(createWCP1Hello(connectionAttemptUuid)))
+  await new Promise(resolve => setTimeout(resolve, 50))
+  const connections = connector.getConnections()
+  expect(connections).toHaveLength(1)
+  return connections[0].instanceId
+}
+
+/** Return port1 transferred to the app during WCP3Handshake. */
+function captureAppMessagePort(connectionAttemptUuid = "test-uuid"): MessagePort {
+  const postMessageSpy = vi.spyOn(window, "postMessage")
+  window.dispatchEvent(createMessageEvent(createWCP1Hello(connectionAttemptUuid)))
+
+  const calls = postMessageSpy.mock.calls as unknown as Array<
+    [BrowserTypes.WebConnectionProtocol3Handshake, string, MessagePort[]]
+  >
+  expect(calls.length).toBeGreaterThan(0)
+  const ports = calls[0][2]
+  expect(ports).toEqual(expect.arrayContaining([expect.any(MessagePort)]))
+
+  postMessageSpy.mockRestore()
+  const appPort = ports[0]
+  appPort.start()
+  return appPort
+}
+
 describe("WCPConnector", () => {
   let desktopAgentTransport: Transport
   let connector: WCPConnector
@@ -334,6 +364,7 @@ describe("WCPConnector", () => {
       // Manually trigger the disconnect by calling stop() which cleans up connections
       connector.stop()
 
+      expect(appDisconnectedHandler).toHaveBeenCalledTimes(1)
       expect(appDisconnectedHandler).toHaveBeenCalledWith(instanceId)
     })
 
@@ -532,6 +563,8 @@ describe("WCPConnector", () => {
 
     it("should disconnect temp connection after WCP5 identity validation failure", async () => {
       connector = new WCPConnector(desktopAgentTransport)
+      const appDisconnectedHandler = vi.fn()
+      connector.on("appDisconnected", appDisconnectedHandler)
       connector.start()
 
       const wcp1Hello = createWCP1Hello("failure-disconnect-uuid")
@@ -555,6 +588,8 @@ describe("WCPConnector", () => {
 
       await new Promise(resolve => setTimeout(resolve, 50))
       expect(connector.getConnection("temp-failure-disconnect-uuid")).toBeUndefined()
+      expect(appDisconnectedHandler).toHaveBeenCalledTimes(1)
+      expect(appDisconnectedHandler).toHaveBeenCalledWith("temp-failure-disconnect-uuid")
     })
   })
 
@@ -679,6 +714,106 @@ describe("WCPConnector", () => {
 
       connector.stop()
       expect(connector.getIsStarted()).toBe(false)
+    })
+  })
+
+  describe("appDisconnected exactly once (owner-initiated disconnect)", () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it("emits appDisconnected exactly once when connector.stop() cleans up one connection", async () => {
+      connector = new WCPConnector(desktopAgentTransport)
+      const appDisconnectedHandler = vi.fn()
+      connector.on("appDisconnected", appDisconnectedHandler)
+      connector.start()
+
+      const instanceId = await establishTempConnection(connector, "stop-single-uuid")
+      connector.stop()
+
+      expect(appDisconnectedHandler).toHaveBeenCalledTimes(1)
+      expect(appDisconnectedHandler).toHaveBeenCalledWith(instanceId)
+    })
+
+    it("emits appDisconnected exactly once per instance when connector.stop() cleans up multiple connections", async () => {
+      connector = new WCPConnector(desktopAgentTransport)
+      const appDisconnectedHandler = vi.fn()
+      connector.on("appDisconnected", appDisconnectedHandler)
+      connector.start()
+
+      window.dispatchEvent(createMessageEvent(createWCP1Hello("stop-multi-1")))
+      window.dispatchEvent(createMessageEvent(createWCP1Hello("stop-multi-2")))
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      connector.stop()
+
+      expect(appDisconnectedHandler).toHaveBeenCalledTimes(2)
+      expect(appDisconnectedHandler).toHaveBeenCalledWith("temp-stop-multi-1")
+      expect(appDisconnectedHandler).toHaveBeenCalledWith("temp-stop-multi-2")
+    })
+
+    it("emits appDisconnected exactly once when disconnectAppByInstanceId is called", async () => {
+      connector = new WCPConnector(desktopAgentTransport)
+      const appDisconnectedHandler = vi.fn()
+      connector.on("appDisconnected", appDisconnectedHandler)
+      connector.start()
+
+      const instanceId = await establishTempConnection(connector, "explicit-disconnect-uuid")
+      connector.disconnectAppByInstanceId(instanceId)
+
+      expect(appDisconnectedHandler).toHaveBeenCalledTimes(1)
+      expect(appDisconnectedHandler).toHaveBeenCalledWith(instanceId)
+    })
+
+    it("emits appDisconnected exactly once after WCP4 handshake timeout", async () => {
+      vi.useFakeTimers()
+      try {
+        connector = new WCPConnector(desktopAgentTransport, { handshakeTimeout: 1000 })
+        const appDisconnectedHandler = vi.fn()
+        connector.on("appDisconnected", appDisconnectedHandler)
+        connector.start()
+
+        window.dispatchEvent(createMessageEvent(createWCP1Hello("handshake-timeout-uuid")))
+        await vi.advanceTimersByTimeAsync(50)
+
+        expect(connector.getConnection("temp-handshake-timeout-uuid")).toBeDefined()
+        await vi.advanceTimersByTimeAsync(1000)
+
+        expect(appDisconnectedHandler).toHaveBeenCalledTimes(1)
+        expect(appDisconnectedHandler).toHaveBeenCalledWith("temp-handshake-timeout-uuid")
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("emits appDisconnected exactly once after WCP6Goodbye grace period", async () => {
+      vi.useFakeTimers()
+      try {
+        connector = new WCPConnector(desktopAgentTransport, {
+          handshakeTimeout: 60_000,
+          disconnectGracePeriod: 500,
+        })
+        const appDisconnectedHandler = vi.fn()
+        connector.on("appDisconnected", appDisconnectedHandler)
+        connector.start()
+
+        const appPort = captureAppMessagePort("goodbye-grace-uuid")
+        await vi.advanceTimersByTimeAsync(50)
+
+        appPort.postMessage({
+          type: "WCP6Goodbye",
+          meta: { timestamp: new Date().toISOString() },
+        })
+        await vi.advanceTimersByTimeAsync(50)
+
+        expect(appDisconnectedHandler).not.toHaveBeenCalled()
+        await vi.advanceTimersByTimeAsync(500)
+
+        expect(appDisconnectedHandler).toHaveBeenCalledTimes(1)
+        expect(appDisconnectedHandler).toHaveBeenCalledWith("temp-goodbye-grace-uuid")
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 
