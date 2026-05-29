@@ -3,10 +3,11 @@ title: "Audit heartbeat timer and state cleanup on disconnect"
 slug: audit-heartbeat-disconnect-cleanup
 kind: task
 type: bug
-status: draft
+status: in-progress
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
+integration_branch: v3-pre
 file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/cleanup.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/heartbeat-handlers.ts
@@ -69,4 +70,14 @@ None.
 
 ## Loop history
 
-- 2026-05-27: approved by human
+- 2026-05-27: approved by human (planning gate; status not updated)
+- 2026-05-29: approved by human (/ww-approve)
+- 2026-05-29: Phase A RED — added disconnect coverage tests; 1 failure (multi-instance WCP4 temp cleanup)
+
+## RED evidence
+
+- Test files changed: `packages/sail-desktop-agent/src/core/handlers/dacp/__tests__/cleanup.test.ts`
+- Command run: `cd packages/sail-desktop-agent && npx vitest run src/core/handlers/dacp/__tests__/cleanup.test.ts`
+- Failure summary: New test `cleanupDACPHandlers clears only the targeted heartbeat when multiple instances are connected and WCP4 temp context is used` fails because after `cleanupDACPHandlers(targetContext)` with a WCP4 temp `instanceId`, `getActiveHeartbeatTimerCount()` remains 2 instead of 1 — the canonical instance's interval timer and `state.heartbeats[canonicalInstanceId]` are not cleared while the other instance's heartbeat remains correctly active.
+- Expected reason: `resolveCleanupInstanceId` only maps temp → canonical when exactly one active heartbeat exists (`activeHeartbeatIds.length === 1`); with two connected instances both heartbeating, cleanup with a temp context id falls through to the temp id, so `stopHeartbeat` clears neither the canonical timer nor state row keyed by `startHeartbeat`'s id.
+- Unrelated tests: healthy (200/201 Vitest pass; sole failure is the new multi-instance test)
