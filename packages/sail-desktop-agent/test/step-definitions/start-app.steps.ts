@@ -6,7 +6,7 @@ import { BrowserTypes } from "@finos/fdc3-schema"
 import type { GetInfoRequest } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { AppInstanceState } from "../../src/core/state/types"
 import { getInstance, getInstancesByState } from "../../src/core/state/selectors"
-import { connectInstance, updateInstanceState } from "../../src/core/state/mutators"
+import { connectInstance, removeInstance, updateInstanceState } from "../../src/core/state/mutators"
 
 type OpenRequest = BrowserTypes.OpenRequest
 type GetAppMetadataRequest = BrowserTypes.GetAppMetadataRequest
@@ -152,13 +152,21 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
     },
   } as unknown as WebConnectionProtocol4ValidateAppIdentity
 
-  // Set to connected state
-  this.updateState(currentState =>
-    updateInstanceState(currentState, uuid, AppInstanceState.CONNECTED)
-  )
-
   // Send message to DesktopAgent
   await this.mockTransport.receiveMessage(message)
+
+  // WCP4 routes under temp-{connectionAttemptUuid}; link the test connection id to WCP5 id.
+  const canonicalId = this.mockTransport.lastWcp5ValidatedInstanceId
+  if (canonicalId) {
+    this.mockTransport.registerWcp5Mapping(uuid, canonicalId)
+    if (canonicalId !== uuid) {
+      this.updateState(state => removeInstance(state, uuid))
+    }
+    // WCP5 creates instances as PENDING; tests treat validated apps as live/connected.
+    this.updateState(state => updateInstanceState(state, canonicalId, AppInstanceState.CONNECTED))
+  } else {
+    this.updateState(state => updateInstanceState(state, uuid, AppInstanceState.CONNECTED))
+  }
 })
 
 When("{string} revalidates", async function (this: CustomWorld, uuid: string) {

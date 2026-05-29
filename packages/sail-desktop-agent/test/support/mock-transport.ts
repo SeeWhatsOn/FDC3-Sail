@@ -74,13 +74,34 @@ export class MockTransport implements Transport {
    */
   public lastWcp5ValidatedInstanceId: string | null = null
 
+  /** WCP4 connection id → canonical WCP5 instanceId assigned during validation. */
+  private wcp5InstanceIdByConnectionId: Map<string, string> = new Map()
+
+  /**
+   * Resolve the canonical WCP5 instance id for a connection id when validation ran.
+   * Falls back to the connection id when no WCP5 mapping exists.
+   */
+  resolveWcp5InstanceId(connectionId: string): string {
+    return this.wcp5InstanceIdByConnectionId.get(connectionId) ?? connectionId
+  }
+
+  /** Record test connection id → canonical WCP5 instance id after validate. */
+  registerWcp5Mapping(connectionId: string, canonicalInstanceId: string): void {
+    this.wcp5InstanceIdByConnectionId.set(connectionId, canonicalInstanceId)
+    this.lastWcp5ValidatedInstanceId = canonicalInstanceId
+  }
+
   send(message: unknown): void {
     const msg = message as DACPMessage
 
     if (msg.type === "WCP5ValidateAppIdentityResponse") {
       const id = (msg.payload as { instanceId?: string } | undefined)?.instanceId
+      const connectionId = msg.meta?.destination?.instanceId
       if (id) {
         this.lastWcp5ValidatedInstanceId = id
+      }
+      if (connectionId && id) {
+        this.wcp5InstanceIdByConnectionId.set(connectionId, id)
       }
     }
 
@@ -198,6 +219,7 @@ export class MockTransport implements Transport {
     this.allMessages = []
     this.messagesByInstance.clear()
     this.lastWcp5ValidatedInstanceId = null
+    this.wcp5InstanceIdByConnectionId.clear()
   }
 
   /**
