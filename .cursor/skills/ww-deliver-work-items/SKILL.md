@@ -170,10 +170,14 @@ Accept exactly:
 
 - `approve`: run learning extraction from `ww-work-items`, include only
   human-approved `AGENTS.md` updates, then follow
-  [references/post-approve-git.md](references/post-approve-git.md) to
-  commit, squash merge to `integration_branch`, run final checks, set
-  `status: done`, and continue to the next eligible item. Do not include
-  `plans/` artifacts unless the human explicitly asks.
+  [references/post-approve-git.md](references/post-approve-git.md) according to
+  the resolved **automation tier** (`ww-workflow-config`):
+  - `stage_only`: do not commit; human merges manually; use `/ww-reconcile` or
+    set `done` after merge
+  - `commit_push`: commit, push, `status: committed`
+  - `draft_pr`: commit, push, draft PR, `status: pr_awaiting` + `pr_url`
+  Include `plans/` when `repo.plans.version_in_git` is true. Squash only if
+  config `squash_to_integration` is true.
 - `changes [note]`: unstage only this work item's files, set
   `status: in-progress`, route the note to `implement-agent`.
 - `skip`: leave staged, keep `status: staged`, continue only if there

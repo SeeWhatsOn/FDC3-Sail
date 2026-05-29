@@ -11,8 +11,9 @@ Kick off the Watson workflow **planning phase**.
 
 Read and follow these skills in order:
 
-1. `ww-work-items`
-2. `ww-prd-breakdown`
+1. `ww-workflow-config` (create `plans/workflow-config.yaml` via interview if missing)
+2. `ww-work-items`
+3. `ww-prd-breakdown`
 
 Also load `interview-me` if intent, scope, or constraints are unclear.
 
@@ -22,6 +23,7 @@ Also load `interview-me` if intent, scope, or constraints are unclear.
 2. Use the PRD path, attached doc, or goal from the user's message as input.
 3. Present each work item draft for human approval before writing it.
 4. End with the handoff report pointing to `/ww-approve` and `/ww-deliver`.
+5. Handoff must state active **automation tier** and `plans.version_in_git`.
 
 ## Usage
 
@@ -31,4 +33,3 @@ Also load `interview-me` if intent, scope, or constraints are unclear.
 ```
 
 Do not write production code or executable tests in this phase.
-

@@ -1,0 +1,19 @@
+# Copy to plans/workflow-config.yaml (repo) or plans/local/user-overrides.yaml (personal).
+version: 1
+
+repo:
+  integration_branch: v3-pre
+  branch_name_template: "cursor/<descriptive-slug>-8a9f"
+  plans:
+    version_in_git: true
+  delivery:
+    default_automation: stage_only # stage_only | commit_push | draft_pr
+    squash_to_integration: false
+    pr_base_branch: v3-pre
+  subagents:
+    probe_at_delivery_start: true
+
+workloads:
+  prd-transport-platform-hardening:
+    delivery:
+      default_automation: draft_pr

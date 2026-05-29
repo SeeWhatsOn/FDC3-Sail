@@ -185,12 +185,14 @@ When verification and review pass:
    phase — see `ww-deliver-work-items` → `subagent-launch.md`), diff
    summary, and **Learnings proposed**
    (aggregated from subagent reports — see Learnings Collection).
-4. Set `status: staged`.
-5. Stage only implementation files from `file_manifest`, tests, product
-   docs intended for the PR, and human-approved `AGENTS.md` updates.
-   Do not stage `plans/` artifacts by default.
-6. Present the staged summary to the human.
-7. Wait for `approve`, `changes [note]`, or `skip`.
+4. Set `status: waiting_on_user` (and record `staged` timestamp in loop history;
+   `staged` may be used as a substate in `## Staged for review` only).
+5. Stage implementation files per automation tier (`stage_only` stages;
+   `commit_push` / `draft_pr` may stage before approve).
+6. Include `plans/work-items/<slug>.md` in git staging only when tier commits
+   and `repo.plans.version_in_git`.
+7. Present summary; state active automation tier.
+8. Wait for `approve`, `changes [note]`, or `skip`.
 
 Do not commit before explicit human approval.
 

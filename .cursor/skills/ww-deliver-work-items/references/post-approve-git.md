@@ -1,26 +1,36 @@
 # Post-Approve Git Flow
 
-Run only after the human replies `approve` at the staged review gate.
+Run only after the human replies `approve` at the review gate (`waiting_on_user`
+or legacy `staged`).
 
-## Sequence
+Read resolved automation tier from `ww-workflow-config`.
 
-1. Confirm the work item is `status: staged`.
-2. Collect learnings and propose any `AGENTS.md` updates before commit.
-3. Include only human-approved durable learning updates.
-4. Commit approved source, test, product-doc, and approved `AGENTS.md`
-   changes on the work item branch.
-5. Checkout `integration_branch`.
-6. Squash merge the work item branch into `integration_branch`.
-7. Run final project checks from `ww-work-items` command detection.
-8. Set the work item `status: done`.
-9. Continue to the next eligible approved work item.
+## Tier: `stage_only`
 
-## Guardrails
+1. Do **not** commit, push, or open PR.
+2. Leave implementation staged or unstaged per human preference; report `git status`.
+3. Set `status: waiting_on_user` (or keep `staged`) — **not** `done`.
+4. Tell human to merge/commit manually; suggest `/ww-reconcile` after merge.
+
+## Tier: `commit_push`
+
+1. Collect learnings; commit approved files on work item branch.
+2. Include `plans/work-items/<slug>.md` when `repo.plans.version_in_git`.
+3. Push to origin.
+4. Set `status: committed`.
+5. If `squash_to_integration`: checkout integration branch, squash merge, run checks.
+6. Do **not** set `done` until merge is confirmed (`/ww-reconcile` or human).
+
+## Tier: `draft_pr`
+
+1. Same as `commit_push` (commit + push + plans if configured).
+2. Create or update **draft** PR (`base` = `repo.delivery.pr_base_branch`).
+3. Set `pr_url` in work item frontmatter; `status: pr_awaiting`.
+4. `/ww-reconcile` sets `done` when PR is **MERGED**.
+
+## All tiers
 
 - Do not commit before human `approve`.
-- Do not include `plans/` artifacts unless the human explicitly asks.
-- Do not push unless the human explicitly asks.
-- If final checks fail after squash merge, stop and report the failure.
-- If merge conflicts occur, stop and ask before resolving unless the human
-  explicitly asked for conflict resolution.
-
+- Do not push unless tier requires it or human asked.
+- Run final project checks before commit when tier commits.
+- On failure after push, stop and report; do not set `done`.

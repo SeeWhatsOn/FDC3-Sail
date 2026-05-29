@@ -11,8 +11,9 @@ Kick off the Watson workflow **approval phase** (between plan and deliver).
 
 Read and follow these skills in order:
 
-1. `ww-work-items`
-2. `ww-approve-work-items`
+1. `ww-workflow-config`
+2. `ww-work-items`
+3. `ww-approve-work-items`
 
 ## What to do
 

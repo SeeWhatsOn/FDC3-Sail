@@ -15,3 +15,6 @@ packages/sail-desktop-agent/test-results.xml
 packages/da-impl/coverage/*
 .cursor/hooks/state/*
 .cursor/hooks/state/continual-learning.json
+
+# Watson workflow — personal overrides (see plans/local/README.md)
+plans/local/user-overrides.yaml

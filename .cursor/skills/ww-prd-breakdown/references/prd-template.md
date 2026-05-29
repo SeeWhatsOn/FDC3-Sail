@@ -27,6 +27,9 @@ ask focused questions instead of guessing.
 
 ## Optional
 
+- **Workflow:** `workflow_profile` — PRD slug under `workloads:` in
+  `plans/workflow-config.yaml` when this batch needs non-default automation
+  (e.g. `draft_pr`). See `plans/WORKFLOW.md`.
 - Reference docs and source links.
 - Rollout or launch notes.
 - Migration or deprecation notes.
