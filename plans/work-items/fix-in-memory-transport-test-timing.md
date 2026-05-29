@@ -3,7 +3,8 @@ title: "Replace fixed sleeps in in-memory transport tests"
 slug: fix-in-memory-transport-test-timing
 kind: spike
 type: chore
-status: approved
+status: waiting_on_user
+branch: cursor/fix-in-memory-transport-test-timing-f2c8
 loop_count: 0
 loop_limit: 3
 last_agent: ""

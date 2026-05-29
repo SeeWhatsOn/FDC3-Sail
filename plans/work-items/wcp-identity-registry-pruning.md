@@ -3,7 +3,8 @@ title: "Investigate and prune WCP instance identity registry entries"
 slug: wcp-identity-registry-pruning
 kind: spike
 type: bug
-status: approved
+status: waiting_on_user
+branch: cursor/wcp-identity-registry-pruning-f2c8
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -65,3 +66,4 @@ Severity after investigation — may close as no-op or optional cleanup.
 ## Loop history
 
 - 2026-05-27: approved by human (validation gaps waived)
+- 2026-05-29: auto-deliver — pruneInstanceIdentity on cleanup; branch pushed

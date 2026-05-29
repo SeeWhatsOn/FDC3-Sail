@@ -3,7 +3,8 @@ title: "Investigate WCP and heartbeat test hygiene"
 slug: align-wcp-instance-id-in-tests
 kind: spike
 type: bug
-status: approved
+status: waiting_on_user
+branch: cursor/align-wcp-instance-id-in-tests-f2c8
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -72,3 +73,4 @@ Whether any change is test-only vs. handler fix.
 ## Loop history
 
 - 2026-05-27: approved by human
+- 2026-05-29: auto-deliver — WCP5 canonical id in BDD; 7 scenarios pass; branch pushed

@@ -2,7 +2,8 @@
 title: "App-channel context history conformance BDD gaps"
 slug: app-channel-context-history-bdd
 type: enhancement
-status: approved
+status: waiting_on_user
+branch: cursor/app-channel-context-history-bdd-f2c8
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -60,3 +61,4 @@ Which exact conformance rows to import in v3 scope — use traceability map to b
 ## Loop history
 
 - 2026-05-27: approved by human (validation gaps waived; scope clarified in approve discussion)
+- 2026-05-29: auto-deliver — 2 BDD scenarios + notifyContextListeners fix; traceability covered; branch pushed
