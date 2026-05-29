@@ -50,6 +50,7 @@ All commands from the repo root — see `package.json` `scripts` for the full li
 
 ### Testing conventions (`@finos/sail-desktop-agent`)
 
+- **Do not add Vitest or Cucumber tests for README, TSDoc, or other documentation.** `npm test` covers FDC3 behavior and library code only. Docs are maintained manually; do not add contract tests that regex-match prose, directory trees, markdown tables, or import examples in README files.
 - **Do not add test-only methods to production types** (e.g. `DesktopAgent`, handlers, transports). No `*ForTesting` helpers, no exposing private handler context builders for Cucumber/Vitest.
 - **Prefer production APIs in BDD** when exercising real behavior (e.g. `desktopAgent.disconnectInstance(instanceId)` for disconnect cleanup — same path as WCP6 goodbye / heartbeat timeout).
 - **Unit / BDD harnesses** live under `src/**/__tests__/` and `packages/sail-desktop-agent/test/`:

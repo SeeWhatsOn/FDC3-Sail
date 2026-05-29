@@ -24,7 +24,7 @@ import { DesktopAgent } from "../core"
 import type { DesktopAgentConfig, Transport } from "../core"
 import type { SailImplementationMetadata } from "../core/sail-default-config"
 import { consoleLogger } from "../core/interfaces/logger"
-import type { Logger } from "../core/interfaces/logger"
+import type { Logger, LogPayloadDetail } from "../core/interfaces/logger"
 import { WCPConnector } from "./wcp/wcp-connector"
 import type { WCPConnectorOptions } from "./wcp/wcp-connector"
 import { createInMemoryTransportPair } from "../transports/in-memory-transport"
@@ -159,6 +159,17 @@ export interface BrowserDesktopAgentOptions extends Pick<
    * OPTIONAL - defaults to consoleLogger if not provided.
    */
   logger?: Logger
+
+  /**
+   * How much message/context detail agent-internal structured logs include.
+   *
+   * @defaultValue `'metadata'`
+   *
+   * @remarks Use with {@link BrowserDesktopAgentOptions.logger}: config selects
+   * *what* to log; the logger selects *where* it goes. Full payloads appear on
+   * {@link Logger.debug} only when set to `'full'`.
+   */
+  logPayloadDetail?: LogPayloadDetail
 }
 
 /**
@@ -261,6 +272,7 @@ export function createBrowserDesktopAgent(
     userChannels: options?.userChannels,
     implementationMetadata: options?.implementationMetadata,
     logger,
+    logPayloadDetail: options?.logPayloadDetail,
     requestIntentResolution: request => wcpConnector.requestIntentResolution(request),
   })
 

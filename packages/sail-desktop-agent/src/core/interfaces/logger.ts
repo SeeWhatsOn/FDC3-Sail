@@ -1,6 +1,16 @@
 /**
+ * How much message/context detail agent-internal structured logs include.
+ */
+export type LogPayloadDetail = "metadata" | "full"
+
+/**
  * Injectable logger interface for DACP handlers.
  * Allows custom logging implementations to be injected.
+ *
+ * @remarks Agent-internal DACP/WCP helpers may emit full serialized payloads on
+ * {@link Logger.debug} when `logPayloadDetail` is `'full'`. The default
+ * {@link consoleLogger} leaves `debug` as a no-op so production hosts are not
+ * flooded; inject a custom logger to capture debug output.
  */
 export interface Logger {
   error: (message: string, ...args: unknown[]) => void
@@ -23,9 +33,8 @@ export const consoleLogger: Logger = {
   info: (message: string, ...args: unknown[]) => {
     console.log(`[DACP INFO] ${message}`, ...args)
   },
-  debug: (message: string, ...args: unknown[]) => {
-    console.debug(`[DACP DEBUG] ${message}`, ...args)
-    // No-op by default - enable via custom logger if needed
+  debug: () => {
+    // No-op by default — enable via custom logger if needed
   },
 }
 

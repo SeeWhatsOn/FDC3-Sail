@@ -346,6 +346,15 @@ const handlerMap = {
 
 3. Add Cucumber tests in `test/features/` and `test/step-definitions/`.
 
+## Logging
+
+The Desktop Agent accepts an **injectable** `logger` and a `logPayloadDetail` policy on `DesktopAgent` / `createBrowserDesktopAgent` options.
+
+- **`logPayloadDetail: 'metadata'`** (default) — structured logs at `info` / `warn` / `error` include message type, request/event ids, `contextType`, and context **key names** only. Sensitive context values are never serialized at those levels.
+- **`logPayloadDetail: 'full'`** — full serialized payloads may appear on `logger.debug` only. Requires a custom logger that implements `debug` (the default `consoleLogger` leaves `debug` as a no-op).
+
+Use `logger` to choose the sink (console, OTEL, test fakes); use `logPayloadDetail` to choose how much payload detail is passed to that sink.
+
 ## Validation
 
 DACP message validation is **injectable**, not built into the agent. Pass an optional `validator` implementing `MessageValidator` when constructing `DesktopAgent` (or via handler context). Integrators supply their own implementation—for example a Zod-based validator from `@finos/sail-platform-api`, a no-op validator, or any custom schema checker.

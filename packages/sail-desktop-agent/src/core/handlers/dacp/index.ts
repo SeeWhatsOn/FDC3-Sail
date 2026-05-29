@@ -6,7 +6,11 @@ import {
   DACPTimeoutError,
   DACPValidationError,
 } from "../../dacp-protocol/dacp-errors"
-import { withDACPTimeout, logDACPMessage } from "../../dacp-protocol/dacp-utils"
+import {
+  withDACPTimeout,
+  logDACPMessage,
+  extractDACPMessageLogMetadata,
+} from "../../dacp-protocol/dacp-utils"
 import { type DACPHandlerContext, type MessageType } from "../types"
 import { sendDACPErrorResponse } from "./utils/dacp-response-utils"
 
@@ -27,11 +31,14 @@ export async function routeDACPMessage(
   message: unknown,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { logger, validator } = context
+  const { logger, validator, logPayloadDetail } = context
+  const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
   try {
-    // Log incoming message (with sensitive data filtering)
-    logDACPMessage("incoming", message, "DACP Router")
-    logger.info("DACP: Routing message", { message })
+    logDACPMessage("incoming", message, "DACP Router", {
+      logger,
+      logPayloadDetail: resolvedLogPayloadDetail,
+    })
+    logger.info("DACP: Routing message", extractDACPMessageLogMetadata(message))
 
     // Extract message type for routing
     const messageType = (message as { type?: MessageType })?.type
@@ -80,7 +87,7 @@ export async function routeDACPMessage(
         typeof message === "object" && message !== null && "type" in message
           ? (message as { type: string }).type
           : "unknown",
-      messageData: message,
+      messageData: extractDACPMessageLogMetadata(message),
     })
     if (err instanceof DACPValidationError) {
       sendErrorResponseIfRequestLike(

@@ -421,8 +421,14 @@ function notifyContextListeners(
         channelId,
         contextType: context.type,
         eventUuid: broadcastEvent.meta.eventUuid,
-        broadcastEventPayload: JSON.stringify(broadcastEvent.payload),
       })
+
+      if (resolvedLogPayloadDetail === "full") {
+        logger.debug("DACP: Sending broadcast event to listener (full payload)", {
+          targetInstanceId: instance.instanceId,
+          broadcastEventPayload: JSON.stringify(broadcastEvent.payload),
+        })
+      }
 
       handlerContext.transport.send(broadcastEventWithRouting)
 

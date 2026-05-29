@@ -21,7 +21,7 @@ import type { DirectoryApp } from "./app-directory/types"
 import type { BrowserTypes } from "@finos/fdc3"
 import type { AgentState, StateSetter } from "./state/types"
 import { createInitialState, createStateWithOverrides } from "./state/initial-state"
-import { consoleLogger, type Logger } from "./interfaces/logger"
+import { consoleLogger, type Logger, type LogPayloadDetail } from "./interfaces/logger"
 import {
   resolveDesktopAgentConfig,
   type SailImplementationMetadata,
@@ -57,7 +57,28 @@ export interface DesktopAgentOptions {
   userChannels?: BrowserTypes.Channel[]
   requestIntentResolution?: IntentResolutionCallback
   validator?: MessageValidator
+  /**
+   * Injectable logger sink for agent-internal structured logs.
+   *
+   * @remarks Pair with {@link DesktopAgentOptions.logPayloadDetail}: the logger
+   * selects where output goes; `logPayloadDetail` selects how much payload is
+   * included (metadata at info/warn/error; full JSON at debug when `'full'`).
+   */
   logger?: Logger
+  /**
+   * How much message/context detail agent-internal structured logs include.
+   *
+   * @defaultValue 'metadata'
+   *
+   * - `'metadata'` — log type, ids, contextType, key names only; never full
+   *   context JSON at info/warn/error.
+   * - `'full'` — may include serialized payloads on {@link Logger.debug} only;
+   *   requires a logger that implements `debug`.
+   *
+   * @remarks Use with {@link DesktopAgentOptions.logger}: config selects *what*
+   * to log; the logger selects *where* it goes.
+   */
+  logPayloadDetail?: LogPayloadDetail
   initialState?: Partial<AgentState>
 
   /** Partial overrides merged with {@link DEFAULT_SAIL_IMPLEMENTATION_METADATA}. */
@@ -80,6 +101,7 @@ export interface DesktopAgentConfig {
   requestIntentResolution?: IntentResolutionCallback
   validator?: MessageValidator
   logger?: Logger
+  logPayloadDetail: LogPayloadDetail
   initialState?: Partial<AgentState>
   implementationMetadata: SailImplementationMetadata
   openContextListenerTimeoutMs: number
@@ -120,6 +142,7 @@ export class DesktopAgent {
   private requestIntentResolution?: IntentResolutionCallback
   private validator?: MessageValidator
   private logger: Logger
+  private logPayloadDetail: LogPayloadDetail
   private isStarted: boolean = false
   private implementationMetadata: SailImplementationMetadata
   private userChannels: BrowserTypes.Channel[]
@@ -137,6 +160,7 @@ export class DesktopAgent {
     this.requestIntentResolution = config.requestIntentResolution
     this.validator = config.validator
     this.logger = config.logger ?? consoleLogger
+    this.logPayloadDetail = config.logPayloadDetail
     this.userChannels = config.userChannels
     this.implementationMetadata = config.implementationMetadata
     this.openContextListenerTimeoutMs = config.openContextListenerTimeoutMs
@@ -287,6 +311,7 @@ export class DesktopAgent {
       requestIntentResolution: this.requestIntentResolution,
       validator: this.validator,
       logger: this.logger,
+      logPayloadDetail: this.logPayloadDetail,
       implementationMetadata: this.implementationMetadata,
       openContextListenerTimeoutMs: this.openContextListenerTimeoutMs,
       heartbeatIntervalMs: this.heartbeatIntervalMs,

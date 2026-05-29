@@ -9,7 +9,16 @@
  */
 
 import type { Transport, MessageHandler, DisconnectHandler } from "../../core/interfaces/transport"
-import { consoleLogger } from "../../core/interfaces/logger"
+import {
+  consoleLogger,
+  type Logger,
+  type LogPayloadDetail,
+} from "../../core/interfaces/logger"
+
+export interface MessagePortTransportOptions {
+  logger?: Logger
+  logPayloadDetail?: LogPayloadDetail
+}
 
 /**
  * Transport implementation using MessagePort API.
@@ -41,6 +50,8 @@ import { consoleLogger } from "../../core/interfaces/logger"
  */
 export class MessagePortTransport implements Transport {
   private port: MessagePort
+  private readonly logger: Logger
+  private readonly logPayloadDetail: LogPayloadDetail
   private messageHandler?: MessageHandler
   private disconnectHandler?: DisconnectHandler
   private connected: boolean = true
@@ -54,12 +65,14 @@ export class MessagePortTransport implements Transport {
    *
    * @param port - MessagePort to wrap
    */
-  constructor(port: MessagePort) {
+  constructor(port: MessagePort, options?: MessagePortTransportOptions) {
     if (typeof MessagePort === "undefined") {
       throw new Error("MessagePort is not available (browser environment required)")
     }
 
     this.port = port
+    this.logger = options?.logger ?? consoleLogger
+    this.logPayloadDetail = options?.logPayloadDetail ?? "metadata"
 
     // Start the port (required for message delivery)
     this.port.start()
@@ -89,16 +102,16 @@ export class MessagePortTransport implements Transport {
         ? (message as { type: unknown }).type
         : "unknown"
 
-    consoleLogger.debug("[MessagePortTransport] Sending message", {
+    this.logger.debug("[MessagePortTransport] Sending message", {
       messageType,
       connected: this.connected,
     })
 
     try {
       this.port.postMessage(message)
-      consoleLogger.debug("[MessagePortTransport] Message posted successfully", { messageType })
+      this.logger.debug("[MessagePortTransport] Message posted successfully", { messageType })
     } catch (error) {
-      consoleLogger.error(
+      this.logger.error(
         "[MessagePortTransport] Error sending message through MessagePort:",
         error
       )
@@ -186,7 +199,7 @@ export class MessagePortTransport implements Transport {
       try {
         this.disconnectHandler()
       } catch (error) {
-        consoleLogger.error("Error in disconnect handler:", error)
+        this.logger.error("Error in disconnect handler:", error)
       }
     }
   }
@@ -205,24 +218,31 @@ export class MessagePortTransport implements Transport {
         ? (message as { type: unknown }).type
         : "unknown"
 
-    consoleLogger.debug("[MessagePortTransport] Received message", {
+    this.logger.debug("[MessagePortTransport] Received message", {
       messageType,
       hasHandler: !!this.messageHandler,
       connected: this.connected,
     })
 
-    // Log broadcastEvent details for debugging
     if (messageType === "broadcastEvent" && message && typeof message === "object") {
       const msg = message as Record<string, unknown>
       const payload = msg.payload as Record<string, unknown> | undefined
-      consoleLogger.debug("[MessagePortTransport] BroadcastEvent details", {
+      const broadcastLog: Record<string, unknown> = {
         type: msg.type,
         hasPayload: !!payload,
         channelId: payload?.channelId,
         contextType: (payload?.context as Record<string, unknown>)?.type,
         contextId: (payload?.context as Record<string, unknown>)?.id,
-        fullMessage: JSON.stringify(message, null, 2),
-      })
+        contextKeys: payload?.context
+          ? Object.keys(payload.context as Record<string, unknown>)
+          : undefined,
+      }
+
+      if (this.logPayloadDetail === "full") {
+        broadcastLog.fullMessage = JSON.stringify(message, null, 2)
+      }
+
+      this.logger.debug("[MessagePortTransport] BroadcastEvent details", broadcastLog)
     }
 
     if (this.messageHandler) {
@@ -231,21 +251,21 @@ export class MessagePortTransport implements Transport {
         // Handle promise if handler is async
         if (result instanceof Promise) {
           void result.catch(error => {
-            consoleLogger.error("[MessagePortTransport] Error in async message handler:", error, {
+            this.logger.error("[MessagePortTransport] Error in async message handler:", error, {
               messageType,
             })
           })
         }
-        consoleLogger.debug("[MessagePortTransport] Message handler executed successfully", {
+        this.logger.debug("[MessagePortTransport] Message handler executed successfully", {
           messageType,
         })
       } catch (error) {
-        consoleLogger.error("[MessagePortTransport] Error in message handler:", error, {
+        this.logger.error("[MessagePortTransport] Error in message handler:", error, {
           messageType,
         })
       }
     } else {
-      consoleLogger.warn("[MessagePortTransport] No message handler registered", { messageType })
+      this.logger.warn("[MessagePortTransport] No message handler registered", { messageType })
     }
   }
 
@@ -257,7 +277,7 @@ export class MessagePortTransport implements Transport {
    * Outbound postMessage failures remain fatal via send() → handleDisconnect().
    */
   private handleError(event: MessageEvent): void {
-    consoleLogger.error("MessagePort error:", event)
+    this.logger.error("MessagePort error:", event)
   }
 
   /**

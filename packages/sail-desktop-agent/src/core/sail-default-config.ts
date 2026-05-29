@@ -32,6 +32,7 @@ export const DEFAULT_SAIL_IMPLEMENTATION_METADATA: SailImplementationMetadata = 
 export const DEFAULT_SAIL_DESKTOP_AGENT_CONFIG = {
   implementationMetadata: DEFAULT_SAIL_IMPLEMENTATION_METADATA,
   userChannels: DEFAULT_FDC3_USER_CHANNELS,
+  logPayloadDetail: "metadata" as const,
   openContextListenerTimeoutMs: DACP_TIMEOUTS.MINIMUM_APP_LAUNCH,
   heartbeatIntervalMs: 30_000,
   heartbeatTimeoutMs: 60_000,
@@ -39,6 +40,7 @@ export const DEFAULT_SAIL_DESKTOP_AGENT_CONFIG = {
   DesktopAgentConfig,
   | "implementationMetadata"
   | "userChannels"
+  | "logPayloadDetail"
   | "openContextListenerTimeoutMs"
   | "heartbeatIntervalMs"
   | "heartbeatTimeoutMs"
@@ -72,6 +74,8 @@ export function resolveDesktopAgentConfig(options: DesktopAgentOptions): Desktop
   return {
     ...DEFAULT_SAIL_DESKTOP_AGENT_CONFIG,
     ...rest,
+    userChannels: rest.userChannels ?? DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.userChannels,
+    logPayloadDetail: rest.logPayloadDetail ?? DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.logPayloadDetail,
     implementationMetadata: mergeImplementationMetadata(
       DEFAULT_SAIL_IMPLEMENTATION_METADATA,
       implementationMetadata
