@@ -34,6 +34,7 @@ executable tests and does not write implementation code.
 
 Load in the top-level agent:
 
+- `ww-workflow-config` (first — create/load `plans/workflow-config.yaml`)
 - `ww-planning-stack` (when choosing PRD vs epic vs work item shape)
 - `ww-work-items`
 - `context-engineering`

@@ -18,6 +18,8 @@ file_manifest:
 depends_on: []
 integration_branch: ""
 branch: feature/short-descriptive-slug
+pr_url: ""                 # set when status: pr_awaiting
+merged_pr: ""              # set when status: done (PR URL or #N)
 external_tracker: ""       # empty unless backed by GitHub/Jira/etc.
 tags: []                   # optional — see work-item-tags.md
 ---

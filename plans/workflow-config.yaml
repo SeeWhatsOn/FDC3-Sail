@@ -1,0 +1,35 @@
+# Watson workflow profile for this repository (checked in).
+# Agents load this before /ww-plan, /ww-deliver, /ww-approve, or /ww-reconcile.
+# See plans/WORKFLOW.md and .cursor/skills/ww-workflow-config/SKILL.md
+#
+# Layering (later wins): repo (this file) → plans/local/user-overrides.yaml
+# (gitignored) → per-workload block under workloads.<slug> (delivery overrides only).
+
+version: 1
+
+repo:
+  integration_branch: v3-pre
+  branch_name_template: "cursor/<descriptive-slug>-8a9f"
+
+  plans:
+    # When true, commit plans/ updates whenever delivery automation includes git commit.
+    version_in_git: true
+
+  delivery:
+    # stage_only | commit_push | draft_pr
+    default_automation: stage_only
+    # After human approve at staged gate (tier commit_push / draft_pr only).
+    squash_to_integration: false
+    # Open draft PRs (tier draft_pr only).
+    pr_base_branch: v3-pre
+
+  subagents:
+    probe_at_delivery_start: true
+
+# Per-PRD / workload overrides (delivery fields only). Example:
+# workloads:
+#   prd-desktop-agent-conformance-gaps:
+#     delivery:
+#       default_automation: draft_pr
+
+workloads: {}

@@ -50,7 +50,6 @@ All commands from the repo root — see `package.json` `scripts` for the full li
 
 ### Testing conventions (`@finos/sail-desktop-agent`)
 
-- **Do not add Vitest or Cucumber tests for README, TSDoc, or other documentation.** `npm test` covers FDC3 behavior and library code only. Docs are maintained manually; do not add contract tests that regex-match prose, directory trees, markdown tables, or import examples in README files.
 - **Do not add test-only methods to production types** (e.g. `DesktopAgent`, handlers, transports). No `*ForTesting` helpers, no exposing private handler context builders for Cucumber/Vitest.
 - **Prefer production APIs in BDD** when exercising real behavior (e.g. `desktopAgent.disconnectInstance(instanceId)` for disconnect cleanup — same path as WCP6 goodbye / heartbeat timeout).
 - **Unit / BDD harnesses** live under `src/**/__tests__/` and `packages/sail-desktop-agent/test/`:
@@ -61,6 +60,17 @@ All commands from the repo root — see `package.json` `scripts` for the full li
 - **Test-only cleanup hooks** belong next to the code under test (e.g. `clearAllHeartbeatTimersForTesting()` in `heartbeat-runtime.ts`), not on `DesktopAgent`.
 - **WCP4 temp vs WCP5 canonical ids:** During identity validation, DACP handler `context.instanceId` may still be the temp connection id while `startHeartbeat` and `state.heartbeats` use the canonical WCP5 `instanceId`. Disconnect cleanup must resolve the canonical id (see `resolveCleanupInstanceId` in `cleanup.ts`).
 - **FDC3 default user channels** are defined once in `src/core/default-user-channels.ts` as `DEFAULT_FDC3_USER_CHANNELS`. Production, Vitest, and Cucumber (`generic.steps` / `CustomWorld.initializeDesktopAgent`) import that constant directly — feature files use spec IDs (`fdc3.channel.1`, …).
+
+### Watson workflow (`plans/`)
+
+Local PRD and work-item queue for `/ww-plan`, `/ww-deliver`, `/ww-approve`, `/ww-reconcile`.
+
+- **Config:** `plans/workflow-config.yaml` (repo defaults). Load via skill `ww-workflow-config` before any ww command. Personal overrides: `plans/local/user-overrides.yaml` (gitignored).
+- **Docs:** `plans/WORKFLOW.md` — automation tiers, status lifecycle, reconcile.
+- **Queue audit:** `plans/scripts/queue-status.sh`, `plans/scripts/reconcile-queue.sh` (needs `gh` for PR merge detection).
+- **Delivery tiers:** `stage_only` (no commit/PR) | `commit_push` | `draft_pr`. Plans and code follow the same tier; when `repo.plans.version_in_git: true`, commit work-item status with code.
+- **Statuses:** `approved` → `in-progress` → `staged` / `waiting_on_user` → `committed` / `pr_awaiting` → `done`. Run `/ww-reconcile` after merging PRs so `pr_awaiting` becomes `done`.
+- **First run:** If `workflow-config.yaml` is missing, the agent runs a short interview once, writes the file, then continues.
 
 ### Cucumber tags (`packages/sail-desktop-agent`)
 
