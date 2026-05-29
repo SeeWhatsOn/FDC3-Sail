@@ -3,10 +3,12 @@ title: "Replace fixed sleeps in in-memory transport tests"
 slug: fix-in-memory-transport-test-timing
 kind: spike
 type: chore
-status: approved
+status: in-progress
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
+integration_branch: v3-pre
+branch: cursor/fix-in-memory-transport-test-timing-f2c8
 file_manifest:
   - packages/sail-desktop-agent/src/transports/__tests__/in-memory-transport.test.ts
 depends_on: []
