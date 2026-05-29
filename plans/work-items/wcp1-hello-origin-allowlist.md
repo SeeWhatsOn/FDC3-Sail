@@ -1,8 +1,9 @@
 ---
 title: "WCP1Hello origin allowlist before handshake"
 slug: wcp1-hello-origin-allowlist
+merged_pr: "v3-pre@43a59510 #30"
 type: enhancement
-status: in-progress
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -69,6 +70,8 @@ Vitest on `WCPConnector` with spy on `MessageChannel` constructor.
 - Unrelated tests: healthy (all 37 pre-existing + 2 permissive/trusted allowlist tests pass).
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (43a59510 #30; feat(sail-desktop-agent): WCP1Hello origin allowlist before handshake)
 
 - 2026-05-27: approved by human (validation gaps waived)
 - 2026-05-28: RED — four tests in `wcp-connector.test.ts` (`WCP1Hello origin allowlist`). Vitest: **2 failed / 39 passed**. `allowedOrigins` added to `WCPConnectorOptions`; Sail platform JSDoc documents undefined = allow-all dev default.

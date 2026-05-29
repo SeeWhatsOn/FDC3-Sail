@@ -1,8 +1,9 @@
 ---
 title: "Define and implement MessagePort messageerror policy"
 slug: decide-messageport-messageerror-policy
+merged_pr: "v3-pre@843cdcd0 #29"
 type: chore
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -63,6 +64,8 @@ RED: one test per chosen policy; update README or inline doc with rationale (sec
 - Human must choose: **fatal disconnect** (strict) vs. **log and ignore** (lenient) before implementation if not decided at approve time.
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (843cdcd0 #29; chore(sail-desktop-agent): lenient MessagePort messageerror policy)
 
 - 2026-05-27: approved by human (validation gaps waived; policy choice deferred to delivery)
 

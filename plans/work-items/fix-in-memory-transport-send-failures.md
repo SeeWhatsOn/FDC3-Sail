@@ -1,8 +1,9 @@
 ---
 title: "Make InMemoryTransport send failures observable"
 slug: fix-in-memory-transport-send-failures
+merged_pr: "v3-pre@78cc9afe #24"
 type: bug
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -133,6 +134,8 @@ Optional integration: DACP test that would previously timeout now fails fast —
 3. **Default recommendation for v1:** spec A synchronous throw is required; spec B at minimum log + invoke optional error callback if added without breaking `Transport` implementers.
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (78cc9afe #24; fix(sail-desktop-agent): observable InMemoryTransport send failures)
 
 - 2026-05-27: revised per human — expand plain-language explanation, examples, and delivery vs. acceptance semantics
 - 2026-05-27: approved by human

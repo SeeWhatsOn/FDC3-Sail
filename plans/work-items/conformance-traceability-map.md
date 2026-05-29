@@ -1,8 +1,9 @@
 ---
 title: "FDC3 2.2 conformance traceability map"
 slug: conformance-traceability-map
+merged_pr: "v3-pre@dac365fb #22"
 type: docs
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -64,5 +65,7 @@ Review map accuracy against `test/features/`; no executable tests required unles
 Authoritative list source: local `fdc3-expert` vs. published FINOS conformance artifact version pin.
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (dac365fb #22; docs(sail-desktop-agent): FDC3 2.2 conformance traceability map)
 
 - 2026-05-27: approved by human (validation gaps waived)

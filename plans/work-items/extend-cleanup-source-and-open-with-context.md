@@ -1,9 +1,10 @@
 ---
 title: "Extend cleanupDACPHandlers for source pending intents and open-with-context"
 slug: extend-cleanup-source-and-open-with-context
+merged_pr: "v3-pre@b835210f #28"
 kind: task
 type: bug
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -79,6 +80,8 @@ If implementing optional source cancel: RED Vitest in `cleanup.test.ts` first, t
 Whether source-side open-with-context cancel is required for v3 or deferred (recommend defer — 15s TTL bounds memory).
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (b835210f #28; fix(sail-desktop-agent): clear open-with-context pending when source disconnects)
 
 - 2026-05-27: items 1–2 verified implemented on v3-pre; item 3 remains optional
 - 2026-05-27: approved by human

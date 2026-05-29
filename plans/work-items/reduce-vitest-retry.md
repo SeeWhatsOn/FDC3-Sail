@@ -1,8 +1,9 @@
 ---
 title: "Reduce Vitest retry after suite stabilization"
 slug: reduce-vitest-retry
+merged_pr: "v3-pre@423b4d9d #34"
 type: chore
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -52,5 +53,7 @@ After `retry: 0`, run `npm test -w @finos/sail-desktop-agent` twice locally; res
 Depends on transport PRD work items completing first.
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (423b4d9d #34; chore(sail-desktop-agent): set Vitest retry to 0; fix traceability table separator parsing)
 
 - 2026-05-27: approved by human (validation gaps waived)

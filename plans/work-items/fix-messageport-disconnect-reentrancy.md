@@ -1,8 +1,9 @@
 ---
 title: "Prevent duplicate appDisconnected on MessagePort disconnect"
 slug: fix-messageport-disconnect-reentrancy
+merged_pr: "v3-pre@cffc8174 #25"
 type: bug
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -64,6 +65,8 @@ RED: update WCP connector tests to assert `toHaveBeenCalledTimes(1)` on disconne
 - Preferred fix: delete reverse lookup before `appTransport.disconnect()` vs. non-notifying dispose path — implementer picks smallest correct diff.
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (cffc8174 #25; fix(sail-desktop-agent): prevent duplicate appDisconnected on MessagePort disconnect)
 
 - 2026-05-27: approved by human (validation gaps waived)
 

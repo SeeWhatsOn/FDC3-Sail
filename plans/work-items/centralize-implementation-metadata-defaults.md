@@ -1,9 +1,10 @@
 ---
 title: "Centralize implementation metadata version defaults for getInfo"
 slug: centralize-implementation-metadata-defaults
+merged_pr: "v3-pre@3b5d2d16 #35"
 kind: task
 type: chore
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -60,5 +61,7 @@ Extend or add Vitest for `handleGetInfoRequest` and WCP5 metadata merge; align e
 Canonical default for `providerVersion` when host omits config (product decision).
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (3b5d2d16 #35; feat(sail-desktop-agent): align with FDC3 2.2 and enhance configuration management)
 
 - 2026-05-27: approved by human (validation gaps waived)

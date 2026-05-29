@@ -1,9 +1,10 @@
 ---
 title: "Remove unused intents.history dead code"
 slug: cap-intents-history
+merged_pr: "v3-pre@cabeb3c2 #36"
 kind: task
 type: chore
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -64,6 +65,8 @@ Run `npm test -w @finos/sail-desktop-agent` and `npm run typecheck -w @finos/sai
 None.
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (cabeb3c2 #36; feat(sail-desktop-agent): ww-deliver batch — log redaction, intents contract tests (+ #21 65e32914))
 
 - 2026-05-27: revised from cap/TTL to full removal per human gate
 - 2026-05-27: approved by human

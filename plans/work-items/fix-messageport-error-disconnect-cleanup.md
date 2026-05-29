@@ -1,8 +1,9 @@
 ---
 title: "Close MessagePort on error-driven disconnect"
 slug: fix-messageport-error-disconnect-cleanup
+merged_pr: "v3-pre@9a6d8259 #26"
 type: bug
-status: in-progress
+status: done
 loop_count: 1
 loop_limit: 3
 last_agent: test-engineer
@@ -65,6 +66,8 @@ RED: simulate `postMessage` failure and assert `port.close` and listener removal
 (none)
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (9a6d8259 #26; fix(sail-desktop-agent): close MessagePort on error-driven disconnect)
 
 - 2026-05-27: approved by human (validation gaps waived)
 - 2026-05-28: RED — six new assertions in `message-port-transport.test.ts` for error-driven disconnect. Vitest (`npx vitest run src/browser/__tests__/message-port-transport.test.ts`): **5 failed / 23 passed** (28 total). Failures: `handleDisconnect()` sets `connected=false` and fires handler but never calls `port.close()` or `removeEventListener`; `disconnect()` early-returns when `connected` is already false so `disconnectApp()` cleanup leaves an open port with listeners. WCP map deletion via `disconnectApp` **passes** (reentrancy fix prerequisite met).

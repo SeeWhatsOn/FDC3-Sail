@@ -1,8 +1,9 @@
 ---
 title: "Fix MessagePortTransport listener removal"
 slug: fix-messageport-bound-listeners
+merged_pr: "v3-pre@417eae09 #23"
 type: bug
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -64,6 +65,8 @@ RED: spy `addEventListener` / `removeEventListener` and assert referential equal
 (none)
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (417eae09 #23; fix(sail-desktop-agent): stable MessagePortTransport listener removal)
 
 - 2026-05-27: approved by human (validation gaps waived)
 

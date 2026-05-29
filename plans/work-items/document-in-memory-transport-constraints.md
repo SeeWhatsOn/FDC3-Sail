@@ -1,8 +1,9 @@
 ---
 title: "Document InMemoryTransport runtime and usage constraints"
 slug: document-in-memory-transport-constraints
+merged_pr: "v3-pre@b1a4dbdf #32"
 type: chore
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -63,6 +64,8 @@ No new tests required unless docs claim behavior that should be asserted; option
 (none)
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (b1a4dbdf #32; docs(sail-desktop-agent): document InMemoryTransport runtime constraints)
 
 - 2026-05-27: approved by human (validation gaps waived)
 

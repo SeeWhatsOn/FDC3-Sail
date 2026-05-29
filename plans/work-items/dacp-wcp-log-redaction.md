@@ -1,9 +1,10 @@
 ---
 title: "DACP/WCP metadata-only log redaction"
 slug: dacp-wcp-log-redaction
+merged_pr: "v3-pre@cabeb3c2 #36"
 kind: task
 type: chore
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -143,6 +144,8 @@ none
 **Resolved (2026-05-27 revise):** Policy is **config-driven**, not permanently redacted. Default `metadata`; opt-in `full` at `debug` only. Injectable `logger` remains the sink; config controls *what* is passed to it.
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (cabeb3c2 #36; feat(sail-desktop-agent): ww-deliver batch — log redaction, intents contract tests)
 
 - 2026-05-27: revised per human — clarify config opt-in vs always-on redaction; wire transport to injected logger
 - 2026-05-27: revised per human — require TSDoc on exported config + README Logging section for future Docusaurus

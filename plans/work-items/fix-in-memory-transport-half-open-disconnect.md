@@ -1,8 +1,9 @@
 ---
 title: "Fix half-open peer state on InMemoryTransport disconnect"
 slug: fix-in-memory-transport-half-open-disconnect
+merged_pr: "v3-pre@ebf40f58 #27"
 type: bug
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -67,6 +68,8 @@ RED: extend `in-memory-transport.test.ts` with peer `isConnected()` after local 
 (none)
 
 ## Loop history
+
+- 2026-05-29: /ww-reconcile — shipped on v3-pre (ebf40f58 #27; fix(sail-desktop-agent): bilateral InMemoryTransport disconnect teardown)
 
 - 2026-05-27: approved by human (validation gaps waived)
 
