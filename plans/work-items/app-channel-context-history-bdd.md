@@ -2,17 +2,17 @@
 title: "App-channel context history conformance BDD gaps"
 slug: app-channel-context-history-bdd
 type: enhancement
-status: approved
+status: committed
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-desktop-agent/test/features/channels/app-channels.feature
   - packages/sail-desktop-agent/test/step-definitions/
 depends_on:
   - conformance-traceability-map
-integration_branch: ""
-branch: test/app-channel-context-history
+integration_branch: v3-pre
+branch: cursor/app-channel-context-history-bdd-f2c8
 external_tracker: ""
 tags: [fdc3]
 ---
