@@ -9,6 +9,7 @@ loop_limit: 3
 last_agent: top-level-delivery-workflow
 integration_branch: v3-pre
 branch: cursor/audit-heartbeat-disconnect-cleanup-f2c8
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/38
 file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/cleanup.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/heartbeat-handlers.ts
@@ -104,3 +105,12 @@ None.
 
 - Document WCP4 temp→canonical link at `startHeartbeat` in AGENTS.md (extend existing WCP4/WCP5 bullet).
 - Multi-connection Vitest needs shared state in `createDACPTestContext` when sharing `initialState`.
+
+## Learnings extracted
+
+- WCP4 temp→canonical: `linkWcpTempInstanceId` at `startHeartbeat`; `resolveCleanupInstanceId` uses map before single-heartbeat heuristic (merged to `AGENTS.md`).
+- Multi-connection Vitest: shared `initialState` → shared agent state in `test-context.ts`.
+
+## Loop history (delivery)
+
+- 2026-05-29: human `approve` at review gate; GREEN committed to `cursor/audit-heartbeat-disconnect-cleanup-f2c8` (`stage_only` — merge to `v3-pre` then set `done` or `/ww-reconcile`).
