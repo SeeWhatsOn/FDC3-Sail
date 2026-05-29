@@ -3,7 +3,10 @@ title: "Replace sendDACPMessageOnBehalfOf with intention-level channel API"
 slug: replace-dacp-impersonation-with-channel-api
 kind: task
 type: feature
-status: approved
+status: waiting_on_user
+integration_branch: v3-pre
+branch: cursor/replace-dacp-impersonation-f2c8
+last_agent: top-level-delivery-workflow
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -115,7 +118,7 @@ Platform-api unit tests: `getAppUserChannel` after join/leave; `changeAppChannel
 
 ## Blocked decisions
 
-- Whether `getAppUserChannel` reads via package-private agent accessor vs. short-lived platform-only selector export from desktop-agent (prefer minimal read hook, not DACP).
+- Resolved: `DesktopAgent.getAppUserChannelId(instanceId)` uses `getInstance` selector; `SailPlatform.getAppUserChannel` delegates to it.
 
 ## Loop history
 
@@ -124,6 +127,23 @@ Platform-api unit tests: `getAppUserChannel` after join/leave; `changeAppChannel
 - 2026-05-27: approved by human
 
 ## Staged for review
+
+**RED evidence:** New `sail-platform-channel.test.ts` — 8 tests (getAppUserChannel lifecycle, changeAppChannel guards, no `sendDACPMessageOnBehalfOf`).
+
+**Commands:**
+- `npm test` in `packages/sail-platform-api` — 12/12 pass
+- `npm run build -w @finos/sail-desktop-agent` + `@finos/sail-platform-api` — pass
+
+**Files changed:**
+- `packages/sail-desktop-agent/src/core/desktop-agent.ts` — `getAppUserChannelId`
+- `packages/sail-platform-api/src/sail-platform.ts` — `getAppUserChannel`
+- `packages/sail-platform-api/src/sail-browser-desktop-agent.ts` — removed impersonation API
+- `packages/sail-platform-api/src/__tests__/sail-platform-channel.test.ts` — new
+- `packages/sail-platform-api/README.md`, `website/docs/architecture/channel-selection.md`, `sail-platform-sdk.md`
+
+**Learnings proposed:**
+- [AGENTS.md candidate] Host channel **read** uses `SailPlatform.getAppUserChannel` → `DesktopAgent.getAppUserChannelId` (state selector); **set** stays `changeAppChannel` via connector transport typed join/leave.
+- [AGENTS.md candidate] `sendDACPMessageOnBehalfOf` removed from `createSailBrowserDesktopAgent`; channel chrome belongs on `SailPlatform` only.
 
 ## Escalation notes
 

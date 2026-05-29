@@ -27,6 +27,7 @@ import {
   type SailImplementationMetadata,
 } from "./sail-default-config"
 import { InMemoryTransport } from "../transports/in-memory-transport"
+import { getInstance } from "./state/selectors"
 
 /**
  * Structure of DACP message metadata for routing
@@ -362,5 +363,15 @@ export class DesktopAgent {
    */
   getUserChannels(): BrowserTypes.Channel[] {
     return this.userChannels
+  }
+
+  /**
+   * Read the app's current user channel from agent state (no DACP round-trip).
+   *
+   * @returns Channel id when the instance exists and has joined a user channel; otherwise `null`.
+   */
+  getAppUserChannelId(instanceId: string): string | null {
+    const instance = getInstance(this.state, instanceId)
+    return instance?.currentUserChannel ?? null
   }
 }

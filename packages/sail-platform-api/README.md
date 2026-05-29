@@ -10,6 +10,7 @@ Platform SDK for FDC3 Sail. Wraps `@finos/sail-desktop-agent` with Sail-specific
 - **Sail app launcher** — `SailAppLauncher` for opening FDC3 apps in your UI
 - **Platform client** — workspace, layout, and configuration persistence via `SailPlatformClient`
 - **Convenience factory** — `createSailBrowserDesktopAgent` pre-wires middleware and WCP
+- **Host channel APIs** — `SailPlatform.changeAppChannel` / `getAppUserChannel` for parent chrome (typed join/leave + state read; no DACP impersonation)
 - **DACP validation** — Zod-based message validation re-exported from the schema package
 
 ```
@@ -60,6 +61,27 @@ const { desktopAgent, wcpConnector } = await createSailBrowserDesktopAgent({
 
 // FDC3 apps in iframes can now connect via fdc3.getAgent()
 ```
+
+### SailPlatform (recommended for host chrome)
+
+`SailPlatform` is the unified entry point for workspace UI, lifecycle, and channel management:
+
+```typescript
+import { SailPlatform } from "@finos/sail-platform-api"
+
+const platform = new SailPlatform({ appLauncher })
+platform.start()
+
+// Join / leave on behalf of an app tile (typed DACP via connector transport)
+await platform.changeAppChannel(instanceId, "fdc3.channel.1")
+
+// Read current channel from agent state (no DACP round-trip)
+const channelId = platform.getAppUserChannel(instanceId)
+
+const channels = platform.getUserChannels()
+```
+
+Channel chrome should use `SailPlatform` — not raw DACP injection. See `website/docs/architecture/channel-selection.md`.
 
 ### Middleware Pipeline
 
