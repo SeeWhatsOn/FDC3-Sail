@@ -13,6 +13,7 @@ import {
   stopHeartbeat,
   setHeartbeatTimer,
   clearHeartbeatTimer,
+  linkWcpTempInstanceId,
 } from "./heartbeat-runtime"
 
 /** Re-export for callers that imported `stopHeartbeat` from this module. */
@@ -29,6 +30,10 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
 
   // Stop any existing heartbeat
   stopHeartbeat(instanceId, setState)
+
+  if (context.instanceId.startsWith("temp-") && context.instanceId !== instanceId) {
+    linkWcpTempInstanceId(context.instanceId, instanceId)
+  }
 
   // Initialize heartbeat state
   setState(state => startHeartbeatTransform(state, instanceId))
