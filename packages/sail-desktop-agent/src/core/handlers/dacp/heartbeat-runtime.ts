@@ -11,6 +11,27 @@ import type { StateSetter } from "../../state/types"
 
 const heartbeatIntervals = new Map<string, NodeJS.Timeout>()
 
+/** WCP4 temp connection ids (temp-{uuid}) → canonical WCP5 instance ids used by startHeartbeat. */
+const wcpTempToCanonicalInstanceIds = new Map<string, string>()
+
+/** Record temp→canonical mapping when heartbeat starts during WCP4 validation. */
+export function linkWcpTempInstanceId(tempInstanceId: string, canonicalInstanceId: string): void {
+  wcpTempToCanonicalInstanceIds.set(tempInstanceId, canonicalInstanceId)
+}
+
+/** Resolve canonical instance id from a WCP4 temp connection id, if linked. */
+export function resolveWcpTempInstanceId(tempInstanceId: string): string | undefined {
+  return wcpTempToCanonicalInstanceIds.get(tempInstanceId)
+}
+
+function unlinkWcpTempMappingsForCanonical(canonicalInstanceId: string): void {
+  for (const [tempId, canonicalId] of wcpTempToCanonicalInstanceIds) {
+    if (canonicalId === canonicalInstanceId) {
+      wcpTempToCanonicalInstanceIds.delete(tempId)
+    }
+  }
+}
+
 /** @internal Returns active heartbeat interval count (for tests and diagnostics). */
 export function getActiveHeartbeatTimerCount(): number {
   return heartbeatIntervals.size
@@ -26,6 +47,7 @@ export function clearAllHeartbeatTimersForTesting(): void {
   for (const instanceId of [...heartbeatIntervals.keys()]) {
     clearHeartbeatTimer(instanceId)
   }
+  wcpTempToCanonicalInstanceIds.clear()
 }
 
 /** Clear the Node interval only (no Immer state change). */
@@ -47,5 +69,6 @@ export function setHeartbeatTimer(instanceId: string, intervalHandle: NodeJS.Tim
  */
 export function stopHeartbeat(instanceId: string, setState: StateSetter): void {
   clearHeartbeatTimer(instanceId)
+  unlinkWcpTempMappingsForCanonical(instanceId)
   setState(state => stopHeartbeatTransform(state, instanceId))
 }

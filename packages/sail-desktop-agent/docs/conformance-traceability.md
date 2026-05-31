@@ -1,12 +1,12 @@
 # FDC3 2.2 conformance traceability map
 
-This document maps FINOS FDC3 2.2 interop / conformance pack areas to in-repo Cucumber BDD scenarios under `packages/sail-desktop-agent/test/features/`. Scenarios tagged `@conformance2.2` are explicit pack alignments; **99 scenarios across 12 feature files** carry that tag (as of this map). Status is honest: `covered` means representative `@conformance2.2` scenarios exist and pass in CI; `partial` means gaps remain; `missing` means no BDD yet; `n/a` means outside the FDC3 2.2 public API conformance surface (e.g. Sail WCP transport).
+This document maps FINOS FDC3 2.2 interop / conformance pack areas to in-repo Cucumber BDD scenarios under `packages/sail-desktop-agent/test/features/`. Scenarios tagged `@conformance2.2` are explicit pack alignments; **101 scenarios across 12 feature files** carry that tag (as of this map). Status is honest: `covered` means representative `@conformance2.2` scenarios exist and pass in CI; `partial` means gaps remain; `missing` means no BDD yet; `n/a` means outside the FDC3 2.2 public API conformance surface (e.g. Sail WCP transport).
 
 | Conformance area | Feature file + scenario | Status | Notes/slug |
 |---|---|---|---|
 | DesktopAgent.getInfo / implementation metadata | `test/features/basic/basic.feature` — GetInfo returns implementation metadata; GetInfo returns optionalFeatures capability flags | covered | Also `test/features/apps/apps.feature` — getInfo returns app metadata for the requesting app |
 | User channels (list, join, leave, current) | `test/features/channels/user-channels.feature` — User channels include displayMetadata for all predefined channels; Current context is delivered when joining a user channel; Broadcasting on a user channel does not echo back to the sender | covered | 14 `@conformance2.2` scenarios in `user-channels.feature`; smoke in `test/features/basic/basic.feature` — User channel can be joined and left |
-| App channels (create, broadcast, listeners) | `test/features/channels/app-channels.feature` — Broadcasting context on an app channel; Multiple context types on an app channel; Channel.addContextListener does not auto-deliver prior context | partial | 9 `@conformance2.2` scenarios; context-history / ordering matrix gaps — **app-channel-context-history-bdd** |
+| App channels (create, broadcast, listeners) | `test/features/channels/app-channels.feature` — Broadcasting context on an app channel; Listener subscribed after two broadcasts only receives subsequent broadcasts; getCurrentContext returns latest after multiple broadcasts in order | covered | 11 `@conformance2.2` scenarios in `app-channels.feature` |
 | Private channels | `test/features/channels/private-channel.feature` — Null lifecycle listener receives addContextListener unsubscribe and disconnect events; Disconnecting from a channel sends unsubscribe and disconnect messages | covered | 4 `@conformance2.2` scenarios |
 | Context broadcast (user channel) | `test/features/context/broadcast.feature` — Broadcast Event Includes OriginatingApp Metadata; Broadcast Is A No-Op When Not Joined To A User Channel | covered | Malformed-context error row covered separately below |
 | Context / event listeners | `test/features/context/event-listeners.feature` — Receiving channelChanged event when another app joins a channel; addEventListener with null type subscribes to all event types | covered | Listener creation smoke in `test/features/basic/basic.feature` — Context listener for a specific type can be created |
@@ -24,7 +24,7 @@ This document maps FINOS FDC3 2.2 interop / conformance pack areas to in-repo Cu
 
 - `test/features/basic/basic.feature` — 10
 - `test/features/channels/user-channels.feature` — 14
-- `test/features/channels/app-channels.feature` — 9
+- `test/features/channels/app-channels.feature` — 11
 - `test/features/channels/private-channel.feature` — 4
 - `test/features/context/broadcast.feature` — 3
 - `test/features/context/event-listeners.feature` — 2
@@ -35,6 +35,6 @@ This document maps FINOS FDC3 2.2 interop / conformance pack areas to in-repo Cu
 - `test/features/apps/apps.feature` — 15
 - `test/features/apps/disconnect-cleanup.feature` — 3
 
-**Total: 99** tagged scenarios across 12 feature files.
+**Total: 101** tagged scenarios across 12 feature files.
 
 Files without `@conformance2.2` tags: `test/features/infrastructure/heartbeat.feature`, `test/features/apps/disconnect-cleanup-p0.feature` (lifecycle P0, not pack-tagged).
