@@ -8,7 +8,7 @@ branch: cursor/align-wcp-instance-id-in-tests-f2c8
 pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/41
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-desktop-agent/test/step-definitions/heartbeat.steps.ts
   - packages/sail-desktop-agent/test/step-definitions/start-app.steps.ts
@@ -69,7 +69,7 @@ Do not assume product bug until minimal scenario passes/fails in isolation. Tigh
 
 ## Blocked decisions
 
-Whether any change is test-only vs. handler fix.
+Resolved: failures were test design (connection id vs WCP5 canonical id, vacuous assertions). Test-only fixes; no production handler changes required.
 
 ## Loop history
 

@@ -1,4 +1,4 @@
-import { Given, Then, When } from "@cucumber/cucumber"
+import { DataTable, Given, Then, When } from "@cucumber/cucumber"
 import { CustomWorld } from "../world/index.ts"
 import type {
   AddEventListenerRequest,
@@ -6,9 +6,16 @@ import type {
   WebConnectionProtocol6Goodbye,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { createMeta, getAppInstanceId } from "./generic.steps"
+import { matchDataSubset } from "../support/testing-utils"
 import { AppInstanceState } from "../../src/core/state/types"
 import { getInstance, getEventListenersForInstance } from "../../src/core/state/selectors"
 import { connectInstance, updateInstanceState } from "../../src/core/state/mutators"
+
+/** WCP5 may replace the connection id; assertions and DACP meta must use the canonical id. */
+function resolveCanonicalInstanceId(world: CustomWorld, appStr: string): string {
+  const connectionId = getAppInstanceId(world, appStr)
+  return world.mockTransport.resolveWcp5InstanceId(connectionId)
+}
 
 /**
  * Test fixture helper: Ensures an app instance exists before sending heartbeat/goodbye messages.
@@ -22,8 +29,9 @@ import { connectInstance, updateInstanceState } from "../../src/core/state/mutat
  * @returns The instanceId that was created or already existed
  */
 function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string {
-  const instanceId = getAppInstanceId(world, appStr)
+  const instanceId = resolveCanonicalInstanceId(world, appStr)
   const meta = createMeta(world, appStr)
+  meta.source.instanceId = instanceId
 
   const state = world.getState()
   const instance = getInstance(state, instanceId)
@@ -54,6 +62,7 @@ Given(
     // Test fixture setup: Ensure app instance exists
     ensureAppInstanceForTesting(this, appStr)
     const meta = createMeta(this, appStr)
+    meta.source.instanceId = resolveCanonicalInstanceId(this, appStr)
 
     // Send DACP heartbeatAcknowledgementRequest message (this is what we're testing)
     const message: HeartbeatAcknowledgementRequest = {
@@ -72,10 +81,7 @@ Given("{string} sends a goodbye message", async function (this: CustomWorld, app
   // Test fixture setup: Ensure app instance exists
   ensureAppInstanceForTesting(this, appStr)
   const meta = createMeta(this, appStr)
-  const validatedInstanceId = this.mockTransport.lastWcp5ValidatedInstanceId
-  if (validatedInstanceId) {
-    meta.source.instanceId = validatedInstanceId
-  }
+  meta.source.instanceId = resolveCanonicalInstanceId(this, appStr)
 
   // Send DACP WCP6Goodbye message (this is what we're testing)
   const message: WebConnectionProtocol6Goodbye = {
@@ -124,7 +130,7 @@ When(
 )
 
 Then("I test the liveness of {string}", function (this: CustomWorld, appStr: string) {
-  const instanceId = getAppInstanceId(this, appStr)
+  const instanceId = resolveCanonicalInstanceId(this, appStr)
 
   // Assertion: Verify internal state of app instance
   // Note: This queries internal state directly to verify liveness tracking
@@ -162,7 +168,9 @@ Then(
 Then("no DA event listeners remain for the WCP-validated instance", function (this: CustomWorld) {
   const instanceId = this.mockTransport.lastWcp5ValidatedInstanceId
   if (!instanceId) {
-    throw new Error("No WCP5 validated instance id recorded.")
+    throw new Error(
+      "No WCP5 validated instance id recorded; send WCP4 validate before this step."
+    )
   }
   const remaining = getEventListenersForInstance(this.getState(), instanceId)
   if (remaining.length > 0) {
@@ -171,3 +179,28 @@ Then("no DA event listeners remain for the WCP-validated instance", function (th
     )
   }
 })
+
+Then(
+  "messaging will have outgoing heartbeat events for the WCP-validated instance",
+  function (this: CustomWorld, dataTable: DataTable) {
+    const canonicalId = this.mockTransport.lastWcp5ValidatedInstanceId
+    if (!canonicalId) {
+      throw new Error(
+        "No WCP5 validated instance id recorded; send WCP4 validate before this step."
+      )
+    }
+
+    const headers = dataTable.raw()[0]!
+    const resolvedRows = dataTable.hashes().map(row => {
+      const resolved = { ...row }
+      if (headers.includes("to.instanceId")) {
+        resolved["to.instanceId"] = canonicalId
+      }
+      return headers.map(column => resolved[column] ?? "")
+    })
+    const table = new DataTable([headers, ...resolvedRows])
+
+    const allMessages = this.mockTransport.getPostedMessages()
+    matchDataSubset(this, allMessages, table)
+  }
+)

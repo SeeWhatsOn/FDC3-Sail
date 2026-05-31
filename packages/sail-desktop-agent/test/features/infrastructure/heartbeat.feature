@@ -38,7 +38,7 @@ Feature: Heartbeat Messages Between Apps and Server
     And we wait for a period of "3000" ms
     Then I test the liveness of "appId: portfolioApp, instanceId: a1"
     Then "{result}" is false
-    And messaging will have outgoing posts
+    And messaging will have outgoing heartbeat events for the WCP-validated instance
       | msg.matches_type | to.instanceId | to.appId     |
       | heartbeatEvent   | a1            | portfolioApp |
       | heartbeatEvent   | a1            | portfolioApp |

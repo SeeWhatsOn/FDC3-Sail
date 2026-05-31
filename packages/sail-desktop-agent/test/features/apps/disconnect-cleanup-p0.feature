@@ -14,13 +14,16 @@ Feature: P0 disconnect cleanup (production cleanup path)
     Given "App1" is an app with the following intents
       | Intent Name   | Context Type   | Result Type |
       | ViewPortfolio | fdc3.portfolio | {empty}     |
-    And A desktop agent
+    And "PortfolioApp" is an app with the following intents
+      | Intent Name   | Context Type   | Result Type |
+      | ViewPortfolio | fdc3.portfolio | {empty}     |
     When "appId: PortfolioApp, instanceId: l1" is opened with connection id "l1"
-    And "appId: App1, instanceId: a1" is opened with connection id "a1"
+    And "appId: App1, instanceId: app1" is opened with connection id "app1"
     And "appId: PortfolioApp, instanceId: l1" registers an intent listener for "ViewPortfolio" [fdc3.addIntentListener]
-    And "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: PortfolioApp, instanceId: l1" with requestUuid "P0-RAISE-1" [fdc3.raiseIntent]
+    And "appId: App1, instanceId: app1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: PortfolioApp, instanceId: l1" with requestUuid "P0-RAISE-1" [fdc3.raiseIntent]
     And we wait for a period of "100" ms
-    And "appId: App1, instanceId: a1" disconnects from the DA
+    And "app1" sends validate
+    And "appId: App1, instanceId: app1" disconnects from the DA
     Then the agent has no pending intents
     And no heartbeat timers are active
 
