@@ -3,7 +3,7 @@ title: "Investigate launcher instanceId vs WCP5 canonical id"
 slug: investigate-launcher-wcp-instance-id
 kind: spike
 type: bug
-status: staged
+status: waiting_on_user
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -109,4 +109,13 @@ _(empty)_
 
 ## Learnings extracted
 
-_(empty)_
+- [AGENTS.md candidate] On first connect after `fdc3.open`, WCP5 canonical `instanceId` is minted by `createAppInstance` unless `canReuseInstanceIdentity` passes; host `AppLauncher.instanceId` / iframe `name` are not adopted without bind-host fix (pre-register at open + WCP4 adoption).
+
+## Phase audit
+
+| Phase | Subagent | Registered subagent | Result |
+|-------|----------|---------------------|--------|
+| A RED | test-engineer | yes | RED — correlation tests fail on id divergence |
+| B GREEN | implement-agent | yes | Tests green; bind-host spec updated |
+| C Verify | verifier-agent | yes | FAIL scope (plans/); orchestrator re-ran tests PASS |
+| D Review | code-reviewer | yes | VERDICT: PASS |
