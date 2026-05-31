@@ -34,6 +34,8 @@ plans/
   work-items/
     add-context-broadcast-handler.md
     resolve-order-race-condition.md
+  completed-work-items/
+    resolve-order-race-condition.md   # status: done — archived from work-items/
   dead-letter/
     add-context-broadcast-handler.md
 
@@ -168,6 +170,11 @@ The PRD breakdown orchestrator creates and revises draft work items.
 Do not persist a transient `loop` status. Keep the work item
 `in-progress` and record retries in `## Loop history`.
 
+## Archive on done
+
+When `status` becomes `done`, move the file to `plans/completed-work-items/`.
+See `ww-work-items/references/archive-on-done.md` (canonical procedure).
+
 ## Project Health Check
 
 Before PRD breakdown or delivery, check for:
@@ -183,6 +190,7 @@ Required files:
 Required directories:
   plans/
   plans/work-items/
+  plans/completed-work-items/   # create on first archive if missing
   plans/dead-letter/
 ```
 

@@ -10,7 +10,8 @@ column below.
 
 - [ ] `kind` is set (`task` default if omitted)
 - [ ] `## Out of scope` is non-empty
-- [ ] `depends_on` slugs exist in `plans/work-items/` or is empty
+- [ ] `depends_on` slugs exist in `plans/work-items/` or
+  `plans/completed-work-items/`, or is empty
 - [ ] `loop_limit` is set (default 3)
 - [ ] Slug matches filename (`plans/work-items/<slug>.md`)
 - [ ] `tags` uses only allowed values from [work-item-tags.md](work-item-tags.md), or is empty

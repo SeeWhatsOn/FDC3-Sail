@@ -104,7 +104,8 @@ For each queued item:
 Special case — **already shipped**:
 
 If the human says `done <slug>` or item is clearly merged (e.g. P0 cleanup),
-set `status: done` without `/ww-deliver`.
+set `status: done` without `/ww-deliver`, then archive per
+`ww-work-items/references/archive-on-done.md`.
 
 ## Handoff
 

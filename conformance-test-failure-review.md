@@ -8,7 +8,7 @@ Record of discovery against the official FDC3 conformance toolbox (FINOS), compa
 |------|--------|
 | `conformance-report.txt` | Earlier toolbox run |
 | `conformance-report-v2.txt` | After recent PRs/commits — **18 pass / 56 fail**, ~172s |
-| `conformance-appd.json` | Conformance app directory; merged in `packages/sail-web/src/main.tsx` |
+| `conformance-appd.json` | Conformance app directory; merged in `packages/sail-web/src/main.tsx` and loaded by `packages/sail-conformance-harness` (desktop-agent-only clean room) |
 
 The toolbox exercises the **full browser stack** (sail-web → SailPlatform / SailAppLauncher → WCP → `@finos/sail-desktop-agent`), not Cucumber’s `MockTransport` path. In-repo BDD coverage is documented in `packages/sail-desktop-agent/docs/conformance-traceability.md` (~101 `@conformance2.2` scenarios).
 

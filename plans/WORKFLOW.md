@@ -43,9 +43,10 @@ draft → approved → in-progress → staged → waiting_on_user
 | `waiting_on_user` | Human review gate (chat `approve` / `changes` / `skip`) |
 | `committed` | Pushed to feature branch (`commit_push` / `draft_pr`) |
 | `pr_awaiting` | Draft PR open; frontmatter `pr_url` set |
-| `done` | Merged or explicitly closed |
+| `done` | Merged or explicitly closed — file lives in `plans/completed-work-items/` |
 
-`/ww-reconcile` moves `pr_awaiting` → `done` when `gh pr view` reports **MERGED**.
+`/ww-reconcile` moves `pr_awaiting` → `done` when `gh pr view` reports **MERGED**,
+then archives the file to `plans/completed-work-items/`.
 
 ## Commands
 

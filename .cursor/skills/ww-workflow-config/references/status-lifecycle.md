@@ -47,4 +47,5 @@ Set `done` when:
 - Human says `approve` after merge, or
 - `stage_only` and human confirms shipped outside ww
 
-Append `## Loop history` line with date and PR link.
+Append `## Loop history` line with date and PR link. Then archive the file
+to `plans/completed-work-items/` per `ww-work-items/references/archive-on-done.md`.

@@ -15,13 +15,15 @@ Progress:
 - [ ] Queue built (slug filter or all `status: approved`)
 - [ ] Queue validated:
   - [ ] No `kind: epic` items in queue
-  - [ ] Every `depends_on` slug is `done` or absent
+  - [ ] Every `depends_on` slug is `done` (in `plans/completed-work-items/`) or absent
   - [ ] No circular dependencies
   - [ ] Overlapping `file_manifest` entries sequenced, not parallel
 - [ ] Human told queue order, count, and active **automation tier**
 - [ ] **Queue bookkeeping:** update each slug `status` on every transition;
   use extended lifecycle (`staged` → `waiting_on_user` → `committed` /
-  `pr_awaiting` → `done`). After external merge, run `/ww-reconcile` or set `done`
+  `pr_awaiting` → `done` + archive to `plans/completed-work-items/`). After external
+  merge, run `/ww-reconcile` or set `done` and archive per
+  `ww-work-items/references/archive-on-done.md`.
 
 If queue validation fails, stop and report the problem.
 

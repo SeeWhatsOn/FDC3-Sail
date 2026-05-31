@@ -5,7 +5,7 @@ description: >
   PRDs. Use when creating descriptive work items, validating drafts
   before approval, updating delivery state, routing review verdicts,
   surfacing blocked decisions, staging for human review, extracting
-  learnings, or moving work to dead-letter. For planning shape (PRD vs
+  learnings, archiving completed items, or moving work to dead-letter. For planning shape (PRD vs
   optional epic vs work item), load ww-planning-stack. Keywords: ww, watson workflow,
   work item, plans/work-items, BDD, Given/When/Then, status lifecycle.
 metadata:
@@ -33,6 +33,8 @@ plans/
   work-items/
     add-context-broadcast-handler.md
     resolve-order-race-condition.md
+  completed-work-items/
+    resolve-order-race-condition.md   # status: done — archived from work-items/
   dead-letter/
     add-context-broadcast-handler.md
 
@@ -127,6 +129,12 @@ The planning orchestrator creates and revises draft work items.
 Do not persist a transient `loop` status. Keep the work item
 `in-progress` and record retries in `## Loop history`.
 
+## Archive on done
+
+When `status` becomes `done`, immediately move the file from
+`plans/work-items/` to `plans/completed-work-items/`. See
+[references/archive-on-done.md](references/archive-on-done.md).
+
 ## Project Health Check
 
 Before `/ww-plan`, `/ww-approve`, or `/ww-deliver`, check for:
@@ -139,6 +147,7 @@ Hard requirements:
 Hard directories:
   plans/
   plans/work-items/
+  plans/completed-work-items/   # create on first archive if missing
   plans/dead-letter/
 
 TypeScript project requirements, when applicable:
