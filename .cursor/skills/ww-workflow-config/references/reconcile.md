@@ -16,7 +16,7 @@ gh pr view <url-or-number> --json state,mergedAt,url
 
 | `state` | Action |
 |---------|--------|
-| `MERGED` | `status: done`, set `merged_pr`, loop history |
+| `MERGED` | `status: done`, set `merged_pr`, loop history, **archive** to `plans/completed-work-items/` |
 | `OPEN` | no change; report in summary |
 | `CLOSED` (not merged) | set `approved` or `in-progress`, note in loop history |
 
@@ -26,6 +26,7 @@ If `gh` unavailable, list items and ask human to run reconcile after merge.
 
 Compare `merged_pr` / git log on `integration_branch` to slugs; suggest
 marking `done` when implementation clearly shipped (human confirms).
+When marking `done`, archive per `ww-work-items/references/archive-on-done.md`.
 
 ## 4. Report
 

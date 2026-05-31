@@ -73,7 +73,7 @@ Local PRD and work-item queue for `/ww-plan`, `/ww-deliver`, `/ww-approve`, `/ww
 - **Docs:** `plans/WORKFLOW.md` — automation tiers, status lifecycle, reconcile.
 - **Queue audit:** `plans/scripts/queue-status.sh`, `plans/scripts/reconcile-queue.sh` (needs `gh` for PR merge detection).
 - **Delivery tiers:** `stage_only` (no commit/PR) | `commit_push` | `draft_pr`. Plans and code follow the same tier; when `repo.plans.version_in_git: true`, commit work-item status with code.
-- **Statuses:** `approved` → `in-progress` → `staged` / `waiting_on_user` → `committed` / `pr_awaiting` → `done`. Run `/ww-reconcile` after merging PRs so `pr_awaiting` becomes `done`.
+- **Statuses:** `approved` → `in-progress` → `staged` / `waiting_on_user` → `committed` / `pr_awaiting` → `done`. Run `/ww-reconcile` after merging PRs so `pr_awaiting` becomes `done`; done items move to `plans/completed-work-items/`.
 - **First run:** If `workflow-config.yaml` is missing, the agent runs a short interview once, writes the file, then continues.
 
 ### Cucumber tags (`packages/sail-desktop-agent`)
@@ -95,6 +95,7 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 
 ## Learned User Preferences
 
+- Do not add Vitest or Cucumber tests for README, TSDoc, or other documentation; `npm test` covers FDC3 behavior and library code only.
 - Keep `@finos/sail-desktop-agent` aligned with FDC3 2.2 spec behavior; Sail-specific extensions (e.g. WCP origin allowlists) belong in `@finos/sail-platform-api`, not the core library.
 - FDC3-Sail product defaults live in `packages/sail-desktop-agent/src/core/sail-default-config.ts`; `new DesktopAgent(options)` merges them in the constructor (partial `implementationMetadata` overrides are deep-merged). Do not add handler-level `??` fallbacks for implementation metadata.
 - `resolveDesktopAgentConfig()` remains exported for tests and pre-built config; app code normally uses `new DesktopAgent({ transport, ... })` or `createBrowserDesktopAgent()` / `SailPlatform`.
@@ -104,6 +105,9 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 
 ## Learned Workspace Facts
 
+- `@finos/sail-conformance-harness` is the clean-room FDC3 toolbox host (port 3001); compare its runs against the full Sail stack (`sail-web`, port 3000) to separate desktop-agent bugs from platform/web UI.
+- Root `conformance-appd.json` is the FINOS conformance app directory fixture loaded by the harness for toolbox runs.
+- Cucumber `@conformance2.2` scenarios use MockTransport with pre-registered instance ids; green BDD does not prove real browser WCP or cross-origin iframe identity — toolbox `AppTimeout` / launch→validate failures need harness or bdd-wcp integration coverage.
 - Avoid `import ... with { type: "json" }` in this repo: the TypeScript parser treats `with` as a legacy statement and breaks module parsing (cascading false module-not-found and `error`-typed imports). Use plain `import pkg from "../../package.json"` with `resolveJsonModule`, or `readFileSync(new URL(..., import.meta.url))` in tests.
 - This monorepo uses npm workspaces (`npm install`, `npm test`), not pnpm; docs and scripts should match npm.
 - WCP origin allowlisting is not an FDC3 2.2 API surface; FDC3 requires responding to `WCP1Hello` with `WCP2LoadUrl` or `WCP3Handshake`, with identity validation at WCP4 — silent pre-filter reject is Sail policy, not spec behavior.

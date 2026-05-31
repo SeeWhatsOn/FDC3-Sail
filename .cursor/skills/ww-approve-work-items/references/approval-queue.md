@@ -12,13 +12,14 @@
 Also include in catalog (but do not queue for approval unless human asks):
 
 - `status: approved` — already ready for `/ww-deliver`
-- `status: done` — informational
+- `status: done` in `plans/completed-work-items/` — informational (archived)
 - `kind: epic` — show in catalog; deliver children only
 
 ## Dependency order
 
 1. Collect all `depends_on` slugs from queued drafts.
-2. Verify each slug exists under `plans/work-items/`.
+2. Verify each slug exists under `plans/work-items/` or
+   `plans/completed-work-items/`.
 3. Topological sort: dependencies first.
 4. If cycle detected, stop and report the cycle.
 
@@ -50,5 +51,6 @@ status: approved   # or done
 
 Do not set `in-progress`, `staged`, or `done` (delivery) except:
 
-- `done` when human confirms already shipped
+- `done` when human confirms already shipped — then archive per
+  `ww-work-items/references/archive-on-done.md`
 - delivery orchestrator owns post-approve lifecycle

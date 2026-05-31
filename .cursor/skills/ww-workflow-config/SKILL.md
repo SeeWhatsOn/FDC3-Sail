@@ -15,6 +15,8 @@ metadata:
 
 Durable workflow preferences for the Watson (ww) stack. Stops repeated
 interview questions and keeps `plans/work-items/` aligned with git reality.
+Done items live in `plans/completed-work-items/` (see `ww-work-items` →
+`references/archive-on-done.md`).
 
 ## When to load
 
@@ -86,6 +88,8 @@ work item frontmatter is empty.
 ## PR reconcile
 
 `/ww-reconcile` uses [references/reconcile.md](references/reconcile.md).
+Merged items are archived to `plans/completed-work-items/` per
+`ww-work-items/references/archive-on-done.md`.
 
 ## PRD planning hook
 

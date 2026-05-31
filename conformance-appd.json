@@ -873,6 +873,7 @@
     {
       "appId": "MockAppId",
       "name": "MockApp",
+      "title": "Mock App",
       "description": "Part of the FDC3 Conformance Tests",
       "details": {
         "url": "https://fdc3.finos.org/toolbox/fdc3-conformance/apps/general/index.html"
