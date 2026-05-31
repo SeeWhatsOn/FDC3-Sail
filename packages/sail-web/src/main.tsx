@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client"
 import { SailAppLauncher, SailPlatform, type DirectoryApp } from "@finos/sail-platform-api"
 import type { AppMetadata } from "@finos/fdc3"
 
+import conformanceAppDirectory from "../../../conformance-appd.json"
 import defaultAppDirectory from "../../../fdc3-app-directory.json"
 import "./index.css"
 import App from "./App"
@@ -86,7 +87,10 @@ if (isChannelSelectorE2e) {
   const platform = new SailPlatform({
     debug: true,
     appLauncher,
-    apps: defaultAppDirectory.applications as unknown as DirectoryApp[],
+    apps: [
+      ...defaultAppDirectory.applications,
+      ...conformanceAppDirectory.applications,
+    ] as unknown as DirectoryApp[],
   })
 
   // Start the agent - this begins listening for WCP1Hello messages

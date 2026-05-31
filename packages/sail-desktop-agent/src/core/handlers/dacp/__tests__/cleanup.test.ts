@@ -377,4 +377,146 @@ describe("heartbeat cleanup on disconnect", () => {
 
     expectHeartbeatFullyCleared(getState, canonicalInstanceId)
   })
+
+  it("cleanupDACPHandlers clears heartbeat when invoked with WCP4 temp context id", () => {
+    const tempInstanceId = "temp-wcp4-direct-cleanup"
+    const canonicalInstanceId = "canonical-wcp5-direct-cleanup"
+    const initialState = connectTestInstance(canonicalInstanceId)
+    const { context, getState } = createHeartbeatTestContext({
+      instanceId: tempInstanceId,
+      initialState,
+    })
+
+    startHeartbeat(canonicalInstanceId, context)
+    expect(getActiveHeartbeatTimerCount()).toBe(1)
+    expect(getState().heartbeats[canonicalInstanceId]).toBeDefined()
+
+    cleanupDACPHandlers(context)
+
+    expectHeartbeatFullyCleared(getState, canonicalInstanceId)
+  })
+
+  it("DesktopAgent.disconnectInstance clears heartbeat when called with WCP4 connectionAttemptUuid", async () => {
+    const appDirectory = new AppDirectoryManager()
+    appDirectory.addApplications([
+      {
+        appId: "test-app",
+        title: "Test App",
+        type: "web",
+        details: { url: "https://example.com/app" },
+      },
+    ])
+    const transport = new MockTransport()
+    const agent = new DesktopAgent({
+      transport,
+      appDirectoryManager: appDirectory,
+      heartbeatIntervalMs: 500,
+      heartbeatTimeoutMs: 2000,
+    })
+    agent.start()
+
+    const connectionAttemptUuid = "temp-disconnect-by-attempt-uuid"
+    const wcp4Message = {
+      type: "WCP4ValidateAppIdentity",
+      payload: {
+        identityUrl: "https://example.com/app",
+        actualUrl: "https://example.com/app",
+      },
+      meta: {
+        connectionAttemptUuid,
+        timestamp: new Date().toISOString(),
+        messageOrigin: "https://example.com",
+      },
+    } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
+
+    await transport.receiveMessage(wcp4Message)
+
+    const wcp5Response = transport.sentMessages.find(
+      message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse"
+    ) as { payload?: { instanceId?: string } } | undefined
+    const canonicalInstanceId = wcp5Response?.payload?.instanceId
+    expect(canonicalInstanceId).toBeDefined()
+
+    expect(getActiveHeartbeatTimerCount()).toBe(1)
+    expect(agent.getState().heartbeats[canonicalInstanceId!]).toBeDefined()
+
+    agent.disconnectInstance(`temp-${connectionAttemptUuid}`)
+
+    expectHeartbeatFullyCleared(() => agent.getState(), canonicalInstanceId!)
+  })
+
+  it("transport disconnect clears all active heartbeat timers and state entries", async () => {
+    const appDirectory = new AppDirectoryManager()
+    appDirectory.addApplications([
+      {
+        appId: "test-app",
+        title: "Test App",
+        type: "web",
+        details: { url: "https://example.com/app" },
+      },
+    ])
+    const transport = new MockTransport()
+    const agent = new DesktopAgent({
+      transport,
+      appDirectoryManager: appDirectory,
+      heartbeatIntervalMs: 500,
+      heartbeatTimeoutMs: 2000,
+    })
+    agent.start()
+
+    const wcp4Message = {
+      type: "WCP4ValidateAppIdentity",
+      payload: {
+        identityUrl: "https://example.com/app",
+        actualUrl: "https://example.com/app",
+      },
+      meta: {
+        connectionAttemptUuid: "transport-disconnect-uuid",
+        timestamp: new Date().toISOString(),
+        messageOrigin: "https://example.com",
+      },
+    } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
+
+    await transport.receiveMessage(wcp4Message)
+
+    const wcp5Response = transport.sentMessages.find(
+      message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse"
+    ) as { payload?: { instanceId?: string } } | undefined
+    const canonicalInstanceId = wcp5Response?.payload?.instanceId
+    expect(canonicalInstanceId).toBeDefined()
+    expect(getActiveHeartbeatTimerCount()).toBe(1)
+
+    transport.disconnect()
+
+    expectHeartbeatFullyCleared(() => agent.getState(), canonicalInstanceId!)
+  })
+
+  it("cleanupDACPHandlers clears only the targeted heartbeat when multiple instances are connected and WCP4 temp context is used", () => {
+    const tempInstanceId = "temp-wcp4-multi"
+    const canonicalInstanceId = "canonical-wcp5-multi"
+    const otherInstanceId = "other-connected-instance"
+
+    let state = connectTestInstance(canonicalInstanceId)
+    state = connectTestInstance(otherInstanceId)
+    state = updateInstanceState(state, otherInstanceId, AppInstanceState.CONNECTED)
+
+    const { context: targetContext, getState: getTargetState } = createHeartbeatTestContext({
+      instanceId: tempInstanceId,
+      initialState: state,
+    })
+    const { context: otherContext } = createHeartbeatTestContext({
+      instanceId: otherInstanceId,
+      initialState: state,
+    })
+
+    startHeartbeat(canonicalInstanceId, targetContext)
+    startHeartbeat(otherInstanceId, otherContext)
+    expect(getActiveHeartbeatTimerCount()).toBe(2)
+
+    cleanupDACPHandlers(targetContext)
+
+    expect(getActiveHeartbeatTimerCount()).toBe(1)
+    expect(getTargetState().heartbeats[canonicalInstanceId]).toBeUndefined()
+    expect(getTargetState().heartbeats[otherInstanceId]).toBeDefined()
+  })
 })

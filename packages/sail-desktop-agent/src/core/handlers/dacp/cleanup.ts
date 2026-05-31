@@ -6,7 +6,11 @@ import {
 import { type DACPHandlerContext } from "../types"
 import * as eventHandlers from "./event-handlers"
 import * as privateChannelHandlers from "./private-channel-handlers"
-import { getActiveHeartbeatInstanceIds, stopHeartbeat } from "./heartbeat-runtime"
+import {
+  getActiveHeartbeatInstanceIds,
+  resolveWcpTempInstanceId,
+  stopHeartbeat,
+} from "./heartbeat-runtime"
 import {
   clearPendingOpenWithContextForInstance,
   clearPendingOpenWithContextForSourceInstance,
@@ -26,6 +30,16 @@ function resolveCleanupInstanceId(context: DACPHandlerContext): string {
     getActiveHeartbeatInstanceIds().includes(instanceId)
   ) {
     return instanceId
+  }
+
+  if (instanceId.startsWith("temp-")) {
+    const canonicalId = resolveWcpTempInstanceId(instanceId)
+    if (
+      canonicalId &&
+      (state.heartbeats[canonicalId] || getActiveHeartbeatInstanceIds().includes(canonicalId))
+    ) {
+      return canonicalId
+    }
   }
 
   const activeHeartbeatIds = getActiveHeartbeatInstanceIds()
