@@ -229,7 +229,7 @@ function convertDirectoryAppToAppMetadata(
     icons: app.icons || [],
     screenshots: app.screenshots || [],
     instanceId,
-    desktopAgent: instanceId ? provider : undefined,
+    desktopAgent: provider,
   }
 }
 
