@@ -460,12 +460,14 @@ describe("InMemoryTransport", () => {
       // Start the exchange
       transport1.send({ type: "ping", count: 0 })
 
-      // Wait for messages to complete
-      await new Promise(resolve => setTimeout(resolve, 200))
-
-      // Both should have received many messages without crashing
-      expect(count1).toBeGreaterThan(0)
-      expect(count2).toBeGreaterThan(0)
+      // Wait until both sides have received at least one message
+      await vi.waitFor(
+        () => {
+          expect(count1).toBeGreaterThan(0)
+          expect(count2).toBeGreaterThan(0)
+        },
+        { timeout: 5000 }
+      )
     })
   })
 })
