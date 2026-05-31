@@ -22,8 +22,9 @@ function extractAppUrl(appMetadata: AppMetadataWithDetails): string | undefined 
  *
  * Each launch generates a fresh {@link crypto.randomUUID} instance id unless
  * the open request targets an existing instance. The returned id must match the
- * iframe `name` attribute so WCP4 identity validation can correlate the
- * connection with the host panel.
+ * iframe `name` attribute so the app can claim it in WCP4 — but the desktop
+ * agent still mints a separate WCP5 canonical id on first connect until
+ * bind-host-instance-id-at-wcp4 is implemented.
  */
 export function createHarnessAppLauncher(onLaunch: HarnessLaunchCallback): AppLauncher {
   return {

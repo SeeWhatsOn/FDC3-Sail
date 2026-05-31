@@ -3,10 +3,10 @@ title: "Investigate launcher instanceId vs WCP5 canonical id"
 slug: investigate-launcher-wcp-instance-id
 kind: spike
 type: bug
-status: approved
+status: staged
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/wcp-handlers.ts
   - packages/sail-desktop-agent/src/browser/wcp/wcp1-3-handshake.ts
@@ -70,7 +70,7 @@ Deliverable via /ww-deliver: yes (spike; spawns or unblocks bind-host-instance-i
 
 ## Blocked decisions
 
-_(empty — populate after Phase 1)_
+None. Recommendation forwarded to `bind-host-instance-id-at-wcp4` behavior spec below.
 
 ## Loop history
 
@@ -78,7 +78,30 @@ _(empty — populate after Phase 1)_
 
 ## Staged for review
 
-_(empty)_
+### Phase 1 findings (2026-05-31)
+
+Harness spike `runHarnessOpenAndWcpHandshake` (Vitest) reproduces the divergence:
+
+1. **launcherInstanceId** — `createHarnessAppLauncher` / `openResponse.appIdentifier.instanceId`
+2. **iframeName** — panel `instanceId` (matches launcher; harness contract holds)
+3. **wcp5InstanceId** — `WCP5ValidateAppIdentityResponse.payload.instanceId` (new UUID from `createAppInstance`)
+4. **findInstancesInstanceIds** — contains WCP5 id only, not launcher id
+
+Root cause: `handleWcp4ValidateAppIdentity` → `createAppInstance` always calls `crypto.randomUUID()` for first connect. WCP4 `instanceId` is only adopted when `canReuseInstanceIdentity` passes (existing state + identity registry + `sourceWindow` + matching `instanceUuid`). `fdc3.open` does not pre-register the launcher id in agent state.
+
+Impact: open-with-context pending keyed on launcher id; DACP listeners on WCP5 id → `AppTimeout` / `IntentDeliveryFailed` in toolbox.
+
+Debug: `[ConformanceHarness] instance-identity-correlation` log with `logPayloadDetail: 'full'` captures all four fields. See `packages/sail-conformance-harness/README.md`.
+
+### Phase 2 recommendation
+
+**Chosen contract: agent change at WCP4 with host pre-registration at open** (not WCP4-payload-only, not harness-only).
+
+1. **At `openRequest` success** — after `appLauncher.launch`, call `connectInstance` (or equivalent) with launcher `instanceId`, `appId`, and a `pendingWcpValidation: true` flag so the id is reserved before the iframe connects.
+2. **At WCP4 first connect** — when claimed `instanceId` matches a pending host-launched instance for the same `appId` and origin, adopt that id (set `instanceUuid` from payload or mint once) instead of `createAppInstance` random UUID. Keep strict reconnect validation for true reconnects.
+3. **Cross-origin** — toolbox apps on `fdc3.finos.org` cannot set iframe `name`; pre-registration still allows WCP4 payload `instanceId` from session storage / FINOS get-agent to bind if the host passes the launcher id through open metadata (follow-up if needed).
+
+Pre-register alone without WCP4 adoption is insufficient; WCP4-payload-only without pre-register fails when no state slot exists. Minimal surface: `app-handlers.ts` (open) + `wcp-handlers.ts` (WCP4 branch).
 
 ## Escalation notes
 

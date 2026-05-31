@@ -143,6 +143,9 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
         sourceWindow,
       })
     } else {
+      // First connect: always mints a new UUID. WCP4 payload instanceId (host iframe name /
+      // AppLauncher return value) is ignored unless canReuseExistingIdentity above succeeds.
+      // Host-assigned ids from fdc3.open are therefore not canonical until bind-host fix lands.
       const newInstance = createAppInstance(context, appMetadata, identityUrl, identityOrigin, sourceWindow)
       instanceId = newInstance.instanceId
       instanceUuid = newInstance.instanceUuid
@@ -242,6 +245,7 @@ function createAppInstance(
   identityOrigin: string,
   sourceWindow: unknown
 ) {
+  // Does not adopt reconnectInstanceId from WCP4; see handleWcp4ValidateAppIdentity branch above.
   const instanceId = crypto.randomUUID()
   const instanceUuid = crypto.randomUUID()
 
