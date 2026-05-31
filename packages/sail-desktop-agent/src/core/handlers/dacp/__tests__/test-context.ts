@@ -7,6 +7,9 @@ import { createInitialState } from "../../../state/initial-state"
 import type { AgentState, StateSetter } from "../../../state/types"
 import { InMemoryTransport } from "../../../../transports/in-memory-transport"
 
+/** Shared agent state for contexts created with the same initialState reference (multi-connection tests). */
+const sharedStateByInitialSnapshot = new WeakMap<AgentState, AgentState>()
+
 export function createDACPTestContext(options: {
   instanceId: string
   pendingIntentPromises?: Map<string, PendingIntentPromiseEntry>
@@ -15,16 +18,28 @@ export function createDACPTestContext(options: {
   context: DACPHandlerContext
   getState: () => AgentState
 } {
-  let state = options.initialState ?? createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+  const initialSnapshot = options.initialState
+  let state = initialSnapshot ?? createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+
+  if (initialSnapshot && !sharedStateByInitialSnapshot.has(initialSnapshot)) {
+    sharedStateByInitialSnapshot.set(initialSnapshot, state)
+  }
+
+  const readState = (): AgentState =>
+    initialSnapshot ? (sharedStateByInitialSnapshot.get(initialSnapshot) ?? state) : state
 
   const setState: StateSetter = callback => {
-    state = callback(state)
+    const next = callback(readState())
+    state = next
+    if (initialSnapshot) {
+      sharedStateByInitialSnapshot.set(initialSnapshot, next)
+    }
   }
 
   const context: DACPHandlerContext = {
     transport: new InMemoryTransport(),
     instanceId: options.instanceId,
-    getState: () => state,
+    getState: readState,
     setState,
     appDirectory: new AppDirectoryManager(),
     logger: consoleLogger,
@@ -39,5 +54,5 @@ export function createDACPTestContext(options: {
     pendingIntentPromises: options.pendingIntentPromises ?? new Map(),
   }
 
-  return { context, getState: () => state }
+  return { context, getState: readState }
 }

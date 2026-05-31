@@ -397,6 +397,20 @@ export class SailPlatform {
     return this._desktopAgent!.getUserChannels()
   }
 
+  /**
+   * Read an app's current user channel from Desktop Agent state.
+   *
+   * Does not send DACP on behalf of the app — use for host chrome that needs
+   * an authoritative read without waiting for `onChannelChanged`.
+   *
+   * @param instanceId - Connected app instance id
+   * @returns Channel id when joined; `null` when not on a channel or instance unknown
+   */
+  getAppUserChannel(instanceId: string): string | null {
+    this.ensureStarted()
+    return this._desktopAgent!.getAppUserChannelId(instanceId)
+  }
+
   // ===== Private Methods =====
 
   private ensureStarted(): void {

@@ -162,6 +162,42 @@ Feature: App Channels
     And messaging will have 3 posts
 
   @conformance2.2
+  @app-channels
+  Scenario: Listener subscribed after two broadcasts only receives subsequent broadcasts
+    When "appId: App1, instanceId: a1" creates or gets an app channel called "historyChannel" [fdc3.getOrCreateChannel]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "historyChannel" [fdc3.broadcast]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.country" on "historyChannel" [fdc3.broadcast]
+    And "appId: App2, instanceId: a2" adds a context listener on "historyChannel" with type "fdc3.instrument" [fdc3.addContextListener]
+    And we wait for a period of "100" ms
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "historyChannel" [fdc3.broadcast]
+    Then messaging will have outgoing posts
+      | msg.matches_type           | to.instanceId | msg.payload.channelId | msg.payload.context.type |
+      | getOrCreateChannelResponse | a1            | {null}                | {null}                   |
+      | broadcastResponse          | a1            | {null}                | {null}                   |
+      | broadcastResponse          | a1            | {null}                | {null}                   |
+      | addContextListenerResponse | a2            | {null}                | {null}                   |
+      | broadcastEvent             | a2            | historyChannel        | fdc3.instrument          |
+      | broadcastResponse          | a1            | {null}                | {null}                   |
+
+  @conformance2.2
+  @app-channels
+  Scenario: getCurrentContext returns latest after multiple broadcasts in order
+    When "appId: App1, instanceId: a1" creates or gets an app channel called "orderChannel" [fdc3.getOrCreateChannel]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.country" on "orderChannel" [fdc3.broadcast]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "orderChannel" [fdc3.broadcast]
+    And "appId: App2, instanceId: a2" gets the latest context on "orderChannel" with type "{null}" [fdc3.getCurrentContext]
+    And "appId: App2, instanceId: a2" gets the latest context on "orderChannel" with type "fdc3.country" [fdc3.getCurrentContext]
+    And "appId: App2, instanceId: a2" gets the latest context on "orderChannel" with type "fdc3.instrument" [fdc3.getCurrentContext]
+    Then messaging will have outgoing posts
+      | msg.matches_type           | msg.payload.context.type | msg.payload.context.name | to.instanceId |
+      | getOrCreateChannelResponse | {null}                   | {null}                   | a1            |
+      | broadcastResponse          | {null}                   | {null}                   | a1            |
+      | broadcastResponse          | {null}                   | {null}                   | a1            |
+      | getCurrentContextResponse  | fdc3.instrument          | Apple                    | a2            |
+      | getCurrentContextResponse  | fdc3.country             | Sweden                   | a2            |
+      | getCurrentContextResponse  | fdc3.instrument          | Apple                    | a2            |
+
+  @conformance2.2
   Scenario: Multiple typed listeners on an app channel receive matching contexts
     When "appId: App3, instanceId: a3" is opened with connection id "a3"
     And "appId: App1, instanceId: a1" creates or gets an app channel called "multiListenerChannel" [fdc3.getOrCreateChannel]

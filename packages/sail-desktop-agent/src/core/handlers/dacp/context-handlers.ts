@@ -352,7 +352,8 @@ function notifyContextListeners(
   context: Context,
   handlerContext: DACPHandlerContext
 ): void {
-  const { getState, logger } = handlerContext
+  const { getState, logger, logPayloadDetail } = handlerContext
+  const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
   const state = getState()
   const userChannel = getUserChannel(state, channelId)
   const appChannel = getAppChannel(state, channelId)

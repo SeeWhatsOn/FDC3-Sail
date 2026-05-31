@@ -3,7 +3,9 @@ title: "Investigate WCP and heartbeat test hygiene"
 slug: align-wcp-instance-id-in-tests
 kind: spike
 type: bug
-status: waiting_on_user
+status: pr_awaiting
+branch: cursor/align-wcp-instance-id-in-tests-f2c8
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/41
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -72,19 +74,5 @@ Resolved: failures were test design (connection id vs WCP5 canonical id, vacuous
 ## Loop history
 
 - 2026-05-27: approved by human
-- 2026-05-29: Phase 2 delivered — aligned steps to WCP5 canonical id via `mockTransport.registerWcp5Mapping` after validate; tightened disconnect-cleanup scenario 1 (removed duplicate agent init, distinct connection id, validate before disconnect); all 7 target scenarios green.
-
-## Staged for review
-
-**RED evidence (before):** `I test the liveness` and `no heartbeat timers` failed when steps used connection id `a1` while heartbeat/WCP6 ran on WCP5 canonical id; messaging assertions expected `to.instanceId: a1`.
-
-**Command:** `cd packages/sail-desktop-agent && npx cucumber-js --profile single test/features/apps/disconnect-cleanup-p0.feature test/features/infrastructure/heartbeat.feature`
-
-**Result:** 7 scenarios (7 passed), 84 steps (84 passed)
-
-**Files changed:** file_manifest only (+ this work item)
-
-**Learnings proposed:**
-- [AGENTS.md candidate] After WCP4 validate in Cucumber, register `connectionId → lastWcp5ValidatedInstanceId` on `MockTransport` (WCP5 `meta.destination` is `temp-{uuid}`, not the test connection id).
-- [AGENTS.md candidate] BDD liveness/disconnect/goodbye steps must resolve canonical instance id; pre-seeded connection instances should be removed after validate.
-- [AGENTS.md candidate] `disconnectInstance(canonical)` may leave launch-keyed open-with-context pending under the connection id — disconnect both when they differ (test harness) until product migrates pending keys on WCP5.
+- 2026-05-29: auto-deliver — WCP5 canonical id in BDD; 7 scenarios pass; branch pushed
+- 2026-05-29: human approve all — PR #41

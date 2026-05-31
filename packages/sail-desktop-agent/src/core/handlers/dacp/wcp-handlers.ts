@@ -19,21 +19,15 @@ import { startHeartbeat } from "./heartbeat-handlers"
 import { cleanupDACPHandlers } from "./cleanup"
 import { getInstance } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
-import type { Transport } from "../../interfaces/transport"
 import type { DirectoryApp } from "../../app-directory/types"
+import {
+  getInstanceIdentityMap,
+  type InstanceIdentityRecord,
+} from "./instance-identity-registry"
 
 type Wcp4ValidateAppIdentity = WebConnectionProtocol4ValidateAppIdentity
 type WCP5ValidateAppIdentityResponse = WebConnectionProtocol5ValidateAppIdentitySuccessResponse
 type WCP5ValidateAppIdentityFailedResponse = WebConnectionProtocol5ValidateAppIdentityFailedResponse
-
-interface InstanceIdentityRecord {
-  appId: string
-  instanceUuid: string
-  origin: string
-  sourceWindow: unknown
-}
-
-const instanceIdentityRegistry = new WeakMap<Transport, Map<string, InstanceIdentityRecord>>()
 
 /**
  * Handles Wcp4Validateappidentity messages from FDC3 apps.
@@ -359,15 +353,6 @@ function sendFailureResponse(
   }
 
   context.transport.send(fallbackResponse)
-}
-
-function getInstanceIdentityMap(transport: Transport): Map<string, InstanceIdentityRecord> {
-  let map = instanceIdentityRegistry.get(transport)
-  if (!map) {
-    map = new Map<string, InstanceIdentityRecord>()
-    instanceIdentityRegistry.set(transport, map)
-  }
-  return map
 }
 
 function canReuseInstanceIdentity(params: {

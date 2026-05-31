@@ -3,10 +3,14 @@ title: "Replace fixed sleeps in in-memory transport tests"
 slug: fix-in-memory-transport-test-timing
 kind: spike
 type: chore
-status: approved
+status: pr_awaiting
+branch: cursor/fix-in-memory-transport-test-timing-f2c8
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/39
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
+integration_branch: v3-pre
+branch: cursor/fix-in-memory-transport-test-timing-f2c8
 file_manifest:
   - packages/sail-desktop-agent/src/transports/__tests__/in-memory-transport.test.ts
 depends_on: []
@@ -65,3 +69,5 @@ Whether `InMemoryTransport` needs a public `flush()` or `whenIdle()` helper for 
 ## Loop history
 
 - 2026-05-27: approved by human (validation gaps waived)
+- 2026-05-29: auto-deliver — vi.waitFor replaces setTimeout(200); branch pushed
+- 2026-05-29: human approve all — PR #39

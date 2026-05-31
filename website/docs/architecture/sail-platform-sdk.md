@@ -84,8 +84,9 @@ await platform.sailConfig.get()
 // Change app channel (host chrome — platform sends typed join/leave for instance)
 await platform.changeAppChannel(instanceId, 'fdc3.channel.1')
 
-// List user channels; per-instance current channel via getAppUserChannel (when added) or onChannelChanged
+// List user channels and read per-instance current channel from agent state
 const channels = platform.getUserChannels()
+const channelId = platform.getAppUserChannel(instanceId)
 
 // Stop when done
 platform.stop()

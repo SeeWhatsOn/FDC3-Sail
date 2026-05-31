@@ -6,11 +6,16 @@ import {
 import { type DACPHandlerContext } from "../types"
 import * as eventHandlers from "./event-handlers"
 import * as privateChannelHandlers from "./private-channel-handlers"
-import { getActiveHeartbeatInstanceIds, stopHeartbeat } from "./heartbeat-runtime"
+import {
+  getActiveHeartbeatInstanceIds,
+  resolveWcpTempInstanceId,
+  stopHeartbeat,
+} from "./heartbeat-runtime"
 import {
   clearPendingOpenWithContextForInstance,
   clearPendingOpenWithContextForSourceInstance,
 } from "./utils/open-with-context"
+import { pruneInstanceIdentity } from "./instance-identity-registry"
 
 /**
  * WCP4 validation runs under a temp connection id while heartbeat and instance state
@@ -25,6 +30,16 @@ function resolveCleanupInstanceId(context: DACPHandlerContext): string {
     getActiveHeartbeatInstanceIds().includes(instanceId)
   ) {
     return instanceId
+  }
+
+  if (instanceId.startsWith("temp-")) {
+    const canonicalId = resolveWcpTempInstanceId(instanceId)
+    if (
+      canonicalId &&
+      (state.heartbeats[canonicalId] || getActiveHeartbeatInstanceIds().includes(canonicalId))
+    ) {
+      return canonicalId
+    }
   }
 
   const activeHeartbeatIds = getActiveHeartbeatInstanceIds()
@@ -107,6 +122,8 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
 
   // Remove instance from state
   setState(state => removeInstance(state, instanceId))
+
+  pruneInstanceIdentity(resolvedContext.transport, instanceId)
 
   logger.info("DACP handlers cleanup completed", { instanceId })
 }

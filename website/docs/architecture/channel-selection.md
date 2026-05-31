@@ -50,8 +50,8 @@ This is “on behalf of the app” in **identity** (source instance id), not “
 | What chrome needs | API / mechanism today | Notes |
 |-------------------|----------------------|--------|
 | List of user channels | `platform.getUserChannels()` | Reads agent config / channel registry (not per-app DACP). |
-| Current channel for a tile | `onChannelChanged` → connection store (`channelId`) | Event-driven; matches what the app will see after `userChannelChanged`. |
-| Authoritative read from agent | *Not on `SailPlatform` yet* | Prefer `platform.getAppUserChannel(instanceId)` reading agent state (platform-api), not raw DACP impersonation. |
+| Current channel for a tile | `platform.getAppUserChannel(instanceId)` | Reads `instance.currentUserChannel` from agent state (no DACP round-trip). |
+| Event-driven mirror | `onChannelChanged` → connection store (`channelId`) | Optional; matches what the app receives via `userChannelChanged`. |
 
 Apps still use **`fdc3.getCurrentChannel()`** inside the iframe over MessagePort — that is the app’s own DACP `getCurrentChannelRequest`.
 
@@ -80,24 +80,23 @@ Both reflect the same agent state change; the host does not need to poke the ifr
 
 ## What not to do
 
-- **`sendDACPMessageOnBehalfOf(instanceId, message: unknown)`** — bypasses WCP validation; allows arbitrary DACP. Deprecated in favor of typed platform channel APIs.
-- **Parent calling private `DesktopAgent.handleMessage`** — breaks layering; keep host integration in **platform-api**.
+- **Raw DACP impersonation** (`sendDACPMessageOnBehalfOf`, private `handleMessage`) — bypasses WCP validation; use typed **`SailPlatform`** channel APIs instead.
 - **Chrome writing agent state without DACP handlers** — breaks conformance and app event delivery.
 
-## Platform API surface (target)
+## Platform API surface
 
 ```typescript
-// Set — exists today
+// Set — join / leave on behalf of an instance
 await platform.changeAppChannel(instanceId, "fdc3.channel.1")
 await platform.changeAppChannel(instanceId, null) // leave
 
-// List channels — exists today
+// List channels
 const channels = platform.getUserChannels()
 
-// Get current user channel for a tile — add on platform-api (read agent state)
-const channelId = platform.getAppUserChannel(instanceId) // planned
+// Get current user channel for a tile (read agent state)
+const channelId = platform.getAppUserChannel(instanceId)
 
-// Events — exists today
+// Events — optional mirror for UI stores
 platform.start({ onChannelChanged: (instanceId, channelId) => { ... } })
 ```
 
