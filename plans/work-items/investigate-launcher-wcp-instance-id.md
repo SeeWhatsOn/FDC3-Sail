@@ -3,7 +3,7 @@ title: "Investigate launcher instanceId vs WCP5 canonical id"
 slug: investigate-launcher-wcp-instance-id
 kind: spike
 type: bug
-status: waiting_on_user
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -15,7 +15,7 @@ file_manifest:
 depends_on: []
 integration_branch: v3-pre
 branch: cursor/investigate-launcher-wcp-instance-id
-pr_url: ""
+pr_url: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/46"
 merged_pr: ""
 external_tracker: ""
 tags: [fdc3]
