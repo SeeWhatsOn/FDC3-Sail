@@ -2,10 +2,12 @@
 title: "Extend FDC3 error enum boundary tests"
 slug: fdc3-error-enum-boundary-tests
 type: enhancement
-status: approved
+status: pr_awaiting
+branch: cursor/fdc3-error-enum-boundary-tests-f2c8
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/44
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/
   - packages/sail-desktop-agent/src/core/errors/fdc3-errors.ts
@@ -13,8 +15,8 @@ file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/__tests__/
 depends_on:
   - conformance-traceability-map
-integration_branch: ""
-branch: test/fdc3-error-enums
+integration_branch: v3-pre
+branch: cursor/fdc3-error-enum-boundary-tests-f2c8
 external_tracker: ""
 tags: [fdc3]
 ---
@@ -61,3 +63,5 @@ Assert enum only vs. exact spec error message strings.
 ## Loop history
 
 - 2026-05-27: approved by human (validation gaps waived)
+- 2026-05-29: auto-deliver — 7-case fdc3-error-enums Vitest matrix; branch pushed
+- 2026-05-29: human approve all — PR #44

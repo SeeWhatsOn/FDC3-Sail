@@ -3,7 +3,9 @@ title: "Replace sendDACPMessageOnBehalfOf with intention-level channel API"
 slug: replace-dacp-impersonation-with-channel-api
 kind: task
 type: feature
-status: approved
+status: pr_awaiting
+branch: cursor/replace-dacp-impersonation-f2c8
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/40
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -122,6 +124,8 @@ Platform-api unit tests: `getAppUserChannel` after join/leave; `changeAppChannel
 - 2026-05-27: revised — scope platform-api set/get + docs; DA stays pure; channel-selection.md added
 - 2026-05-27: revised per human — host chrome layering, Docusaurus two-pattern doc
 - 2026-05-27: approved by human
+- 2026-05-29: auto-deliver — getAppUserChannel + removed sendDACPMessageOnBehalfOf; branch pushed
+- 2026-05-29: human approve all — PR #40
 
 ## Staged for review
 
