@@ -15,6 +15,7 @@ import {
   clearPendingOpenWithContextForInstance,
   clearPendingOpenWithContextForSourceInstance,
 } from "./utils/open-with-context"
+import { pruneInstanceIdentity } from "./instance-identity-registry"
 
 /**
  * WCP4 validation runs under a temp connection id while heartbeat and instance state
@@ -121,6 +122,8 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
 
   // Remove instance from state
   setState(state => removeInstance(state, instanceId))
+
+  pruneInstanceIdentity(resolvedContext.transport, instanceId)
 
   logger.info("DACP handlers cleanup completed", { instanceId })
 }

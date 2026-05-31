@@ -8,7 +8,7 @@ branch: cursor/wcp-identity-registry-pruning-f2c8
 pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/42
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/wcp-handlers.ts
   - packages/sail-desktop-agent/src/core/__tests__/desktop-agent-wcp-routing.test.ts
@@ -67,5 +67,9 @@ Severity after investigation — may close as no-op or optional cleanup.
 ## Loop history
 
 - 2026-05-27: approved by human (validation gaps waived)
+<<<<<<< HEAD
+- 2026-05-29: Phase 1 — confirmed inner `Map` retained entries after disconnect/heartbeat/WCP6 cleanup; failed WCP4 paths never set entries. Outer `WeakMap` bounds lifetime to transport. Phase 2 — added `pruneInstanceIdentity` on `cleanupDACPHandlers` paths; 7 focused Vitest cases in `wcp-identity-registry.test.ts`.
+=======
 - 2026-05-29: auto-deliver — pruneInstanceIdentity on cleanup; branch pushed
 - 2026-05-29: human approve all — PR #42
+>>>>>>> origin/v3-pre
