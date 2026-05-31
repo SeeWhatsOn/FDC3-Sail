@@ -3,7 +3,7 @@ title: "Conformance harness host (React + sail-desktop-agent only)"
 slug: conformance-harness-host
 kind: task
 type: feature
-status: waiting_on_user
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -23,7 +23,7 @@ file_manifest:
 depends_on: []
 integration_branch: v3-pre
 branch: cursor/conformance-harness-host-3cab
-pr_url: ""
+pr_url: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/45"
 merged_pr: ""
 external_tracker: ""
 tags: [fdc3, ui]
@@ -277,7 +277,7 @@ Intent resolution callback type: use `IntentResolutionCallback` / payload types 
 ## Loop history
 
 - 2026-05-31: approved by human (/ww-approve conformance-harness-host)
-- 2026-05-31: delivery Phase A–D complete; staged for human review (stage_only tier)
+- 2026-05-31: human requested PR; committed and opened #45
 
 ## Staged for review
 
