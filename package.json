@@ -29,6 +29,7 @@
     "packages/sail-ui",
     "packages/sail-platform-api",
     "packages/sail-web",
+    "packages/sail-conformance-harness",
     "packages/sail-electron",
     "packages/sail-server",
     "website"

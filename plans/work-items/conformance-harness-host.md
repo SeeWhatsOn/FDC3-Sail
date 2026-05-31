@@ -3,10 +3,10 @@ title: "Conformance harness host (React + sail-desktop-agent only)"
 slug: conformance-harness-host
 kind: task
 type: feature
-status: approved
+status: waiting_on_user
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-conformance-harness/
   - packages/sail-conformance-harness/package.json
@@ -22,7 +22,7 @@ file_manifest:
   - package.json
 depends_on: []
 integration_branch: v3-pre
-branch: feature/conformance-harness-host
+branch: cursor/conformance-harness-host-3cab
 pr_url: ""
 merged_pr: ""
 external_tracker: ""
@@ -277,10 +277,68 @@ Intent resolution callback type: use `IntentResolutionCallback` / payload types 
 ## Loop history
 
 - 2026-05-31: approved by human (/ww-approve conformance-harness-host)
+- 2026-05-31: delivery Phase A–D complete; staged for human review (stage_only tier)
 
 ## Staged for review
 
-_(empty — populate after delivery with: dev command, port, instance-id approach chosen, toolbox pass/fail counts vs v2, sample attribution conclusions)_
+### Dev command & port
+
+```bash
+nvm use 24 && npm install
+npm run dev -w @finos/sail-conformance-harness
+# → http://localhost:3001
+```
+
+### Instance-id approach
+
+Host-generated `crypto.randomUUID()` per panel; iframe `name={instanceId}`. Documented in `packages/sail-conformance-harness/README.md` and `app-launcher.ts`. WCP4 reconnect alignment depends on cross-origin toolbox apps sending matching identity in WCP4 payload — log WCP connect/disconnect to verify.
+
+### RED evidence
+
+| Field | Value |
+|-------|-------|
+| Test files | `packages/sail-conformance-harness/src/intent-resolution.test.ts` |
+| Command | `cd packages/sail-conformance-harness && npm test` |
+| Initial failure | `Cannot find module './intent-resolution'` (module absent — correct RED) |
+| Final | 7/7 pass |
+
+### Commands run
+
+```bash
+cd packages/sail-conformance-harness && npm test        # 7/7 pass
+cd packages/sail-conformance-harness && npm run typecheck  # clean
+cd packages/sail-conformance-harness && npm run build     # succeeds
+```
+
+### Phase audit
+
+| Phase | Subagent | Registered | ui_surface | Result |
+|-------|----------|------------|------------|--------|
+| A RED | test-engineer | yes | n/a | RED confirmed |
+| B GREEN | implement-agent | yes | yes | 7/7 tests green |
+| C Verify | verifier-agent | yes | n/a | FAIL (readonly shell); orchestrator re-ran → PASS |
+| D Review | code-reviewer | yes | yes | VERDICT: PASS |
+
+**Automation tier:** `stage_only` — files staged, no commit until human `approve`.
+
+### Files changed
+
+- `packages/sail-conformance-harness/**` — new harness package (Vite + React + sail-desktop-agent only)
+- `package.json` — workspace entry
+- `package-lock.json` — lockfile update
+- `conformance-test-failure-review.md` — harness cross-link
+
+### Diff summary
+
+Scaffold `@finos/sail-conformance-harness`: bootstrap `createBrowserDesktopAgent` before React render, auto-load Conformance1, dynamic `AppLauncher` panels, programmatic intent resolution via `intentResolverNeeded` → `selectIntentHandler` → `resolveIntentSelection`. No sail-platform-api/web/ui deps.
+
+### Toolbox run
+
+**Not yet executed** (manual acceptance per work item). After merge, run toolbox inside Conformance1 at `:3001` and compare to `conformance-report-v2.txt`.
+
+### Learnings proposed
+
+- [AGENTS.md candidate] FDC3 toolbox diagnostic clean room: `@finos/sail-conformance-harness` on port **3001**; only `@finos/sail-desktop-agent`; bootstrap agent before React; iframe `name=instanceId`; see `conformance-test-failure-review.md` attribution workflow.
 
 ## Escalation notes
 
