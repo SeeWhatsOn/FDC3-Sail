@@ -3,10 +3,10 @@ title: "Map intent displayName from directory and dedupe findIntentsByContext"
 slug: fix-intent-discovery-displayname-dedupe
 kind: task
 type: bug
-status: approved
+status: in-progress
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-helpers.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/
