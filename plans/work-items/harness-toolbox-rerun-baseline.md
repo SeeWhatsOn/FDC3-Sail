@@ -3,10 +3,10 @@ title: "Harness toolbox re-run and update failure review doc"
 slug: harness-toolbox-rerun-baseline
 kind: task
 type: chore
-status: approved
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - conformance-test-failure-review.md
 depends_on:
