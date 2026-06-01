@@ -2,7 +2,7 @@
 title: "BDD or integration scenario through real WCPConnector"
 slug: bdd-wcp-integration-scenario
 type: enhancement
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -13,6 +13,7 @@ depends_on:
 integration_branch: v3-pre
 branch: cursor/bdd-wcp-integration-scenario
 pr_url: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/53"
+merged_pr: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/53"
 external_tracker: ""
 tags: [fdc3]
 ---
@@ -69,3 +70,4 @@ _(empty)_
 
 - 2026-05-27: approved by human (validation gaps waived)
 - 2026-06-01: TB-00 audit updated scope from generic WCP coverage to exact toolbox blind spots: host id adoption, `findInstances`, channel delivery, `raiseIntent` launch delivery, and `GetInfo2` browser bootstrap.
+- 2026-06-01: reconcile — PR merged (batch 2)

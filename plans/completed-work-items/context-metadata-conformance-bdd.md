@@ -3,7 +3,7 @@ title: "BDD coverage for ContextMetadata on broadcast and intent"
 slug: context-metadata-conformance-bdd
 kind: task
 type: enhancement
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -89,3 +89,4 @@ _(empty)_
 - FDC3 2.2 `ContextMetadata` (`@finos/fdc3-standard`) has only `source`; DACP wire schema uses `originatingApp` on event payloads, not `metadata`.
 - Event `meta.timestamp` is already populated (ISO string); conformance toolbox also expects timestamp on listener `ContextMetadata` — GREEN must align payload shape for BDD.
 - Timestamp assertion uses literal `ISO8601-timestamp-required` until GREEN adds `{isoTimestamp}` resolver or copies `meta.timestamp` into `payload.metadata.timestamp`.
+- 2026-06-01: reconcile — PR merged (batch 2)
