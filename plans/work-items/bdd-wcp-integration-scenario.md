@@ -2,19 +2,17 @@
 title: "BDD or integration scenario through real WCPConnector"
 slug: bdd-wcp-integration-scenario
 type: enhancement
-status: approved
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
-  - packages/sail-desktop-agent/test/
-  - packages/sail-desktop-agent/src/browser/browser-desktop-agent.ts
-  - packages/sail-desktop-agent/src/browser/__tests__/
-  - packages/sail-platform-api/
+  - packages/sail-desktop-agent/src/browser/__tests__/wcp-desktop-agent.integration.test.ts
 depends_on:
-  - bind-host-instance-id-at-wcp4
+  - extend-cleanup-source-and-open-with-context
 integration_branch: v3-pre
 branch: cursor/bdd-wcp-integration-scenario
+pr_url: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/53"
 external_tracker: ""
 tags: [fdc3]
 ---
