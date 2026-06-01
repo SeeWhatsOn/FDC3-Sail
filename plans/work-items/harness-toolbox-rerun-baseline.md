@@ -10,6 +10,7 @@ last_agent: ""
 file_manifest:
   - conformance-test-failure-review.md
 depends_on:
+  - conformance-bdd-blind-spot-audit
   - fix-app-metadata-desktop-agent-field
   - fix-intent-discovery-displayname-dedupe
   - bind-host-instance-id-at-wcp4
@@ -37,14 +38,14 @@ Manual acceptance for the toolbox-conformance-burn-down epic. Harness must be ru
 
 ## Parent context
 
-From `plans/prd-toolbox-conformance-burn-down.md`: Final verification slice; documents remaining failure attribution after agent and WCP fixes.
+From `plans/prd-toolbox-conformance-burn-down.md`: Final verification slice after the blind-spot audit, agent fixes, and WCP fixes. This item updates the failure-category matrix from the audit with fresh v4 evidence rather than inventing attribution from scratch.
 
 ## Behavior spec
 
 Given npm run dev -w @finos/sail-conformance-harness on port 3001
 When the maintainer runs the full toolbox export inside Conformance1
 Then a v4 summary is recorded in this work item ## Staged for review
-And conformance-test-failure-review.md reflects remaining failure attribution vs v3
+And conformance-test-failure-review.md updates the TB-00 failure-category matrix with remaining failure attribution vs v3
 
 ## Out of scope
 
@@ -58,7 +59,7 @@ none
 
 ## Test guidance
 
-Manual only. Capture pass/fail counts, duration, and notable deltas (getAppMetadata, findIntent, AppTimeout count). No executable test code required for RED phase.
+Manual only. Capture pass/fail counts, duration, notable deltas (getAppMetadata, findIntent, AppTimeout count), and per-category movement against the TB-00 matrix. No executable test code required for RED phase.
 
 ## Blocked decisions
 
