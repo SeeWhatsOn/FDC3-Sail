@@ -14,8 +14,8 @@ Feature: Opening and Requesting App Details
   Scenario: Looking up app metadata
     When "appId: portfolioApp, instanceId: a1" requests metadata for "chartApp" [fdc3.getAppMetadata]
     Then messaging will have outgoing posts
-      | msg.payload.appMetadata.appId | to.instanceId | msg.matches_type       |
-      | chartApp                      | a1            | getAppMetadataResponse |
+      | msg.payload.appMetadata.appId | msg.payload.appMetadata.desktopAgent | to.instanceId | msg.matches_type       |
+      | chartApp                      | cucumber-provider                    | a1            | getAppMetadataResponse |
 
   Scenario: Looking up app metadata from missing app
     When "appId: portfolioApp, instanceId: a1" requests metadata for "unknownApp" [fdc3.getAppMetadata]
@@ -44,8 +44,8 @@ Feature: Opening and Requesting App Details
     And "appId: chartApp, instanceId: chart-123" is opened with connection id "chart-123"
     When "appId: portfolioApp, instanceId: a1" requests metadata for "chartApp" [fdc3.getAppMetadata]
     Then messaging will have outgoing posts
-      | msg.payload.appMetadata.appId | msg.payload.appMetadata.instanceId | to.instanceId | msg.matches_type       |
-      | chartApp                      | chart-123                          | a1            | getAppMetadataResponse |
+      | msg.payload.appMetadata.appId | msg.payload.appMetadata.instanceId | msg.payload.appMetadata.desktopAgent | to.instanceId | msg.matches_type       |
+      | chartApp                      | chart-123                          | cucumber-provider                    | a1            | getAppMetadataResponse |
 
   @conformance2.2
   Scenario: Looking up DesktopAgent metadata
