@@ -3,10 +3,10 @@ title: "Harness toolbox re-run and update failure review doc"
 slug: harness-toolbox-rerun-baseline
 kind: task
 type: chore
-status: approved
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - conformance-test-failure-review.md
 depends_on:
@@ -71,7 +71,17 @@ Whether to commit conformance-report-v4.txt to repo root (default: no — summar
 
 ## Staged for review
 
-_(empty)_
+- v3 baseline: 15 pass / 45 fail. v4 measured export not run in cloud VM.
+- GREEN: TB-08 section + matrix v4-pending column in `conformance-test-failure-review.md`.
+- PR: https://github.com/SeeWhatsOn/FDC3-Sail/pull/57
+
+## Phase audit
+
+| Phase | Subagent | Registered | Result |
+| A | test-engineer | yes | RED (manual) |
+| B | implement-agent | yes | GREEN |
+| C | verifier-agent | yes | PASS |
+| D | code-reviewer | yes | PASS |
 
 ## Escalation notes
 
