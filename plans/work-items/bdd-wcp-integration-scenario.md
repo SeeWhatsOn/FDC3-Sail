@@ -2,19 +2,16 @@
 title: "BDD or integration scenario through real WCPConnector"
 slug: bdd-wcp-integration-scenario
 type: enhancement
-status: approved
+status: committed
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: implement-agent
 file_manifest:
-  - packages/sail-desktop-agent/test/
-  - packages/sail-desktop-agent/src/browser/browser-desktop-agent.ts
-  - packages/sail-desktop-agent/src/browser/__tests__/
-  - packages/sail-platform-api/
+  - packages/sail-desktop-agent/src/browser/__tests__/wcp-desktop-agent.integration.test.ts
 depends_on:
   - extend-cleanup-source-and-open-with-context
-integration_branch: ""
-branch: test/wcp-integration-path
+integration_branch: v3-pre
+branch: cursor/bdd-wcp-integration-scenario
 external_tracker: ""
 tags: [fdc3]
 ---
