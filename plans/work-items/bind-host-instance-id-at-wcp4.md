@@ -16,7 +16,7 @@ depends_on:
   - investigate-launcher-wcp-instance-id
 integration_branch: v3-pre
 branch: cursor/bind-host-instance-id-at-wcp4
-pr_url: ""
+pr_url: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/49"
 merged_pr: ""
 external_tracker: ""
 tags: [fdc3]
