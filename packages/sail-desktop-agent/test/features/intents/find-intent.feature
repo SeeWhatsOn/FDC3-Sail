@@ -2,20 +2,20 @@ Feature: Find Intent API
 
   Background:
     Given "portfolioApp" is an app with the following intents
-      | Intent Name      | Context Type   | Result Type    |
-      | ViewChart        | fdc3.portfolio | fdc3.chart     |
-      | StreamChart      | fdc3.portfolio | channel<chart> |
-      | ViewPortfolio    | fdc3.portfolio | {empty}        |
-      | StreamInstrument | fdc3.portfolio | channel        |
+      | Intent Name      | Context Type   | Result Type    | Display Name       |
+      | ViewChart        | fdc3.portfolio | fdc3.chart     | View Chart         |
+      | StreamChart      | fdc3.portfolio | channel<chart> | Stream Chart       |
+      | ViewPortfolio    | fdc3.portfolio | {empty}        | View Portfolio     |
+      | StreamInstrument | fdc3.portfolio | channel        | Stream Instrument  |
     And "researchApp" is an app with the following intents
-      | Intent Name | Context Type | Result Type |
-      | viewStock   | fdc3.product | {empty}     |
+      | Intent Name | Context Type | Result Type | Display Name |
+      | viewStock   | fdc3.product | {empty}     | View Stock   |
     And "analyticsApp" is an app with the following intents
-      | Intent Name | Context Type | Result Type |
-      | viewStock   | fdc3.product | {empty}     |
+      | Intent Name | Context Type | Result Type | Display Name |
+      | viewStock   | fdc3.product | {empty}     | View Stock   |
     And "marketDataApp" is an app with the following intents
-      | Intent Name | Context Type | Result Type |
-      | viewStock   | fdc3.product | {empty}     |
+      | Intent Name | Context Type | Result Type | Display Name |
+      | viewStock   | fdc3.product | {empty}     | View Stock   |
     And A desktop agent
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: App1, instanceId: b1" is opened with connection id "b1"
@@ -51,7 +51,7 @@ Feature: Find Intent API
     When "appId: App1, instanceId: a1" finds intents with intent "ViewChart" and contextType "{empty}" and result type "{empty}" [fdc3.findIntent]
     Then messaging will have outgoing posts
       | msg.matches_type   | msg.payload.appIntent.intent.name | msg.payload.appIntent.apps.length | msg.payload.appIntent.apps[0].appId | to.instanceId | msg.payload.appIntent.intent.displayName |
-      | findIntentResponse | ViewChart                         |                                 1 | portfolioApp                        | a1            | ViewChart                                |
+      | findIntentResponse | ViewChart                         |                                 1 | portfolioApp                        | a1            | View Chart                               |
 
   Scenario: Find Intents Requests should include both the app and running instances of it
     When "appId: App1, instanceId: a1" finds intents with intent "viewStock" and contextType "fdc3.product" and result type "{empty}" [fdc3.findIntent]
@@ -69,7 +69,7 @@ Feature: Find Intent API
     When "appId: App, instanceId: a1" finds intents with contextType "fdc3.portfolio" and result type "{empty}" [fdc3.findIntentsByContext]
     Then messaging will have outgoing posts
       | msg.matches_type             | msg.payload.appIntents[0].intent.name | msg.payload.appIntents.length | to.instanceId | msg.payload.appIntents[0].intent.displayName |
-      | findIntentsByContextResponse | ViewChart                             |                             4 | a1            | ViewChart                                    |
+      | findIntentsByContextResponse | ViewChart                             |                             4 | a1            | View Chart                                   |
 
   @conformance2.2
   Scenario: Find Intents by Context for non-existent context returns NoAppsFound

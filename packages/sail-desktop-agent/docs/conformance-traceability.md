@@ -1,6 +1,6 @@
 # FDC3 2.2 conformance traceability map
 
-This document maps FINOS FDC3 2.2 interop / conformance pack areas to in-repo Cucumber BDD scenarios under `packages/sail-desktop-agent/test/features/`. Scenarios tagged `@conformance2.2` are explicit pack alignments; **101 scenarios across 12 feature files** carry that tag (as of this map). Status is honest: `covered` means representative `@conformance2.2` scenarios exist and pass in CI; `partial` means gaps remain; `missing` means no BDD yet; `n/a` means outside the FDC3 2.2 public API conformance surface (e.g. Sail WCP transport).
+This document maps FINOS FDC3 2.2 interop / conformance pack areas to in-repo Cucumber BDD scenarios under `packages/sail-desktop-agent/test/features/`. Scenarios tagged `@conformance2.2` are explicit pack alignments; **102 scenarios across 12 feature files** carry that tag (as of this map). Status is honest: `covered` means representative `@conformance2.2` scenarios exist and pass in CI; `partial` means gaps remain; `missing` means no BDD yet; `n/a` means outside the FDC3 2.2 public API conformance surface (e.g. Sail WCP transport).
 
 | Conformance area | Feature file + scenario | Status | Notes/slug |
 |---|---|---|---|
@@ -12,9 +12,9 @@ This document maps FINOS FDC3 2.2 interop / conformance pack areas to in-repo Cu
 | Context / event listeners | `test/features/context/event-listeners.feature` — Receiving channelChanged event when another app joins a channel; addEventListener with null type subscribes to all event types | covered | Listener creation smoke in `test/features/basic/basic.feature` — Context listener for a specific type can be created |
 | raiseIntent | `test/features/intents/raise-intent.feature` — Raising an intent that should auto-resolve (only one option); User Cancels The Intent Resolver Returns UserCancelledResolution; Raising An Intent With Malformed Context Returns MalformedContext | covered | 12 `@conformance2.2` scenarios in `raise-intent.feature` |
 | raiseIntentForContext | `test/features/intents/raise-intent-with-context.feature` — Raising An Intent With Context To A Running App; User Cancels The Intent Resolver Returns UserCancelledResolution | covered | 9 `@conformance2.2` scenarios; smoke in `test/features/basic/basic.feature` — Intent can be raised for context |
-| findIntent / findIntentByContext | `test/features/intents/find-intent.feature` — Successful Find Intents Request; Find Intents by Context Request; Find Intent With Malformed Context Returns MalformedContext | covered | 12 `@conformance2.2` scenarios |
+| findIntent / findIntentByContext | `test/features/intents/find-intent.feature` — Successful Find Intents Request; Find Intents by Context Request; Find Intent With Malformed Context Returns MalformedContext | covered | 12 `@conformance2.2` scenarios; asserts directory `displayName` (distinct from intent name) on findIntent / findIntentsByContext |
 | Intent resolution / IntentResult | `test/features/intents/intent-result.feature` — App Returns An Intent Result; IntentResolution.getResult() rejects with NoResultReturned when handler returns nothing | covered | 6 `@conformance2.2` scenarios |
-| Apps (metadata, open, open with context, findInstances) | `test/features/apps/apps.feature` — Opening An App; Opening An App With Context; Find Instances with Some Apps Running; Opening An App With Malformed Context Returns MalformedContext | covered | 15 `@conformance2.2` scenarios in `apps.feature` |
+| Apps (metadata, open, open with context, findInstances) | `test/features/apps/apps.feature` — Looking up app metadata; Looking up app metadata for non-running app from directory; Opening An App; Opening An App With Context; Find Instances with Some Apps Running; Opening An App With Malformed Context Returns MalformedContext | covered | 16 `@conformance2.2` scenarios in `apps.feature`; getAppMetadata asserts `desktopAgent` for directory and running lookups |
 | Disconnect / lifecycle cleanup | `test/features/apps/disconnect-cleanup.feature` — Apps that disconnect and reconnect to the DA should receive one copy of a broadcast message from an app channel as state was cleaned up; Disconnecting from the DA when subscribed to a private channel channel sends unsubscribe and disconnect messages | partial | P0 source/open-with-context gaps in `test/features/apps/disconnect-cleanup-p0.feature` (not `@conformance2.2`) — **extend-cleanup-source-and-open-with-context** |
 | FDC3 error enums (ResolveError, OpenError, ChannelError, …) | `test/features/intents/raise-intent.feature` — Raising An Intent With Malformed Context Returns MalformedContext; `test/features/apps/apps.feature` — Opening A Missing App; `test/features/context/broadcast.feature` — Broadcast With Malformed Context Returns MalformedContext Error | partial | Many scenarios assert error names ad hoc; systematic boundary matrix — **fdc3-error-enum-boundary-tests** |
 | WCP transport / browser bridge | — | partial | Cucumber uses `MockTransport`; no `@conformance2.2` WCP path — **bdd-wcp-integration-scenario** |
@@ -32,9 +32,9 @@ This document maps FINOS FDC3 2.2 interop / conformance pack areas to in-repo Cu
 - `test/features/intents/raise-intent-with-context.feature` — 9
 - `test/features/intents/find-intent.feature` — 12
 - `test/features/intents/intent-result.feature` — 6
-- `test/features/apps/apps.feature` — 15
+- `test/features/apps/apps.feature` — 16
 - `test/features/apps/disconnect-cleanup.feature` — 3
 
-**Total: 101** tagged scenarios across 12 feature files.
+**Total: 102** tagged scenarios across 12 feature files.
 
 Files without `@conformance2.2` tags: `test/features/infrastructure/heartbeat.feature`, `test/features/apps/disconnect-cleanup-p0.feature` (lifecycle P0, not pack-tagged).
