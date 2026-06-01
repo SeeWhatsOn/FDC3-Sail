@@ -143,6 +143,8 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
       messageOrigin: new URL(appUrl).origin,
+      // Required for bind-host WCP4 adoption of launcher-pre-registered instance ids (e.g. uuid-0).
+      wcpSourceWindow: { hostPanel: uuid },
     } as unknown as WebConnectionProtocol4ValidateAppIdentity["meta"],
     payload: {
       instanceId: uuid,
@@ -192,6 +194,7 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
       messageOrigin: new URL(appUrl).origin,
+      wcpSourceWindow: { hostPanel: uuid },
     } as unknown as WebConnectionProtocol4ValidateAppIdentity["meta"],
     payload: {
       instanceId: uuid,

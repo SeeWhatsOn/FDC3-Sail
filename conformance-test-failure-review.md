@@ -8,6 +8,7 @@ Record of discovery against the official FDC3 conformance toolbox (FINOS), compa
 |------|--------|
 | `conformance-report.txt` | Earlier toolbox run |
 | `conformance-report-v2.txt` | After recent PRs/commits — **18 pass / 56 fail**, ~172s |
+| `conformance-report-v3.txt` | Clean-room conformance harness run — **15 pass / 45 fail**, ~155s |
 | `conformance-appd.json` | Conformance app directory; merged in `packages/sail-web/src/main.tsx` and loaded by `packages/sail-conformance-harness` (desktop-agent-only clean room) |
 
 The toolbox exercises the **full browser stack** (sail-web → SailPlatform / SailAppLauncher → WCP → `@finos/sail-desktop-agent`), not Cucumber’s `MockTransport` path. In-repo BDD coverage is documented in `packages/sail-desktop-agent/docs/conformance-traceability.md` (~101 `@conformance2.2` scenarios).
@@ -120,7 +121,31 @@ These are good **library-only** fixes with high signal in a re-run.
 
 ---
 
-## 5. Recommended investigation order
+## 5. BDD blind-spot audit (v3)
+
+The traceability map is useful for API-area coverage, but several `covered` rows are not equivalent to the FINOS toolbox oracle. This matrix separates exact field/assertion gaps from MockTransport-vs-WCP/browser gaps and records the regression owner that must close each non-deferred category before the burn-down epic can be treated as complete.
+
+| v3 failure category | Toolbox symptom | Classification | Existing owner | Required regression net |
+|---|---|---|---|---|
+| `getAppMetadata` / `AppInstanceMetadata` missing `desktopAgent` | Metadata validator expected `desktopAgent` in both directory and instance metadata | Product bug + BDD assertion blind spot | `fix-app-metadata-desktop-agent-field`; `toolbox-bdd-metadata-assertions` | Cucumber or handler-level assertion for directory-only and running-instance `AppMetadata.desktopAgent`; harness rerun confirms toolbox rows |
+| `findIntent` deep-equal failures | `intent.displayName` and app-intent shape differ from `conformance-appd.json` | Product bug + BDD assertion blind spot | `fix-intent-discovery-displayname-dedupe`; `toolbox-bdd-metadata-assertions` | Vitest/BDD using directory display names distinct from intent names; harness rerun confirms all `findIntent` deep-equal rows |
+| `findIntentsByContext` count and invalid-context error | Wrong result count for `testContextX`; invalid context rejects as `assert.fail()` instead of `NoAppsFound` | Product bug + error-boundary blind spot | `fix-intent-discovery-displayname-dedupe`; `fdc3-error-enum-boundary-tests` | Deduping regression plus representative DACP rejection tests for `NoAppsFound`; harness rerun confirms count and error rows |
+| `raiseIntent` targeted wrong-correlation errors | Expected `NoAppsFound`; observed `IntentDeliveryFailed` or `TargetInstanceUnavailable` | Product bug + error-boundary blind spot | `fdc3-error-enum-boundary-tests` | Table-driven error enum tests for targeted app/instance correlation paths; harness rerun confirms toolbox throws-error rows |
+| `fdc3.open` with context / wrong context / multiple listeners | `AppTimeout`; listener never receives expected launch context | MockTransport-vs-WCP integration blind spot | `investigate-launcher-wcp-instance-id`; `bind-host-instance-id-at-wcp4`; `fix-cucumber-raise-intent-launch-correlation` | WCP/host instance-id regression proving launcher id becomes WCP5 canonical id; Cucumber launch+validate slice; harness rerun confirms open-with-context rows |
+| `fdc3.open` no-context regressions (`AOpensB3`, `AOpensB4`) | Timeout in v3 harness despite earlier v2 improvement | MockTransport-vs-WCP integration blind spot / harness regression check | `bind-host-instance-id-at-wcp4`; `harness-toolbox-rerun-baseline` | Harness open slice rerun after host-id bind; record whether no-context open returns to passing baseline |
+| `findInstances` after opening multiple instances | Returned AppIdentifier array misses at least one instance | MockTransport-vs-WCP integration blind spot | `bind-host-instance-id-at-wcp4`; `bdd-wcp-integration-scenario` | WCP integration test where `fdc3.open` pre-registers/adopts host id and `findInstances()` includes it |
+| App/user channel delivery | `ACBasicUsage1` and `UCBasicUsage1` `AppTimeout` | MockTransport-vs-WCP integration blind spot | `bdd-wcp-integration-scenario`; `bind-host-instance-id-at-wcp4` | Browser/WCP or harness-level multi-instance broadcast path; MockTransport BDD remains API-area coverage only |
+| `UCContextMetadataOnBroadcast` and `IntentContextMetadata` | `AppTimeout`; toolbox also requires context metadata `source` and `timestamp` when delivered | BDD assertion blind spot + MockTransport-vs-WCP integration blind spot | `context-metadata-conformance-bdd`; `bdd-wcp-integration-scenario` | BDD for ContextMetadata shape on broadcast and intent; WCP/harness rerun for actual browser delivery |
+| `basicRI1`, `basicRI2`, `RaiseIntentSingleResolve`, `RaiseIntentVoidResult` | `IntentDeliveryFailed` when launching or resolving target app | MockTransport-vs-WCP integration blind spot | `fix-cucumber-raise-intent-launch-correlation`; `bind-host-instance-id-at-wcp4`; `bdd-wcp-integration-scenario` | Cucumber launch-via-raiseIntent `uuid-0` regression plus WCPConnector integration path; harness rerun confirms delivery/result rows |
+| `GetInfo2` timeout | Second getInfo validation times out in harness path | MockTransport-vs-WCP integration blind spot | `bdd-wcp-integration-scenario`; `harness-toolbox-rerun-baseline` | Browser/WCP app bootstrap evidence that each toolbox app connects and can call `getInfo`; harness rerun records remaining attribution |
+| sail-web resolver / launch-context issues from v2 full-stack run | `UserCancelledResolution`, ignored launch context, resolver dialog not automated | Platform/web gap outside this agent-harness burn-down | No child item in this workload | Accepted deferral for this PRD scope; compare harness vs full Sail stack before filing separate platform/web follow-up |
+| Cross-origin `window.name` / conformance host correlation | Host cannot read toolbox iframe `window.name` for `fdc3.finos.org` apps | Harness/toolbox integration risk; not proven required after host-id bind | `investigate-launcher-wcp-instance-id`; `harness-toolbox-rerun-baseline` | Re-run after WCP4 host-id binding; create follow-up only if v4 still shows cross-origin correlation failure independent of agent id binding |
+
+No new work item is required from this audit. All non-deferred categories above have an existing owner; the manual rerun item must update this matrix with v4 movement rather than re-attributing from scratch.
+
+---
+
+## 6. Recommended investigation order
 
 1. **Instance ID lifecycle** — Log launcher `instanceId`, iframe `name`, WCP5 `instanceId`, and `findInstances()` for two conformance windows.  
 2. **Single open-with-context** — One listener on a known instance; verify pending open targets the same id as WCP-connected instance.  
@@ -130,7 +155,7 @@ These are good **library-only** fixes with high signal in a re-run.
 
 ---
 
-## 6. Related repo docs
+## 7. Related repo docs
 
 - `packages/sail-desktop-agent/docs/conformance-traceability.md` — BDD ↔ FDC3 2.2 areas  
 - `plans/prd-desktop-agent-conformance-gaps.md` — Planned hardening (cleanup, WCP BDD, error enums)  
@@ -138,7 +163,7 @@ These are good **library-only** fixes with high signal in a re-run.
 
 ---
 
-## 7. Bottom line
+## 8. Bottom line
 
 | Question | Answer |
 |----------|--------|
@@ -146,4 +171,4 @@ These are good **library-only** fixes with high signal in a re-run.
 | Is the agent “mostly broken”? | **No** — BDD shows core DACP behavior; toolbox stresses **real WCP + multi-window hosting**. |
 | Where is most work? | **Integration:** instance id pipeline, cross-origin conformance hosting, launch context, automated intent resolution. |
 
-*Review date: 2026-05-31. Based on `conformance-report.txt` and `conformance-report-v2.txt` in repo root.*
+*Review date: 2026-06-01. Based on `conformance-report.txt`, `conformance-report-v2.txt`, and `conformance-report-v3.txt` in repo root.*

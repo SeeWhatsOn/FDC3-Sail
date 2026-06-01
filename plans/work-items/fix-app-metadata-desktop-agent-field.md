@@ -3,7 +3,7 @@ title: "Always set desktopAgent on getAppMetadata responses"
 slug: fix-app-metadata-desktop-agent-field
 kind: task
 type: bug
-status: approved
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
 last_agent: ""

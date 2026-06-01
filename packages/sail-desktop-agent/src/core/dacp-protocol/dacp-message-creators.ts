@@ -14,6 +14,40 @@ export interface DACPRequestLike {
   }
 }
 
+type OriginatingAppPayload = {
+  appId: string
+  instanceId?: string
+  desktopAgent?: string
+}
+
+/**
+ * FDC3 ContextMetadata shape for DACP event payloads (source + ISO timestamp).
+ * Mirrors `originatingApp` and event `meta.timestamp` for listener-side metadata.
+ */
+function buildContextMetadataFromOriginatingApp(
+  originatingApp: OriginatingAppPayload,
+  timestamp: string
+): { source: { appId: string; instanceId?: string }; timestamp: string } {
+  return {
+    source: {
+      appId: originatingApp.appId,
+      ...(originatingApp.instanceId && { instanceId: originatingApp.instanceId }),
+    },
+    timestamp,
+  }
+}
+
+function attachContextMetadataWhenPresent(
+  payload: Record<string, unknown>,
+  timestamp: string
+): void {
+  const originatingApp = payload.originatingApp as OriginatingAppPayload | undefined
+  if (!originatingApp?.appId) {
+    return
+  }
+  payload.metadata = buildContextMetadataFromOriginatingApp(originatingApp, timestamp)
+}
+
 /**
  * Creates a DACP error response following the specification format.
  * Accepts any object with meta.requestUuid (typically a DACPMessage).
@@ -75,12 +109,16 @@ export function createDACPEvent(
   eventType: BrowserTypes.EventMessageType,
   payload: Record<string, unknown> = {}
 ): BrowserTypes.AgentEventMessage {
+  const timestamp = new Date().toISOString()
+  const eventPayload = { ...payload }
+  attachContextMetadataWhenPresent(eventPayload, timestamp)
+
   const response = {
     type: eventType,
-    payload,
+    payload: eventPayload,
     meta: {
       eventUuid: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
+      timestamp,
     },
   }
 
@@ -98,21 +136,24 @@ export function createIntentEvent(
   requestUuid: string,
   originatingApp: { appId: string; instanceId?: string; desktopAgent?: string }
 ): BrowserTypes.IntentEvent {
+  const timestamp = new Date().toISOString()
+  const normalizedOriginatingApp = {
+    appId: originatingApp.appId,
+    ...(originatingApp.instanceId && { instanceId: originatingApp.instanceId }),
+    ...(originatingApp.desktopAgent && { desktopAgent: originatingApp.desktopAgent }),
+  }
   const response = {
     type: "intentEvent",
     payload: {
       intent,
       context,
-      originatingApp: {
-        appId: originatingApp.appId,
-        ...(originatingApp.instanceId && { instanceId: originatingApp.instanceId }),
-        ...(originatingApp.desktopAgent && { desktopAgent: originatingApp.desktopAgent }),
-      },
+      originatingApp: normalizedOriginatingApp,
+      metadata: buildContextMetadataFromOriginatingApp(normalizedOriginatingApp, timestamp),
       raiseIntentRequestUuid: requestUuid,
     },
     meta: {
       eventUuid: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
+      timestamp,
     },
   }
 

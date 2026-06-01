@@ -26,6 +26,20 @@ Dev server: **http://localhost:3001**
 
 Each panel gets a unique id from `crypto.randomUUID()` (or reuses the id from an `fdc3.open` target). The iframe **`name` attribute must equal `instanceId`** so WCP identity validation can correlate the connection with the host panel.
 
+### Launcher id vs WCP5 canonical id (known divergence)
+
+On first connect after `fdc3.open`, three ids are in play:
+
+| Field | Source | Typical value |
+| --- | --- | --- |
+| `AppLauncher.instanceId` / iframe `name` | Host at open time | e.g. `uuid-0` from `createHarnessAppLauncher` |
+| WCP4 payload `instanceId` | App claims host id | Same as launcher id when iframe `name` is wired |
+| WCP5 `instanceId` / `findInstances()` | Agent `createAppInstance` | **New** `crypto.randomUUID()` unless reconnect reuse succeeds |
+
+Sail's WCP4 handler only reuses a claimed `instanceId` when `canReuseInstanceIdentity` passes (existing state entry, identity registry, matching `instanceUuid`, and same `sourceWindow`). A freshly launched panel has no pre-registered agent instance, so WCP5 mints an unrelated UUID. Open-with-context and DACP routing keyed on the launcher id then miss the live instance → toolbox `AppTimeout`.
+
+Phase 1 spike tests (`src/instance-identity-correlation.test.ts`) log all four fields via `[ConformanceHarness] instance-identity-correlation` when `logPayloadDetail: 'full'`. Fix contract: `plans/work-items/bind-host-instance-id-at-wcp4.md`.
+
 ## Debug logging
 
 Agent bootstrap sets `logPayloadDetail: 'full'` and logs WCP connect/disconnect and intent resolution choices to the browser console.
@@ -36,4 +50,4 @@ Agent bootstrap sets `logPayloadDetail: 'full'` and logs WCP connect/disconnect 
 cd packages/sail-conformance-harness && npm test
 ```
 
-Unit tests cover programmatic intent handler selection in `src/intent-resolution.test.ts`.
+Unit tests cover programmatic intent handler selection in `src/intent-resolution.test.ts` and instance-identity correlation in `src/instance-identity-correlation.test.ts`.

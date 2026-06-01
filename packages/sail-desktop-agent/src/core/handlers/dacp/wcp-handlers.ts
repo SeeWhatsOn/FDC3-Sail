@@ -19,6 +19,7 @@ import { startHeartbeat } from "./heartbeat-handlers"
 import { cleanupDACPHandlers } from "./cleanup"
 import { getInstance } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
+import { AppInstanceState } from "../../state/types"
 import type { DirectoryApp } from "../../app-directory/types"
 import {
   getInstanceIdentityMap,
@@ -119,18 +120,31 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     let instanceUuid: string
     const identityMap = getInstanceIdentityMap(transport)
 
+    const existingInstance = reconnectInstanceId
+      ? getInstance(getState(), reconnectInstanceId)
+      : undefined
+
     const canReuseExistingIdentity =
       reconnectInstanceId &&
       reconnectInstanceUuid &&
       sourceWindow &&
       canReuseInstanceIdentity({
-        existingInstance: getInstance(getState(), reconnectInstanceId),
+        existingInstance,
         identityRecord: identityMap.get(reconnectInstanceId),
         reconnectInstanceUuid,
         expectedAppId: appMetadata.appId,
         expectedOrigin: identityOrigin,
         sourceWindow,
       })
+
+    // Launcher-pre-registered instances are PENDING without an identity record until WCP4.
+    const canAdoptPendingHostInstance =
+      reconnectInstanceId &&
+      reconnectInstanceUuid &&
+      sourceWindow &&
+      existingInstance?.state === AppInstanceState.PENDING &&
+      existingInstance.appId === appMetadata.appId &&
+      !identityMap.has(reconnectInstanceId)
 
     if (canReuseExistingIdentity && reconnectInstanceId) {
       logger.info("[WCP4] Reconnecting to existing instance", reconnectInstanceId)
@@ -142,7 +156,20 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
         origin: identityOrigin,
         sourceWindow,
       })
+    } else if (canAdoptPendingHostInstance && reconnectInstanceId) {
+      logger.info("[WCP4] Adopting host-pre-registered pending instance", reconnectInstanceId)
+      instanceId = reconnectInstanceId
+      instanceUuid = reconnectInstanceUuid
+      identityMap.set(instanceId, {
+        appId: appMetadata.appId,
+        instanceUuid,
+        origin: identityOrigin,
+        sourceWindow,
+      })
     } else {
+      // First connect: always mints a new UUID. WCP4 payload instanceId (host iframe name /
+      // AppLauncher return value) is ignored unless canReuseExistingIdentity above succeeds.
+      // Host-assigned ids from fdc3.open are therefore not canonical until bind-host fix lands.
       const newInstance = createAppInstance(context, appMetadata, identityUrl, identityOrigin, sourceWindow)
       instanceId = newInstance.instanceId
       instanceUuid = newInstance.instanceUuid
@@ -242,6 +269,7 @@ function createAppInstance(
   identityOrigin: string,
   sourceWindow: unknown
 ) {
+  // Does not adopt reconnectInstanceId from WCP4; see handleWcp4ValidateAppIdentity branch above.
   const instanceId = crypto.randomUUID()
   const instanceUuid = crypto.randomUUID()
 

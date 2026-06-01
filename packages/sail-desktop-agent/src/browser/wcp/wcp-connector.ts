@@ -241,6 +241,7 @@ export class WCPConnector extends WCPEventEmitter {
     const isIdentityValidation = message.type === "WCP4ValidateAppIdentity"
     const storedConnection = isIdentityValidation ? this.connections.get(instanceId) : undefined
     const storedMessageOrigin = storedConnection?.messageOrigin
+    const storedSourceWindow = storedConnection?.source
 
     const nextMeta = {
       ...(currentMeta ?? {}),
@@ -255,11 +256,14 @@ export class WCPConnector extends WCPEventEmitter {
       instanceId,
     }
 
-    // For WCP4, force messageOrigin from the original WCP1Hello event origin.
-    // This prevents apps from spoofing origin metadata during identity validation.
+    // For WCP4, force messageOrigin and wcpSourceWindow from the original WCP1Hello.
+    // This prevents apps from spoofing origin or source-window metadata during identity validation.
     const nextMetaRecord = nextMeta as unknown as Record<string, unknown>
     if (storedMessageOrigin) {
       nextMetaRecord.messageOrigin = storedMessageOrigin
+    }
+    if (storedSourceWindow) {
+      nextMetaRecord.wcpSourceWindow = storedSourceWindow
     }
     return {
       ...message,
