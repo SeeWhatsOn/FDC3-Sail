@@ -77,6 +77,9 @@ export class MockTransport implements Transport {
   /** WCP4 connection id → canonical WCP5 instanceId assigned during validation. */
   private wcp5InstanceIdByConnectionId: Map<string, string> = new Map()
 
+  /** WCP4 connectionAttemptUuid → host instance id from validate payload (pre-WCP5). */
+  private hostInstanceIdByConnectionAttempt: Map<string, string> = new Map()
+
   /**
    * Resolve the canonical WCP5 instance id for a connection id when validation ran.
    * Falls back to the connection id when no WCP5 mapping exists.
@@ -97,11 +100,21 @@ export class MockTransport implements Transport {
     if (msg.type === "WCP5ValidateAppIdentityResponse") {
       const id = (msg.payload as { instanceId?: string } | undefined)?.instanceId
       const connectionId = msg.meta?.destination?.instanceId
+      const connectionAttemptUuid = (
+        msg.meta as { connectionAttemptUuid?: string } | undefined
+      )?.connectionAttemptUuid
       if (id) {
         this.lastWcp5ValidatedInstanceId = id
       }
       if (connectionId && id) {
         this.wcp5InstanceIdByConnectionId.set(connectionId, id)
+      }
+      if (connectionAttemptUuid && id) {
+        const hostInstanceId = this.hostInstanceIdByConnectionAttempt.get(connectionAttemptUuid)
+        if (hostInstanceId) {
+          this.wcp5InstanceIdByConnectionId.set(hostInstanceId, id)
+          this.hostInstanceIdByConnectionAttempt.delete(connectionAttemptUuid)
+        }
       }
     }
 
@@ -174,6 +187,14 @@ export class MockTransport implements Transport {
     if (sourceInstanceId && sourceAppId) {
       this.appIdsByInstanceId.set(sourceInstanceId, sourceAppId)
     }
+    if (incoming.type === "WCP4ValidateAppIdentity") {
+      const attemptUuid = (incoming.meta as { connectionAttemptUuid?: string } | undefined)
+        ?.connectionAttemptUuid
+      const hostInstanceId = (incoming.payload as { instanceId?: string } | undefined)?.instanceId
+      if (attemptUuid && hostInstanceId) {
+        this.hostInstanceIdByConnectionAttempt.set(attemptUuid, hostInstanceId)
+      }
+    }
     await this.messageHandler(message)
   }
 
@@ -220,6 +241,7 @@ export class MockTransport implements Transport {
     this.messagesByInstance.clear()
     this.lastWcp5ValidatedInstanceId = null
     this.wcp5InstanceIdByConnectionId.clear()
+    this.hostInstanceIdByConnectionAttempt.clear()
   }
 
   /**

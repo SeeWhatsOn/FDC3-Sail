@@ -64,6 +64,7 @@ Feature: Raising Intents
 
   @conformance2.2
   Scenario: Raising An Intent To A Running App instance by instanceId
+    And "appId: listenerApp, instanceId: b1" registers an intent listener for "ViewChart" [fdc3.addIntentListener]
     When "appId: App1, instanceId: a1" raises an intent for "ViewChart" with contextType "fdc3.portfolio" on app "appId: listenerApp, instanceId: b1" [fdc3.raiseIntent]
     Then messaging will have outgoing posts
       | msg.matches_type    | msg.payload.context.type | msg.payload.intent | msg.payload.originatingApp.appId | msg.payload.originatingApp.instanceId | msg.payload.intentResolution.intent | to.instanceId | to.appId    | msg.payload.intentResolution.source.appId |
