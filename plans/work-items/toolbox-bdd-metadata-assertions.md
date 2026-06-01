@@ -3,7 +3,7 @@ title: "BDD assertions for toolbox-checked AppMetadata and intent displayName"
 slug: toolbox-bdd-metadata-assertions
 kind: task
 type: enhancement
-status: approved
+status: committed
 loop_count: 0
 loop_limit: 3
 last_agent: ""

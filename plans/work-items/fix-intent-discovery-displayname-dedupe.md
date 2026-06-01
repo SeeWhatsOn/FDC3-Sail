@@ -3,7 +3,11 @@ title: "Map intent displayName from directory and dedupe findIntentsByContext"
 slug: fix-intent-discovery-displayname-dedupe
 kind: task
 type: bug
+<<<<<<< HEAD
+status: in-progress
+=======
 status: pr_awaiting
+>>>>>>> origin/v3-pre
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow

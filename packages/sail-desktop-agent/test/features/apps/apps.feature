@@ -23,6 +23,7 @@ Feature: Opening and Requesting App Details
       | msg.payload.error    | to.instanceId | msg.type               |
       | TargetAppUnavailable | a1            | getAppMetadataResponse |
 
+  @conformance2.2
   Scenario: Looking up app metadata for non-running app from directory
     Given "researchApp" is an app with the following intents
       | Intent Name    | Context Type   | Result Type |
@@ -31,8 +32,8 @@ Feature: Opening and Requesting App Details
     And "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"
     When "appId: portfolioApp, instanceId: a1" requests metadata for "researchApp" [fdc3.getAppMetadata]
     Then messaging will have outgoing posts
-      | msg.payload.appMetadata.appId | msg.payload.appMetadata.title | to.instanceId | msg.matches_type       |
-      | researchApp                   | researchApp                   | a1            | getAppMetadataResponse |
+      | msg.payload.appMetadata.appId | msg.payload.appMetadata.title | msg.payload.appMetadata.desktopAgent | to.instanceId | msg.matches_type       |
+      | researchApp                   | researchApp                   | cucumber-provider                    | a1            | getAppMetadataResponse |
 
   @conformance2.2
   Scenario: Looking up app metadata for running app includes instanceId

@@ -96,8 +96,11 @@ function convertDataTableToListensFor(cw: CustomWorld, dt: DataTable): ListensFo
   const hashes = dt.hashes()
   const out: ListensFor = {}
   hashes.forEach(h => {
+    const explicitDisplayName = h["Display Name"]?.trim()
     out[h["Intent Name"]] = {
-      displayName: decamelize(h["Intent Name"], " "),
+      displayName: explicitDisplayName
+        ? (handleResolve(explicitDisplayName, cw) as string)
+        : decamelize(h["Intent Name"], " "),
       contexts: [handleResolve(h["Context Type"], cw) as string],
       resultType: handleResolve(h["Result Type"], cw) ?? undefined,
     }
