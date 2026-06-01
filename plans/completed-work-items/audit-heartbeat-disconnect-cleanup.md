@@ -71,7 +71,6 @@ None.
 
 ## Loop history
 
-<<<<<<< HEAD
 - 2026-05-27: approved by human (planning gate; status not updated)
 - 2026-05-29: approved by human (/ww-approve)
 - 2026-05-29: Phase A RED — added disconnect coverage tests; 1 failure (multi-instance WCP4 temp cleanup)
@@ -116,7 +115,4 @@ None.
 ## Loop history (delivery)
 
 - 2026-05-29: human `approve` at review gate; GREEN committed to `cursor/audit-heartbeat-disconnect-cleanup-f2c8` (`stage_only` — merge to `v3-pre` then set `done` or `/ww-reconcile`).
-=======
-- 2026-05-27: approved by human
 - 2026-05-29: human approve all — merged PR #38
->>>>>>> de2ce340 (docs(plans): approve all batch — pr_awaiting #39-44, audit-heartbeat done #38)
