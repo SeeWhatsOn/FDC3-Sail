@@ -147,6 +147,19 @@ function assertFieldValue(
     return
   }
 
+  // Conformance placeholder: require a parseable ISO-8601 timestamp string
+  if (expectedValue === "ISO8601-timestamp-required") {
+    if (typeof actualValue !== "string" || Number.isNaN(Date.parse(actualValue))) {
+      const contextMsg = context
+        ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
+        : ""
+      throw new Error(
+        `Field "${fieldName}" expected ISO-8601 timestamp but got: ${formatValue(actualValue)}${contextMsg}`
+      )
+    }
+    return
+  }
+
   // If expected looks like a boolean, convert for comparison
   if ((expectedValue === "true" || expectedValue === "false") && typeof actualValue === "boolean") {
     const booleanValue = expectedValue === "true"
