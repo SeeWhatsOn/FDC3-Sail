@@ -7,7 +7,7 @@
 
 ## Goal / outcome
 
-Reduce toolbox failures attributable to **real `@finos/sail-desktop-agent` bugs** and **WCP/instance-identity integration gaps**, with BDD coverage that catches regressions before manual toolbox runs. Success is measured by a harness re-run (`conformance-report-v4.txt` or staged summary) showing cleared agent-metadata/intent-discovery blocks and materially fewer `AppTimeout` / `IntentDeliveryFailed` clusters.
+Reduce toolbox failures attributable to **real `@finos/sail-desktop-agent` bugs** and **WCP/instance-identity integration gaps**, with BDD coverage that catches regressions before manual toolbox runs. Success is measured by a harness re-run (`conformance-report-v4.txt` or staged summary) showing cleared agent-metadata/intent-discovery blocks and materially fewer `AppTimeout` / `IntentDeliveryFailed` clusters, plus a failure-category audit proving each cleared or deferred toolbox row has the right regression owner.
 
 ## Relationship to other plans
 
@@ -39,6 +39,7 @@ Reduce toolbox failures attributable to **real `@finos/sail-desktop-agent` bugs*
 
 | ID | Summary | Classification |
 |----|---------|----------------|
+| TB-00 | Audit why conformance-lifted BDD missed toolbox failures; classify every failure category and required regression net | task |
 | TB-01 | Always include `desktopAgent` on `AppMetadata` from `getAppMetadata` (directory and instance paths) | task |
 | TB-02 | Map intent `displayName` from app directory; dedupe `findIntentsByContext` results | task |
 | TB-03 | Align resolve error codes with toolbox matrix (`NoAppsFound` vs `TargetInstanceUnavailable` vs `IntentDeliveryFailed`) | task — **existing** `fdc3-error-enum-boundary-tests` |
@@ -59,6 +60,7 @@ Reduce toolbox failures attributable to **real `@finos/sail-desktop-agent` bugs*
 
 ## Success criteria
 
+- TB-00: `conformance-test-failure-review.md` has a matrix mapping v3/v4 toolbox failure categories to classification, owner work item, and required regression net (BDD, Vitest, WCP/browser integration, harness re-run, platform/web follow-up, or explicit deferral).
 - TB-01 + TB-02 fixes green with new/extended BDD or Vitest without weakening assertions.
 - TB-05: `npm test -w @finos/sail-desktop-agent` Cucumber raise-intent `@conformance2.2` scenarios green (including launch + validate paths).
 - Harness toolbox re-run (TB-08): `getAppMetadata`, all `findIntent` deep-equal, and `findIntentsByContext` count scenarios pass; `AppTimeout` count reduced vs v3 baseline.
@@ -67,6 +69,7 @@ Reduce toolbox failures attributable to **real `@finos/sail-desktop-agent` bugs*
 
 ## Architecture / implementation direction
 
+0. **Blind-spot audit first** (TB-00) — before treating additional burn-down work as complete, classify each toolbox failure category as product bug, BDD assertion blind spot, MockTransport-vs-WCP integration blind spot, platform/web gap, harness/toolbox issue, or accepted deferral.
 1. **Agent-only fixes first** (TB-01, TB-02) — high signal, no web changes; cite `app-handlers.ts` `convertDirectoryAppToAppMetadata`, `intent-helpers.ts` `createAppIntents` / `findIntentsByContext`.
 2. **Instance-id contract** (TB-04) — `AppLauncher.launch()` returns `instanceId`; iframe `name` must match; WCP4 `createAppInstance` must not mint a unrelated UUID on first connect unless reconnect reuse succeeds. Harness already sets `name={instanceId}` (`packages/sail-conformance-harness/src/App.tsx`). Fix likely in `wcp-handlers.ts` + host pre-registration or WCP4 payload correlation — investigate before coding.
 3. **BDD gap closure** (TB-05–07) — use `conformance-appd.json` fixture slices where toolbox asserts directory-specific `displayName` (e.g. `"A Testing Intent"`); MockTransport steps must use same instance id as launcher/open response.
@@ -119,6 +122,7 @@ FINOS toolbox failures split into **agent library bugs** (metadata, intent disco
 
 | ID | Kind | Work item slug |
 |----|------|----------------|
+| TB-00 | task | `conformance-bdd-blind-spot-audit` |
 | TB-01 | task | `fix-app-metadata-desktop-agent-field` |
 | TB-02 | task | `fix-intent-discovery-displayname-dedupe` |
 | TB-03 | task | `fdc3-error-enum-boundary-tests` (existing) |
@@ -134,6 +138,7 @@ FINOS toolbox failures split into **agent library bugs** (metadata, intent disco
 
 | ID | Classification | Evidence | Work item slug |
 |----|----------------|----------|----------------|
+| TB-00 | task | verified-gap: BDD scenarios were conformance-area aligned but not always toolbox-oracle equivalent; no per-category owner/regression-net matrix exists | conformance-bdd-blind-spot-audit |
 | TB-01 | task | verified-gap: `app-handlers.ts:232` `desktopAgent: instanceId ? provider : undefined` | fix-app-metadata-desktop-agent-field |
 | TB-02 | task | verified-gap: `intent-helpers.ts:243,331` `displayName: intentName`; v2/v3 findIntent deep-equal failures | fix-intent-discovery-displayname-dedupe |
 | TB-03 | task | verified-gap: v3 raiseIntent throws — `NoAppsFound` vs `IntentDeliveryFailed`; PR #44 in flight | fdc3-error-enum-boundary-tests |

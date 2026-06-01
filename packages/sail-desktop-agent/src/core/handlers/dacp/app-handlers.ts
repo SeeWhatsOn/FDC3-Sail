@@ -11,6 +11,7 @@ import {
 } from "../../errors/fdc3-errors"
 import type { DirectoryApp } from "../../app-directory/types"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
+import { connectInstance } from "../../state/mutators"
 import { registerOpenWithContext } from "./utils/open-with-context"
 import { isValidContext } from "./utils/context-validation"
 
@@ -135,8 +136,28 @@ export async function handleOpenRequest(
       instanceId: appIdentifier.instanceId,
     })
 
-    if (!appIdentifier.instanceId) {
+    const launchedInstanceId = appIdentifier.instanceId
+    if (!launchedInstanceId) {
       throw new ErrorOnLaunchError("App launcher did not return an instanceId")
+    }
+
+    // Pre-register host-assigned instanceId so findInstances and open-with-context
+    // can route to the launcher id before WCP4 validation completes.
+    if (!getInstance(context.getState(), launchedInstanceId)) {
+      context.setState(state =>
+        connectInstance(state, {
+          instanceId: launchedInstanceId,
+          appId: appMetadata.appId,
+          metadata: {
+            appId: appMetadata.appId,
+            name: appMetadata.name,
+            title: appMetadata.title,
+            description: appMetadata.description,
+            icons: appMetadata.icons,
+            screenshots: appMetadata.screenshots,
+          },
+        })
+      )
     }
 
     if (launchContext) {
@@ -229,7 +250,7 @@ function convertDirectoryAppToAppMetadata(
     icons: app.icons || [],
     screenshots: app.screenshots || [],
     instanceId,
-    desktopAgent: instanceId ? provider : undefined,
+    desktopAgent: provider,
   }
 }
 

@@ -13,9 +13,25 @@ import {
   getInstance,
   getInstancesByAppId,
   getActiveListenersForIntent,
-  getAllIntentListeners,
 } from "../../../state/selectors"
 import { AppInstanceState } from "../../../state/types"
+
+/**
+ * Resolves human-readable intent labels from the app directory (e.g. conformance-appd.json
+ * `displayName` on listensFor entries). FDC3 findIntent / findIntentsByContext responses must
+ * surface directory metadata, not the internal intent name.
+ */
+function getIntentDisplayNameFromDirectory(
+  appDirectory: AppDirectoryManager,
+  intentName: string,
+  contextType?: string
+): string {
+  const directoryIntents = appDirectory.retrieveIntents(contextType, intentName, undefined)
+  const withDisplayName = directoryIntents.find(
+    entry => typeof entry.displayName === "string" && entry.displayName.length > 0
+  )
+  return withDisplayName?.displayName ?? intentName
+}
 
 /**
  * Helper to check if context type is compatible with supported types
@@ -240,7 +256,10 @@ export function createAppIntents(
       appIntentsMap.set(intentName, {
         intent: {
           name: intentName,
-          displayName: intentName,
+          displayName:
+            typeof intentDef.displayName === "string"
+              ? intentDef.displayName
+              : getIntentDisplayNameFromDirectory(appDirectory, intentName, contextType),
         },
         apps: [],
       })
@@ -261,7 +280,7 @@ export function createAppIntents(
       appIntentsMap.set(intentName, {
         intent: {
           name: intentName,
-          displayName: intentName,
+          displayName: getIntentDisplayNameFromDirectory(appDirectory, intentName, contextType),
         },
         apps: [],
       })
@@ -292,12 +311,13 @@ export function createAppIntents(
  * Replaces intentRegistry.findIntentsByContext()
  */
 export function findIntentsByContext(
-  state: AgentState,
+  _state: AgentState,
   appDirectory: AppDirectoryManager,
   contextType: string
 ): Array<{ name: string; displayName?: string }> {
   const orderedIntentNames: string[] = []
   const intentNameSet = new Set<string>()
+  const displayNameByIntent = new Map<string, string>()
 
   const allApps = appDirectory.retrieveAllApps()
   allApps.forEach(app => {
@@ -311,24 +331,21 @@ export function findIntentsByContext(
             intentNameSet.add(intentName)
             orderedIntentNames.push(intentName)
           }
+          if (typeof intentDef.displayName === "string" && !displayNameByIntent.has(intentName)) {
+            displayNameByIntent.set(intentName, intentDef.displayName)
+          }
         }
       }
     })
   })
 
-  const allListeners = getAllIntentListeners(state)
-  allListeners.forEach(listener => {
-    if (listener.active && isContextTypeCompatible(listener.contextTypes, contextType)) {
-      if (!intentNameSet.has(listener.intentName)) {
-        intentNameSet.add(listener.intentName)
-        orderedIntentNames.push(listener.intentName)
-      }
-    }
-  })
+  // Intent discovery lists come from the app directory for the requested context type.
+  // Running listeners may add live instances via createAppIntents, but must not inflate
+  // the intent list when directory metadata excludes that context (FDC3 conformance).
 
   return orderedIntentNames.map(name => ({
     name,
-    displayName: name,
+    displayName: displayNameByIntent.get(name) ?? getIntentDisplayNameFromDirectory(appDirectory, name, contextType),
   }))
 }
 

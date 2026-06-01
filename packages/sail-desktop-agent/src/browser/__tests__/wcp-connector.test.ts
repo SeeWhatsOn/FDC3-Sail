@@ -561,6 +561,41 @@ describe("WCPConnector", () => {
       expect(enriched.meta?.messageOrigin).toBe("https://example.com")
     })
 
+    it("should set wcpSourceWindow on enriched WCP4 from handshake source", async () => {
+      connector = new WCPConnector(desktopAgentTransport)
+      connector.start()
+
+      const handshakeSource = { postMessage: vi.fn() } as unknown as Window
+      const wcp1Hello = createWCP1Hello("source-window-uuid")
+      window.dispatchEvent(createMessageEvent(wcp1Hello, handshakeSource))
+
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      const connectorAccess = connector as unknown as {
+        enrichMessageWithSource: (
+          message: BrowserTypes.AppRequestMessage | BrowserTypes.WebConnectionProtocolMessage,
+          instanceId: string
+        ) => BrowserTypes.AppRequestMessage | BrowserTypes.WebConnectionProtocolMessage
+      }
+
+      const enriched = connectorAccess.enrichMessageWithSource(
+        {
+          type: "WCP4ValidateAppIdentity",
+          payload: {
+            identityUrl: "https://example.com/app",
+            actualUrl: "https://example.com/app",
+          },
+          meta: {
+            connectionAttemptUuid: "source-window-uuid",
+            timestamp: new Date().toISOString(),
+          },
+        } as unknown as BrowserTypes.WebConnectionProtocolMessage,
+        "temp-source-window-uuid"
+      ) as { meta?: { wcpSourceWindow?: Window } }
+
+      expect(enriched.meta?.wcpSourceWindow).toBe(handshakeSource)
+    })
+
     it("should disconnect temp connection after WCP5 identity validation failure", async () => {
       connector = new WCPConnector(desktopAgentTransport)
       const appDisconnectedHandler = vi.fn()
