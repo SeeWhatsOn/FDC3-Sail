@@ -3,9 +3,10 @@ title: "Replace sendDACPMessageOnBehalfOf with intention-level channel API"
 slug: replace-dacp-impersonation-with-channel-api
 kind: task
 type: feature
-status: pr_awaiting
+status: done
 branch: cursor/replace-dacp-impersonation-f2c8
 pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/40
+merged_pr: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/40"
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -149,3 +150,4 @@ Platform-api unit tests: `getAppUserChannel` after join/leave; `changeAppChannel
 ## Escalation notes
 
 ## Learnings extracted
+- 2026-06-01: reconcile — PR merged (batch 3)
