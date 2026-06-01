@@ -3,7 +3,7 @@ title: "BDD coverage for ContextMetadata on broadcast and intent"
 slug: context-metadata-conformance-bdd
 kind: task
 type: enhancement
-status: in-progress
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -14,7 +14,7 @@ file_manifest:
 depends_on: []
 integration_branch: v3-pre
 branch: cursor/context-metadata-conformance-bdd
-pr_url: ""
+pr_url: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/50"
 merged_pr: ""
 external_tracker: ""
 tags: [fdc3]
