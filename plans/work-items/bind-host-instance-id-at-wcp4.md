@@ -42,14 +42,27 @@ From `plans/prd-toolbox-conformance-burn-down.md`: Core integration fix; unblock
 
 ## Behavior spec
 
+_(Updated from `investigate-launcher-wcp-instance-id` spike — 2026-05-31)_
+
+**Contract: pre-register at open + adopt claimed id at WCP4 first connect**
+
 Given AppLauncher.launch returns { appId, instanceId: "uuid-0" }
+When openRequest completes successfully
+Then agent state pre-registers instance "uuid-0" for appId (pending WCP validation, not yet heartbeating)
+
+Given a pre-registered host instance "uuid-0"
 And the host renders iframe name="uuid-0"
-When the app completes WCP identity validation
-Then agent state registers instanceId uuid-0 and routes DACP to that id
+When the app sends WCP4 with instanceId "uuid-0" and matching app directory identity
+Then WCP5 responds with instanceId "uuid-0" (no unrelated UUID from createAppInstance)
+And findInstances() for that app includes "uuid-0"
 
 Given open-with-context pending for uuid-0
 When the target app adds a context listener on uuid-0
 Then launch context is delivered without AppTimeout
+
+**Reconnect path (unchanged):** When instance already live, `canReuseInstanceIdentity` continues to gate reuse on instanceUuid, origin, and sourceWindow.
+
+**Out of scope for this item:** cross-origin iframe name / fdc3.finos.org proxy (separate if toolbox still cannot claim host id).
 
 ## Out of scope
 
