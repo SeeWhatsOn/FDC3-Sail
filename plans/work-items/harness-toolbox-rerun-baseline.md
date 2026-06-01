@@ -3,10 +3,10 @@ title: "Harness toolbox re-run and update failure review doc"
 slug: harness-toolbox-rerun-baseline
 kind: task
 type: chore
-status: pr_awaiting
+status: approved
 loop_count: 0
 loop_limit: 3
-last_agent: top-level-delivery-workflow
+last_agent: ""
 file_manifest:
   - conformance-test-failure-review.md
 depends_on:
@@ -15,8 +15,8 @@ depends_on:
   - fix-intent-discovery-displayname-dedupe
   - bind-host-instance-id-at-wcp4
 integration_branch: v3-pre
-branch: cursor/harness-toolbox-rerun-baseline
-pr_url: ""
+branch: cursor/harness-toolbox-rerun-baseline-95cd
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/57
 merged_pr: ""
 external_tracker: ""
 tags: [fdc3]
