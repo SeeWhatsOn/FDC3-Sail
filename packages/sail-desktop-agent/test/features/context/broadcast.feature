@@ -30,6 +30,15 @@ Feature: Relaying Broadcast messages
       | broadcastEvent    | App2     | a2            | App1                             | a1                                    |
       | broadcastResponse | App1     | a1            | {null}                           | {null}                                |
 
+  @conformance2.2
+  Scenario: Broadcast Event Includes ContextMetadata With Source And Timestamp
+    When "appId: App2, instanceId: a2" adds a context listener on "fdc3.channel.1" with type "fdc3.instrument" [fdc3.addContextListener]
+    And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "fdc3.channel.1" [fdc3.broadcast]
+    Then messaging will have outgoing posts
+      | msg.matches_type  | to.appId | to.instanceId | msg.payload.metadata.source.appId | msg.payload.metadata.source.instanceId | msg.payload.metadata.timestamp |
+      | broadcastEvent    | App2     | a2            | App1                              | a1                                     | ISO8601-timestamp-required     |
+      | broadcastResponse | App1     | a1            | {null}                            | {null}                                 | {null}                         |
+
   Scenario: Broadcast message sent but listener has unsubscribed
     When "appId: App2, instanceId: a2" adds a context listener on "fdc3.channel.1" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App2, instanceId: a2" removes context listener with id "uuid3" [fdc3.removeContextListener]

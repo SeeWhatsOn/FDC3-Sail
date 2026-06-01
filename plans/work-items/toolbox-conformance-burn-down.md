@@ -36,20 +36,23 @@ Lead maintainer and conformance engineers need to separate desktop-agent bugs fr
 
 FINOS toolbox failures split into agent library bugs (metadata, intent discovery, error enums) and real-browser WCP integration (instance id lifecycle, multi-iframe delivery). Cucumber MockTransport is largely green but does not assert toolbox-checked fields and fails on launch+validate instance correlation.
 
+Before delivering the remaining child fixes, run the blind-spot audit so each toolbox failure category has an explicit classification, owner, and regression-net expectation. This prevents `@conformance2.2` scenario volume from being treated as equivalent to the FINOS toolbox oracle.
+
 ## Child work items
 
 | Slug | Kind | Depends on | Status |
 |------|------|------------|--------|
-| fix-app-metadata-desktop-agent-field | task | — | approved |
-| fix-intent-discovery-displayname-dedupe | task | — | approved |
+| conformance-bdd-blind-spot-audit | task | — | done |
+| fix-app-metadata-desktop-agent-field | task | — | pr_awaiting |
+| fix-intent-discovery-displayname-dedupe | task | — | pr_awaiting |
 | fdc3-error-enum-boundary-tests | task | conformance-traceability-map | pr_awaiting |
 | toolbox-bdd-metadata-assertions | task | fix-app-metadata-desktop-agent-field, fix-intent-discovery-displayname-dedupe | approved |
-| investigate-launcher-wcp-instance-id | spike | — | approved |
-| bind-host-instance-id-at-wcp4 | task | investigate-launcher-wcp-instance-id | approved |
+| investigate-launcher-wcp-instance-id | spike | — | pr_awaiting |
+| bind-host-instance-id-at-wcp4 | task | investigate-launcher-wcp-instance-id | pr_awaiting |
 | fix-cucumber-raise-intent-launch-correlation | task | bind-host-instance-id-at-wcp4 | approved |
 | context-metadata-conformance-bdd | task | — | approved |
 | bdd-wcp-integration-scenario | task | bind-host-instance-id-at-wcp4 | approved |
-| harness-toolbox-rerun-baseline | task | fix-app-metadata-desktop-agent-field, fix-intent-discovery-displayname-dedupe, bind-host-instance-id-at-wcp4 | approved |
+| harness-toolbox-rerun-baseline | task | conformance-bdd-blind-spot-audit, fix-app-metadata-desktop-agent-field, fix-intent-discovery-displayname-dedupe, bind-host-instance-id-at-wcp4 | approved |
 
 ## Out of scope
 
@@ -63,7 +66,7 @@ none
 
 ## Test guidance
 
-Deliver children in dependency order; TB-08 (harness re-run) is manual acceptance after agent and WCP fixes land.
+Deliver `conformance-bdd-blind-spot-audit` first. Then deliver children in dependency order; TB-08 (harness re-run) is manual acceptance after the audit, agent fixes, and WCP fixes land.
 
 ## Blocked decisions
 

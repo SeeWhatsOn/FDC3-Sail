@@ -97,7 +97,6 @@ export class CustomWorld extends World {
       appLauncher: this.mockAppLauncher,
       requestIntentResolution: this.mockIntentResolver.createCallback(),
       appDirectoryManager: this.appDirectoryManager,
-      apps: apps,
       userChannels: channels,
       implementationMetadata: {
         provider: "cucumber-provider",

@@ -3,10 +3,14 @@ title: "Map intent displayName from directory and dedupe findIntentsByContext"
 slug: fix-intent-discovery-displayname-dedupe
 kind: task
 type: bug
-status: approved
+<<<<<<< HEAD
+status: in-progress
+=======
+status: pr_awaiting
+>>>>>>> origin/v3-pre
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-helpers.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/
@@ -70,7 +74,17 @@ _(empty)_
 
 ## Staged for review
 
-_(empty)_
+- RED: `intent-discovery-metadata.test.ts` (6 tests)
+- GREEN: `intent-helpers.ts` — directory displayName + dedupe
+- Tests: `npx vitest run .../intent-discovery-metadata.test.ts` — 6 passed
+- Review: VERDICT PASS
+
+## Phase audit
+
+| Phase | Subagent | Registered | Result |
+| A | test-engineer | yes | RED |
+| B | implement-agent | yes | GREEN |
+| D | code-reviewer | yes | PASS |
 
 ## Escalation notes
 

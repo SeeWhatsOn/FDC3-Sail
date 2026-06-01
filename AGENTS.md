@@ -102,6 +102,8 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 - Product identity (`provider`, `providerVersion`) should not use a separate JSON/YAML config file or CI env override; pass overrides through TypeScript factory/config APIs.
 - `providerVersion` tracks `@finos/sail-desktop-agent` `package.json` version so deployed npm semver and `getInfo()` stay in lock step.
 - Provider branding stays `FDC3-Sail` across library and platform layers unless a caller explicitly overrides metadata in config.
+- When burning down FINOS toolbox failures, classify each category (product bug, BDD assertion gap, MockTransport/WCP integration gap, platform/web gap, or explicit deferral) and assign a regression owner before closing the epic — product fixes alone are insufficient.
+- `@conformance2.2` BDD means conformance-area alignment, not FINOS toolbox oracle equivalence; assert toolbox-checked fields (often from `conformance-appd.json`) and cover browser/WCP paths where the toolbox checks runtime behavior.
 
 ## Learned Workspace Facts
 
@@ -111,3 +113,5 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 - Avoid `import ... with { type: "json" }` in this repo: the TypeScript parser treats `with` as a legacy statement and breaks module parsing (cascading false module-not-found and `error`-typed imports). Use plain `import pkg from "../../package.json"` with `resolveJsonModule`, or `readFileSync(new URL(..., import.meta.url))` in tests.
 - This monorepo uses npm workspaces (`npm install`, `npm test`), not pnpm; docs and scripts should match npm.
 - WCP origin allowlisting is not an FDC3 2.2 API surface; FDC3 requires responding to `WCP1Hello` with `WCP2LoadUrl` or `WCP3Handshake`, with identity validation at WCP4 — silent pre-filter reject is Sail policy, not spec behavior.
+- Completed Watson work items move to `plans/completed-work-items/` when status is `done` (ww-work-items archive flow).
+- Root `vitest.config.ts` uses Vitest `test.projects` for each workspace package config; Playwright specs under `packages/sail-web/tests/` are excluded from `npm test` — run them with `npx playwright test` or `npm run test:e2e -w @finos/sail-web`.

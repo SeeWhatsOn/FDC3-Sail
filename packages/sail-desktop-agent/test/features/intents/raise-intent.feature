@@ -42,6 +42,13 @@ Feature: Raising Intents
       | raiseIntentResponse | {null}                   | {null}             | {null}                           | {null}                                | uniqueIntent                        | a1            | App1            | uniqueIntentApp                           |
 
   @conformance2.2
+  Scenario: Intent Event Includes ContextMetadata With Source And Timestamp
+    When "appId: App1, instanceId: a1" raises an intent for "uniqueIntent" with contextType "fdc3.instrument" [fdc3.raiseIntent]
+    Then messaging will include outgoing posts
+      | msg.matches_type | to.instanceId | to.appId        | msg.payload.metadata.source.appId | msg.payload.metadata.source.instanceId | msg.payload.metadata.timestamp |
+      | intentEvent      | c1            | uniqueIntentApp | App1                              | a1                                     | ISO8601-timestamp-required     |
+
+  @conformance2.2
   Scenario: Raising an Intent to a Non-Existent App
     And "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "completelyMadeUp" [fdc3.raiseIntent]
     Then messaging will have outgoing posts
@@ -57,6 +64,7 @@ Feature: Raising Intents
 
   @conformance2.2
   Scenario: Raising An Intent To A Running App instance by instanceId
+    And "appId: listenerApp, instanceId: b1" registers an intent listener for "ViewChart" [fdc3.addIntentListener]
     When "appId: App1, instanceId: a1" raises an intent for "ViewChart" with contextType "fdc3.portfolio" on app "appId: listenerApp, instanceId: b1" [fdc3.raiseIntent]
     Then messaging will have outgoing posts
       | msg.matches_type    | msg.payload.context.type | msg.payload.intent | msg.payload.originatingApp.appId | msg.payload.originatingApp.instanceId | msg.payload.intentResolution.intent | to.instanceId | to.appId    | msg.payload.intentResolution.source.appId |
