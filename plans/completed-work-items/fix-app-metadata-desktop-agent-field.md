@@ -3,7 +3,7 @@ title: "Always set desktopAgent on getAppMetadata responses"
 slug: fix-app-metadata-desktop-agent-field
 kind: task
 type: bug
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -13,7 +13,7 @@ file_manifest:
 depends_on: []
 integration_branch: v3-pre
 branch: cursor/fix-app-metadata-desktop-agent-field
-pr_url: ""
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/48
 merged_pr: ""
 external_tracker: ""
 tags: [fdc3]
@@ -79,3 +79,4 @@ _(empty)_
 ## Learnings extracted
 
 _(empty)_
+- 2026-06-01: reconcile — PR merged (batch 1)
