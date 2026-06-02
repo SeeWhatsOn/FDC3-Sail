@@ -7,9 +7,12 @@
  */
 export {
   createBrowserDesktopAgent,
-  createWCPClient,
   type BrowserDesktopAgentOptions,
   type BrowserDesktopAgentResult,
+} from "./browser-desktop-agent.js"
+
+export {
+  createWCPClient,
   type WCPClientOptions,
   type WCPClientResult,
 } from "../connectors/browser/browser-desktop-agent.js"

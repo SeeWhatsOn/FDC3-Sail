@@ -138,7 +138,7 @@ export function createWCPClient(options: WCPClientOptions): WCPClientResult {
  */
 export interface BrowserDesktopAgentOptions extends Pick<
   DesktopAgentConfig,
-  "appLauncher" | "userChannels"
+  "appLauncher" | "userChannels" | "apps"
 > {
   /**
    * Override FDC3 implementation metadata (FDC3-Sail defaults applied by factory).
@@ -269,6 +269,7 @@ export function createBrowserDesktopAgent(
   const desktopAgent = new DesktopAgent({
     transport: daTransport,
     appLauncher: options?.appLauncher,
+    apps: options?.apps,
     userChannels: options?.userChannels,
     implementationMetadata: options?.implementationMetadata,
     logger,
