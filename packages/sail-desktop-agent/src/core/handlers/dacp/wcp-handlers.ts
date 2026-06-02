@@ -25,6 +25,7 @@ import {
   getInstanceIdentityMap,
   type InstanceIdentityRecord,
 } from "./instance-identity-registry"
+import { takePendingWcpSourceWindow } from "./wcp-pending-source-window"
 
 type Wcp4ValidateAppIdentity = WebConnectionProtocol4ValidateAppIdentity
 type WCP5ValidateAppIdentityResponse = WebConnectionProtocol5ValidateAppIdentitySuccessResponse
@@ -62,7 +63,8 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
       meta?: { messageOrigin?: string; wcpSourceWindow?: unknown }
     }).meta
     const messageOrigin = messageMeta?.messageOrigin
-    const sourceWindow = messageMeta?.wcpSourceWindow
+    const sourceWindow =
+      takePendingWcpSourceWindow(transport, context.instanceId) ?? messageMeta?.wcpSourceWindow
 
     // 2. Validate origins match (per FDC3 spec requirement)
     if (identityOrigin !== actualOrigin) {

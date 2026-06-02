@@ -44,6 +44,7 @@ import {
   type WCPConnectionContext,
 } from "../../protocols/wcp/wcp-connection-management"
 import { WCPEventEmitter } from "../../protocols/wcp/wcp-event-emitter"
+import { clearPendingWcpSourceWindow, setPendingWcpSourceWindow } from "../../core/handlers/dacp/wcp-pending-source-window"
 import type {
   AppConnectionMetadata,
   IntentResolverPayload,
@@ -256,14 +257,14 @@ export class WCPConnector extends WCPEventEmitter {
       instanceId,
     }
 
-    // For WCP4, force messageOrigin and wcpSourceWindow from the original WCP1Hello.
-    // This prevents apps from spoofing origin or source-window metadata during identity validation.
+    // For WCP4, force messageOrigin from the original WCP1Hello (cloneable on InMemoryTransport).
+    // Source window is stored out-of-band — Window cannot be structuredClone'd.
     const nextMetaRecord = nextMeta as unknown as Record<string, unknown>
     if (storedMessageOrigin) {
       nextMetaRecord.messageOrigin = storedMessageOrigin
     }
-    if (storedSourceWindow) {
-      nextMetaRecord.wcpSourceWindow = storedSourceWindow
+    if (isIdentityValidation && storedSourceWindow) {
+      setPendingWcpSourceWindow(this.desktopAgentTransport, instanceId, storedSourceWindow)
     }
     return {
       ...message,
@@ -321,6 +322,7 @@ export class WCPConnector extends WCPEventEmitter {
    * This is the internal method that performs the actual cleanup
    */
   private disconnectApp(instanceId: string): void {
+    clearPendingWcpSourceWindow(this.desktopAgentTransport, instanceId)
     disconnectApp(this.getConnectionContext(), instanceId)
   }
 

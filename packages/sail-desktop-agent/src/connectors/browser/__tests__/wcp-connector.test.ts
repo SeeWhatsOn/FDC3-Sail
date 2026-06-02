@@ -10,6 +10,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { WCPConnector } from "../wcp-connector"
 import { createInMemoryTransportPair } from "../../../transports/in-memory-transport"
+import { getPendingWcpSourceWindowForTesting } from "../../../core/handlers/dacp/wcp-pending-source-window"
 import type { Transport } from "../../../core/interfaces/transport"
 import type { BrowserTypes } from "@finos/fdc3"
 
@@ -561,7 +562,7 @@ describe("WCPConnector", () => {
       expect(enriched.meta?.messageOrigin).toBe("https://example.com")
     })
 
-    it("should set wcpSourceWindow on enriched WCP4 from handshake source", async () => {
+    it("should register handshake source window for enriched WCP4 (not on message meta)", async () => {
       connector = new WCPConnector(desktopAgentTransport)
       connector.start()
 
@@ -591,9 +592,13 @@ describe("WCPConnector", () => {
           },
         } as unknown as BrowserTypes.WebConnectionProtocolMessage,
         "temp-source-window-uuid"
-      ) as { meta?: { wcpSourceWindow?: Window } }
+      )
 
-      expect(enriched.meta?.wcpSourceWindow).toBe(handshakeSource)
+      expect(enriched.meta).not.toHaveProperty("wcpSourceWindow")
+
+      expect(
+        getPendingWcpSourceWindowForTesting(desktopAgentTransport, "temp-source-window-uuid")
+      ).toBe(handshakeSource)
     })
 
     it("should disconnect temp connection after WCP5 identity validation failure", async () => {

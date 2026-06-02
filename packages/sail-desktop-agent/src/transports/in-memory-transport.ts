@@ -61,6 +61,14 @@ export class InMemoryTransport implements Transport {
   }
 
   /**
+   * Linked peer for same-process registries (e.g. WCP4 pending source window).
+   * @internal
+   */
+  getLinkedPeer(): InMemoryTransport | undefined {
+    return this.peer
+  }
+
+  /**
    * Send a message to the peer transport.
    *
    * Delivery semantics:
@@ -285,6 +293,14 @@ export class InMemoryTransport implements Transport {
  * // Messages flow bidirectionally between them
  * ```
  */
+/** Resolve the other endpoint of an in-memory transport pair, if any. */
+export function getInMemoryTransportPeer(transport: Transport): Transport | undefined {
+  if (transport instanceof InMemoryTransport) {
+    return transport.getLinkedPeer()
+  }
+  return undefined
+}
+
 export function createInMemoryTransportPair(): [InMemoryTransport, InMemoryTransport] {
   const transport1 = new InMemoryTransport()
   const transport2 = new InMemoryTransport()

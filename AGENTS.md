@@ -106,6 +106,7 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 - Keep `@finos/sail-desktop-agent` headless but usable on its own: FDC3-required host capabilities such as app launch, intent resolution, app directory access, channel state, and instance/connection registry belong as core package contracts; broader layout, workspace, configuration, storage, and product shell concerns belong in `@finos/sail-platform-api`.
 - When burning down FINOS toolbox failures, classify each category (product bug, BDD assertion gap, MockTransport/WCP integration gap, platform/web gap, or explicit deferral) and assign a regression owner before closing the epic — product fixes alone are insufficient.
 - `@conformance2.2` BDD means conformance-area alignment, not FINOS toolbox oracle equivalence; assert toolbox-checked fields (often from `conformance-appd.json`) and cover browser/WCP paths where the toolbox checks runtime behavior.
+- On `@finos/sail-desktop-agent` v3 refactor work, backward-compatibility shims are not required; remove `@deprecated` re-exports and import from canonical paths (e.g. `host-contracts/`).
 
 ## Learned Workspace Facts
 
@@ -118,3 +119,4 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 - Completed Watson work items move to `plans/completed-work-items/` when status is `done` (ww-work-items archive flow).
 - Root `vitest.config.ts` uses Vitest `test.projects` for each workspace package config; Playwright specs under `packages/sail-web/tests/` are excluded from `npm test` — run them with `npx playwright test` or `npm run test:e2e -w @finos/sail-web`.
 - `@finos/sail-desktop-agent` target `src/` top-level folders: `core`, `host-contracts`, `protocols`, `transports`, `connectors`, `presets`; browser WCP integration belongs under `connectors/`, not a top-level `browser/` folder.
+- WCP4 over `InMemoryTransport` (browser preset, conformance harness): do not put `Window` on DACP message meta — `InMemoryTransport.send` uses `structuredClone` and throws `DataCloneError`; store WCP1Hello source windows in `wcp-pending-source-window.ts` keyed by temp `instanceId` and resolve in `wcp-handlers.ts`.
