@@ -6,7 +6,7 @@
 
 import { DACPTimeoutError } from "./dacp-errors"
 import { DACP_TIMEOUTS } from "./dacp-constants"
-import { consoleLogger, type Logger, type LogPayloadDetail } from "../interfaces/logger"
+import { consoleLogger, type Logger, type LogPayloadDetail } from "../../core/interfaces/logger"
 
 /**
  * Wraps a promise with a timeout, rejecting with DACPTimeoutError if exceeded.

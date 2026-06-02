@@ -3,7 +3,7 @@ import {
   createDACPErrorResponse,
   createDACPSuccessResponse,
   createIntentEvent,
-} from "../../../dacp-protocol/dacp-message-creators"
+} from "../../../../protocols/dacp/dacp-message-creators"
 import { sendDACPResponse } from "../utils/dacp-response-utils"
 import { getInstance, getListenersForInstance, getPendingIntent } from "../../../state/selectors"
 import { resolvePendingIntent, updatePendingIntentTarget } from "../../../state/mutators"

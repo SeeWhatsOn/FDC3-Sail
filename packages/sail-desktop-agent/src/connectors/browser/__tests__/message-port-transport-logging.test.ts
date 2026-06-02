@@ -11,7 +11,7 @@ import {
   serializeLogCalls,
 } from "../../../__tests__/utils/capturing-logger"
 import type { Logger } from "../../../core/interfaces/logger"
-import { MessagePortTransport } from "../wcp/message-port-transport"
+import { MessagePortTransport } from "../message-port-transport"
 
 type MessagePortTransportLoggingOptions = {
   logger?: Logger

@@ -102,17 +102,15 @@ describe("createBrowserDesktopAgent top-level preset", () => {
   it("wires intentResolver to WCPConnector intent resolution", async () => {
     const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
 
-    const resolveMock = vi.fn<IntentResolver["resolve"]>(request => {
-      const selectedHandler = request.handlers[0]
-      return Promise.resolve({
-        selectedHandler,
+    const intentResolver: IntentResolver = {
+      resolve: vi.fn(async request => ({
+        selectedHandler: request.handlers[0],
         target: {
-          appId: selectedHandler.app.appId,
-          instanceId: selectedHandler.instanceId,
+          appId: request.handlers[0].app.appId,
+          instanceId: request.handlers[0].instanceId,
         },
-      })
-    })
-    const intentResolver: IntentResolver = { resolve: resolveMock }
+      })),
+    }
 
     const session = createBrowserDesktopAgent({ intentResolver })
     activeSessions.push(session)
@@ -138,10 +136,10 @@ describe("createBrowserDesktopAgent top-level preset", () => {
     })
 
     await vi.waitFor(() => {
-      expect(resolveMock).toHaveBeenCalledOnce()
+      expect(intentResolver.resolve).toHaveBeenCalledOnce()
     })
 
-    expect(resolveMock).toHaveBeenCalledWith(
+    expect(intentResolver.resolve).toHaveBeenCalledWith(
       expect.objectContaining({
         requestId: "preset-intent-req-1",
         intent: "ViewContact",

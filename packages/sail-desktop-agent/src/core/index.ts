@@ -55,7 +55,7 @@ export type {
 } from "./app-directory/types"
 
 // DACP Protocol Messages (types)
-export * from "./dacp-protocol/dacp-messages"
+export * from "../protocols/dacp"
 
 // Handler types
 export type {
@@ -67,8 +67,4 @@ export type {
   WCPMessageType,
 } from "./handlers/types"
 
-// DACP Protocol Utilities (errors, constants, message creators, utilities)
-export * from "./dacp-protocol/dacp-errors"
-export * from "./dacp-protocol/dacp-constants"
-export * from "./dacp-protocol/dacp-message-creators"
-export * from "./dacp-protocol/dacp-utils"
+// DACP Protocol Utilities re-exported via protocols/dacp barrel above

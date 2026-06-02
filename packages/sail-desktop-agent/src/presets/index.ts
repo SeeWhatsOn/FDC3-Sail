@@ -17,4 +17,4 @@ export {
   type WCPClientResult,
 } from "../connectors/browser/browser-desktop-agent.js"
 
-export { WCPConnector } from "../connectors/browser/wcp/wcp-connector.js"
+export { WCPConnector } from "../connectors/browser/wcp-connector.js"
