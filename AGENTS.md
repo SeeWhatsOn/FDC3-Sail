@@ -102,6 +102,7 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 - Product identity (`provider`, `providerVersion`) should not use a separate JSON/YAML config file or CI env override; pass overrides through TypeScript factory/config APIs.
 - `providerVersion` tracks `@finos/sail-desktop-agent` `package.json` version so deployed npm semver and `getInfo()` stay in lock step.
 - Provider branding stays `FDC3-Sail` across library and platform layers unless a caller explicitly overrides metadata in config.
+- Keep `@finos/sail-desktop-agent` headless but usable on its own: FDC3-required host capabilities such as app launch, intent resolution, app directory access, channel state, and instance/connection registry belong as core package contracts; broader layout, workspace, configuration, storage, and product shell concerns belong in `@finos/sail-platform-api`.
 - When burning down FINOS toolbox failures, classify each category (product bug, BDD assertion gap, MockTransport/WCP integration gap, platform/web gap, or explicit deferral) and assign a regression owner before closing the epic — product fixes alone are insufficient.
 - `@conformance2.2` BDD means conformance-area alignment, not FINOS toolbox oracle equivalence; assert toolbox-checked fields (often from `conformance-appd.json`) and cover browser/WCP paths where the toolbox checks runtime behavior.
 

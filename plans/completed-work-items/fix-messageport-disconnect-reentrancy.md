@@ -16,6 +16,7 @@ file_manifest:
 depends_on: []
 integration_branch: ""
 branch: fix/messageport-disconnect-reentrancy
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/25
 external_tracker: ""
 tags: [fdc3]
 ---

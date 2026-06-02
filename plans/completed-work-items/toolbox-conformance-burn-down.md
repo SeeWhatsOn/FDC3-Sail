@@ -3,7 +3,7 @@ title: "Toolbox conformance burn-down (epic)"
 slug: toolbox-conformance-burn-down
 kind: epic
 type: feature
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -42,17 +42,17 @@ Before delivering the remaining child fixes, run the blind-spot audit so each to
 
 | Slug | Kind | Depends on | Status |
 |------|------|------------|--------|
-| conformance-bdd-blind-spot-audit | task | — | done |
-| fix-app-metadata-desktop-agent-field | task | — | pr_awaiting |
-| fix-intent-discovery-displayname-dedupe | task | — | pr_awaiting |
-| fdc3-error-enum-boundary-tests | task | conformance-traceability-map | pr_awaiting |
-| toolbox-bdd-metadata-assertions | task | fix-app-metadata-desktop-agent-field, fix-intent-discovery-displayname-dedupe | approved |
-| investigate-launcher-wcp-instance-id | spike | — | pr_awaiting |
-| bind-host-instance-id-at-wcp4 | task | investigate-launcher-wcp-instance-id | pr_awaiting |
-| fix-cucumber-raise-intent-launch-correlation | task | bind-host-instance-id-at-wcp4 | approved |
-| context-metadata-conformance-bdd | task | — | approved |
-| bdd-wcp-integration-scenario | task | bind-host-instance-id-at-wcp4 | approved |
-| harness-toolbox-rerun-baseline | task | conformance-bdd-blind-spot-audit, fix-app-metadata-desktop-agent-field, fix-intent-discovery-displayname-dedupe, bind-host-instance-id-at-wcp4 | approved |
+| conformance-bdd-blind-spot-audit | task | — | done (#60) |
+| fix-app-metadata-desktop-agent-field | task | — | done (#48) |
+| fix-intent-discovery-displayname-dedupe | task | — | done (#47) |
+| fdc3-error-enum-boundary-tests | task | conformance-traceability-map | done (#44) |
+| toolbox-bdd-metadata-assertions | task | fix-app-metadata-desktop-agent-field, fix-intent-discovery-displayname-dedupe | done (#52) |
+| investigate-launcher-wcp-instance-id | spike | — | done (#46) |
+| bind-host-instance-id-at-wcp4 | task | investigate-launcher-wcp-instance-id | done (#49) |
+| fix-cucumber-raise-intent-launch-correlation | task | bind-host-instance-id-at-wcp4 | done (#51) |
+| context-metadata-conformance-bdd | task | — | done (#50) |
+| bdd-wcp-integration-scenario | task | bind-host-instance-id-at-wcp4 | done (#53) |
+| harness-toolbox-rerun-baseline | task | conformance-bdd-blind-spot-audit, fix-app-metadata-desktop-agent-field, fix-intent-discovery-displayname-dedupe, bind-host-instance-id-at-wcp4 | done (#57) |
 
 ## Out of scope
 

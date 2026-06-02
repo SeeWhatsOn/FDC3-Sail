@@ -14,6 +14,7 @@ file_manifest:
 depends_on: []
 integration_branch: ""
 branch: fix/in-memory-transport-send-failures
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/24
 external_tracker: ""
 tags: [fdc3]
 ---

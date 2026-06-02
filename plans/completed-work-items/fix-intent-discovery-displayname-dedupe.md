@@ -13,7 +13,7 @@ file_manifest:
 depends_on: []
 integration_branch: v3-pre
 branch: cursor/fix-intent-discovery-displayname-dedupe
-pr_url: ""
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/47
 merged_pr: ""
 external_tracker: ""
 tags: [fdc3]

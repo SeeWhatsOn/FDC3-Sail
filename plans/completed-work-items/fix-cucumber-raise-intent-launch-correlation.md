@@ -3,7 +3,7 @@ title: "Fix Cucumber raise-intent launch uuid-0 correlation"
 slug: fix-cucumber-raise-intent-launch-correlation
 kind: task
 type: bug
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""

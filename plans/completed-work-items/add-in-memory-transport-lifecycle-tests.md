@@ -15,6 +15,7 @@ depends_on:
   - fix-in-memory-transport-half-open-disconnect
 integration_branch: ""
 branch: chore/in-memory-transport-lifecycle-tests
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/33
 external_tracker: ""
 tags: [fdc3]
 ---

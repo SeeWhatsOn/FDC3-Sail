@@ -15,6 +15,7 @@ file_manifest:
 depends_on: []
 integration_branch: ""
 branch: chore/centralize-implementation-metadata
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/31
 external_tracker: ""
 tags: [fdc3]
 ---

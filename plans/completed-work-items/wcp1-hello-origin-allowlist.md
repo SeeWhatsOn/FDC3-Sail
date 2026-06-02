@@ -15,6 +15,7 @@ file_manifest:
 depends_on: []
 integration_branch: ""
 branch: feature/wcp-origin-allowlist
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/30
 external_tracker: ""
 tags: [fdc3, security]
 ---

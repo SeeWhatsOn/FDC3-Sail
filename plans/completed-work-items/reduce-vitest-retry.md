@@ -13,6 +13,7 @@ depends_on:
   - extend-cleanup-source-and-open-with-context
 integration_branch: ""
 branch: chore/vitest-no-retry
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/34
 external_tracker: ""
 tags: []
 ---

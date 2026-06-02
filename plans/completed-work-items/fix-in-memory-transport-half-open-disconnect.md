@@ -13,6 +13,7 @@ file_manifest:
 depends_on: []
 integration_branch: ""
 branch: fix/in-memory-transport-half-open-disconnect
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/27
 external_tracker: ""
 tags: [fdc3]
 ---

@@ -15,6 +15,7 @@ depends_on:
   - fix-messageport-disconnect-reentrancy
 integration_branch: v3-pre
 branch: cursor/fix-messageport-error-disconnect-cleanup-32fd
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/26
 review_via: pr
 relies_on_pr: "23, 25"
 external_tracker: ""

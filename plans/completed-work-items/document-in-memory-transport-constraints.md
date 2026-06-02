@@ -15,6 +15,7 @@ depends_on:
   - fix-in-memory-transport-half-open-disconnect
 integration_branch: ""
 branch: chore/document-in-memory-transport-constraints
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/32
 external_tracker: ""
 tags: [fdc3, api]
 ---

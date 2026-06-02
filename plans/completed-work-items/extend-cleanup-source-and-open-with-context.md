@@ -17,6 +17,7 @@ file_manifest:
 depends_on: []
 integration_branch: ""
 branch: fix/cleanup-source-and-open-with-context
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/28
 external_tracker: ""
 tags: [fdc3]
 ---

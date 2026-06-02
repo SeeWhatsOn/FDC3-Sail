@@ -14,6 +14,7 @@ file_manifest:
 depends_on: []
 integration_branch: ""
 branch: docs/align-readme-package-validation
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/20
 external_tracker: ""
 tags: [fdc3]
 ---

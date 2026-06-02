@@ -19,6 +19,7 @@ file_manifest:
 depends_on: []
 integration_branch: ""
 branch: cursor/remove-intents-history-398c
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/36
 external_tracker: ""
 tags: [fdc3]
 ---

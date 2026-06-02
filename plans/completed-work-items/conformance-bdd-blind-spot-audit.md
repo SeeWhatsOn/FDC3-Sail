@@ -15,8 +15,8 @@ file_manifest:
 depends_on: []
 integration_branch: v3-pre
 branch: cursor/conformance-bdd-blind-spot-audit
-pr_url: ""
-merged_pr: ""
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/60
+merged_pr: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/60"
 external_tracker: ""
 tags: [fdc3]
 ---

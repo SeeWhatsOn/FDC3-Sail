@@ -16,7 +16,7 @@ depends_on:
   - fix-intent-discovery-displayname-dedupe
 integration_branch: v3-pre
 branch: cursor/toolbox-bdd-metadata-assertions
-pr_url: ""
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/52
 merged_pr: ""
 external_tracker: ""
 tags: [fdc3]

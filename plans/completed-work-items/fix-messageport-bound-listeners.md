@@ -13,6 +13,7 @@ file_manifest:
 depends_on: []
 integration_branch: ""
 branch: fix/messageport-bound-listeners
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/23
 external_tracker: ""
 tags: [fdc3]
 ---

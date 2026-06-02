@@ -13,6 +13,7 @@ depends_on:
   - conformance-traceability-map
 integration_branch: v3-pre
 branch: cursor/app-channel-context-history-bdd-f2c8
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/43
 external_tracker: ""
 tags: [fdc3]
 ---
