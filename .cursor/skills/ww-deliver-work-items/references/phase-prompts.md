@@ -10,6 +10,11 @@ resolved from the slice.
 Every subagent report must end with `## Learnings proposed` per
 [learnings-proposed-format.md](../../ww-work-items/references/learnings-proposed-format.md).
 
+**Docs-only work items:** When Test guidance starts with
+`Docs-only: no executable RED phase.`, do **not** launch Phase A. Start
+at Phase B. See
+[docs-only-work-items.md](../../ww-work-items/references/docs-only-work-items.md).
+
 ## Phase A: RED Tests (`test-engineer`)
 
 ```text
