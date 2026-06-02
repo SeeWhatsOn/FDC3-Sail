@@ -66,7 +66,9 @@ None.
 
 ## Test guidance
 
-RED phase should check documentation expectations against current package exports and source layout. Verification should include a docs review and any repository docs build or focused package validation that is practical for documentation-only changes.
+Docs-only: no executable RED phase. Human review of README and website
+architecture docs; optional Docusaurus build if practical. Do not add
+Vitest/Cucumber tests that read `.md` files.
 
 ## Blocked decisions
 

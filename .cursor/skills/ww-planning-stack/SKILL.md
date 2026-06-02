@@ -91,6 +91,9 @@ or two obvious work items.
 
 ## Anti-patterns
 
+- Prescribing Vitest/Cucumber or "documentation contract tests" for
+  markdown-only work items — see
+  `ww-work-items/references/docs-only-work-items.md`
 - Creating documents because the stack allows them, not because delivery
   needs them.
 - Hiding architecture direction in a separate document when a short PRD

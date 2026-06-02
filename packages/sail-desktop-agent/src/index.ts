@@ -23,7 +23,7 @@
  * ## What's Exported
  *
  * - **DesktopAgent** - Core Desktop Agent class
- * - **Interfaces** - Transport, AppLauncher
+ * - **Interfaces** - Transport (core); AppLauncher and other host contracts via `./host-contracts`
  * - **State Registries** - App, Intent, Channel registries
  * - **App Directory** - App directory manager
  * - **Types** - TypeScript types and interfaces
