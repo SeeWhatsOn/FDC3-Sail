@@ -5,7 +5,9 @@ import {
   DEFAULT_FDC3_USER_CHANNELS,
   type DirectoryApp,
 } from "@finos/sail-desktop-agent"
+
 import conformanceAppDirectory from "../../../conformance-appd.json"
+
 import App from "./App"
 import { createHarnessAppLauncher } from "./app-launcher"
 import { createHarnessIntentResolver } from "./intent-resolver-wiring"
@@ -70,9 +72,7 @@ function bootstrapHarness(): {
   })
 
   wcpConnector.on("appConnected", metadata => {
-    console.log(
-      `[ConformanceHarness] WCP connected: ${metadata.appId} (${metadata.instanceId})`
-    )
+    console.log(`[ConformanceHarness] WCP connected: ${metadata.appId} (${metadata.instanceId})`)
   })
 
   wcpConnector.on("appDisconnected", instanceId => {
