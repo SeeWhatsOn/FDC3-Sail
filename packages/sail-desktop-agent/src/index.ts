@@ -41,9 +41,15 @@ export * from "./core"
 // UI-free host contracts for platform builders (launch, intent resolver, channel control)
 export * from "./host-contracts"
 
-// NOTE: Browser-specific code is NOT exported here
+// Browser Desktop Agent preset (WCP + in-memory transport wiring)
+export {
+  createBrowserDesktopAgent,
+  type BrowserDesktopAgentOptions,
+  type BrowserDesktopAgentResult,
+} from "./presets/browser-desktop-agent.js"
+
+// NOTE: Lower-level browser connector APIs are NOT exported here
 // Import from @finos/sail-desktop-agent/browser for:
-// - createBrowserDesktopAgent()
 // - WCPConnector
 // - MessagePortTransport
 
