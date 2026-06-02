@@ -2,7 +2,7 @@ import {
   createBrowserDesktopAgent,
   type BrowserDesktopAgentOptions,
   type BrowserDesktopAgentResult,
-} from "@finos/sail-desktop-agent/browser"
+} from "@finos/sail-desktop-agent"
 import { MiddlewarePipeline, type Middleware } from "./middleware/middleware"
 import { wireWcp4OriginAllowlist } from "./wcp4-origin-allowlist"
 export type { Middleware }

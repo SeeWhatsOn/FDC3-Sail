@@ -53,16 +53,20 @@ export {
 // Middleware pipeline (kept for future usage)
 export { MiddlewarePipeline, type Middleware } from "./middleware/middleware"
 
-// Browser Desktop Agent (re-export from @finos/sail-desktop-agent/browser)
+// Browser Desktop Agent preset (re-export from @finos/sail-desktop-agent)
+export {
+  createBrowserDesktopAgent,
+  type BrowserDesktopAgentOptions,
+  type BrowserDesktopAgentResult,
+} from "@finos/sail-desktop-agent"
+
+// Lower-level browser connector APIs (WCPConnector, MessagePortTransport)
 export {
   WCPConnector,
   MessagePortTransport,
-  createBrowserDesktopAgent,
   type WCPConnectorOptions,
   type WCPConnectorEvents,
   type AppConnectionMetadata,
-  type BrowserDesktopAgentOptions,
-  type BrowserDesktopAgentResult,
 } from "@finos/sail-desktop-agent/browser"
 
 // Core Desktop Agent types (for library consumers)

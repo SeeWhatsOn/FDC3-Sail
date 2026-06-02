@@ -8,18 +8,18 @@
  */
 
 import {
+  createBrowserDesktopAgent,
   DesktopAgent,
   type AppLauncher,
   type DirectoryApp,
   type Transport,
   type SailImplementationMetadata,
+  type IntentResolver,
 } from "@finos/sail-desktop-agent"
-import { WCPConnector, type AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
-import { createInMemoryTransportPair } from "@finos/sail-desktop-agent/transports"
-import type { BrowserTypes, Context } from "@finos/fdc3"
+import type { WCPConnector, AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
+import type { BrowserTypes } from "@finos/fdc3"
 import { generateUuid } from "./utils/uuid"
 
-import type { IntentResolver, IntentResolutionRequest } from "./interfaces/intent-resolver"
 import type { ChannelSelector } from "./interfaces/channel-selector"
 import { SailPlatformClient, type SailPlatformClientConfig } from "./client/sail-platform-client"
 
@@ -186,10 +186,11 @@ export class SailPlatform {
   private platformClient: SailPlatformClient
   private started = false
 
-  // Desktop Agent components (created on start)
+  // Browser Desktop Agent session (created on start via preset)
   private _desktopAgent: DesktopAgent | null = null
   private _wcpConnector: WCPConnector | null = null
   private _connectorTransport: Transport | null = null
+  private _stopBrowserSession: (() => void) | null = null
 
   // Namespaced APIs (initialized in constructor)
   public readonly workspaces: WorkspacesApi
@@ -216,46 +217,31 @@ export class SailPlatform {
       throw new Error("SailPlatform already started")
     }
 
-    // Create in-memory transport pair for Desktop Agent ↔ WCP Connector communication
-    const [daTransport, connectorTransport] = createInMemoryTransportPair()
-    this._connectorTransport = connectorTransport
-
-    // Create WCP Connector first (so we can reference its methods for intent resolution)
-    this._wcpConnector = new WCPConnector(connectorTransport, {
-      // Sail controls UI externally (no injected iframes)
-      getIntentResolverUrl: () => false,
-      getChannelSelectorUrl: () => false,
-      fdc3Version: "2.2",
-    })
-
-    this._desktopAgent = new DesktopAgent({
-      transport: daTransport,
+    const browserSession = createBrowserDesktopAgent({
       appLauncher: this.config.appLauncher,
+      apps: this.config.apps,
       userChannels: this.config.userChannels,
       implementationMetadata: this.config.implementationMetadata,
       openContextListenerTimeoutMs: this.config.openContextListenerTimeoutMs,
       heartbeatIntervalMs: this.config.heartbeatIntervalMs,
       heartbeatTimeoutMs: this.config.heartbeatTimeoutMs,
-      requestIntentResolution: request => this._wcpConnector!.requestIntentResolution(request),
+      intentResolver: this.config.intentResolver,
+      wcpOptions: {
+        // Sail controls UI externally (no injected iframes)
+        getIntentResolverUrl: () => false,
+        getChannelSelectorUrl: () => false,
+        fdc3Version: "2.2",
+      },
     })
 
-    // Add initial apps to directory if provided
-    if (this.config.apps && this.config.apps.length > 0) {
-      const appDirectory = this._desktopAgent.getAppDirectory()
-      for (const app of this.config.apps) {
-        appDirectory.add(app)
-      }
-    }
+    this._desktopAgent = browserSession.desktopAgent
+    this._wcpConnector = browserSession.wcpConnector
+    this._connectorTransport = browserSession.connectorTransport
+    this._stopBrowserSession = browserSession.stop
 
-    // Wire up event callbacks
     this.wireEvents()
 
-    // Wire up intent resolver if provided
-    this.wireIntentResolver()
-
-    // Start both Desktop Agent and WCP Connector
-    this._desktopAgent.start()
-    this._wcpConnector.start()
+    browserSession.start()
     this.started = true
 
     if (this.config.debug) {
@@ -271,13 +257,12 @@ export class SailPlatform {
       return
     }
 
-    // Stop in reverse order
-    this._wcpConnector?.stop()
-    this._desktopAgent?.stop()
+    this._stopBrowserSession?.()
 
     this._wcpConnector = null
     this._desktopAgent = null
     this._connectorTransport = null
+    this._stopBrowserSession = null
     this.started = false
 
     if (this.config.debug) {
@@ -360,7 +345,7 @@ export class SailPlatform {
 
       this._wcpConnector!.on("channelChanged", handleChannelChanged)
 
-      // Send DACP message on behalf of the app
+      // Send DACP message on behalf of the app via connector transport
       if (channelId) {
         // Join channel
         const message = {
@@ -417,70 +402,6 @@ export class SailPlatform {
     if (!this.started || !this._desktopAgent || !this._wcpConnector || !this._connectorTransport) {
       throw new Error("SailPlatform not started. Call start() first.")
     }
-  }
-
-  /**
-   * Wire up intent resolver if provided.
-   * Listens to 'intentResolverNeeded' event and calls the resolver.
-   */
-  private wireIntentResolver(): void {
-    if (!this._wcpConnector || !this.config.intentResolver) return
-
-    const connector = this._wcpConnector
-    const resolver = this.config.intentResolver
-
-    connector.on("intentResolverNeeded", payload => {
-      // Handle async intent resolution without returning the promise
-      // (event handlers expect void return)
-      void (async () => {
-        try {
-          // Adapt payload to our interface format
-          // WCP's IntentHandler is AppMetadata & { isRunning }
-          // Our IntentHandler has { app, intent, instanceId, isRunning }
-          const request: IntentResolutionRequest = {
-            requestId: payload.requestId,
-            intent: payload.intent,
-            context: payload.context as Context,
-            handlers: payload.handlers.map(handler => ({
-              app: handler,
-              intent: { name: payload.intent, displayName: payload.intent },
-              instanceId: handler.instanceId,
-              isRunning: handler.isRunning,
-            })),
-          }
-
-          // Call the resolver
-          const response = await resolver.resolve(request)
-
-          // Send selection back to connector
-          // WCP expects { requestId, selectedHandler: { instanceId?, appId } | null }
-          if (response) {
-            connector.resolveIntentSelection({
-              requestId: payload.requestId,
-              selectedHandler: {
-                appId: response.target.appId,
-                instanceId: response.target.instanceId,
-              },
-            })
-          } else {
-            // User cancelled - resolve with null to reject the intent
-            connector.resolveIntentSelection({
-              requestId: payload.requestId,
-              selectedHandler: null,
-            })
-          }
-        } catch (error) {
-          if (this.config.debug) {
-            console.error("[SailPlatform] Intent resolution failed:", error)
-          }
-          // Resolve with null on error
-          connector.resolveIntentSelection({
-            requestId: payload.requestId,
-            selectedHandler: null,
-          })
-        }
-      })()
-    })
   }
 
   /**
