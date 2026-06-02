@@ -7,7 +7,7 @@
  * ## What's in Core
  *
  * - **DesktopAgent** - Main Desktop Agent class with FDC3 API implementation
- * - **Interfaces** - Transport, AppLauncher, and other core interfaces
+ * - **Interfaces** - Transport and other core interfaces
  * - **State Registries** - App instances, intents, channels
  * - **Handlers** - DACP message handlers
  * - **Protocol** - DACP message types
@@ -27,7 +27,6 @@ export type { SailImplementationMetadata } from "./sail-default-config"
 
 // Interfaces (types only - no implementations)
 export type { Transport, MessageHandler, DisconnectHandler } from "./interfaces/transport"
-export type { AppLauncher } from "./interfaces/app-launcher"
 export * from "./interfaces"
 
 // State Types (from functional state management)

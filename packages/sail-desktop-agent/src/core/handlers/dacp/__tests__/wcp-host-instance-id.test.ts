@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { AppLauncher } from "../../../interfaces/app-launcher"
+import type { AppLauncher } from "../../../../host-contracts/app-launcher"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { OpenError } from "@finos/fdc3"
 import { DesktopAgent } from "../../../desktop-agent"
