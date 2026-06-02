@@ -26,6 +26,9 @@ column below.
 - [ ] `## TypeScript interfaces` present (or "none")
 - [ ] No executable test code in the body
 - [ ] `## Test guidance` describes RED-phase intent without prescribing implementation
+- [ ] If docs-only (see [docs-only-work-items.md](docs-only-work-items.md)):
+  Test guidance starts with `Docs-only: no executable RED phase.`; no test
+  files in `file_manifest`; no Vitest/Cucumber/doc-contract-test language
 
 ## spike
 

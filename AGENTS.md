@@ -95,7 +95,8 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 
 ## Learned User Preferences
 
-- Do not add Vitest or Cucumber tests for README, TSDoc, or other documentation; `npm test` covers FDC3 behavior and library code only.
+- Do not add Vitest or Cucumber tests for README, TSDoc, or other documentation; `npm test` covers FDC3 behavior and library code only. Watson `/ww-plan` and `/ww-deliver` must not prescribe RED tests or documentation contract tests for markdown-only work items (see `.cursor/skills/ww-work-items/references/docs-only-work-items.md`).
+- `@finos/sail-desktop-agent` exposes both manual composition (transports, host contracts, connectors) and high-level presets (e.g. browser desktop agent); presets abstract common wiring but must not hide the composition path.
 - Keep `@finos/sail-desktop-agent` aligned with FDC3 2.2 spec behavior; Sail-specific extensions (e.g. WCP origin allowlists) belong in `@finos/sail-platform-api`, not the core library.
 - FDC3-Sail product defaults live in `packages/sail-desktop-agent/src/core/sail-default-config.ts`; `new DesktopAgent(options)` merges them in the constructor (partial `implementationMetadata` overrides are deep-merged). Do not add handler-level `??` fallbacks for implementation metadata.
 - `resolveDesktopAgentConfig()` remains exported for tests and pre-built config; app code normally uses `new DesktopAgent({ transport, ... })` or `createBrowserDesktopAgent()` / `SailPlatform`.
@@ -116,3 +117,4 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 - WCP origin allowlisting is not an FDC3 2.2 API surface; FDC3 requires responding to `WCP1Hello` with `WCP2LoadUrl` or `WCP3Handshake`, with identity validation at WCP4 — silent pre-filter reject is Sail policy, not spec behavior.
 - Completed Watson work items move to `plans/completed-work-items/` when status is `done` (ww-work-items archive flow).
 - Root `vitest.config.ts` uses Vitest `test.projects` for each workspace package config; Playwright specs under `packages/sail-web/tests/` are excluded from `npm test` — run them with `npx playwright test` or `npm run test:e2e -w @finos/sail-web`.
+- `@finos/sail-desktop-agent` target `src/` top-level folders: `core`, `host-contracts`, `protocols`, `transports`, `connectors`, `presets`; browser WCP integration belongs under `connectors/`, not a top-level `browser/` folder.

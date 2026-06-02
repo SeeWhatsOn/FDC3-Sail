@@ -134,6 +134,12 @@ Then [observable outcome]
 Do not prescribe executable test code in this phase. Delivery decides
 the right test level during RED.
 
+**Documentation-only slices:** When `file_manifest` is markdown-only and
+there is no runtime or API change, follow
+`ww-work-items/references/docs-only-work-items.md`. Do not prescribe RED,
+Vitest, Cucumber, or "documentation contract tests" that read `.md` files.
+Test guidance must start with `Docs-only: no executable RED phase.`
+
 Use the canonical format from `ww-work-items` → Canonical Work Item
 Format (loads `references/work-item-template.md` when needed).
 
@@ -175,6 +181,8 @@ End with a report that includes:
 
 - Write production code
 - Write executable tests
+- Prescribe Vitest, Cucumber, or other executable tests for markdown-only
+  work items (see `docs-only-work-items.md`)
 - Create fake tracker identifiers
 - Set delivery statuses other than `draft` or `approved`
 - Commit or merge `plans/` as approved without human `approve` per item
