@@ -3,7 +3,7 @@ title: "Harness toolbox re-run and update failure review doc"
 slug: harness-toolbox-rerun-baseline
 kind: task
 type: chore
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -90,3 +90,4 @@ _(empty)_
 ## Learnings extracted
 
 _(empty)_
+- 2026-06-02: reconcile-queue.sh — PR merged
