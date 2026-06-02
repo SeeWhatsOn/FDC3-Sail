@@ -3,7 +3,7 @@ title: "Investigate launcher instanceId vs WCP5 canonical id"
 slug: investigate-launcher-wcp-instance-id
 kind: spike
 type: bug
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -119,3 +119,4 @@ _(empty)_
 | B GREEN | implement-agent | yes | Tests green; bind-host spec updated |
 | C Verify | verifier-agent | yes | FAIL scope (plans/); orchestrator re-ran tests PASS |
 | D Review | code-reviewer | yes | VERDICT: PASS |
+- 2026-06-01: reconcile — PR merged (batch 3)
