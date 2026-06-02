@@ -3,7 +3,7 @@ title: "Bind host-assigned instanceId at WCP4 as canonical WCP5 id"
 slug: bind-host-instance-id-at-wcp4
 kind: task
 type: bug
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -117,3 +117,4 @@ _(empty)_
 ## Learnings extracted
 
 - [AGENTS.md candidate] Host bind: `openRequest` pre-registers launcher id as PENDING; WCP4 adoption needs `meta.wcpSourceWindow` from `WCPConnector.enrichMessageWithSource` (WCP1 `event.source`), not only test-injected meta.
+- 2026-06-01: reconcile — PR merged (batch 2)

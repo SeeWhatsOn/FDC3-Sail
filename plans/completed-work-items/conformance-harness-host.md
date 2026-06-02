@@ -3,7 +3,7 @@ title: "Conformance harness host (React + sail-desktop-agent only)"
 slug: conformance-harness-host
 kind: task
 type: feature
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -347,3 +347,4 @@ _(empty)_
 ## Learnings extracted
 
 _(empty — after delivery, consider AGENTS.md note on conformance harness port and attribution workflow)_
+- 2026-06-01: reconcile — PR merged (batch 2)
