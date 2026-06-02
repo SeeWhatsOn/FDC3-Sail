@@ -8,7 +8,7 @@ import type { IntentResolutionRequest as HarnessIntentResolutionRequest } from "
  */
 export function createHarnessIntentResolver(debug = false): IntentResolver {
   return {
-    async resolve(request) {
+    resolve(request) {
       const harnessRequest: HarnessIntentResolutionRequest = {
         requestId: request.requestId,
         intent: request.intent,
@@ -33,7 +33,7 @@ export function createHarnessIntentResolver(debug = false): IntentResolver {
       }
 
       if (!target) {
-        return null
+        return Promise.resolve(null)
       }
 
       const selectedHandler = request.handlers.find(
@@ -43,13 +43,13 @@ export function createHarnessIntentResolver(debug = false): IntentResolver {
       )
 
       if (!selectedHandler) {
-        return null
+        return Promise.resolve(null)
       }
 
-      return {
+      return Promise.resolve({
         selectedHandler,
         target,
-      }
+      })
     },
   }
 }
