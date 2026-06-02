@@ -5,7 +5,7 @@
  * Provides hooks for tests to control and verify launch behavior.
  */
 
-import type { AppLauncher } from "../../src/core/interfaces/app-launcher"
+import type { AppLauncher } from "../../src/host-contracts/app-launcher"
 import type { AppIdentifier, AppMetadata, BrowserTypes } from "@finos/fdc3"
 
 /**

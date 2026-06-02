@@ -7,5 +7,4 @@
  */
 
 export type { Transport } from "./transport"
-export type { AppLauncher } from "./app-launcher"
 export * from "./logger"
