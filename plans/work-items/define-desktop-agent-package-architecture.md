@@ -3,7 +3,7 @@ title: "Define desktop-agent package architecture"
 slug: define-desktop-agent-package-architecture
 kind: task
 type: feature
-status: in-progress
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -13,8 +13,8 @@ file_manifest:
   - website/docs/architecture/sail-platform-sdk.md
 depends_on: []
 integration_branch: v3-pre
-branch: cursor/define-desktop-agent-package-architecture-8a9f
-pr_url: ""
+branch: cursor/define-desktop-agent-package-architecture-ade5
+pr_url: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/61"
 merged_pr: ""
 external_tracker: ""
 tags: []
