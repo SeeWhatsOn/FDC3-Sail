@@ -15,7 +15,7 @@ depends_on:
   - bind-host-instance-id-at-wcp4
 integration_branch: v3-pre
 branch: cursor/fix-cucumber-raise-intent-launch-correlation
-pr_url: ""
+pr_url: https://github.com/SeeWhatsOn/FDC3-Sail/pull/51
 merged_pr: ""
 external_tracker: ""
 tags: [fdc3]
@@ -77,3 +77,4 @@ _(empty)_
 ## Learnings extracted
 
 _(empty)_
+- 2026-06-01: reconcile — PR merged (batch 1)

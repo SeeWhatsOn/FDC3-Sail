@@ -3,7 +3,7 @@ title: "BDD assertions for toolbox-checked AppMetadata and intent displayName"
 slug: toolbox-bdd-metadata-assertions
 kind: task
 type: enhancement
-status: committed
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -81,3 +81,4 @@ _(empty)_
 ## Learnings extracted
 
 _(empty)_
+- 2026-06-01: reconcile — PR merged (batch 1)
