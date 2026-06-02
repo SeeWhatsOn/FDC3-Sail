@@ -1,5 +1,5 @@
 import type { WCPConnectorEvents } from "./wcp-types"
-import { consoleLogger } from "../../core/interfaces/logger"
+import { consoleLogger } from "../../../core/interfaces/logger"
 
 export class WCPEventEmitter {
   private handlers: { [K in keyof WCPConnectorEvents]?: Set<WCPConnectorEvents[K]> } = {}

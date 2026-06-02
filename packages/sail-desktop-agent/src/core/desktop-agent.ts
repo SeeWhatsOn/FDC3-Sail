@@ -8,7 +8,7 @@
  */
 
 import type { Transport } from "./interfaces/transport"
-import type { AppLauncher } from "./interfaces/app-launcher"
+import type { AppLauncher } from "../host-contracts/app-launcher"
 import { AppDirectoryManager } from "./app-directory/app-directory-manager"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
 import type {

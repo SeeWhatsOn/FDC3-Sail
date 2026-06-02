@@ -15,6 +15,11 @@ TASK: Draft one local markdown work item for the Watson workflow.
 Use the canonical format from ww-work-items. Do not write executable
 tests or production code.
 
+If file_manifest is markdown-only with no runtime/API change, follow
+ww-work-items/references/docs-only-work-items.md: Test guidance must
+start with "Docs-only: no executable RED phase." — never prescribe
+Vitest/Cucumber or documentation contract tests for .md files.
+
 title:              [work item title]
 slug:               [descriptive filename slug]
 kind:               [task | spike | epic]

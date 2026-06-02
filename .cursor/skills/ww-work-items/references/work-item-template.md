@@ -62,6 +62,11 @@ Relevant interfaces, or "none".
 High-level guidance for the RED phase. Do not prescribe exact test code
 unless the PRD explicitly requires a particular test level.
 
+**Docs-only slices** (markdown-only `file_manifest`, no runtime/API change):
+start with `Docs-only: no executable RED phase.` and describe human review
+or optional docs build — see [docs-only-work-items.md](docs-only-work-items.md).
+Never add `*.test.ts` / `*.feature` paths or "documentation contract tests".
+
 ## Blocked decisions
 Questions raised by delivery agents and answered by the human.
 

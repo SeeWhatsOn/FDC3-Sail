@@ -91,6 +91,10 @@ Optional `tags` route domain skills during delivery. See
 RED evidence format for delivery Phase A is in
 [references/red-evidence-format.md](references/red-evidence-format.md).
 
+Documentation-only work items (markdown deliverables, no runtime change)
+must not prescribe executable tests — see
+[references/docs-only-work-items.md](references/docs-only-work-items.md).
+
 ## Work Item Tags
 
 Optional frontmatter `tags` route domain skills and optional security
