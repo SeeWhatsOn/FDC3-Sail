@@ -38,6 +38,9 @@
 // Re-export everything from core
 export * from "./core"
 
+// UI-free host contracts for platform builders (launch, intent resolver, channel control)
+export * from "./host-contracts"
+
 // NOTE: Browser-specific code is NOT exported here
 // Import from @finos/sail-desktop-agent/browser for:
 // - createBrowserDesktopAgent()
