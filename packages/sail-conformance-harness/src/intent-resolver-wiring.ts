@@ -1,39 +1,55 @@
-import type { Context } from "@finos/fdc3"
-import type { WCPConnector } from "@finos/sail-desktop-agent/browser"
+import type { IntentResolver } from "@finos/sail-desktop-agent"
 import { selectIntentHandler } from "./intent-resolution"
-import type { IntentHandlerOption } from "./types"
+import type { IntentResolutionRequest as HarnessIntentResolutionRequest } from "./types"
 
 /**
- * Subscribe to WCP intent resolution requests and resolve programmatically.
- *
- * The desktop agent forwards multi-handler intents to {@link WCPConnector.requestIntentResolution};
- * this wiring listens for `intentResolverNeeded` and replies via
- * {@link WCPConnector.resolveIntentSelection} without modal UI.
+ * Build a host {@link IntentResolver} that picks handlers programmatically via
+ * {@link selectIntentHandler} (no modal UI).
  */
-export function wireIntentResolver(wcpConnector: WCPConnector, debug = false): void {
-  wcpConnector.on("intentResolverNeeded", payload => {
-    const request = {
-      requestId: payload.requestId,
-      intent: payload.intent,
-      context: payload.context as Context,
-      handlers: payload.handlers as IntentHandlerOption[],
-    }
+export function createHarnessIntentResolver(debug = false): IntentResolver {
+  return {
+    resolve(request) {
+      const harnessRequest: HarnessIntentResolutionRequest = {
+        requestId: request.requestId,
+        intent: request.intent,
+        context: request.context,
+        handlers: request.handlers.map(handler => ({
+          ...handler.app,
+          instanceId: handler.instanceId,
+          isRunning: handler.isRunning,
+        })),
+      }
 
-    const selectedHandler = selectIntentHandler(request)
+      const target = selectIntentHandler(harnessRequest)
 
-    if (debug) {
-      console.log("[ConformanceHarness] Intent resolution", {
-        intent: payload.intent,
-        handlerCount: payload.handlers.length,
+      if (debug) {
+        console.log("[ConformanceHarness] Intent resolution", {
+          intent: request.intent,
+          handlerCount: request.handlers.length,
+          selectedHandler: target,
+        })
+      } else {
+        console.log("[ConformanceHarness] Intent resolution selected:", target)
+      }
+
+      if (!target) {
+        return Promise.resolve(null)
+      }
+
+      const selectedHandler = request.handlers.find(
+        handler =>
+          handler.app.appId === target.appId &&
+          (target.instanceId === undefined || handler.instanceId === target.instanceId)
+      )
+
+      if (!selectedHandler) {
+        return Promise.resolve(null)
+      }
+
+      return Promise.resolve({
         selectedHandler,
+        target,
       })
-    } else {
-      console.log("[ConformanceHarness] Intent resolution selected:", selectedHandler)
-    }
-
-    wcpConnector.resolveIntentSelection({
-      requestId: payload.requestId,
-      selectedHandler,
-    })
-  })
+    },
+  }
 }

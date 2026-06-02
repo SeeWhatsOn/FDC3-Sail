@@ -16,11 +16,11 @@ Dev server: **http://localhost:3001**
 
 ## Architecture
 
-- **`createBrowserDesktopAgent`** — local desktop agent + WCP connector (no SailPlatform).
-- **App directory** — apps loaded from repo-root `conformance-appd.json` via `getAppDirectory().addApplications()`.
+- **`createBrowserDesktopAgent`** (from `@finos/sail-desktop-agent`) — local desktop agent + WCP connector (no SailPlatform).
+- **App directory** — apps from repo-root `conformance-appd.json` passed via the preset `apps` option.
 - **Bootstrap** — Conformance1 iframe mounts on load with a generated `instanceId`; the agent starts **before** React renders so WCP1Hello is handled immediately.
 - **Dynamic open** — `fdc3.open` uses `createHarnessAppLauncher`, which appends a panel to React state and renders an iframe.
-- **Intent resolution** — listens for `intentResolverNeeded` on `wcpConnector` and resolves programmatically via `selectIntentHandler` + `resolveIntentSelection` (no modal UI).
+- **Intent resolution** — preset `intentResolver` from `createHarnessIntentResolver()` uses `selectIntentHandler` programmatically (no modal UI).
 
 ## Instance identity (WCP4)
 
