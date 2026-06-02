@@ -5,7 +5,7 @@ import type {
   WCPConnectorEvents,
   WCPConnectorOptions,
 } from "./wcp-types"
-import type { Logger } from "../../core/interfaces/logger"
+import type { Logger } from "../../../core/interfaces/logger"
 
 type EmitFunction = <EventName extends keyof WCPConnectorEvents>(
   event: EventName,

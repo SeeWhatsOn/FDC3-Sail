@@ -13,9 +13,14 @@
       "default": "./dist/index.mjs"
     },
     "./browser": {
-      "import": "./dist/browser/index.mjs",
-      "types": "./dist/browser/index.d.mts",
-      "default": "./dist/browser/index.mjs"
+      "import": "./dist/connectors/browser/index.mjs",
+      "types": "./dist/connectors/browser/index.d.mts",
+      "default": "./dist/connectors/browser/index.mjs"
+    },
+    "./presets": {
+      "import": "./dist/presets/index.mjs",
+      "types": "./dist/presets/index.d.mts",
+      "default": "./dist/presets/index.mjs"
     },
     "./transports": {
       "import": "./dist/transports/index.mjs",

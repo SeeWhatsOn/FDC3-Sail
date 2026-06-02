@@ -135,7 +135,11 @@ For each eligible work item, track:
 - [ ] `integration_branch` and `branch` set
 - [ ] Branch checked out or created from `integration_branch`
 - [ ] Focused context loaded (`AGENTS.md`, reference docs, `file_manifest`)
+- [ ] Docs-only check: if Test guidance starts with `Docs-only: no executable
+  RED phase.`, skip Phase A per
+  `ww-work-items/references/docs-only-work-items.md`
 - [ ] Phase A: `test-engineer` launched → RED evidence + learnings captured
+  (skip when docs-only)
 - [ ] Phase B: `implement-agent` launched → tests green + learnings captured
 - [ ] Phase C: `verifier-agent` launched → `VERIFICATION: PASS` + learnings captured
 - [ ] Phase D: `code-reviewer` launched → `VERDICT: PASS` + learnings captured

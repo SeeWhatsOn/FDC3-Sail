@@ -15,9 +15,18 @@ FDC3 Sail implements the FDC3 2.2 standard using a modular, transport-agnostic a
 - Standard `@finos/fdc3` library works unchanged
 
 ### 2. Separation of Concerns
-- **Pure FDC3 engine** (`@finos/sail-desktop-agent`) - no platform-specific code
-- **Platform services** (`@finos/sail-platform-api`) - Sail-specific features and wrappers
+- **Pure FDC3 engine** (`@finos/sail-desktop-agent`) — `core`, `host-contracts`, `protocols`, `transports`, `connectors`, and `presets` under `src/`
+- **Platform services** (`@finos/sail-platform-api`) — Sail-specific wrappers; **layout**, **workspace**, **storage**, and **config** belong in platform-api, not in desktop-agent core
 - Clear boundaries between FDC3 operations and proprietary features
+
+### Public API modes
+
+Integrators choose between two entry styles:
+
+- **Manual composition primitives** — import `DesktopAgent`, connectors, and transports separately and wire them yourself (`@finos/sail-desktop-agent`, `/connectors`, `/transports`).
+- **Presets** — import high-level factories from `@finos/sail-desktop-agent/presets` (for example `createBrowserDesktopAgent`) when default wiring is sufficient.
+
+Use manual composition when you need custom transports or lifecycle control; use presets for faster integration.
 
 ### 3. Transport Agnostic
 - Desktop Agent core has zero transport dependencies
@@ -49,11 +58,13 @@ FDC3 Sail implements the FDC3 2.2 standard using a modular, transport-agnostic a
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │  LAYER 1: Pure FDC3 Engine (@finos/sail-desktop-agent)      │
-│  - DACP message handlers                                    │
-│  - Functional state management (AgentState)                 │
-│  - WCP validation logic (WCP4-5)                            │
-│  - App Directory management                                 │
-│  - ZERO external dependencies                               │
+│  src/core — DACP handlers, AgentState, app directory        │
+│  src/host-contracts — host-facing connector contracts       │
+│  src/protocols — DACP / WCP protocol helpers                │
+│  src/transports — Transport implementations                 │
+│  src/connectors — browser WCP bridge, MessagePort           │
+│  src/presets — high-level preset factories                  │
+│  ZERO platform layout / workspace / storage / config        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -68,7 +79,7 @@ FDC3 Sail implements the FDC3 2.2 standard using a modular, transport-agnostic a
 **Layer 2 (Sail Platform SDK)** bridges environments:
 - Wraps Layer 1 for specific runtime environments
 - Provides transport implementations
-- Adds Sail-specific features (workspaces, layouts)
+- Owns platform features — **layout**, **workspace**, **storage**, and **config** are routed to `@finos/sail-platform-api` instead of `@finos/sail-desktop-agent` core
 - Handles browser-specific WCP connection setup
 
 **Layer 3 (Applications)** uses the APIs:
@@ -87,10 +98,14 @@ Standard FDC3 2.2 protocol for all FDC3 operations:
 
 ### Sail Platform Protocol
 
-Proprietary protocol for Sail-specific features:
-- Workspace management
-- Layout persistence
-- Configuration
+Proprietary protocol for Sail-specific features owned by `@finos/sail-platform-api` (not desktop-agent core):
+
+- **Workspace** management
+- **Layout** persistence
+- **Storage** clients
+- **Config** (`sailConfig`)
+
+These concerns belong in platform services — do not implement layout, workspace, storage, or config inside `@finos/sail-desktop-agent` core.
 
 ## State Management
 

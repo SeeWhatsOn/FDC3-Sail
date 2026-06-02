@@ -20,14 +20,14 @@
  * - Remote mode: SocketIO, WebWorker, or any Transport implementation
  */
 
-import { DesktopAgent } from "../core"
-import type { DesktopAgentConfig, Transport } from "../core"
-import type { SailImplementationMetadata } from "../core/sail-default-config"
-import { consoleLogger } from "../core/interfaces/logger"
-import type { Logger, LogPayloadDetail } from "../core/interfaces/logger"
+import { DesktopAgent } from "../../core"
+import type { DesktopAgentConfig, Transport } from "../../core"
+import type { SailImplementationMetadata } from "../../core/sail-default-config"
+import { consoleLogger } from "../../core/interfaces/logger"
+import type { Logger, LogPayloadDetail } from "../../core/interfaces/logger"
 import { WCPConnector } from "./wcp/wcp-connector"
 import type { WCPConnectorOptions } from "./wcp/wcp-connector"
-import { createInMemoryTransportPair } from "../transports/in-memory-transport"
+import { createInMemoryTransportPair } from "../../transports/in-memory-transport"
 
 // ============================================================================
 // WCP CLIENT (for remote Desktop Agent - server mode, worker mode)

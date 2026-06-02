@@ -9,8 +9,8 @@ import {
   createCapturingLogger,
   SENSITIVE_MARKER,
   serializeLogCalls,
-} from "../../__tests__/utils/capturing-logger"
-import type { Logger } from "../../core/interfaces/logger"
+} from "../../../__tests__/utils/capturing-logger"
+import type { Logger } from "../../../core/interfaces/logger"
 import { MessagePortTransport } from "../wcp/message-port-transport"
 
 type MessagePortTransportLoggingOptions = {
