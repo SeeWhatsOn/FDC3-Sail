@@ -1,11 +1,14 @@
 import { StrictMode, type Dispatch, type SetStateAction } from "react"
 import { createRoot } from "react-dom/client"
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/browser"
-import { DEFAULT_FDC3_USER_CHANNELS, type DirectoryApp } from "@finos/sail-desktop-agent"
+import {
+  createBrowserDesktopAgent,
+  DEFAULT_FDC3_USER_CHANNELS,
+  type DirectoryApp,
+} from "@finos/sail-desktop-agent"
 import conformanceAppDirectory from "../../../conformance-appd.json"
 import App from "./App"
 import { createHarnessAppLauncher } from "./app-launcher"
-import { wireIntentResolver } from "./intent-resolver-wiring"
+import { createHarnessIntentResolver } from "./intent-resolver-wiring"
 import type { HarnessPanel } from "./types"
 
 const HARNESS_DEBUG = true
@@ -54,8 +57,10 @@ function bootstrapHarness(): {
     appendPanel?.(current => [...current, panel])
   })
 
-  const { desktopAgent, wcpConnector, start } = createBrowserDesktopAgent({
+  const { wcpConnector, start } = createBrowserDesktopAgent({
+    apps: conformanceApps,
     appLauncher,
+    intentResolver: createHarnessIntentResolver(HARNESS_DEBUG),
     userChannels: DEFAULT_FDC3_USER_CHANNELS,
     wcpOptions: {
       getIntentResolverUrl: () => false,
@@ -63,9 +68,6 @@ function bootstrapHarness(): {
     },
     logPayloadDetail: HARNESS_DEBUG ? "full" : "metadata",
   })
-
-  desktopAgent.getAppDirectory().addApplications(conformanceApps)
-  wireIntentResolver(wcpConnector, HARNESS_DEBUG)
 
   wcpConnector.on("appConnected", metadata => {
     console.log(
