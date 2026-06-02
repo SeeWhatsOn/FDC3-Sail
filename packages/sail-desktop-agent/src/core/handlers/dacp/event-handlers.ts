@@ -1,4 +1,4 @@
-import { createDACPSuccessResponse } from "../../dacp-protocol/dacp-message-creators"
+import { createDACPSuccessResponse } from "../../../protocols/dacp/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"

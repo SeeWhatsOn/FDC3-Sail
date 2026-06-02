@@ -13,7 +13,7 @@ import {
   type BrowserDesktopAgentOptions as CoreBrowserDesktopAgentOptions,
   type BrowserDesktopAgentResult,
 } from "../connectors/browser/browser-desktop-agent.js"
-import type { WCPConnector } from "../connectors/browser/wcp/wcp-connector.js"
+import type { WCPConnector } from "../connectors/browser/wcp-connector.js"
 
 export type { BrowserDesktopAgentResult }
 

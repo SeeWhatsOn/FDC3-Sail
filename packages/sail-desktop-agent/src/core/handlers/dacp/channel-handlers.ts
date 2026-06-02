@@ -1,7 +1,7 @@
 import {
   createDACPSuccessResponse,
   createDACPEvent,
-} from "../../dacp-protocol/dacp-message-creators"
+} from "../../../protocols/dacp/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import { getEventListeners, ALL_DA_EVENT_TYPES } from "./event-handlers"

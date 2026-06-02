@@ -25,8 +25,8 @@ import type { DesktopAgentConfig, Transport } from "../../core"
 import type { SailImplementationMetadata } from "../../core/sail-default-config"
 import { consoleLogger } from "../../core/interfaces/logger"
 import type { Logger, LogPayloadDetail } from "../../core/interfaces/logger"
-import { WCPConnector } from "./wcp/wcp-connector"
-import type { WCPConnectorOptions } from "./wcp/wcp-connector"
+import { WCPConnector } from "./wcp-connector"
+import type { WCPConnectorOptions } from "./wcp-connector"
 import { createInMemoryTransportPair } from "../../transports/in-memory-transport"
 
 // ============================================================================

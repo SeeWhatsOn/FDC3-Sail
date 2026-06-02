@@ -4,8 +4,8 @@
  * Handlers for adding and removing intent listeners
  */
 
-import { createDACPSuccessResponse } from "../../../dacp-protocol/dacp-message-creators"
-import { generateEventUuid } from "../../../dacp-protocol/dacp-utils"
+import { createDACPSuccessResponse } from "../../../../protocols/dacp/dacp-message-creators"
+import { generateEventUuid } from "../../../../protocols/dacp/dacp-utils"
 import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"

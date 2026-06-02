@@ -3,7 +3,7 @@ import { OpenError } from "@finos/fdc3"
 import {
   createDACPEvent,
   createDACPSuccessResponse,
-} from "../../../dacp-protocol/dacp-message-creators"
+} from "../../../../protocols/dacp/dacp-message-creators"
 import { sendDACPResponse, sendDACPErrorResponse } from "./dacp-response-utils"
 import type { DACPHandlerContext } from "../../types"
 import { getInstance } from "../../../state/selectors"

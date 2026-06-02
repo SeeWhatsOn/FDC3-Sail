@@ -8,12 +8,12 @@
  * browser environments.
  */
 
-import type { Transport, MessageHandler, DisconnectHandler } from "../../../core/interfaces/transport"
+import type { Transport, MessageHandler, DisconnectHandler } from "../../core/interfaces/transport"
 import {
   consoleLogger,
   type Logger,
   type LogPayloadDetail,
-} from "../../../core/interfaces/logger"
+} from "../../core/interfaces/logger"
 
 export interface MessagePortTransportOptions {
   logger?: Logger

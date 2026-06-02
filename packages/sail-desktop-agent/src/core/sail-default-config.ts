@@ -7,7 +7,7 @@
 
 import type { BrowserTypes } from "@finos/fdc3"
 import pkg from "../../package.json"
-import { DACP_TIMEOUTS } from "./dacp-protocol/dacp-constants"
+import { DACP_TIMEOUTS } from "../protocols/dacp/dacp-constants"
 import type { DesktopAgentConfig, DesktopAgentOptions } from "./desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
 

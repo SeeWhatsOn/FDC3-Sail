@@ -3,8 +3,8 @@ import type { Transport } from "../../../interfaces/transport"
 import {
   createDACPErrorResponse,
   type DACPRequestLike,
-} from "../../../dacp-protocol/dacp-message-creators"
-import type { DACPResponseType } from "../../../dacp-protocol/dacp-messages"
+} from "../../../../protocols/dacp/dacp-message-creators"
+import type { DACPResponseType } from "../../../../protocols/dacp/dacp-messages"
 
 /**
  * Options for sending a DACP response

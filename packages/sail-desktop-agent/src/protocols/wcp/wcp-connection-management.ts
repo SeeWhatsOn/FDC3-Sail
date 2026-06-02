@@ -1,11 +1,11 @@
-import type { MessagePortTransport } from "./message-port-transport"
+import type { MessagePortTransport } from "../../connectors/browser/message-port-transport"
 import type { WebConnectionProtocolMessage } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type {
   AppConnectionMetadata,
   WCPConnectorEvents,
   WCPConnectorOptions,
 } from "./wcp-types"
-import type { Logger } from "../../../core/interfaces/logger"
+import type { Logger } from "../../core/interfaces/logger"
 
 type EmitFunction = <EventName extends keyof WCPConnectorEvents>(
   event: EventName,

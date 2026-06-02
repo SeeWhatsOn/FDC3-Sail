@@ -12,8 +12,8 @@
  * - Manage app connection lifecycle
  */
 
-import type { Transport } from "../../../core/interfaces/transport"
-import { type Logger, consoleLogger } from "../../../core/interfaces/logger"
+import type { Transport } from "../../core/interfaces/transport"
+import { type Logger, consoleLogger } from "../../core/interfaces/logger"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type {
   AppRequestMessage,
@@ -23,16 +23,16 @@ import type { MessagePortTransport } from "./message-port-transport"
 import {
   handleWCP1Hello as handleWCP1HelloHandshake,
   type WCPHandshakeContext,
-} from "./wcp1-3-handshake"
+} from "../../protocols/wcp/wcp1-3-handshake"
 import {
   handleDesktopAgentMessage as handleDesktopAgentMessageRouting,
   type WCPRoutingContext,
-} from "./wcp-message-routing"
+} from "../../protocols/wcp/wcp-message-routing"
 import {
   requestIntentResolution,
   resolveIntentSelection,
   type PendingIntentResolution,
-} from "./wcp-intent-resolver"
+} from "../../protocols/wcp/wcp-intent-resolver"
 import {
   cleanupStaleDisconnects,
   disconnectApp,
@@ -42,15 +42,15 @@ import {
   handleWCP6Goodbye,
   updateConnectionMetadata,
   type WCPConnectionContext,
-} from "./wcp-connection-management"
-import { WCPEventEmitter } from "./wcp-event-emitter"
+} from "../../protocols/wcp/wcp-connection-management"
+import { WCPEventEmitter } from "../../protocols/wcp/wcp-event-emitter"
 import type {
   AppConnectionMetadata,
   IntentResolverPayload,
   IntentResolverResponse,
   WCP1HelloMessage,
   WCPConnectorOptions,
-} from "./wcp-types"
+} from "../../protocols/wcp/wcp-types"
 
 export type {
   AppConnectionMetadata,
@@ -59,7 +59,7 @@ export type {
   IntentResolverResponse,
   WCPConnectorEvents,
   WCPConnectorOptions,
-} from "./wcp-types"
+} from "../../protocols/wcp/wcp-types"
 
 /**
  * WCP Connector for browser-based Desktop Agents.

@@ -1,5 +1,5 @@
 import type { AppMetadata, BrowserTypes } from "@finos/fdc3"
-import type { Logger } from "../../../core/interfaces/logger"
+import type { Logger } from "../../core/interfaces/logger"
 import type {
   AppRequestMessage,
   AgentEventMessage,

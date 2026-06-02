@@ -5,7 +5,7 @@ import type { AppDirectoryManager } from "../app-directory/app-directory-manager
 import type { AgentState, StateSetter } from "../state/types"
 import type { Logger, LogPayloadDetail } from "../interfaces/logger"
 import type { DesktopAgentConfig } from "../desktop-agent"
-import type { DACPMessageType } from "../dacp-protocol/dacp-messages"
+import type { DACPMessageType } from "../../protocols/dacp/dacp-messages"
 
 // ============================================================================
 // INTENT RESOLUTION CALLBACK

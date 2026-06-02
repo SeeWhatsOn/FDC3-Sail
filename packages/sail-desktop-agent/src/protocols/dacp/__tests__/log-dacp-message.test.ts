@@ -6,7 +6,7 @@ import {
   serializeLogCalls,
   serializeNonDebugLogs,
 } from "../../../__tests__/utils/capturing-logger"
-import type { Logger } from "../../interfaces/logger"
+import type { Logger } from "../../../core/interfaces/logger"
 import { logDACPMessage } from "../dacp-utils"
 
 type LogDACPMessageOptions = {

@@ -1,16 +1,16 @@
 import { BridgingError } from "@finos/fdc3"
 
-import { DACP_TIMEOUTS } from "../../dacp-protocol/dacp-constants"
+import { DACP_TIMEOUTS } from "../../../protocols/dacp/dacp-constants"
 import {
   DACPProcessingError,
   DACPTimeoutError,
   DACPValidationError,
-} from "../../dacp-protocol/dacp-errors"
+} from "../../../protocols/dacp/dacp-errors"
 import {
   withDACPTimeout,
   logDACPMessage,
   extractDACPMessageLogMetadata,
-} from "../../dacp-protocol/dacp-utils"
+} from "../../../protocols/dacp/dacp-utils"
 import { type DACPHandlerContext, type MessageType } from "../types"
 import { sendDACPErrorResponse } from "./utils/dacp-response-utils"
 

@@ -1,5 +1,5 @@
 import type { IntentResolverPayload, IntentResolverResponse } from "./wcp-types"
-import { consoleLogger } from "../../../core/interfaces/logger"
+import { consoleLogger } from "../../core/interfaces/logger"
 
 export interface PendingIntentResolution {
   resolve: (response: IntentResolverResponse) => void
