@@ -3,7 +3,7 @@ title: "Reorganize desktop-agent runtime folders"
 slug: reorganize-desktop-agent-runtime-folders
 kind: task
 type: chore
-status: approved
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -18,8 +18,8 @@ file_manifest:
 depends_on:
   - add-top-level-browser-desktop-agent-preset
 integration_branch: v3-pre
-branch: cursor/reorganize-desktop-agent-runtime-folders-8a9f
-pr_url: ""
+branch: cursor/reorganize-desktop-agent-runtime-folders-ade5
+pr_url: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/64"
 merged_pr: ""
 external_tracker: ""
 tags: []

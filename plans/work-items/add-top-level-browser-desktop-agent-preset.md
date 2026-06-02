@@ -3,7 +3,7 @@ title: "Add top-level browser Desktop Agent preset"
 slug: add-top-level-browser-desktop-agent-preset
 kind: task
 type: feature
-status: approved
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -18,8 +18,8 @@ file_manifest:
 depends_on:
   - promote-desktop-agent-host-contracts
 integration_branch: v3-pre
-branch: cursor/add-top-level-browser-desktop-agent-preset-8a9f
-pr_url: ""
+branch: cursor/add-top-level-browser-desktop-agent-preset-ade5
+pr_url: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/63"
 merged_pr: ""
 external_tracker: ""
 tags: []

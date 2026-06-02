@@ -3,7 +3,7 @@ title: "Update conformance harness desktop-agent API usage"
 slug: update-conformance-harness-desktop-agent-api
 kind: task
 type: feature
-status: approved
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -16,8 +16,8 @@ depends_on:
   - add-top-level-browser-desktop-agent-preset
   - promote-desktop-agent-host-contracts
 integration_branch: v3-pre
-branch: cursor/update-conformance-harness-desktop-agent-api-8a9f
-pr_url: ""
+branch: cursor/update-conformance-harness-desktop-agent-api-ade5
+pr_url: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/66"
 merged_pr: ""
 external_tracker: ""
 tags: []
