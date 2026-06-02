@@ -3,7 +3,7 @@ title: "Update consume-sail-desktop-agent skill"
 slug: update-consume-sail-desktop-agent-skill
 kind: task
 type: chore
-status: approved
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -14,8 +14,8 @@ depends_on:
   - promote-desktop-agent-host-contracts
   - define-desktop-agent-package-architecture
 integration_branch: v3-pre
-branch: cursor/update-consume-sail-desktop-agent-skill-8a9f
-pr_url: ""
+branch: cursor/update-consume-sail-desktop-agent-skill-ade5
+pr_url: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/67"
 merged_pr: ""
 external_tracker: ""
 tags: []

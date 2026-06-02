@@ -3,7 +3,7 @@ title: "Promote desktop-agent host contracts"
 slug: promote-desktop-agent-host-contracts
 kind: task
 type: feature
-status: approved
+status: pr_awaiting
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -19,8 +19,8 @@ file_manifest:
 depends_on:
   - define-desktop-agent-package-architecture
 integration_branch: v3-pre
-branch: cursor/promote-desktop-agent-host-contracts-8a9f
-pr_url: ""
+branch: cursor/promote-desktop-agent-host-contracts-ade5
+pr_url: "https://github.com/SeeWhatsOn/FDC3-Sail/pull/62"
 merged_pr: ""
 external_tracker: ""
 tags: []
