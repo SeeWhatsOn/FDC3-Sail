@@ -111,5 +111,5 @@ export { MessagePortTransport } from "./wcp/message-port-transport"
 
 // Re-export core Desktop Agent for convenience
 // (This is safe - it's already in the core package)
-export { DesktopAgent } from "../core/desktop-agent"
-export type { DesktopAgentConfig } from "../core/desktop-agent"
+export { DesktopAgent } from "../../core/desktop-agent"
+export type { DesktopAgentConfig } from "../../core/desktop-agent"

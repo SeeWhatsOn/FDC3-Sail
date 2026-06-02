@@ -12,7 +12,17 @@ sidebar_position: 3
 
 ## Overview
 
-The `sail-platform-api` package is the **main entry point** for using Sail. It:
+The `sail-platform-api` package is the **main entry point** for using Sail. It wraps `@finos/sail-desktop-agent` and adds platform services that **do not belong in the desktop-agent core**:
+
+| Concern | Owner |
+|---------|--------|
+| FDC3 engine (`core`, `protocols`, `transports`, `connectors`, `presets`) | `@finos/sail-desktop-agent` |
+| Host contracts shared with connectors | `@finos/sail-desktop-agent` (`src/host-contracts`) |
+| **Layout**, **workspace**, **storage**, **config** | `@finos/sail-platform-api` — routed to platform-api instead of desktop-agent |
+
+Choose **manual composition primitives** from `@finos/sail-desktop-agent` when building a custom stack; use **presets** from `@finos/sail-desktop-agent/presets` or `SailPlatform` here when you want batteries-included wiring plus platform features.
+
+It:
 
 1. **Creates and manages the Desktop Agent** - `SailPlatform` holds the `DesktopAgent` instance
 2. **Manages WCP connections** - Creates and manages `WCPConnector` for app connections
@@ -21,6 +31,10 @@ The `sail-platform-api` package is the **main entry point** for using Sail. It:
 5. **Event coordination** - Forwards Desktop Agent events to consumers
 
 **Key Principle**: `SailPlatform` is a stateless coordinator - the Desktop Agent is the source of truth
+
+## Desktop Agent package boundary
+
+`@finos/sail-desktop-agent` organizes code under `src/core`, `src/host-contracts`, `src/protocols`, `src/transports`, `src/connectors`, and `src/presets`. Platform **layout**, **workspace**, **storage**, and **config** APIs live in `@finos/sail-platform-api` only — they are not implemented in desktop-agent core.
 
 ## Package Structure
 

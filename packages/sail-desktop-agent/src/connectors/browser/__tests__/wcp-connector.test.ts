@@ -9,8 +9,8 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { WCPConnector } from "../wcp/wcp-connector"
-import { createInMemoryTransportPair } from "../../transports/in-memory-transport"
-import type { Transport } from "../../core/interfaces/transport"
+import { createInMemoryTransportPair } from "../../../transports/in-memory-transport"
+import type { Transport } from "../../../core/interfaces/transport"
 import type { BrowserTypes } from "@finos/fdc3"
 
 // Helper to create a mock WCP1Hello message

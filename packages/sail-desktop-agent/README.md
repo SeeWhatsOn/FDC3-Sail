@@ -17,31 +17,31 @@ This package provides a production-ready FDC3 Desktop Agent that manages applica
 
 ## Architecture
 
-The package follows a clean three-layer architecture:
+`@finos/sail-desktop-agent` is the **pure FDC3 engine**: DACP handlers, agent state, and protocol validation with no Sail platform UI, layout, workspace, storage, or config. Those platform concerns **belong in `@finos/sail-platform-api`**, not in the desktop-agent core — use `SailPlatform` when you need layout, workspace, storage, and config alongside FDC3.
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  Browser Apps (iframes)                                                 │
-│  Using @finos/fdc3-get-agent                                           │
-│  fdc3.raiseIntent(), fdc3.broadcast(), etc.                            │
-└────────────────────────────────┬────────────────────────────────────────┘
-                                 │ MessagePort (WCP)
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  WCPConnector (Browser only)                                            │
-│  - Handles WCP1-3 handshake with iframe apps                           │
-│  - Manages MessagePorts per app                                         │
-│  - Bridges to Transport                                                 │
-└────────────────────────────────┬────────────────────────────────────────┘
-                                 │ Transport (swappable)
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  DesktopAgent (runs anywhere)                                           │
-│  - Pure FDC3 logic, zero environment dependencies                       │
-│  - DACP message handlers                                                │
-│  - State registries (apps, channels, intents)                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+### Public API modes: manual composition vs presets
+
+| Mode | When to use | Entry points |
+|------|-------------|--------------|
+| **Manual composition** | Custom agents, alternate transports, full control over `DesktopAgent`, connectors, and transports | `@finos/sail-desktop-agent`, `/connectors`, `/transports` |
+| **Presets** | Faster integration with opinionated wiring for common browser and server setups | `@finos/sail-desktop-agent/presets` |
+
+Choose **manual composition primitives** when you assemble `DesktopAgent`, `WCPConnector`, and `Transport` yourself. Choose **presets** (for example `createBrowserDesktopAgent`) when the default wiring matches your deployment and you want less boilerplate.
+
+### Package boundary (target `src/` tree)
+
+Top-level folders under `packages/sail-desktop-agent/src/`:
+
+| Folder | Role |
+|--------|------|
+| `core/` | Pure FDC3 Desktop Agent — handlers, state, app directory |
+| `host-contracts/` | Host-facing TypeScript contracts shared with connectors |
+| `protocols/` | DACP and WCP protocol types and helpers |
+| `transports/` | Swappable `Transport` implementations |
+| `connectors/` | Environment bridges (browser WCP connector, MessagePort) |
+| `presets/` | High-level factory functions exported from `@finos/sail-desktop-agent/presets` |
+
+Platform layout, workspace persistence, storage clients, and Sail config are **routed to `@finos/sail-platform-api`** instead of `@finos/sail-desktop-agent` core.
 
 ### Directory Structure
 
@@ -53,21 +53,42 @@ packages/sail-desktop-agent/
 │   │   ├── handlers/                  # DACP message handlers
 │   │   │   └── dacp/                  # All FDC3 operation handlers
 │   │   ├── state/                     # Immutable agent state (Immer-based updates)
-│   │   │   ├── types.ts
-│   │   │   ├── initial-state.ts
-│   │   │   ├── selectors/             # Read-only state projections
-│   │   │   └── mutators/              # State transition helpers
 │   │   ├── interfaces/                # Transport & AppLauncher interfaces
 │   │   └── app-directory/             # FDC3 App Directory management
-│   ├── browser/                       # Browser-specific code
-│   │   ├── browser-desktop-agent.ts   # Factory functions (local DA + WCP client)
-│   │   └── wcp/                       # WCP implementation
-│   │       ├── wcp-connector.ts       # WCP protocol handler & routing
-│   │       ├── message-port-transport.ts
-│   │       └── ...                    # Handshake, connection management, intent resolver UI
-│   └── transports/                    # Shared transport implementations
-│       └── in-memory-transport.ts     # Same-process linked transports
+│   ├── host-contracts/            # Host-facing contracts for connectors
+│   ├── protocols/                   # DACP / WCP protocol definitions
+│   ├── transports/                  # Shared transport implementations
+│   │   └── in-memory-transport.ts     # Same-process linked transports
+│   ├── connectors/                  # Environment bridges (browser WCP, MessagePort)
+│   │   └── browser/                   # WCP connector and browser factories
+│   └── presets/                     # High-level preset factories (see /presets export)
 └── test/                              # Cucumber BDD tests
+```
+
+### Runtime layering
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Browser Apps (iframes)                                                 │
+│  Using @finos/fdc3-get-agent                                           │
+│  fdc3.raiseIntent(), fdc3.broadcast(), etc.                            │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │ MessagePort (WCP)
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  connectors/browser — WCPConnector                                      │
+│  - Handles WCP1-3 handshake with iframe apps                           │
+│  - Manages MessagePorts per app                                         │
+│  - Bridges to Transport                                                 │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │ Transport (swappable)
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  core — DesktopAgent (runs anywhere)                                    │
+│  - Pure FDC3 logic, zero environment dependencies                       │
+│  - DACP message handlers                                                │
+│  - State registries (apps, channels, intents)                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Installation
@@ -78,12 +99,17 @@ npm install @finos/sail-desktop-agent
 
 ## Quick Start
 
+### Presets (recommended)
+
+Use `@finos/sail-desktop-agent/presets` for opinionated factories. Prefer **presets** over **manual composition** when the default browser or remote-client wiring fits your app.
+
 ### Browser Mode (Desktop Agent in same window)
 
 Use when Desktop Agent runs in the browser alongside your UI:
 
 ```typescript
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/browser"
+import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
+// Or: import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/browser"
 
 const { desktopAgent, wcpConnector, start, stop } = createBrowserDesktopAgent({
   wcpOptions: {
@@ -154,7 +180,7 @@ start()
 
 ### Manual Composition (Advanced)
 
-For full control over component setup:
+For full control over component setup, use **composition primitives** instead of presets:
 
 ```typescript
 import { DesktopAgent } from "@finos/sail-desktop-agent"
