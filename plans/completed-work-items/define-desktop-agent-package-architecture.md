@@ -3,7 +3,7 @@ title: "Define desktop-agent package architecture"
 slug: define-desktop-agent-package-architecture
 kind: task
 type: feature
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -97,3 +97,4 @@ None.
 ## Learnings extracted
 
 None.
+- 2026-06-02: reconcile-queue.sh — PR merged

@@ -3,7 +3,7 @@ title: "Update consume-sail-desktop-agent skill"
 slug: update-consume-sail-desktop-agent-skill
 kind: task
 type: chore
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -88,3 +88,4 @@ None.
 ## Learnings extracted
 
 None.
+- 2026-06-02: reconcile-queue.sh — PR merged

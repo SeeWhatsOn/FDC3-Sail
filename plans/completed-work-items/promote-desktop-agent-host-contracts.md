@@ -3,7 +3,7 @@ title: "Promote desktop-agent host contracts"
 slug: promote-desktop-agent-host-contracts
 kind: task
 type: feature
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -102,3 +102,4 @@ None.
 ## Learnings extracted
 
 None.
+- 2026-06-02: reconcile-queue.sh — PR merged
