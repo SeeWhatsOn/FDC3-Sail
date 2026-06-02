@@ -1,6 +1,6 @@
 import type { AppIdentifier, AppMetadata, BrowserTypes, Context } from "@finos/fdc3"
 import type { Transport } from "../interfaces/transport"
-import type { AppLauncher } from "../interfaces/app-launcher"
+import type { AppLauncher } from "../../host-contracts/app-launcher"
 import type { AppDirectoryManager } from "../app-directory/app-directory-manager"
 import type { AgentState, StateSetter } from "../state/types"
 import type { Logger, LogPayloadDetail } from "../interfaces/logger"

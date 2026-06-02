@@ -23,7 +23,7 @@
  * ## What's Exported
  *
  * - **DesktopAgent** - Core Desktop Agent class
- * - **Interfaces** - Transport, AppLauncher
+ * - **Interfaces** - Transport (core); AppLauncher and other host contracts via `./host-contracts`
  * - **State Registries** - App, Intent, Channel registries
  * - **App Directory** - App directory manager
  * - **Types** - TypeScript types and interfaces
@@ -37,6 +37,9 @@
 
 // Re-export everything from core
 export * from "./core"
+
+// UI-free host contracts for platform builders (launch, intent resolver, channel control)
+export * from "./host-contracts"
 
 // NOTE: Browser-specific code is NOT exported here
 // Import from @finos/sail-desktop-agent/browser for:
