@@ -21,7 +21,7 @@
  */
 
 import { DesktopAgent } from "../../core"
-import type { DesktopAgentConfig, Transport } from "../../core"
+import type { DesktopAgentOptions, Transport } from "../../core"
 import type { SailImplementationMetadata } from "../../core/sail-default-config"
 import { consoleLogger } from "../../core/interfaces/logger"
 import type { Logger, LogPayloadDetail } from "../../core/interfaces/logger"
@@ -137,8 +137,13 @@ export function createWCPClient(options: WCPClientOptions): WCPClientResult {
  * adds browser-specific options for WCP and app directories.
  */
 export interface BrowserDesktopAgentOptions extends Pick<
-  DesktopAgentConfig,
-  "appLauncher" | "userChannels" | "apps"
+  DesktopAgentOptions,
+  | "appLauncher"
+  | "userChannels"
+  | "apps"
+  | "openContextListenerTimeoutMs"
+  | "heartbeatIntervalMs"
+  | "heartbeatTimeoutMs"
 > {
   /**
    * Override FDC3 implementation metadata (FDC3-Sail defaults applied by factory).
@@ -185,6 +190,12 @@ export interface BrowserDesktopAgentResult {
    * The WCP connector instance (handles iframe connections)
    */
   wcpConnector: WCPConnector
+
+  /**
+   * Transport between WCP Connector and Desktop Agent (connector side).
+   * Host platforms use this for typed channel control (e.g. join/leave on behalf of apps).
+   */
+  connectorTransport: Transport
 
   /**
    * Start the Desktop Agent and WCP connector
@@ -272,6 +283,9 @@ export function createBrowserDesktopAgent(
     apps: options?.apps,
     userChannels: options?.userChannels,
     implementationMetadata: options?.implementationMetadata,
+    openContextListenerTimeoutMs: options?.openContextListenerTimeoutMs,
+    heartbeatIntervalMs: options?.heartbeatIntervalMs,
+    heartbeatTimeoutMs: options?.heartbeatTimeoutMs,
     logger,
     logPayloadDetail: options?.logPayloadDetail,
     requestIntentResolution: request => wcpConnector.requestIntentResolution(request),
@@ -316,6 +330,7 @@ export function createBrowserDesktopAgent(
   return {
     desktopAgent,
     wcpConnector,
+    connectorTransport,
     start,
     stop,
   }
