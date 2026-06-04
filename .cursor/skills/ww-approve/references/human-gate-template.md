@@ -33,4 +33,3 @@ revise [note]
 For `revise`, update the draft, re-run draft validation from
 `ww-work-items`, and re-present. Do not mark the work item approved
 until the human replies `approve`.
-

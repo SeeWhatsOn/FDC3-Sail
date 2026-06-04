@@ -41,7 +41,7 @@ Optional: `ww-planning-stack` when filtering by PRD or explaining order.
 
 - Builds an **approval queue** from `plans/work-items/*.md`
 - Runs **draft validation** (`ww-work-items` → `validation-before-approve.md`)
-- Presents each item using `ww-prd-breakdown` → `human-gate-template.md`
+- Presents each item using [references/human-gate-template.md](references/human-gate-template.md)
 - On human **`approve`**, writes `status: approved` immediately
 - On **`done`** (shipped elsewhere), writes `status: done`
 - On **`skip`**, leaves `draft` and continues
@@ -130,8 +130,8 @@ Next: /ww-deliver
 | Resume mid-backlog | `/ww-approve` then `/ww-deliver` |
 | One item only | `/ww-approve <slug>` |
 
-Update cross-links when editing: `ww-planning-stack`, `ww-prd-breakdown` handoff,
-`ww-deliver-work-items` startup (suggest `/ww-approve` when queue empty).
+Update cross-links when editing: `ww-planning-stack`, `spec-planner` Stage 5 handoff,
+`ww-deliver` startup (suggest `/ww-approve` when queue empty).
 
 ## Progress checklist
 

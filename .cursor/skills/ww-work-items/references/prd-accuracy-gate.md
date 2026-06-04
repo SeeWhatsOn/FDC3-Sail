@@ -20,7 +20,7 @@ are explicitly recorded as `## Blocked decisions` on the PRD.
 
 ### 2. Codebase verification
 
-For each **in scope** PRD row, record evidence:
+For each **in scope** PRD row, use `verify-this` to produce evidence:
 
 | Label | Meaning |
 |-------|---------|

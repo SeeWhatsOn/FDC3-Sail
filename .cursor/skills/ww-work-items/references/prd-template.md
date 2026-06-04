@@ -1,8 +1,8 @@
 # PRD Template
 
 Use this checklist when creating or refining a PRD before splitting it into
-epics and work items. If critical fields are missing, use `interview-me` or
-ask focused questions instead of guessing.
+epics and work items. If critical fields are missing, use the `interview`
+skill or ask focused questions instead of guessing.
 
 ## Required
 
@@ -29,7 +29,7 @@ ask focused questions instead of guessing.
 
 - **Workflow:** `workflow_profile` — PRD slug under `workloads:` in
   `plans/workflow-config.yaml` when this batch needs non-default automation
-  (e.g. `draft_pr`). See `plans/WORKFLOW.md`.
+  (e.g. `draft_pr`).
 - Reference docs and source links.
 - Rollout or launch notes.
 - Migration or deprecation notes.
@@ -49,4 +49,3 @@ Before drafting work items:
 4. Identify unanswered questions that block safe slicing.
 5. Decide whether missing details are blockers, `kind: spike`, or work-item
    `## Blocked decisions`.
-

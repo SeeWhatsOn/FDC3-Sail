@@ -69,12 +69,54 @@ All commands from the repo root — see `package.json` `scripts` for the full li
 
 Local PRD and work-item queue for `/ww-plan`, `/ww-deliver`, `/ww-approve`, `/ww-reconcile`.
 
-- **Config:** `plans/workflow-config.yaml` (repo defaults). Load via skill `ww-workflow-config` before any ww command. Personal overrides: `plans/local/user-overrides.yaml` (gitignored).
-- **Docs:** `plans/WORKFLOW.md` — automation tiers, status lifecycle, reconcile.
+- **Config:** `plans/workflow-config.yaml` (repo defaults). Personal overrides: `plans/local/user-overrides.yaml` (gitignored).
+- **Docs:** `plans/WORKFLOW.md` — full lifecycle diagram, skill map, automation tiers, status lifecycle.
+- **Skills:** `spec-planner` (plan), `ww-approve` (approve), `ww-deliver` (deliver) in `.cursor/skills/`.
+- **Integration branch:** `v3-pre`
+- **Plans in git:** `repo.plans.version_in_git: true` — commit work-item status with code when automation tier commits.
 - **Queue audit:** `plans/scripts/queue-status.sh`, `plans/scripts/reconcile-queue.sh` (needs `gh` for PR merge detection).
-- **Delivery tiers:** `stage_only` (no commit/PR) | `commit_push` | `draft_pr`. Plans and code follow the same tier; when `repo.plans.version_in_git: true`, commit work-item status with code.
-- **Statuses:** `approved` → `in-progress` → `staged` / `waiting_on_user` → `committed` / `pr_awaiting` → `done`. Run `/ww-reconcile` after merging PRs so `pr_awaiting` becomes `done`; done items move to `plans/completed-work-items/`.
-- **First run:** If `workflow-config.yaml` is missing, the agent runs a short interview once, writes the file, then continues.
+
+#### Delivery automation tiers
+
+| Tier | Behaviour after Phase D passes |
+|------|-------------------------------|
+| `stage_only` | Stage files; update work items; **no** commit, push, or PR — human commits manually |
+| `commit_push` | On human `approve`: commit + push branch; set `committed` |
+| `draft_pr` | On human `approve`: commit + push + open draft PR; set `pr_awaiting` + `pr_url` |
+
+This repo default: `commit_push`. Human chat `approve` always required before commit. Workload may override per PRD `workflow_profile` key.
+
+#### Status lifecycle
+
+```
+draft → approved → in-progress → waiting_on_user → committed / pr_awaiting → done
+                              ↘ blocked
+                              ↘ escalated → dead-letter
+```
+
+Full lifecycle + frontmatter fields: `.cursor/skills/ww-work-items/references/status-lifecycle.md`.
+PR reconcile procedure: `.cursor/skills/ww-work-items/references/reconcile.md`.
+Done items archive to `plans/completed-work-items/`.
+
+#### Plans / git policy
+
+- Always update work item markdown on disk during delivery (`in-progress`, `staged`, etc.).
+- Git add `plans/` only when: `repo.plans.version_in_git: true` AND tier is `commit_push` or `draft_pr` AND human approved commit.
+- Do not add `plans/` to `.gitignore` automatically — versioning is a project decision.
+
+#### First-run interview (run once if `workflow-config.yaml` missing)
+
+Ask one cluster at a time; skip questions already answered in any partial config:
+
+1. Confirm writing `plans/workflow-config.yaml` to the repository (team defaults).
+2. Integration branch — **GUESS:** `v3-pre` (or current branch from git).
+3. Version plans in git? Yes (queue state visible in PRs) or No (local only). **Recommended:** yes.
+4. Default automation tier: `stage_only` | `commit_push` | `draft_pr` — **GUESS:** `commit_push`.
+5. Squash to integration branch after approve? **Default:** no — keep feature branch, merge in GitHub.
+6. Branch name template — **GUESS:** `cursor/<descriptive-slug>-8a9f`.
+7. Subagent probe at delivery start (`verifier-agent` → `PONG`)? **GUESS:** yes.
+
+After answers write `plans/workflow-config.yaml` then resume the command that triggered setup.
 
 ### Cucumber tags (`packages/sail-desktop-agent`)
 
@@ -100,13 +142,13 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 - Keep `@finos/sail-desktop-agent` aligned with FDC3 2.2 spec behavior; Sail-specific extensions (e.g. WCP origin allowlists) belong in `@finos/sail-platform-api`, not the core library.
 - FDC3-Sail product defaults live in `packages/sail-desktop-agent/src/core/sail-default-config.ts`; `new DesktopAgent(options)` merges them in the constructor (partial `implementationMetadata` overrides are deep-merged). Do not add handler-level `??` fallbacks for implementation metadata.
 - `resolveDesktopAgentConfig()` remains exported for tests and pre-built config; app code normally uses `new DesktopAgent({ transport, ... })` or `createBrowserDesktopAgent()` / `SailPlatform`.
-- Product identity (`provider`, `providerVersion`) should not use a separate JSON/YAML config file or CI env override; pass overrides through TypeScript factory/config APIs.
-- `providerVersion` tracks `@finos/sail-desktop-agent` `package.json` version so deployed npm semver and `getInfo()` stay in lock step.
-- Provider branding stays `FDC3-Sail` across library and platform layers unless a caller explicitly overrides metadata in config.
+- Product identity (`provider`, `providerVersion`) and branding (`FDC3-Sail`) stay consistent across library and platform layers; `providerVersion` tracks the `@finos/sail-desktop-agent` npm semver; pass overrides through TypeScript factory/config APIs, not env vars or separate JSON/YAML files.
 - Keep `@finos/sail-desktop-agent` headless but usable on its own: FDC3-required host capabilities such as app launch, intent resolution, app directory access, channel state, and instance/connection registry belong as core package contracts; broader layout, workspace, configuration, storage, and product shell concerns belong in `@finos/sail-platform-api`.
-- When burning down FINOS toolbox failures, classify each category (product bug, BDD assertion gap, MockTransport/WCP integration gap, platform/web gap, or explicit deferral) and assign a regression owner before closing the epic — product fixes alone are insufficient.
-- `@conformance2.2` BDD means conformance-area alignment, not FINOS toolbox oracle equivalence; assert toolbox-checked fields (often from `conformance-appd.json`) and cover browser/WCP paths where the toolbox checks runtime behavior.
+- When burning down FINOS toolbox failures, classify by layer (product bug, BDD assertion gap, MockTransport/WCP integration gap, platform/web gap, or explicit deferral) and assign a regression owner before closing the epic; `@conformance2.2` BDD is conformance-area alignment, not toolbox oracle equivalence — assert toolbox-checked fields (often from `conformance-appd.json`) and cover browser/WCP paths where the toolbox checks runtime behavior.
 - On `@finos/sail-desktop-agent` v3 refactor work, backward-compatibility shims are not required; remove `@deprecated` re-exports and import from canonical paths (e.g. `host-contracts/`).
+- All new Watson workflow skill and agent files belong in the **repo-level `.cursor/` folder** (e.g. `.cursor/skills/`, `.cursor/agents/`), not the user-root `~/.cursor/`; FDC3-Sail-specific planning artifacts stay with the repo.
+- Do not modify any skill not prefixed `ww-` or not authored by Watson without alerting the user first.
+- Watson orchestrator skills must not load all atomic skills simultaneously in one long context; delegate each stage to a focused sub-agent or atomic skill that loads only what it needs — the anti-pattern is an orchestrator that inlines all logic itself.
 
 ## Learned Workspace Facts
 
@@ -120,3 +162,5 @@ Tags are for **filtering and classification**, not for wiring hooks. Global tear
 - Root `vitest.config.ts` uses Vitest `test.projects` for each workspace package config; Playwright specs under `packages/sail-web/tests/` are excluded from `npm test` — run them with `npx playwright test` or `npm run test:e2e -w @finos/sail-web`.
 - `@finos/sail-desktop-agent` target `src/` top-level folders: `core`, `host-contracts`, `protocols`, `transports`, `connectors`, `presets`; browser WCP integration belongs under `connectors/`, not a top-level `browser/` folder.
 - WCP4 over `InMemoryTransport` (browser preset, conformance harness): do not put `Window` on DACP message meta — `InMemoryTransport.send` uses `structuredClone` and throws `DataCloneError`; store WCP1Hello source windows in `wcp-pending-source-window.ts` keyed by temp `instanceId` and resolve in `wcp-handlers.ts`.
+- `ww-prd-breakdown/SKILL.md` is now a slim `spec-planner` orchestrator; four atomic planning skills — `interview`, `prd`, `work-breakdown`, `bdd` — live under `.cursor/skills/` and are called one per stage; `ww-workflow-config` folder was deleted, its content absorbed into the Watson workflow section of `AGENTS.md`; reference files (`status-lifecycle.md`, `reconcile.md`) moved to `.cursor/skills/ww-work-items/references/`.
+- `.cursor/agents/architect-agent.md` is a conditional architecture-review agent that fires when work involves a new service, shared state mutation, or ambiguous cross-module approach, and drafts ADRs; `.cursor/agents/spec-agent.md` was updated to add INVEST validation and `bdd` skill delegation.

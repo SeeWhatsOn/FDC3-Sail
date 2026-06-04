@@ -133,6 +133,27 @@ The planning orchestrator creates and revises draft work items.
 Do not persist a transient `loop` status. Keep the work item
 `in-progress` and record retries in `## Loop history`.
 
+Extended lifecycle, automation tiers, and frontmatter fields:
+[references/status-lifecycle.md](references/status-lifecycle.md).
+
+PR reconcile procedure (sync `pr_awaiting` → `done` after merge):
+[references/reconcile.md](references/reconcile.md).
+
+## Planning References
+
+Shared reference files used by the planning harness (`spec-planner`) and
+atomic planning skills:
+
+| File | Used by |
+|------|---------|
+| [references/prd-template.md](references/prd-template.md) | `prd` skill, `spec-planner` |
+| [references/prd-accuracy-gate.md](references/prd-accuracy-gate.md) | `prd` skill, `spec-planner` |
+| [references/moscow-guide.md](references/moscow-guide.md) | `work-breakdown` skill |
+| [references/invest-criteria.md](references/invest-criteria.md) | `work-breakdown` skill, `spec-agent` |
+| [references/status-lifecycle.md](references/status-lifecycle.md) | `ww-approve-work-items`, `ww-deliver-work-items` |
+| [references/reconcile.md](references/reconcile.md) | `/ww-reconcile` |
+| [references/agents-md-schema.md](references/agents-md-schema.md) | All ww harnesses |
+
 ## Archive on done
 
 When `status` becomes `done`, immediately move the file from
