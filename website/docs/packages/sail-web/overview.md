@@ -44,6 +44,7 @@ Reference wiring for host contracts:
 
 ## Related
 
-- [Getting started](../../getting-started)
+- [Run Sail](../../run-sail) — run or host the full platform
+- [Getting Started](../../getting-started) — embed a Desktop Agent in your own web app
 - [Deployment targets (DPWA)](../../architecture/deployment-targets)
 - [@finos/sail-platform-api](../platform-api/overview)

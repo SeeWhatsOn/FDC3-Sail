@@ -77,7 +77,6 @@ function HomepageFeatures(): ReactNode {
 }
 
 export default function Home(): ReactNode {
-  const { siteConfig } = useDocusaurusContext();
   return (
     <Layout
       title="Home"

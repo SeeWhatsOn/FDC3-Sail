@@ -44,7 +44,9 @@ packages/sail-desktop-agent/src/
 
 | Doc | Purpose |
 |-----|---------|
-| [Integrator guide](./integrator-guide) | **Start here** — host contracts, presets, deployment fork, WCP/DACP detail |
+| [Add your app to Sail](../../add-your-app) | App developer onboarding — `@finos/fdc3`, app directory metadata, contexts and intents |
+| [Getting started](../../getting-started) | Adoption paths — preset vs manual, host contracts, `@finos/fdc3` |
+| [Integrator guide](./integrator-guide) | **Deep reference** — host contracts, presets, deployment fork, WCP/DACP detail |
 | [Composition & internals](./composition) | Diagrams — how edge, DA, transports, and host contracts interact |
 | [Conformance traceability](./conformance) | BDD `@conformance2.2` coverage vs FINOS toolbox oracle |
 

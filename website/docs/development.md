@@ -1,10 +1,42 @@
 ---
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 # Development Guide
 
-This guide provides detailed instructions for developers contributing to FDC3-Sail.
+This guide is for **contributors** who clone the FDC3-Sail monorepo and work on Sail packages, tests, and documentation.
+
+If you want to **run the Sail platform** without contributing, see [Run Sail](./run-sail). If you want to **embed a Desktop Agent in your own web app**, see [Getting Started](./getting-started).
+
+## Prerequisites
+
+- Node.js **24+**
+- npm **11+**
+
+```bash
+nvm use 24
+```
+
+## Clone and install
+
+```bash
+git clone https://github.com/finos/FDC3-Sail.git
+cd FDC3-Sail
+npm install
+```
+
+### Run the full stack locally
+
+```bash
+npm run dev
+```
+
+Starts Desktop Agent (watch), platform API (watch), server stub, and Sail web UI on **http://localhost:3000**.
+
+```bash
+npm run dev:desktop   # Electron desktop mode
+npm run docs:dev      # Documentation site (use --port 3002 if web app is running)
+```
 
 ## Project Structure
 
@@ -21,6 +53,13 @@ FDC3-Sail/
 │   └── sail-electron/  # Electron desktop wrapper (@finos/sail-electron)
 └── website/            # Documentation (Docusaurus)
 ```
+
+## Internal and Development Packages
+
+The main package docs focus on packages adopters are likely to use directly. These package docs are most useful when working inside the monorepo:
+
+- [@finos/sail-ui](./packages/sail-ui/overview) - shared React components used by Sail apps.
+- [@finos/sail-conformance-harness](./packages/conformance-harness/overview) - clean-room FDC3 toolbox host for conformance debugging.
 
 ## Common Commands
 

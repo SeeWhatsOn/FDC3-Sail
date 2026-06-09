@@ -7,7 +7,7 @@ title: Integrator guide
 
 This document is the **primary integrator guide** for FDC3 in the browser. The package implements two cooperating roles:
 
-1. **Browser edge** — everything that talks to iframe apps (WCP, MessagePort, per-app routing).
+1. **Browser edge** — everything that talks to child app browsing contexts (WCP, MessagePort, per-app routing).
 2. **Desktop Agent (DA)** — headless FDC3 logic (DACP handlers, channel state, intents, instance registry).
 
 Everything else is detail under one of those two boxes.
@@ -34,7 +34,7 @@ Everything else is detail under one of those two boxes.
 
 | Role | Package path | Speaks to |
 |------|--------------|-----------|
-| Browser edge | `src/connectors/browser/`, `src/protocols/wcp/` | iframe apps (WCP + MessagePort) |
+| Browser edge | `src/connectors/browser/`, `src/protocols/wcp/` | iframe or child-window apps (WCP + MessagePort) |
 | Desktop Agent | `src/core/`, `src/protocols/dacp/` | Host via `Transport`; apps only via edge |
 
 **InMemoryTransport** (local mode) is only the **short internal wire** between edge and DA in the same JS process. It is **not** how apps connect. Toolbox `AppTimeout` failures usually mean **MessagePort routing or instanceId mismatch** on the edge, not broken InMemoryTransport.
@@ -145,6 +145,59 @@ function currentChannel(instanceId: string) {
 | Lifecycle | Recommended — tab chrome, cleanup | `onAppConnected` / `onAppDisconnected` / `onHandshakeFailed` |
 
 `createBrowserDesktopAgent` returns a single `DesktopAgent` handle; the browser edge starts and stops with `desktopAgent.start()` / `desktopAgent.stop()`. You do not manage `WCPConnector` in application code.
+
+## `getAgent()` discovery support
+
+FDC3 `getAgent()` supports more than one web mechanism. Sail's browser host implements the browser-resident **proxy** mechanism: a child app sends `WCP1Hello` with `postMessage`, Sail replies with `WCP3Handshake`, and app API calls then travel over a `MessagePort` using DACP.
+
+| Scenario | Does standard `getAgent()` find Sail? | What to do |
+|----------|---------------------------------------|------------|
+| App in an iframe owned by the Sail host | Yes. This is the primary and tested browser path. | Set the iframe `name` to the host instance id and list the app URL in the app directory. |
+| App opened with `window.open` by the Sail host | Can work if the child keeps `window.opener` and the app directory identity matches. | Implement a window-based `AppLauncher`; this is not the default `sail-web` launcher. |
+| App in a traditional preload-style container | `getAgent()` can return `window.fdc3` when the container injects it. | This is a different FDC3 web interface. Sail's browser preset does not currently install `window.fdc3` into the host page. |
+| React component rendered in the same top-level page as the Sail host | No, not as a separate standard FDC3 app. There is no parent/opener for proxy discovery, and no Sail preload object is installed. | Treat it as host UI and use `SailPlatform` / `DesktopAgent` host APIs, or put it in an iframe/window. |
+
+This is the key difference for teams coming from preload-style desktop agents: in the browser-resident model, independent apps usually need independent browsing contexts. Same-page components can still participate in the product UI, but they are not separate FDC3 app instances through `@finos/fdc3` unless Sail later provides a dedicated top-level adapter.
+
+The browsing-context boundary is also a feature. A Sail host can embed apps from different teams and technology stacks side by side: React, Vue, Angular, Svelte, or plain JavaScript. Each app owns its bundle and deployment URL; Sail owns launch, identity, channels, intents, and lifecycle.
+
+### App code
+
+Application code should stay vendor-neutral and use the FDC3 package:
+
+```typescript
+import { fdc3 } from "@finos/fdc3"
+
+const agent = await fdc3.getAgent()
+
+await agent.addContextListener("fdc3.instrument", context => {
+  console.log("instrument context", context)
+})
+
+await agent.broadcast({
+  type: "fdc3.instrument",
+  id: { ticker: "AAPL" },
+})
+```
+
+Host code supplies the app directory and launches the app. App code should not import `@finos/sail-desktop-agent`, inspect parent windows, or manually speak DACP.
+
+### Same-page components
+
+If your "app" is a React component rendered inside the same page that created `SailPlatform` or `createBrowserDesktopAgent`, it is part of the host shell. Use the host APIs already available in that process:
+
+```typescript
+const platform = new SailPlatform({ appLauncher, intentResolver })
+platform.start()
+
+const channels = platform.getUserChannels()
+const currentChannel = platform.getAppUserChannel(instanceId)
+await platform.changeAppChannel(instanceId, "fdc3.channel.1")
+```
+
+If you need those components to behave like independent FDC3 apps with their own identity, listeners, channel membership, and lifecycle, launch each one in an iframe or child window. A future Sail component adapter could provide a direct in-page API, but that would be a Sail-specific integration path rather than the standard `@finos/fdc3` `getAgent()` discovery path.
+
+Installing a global `window.fdc3` object in the host page would not by itself make each component an independent app. Every component would see the same global API and share the same browsing context. Without an additional Sail-owned identity layer, their listeners, channel membership, and app metadata would all belong to one host-page app identity. Multiple component libraries should therefore not each try to install their own `window.fdc3`; that would create competing globals rather than separate FDC3 apps.
 
 ### Wiring intent resolver and channel selector UI
 

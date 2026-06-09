@@ -22,5 +22,6 @@ npm run dev:desktop
 
 ## Related
 
+- [Run Sail](../../run-sail) — run or host the full platform
 - [Deployment targets (Electron)](../../architecture/deployment-targets)
 - [@finos/sail-web](../sail-web/overview)
