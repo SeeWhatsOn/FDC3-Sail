@@ -7,6 +7,10 @@ thumbs.db
 packages/preload/exposedInMainWorld.d.ts
 build
 .rollup.cache
+
+# Docusaurus generated cache (regenerated on start/build; see `docusaurus clear`)
+website/.docusaurus
+.cache-loader
 FDC3-Sail.pem
 *.tsbuildinfo
 packages/sail-desktop-agent/cucumber-report.html

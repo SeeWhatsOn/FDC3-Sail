@@ -11,7 +11,7 @@ Record of discovery against the official FDC3 conformance toolbox (FINOS), compa
 | `conformance-report-v3.txt` | Clean-room conformance harness run — **15 pass / 45 fail**, ~155s |
 | `conformance-appd.json` | Conformance app directory; merged in `packages/sail-web/src/main.tsx` and loaded by `packages/sail-conformance-harness` (desktop-agent-only clean room) |
 
-The toolbox exercises the **full browser stack** (sail-web → SailPlatform / SailAppLauncher → WCP → `@finos/sail-desktop-agent`), not Cucumber’s `MockTransport` path. In-repo BDD coverage is documented in `packages/sail-desktop-agent/docs/conformance-traceability.md` (~101 `@conformance2.2` scenarios).
+The toolbox exercises the **full browser stack** (sail-web → SailPlatform / SailAppLauncher → WCP → `@finos/sail-desktop-agent`), not Cucumber’s `MockTransport` path. In-repo BDD coverage is documented in `website/docs/packages/desktop-agent/conformance.md` (~101 `@conformance2.2` scenarios).
 
 ## v1 → v2 delta (high level)
 
@@ -203,7 +203,7 @@ Merged burn-down items on v3-pre; **expected** harness impact pending maintainer
 
 ## 7. Related repo docs
 
-- `packages/sail-desktop-agent/docs/conformance-traceability.md` — BDD ↔ FDC3 2.2 areas  
+- `website/docs/packages/desktop-agent/conformance.md` — BDD ↔ FDC3 2.2 areas  
 - `plans/prd-desktop-agent-conformance-gaps.md` — Planned hardening (cleanup, WCP BDD, error enums)  
 - `AGENTS.md` — WCP temp vs canonical ids, testing conventions  
 

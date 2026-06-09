@@ -16,7 +16,7 @@ Ask for or locate:
 | Conformance export | `conformance-report-v4.txt` (or latest `conformance-report*.txt` in repo root) |
 | App directory oracle | `conformance-appd.json` |
 | Prior review / matrix | `conformance-test-failure-review.md` |
-| BDD map | `packages/sail-desktop-agent/docs/conformance-traceability.md` |
+| BDD map | `website/docs/packages/desktop-agent/conformance.md` |
 
 Parse the report header: `passes: N failures: M duration: …`
 
@@ -132,7 +132,7 @@ npm run dev -w @finos/sail-conformance-harness   # :3001 manual toolbox
 - [ ] Assert **toolbox fields**: `intent.displayName`, `AppIntent.apps.length`, `AppMetadata.desktopAgent`, error `.message`
 - [ ] Align Vitest oracle with toolbox (no test that expects wrong count vs FINOS)
 - [ ] For delivery failures: assert **destination.instanceId** in WCP tests, not only DACP type
-- [ ] Update `conformance-traceability.md` row from `partial` → `covered` only when the new guard matches toolbox symptom
+- [ ] Update `website/docs/packages/desktop-agent/conformance.md` row from `partial` → `covered` only when the new guard matches toolbox symptom
 
 ## Anti-patterns
 

@@ -1,3 +1,7 @@
+---
+sidebar_position: 4
+---
+
 # FDC3 2.2 conformance traceability map
 
 This document maps FINOS FDC3 2.2 interop / conformance pack areas to in-repo Cucumber BDD scenarios under `packages/sail-desktop-agent/test/features/`. Scenarios tagged `@conformance2.2` are explicit pack alignments; **103 scenarios across 12 feature files** carry that tag (as of this map). Status is honest: `covered` means representative `@conformance2.2` scenarios exist and pass in CI; `partial` means gaps remain; `missing` means no BDD yet; `n/a` means outside the FDC3 2.2 public API conformance surface (e.g. Sail WCP transport).

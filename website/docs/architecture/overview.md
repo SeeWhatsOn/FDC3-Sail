@@ -163,6 +163,6 @@ See [Channel selection: host chrome vs app-hosted UI](./channel-selection) for s
 
 ## Learn More
 
-- [Desktop Agent Architecture](./desktop-agent) - Core FDC3 implementation
-- [Sail Platform SDK Architecture](./sail-platform-sdk) - Platform services and wrappers
-- [Channel selection](./channel-selection) - Host chrome vs app-hosted selector
+- [@finos/sail-desktop-agent](../packages/desktop-agent/overview) — FDC3 engine, integrator guide, composition diagrams
+- [Sail Platform SDK Architecture](./sail-platform-sdk) — Platform services and wrappers
+- [Channel selection](./channel-selection) — Host chrome vs app-hosted selector

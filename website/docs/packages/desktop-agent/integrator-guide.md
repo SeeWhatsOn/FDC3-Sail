@@ -1,3 +1,8 @@
+---
+sidebar_position: 2
+title: Integrator guide
+---
+
 # Browser edge and Desktop Agent
 
 This document is the **primary integrator guide** for FDC3 in the browser. The package implements two cooperating roles:
@@ -380,7 +385,7 @@ This package defaults both to **`false`** when `wcpOptions` is omitted. That is 
 | WCP3 `intentResolverUrl` | iframe URL injected **into the app window** by `@finos/fdc3` |
 | `intentResolver` on `createBrowserDesktopAgent` | Host callback when DA needs disambiguation; wired to `wcpConnector.on('intentResolverNeeded')` |
 
-Most browser hosts use **`false`** for WCP3 URLs and implement **`intentResolver`** (and channel UI) in the host shell via [`host-contracts/`](../src/host-contracts/).
+Most browser hosts use **`false`** for WCP3 URLs and implement **`intentResolver`** (and channel UI) in the host shell via [host contracts](https://github.com/finos/FDC3-Sail/tree/main/packages/sail-desktop-agent/src/host-contracts).
 
 ### Package extensions (not FDC3 API)
 
@@ -664,8 +669,8 @@ Run:
 npm test -w @finos/sail-desktop-agent -- wcp-desktop-agent.integration
 ```
 
-## Related docs (this package)
+## Related docs
 
-- [README](../README.md) — architecture diagram and presets
-- [conformance-traceability.md](./conformance-traceability.md) — BDD vs toolbox oracle
-- [host-contracts](../src/host-contracts/) — `AppLauncher`, `IntentResolver`, and related host wiring
+- [Package overview](./overview)
+- [Composition & internals](./composition)
+- [Conformance traceability](./conformance)

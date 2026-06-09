@@ -21,5 +21,11 @@ FDC3 Sail is in active development and not yet production-ready. It is based on 
 ## Quick Links
 
 - [Getting Started](./getting-started)
+- [@finos/sail-desktop-agent](./packages/desktop-agent/overview) — FDC3 engine and browser integrator guide
 - [Architecture Overview](./architecture/overview)
+- [Packages](./packages/desktop-agent/overview) — per-package documentation
 - [Development Guide](./development)
+
+## Documentation policy
+
+The **Docusaurus site** (`website/docs/`) is the single source of truth for package documentation. npm `README.md` files in each package are brief summaries that link here.

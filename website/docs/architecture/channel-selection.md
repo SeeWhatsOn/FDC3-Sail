@@ -100,7 +100,7 @@ const channelId = platform.getAppUserChannel(instanceId)
 platform.start({ onChannelChanged: (instanceId, channelId) => { ... } })
 ```
 
-Low-level **`createSailBrowserDesktopAgent`** remains for advanced hosts; channel chrome should use **`SailPlatform`**, not raw DACP injection.
+Low-level **`createSailBrowserDesktopAgent`** (returns a `DesktopAgent`) remains for advanced hosts; channel chrome should use **`SailPlatform`**, not raw DACP injection.
 
 ## Related work
 

@@ -6,8 +6,12 @@ sidebar_position: 2
 
 ## Prerequisites
 
-- Node.js 18+
-- npm 9+
+- Node.js **24+**
+- npm **11+**
+
+```bash
+nvm use 24
+```
 
 ## Installation
 
@@ -19,62 +23,62 @@ npm install
 
 ## Running Sail
 
-### Browser Mode (Recommended for Development)
+### Browser mode (recommended)
 
 ```bash
-npm run dev:web
+npm run dev
 ```
 
-This starts multiple processes:
-- Desktop Agent (watch mode)
-- Platform SDK (watch mode)
+This starts:
+
+- Desktop Agent (watch)
+- Platform API (watch)
 - Sail Server
 - Sail Web UI
 
-Access Sail at **http://localhost:8090**
+Open **http://localhost:3000**
 
-### Desktop Mode (Electron)
+### Documentation site
+
+```bash
+npm run docs:dev
+```
+
+Runs Docusaurus on port 3000 by default — use a different port if the web app is already running:
+
+```bash
+npm run start -w @finos/sail-docs -- --port 3002
+```
+
+### Electron desktop mode
 
 ```bash
 npm run dev:desktop
 ```
 
-## Project Structure
+## Project structure
 
-```
+```text
 FDC3-Sail/
 ├── packages/
-│   ├── sail-desktop-agent/  # Pure FDC3 Desktop Agent (@finos/sail-desktop-agent)
-│   ├── sail-platform-api/   # Platform services & wrappers (@finos/sail-platform-api)
-│   ├── sail-ui/             # Shared UI components
-│   ├── sail-web/            # Sail UI (React frontend)
-│   ├── sail-server/         # Server runtime (Node.js backend)
-│   └── sail-electron/       # Electron desktop wrapper
-└── website/                 # Documentation (you are here)
+│   ├── sail-desktop-agent/   # Pure FDC3 Desktop Agent
+│   ├── sail-platform-api/    # Platform services & SailPlatform
+│   ├── sail-ui/              # Shared UI components
+│   ├── sail-web/             # React host application
+│   ├── sail-server/          # Server runtime (stub/WIP)
+│   ├── sail-electron/        # Electron wrapper
+│   └── sail-conformance-harness/  # FINOS toolbox clean room
+└── website/                  # Documentation (Docusaurus)
 ```
 
-## Key Concepts
+## Key concepts
 
-### What is FDC3?
+**FDC3** enables desktop app interoperability — context sharing, intents, and channels.
 
-FDC3 (Financial Desktop Connectivity and Collaboration Consortium) is a standard for desktop application interoperability in financial services. It enables applications to:
+**Desktop Agent** manages app connections, routes messages, and implements the FDC3 2.2 APIs.
 
-- **Share context** - Pass data between apps (instruments, contacts, etc.)
-- **Raise intents** - Request actions from other apps (view chart, start chat)
-- **Join channels** - Synchronize context across multiple apps
+## Next steps
 
-### What is a Desktop Agent?
-
-A Desktop Agent is the runtime that implements the FDC3 standard. It:
-
-- Manages app connections and lifecycle
-- Routes context and intent messages
-- Provides channel management
-- Handles app directory lookups
-
-FDC3 Sail provides a complete Desktop Agent implementation that runs in the browser or as a desktop application.
-
-## Next Steps
-
-- Read the [Architecture Overview](./architecture/overview) to understand how Sail works
-- Check out the [Development Guide](./development) for contributing
+- [Architecture overview](./architecture/overview)
+- [@finos/sail-desktop-agent integrator guide](./packages/desktop-agent/integrator-guide) — how to build a browser FDC3 host
+- [Development guide](./development)

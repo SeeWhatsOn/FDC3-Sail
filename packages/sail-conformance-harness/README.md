@@ -1,53 +1,15 @@
-# FDC3 Conformance Harness
+# @finos/sail-conformance-harness
 
-Minimal React host that wires **only** `@finos/sail-desktop-agent` to run the [FINOS FDC3 conformance toolbox](https://fdc3.finos.org/toolbox/fdc3-conformance/). Use this as a diagnostic clean room compared to the full Sail stack (`sail-web`, `sail-platform-api`, `sail-ui`).
+Minimal React host for the [FINOS FDC3 conformance toolbox](https://fdc3.finos.org/toolbox/fdc3-conformance/) — wires only `@finos/sail-desktop-agent` (no full Sail stack).
 
-## Quick start
+## Documentation
 
-From the repo root:
+[finos.github.io/FDC3-Sail/docs/packages/conformance-harness/overview](https://finos.github.io/FDC3-Sail/docs/packages/conformance-harness/overview)
+
+## Run
 
 ```bash
-nvm use 24
-npm install
 npm run dev -w @finos/sail-conformance-harness
 ```
 
 Dev server: **http://localhost:3001**
-
-## Architecture
-
-- **`createBrowserDesktopAgent`** (from `@finos/sail-desktop-agent`) — local desktop agent + WCP connector (no SailPlatform).
-- **App directory** — apps from repo-root `conformance-appd.json` passed via the preset `apps` option.
-- **Bootstrap** — Conformance1 iframe mounts on load with a generated `instanceId`; the agent starts **before** React renders so WCP1Hello is handled immediately.
-- **Dynamic open** — `fdc3.open` uses `createHarnessAppLauncher`, which appends a panel to React state and renders an iframe.
-- **Intent resolution** — preset `intentResolver` from `createHarnessIntentResolver()` uses `selectIntentHandler` programmatically (no modal UI).
-
-## Instance identity (WCP4)
-
-Each panel gets a unique id from `crypto.randomUUID()` (or reuses the id from an `fdc3.open` target). The iframe **`name` attribute must equal `instanceId`** so WCP identity validation can correlate the connection with the host panel.
-
-### Launcher id vs WCP5 canonical id (known divergence)
-
-On first connect after `fdc3.open`, three ids are in play:
-
-| Field | Source | Typical value |
-| --- | --- | --- |
-| `AppLauncher.instanceId` / iframe `name` | Host at open time | e.g. `uuid-0` from `createHarnessAppLauncher` |
-| WCP4 payload `instanceId` | App claims host id | Same as launcher id when iframe `name` is wired |
-| WCP5 `instanceId` / `findInstances()` | Agent `createAppInstance` | **New** `crypto.randomUUID()` unless reconnect reuse succeeds |
-
-Sail's WCP4 handler only reuses a claimed `instanceId` when `canReuseInstanceIdentity` passes (existing state entry, identity registry, matching `instanceUuid`, and same `sourceWindow`). A freshly launched panel has no pre-registered agent instance, so WCP5 mints an unrelated UUID. Open-with-context and DACP routing keyed on the launcher id then miss the live instance → toolbox `AppTimeout`.
-
-Phase 1 spike tests (`src/instance-identity-correlation.test.ts`) log all four fields via `[ConformanceHarness] instance-identity-correlation` when `logPayloadDetail: 'full'`. Fix contract: `plans/work-items/bind-host-instance-id-at-wcp4.md`.
-
-## Debug logging
-
-Agent bootstrap sets `logPayloadDetail: 'full'` and logs WCP connect/disconnect and intent resolution choices to the browser console.
-
-## Tests
-
-```bash
-cd packages/sail-conformance-harness && npm test
-```
-
-Unit tests cover programmatic intent handler selection in `src/intent-resolution.test.ts` and instance-identity correlation in `src/instance-identity-correlation.test.ts`.

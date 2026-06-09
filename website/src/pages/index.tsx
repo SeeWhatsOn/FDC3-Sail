@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import clsx from "clsx";
 import Link from "@docusaurus/Link";
+import useBaseUrl from "@docusaurus/useBaseUrl";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
@@ -9,9 +10,18 @@ import styles from "./index.module.css";
 
 function HomepageHeader() {
   const { siteConfig } = useDocusaurusContext();
+  const sailIconUrl = useBaseUrl("/img/sail-icon.svg");
+
   return (
-    <header className={clsx("hero hero--primary", styles.heroBanner)}>
+    <header className={clsx("hero", styles.heroBanner)}>
       <div className="container">
+        <img
+          src={sailIconUrl}
+          alt="FDC3 Sail"
+          className={styles.heroLogo}
+          width={120}
+          height={175}
+        />
         <Heading as="h1" className="hero__title">
           {siteConfig.title}
         </Heading>
