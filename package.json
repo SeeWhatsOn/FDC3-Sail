@@ -22,7 +22,12 @@
     "test:watch": "vitest --watch",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "validate": "npm run validate --workspaces --if-present && npm run build"
+    "validate": "npm run validate --workspaces --if-present && npm run build",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "packages/*/src/**/*.{ts,tsx}": "eslint --fix --max-warnings=0",
+    "**/*": "prettier --ignore-unknown --write"
   },
   "workspaces": [
     "packages/sail-desktop-agent",
@@ -53,7 +58,9 @@
     "eslint-plugin-react-refresh": "^0.4.26",
     "eslint-plugin-unicorn": "^62.0.0",
     "globals": "^16.3.0",
+    "husky": "^9.1.7",
     "knip": "^5.82.1",
+    "lint-staged": "^17.0.7",
     "prettier": "^3.8.1",
     "rimraf": "^6.0.1",
     "tsdown": "^0.21.0-beta.2",
