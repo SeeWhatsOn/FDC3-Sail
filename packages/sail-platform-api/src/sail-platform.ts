@@ -16,7 +16,11 @@ import {
   type SailImplementationMetadata,
   type IntentResolver,
 } from "@finos/sail-desktop-agent"
-import type { WCPConnector, AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
+import {
+  getBrowserDesktopAgentSession,
+  type WCPConnector,
+  type AppConnectionMetadata,
+} from "@finos/sail-desktop-agent/browser"
 import type { BrowserTypes } from "@finos/fdc3"
 import { generateUuid } from "./utils/uuid"
 
@@ -217,7 +221,7 @@ export class SailPlatform {
       throw new Error("SailPlatform already started")
     }
 
-    const browserSession = createBrowserDesktopAgent({
+    const desktopAgent = createBrowserDesktopAgent({
       appLauncher: this.config.appLauncher,
       apps: this.config.apps,
       userChannels: this.config.userChannels,
@@ -234,14 +238,15 @@ export class SailPlatform {
       },
     })
 
-    this._desktopAgent = browserSession.desktopAgent
-    this._wcpConnector = browserSession.wcpConnector
-    this._connectorTransport = browserSession.connectorTransport
-    this._stopBrowserSession = browserSession.stop
+    const { wcpConnector, connectorTransport } = getBrowserDesktopAgentSession(desktopAgent)
+
+    this._desktopAgent = desktopAgent
+    this._wcpConnector = wcpConnector
+    this._connectorTransport = connectorTransport
+    this._stopBrowserSession = () => desktopAgent.stop()
 
     this.wireEvents()
 
-    browserSession.start()
     this.started = true
 
     if (this.config.debug) {

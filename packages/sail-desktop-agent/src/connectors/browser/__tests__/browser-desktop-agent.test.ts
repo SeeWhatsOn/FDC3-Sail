@@ -10,7 +10,8 @@
 import { describe, it, expect, afterEach, vi } from "vitest"
 import type { BrowserTypes } from "@finos/fdc3"
 import { createBrowserDesktopAgent } from "../browser-desktop-agent"
-import type { BrowserDesktopAgentResult } from "../browser-desktop-agent"
+import type { DesktopAgent } from "../../../core/desktop-agent"
+import { getBrowserDesktopAgentSession } from "../browser-desktop-agent-session"
 
 function createWCP1Hello(
   connectionAttemptUuid: string
@@ -60,7 +61,7 @@ async function expectWCP3Handshake(connectionAttemptUuid: string): Promise<void>
 }
 
 describe("createBrowserDesktopAgent lifecycle", () => {
-  const activeAgents: BrowserDesktopAgentResult[] = []
+  const activeAgents: DesktopAgent[] = []
 
   afterEach(() => {
     for (const agent of activeAgents.splice(0)) {
@@ -70,6 +71,7 @@ describe("createBrowserDesktopAgent lifecycle", () => {
 
   it("completes WCP handshake after a previous agent was started and stopped", async () => {
     const firstAgent = createBrowserDesktopAgent({
+      autoStart: false,
       wcpOptions: {
         getIntentResolverUrl: () => false,
         getChannelSelectorUrl: () => false,
@@ -82,6 +84,7 @@ describe("createBrowserDesktopAgent lifecycle", () => {
     firstAgent.stop()
 
     const secondAgent = createBrowserDesktopAgent({
+      autoStart: false,
       wcpOptions: {
         getIntentResolverUrl: () => false,
         getChannelSelectorUrl: () => false,
@@ -93,23 +96,23 @@ describe("createBrowserDesktopAgent lifecycle", () => {
     secondAgent.start()
 
     await expectWCP3Handshake("reuse-after-stop-uuid")
-    expect(secondAgent.wcpConnector.getConnections()).toHaveLength(1)
+    expect(getBrowserDesktopAgentSession(secondAgent).wcpConnector.getConnections()).toHaveLength(1)
   })
 
   it("allows stop then start on a new factory instance without stale in-memory transport", async () => {
-    const sessionOne = createBrowserDesktopAgent()
+    const sessionOne = createBrowserDesktopAgent({ autoStart: false })
     activeAgents.push(sessionOne)
     sessionOne.start()
     sessionOne.stop()
 
-    const sessionTwo = createBrowserDesktopAgent()
+    const sessionTwo = createBrowserDesktopAgent({ autoStart: false })
     activeAgents.push(sessionTwo)
     sessionTwo.start()
 
     await expectWCP3Handshake("fresh-pair-uuid")
 
-    expect(sessionOne.wcpConnector.getIsStarted()).toBe(false)
-    expect(sessionTwo.wcpConnector.getIsStarted()).toBe(true)
-    expect(sessionTwo.wcpConnector.getConnections()).toHaveLength(1)
+    expect(getBrowserDesktopAgentSession(sessionOne).wcpConnector.getIsStarted()).toBe(false)
+    expect(getBrowserDesktopAgentSession(sessionTwo).wcpConnector.getIsStarted()).toBe(true)
+    expect(getBrowserDesktopAgentSession(sessionTwo).wcpConnector.getConnections()).toHaveLength(1)
   })
 })

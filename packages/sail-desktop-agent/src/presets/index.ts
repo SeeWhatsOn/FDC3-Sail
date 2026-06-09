@@ -8,7 +8,6 @@
 export {
   createBrowserDesktopAgent,
   type BrowserDesktopAgentOptions,
-  type BrowserDesktopAgentResult,
 } from "./browser-desktop-agent.js"
 
 export {

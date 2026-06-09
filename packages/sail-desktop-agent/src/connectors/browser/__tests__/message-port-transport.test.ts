@@ -46,6 +46,8 @@ function createListenerTracker(port: MessagePort) {
 function createMinimalWCPContext(): WCPConnectionContext {
   return {
     options: {
+      intentResolverUrl: false,
+      channelSelectorUrl: false,
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,
       fdc3Version: "2.2",

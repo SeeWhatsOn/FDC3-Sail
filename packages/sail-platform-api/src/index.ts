@@ -57,7 +57,6 @@ export { MiddlewarePipeline, type Middleware } from "./middleware/middleware"
 export {
   createBrowserDesktopAgent,
   type BrowserDesktopAgentOptions,
-  type BrowserDesktopAgentResult,
 } from "@finos/sail-desktop-agent"
 
 // Lower-level browser connector APIs (WCPConnector, MessagePortTransport)

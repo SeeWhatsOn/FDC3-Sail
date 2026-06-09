@@ -4,14 +4,15 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as sailDesktopAgent from "@finos/sail-desktop-agent"
+import * as sailDesktopAgentBrowser from "@finos/sail-desktop-agent/browser"
 import { SailPlatform } from "../sail-platform"
 
 describe("SailPlatform preset wiring", () => {
-  const mockStart = vi.fn()
   const mockStop = vi.fn()
   const mockDesktopAgent = {
     getUserChannels: vi.fn(() => []),
     getAppUserChannelId: vi.fn(() => null),
+    stop: mockStop,
   }
   const mockWcpConnector = {
     on: vi.fn(),
@@ -22,19 +23,23 @@ describe("SailPlatform preset wiring", () => {
   }
 
   let createBrowserDesktopAgentSpy: ReturnType<typeof vi.spyOn>
+  let getBrowserDesktopAgentSessionSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
-    createBrowserDesktopAgentSpy = vi.spyOn(sailDesktopAgent, "createBrowserDesktopAgent").mockReturnValue({
-      desktopAgent: mockDesktopAgent as unknown as sailDesktopAgent.DesktopAgent,
-      wcpConnector: mockWcpConnector as unknown as import("@finos/sail-desktop-agent/browser").WCPConnector,
-      connectorTransport: mockConnectorTransport as unknown as sailDesktopAgent.Transport,
-      start: mockStart,
-      stop: mockStop,
-    })
+    createBrowserDesktopAgentSpy = vi.spyOn(sailDesktopAgent, "createBrowserDesktopAgent").mockReturnValue(
+      mockDesktopAgent as unknown as sailDesktopAgent.DesktopAgent
+    )
+    getBrowserDesktopAgentSessionSpy = vi
+      .spyOn(sailDesktopAgentBrowser, "getBrowserDesktopAgentSession")
+      .mockReturnValue({
+        wcpConnector: mockWcpConnector as unknown as import("@finos/sail-desktop-agent/browser").WCPConnector,
+        connectorTransport: mockConnectorTransport as unknown as sailDesktopAgent.Transport,
+      })
   })
 
   afterEach(() => {
     createBrowserDesktopAgentSpy.mockRestore()
+    getBrowserDesktopAgentSessionSpy.mockRestore()
     vi.clearAllMocks()
   })
 
@@ -77,13 +82,13 @@ describe("SailPlatform preset wiring", () => {
         fdc3Version: "2.2",
       },
     })
-    expect(mockStart).toHaveBeenCalledOnce()
+    expect(getBrowserDesktopAgentSessionSpy).toHaveBeenCalledWith(mockDesktopAgent)
     expect(platform.isRunning).toBe(true)
     expect(platform.agent).toBe(mockDesktopAgent)
     expect(platform.connector).toBe(mockWcpConnector)
   })
 
-  it("stop() delegates to the preset session stop()", () => {
+  it("stop() delegates to the preset agent stop()", () => {
     const platform = new SailPlatform({
       appLauncher: { launch: vi.fn() },
     })

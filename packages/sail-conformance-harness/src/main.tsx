@@ -59,7 +59,7 @@ function bootstrapHarness(): {
     appendPanel?.(current => [...current, panel])
   })
 
-  const { wcpConnector, start } = createBrowserDesktopAgent({
+  const desktopAgent = createBrowserDesktopAgent({
     apps: conformanceApps,
     appLauncher,
     intentResolver: createHarnessIntentResolver(HARNESS_DEBUG),
@@ -69,17 +69,13 @@ function bootstrapHarness(): {
       getChannelSelectorUrl: () => false,
     },
     logPayloadDetail: HARNESS_DEBUG ? "full" : "metadata",
+    onAppConnected: metadata => {
+      console.log(`[ConformanceHarness] WCP connected: ${metadata.appId} (${metadata.instanceId})`)
+    },
+    onAppDisconnected: instanceId => {
+      console.log(`[ConformanceHarness] WCP disconnected: ${instanceId}`)
+    },
   })
-
-  wcpConnector.on("appConnected", metadata => {
-    console.log(`[ConformanceHarness] WCP connected: ${metadata.appId} (${metadata.instanceId})`)
-  })
-
-  wcpConnector.on("appDisconnected", instanceId => {
-    console.log(`[ConformanceHarness] WCP disconnected: ${instanceId}`)
-  })
-
-  start()
 
   if (HARNESS_DEBUG) {
     console.log("[ConformanceHarness] Desktop agent started (debug logging enabled)")

@@ -67,27 +67,47 @@ export function isAgentMessage(
   )
 }
 
+/** WCP3Handshake `payload.intentResolverUrl` / `payload.channelSelectorUrl` per FDC3 2.2 */
+export type WcpInjectedUiUrl = string | false
+
 /**
  * Configuration options for WCPConnector
  */
 export interface WCPConnectorOptions {
   /**
-   * Function to generate intent resolver URL for a given app instance.
-   * Return undefined or false to indicate Sail-controlled UI (no injected iframe).
+   * Static URL for the intent-resolver iframe in WCP3Handshake.
+   * Matches FDC3 `payload.intentResolverUrl`: URL string, `false` (host/DA provides UI
+   * elsewhere), or `true` (reference FINOS UI). Omitted defaults to `false`.
    *
-   * @param instanceId - The app instance ID
-   * @returns URL for intent resolver iframe, or undefined/false for Sail-controlled UI
+   * Ignored when {@link getIntentResolverUrl} is set (use the getter for per-instance URLs).
    */
-  getIntentResolverUrl?: (instanceId: string) => string | undefined | false
+  intentResolverUrl?: WcpInjectedUiUrl
+
+  /**
+   * Static URL for the channel-selector iframe in WCP3Handshake.
+   * Matches FDC3 `payload.channelSelectorUrl`. Omitted defaults to `false`.
+   *
+   * Ignored when {@link getChannelSelectorUrl} is set.
+   */
+  channelSelectorUrl?: WcpInjectedUiUrl
+
+  /**
+   * Function to generate intent resolver URL for a given app instance.
+   * Return undefined to fall back to `false` in WCP3Handshake.
+   *
+   * @param instanceId - Temporary or canonical instance id at handshake time
+   * @returns URL, `false`, `true`, or undefined
+   */
+  getIntentResolverUrl?: (instanceId: string) => WcpInjectedUiUrl | undefined
 
   /**
    * Function to generate channel selector URL for a given app instance.
-   * Return undefined or false to indicate Sail-controlled UI (no injected iframe).
+   * Return undefined to fall back to `false` in WCP3Handshake.
    *
-   * @param instanceId - The app instance ID
-   * @returns URL for channel selector iframe, or undefined/false for Sail-controlled UI
+   * @param instanceId - Temporary or canonical instance id at handshake time
+   * @returns URL, `false`, `true`, or undefined
    */
-  getChannelSelectorUrl?: (instanceId: string) => string | undefined | false
+  getChannelSelectorUrl?: (instanceId: string) => WcpInjectedUiUrl | undefined
 
   /**
    * FDC3 version to advertise in WCP3Handshake.

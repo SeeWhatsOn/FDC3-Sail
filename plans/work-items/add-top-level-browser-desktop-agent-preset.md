@@ -61,7 +61,7 @@ Then the preset uses it to resolve the valid handler selection.
 
 Given a consumer needs lower-level access
 When the factory returns
-Then the result exposes lifecycle methods and access to the core Desktop Agent and browser connector.
+Then advanced callers use `getBrowserDesktopAgentSession(desktopAgent)` from `/browser` (see `simplify-browser-desktop-agent-facade-api`).
 
 ## Out of scope
 
@@ -81,15 +81,10 @@ export interface BrowserDesktopAgentOptions {
   userChannels?: BrowserTypes.Channel[]
 }
 
-export interface BrowserDesktopAgent {
-  desktopAgent: DesktopAgent
-  browserConnector: unknown
-  start(): void
-  stop(): void
-}
+// Return type superseded by simplify-browser-desktop-agent-facade-api:
+// createBrowserDesktopAgent(...): DesktopAgent
+// getBrowserDesktopAgentSession(agent) → { wcpConnector, connectorTransport }
 ```
-
-The connector property name may be finalized during implementation; if `wcpConnector` remains, document why.
 
 ## Test guidance
 

@@ -98,8 +98,8 @@ export function handleWCP1Hello(
     },
     payload: {
       fdc3Version: context.options.fdc3Version,
-      intentResolverUrl: context.options.getIntentResolverUrl(instanceId) || false,
-      channelSelectorUrl: context.options.getChannelSelectorUrl(instanceId) || false,
+      intentResolverUrl: context.options.getIntentResolverUrl(instanceId) ?? false,
+      channelSelectorUrl: context.options.getChannelSelectorUrl(instanceId) ?? false,
     },
   } as unknown as WCP3HandshakeMessage
 

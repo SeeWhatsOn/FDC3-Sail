@@ -33,14 +33,9 @@
  * ```typescript
  * import { createBrowserDesktopAgent } from '@finos/sail-desktop-agent/browser'
  *
- * const { desktopAgent, wcpConnector, start } = createBrowserDesktopAgent({
- *   wcpOptions: {
- *     getIntentResolverUrl: (id) => `/resolver?id=${id}`,
- *     getChannelSelectorUrl: (id) => `/selector?id=${id}`
- *   }
+ * const desktopAgent = createBrowserDesktopAgent({
+ *   appLauncher: myLauncher,
  * })
- *
- * start()
  * ```
  *
  * ### Pattern 2: Server Mode (Desktop Agent on server)
@@ -89,12 +84,13 @@
 
 // Main factory functions
 export { createBrowserDesktopAgent, createWCPClient } from "./browser-desktop-agent"
-export type {
-  BrowserDesktopAgentOptions,
-  BrowserDesktopAgentResult,
-  WCPClientOptions,
-  WCPClientResult,
-} from "./browser-desktop-agent"
+export type { BrowserDesktopAgentOptions, WCPClientOptions, WCPClientResult } from "./browser-desktop-agent"
+
+export {
+  getBrowserDesktopAgentSession,
+  isBrowserDesktopAgent,
+  type BrowserDesktopAgentSession,
+} from "./browser-desktop-agent-session"
 
 // Core browser components (for advanced usage)
 export { WCPConnector } from "./wcp-connector"

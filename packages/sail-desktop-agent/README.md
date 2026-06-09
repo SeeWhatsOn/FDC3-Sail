@@ -19,6 +19,8 @@ This package provides a production-ready FDC3 Desktop Agent that manages applica
 
 `@finos/sail-desktop-agent` is the **pure FDC3 engine**: DACP handlers, agent state, and protocol validation with no Sail platform UI, layout, workspace, storage, or config. Those platform concerns **belong in `@finos/sail-platform-api`**, not in the desktop-agent core — use `SailPlatform` when you need layout, workspace, storage, and config alongside FDC3.
 
+**Integrators:** start with [Browser edge and Desktop Agent](docs/browser-edge-and-da.md) — **host contract example** (what you implement), two-box model (edge + DA), deployment decision tree, and advanced WCP/DACP detail.
+
 ### Public API modes: manual composition vs presets
 
 | Mode | When to use | Entry points |
@@ -67,29 +69,14 @@ packages/sail-desktop-agent/
 
 ### Runtime layering
 
+```text
+  FDC3 Apps          Your host                 FDC3 engine
+  (external)    →   contracts you wire   →   createBrowserDesktopAgent()
+  fdc3.getAgent()    launcher · directory      (browser edge + DA)
+                     intent · channel UI
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  Browser Apps (iframes)                                                 │
-│  Using @finos/fdc3-get-agent                                           │
-│  fdc3.raiseIntent(), fdc3.broadcast(), etc.                            │
-└────────────────────────────────┬────────────────────────────────────────┘
-                                 │ MessagePort (WCP)
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  connectors/browser — WCPConnector                                      │
-│  - Handles WCP1-3 handshake with iframe apps                           │
-│  - Manages MessagePorts per app                                         │
-│  - Bridges to Transport                                                 │
-└────────────────────────────────┬────────────────────────────────────────┘
-                                 │ Transport (swappable)
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  core — DesktopAgent (runs anywhere)                                    │
-│  - Pure FDC3 logic, zero environment dependencies                       │
-│  - DACP message handlers                                                │
-│  - State registries (apps, channels, intents)                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+
+Iframe apps use `@finos/fdc3` (`getAgent()`, `raiseIntent()`, …) — not part of this package. You implement **host contracts** (`AppLauncher`, optional `IntentResolver`, channel chrome, lifecycle hooks) and pass them to the preset. Full copy-paste example, deployment fork (browser vs server/worker), and WCP/DACP detail: [docs/browser-edge-and-da.md](docs/browser-edge-and-da.md).
 
 ## Installation
 

@@ -45,7 +45,6 @@ export * from "./host-contracts"
 export {
   createBrowserDesktopAgent,
   type BrowserDesktopAgentOptions,
-  type BrowserDesktopAgentResult,
 } from "./presets/browser-desktop-agent.js"
 
 // NOTE: Lower-level browser connector APIs are NOT exported here

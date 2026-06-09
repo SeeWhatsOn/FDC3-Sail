@@ -93,14 +93,14 @@ packages/sail-desktop-agent/src/
 `@finos/sail-desktop-agent` should expose both supported consumption modes:
 
 - **Manual composition**: consumers wire `DesktopAgent`, host contracts, transports, connectors, App Directory data, channel configuration, and resolver behavior themselves.
-- **Presets**: consumers call a factory such as `createBrowserDesktopAgent(...)` and get a composed controller object with lifecycle methods and access to the underlying core agent and connector.
+- **Presets**: consumers call `createBrowserDesktopAgent(...)` and receive a `DesktopAgent` with the browser edge coupled to `start()` / `stop()`. Advanced edge access uses `getBrowserDesktopAgentSession` from `/browser`.
 
 The desired browser preset example is:
 
 ```typescript
 import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent"
 
-const agent = createBrowserDesktopAgent({
+const desktopAgent = createBrowserDesktopAgent({
   appLauncher,
   intentResolver,
   apps,
@@ -142,6 +142,10 @@ const agent = createBrowserDesktopAgent({
 | PKG-05 | Align sail-platform-api wrapper with new desktop-agent API | task | `align-sail-platform-wrapper-with-desktop-agent-preset` |
 | PKG-06 | Update conformance harness for desktop-agent top-level API | task | `update-conformance-harness-desktop-agent-api` |
 | PKG-07 | Update consume-sail-desktop-agent skill | task | `update-consume-sail-desktop-agent-skill` |
+| PKG-08 | Browser edge + DA integrator guide (`docs/browser-edge-and-da.md`) | task | `document-browser-edge-and-da-integrator-guide` |
+| PKG-09 | Facade API: return `DesktopAgent`, session registry, coupled lifecycle | task | `simplify-browser-desktop-agent-facade-api` |
+| PKG-10 | README / JSDoc examples for facade API | chore | `align-package-readme-browser-facade-examples` |
+| PKG-11 | Platform + harness facade consumer reconciliation | task | `reconcile-downstream-browser-facade-consumers` |
 
 ## PRD accuracy gate (2026-06-02 / v3-pre)
 

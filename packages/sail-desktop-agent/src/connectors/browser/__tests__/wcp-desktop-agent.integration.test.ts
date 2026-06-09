@@ -1,76 +1,77 @@
 /**
- * WCPConnector ↔ DesktopAgent integration tests.
+ * WCP edge-contract integration tests.
  *
- * Exercises the full browser wiring via createBrowserDesktopAgent and synthetic
- * postMessage WCP1Hello — not MockTransport-only.
+ * Proves the browser edge (WCPConnector + MessagePort) wired to DesktopAgent —
+ * not MockTransport-only DACP handler tests.
  *
  * @vitest-environment jsdom
  */
 
 import { describe, it, expect, afterEach, vi } from "vitest"
 import type { BrowserTypes } from "@finos/fdc3"
+import type { AppLauncher } from "../../../host-contracts/app-launcher"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../../core/default-user-channels"
 import { createBrowserDesktopAgent } from "../browser-desktop-agent"
-import type { BrowserDesktopAgentResult } from "../browser-desktop-agent"
+import type { DesktopAgent } from "../../../core/desktop-agent"
+import { getBrowserDesktopAgentSession } from "../browser-desktop-agent-session"
+import {
+  INSTRUMENT_CONTEXT,
+  connectWcpApp,
+  createAddContextListenerMessage,
+  createBroadcastMessage,
+  createJoinUserChannelMessage,
+  createOpenRequestMessage,
+  flushAsyncDelivery,
+  postDacpOnPort,
+  waitForPortMessage,
+} from "./wcp-edge-test-helpers"
 
-const APP_URL = "https://example.com/app"
-const APP_ORIGIN = "https://example.com"
+const CHANNEL_ID = "fdc3.channel.1"
+const HOST_LAUNCHER_INSTANCE_ID = "uuid-host-0"
 
-function createWCP1Hello(
-  connectionAttemptUuid: string
-): BrowserTypes.WebConnectionProtocol1Hello {
-  return {
-    type: "WCP1Hello",
-    meta: {
-      connectionAttemptUuid,
-      timestamp: new Date().toISOString(),
-    },
-    payload: {
-      identityUrl: APP_URL,
-      actualUrl: APP_URL,
+const PORTFOLIO_APP = {
+  appId: "portfolioApp",
+  title: "Portfolio",
+  type: "web" as const,
+  details: { url: "https://example.com/portfolio" },
+}
+
+const CHART_APP = {
+  appId: "chartApp",
+  title: "Chart",
+  type: "web" as const,
+  details: { url: "https://example.com/chart" },
+}
+
+function createTestAgent(options?: { appLauncher?: AppLauncher }): DesktopAgent {
+  const agent = createBrowserDesktopAgent({
+    userChannels: DEFAULT_FDC3_USER_CHANNELS,
+    appLauncher: options?.appLauncher,
+    wcpOptions: {
+      getIntentResolverUrl: () => false,
+      getChannelSelectorUrl: () => false,
       fdc3Version: "2.2",
+      handshakeTimeout: 30_000,
     },
-  } as unknown as BrowserTypes.WebConnectionProtocol1Hello
-}
-
-function createMessageEvent(data: unknown, source: Window = window): MessageEvent {
-  return new MessageEvent("message", {
-    data,
-    source,
-    origin: APP_ORIGIN,
   })
+
+  agent.getAppDirectory().addApplications([PORTFOLIO_APP, CHART_APP])
+  return agent
 }
 
-/** InMemoryTransport delivers on the next macrotask; flush before asserting. */
-async function flushAsyncDelivery(): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, 0))
+function createHostInstanceAppLauncher(): AppLauncher {
+  return {
+    async launch(request) {
+      return {
+        appId: request.app.appId,
+        instanceId: request.app.instanceId ?? HOST_LAUNCHER_INSTANCE_ID,
+      }
+    },
+  }
 }
 
-/** Capture the MessagePort transferred to the app during WCP3Handshake. */
-function captureAppMessagePort(connectionAttemptUuid: string): MessagePort {
-  const postMessageSpy = vi.spyOn(window, "postMessage")
-
-  window.dispatchEvent(createMessageEvent(createWCP1Hello(connectionAttemptUuid)))
-
-  const calls = postMessageSpy.mock.calls as unknown as Array<
-    [BrowserTypes.WebConnectionProtocol3Handshake, string, MessagePort[]]
-  >
-  expect(calls.length).toBeGreaterThan(0)
-
-  const [handshakeMessage, targetOrigin, ports] = calls[0]
-  expect(handshakeMessage.type).toBe("WCP3Handshake")
-  expect(handshakeMessage.meta.connectionAttemptUuid).toBe(connectionAttemptUuid)
-  expect(targetOrigin).toBe(APP_ORIGIN)
-  expect(ports).toEqual(expect.arrayContaining([expect.any(MessagePort)]))
-
-  postMessageSpy.mockRestore()
-
-  const appPort = ports[0]
-  appPort.start()
-  return appPort
-}
-
-describe("WCPConnector ↔ DesktopAgent integration", () => {
-  const activeAgents: BrowserDesktopAgentResult[] = []
+describe("WCP edge contract", () => {
+  const activeAgents: DesktopAgent[] = []
 
   afterEach(() => {
     for (const agent of activeAgents.splice(0)) {
@@ -79,98 +80,115 @@ describe("WCPConnector ↔ DesktopAgent integration", () => {
   })
 
   it("routes WCP4 through the connector to DesktopAgent and correlates temp→canonical instance ids", async () => {
-    const connectionAttemptUuid = "integration-wcp-path-uuid"
-    const tempInstanceId = `temp-${connectionAttemptUuid}`
-
-    const agent = createBrowserDesktopAgent({
-      wcpOptions: {
-        getIntentResolverUrl: () => false,
-        getChannelSelectorUrl: () => false,
-        fdc3Version: "2.2",
-        handshakeTimeout: 30_000,
-      },
-    })
+    const agent = createTestAgent()
     activeAgents.push(agent)
 
-    agent.desktopAgent.getAppDirectory().addApplications([
-      {
-        appId: "integration-test-app",
-        title: "Integration Test App",
-        type: "web",
-        details: { url: APP_URL },
-      },
-    ])
-
     const appConnected = vi.fn()
-    agent.wcpConnector.on("appConnected", appConnected)
+    getBrowserDesktopAgentSession(agent).wcpConnector.on("appConnected", appConnected)
 
-    agent.start()
-
-    const appPort = captureAppMessagePort(connectionAttemptUuid)
-
-    expect(agent.wcpConnector.getConnection(tempInstanceId)).toBeDefined()
-    expect(agent.wcpConnector.getConnections()).toHaveLength(1)
-
-    const wcp5Response = new Promise<BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse>(
-      resolve => {
-        appPort.onmessage = event => {
-          resolve(
-            event.data as BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse
-          )
-        }
-      }
-    )
-
-    const wcp4Message: BrowserTypes.WebConnectionProtocol4ValidateAppIdentity = {
-      type: "WCP4ValidateAppIdentity",
-      meta: {
-        connectionAttemptUuid,
-        timestamp: new Date().toISOString(),
-      },
-      payload: {
-        identityUrl: APP_URL,
-        actualUrl: APP_URL,
-      },
-    }
-
-    appPort.postMessage(wcp4Message)
-    await flushAsyncDelivery()
-
-    const resolvedWcp5 = await Promise.race([
-      wcp5Response,
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Timed out waiting for WCP5ValidateAppIdentityResponse")),
-          5000
-        )
-      ),
-    ])
-
-    expect(resolvedWcp5.type).toBe("WCP5ValidateAppIdentityResponse")
-    expect(resolvedWcp5.meta.connectionAttemptUuid).toBe(connectionAttemptUuid)
-    expect(resolvedWcp5.meta.destination?.instanceId).toBe(tempInstanceId)
-
-    const canonicalInstanceId = resolvedWcp5.payload.instanceId
-    expect(canonicalInstanceId).toBeTruthy()
-    expect(canonicalInstanceId).not.toBe(tempInstanceId)
-    expect(resolvedWcp5.payload.appId).toBe("integration-test-app")
-
-    await vi.waitFor(() => {
-      expect(appConnected).toHaveBeenCalledTimes(1)
-      expect(agent.wcpConnector.getConnection(tempInstanceId)).toBeUndefined()
-      expect(agent.wcpConnector.getConnection(canonicalInstanceId)).toBeDefined()
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "integration-wcp-path-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
     })
 
     expect(appConnected).toHaveBeenCalledWith(
       expect.objectContaining({
-        instanceId: canonicalInstanceId,
-        appId: "integration-test-app",
-        connectionAttemptUuid,
+        instanceId: connected.canonicalInstanceId,
+        appId: "portfolioApp",
+        connectionAttemptUuid: "integration-wcp-path-uuid",
       })
     )
 
-    const agentState = agent.desktopAgent.getState()
-    expect(agentState.instances[canonicalInstanceId]?.appId).toBe("integration-test-app")
-    expect(agentState.instances[tempInstanceId]).toBeUndefined()
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.appId).toBe(
+      "portfolioApp"
+    )
+  })
+
+  it("delivers user-channel broadcast from app B to app A listener over MessagePort routing", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "edge-listener-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const appB = await connectWcpApp(agent, {
+      connectionAttemptUuid: "edge-broadcaster-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+    })
+
+    const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent"
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createJoinUserChannelMessage(appA.canonicalInstanceId, appA.appId, CHANNEL_ID)
+    )
+    await postDacpOnPort(
+      appA.appPort,
+      createAddContextListenerMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHANNEL_ID,
+        INSTRUMENT_CONTEXT.type
+      )
+    )
+
+    await postDacpOnPort(
+      appB.appPort,
+      createJoinUserChannelMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID)
+    )
+    await postDacpOnPort(
+      appB.appPort,
+      createBroadcastMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID, INSTRUMENT_CONTEXT)
+    )
+
+    const broadcastEvent = await broadcastPromise
+
+    expect(broadcastEvent.type).toBe("broadcastEvent")
+    expect(broadcastEvent.meta.destination?.instanceId).toBe(appA.canonicalInstanceId)
+    expect(broadcastEvent.payload.context?.type).toBe(INSTRUMENT_CONTEXT.type)
+  })
+
+  it("adopts host launcher instanceId as canonical id when open pre-registers a PENDING instance", async () => {
+    const agent = createTestAgent({ appLauncher: createHostInstanceAppLauncher() })
+    activeAgents.push(agent)
+
+    const source = await connectWcpApp(agent, {
+      connectionAttemptUuid: "edge-open-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    await postDacpOnPort(
+      source.appPort,
+      createOpenRequestMessage(source.canonicalInstanceId, source.appId, CHART_APP.appId)
+    )
+    await flushAsyncDelivery()
+
+    await vi.waitFor(() => {
+      const pending = agent.getState().instances[HOST_LAUNCHER_INSTANCE_ID]
+      expect(pending?.appId).toBe(CHART_APP.appId)
+      expect(pending?.state).toBe("pending")
+    })
+
+    const chart = await connectWcpApp(agent, {
+      connectionAttemptUuid: "edge-open-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+      hostInstanceId: HOST_LAUNCHER_INSTANCE_ID,
+      instanceUuid: crypto.randomUUID(),
+    })
+
+    expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(
+      getBrowserDesktopAgentSession(agent).wcpConnector.getConnection(HOST_LAUNCHER_INSTANCE_ID)
+    ).toBeDefined()
   })
 })

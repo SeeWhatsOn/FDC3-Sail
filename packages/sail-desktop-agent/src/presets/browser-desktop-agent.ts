@@ -7,15 +7,14 @@
 
 import type { Context } from "@finos/fdc3"
 import type { DirectoryApp } from "../core/app-directory/types"
+import type { DesktopAgent } from "../core/desktop-agent"
 import type { IntentResolver, IntentResolutionRequest } from "../host-contracts"
 import {
   createBrowserDesktopAgent as createBrowserDesktopAgentCore,
   type BrowserDesktopAgentOptions as CoreBrowserDesktopAgentOptions,
-  type BrowserDesktopAgentResult,
 } from "../connectors/browser/browser-desktop-agent.js"
+import { getBrowserDesktopAgentSession } from "../connectors/browser/browser-desktop-agent-session.js"
 import type { WCPConnector } from "../connectors/browser/wcp-connector.js"
-
-export type { BrowserDesktopAgentResult }
 
 /**
  * Options for {@link createBrowserDesktopAgent} including host wiring.
@@ -70,19 +69,25 @@ function wireIntentResolver(wcpConnector: WCPConnector, resolver: IntentResolver
 }
 
 /**
- * Create a browser Desktop Agent with WCP connector and optional host wiring.
+ * Create a browser Desktop Agent with WCP edge coupled to {@link DesktopAgent.start}.
  */
 export function createBrowserDesktopAgent(
   options?: BrowserDesktopAgentOptions
-): BrowserDesktopAgentResult {
-  const intentResolver = options?.intentResolver
-  const result = createBrowserDesktopAgentCore(
-    options as CoreBrowserDesktopAgentOptions | undefined
-  )
+): DesktopAgent {
+  const { intentResolver, autoStart, ...coreOptions } = options ?? {}
+
+  const desktopAgent = createBrowserDesktopAgentCore({
+    ...coreOptions,
+    autoStart: false,
+  })
 
   if (intentResolver) {
-    wireIntentResolver(result.wcpConnector, intentResolver)
+    wireIntentResolver(getBrowserDesktopAgentSession(desktopAgent).wcpConnector, intentResolver)
   }
 
-  return result
+  if (autoStart !== false) {
+    desktopAgent.start()
+  }
+
+  return desktopAgent
 }

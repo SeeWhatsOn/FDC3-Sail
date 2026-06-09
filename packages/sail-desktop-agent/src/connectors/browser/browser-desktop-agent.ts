@@ -26,8 +26,9 @@ import type { SailImplementationMetadata } from "../../core/sail-default-config"
 import { consoleLogger } from "../../core/interfaces/logger"
 import type { Logger, LogPayloadDetail } from "../../core/interfaces/logger"
 import { WCPConnector } from "./wcp-connector"
-import type { WCPConnectorOptions } from "./wcp-connector"
+import type { AppConnectionMetadata, WCPConnectorOptions } from "./wcp-connector"
 import { createInMemoryTransportPair } from "../../transports/in-memory-transport"
+import { registerBrowserDesktopAgentSession } from "./browser-desktop-agent-session"
 
 // ============================================================================
 // WCP CLIENT (for remote Desktop Agent - server mode, worker mode)
@@ -175,37 +176,43 @@ export interface BrowserDesktopAgentOptions extends Pick<
    * {@link Logger.debug} only when set to `'full'`.
    */
   logPayloadDetail?: LogPayloadDetail
+
+  /**
+   * Call {@link DesktopAgent.start} (and the coupled browser edge) before returning.
+   * Set to `false` when you need to configure the agent before it listens.
+   *
+   * @defaultValue `true`
+   */
+  autoStart?: boolean
+
+  /** Fired when an iframe app completes the WCP handshake. */
+  onAppConnected?: (metadata: AppConnectionMetadata) => void
+
+  /** Fired when an iframe app disconnects. */
+  onAppDisconnected?: (instanceId: string) => void
+
+  /** Fired when WCP handshake fails before WCP4 completes. */
+  onHandshakeFailed?: (error: Error, connectionAttemptUuid: string) => void
 }
 
-/**
- * Result of creating a browser Desktop Agent
- */
-export interface BrowserDesktopAgentResult {
-  /**
-   * The Desktop Agent instance
-   */
-  desktopAgent: DesktopAgent
-
-  /**
-   * The WCP connector instance (handles iframe connections)
-   */
+function wireBrowserDesktopAgentLifecycle(
+  desktopAgent: DesktopAgent,
   wcpConnector: WCPConnector
+): void {
+  const originalStart = desktopAgent.start.bind(desktopAgent)
+  const originalStop = desktopAgent.stop.bind(desktopAgent)
 
-  /**
-   * Transport between WCP Connector and Desktop Agent (connector side).
-   * Host platforms use this for typed channel control (e.g. join/leave on behalf of apps).
-   */
-  connectorTransport: Transport
+  desktopAgent.start = () => {
+    if (!wcpConnector.getIsStarted()) {
+      wcpConnector.start()
+    }
+    originalStart()
+  }
 
-  /**
-   * Start the Desktop Agent and WCP connector
-   */
-  start: () => void
-
-  /**
-   * Stop the Desktop Agent and WCP connector
-   */
-  stop: () => void
+  desktopAgent.stop = () => {
+    wcpConnector.stop()
+    originalStop()
+  }
 }
 
 /**
@@ -226,47 +233,19 @@ export interface BrowserDesktopAgentResult {
  * - Routes messages based on DACP metadata
  *
  * @param options - Configuration options
- * @returns Object with desktopAgent, wcpConnector, and control methods
+ * @returns DesktopAgent with browser edge coupled to {@link DesktopAgent.start} / {@link DesktopAgent.stop}
  *
  * @example
  * ```typescript
- * // Create browser Desktop Agent (local mode)
- * const { desktopAgent, wcpConnector, start } = createBrowserDesktopAgent({
- *   wcpOptions: {
- *     getIntentResolverUrl: (instanceId) => `/resolver?id=${instanceId}`,
- *     getChannelSelectorUrl: (instanceId) => `/selector?id=${instanceId}`
- *   },
- *   appDirectories: [myAppDirectory]
+ * const desktopAgent = createBrowserDesktopAgent({
+ *   appLauncher: myLauncher,
+ *   intentResolver: myResolver,
  * })
  *
- * // Start both Desktop Agent and WCP Connector
- * start()
- *
- * // Desktop Agent is now ready to handle FDC3 apps in iframes
- * // Apps will connect via WCP when they call fdc3.getAgent()
- * ```
- *
- * @example
- * ```typescript
- * // For Sail-controlled UI (no injected iframes)
- * const { desktopAgent, wcpConnector, start } = createBrowserDesktopAgent({
- *   wcpOptions: {
- *     // Return false to indicate Sail provides UI externally
- *     getIntentResolverUrl: () => false,
- *     getChannelSelectorUrl: () => false
- *   }
- * })
- *
- * start()
- *
- * // Apps receive WCP3Handshake with:
- * // { intentResolverUrl: false, channelSelectorUrl: false }
- * // Indicating Sail UI parent window controls UI
+ * // Auto-started by default — iframe apps connect via fdc3.getAgent()
  * ```
  */
-export function createBrowserDesktopAgent(
-  options?: BrowserDesktopAgentOptions
-): BrowserDesktopAgentResult {
+export function createBrowserDesktopAgent(options?: BrowserDesktopAgentOptions): DesktopAgent {
   const logger = options?.logger ?? consoleLogger
 
   // Create in-memory transport pair
@@ -301,37 +280,25 @@ export function createBrowserDesktopAgent(
 
   wcpConnector.on("appConnected", metadata => {
     logger.info(`[BrowserDA] App connected: ${metadata.appId} (${metadata.instanceId})`)
+    options?.onAppConnected?.(metadata)
   })
 
   wcpConnector.on("appDisconnected", instanceId => {
     logger.info(`[BrowserDA] App disconnected: ${instanceId}`)
+    options?.onAppDisconnected?.(instanceId)
   })
 
   wcpConnector.on("handshakeFailed", (error, connectionAttemptUuid) => {
     logger.error(`[BrowserDA] WCP handshake failed for ${connectionAttemptUuid}:`, error)
+    options?.onHandshakeFailed?.(error, connectionAttemptUuid)
   })
 
-  /**
-   * Start both Desktop Agent and WCP Connector
-   */
-  function start(): void {
+  registerBrowserDesktopAgentSession(desktopAgent, { wcpConnector, connectorTransport })
+  wireBrowserDesktopAgentLifecycle(desktopAgent, wcpConnector)
+
+  if (options?.autoStart !== false) {
     desktopAgent.start()
-    wcpConnector.start()
   }
 
-  /**
-   * Stop both Desktop Agent and WCP Connector
-   */
-  function stop(): void {
-    wcpConnector.stop()
-    desktopAgent.stop()
-  }
-
-  return {
-    desktopAgent,
-    wcpConnector,
-    connectorTransport,
-    start,
-    stop,
-  }
+  return desktopAgent
 }

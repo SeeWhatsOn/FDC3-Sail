@@ -128,9 +128,17 @@ export class WCPConnector extends WCPEventEmitter {
     super()
     this.desktopAgentTransport = desktopAgentTransport
     const logger: Logger = options?.logger ?? consoleLogger
+    const intentResolverUrl = options?.intentResolverUrl ?? false
+    const channelSelectorUrl = options?.channelSelectorUrl ?? false
     this.options = {
-      getIntentResolverUrl: options?.getIntentResolverUrl ?? (() => false),
-      getChannelSelectorUrl: options?.getChannelSelectorUrl ?? (() => false),
+      intentResolverUrl,
+      channelSelectorUrl,
+      getIntentResolverUrl:
+        options?.getIntentResolverUrl ??
+        (options?.intentResolverUrl !== undefined ? () => intentResolverUrl : () => false),
+      getChannelSelectorUrl:
+        options?.getChannelSelectorUrl ??
+        (options?.channelSelectorUrl !== undefined ? () => channelSelectorUrl : () => false),
       fdc3Version: options?.fdc3Version ?? "2.2",
       handshakeTimeout: options?.handshakeTimeout ?? 5000,
       disconnectGracePeriod: options?.disconnectGracePeriod ?? 2000,

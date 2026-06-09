@@ -1,7 +1,7 @@
 import {
   createBrowserDesktopAgent,
   type BrowserDesktopAgentOptions,
-  type BrowserDesktopAgentResult,
+  type DesktopAgent,
 } from "@finos/sail-desktop-agent"
 import { MiddlewarePipeline, type Middleware } from "./middleware/middleware"
 import { wireWcp4OriginAllowlist } from "./wcp4-origin-allowlist"
@@ -10,8 +10,10 @@ export type { Middleware }
 /**
  * Configuration for Sail Browser Desktop Agent
  */
-export interface SailBrowserDesktopAgentConfig
-  extends Omit<BrowserDesktopAgentOptions, "wcpOptions"> {
+export interface SailBrowserDesktopAgentConfig extends Omit<
+  BrowserDesktopAgentOptions,
+  "wcpOptions"
+> {
   /**
    * WCP options with Sail-specific defaults.
    */
@@ -46,23 +48,15 @@ export interface SailBrowserDesktopAgentConfig
  *
  * @example
  * ```typescript
- * // Create browser Desktop Agent with Sail defaults
- * const { desktopAgent, wcpConnector, start } = createSailBrowserDesktopAgent({
- *   wcpOptions: {
- *     // Sail provides UI externally, so return false
- *     getIntentResolverUrl: () => false,
- *     getChannelSelectorUrl: () => false,
- *     fdc3Version: '2.2'
- *   },
- *   debug: true
+ * const desktopAgent = createSailBrowserDesktopAgent({
+ *   appLauncher: myLauncher,
+ *   debug: true,
  * })
- *
- * start()
  * ```
  */
 export function createSailBrowserDesktopAgent(
   config?: SailBrowserDesktopAgentConfig
-): BrowserDesktopAgentResult & {
+): DesktopAgent & {
   /**
    * Add middleware to the message processing pipeline
    */
@@ -78,14 +72,13 @@ export function createSailBrowserDesktopAgent(
     ...config?.wcpOptions,
   }
 
-  // Create browser desktop agent with merged options
-  const browserAgent = createBrowserDesktopAgent({
+  const desktopAgent = createBrowserDesktopAgent({
     ...config,
     wcpOptions,
   })
 
   if (config?.allowedOrigins !== undefined) {
-    wireWcp4OriginAllowlist(browserAgent.desktopAgent, config.allowedOrigins, config.debug)
+    wireWcp4OriginAllowlist(desktopAgent, config.allowedOrigins, config.debug)
   }
 
   // Create middleware pipeline for future use
@@ -96,15 +89,11 @@ export function createSailBrowserDesktopAgent(
     pipeline.use(middleware)
   }
 
-  // TODO: Wire up middleware pipeline to intercept messages at the transport level
-  // This will require wrapping browserAgent.desktopAgent's transport with middleware
+  // This will require wrapping the agent's transport with middleware
 
   if (config?.debug) {
     console.log("[SailBrowserDesktopAgent] Created with Sail-specific defaults")
   }
 
-  return {
-    ...browserAgent,
-    use,
-  }
+  return Object.assign(desktopAgent, { use })
 }
