@@ -105,5 +105,5 @@ import {
 ## Related
 
 - [Desktop Agent integrator guide](../desktop-agent/integrator-guide)
-- [Sail Platform SDK architecture](../../architecture/sail-platform-sdk)
+- [Architecture overview](../../architecture/overview)
 - [Channel selection](../../architecture/channel-selection)

@@ -122,5 +122,5 @@ The `sail-platform-api` package abstracts the transport layer, making it straigh
 ## Related Documentation
 
 - [Architecture Overview](./overview) - Three-layer architecture
-- [Desktop Agent Architecture](./desktop-agent) - Core FDC3 engine
-- [Sail Platform SDK Architecture](./sail-platform-sdk) - Platform services
+- [@finos/sail-desktop-agent](../packages/desktop-agent/overview) - Core FDC3 engine
+- [@finos/sail-platform-api](../packages/platform-api/overview) - Platform services

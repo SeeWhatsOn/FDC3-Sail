@@ -106,4 +106,4 @@ Low-level **`createSailBrowserDesktopAgent`** (returns a `DesktopAgent`) remains
 
 - Transport hardening: `plans/work-items/replace-dacp-impersonation-with-channel-api.md`
 - Architecture overview: [Overview](./overview.md) (Sail-controlled UI)
-- Platform SDK: [Sail Platform SDK](./sail-platform-sdk.md)
+- Platform API: [@finos/sail-platform-api](../packages/platform-api/overview)
