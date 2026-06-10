@@ -8,8 +8,15 @@ Minimal React host for the [FINOS FDC3 conformance toolbox](https://fdc3.finos.o
 
 ## Run
 
+From the monorepo root (`npm install` at repo root — shared dev tooling is hoisted from the root workspace):
+
 ```bash
 npm run dev -w @finos/sail-conformance-harness
 ```
 
 Dev server: **http://localhost:3001**
+
+```bash
+npm test -w @finos/sail-conformance-harness
+npm run typecheck -w @finos/sail-conformance-harness
+```

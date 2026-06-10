@@ -10,13 +10,21 @@ Minimal React host that wires **only** `@finos/sail-desktop-agent` to run the [F
 
 ## Quick start
 
+From the monorepo root (install dependencies there — Vite, TypeScript, and Vitest are hoisted from the root workspace):
+
 ```bash
 nvm use 24
+cd FDC3-Sail
 npm install
 npm run dev -w @finos/sail-conformance-harness
 ```
 
 Dev server: **http://localhost:3001**
+
+```bash
+npm test -w @finos/sail-conformance-harness
+npm run typecheck -w @finos/sail-conformance-harness
+```
 
 ## Architecture
 

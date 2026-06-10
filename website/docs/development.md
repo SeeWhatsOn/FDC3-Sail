@@ -25,6 +25,8 @@ cd FDC3-Sail
 npm install
 ```
 
+Always install from the **repository root**. Shared dev tooling (TypeScript, Vite, Vitest, ESLint, Prettier, and React type packages) lives in the root `package.json` and is hoisted for all workspaces. Workspace packages only declare package-specific dev dependencies (for example Cucumber in `@finos/sail-desktop-agent` or Playwright in `@finos/sail-web`). Run workspace scripts with `npm run <script> -w <workspace>` from the root — do not `cd` into a package and run `npm install` there.
+
 ### Run the full stack locally
 
 ```bash
@@ -36,6 +38,7 @@ Starts Desktop Agent (watch), platform API (watch), server stub, and Sail web UI
 ```bash
 npm run dev:desktop   # Electron desktop mode
 npm run docs:dev      # Documentation site (use --port 3002 if web app is running)
+npm run dev -w @finos/sail-conformance-harness   # FDC3 toolbox clean room on :3001
 ```
 
 ## Project Structure
@@ -49,6 +52,7 @@ FDC3-Sail/
 │   ├── sail-platform-api/  # Platform services & transports (@finos/sail-platform-api)
 │   ├── sail-ui/        # Shared React components
 │   ├── sail-web/       # Browser-based Sail UI (@finos/sail-web)
+│   ├── sail-conformance-harness/  # FDC3 toolbox clean room (@finos/sail-conformance-harness)
 │   ├── sail-server/    # Node.js backend server (@finos/sail-server)
 │   └── sail-electron/  # Electron desktop wrapper (@finos/sail-electron)
 └── website/            # Documentation (Docusaurus)
