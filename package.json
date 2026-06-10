@@ -29,6 +29,17 @@
     "packages/*/src/**/*.{ts,tsx}": "eslint --fix --max-warnings=0",
     "**/*": "prettier --ignore-unknown --write"
   },
+  "overrides": {
+    "copy-webpack-plugin": {
+      "serialize-javascript": "7.0.5"
+    },
+    "css-minimizer-webpack-plugin": {
+      "serialize-javascript": "7.0.5"
+    },
+    "sockjs": {
+      "uuid": "11.1.1"
+    }
+  },
   "workspaces": [
     "packages/sail-desktop-agent",
     "packages/sail-ui",
