@@ -11,7 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@finos/fdc3": "^2.2.0",
+    "@finos/fdc3": "^2.2.3",
     "@finos/sail-desktop-agent": "*",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

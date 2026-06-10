@@ -19,7 +19,7 @@
     "validate": "npm run typecheck && npm run lint && npm run format"
   },
   "dependencies": {
-    "@finos/fdc3": "^2.2.0",
+    "@finos/fdc3": "^2.2.3",
     "@finos/sail-platform-api": "*",
     "@finos/sail-ui": "*",
     "@tailwindcss/vite": "^4.1.12",

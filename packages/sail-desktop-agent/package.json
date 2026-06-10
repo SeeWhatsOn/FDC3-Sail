@@ -51,7 +51,7 @@
     "tsx": "^4.21.0"
   },
   "dependencies": {
-    "@finos/fdc3": "^2.2.0",
+    "@finos/fdc3": "^2.2.3",
     "@finos/fdc3-schema": "^2.2.1-beta.3",
     "immer": "^10.1.1"
   },

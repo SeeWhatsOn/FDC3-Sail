@@ -22,7 +22,7 @@
     "rollup": "^4.32.1"
   },
   "dependencies": {
-    "@finos/fdc3": "^2.2.0",
+    "@finos/fdc3": "^2.2.3",
     "electron": "^42.4.0"
   }
 }

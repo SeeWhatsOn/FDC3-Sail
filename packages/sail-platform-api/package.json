@@ -7,7 +7,10 @@
   "homepage": "https://github.com/finos/FDC3-Sail",
   "repository": "github:finos/FDC3-Sail",
   "bugs": "https://github.com/finos/FDC3-Sail/issues",
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -36,7 +39,7 @@
   },
   "devDependencies": {},
   "dependencies": {
-    "@finos/fdc3": "^2.2.0",
+    "@finos/fdc3": "^2.2.3",
     "@finos/sail-desktop-agent": "*",
     "zod": "^4.1.11"
   }
