@@ -59,7 +59,7 @@ function bootstrapHarness(): {
     appendPanel?.(current => [...current, panel])
   })
 
-  const desktopAgent = createBrowserDesktopAgent({
+  void createBrowserDesktopAgent({
     apps: conformanceApps,
     appLauncher,
     intentResolver: createHarnessIntentResolver(HARNESS_DEBUG),

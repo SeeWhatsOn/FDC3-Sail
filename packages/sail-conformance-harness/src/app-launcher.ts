@@ -28,7 +28,7 @@ function extractAppUrl(appMetadata: AppMetadataWithDetails): string | undefined 
  */
 export function createHarnessAppLauncher(onLaunch: HarnessLaunchCallback): AppLauncher {
   return {
-    async launch(
+    launch(
       request: BrowserTypes.OpenRequestPayload,
       appMetadata: AppMetadata
     ): Promise<AppIdentifier> {
@@ -48,10 +48,10 @@ export function createHarnessAppLauncher(onLaunch: HarnessLaunchCallback): AppLa
         title: metadata.title ?? metadata.name ?? request.app.appId,
       })
 
-      return {
+      return Promise.resolve({
         appId: request.app.appId,
         instanceId,
-      }
+      })
     },
   }
 }

@@ -24,14 +24,12 @@ function createHostRequest(
 describe("createHarnessIntentResolver", () => {
   it("auto-selects the sole handler when exactly one valid handler exists", async () => {
     const resolver = createHarnessIntentResolver()
-    const response = await resolver.resolve(createHostRequest([{ appId: "ChartApp", isRunning: false }]))
+    const response = await resolver.resolve(
+      createHostRequest([{ appId: "ChartApp", isRunning: false }])
+    )
 
-    expect(response).toEqual({
-      selectedHandler: expect.objectContaining({
-        app: expect.objectContaining({ appId: "ChartApp" }),
-      }),
-      target: { appId: "ChartApp" },
-    })
+    expect(response?.target).toEqual({ appId: "ChartApp" })
+    expect(response?.selectedHandler?.app.appId).toBe("ChartApp")
   })
 
   it("prefers a running handler over a non-running handler in directory order", async () => {

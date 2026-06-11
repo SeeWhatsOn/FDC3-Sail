@@ -1,5 +1,4 @@
 import { expect } from "vitest"
-import type { BrowserTypes } from "@finos/fdc3"
 import { AppDirectoryManager, DesktopAgent, type Logger } from "@finos/sail-desktop-agent"
 import { MockTransport } from "../../../sail-desktop-agent/test/support/mock-transport"
 import { createHarnessAppLauncher } from "../app-launcher"
@@ -86,15 +85,18 @@ export async function runHarnessOpenAndWcpHandshake(
         desktopAgent: "n/a",
       },
     },
-  } as BrowserTypes.OpenRequest)
+  })
 
   const openResponse = transport.allMessages
     .map(record => record.msg)
     .find(message => message.type === "openResponse") as
-    | { type: string; payload?: { appIdentifier?: { instanceId?: string } } }
+    | {
+        type: "openResponse"
+        payload?: { appIdentifier?: { instanceId?: string } }
+      }
     | undefined
   expect(openResponse?.type).toBe("openResponse")
-  const launcherInstanceId = openResponse.payload?.appIdentifier?.instanceId
+  const launcherInstanceId = openResponse?.payload?.appIdentifier?.instanceId
   expect(launcherInstanceId).toBeDefined()
 
   const launchedPanel = panels.find(panel => panel.appId === appId)
@@ -126,19 +128,19 @@ export async function runHarnessOpenAndWcpHandshake(
         desktopAgent: "n/a",
       },
     },
-  } as BrowserTypes.FindInstancesRequest)
+  })
 
   const findInstancesResponse = transport.allMessages
     .map(record => record.msg)
     .find(message => message.type === "findInstancesResponse") as
     | {
-        type: string
+        type: "findInstancesResponse"
         payload?: { appIdentifiers?: Array<{ instanceId?: string }> }
       }
     | undefined
   expect(findInstancesResponse?.type).toBe("findInstancesResponse")
   const findInstancesInstanceIds =
-    findInstancesResponse.payload?.appIdentifiers
+    findInstancesResponse?.payload?.appIdentifiers
       ?.map(identifier => identifier.instanceId)
       .filter((id): id is string => typeof id === "string") ?? []
 
@@ -194,7 +196,7 @@ async function completeWcp4Handshake(
       identityUrl: params.appUrl,
       actualUrl: params.appUrl,
     },
-  } as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity)
+  })
 
   return readWcp5InstanceId(transport)
 }
