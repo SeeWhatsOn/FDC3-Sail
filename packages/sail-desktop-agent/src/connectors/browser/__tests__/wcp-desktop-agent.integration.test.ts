@@ -61,11 +61,11 @@ function createTestAgent(options?: { appLauncher?: AppLauncher }): DesktopAgent 
 
 function createHostInstanceAppLauncher(): AppLauncher {
   return {
-    async launch(request) {
-      return {
+    launch(request) {
+      return Promise.resolve({
         appId: request.app.appId,
         instanceId: request.app.instanceId ?? HOST_LAUNCHER_INSTANCE_ID,
-      }
+      })
     },
   }
 }
@@ -100,9 +100,7 @@ describe("WCP edge contract", () => {
       })
     )
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.appId).toBe(
-      "portfolioApp"
-    )
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.appId).toBe("portfolioApp")
   })
 
   it("delivers user-channel broadcast from app B to app A listener over MessagePort routing", async () => {
@@ -152,7 +150,8 @@ describe("WCP edge contract", () => {
     const broadcastEvent = await broadcastPromise
 
     expect(broadcastEvent.type).toBe("broadcastEvent")
-    expect(broadcastEvent.meta.destination?.instanceId).toBe(appA.canonicalInstanceId)
+    const destination = broadcastEvent.meta.destination as { instanceId?: string } | undefined
+    expect(destination?.instanceId).toBe(appA.canonicalInstanceId)
     expect(broadcastEvent.payload.context?.type).toBe(INSTRUMENT_CONTEXT.type)
   })
 
@@ -190,5 +189,35 @@ describe("WCP edge contract", () => {
     expect(
       getBrowserDesktopAgentSession(agent).wcpConnector.getConnection(HOST_LAUNCHER_INSTANCE_ID)
     ).toBeDefined()
+  })
+
+  it("adopts sole pending launcher id when WCP4 omits host instanceId", async () => {
+    const agent = createTestAgent({ appLauncher: createHostInstanceAppLauncher() })
+    activeAgents.push(agent)
+
+    const source = await connectWcpApp(agent, {
+      connectionAttemptUuid: "edge-open-source-no-id-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    await postDacpOnPort(
+      source.appPort,
+      createOpenRequestMessage(source.canonicalInstanceId, source.appId, CHART_APP.appId)
+    )
+    await flushAsyncDelivery()
+
+    await vi.waitFor(() => {
+      expect(agent.getState().instances[HOST_LAUNCHER_INSTANCE_ID]?.state).toBe("pending")
+    })
+
+    const chart = await connectWcpApp(agent, {
+      connectionAttemptUuid: "edge-open-target-no-id-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+      instanceUuid: crypto.randomUUID(),
+    })
+
+    expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
   })
 })

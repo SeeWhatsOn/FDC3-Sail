@@ -79,7 +79,7 @@ describe("cleanupDACPHandlers", () => {
     state = addPendingIntent(state, {
       requestId: "req-source-disconnect",
       intentName: "ViewPortfolio",
-      context: { type: "fdc3.portfolio" } as Context,
+      context: { type: "fdc3.portfolio" },
       sourceInstanceId: "a1",
       targetInstanceId: "l1",
       targetAppId: "portfolioApp",
@@ -121,7 +121,7 @@ describe("cleanupDACPHandlers", () => {
     state = addPendingIntent(state, {
       requestId: "req-target-disconnect",
       intentName: "ViewPortfolio",
-      context: { type: "fdc3.portfolio" } as Context,
+      context: { type: "fdc3.portfolio" },
       sourceInstanceId: "a1",
       targetInstanceId: "l1",
       targetAppId: "portfolioApp",
@@ -489,6 +489,39 @@ describe("heartbeat cleanup on disconnect", () => {
     transport.disconnect()
 
     expectHeartbeatFullyCleared(() => agent.getState(), canonicalInstanceId!)
+  })
+
+  it("duplicate WCP6Goodbye for a closed instance does not clean up another connected app", () => {
+    const closedMockInstanceId = "mock-app-closed"
+    const conformanceInstanceId = "conformance1-still-open"
+
+    let state = connectTestInstance(closedMockInstanceId)
+    state = connectTestInstance(conformanceInstanceId)
+    state = updateInstanceState(state, conformanceInstanceId, AppInstanceState.CONNECTED)
+
+    const { context: mockContext, getState } = createHeartbeatTestContext({
+      instanceId: closedMockInstanceId,
+      initialState: state,
+    })
+    const { context: conformanceContext } = createHeartbeatTestContext({
+      instanceId: conformanceInstanceId,
+      initialState: state,
+    })
+
+    startHeartbeat(closedMockInstanceId, mockContext)
+    startHeartbeat(conformanceInstanceId, conformanceContext)
+    expect(getActiveHeartbeatTimerCount()).toBe(2)
+
+    cleanupDACPHandlers(mockContext)
+    expect(getState().instances[closedMockInstanceId]).toBeUndefined()
+    expect(getState().instances[conformanceInstanceId]).toBeDefined()
+    expect(getActiveHeartbeatTimerCount()).toBe(1)
+
+    handleWCP6Goodbye({}, mockContext)
+
+    expect(getState().instances[conformanceInstanceId]).toBeDefined()
+    expect(getState().heartbeats[conformanceInstanceId]).toBeDefined()
+    expect(getActiveHeartbeatTimerCount()).toBe(1)
   })
 
   it("cleanupDACPHandlers clears only the targeted heartbeat when multiple instances are connected and WCP4 temp context is used", () => {

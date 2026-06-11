@@ -37,6 +37,7 @@ import {
   notifyPrivateChannelUnsubscribe,
 } from "./private-channel-handlers"
 import { notifyContextListenerAdded } from "./utils/open-with-context"
+import { resolveDacpHandlerInstanceId } from "./utils/resolve-context-listener-instance-id"
 import { isValidContext } from "./utils/context-validation"
 
 /**
@@ -153,7 +154,8 @@ export function handleAddContextListener(
   message: BrowserTypes.AddContextListenerRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { transport, getState, setState, logger } = context
+  const instanceId = resolveDacpHandlerInstanceId(message, context)
 
   try {
     const { channelId, contextType: payloadContextType } = message.payload

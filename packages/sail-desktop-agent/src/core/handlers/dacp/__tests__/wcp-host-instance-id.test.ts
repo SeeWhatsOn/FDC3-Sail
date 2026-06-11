@@ -39,9 +39,9 @@ const LAUNCH_CONTEXT: Context = {
 function createHostInstanceAppLauncher(): AppLauncher {
   let launchCount = 0
   return {
-    async launch(request) {
+    launch(request) {
       const instanceId = request.app.instanceId ?? `uuid-${launchCount++}`
-      return { appId: request.app.appId, instanceId }
+      return Promise.resolve({ appId: request.app.appId, instanceId })
     },
   }
 }
@@ -77,7 +77,7 @@ function createAgentWithSourceInstance(options?: { openContextListenerTimeoutMs?
 
 function createWcp4FirstConnectMessage(
   connectionAttemptUuid: string,
-  hostInstanceId: string,
+  hostInstanceId?: string,
   hostInstanceUuid = "host-instance-uuid"
 ) {
   return {
@@ -85,14 +85,14 @@ function createWcp4FirstConnectMessage(
     payload: {
       identityUrl: APP_URL,
       actualUrl: APP_URL,
-      instanceId: hostInstanceId,
+      ...(hostInstanceId ? { instanceId: hostInstanceId } : {}),
       instanceUuid: hostInstanceUuid,
     },
     meta: {
       connectionAttemptUuid,
       timestamp: new Date().toISOString(),
       messageOrigin: new URL(APP_URL).origin,
-      wcpSourceWindow: { hostPanel: hostInstanceId },
+      wcpSourceWindow: hostInstanceId ? { hostPanel: hostInstanceId } : { hostPanel: "anonymous" },
     },
   } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 }
@@ -112,7 +112,7 @@ function createOpenRequestMessage(context?: Context): BrowserTypes.OpenRequest {
       app: { appId: CHART_APP.appId },
       context,
     },
-  } as BrowserTypes.OpenRequest
+  }
 }
 
 function createFindInstancesMessage(): BrowserTypes.FindInstancesRequest {
@@ -129,7 +129,7 @@ function createFindInstancesMessage(): BrowserTypes.FindInstancesRequest {
     payload: {
       app: { appId: CHART_APP.appId },
     },
-  } as BrowserTypes.FindInstancesRequest
+  }
 }
 
 function createAddContextListenerMessage(
@@ -150,7 +150,7 @@ function createAddContextListenerMessage(
       channelId: null,
       contextType,
     },
-  } as BrowserTypes.AddContextListenerRequest
+  }
 }
 
 function getWcp5InstanceId(transport: MockTransport): string {
@@ -230,12 +230,16 @@ describe("host-assigned instanceId at WCP4", () => {
     })
     agent.start()
 
-    await transport.receiveMessage(createWcp4FirstConnectMessage("wcp4-host-bind", HOST_INSTANCE_ID))
+    await transport.receiveMessage(
+      createWcp4FirstConnectMessage("wcp4-host-bind", HOST_INSTANCE_ID)
+    )
 
     expect(getWcp5InstanceId(transport)).toBe(HOST_INSTANCE_ID)
     expect(getInstance(agent.getState(), HOST_INSTANCE_ID)).toBeDefined()
     expect(
-      Object.values(agent.getState().instances).filter(instance => instance.appId === CHART_APP.appId)
+      Object.values(agent.getState().instances).filter(
+        instance => instance.appId === CHART_APP.appId
+      )
     ).toHaveLength(1)
   })
 
@@ -250,7 +254,9 @@ describe("host-assigned instanceId at WCP4", () => {
     expect(getInstance(agent.getState(), HOST_INSTANCE_ID)).toBeDefined()
     expect(agent.getState().open.pendingWithContext[HOST_INSTANCE_ID]?.length).toBe(1)
 
-    await transport.receiveMessage(createWcp4FirstConnectMessage("wcp4-open-with-context", HOST_INSTANCE_ID))
+    await transport.receiveMessage(
+      createWcp4FirstConnectMessage("wcp4-open-with-context", HOST_INSTANCE_ID)
+    )
     expect(getWcp5InstanceId(transport)).toBe(HOST_INSTANCE_ID)
 
     transport.clear()
@@ -279,5 +285,44 @@ describe("host-assigned instanceId at WCP4", () => {
       return typed.type === "openResponse" && typed.payload?.error === OpenError.AppTimeout
     })
     expect(timeoutAfterDelivery).toHaveLength(0)
+  })
+
+  it("adopts sole host-pre-registered pending when WCP4 omits instanceId", async () => {
+    const { agent, transport } = createAgentWithSourceInstance()
+
+    await transport.receiveMessage(createOpenRequestMessage())
+
+    await transport.receiveMessage(createWcp4FirstConnectMessage("wcp4-cross-origin-no-name"))
+
+    expect(getWcp5InstanceId(transport)).toBe(HOST_INSTANCE_ID)
+    expect(
+      Object.values(agent.getState().instances).filter(
+        instance => instance.appId === CHART_APP.appId
+      )
+    ).toHaveLength(1)
+  })
+
+  it("delivers open-with-context for a specific context type when WCP4 omits instanceId", async () => {
+    vi.useFakeTimers()
+    const { agent, transport } = createAgentWithSourceInstance({
+      openContextListenerTimeoutMs: 2000,
+    })
+
+    await transport.receiveMessage(createOpenRequestMessage(LAUNCH_CONTEXT))
+    expect(agent.getState().open.pendingWithContext[HOST_INSTANCE_ID]?.length).toBe(1)
+
+    await transport.receiveMessage(createWcp4FirstConnectMessage("wcp4-specific-context-no-name"))
+    expect(getWcp5InstanceId(transport)).toBe(HOST_INSTANCE_ID)
+
+    transport.clear()
+    await transport.receiveMessage(
+      createAddContextListenerMessage(HOST_INSTANCE_ID, LAUNCH_CONTEXT.type)
+    )
+
+    const appTimeoutResponses = transport.sentMessages.filter(message => {
+      const typed = message as { type?: string; payload?: { error?: string } }
+      return typed.type === "openResponse" && typed.payload?.error === OpenError.AppTimeout
+    })
+    expect(appTimeoutResponses).toHaveLength(0)
   })
 })

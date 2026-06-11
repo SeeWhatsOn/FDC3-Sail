@@ -37,6 +37,41 @@ export const setPendingOpenWithContextForInstance = (
   })
 }
 
+// Move pending open-with-context entries from one instance bucket to another.
+export const migratePendingOpenWithContextTarget = (
+  state: AgentState,
+  fromInstanceId: string,
+  toInstanceId: string
+): AgentState => {
+  const pendingList = state.open.pendingWithContext[fromInstanceId]
+  if (!pendingList || pendingList.length === 0) {
+    return state
+  }
+
+  return produce(state, draft => {
+    const fromList = draft.open.pendingWithContext[fromInstanceId]
+    if (!fromList || fromList.length === 0) {
+      return
+    }
+
+    delete draft.open.pendingWithContext[fromInstanceId]
+
+    if (!draft.open.pendingWithContext[toInstanceId]) {
+      draft.open.pendingWithContext[toInstanceId] = []
+    }
+
+    for (const pending of fromList) {
+      draft.open.pendingWithContext[toInstanceId].push({
+        ...pending,
+        appIdentifier: {
+          ...pending.appIdentifier,
+          instanceId: toInstanceId,
+        },
+      })
+    }
+  })
+}
+
 // Remove a pending entry by request UUID for a specific target instance.
 export const removePendingOpenWithContextByRequest = (
   state: AgentState,

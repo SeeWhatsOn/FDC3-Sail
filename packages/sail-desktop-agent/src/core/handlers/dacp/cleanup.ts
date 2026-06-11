@@ -16,6 +16,7 @@ import {
   clearPendingOpenWithContextForSourceInstance,
 } from "./utils/open-with-context"
 import { pruneInstanceIdentity } from "./instance-identity-registry"
+import type { AgentState } from "../../state/types"
 
 /**
  * WCP4 validation runs under a temp connection id while heartbeat and instance state
@@ -25,10 +26,7 @@ function resolveCleanupInstanceId(context: DACPHandlerContext): string {
   const { instanceId, getState } = context
   const state = getState()
 
-  if (
-    state.heartbeats[instanceId] ||
-    getActiveHeartbeatInstanceIds().includes(instanceId)
-  ) {
+  if (state.heartbeats[instanceId] || getActiveHeartbeatInstanceIds().includes(instanceId)) {
     return instanceId
   }
 
@@ -42,16 +40,25 @@ function resolveCleanupInstanceId(context: DACPHandlerContext): string {
     }
   }
 
-  const activeHeartbeatIds = getActiveHeartbeatInstanceIds()
-  if (
-    activeHeartbeatIds.length === 1 &&
-    !state.instances[instanceId] &&
-    state.instances[activeHeartbeatIds[0]!]
-  ) {
-    return activeHeartbeatIds[0]!
+  return instanceId
+}
+
+function instanceHasCleanupWork(state: AgentState, instanceId: string): boolean {
+  if (state.instances[instanceId] || state.heartbeats[instanceId]) {
+    return true
   }
 
-  return instanceId
+  if (getActiveHeartbeatInstanceIds().includes(instanceId)) {
+    return true
+  }
+
+  if ((state.open.pendingWithContext[instanceId]?.length ?? 0) > 0) {
+    return true
+  }
+
+  return Object.values(state.intents.pending).some(
+    pending => pending.targetInstanceId === instanceId || pending.sourceInstanceId === instanceId
+  )
 }
 
 /**
@@ -65,6 +72,11 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
     instanceId: resolveCleanupInstanceId(context),
   }
   const { instanceId, getState, setState, logger } = resolvedContext
+
+  if (!instanceHasCleanupWork(getState(), instanceId)) {
+    logger.debug("Skipping cleanup for already-removed instance", { instanceId })
+    return
+  }
 
   logger.info("Cleaning up DACP handlers for instance", { instanceId })
 
@@ -83,11 +95,8 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
       if (promiseData.deliveryTimeoutHandle) {
         clearTimeout(promiseData.deliveryTimeoutHandle)
       }
-      const disconnectRole =
-        pending.sourceInstanceId === instanceId ? "source" : "target"
-      promiseData.reject(
-        new Error(`Intent cancelled - ${disconnectRole} instance disconnected`)
-      )
+      const disconnectRole = pending.sourceInstanceId === instanceId ? "source" : "target"
+      promiseData.reject(new Error(`Intent cancelled - ${disconnectRole} instance disconnected`))
       resolvedContext.pendingIntentPromises.delete(pending.requestId)
     }
     setState(state => resolvePendingIntent(state, pending.requestId))

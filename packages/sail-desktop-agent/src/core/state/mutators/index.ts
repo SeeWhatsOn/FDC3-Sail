@@ -68,4 +68,5 @@ export {
   addPendingOpenWithContext,
   setPendingOpenWithContextForInstance,
   removePendingOpenWithContextByRequest,
+  migratePendingOpenWithContextTarget,
 } from "./open-with-context"

@@ -28,6 +28,16 @@ export function resolveDacpHandlerInstanceId(
     return hostInstanceId
   }
 
+  const sourceAppId = message.meta?.source?.appId
+  const pendingHostInstanceId = findPendingOpenWithContextHostInstanceId(
+    state,
+    sourceAppId,
+    instanceId
+  )
+  if (pendingHostInstanceId) {
+    return pendingHostInstanceId
+  }
+
   if (getInstance(state, instanceId)) {
     return instanceId
   }
@@ -39,7 +49,6 @@ export function resolveDacpHandlerInstanceId(
     }
   }
 
-  const sourceAppId = message.meta?.source?.appId
   if (sourceAppId) {
     const connectedInstancesForSourceApp = Object.values(state.instances).filter(
       instance =>
@@ -63,6 +72,29 @@ export function resolveDacpHandlerInstanceId(
   }
 
   return instanceId
+}
+
+function findPendingOpenWithContextHostInstanceId(
+  state: ReturnType<DACPHandlerContext["getState"]>,
+  sourceAppId: string | undefined,
+  routedInstanceId: string
+): string | undefined {
+  if (!sourceAppId) {
+    return undefined
+  }
+
+  const pendingTargets = Object.entries(state.open.pendingWithContext).filter(
+    ([targetInstanceId, pendingList]) =>
+      pendingList.length > 0 &&
+      targetInstanceId !== routedInstanceId &&
+      state.instances[targetInstanceId]?.appId === sourceAppId
+  )
+
+  if (pendingTargets.length !== 1) {
+    return undefined
+  }
+
+  return pendingTargets[0][0]
 }
 
 /** @deprecated Use {@link resolveDacpHandlerInstanceId}. */

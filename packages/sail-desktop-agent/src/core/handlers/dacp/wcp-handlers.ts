@@ -19,10 +19,14 @@ import { startHeartbeat } from "./heartbeat-handlers"
 import { cleanupDACPHandlers } from "./cleanup"
 import { getInstance } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
-import { AppInstanceState } from "../../state/types"
 import type { DirectoryApp } from "../../app-directory/types"
 import { getInstanceIdentityMap, type InstanceIdentityRecord } from "./instance-identity-registry"
 import { takePendingWcpSourceWindow } from "./wcp-pending-source-window"
+import { findBestAppMatchByIdentityUrl } from "./utils/wcp-identity-url-matching"
+import {
+  reconcileOrphanPendingHostInstances,
+  tryAdoptHostPreRegisteredInstance,
+} from "./utils/wcp-host-instance-adoption"
 
 type Wcp4ValidateAppIdentity = WebConnectionProtocol4ValidateAppIdentity
 type WCP5ValidateAppIdentityResponse = WebConnectionProtocol5ValidateAppIdentitySuccessResponse
@@ -138,14 +142,14 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
         sourceWindow,
       })
 
-    // Launcher-pre-registered instances are PENDING without an identity record until WCP4.
-    const canAdoptPendingHostInstance =
-      reconnectInstanceId &&
-      reconnectInstanceUuid &&
-      sourceWindow &&
-      existingInstance?.state === AppInstanceState.PENDING &&
-      existingInstance.appId === appMetadata.appId &&
-      !identityMap.has(reconnectInstanceId)
+    const adoptedHostInstance = tryAdoptHostPreRegisteredInstance({
+      reconnectInstanceId,
+      reconnectInstanceUuid,
+      sourceWindow,
+      appId: appMetadata.appId,
+      getState,
+      identityMap,
+    })
 
     if (canReuseExistingIdentity && reconnectInstanceId) {
       logger.info("[WCP4] Reconnecting to existing instance", reconnectInstanceId)
@@ -157,10 +161,13 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
         origin: identityOrigin,
         sourceWindow,
       })
-    } else if (canAdoptPendingHostInstance && reconnectInstanceId) {
-      logger.info("[WCP4] Adopting host-pre-registered pending instance", reconnectInstanceId)
-      instanceId = reconnectInstanceId
-      instanceUuid = reconnectInstanceUuid
+    } else if (adoptedHostInstance) {
+      logger.info(
+        "[WCP4] Adopting host-pre-registered pending instance",
+        adoptedHostInstance.instanceId
+      )
+      instanceId = adoptedHostInstance.instanceId
+      instanceUuid = adoptedHostInstance.instanceUuid
       identityMap.set(instanceId, {
         appId: appMetadata.appId,
         instanceUuid,
@@ -168,9 +175,6 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
         sourceWindow,
       })
     } else {
-      // First connect: always mints a new UUID. WCP4 payload instanceId (host iframe name /
-      // AppLauncher return value) is ignored unless canReuseExistingIdentity above succeeds.
-      // Host-assigned ids from fdc3.open are therefore not canonical until bind-host fix lands.
       const newInstance = createAppInstance(
         context,
         appMetadata,
@@ -186,6 +190,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
         origin: identityOrigin,
         sourceWindow,
       })
+      reconcileOrphanPendingHostInstances(context, appMetadata.appId, instanceId)
     }
 
     // Extract connectionAttemptUuid from WCP4 message or from temporary instanceId
@@ -277,11 +282,9 @@ function createAppInstance(
   identityOrigin: string,
   sourceWindow: unknown
 ) {
-  // Does not adopt reconnectInstanceId from WCP4; see handleWcp4ValidateAppIdentity branch above.
   const instanceId = crypto.randomUUID()
   const instanceUuid = crypto.randomUUID()
 
-  // Register the instance using state transform
   context.setState(state =>
     connectInstance(state, {
       instanceId,
@@ -418,81 +421,4 @@ function canReuseInstanceIdentity(params: {
     identityRecord.origin === expectedOrigin &&
     identityRecord.sourceWindow === sourceWindow
   )
-}
-
-function findBestAppMatchByIdentityUrl(
-  identityUrl: string,
-  apps: DirectoryApp[]
-): DirectoryApp | undefined {
-  const parsedIdentityUrl = new URL(identityUrl)
-  let bestMatch: { score: number; app: DirectoryApp } | undefined
-
-  for (const app of apps) {
-    const appUrl = getAppDirectoryUrl(app)
-
-    if (typeof appUrl !== "string") {
-      continue
-    }
-
-    const matchScore = scoreUrlMatch(parsedIdentityUrl, appUrl)
-    if (matchScore <= 0) {
-      continue
-    }
-
-    if (!bestMatch || matchScore > bestMatch.score) {
-      bestMatch = { score: matchScore, app }
-    }
-  }
-
-  return bestMatch?.app
-}
-
-function scoreUrlMatch(identityUrl: URL, appDirectoryUrl: string): number {
-  let parsedAppDUrl: URL
-  try {
-    parsedAppDUrl = new URL(appDirectoryUrl)
-  } catch {
-    return 0
-  }
-
-  if (parsedAppDUrl.origin !== identityUrl.origin) {
-    return 0
-  }
-
-  let score = 1
-
-  const appDPath = normalizePath(parsedAppDUrl.pathname)
-  if (appDPath) {
-    if (normalizePath(identityUrl.pathname) !== appDPath) {
-      return 0
-    }
-    score++
-  }
-
-  if (parsedAppDUrl.hash) {
-    if (identityUrl.hash !== parsedAppDUrl.hash) {
-      return 0
-    }
-    score++
-  }
-
-  for (const [key, value] of parsedAppDUrl.searchParams.entries()) {
-    if (identityUrl.searchParams.get(key) !== value) {
-      return 0
-    }
-    score++
-  }
-
-  return score
-}
-
-function normalizePath(pathname: string): string | null {
-  if (pathname === "/") {
-    return null
-  }
-  return pathname.endsWith("/") ? pathname.slice(0, -1) : pathname
-}
-
-function getAppDirectoryUrl(app: DirectoryApp): string | undefined {
-  return "url" in app.details && typeof app.details.url === "string" ? app.details.url : undefined
 }
