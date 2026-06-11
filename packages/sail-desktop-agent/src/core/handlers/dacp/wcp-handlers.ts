@@ -21,10 +21,7 @@ import { getInstance } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
 import { AppInstanceState } from "../../state/types"
 import type { DirectoryApp } from "../../app-directory/types"
-import {
-  getInstanceIdentityMap,
-  type InstanceIdentityRecord,
-} from "./instance-identity-registry"
+import { getInstanceIdentityMap, type InstanceIdentityRecord } from "./instance-identity-registry"
 import { takePendingWcpSourceWindow } from "./wcp-pending-source-window"
 
 type Wcp4ValidateAppIdentity = WebConnectionProtocol4ValidateAppIdentity
@@ -59,9 +56,11 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     // 1. Extract origins from URLs
     const identityOrigin = new URL(identityUrl).origin
     const actualOrigin = new URL(actualUrl).origin
-    const messageMeta = (message as {
-      meta?: { messageOrigin?: string; wcpSourceWindow?: unknown }
-    }).meta
+    const messageMeta = (
+      message as {
+        meta?: { messageOrigin?: string; wcpSourceWindow?: unknown }
+      }
+    ).meta
     const messageOrigin = messageMeta?.messageOrigin
     const sourceWindow =
       takePendingWcpSourceWindow(transport, context.instanceId) ?? messageMeta?.wcpSourceWindow
@@ -172,7 +171,13 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
       // First connect: always mints a new UUID. WCP4 payload instanceId (host iframe name /
       // AppLauncher return value) is ignored unless canReuseExistingIdentity above succeeds.
       // Host-assigned ids from fdc3.open are therefore not canonical until bind-host fix lands.
-      const newInstance = createAppInstance(context, appMetadata, identityUrl, identityOrigin, sourceWindow)
+      const newInstance = createAppInstance(
+        context,
+        appMetadata,
+        identityUrl,
+        identityOrigin,
+        sourceWindow
+      )
       instanceId = newInstance.instanceId
       instanceUuid = newInstance.instanceUuid
       identityMap.set(instanceId, {
@@ -249,8 +254,9 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
 
     transport.send(responseWithRouting)
 
-    // Start heartbeat for the actual instance (not the temp one)
-    startHeartbeat(instanceId, context)
+    if (context.heartbeatEnabled) {
+      startHeartbeat(instanceId, context)
+    }
   } catch (error) {
     logger.error("[WCP4] Error during validation", error)
     sendFailureResponse(

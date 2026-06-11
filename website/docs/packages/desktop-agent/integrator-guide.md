@@ -448,6 +448,54 @@ These behaviours stay within FDC3 MUSTs but are host conventions supported by th
 - **Host-adopt path** — `open` registers a `PENDING` instance; WCP4 may claim that `instanceId` before first connect so canonical id matches the launcher (supports `open()` returning `instanceId` early).
 - **`HostInstanceBinding`** (below) — proposed integrator sugar only; not part of the FDC3 standard.
 
+## Heartbeat and liveness configuration
+
+FDC3 2.2 defines [`heartbeatEvent`](https://fdc3.finos.org/docs/api/specs/desktopAgentCommunicationProtocol#checking-apps-are-alive) / [`heartbeatAcknowledgment`](https://fdc3.finos.org/docs/api/specs/desktopAgentCommunicationProtocol#checking-apps-are-alive) as an optional **Desktop Agent** liveness mechanism — “periodically or on demand,” depending on how the app is connected. Apps respond when the DA sends a heartbeat; there is **no** `getAgent()` parameter to disable it from the app side.
+
+Sail exposes heartbeat as **host-level configuration** on `DesktopAgent` / `createBrowserDesktopAgent` / `SailPlatform`. Settings apply to **every** connected instance for that agent — not per app or per entry in the app directory.
+
+| Option | Default | Purpose |
+|--------|---------|---------|
+| `heartbeatEnabled` | `true` | When `true`, start DACP heartbeat after successful WCP5. When `false`, skip heartbeat timers and `heartbeatEvent` traffic. |
+| `heartbeatIntervalMs` | `30_000` | Milliseconds between heartbeat sends (only when enabled). |
+| `heartbeatTimeoutMs` | `60_000` | Milliseconds without an ack before the instance is torn down (only when enabled). |
+
+Product defaults live in `packages/sail-desktop-agent/src/core/sail-default-config.ts` and merge in the `DesktopAgent` constructor via `resolveDesktopAgentConfig()`.
+
+```typescript
+import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
+
+const desktopAgent = createBrowserDesktopAgent({
+  appLauncher,
+  heartbeatEnabled: true, // default — omit to keep enabled
+  heartbeatIntervalMs: 30_000,
+  heartbeatTimeoutMs: 60_000,
+})
+
+// Disable heartbeat when the host relies on WCP6 / MessagePort teardown only
+const quietAgent = createBrowserDesktopAgent({
+  appLauncher,
+  heartbeatEnabled: false,
+})
+```
+
+```typescript
+// Remote or manual composition — same options on DesktopAgent
+import { DesktopAgent } from "@finos/sail-desktop-agent"
+
+const agent = new DesktopAgent({
+  transport: daTransport,
+  appLauncher,
+  heartbeatEnabled: false,
+})
+```
+
+**When to disable:** rare — e.g. local debugging, or a host that implements disconnect detection solely via [WCP6 Goodbye](https://fdc3.finos.org/docs/api/specs/webConnectionProtocol#step-5-disconnection) and port teardown. Production and conformance runs should normally leave heartbeat **enabled**; browser-resident agents often combine heartbeat with WCP6 and other signals.
+
+**Logging vs protocol:** `@finos/fdc3` `getAgent({ logLevels: { proxy: "WARN" } })` hides `"Responding to heartbeat request"` in the browser console only. It does not stop heartbeat on the wire — use `heartbeatEnabled: false` on the host agent for that.
+
+**Tests:** Cucumber uses shorter intervals via world config (`heartbeatIntervalMs` / `heartbeatTimeoutMs`). Vitest edge tests assert no connect-time flood when defaults are applied correctly.
+
 ## Connection lifecycle (happy path)
 
 ```mermaid

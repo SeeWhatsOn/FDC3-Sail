@@ -22,10 +22,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import type { AgentState, StateSetter } from "./state/types"
 import { createInitialState, createStateWithOverrides } from "./state/initial-state"
 import { consoleLogger, type Logger, type LogPayloadDetail } from "./interfaces/logger"
-import {
-  resolveDesktopAgentConfig,
-  type SailImplementationMetadata,
-} from "./sail-default-config"
+import { resolveDesktopAgentConfig, type SailImplementationMetadata } from "./sail-default-config"
 import { InMemoryTransport } from "../transports/in-memory-transport"
 import { getInstance } from "./state/selectors"
 
@@ -86,6 +83,13 @@ export interface DesktopAgentOptions {
   implementationMetadata?: Partial<SailImplementationMetadata>
 
   openContextListenerTimeoutMs?: number
+  /**
+   * When `true`, the agent sends DACP `heartbeatEvent` messages for liveness after WCP5.
+   * FDC3 2.2 leaves this as a Desktop Agent policy (apps cannot opt out via `getAgent()`).
+   *
+   * @defaultValue `true`
+   */
+  heartbeatEnabled?: boolean
   heartbeatIntervalMs?: number
   heartbeatTimeoutMs?: number
 }
@@ -106,6 +110,7 @@ export interface DesktopAgentConfig {
   initialState?: Partial<AgentState>
   implementationMetadata: SailImplementationMetadata
   openContextListenerTimeoutMs: number
+  heartbeatEnabled: boolean
   heartbeatIntervalMs: number
   heartbeatTimeoutMs: number
 }
@@ -148,6 +153,7 @@ export class DesktopAgent {
   private implementationMetadata: SailImplementationMetadata
   private userChannels: BrowserTypes.Channel[]
   private openContextListenerTimeoutMs: number
+  private heartbeatEnabled: boolean
   private heartbeatIntervalMs: number
   private heartbeatTimeoutMs: number
   private pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
@@ -165,6 +171,7 @@ export class DesktopAgent {
     this.userChannels = config.userChannels
     this.implementationMetadata = config.implementationMetadata
     this.openContextListenerTimeoutMs = config.openContextListenerTimeoutMs
+    this.heartbeatEnabled = config.heartbeatEnabled
     this.heartbeatIntervalMs = config.heartbeatIntervalMs
     this.heartbeatTimeoutMs = config.heartbeatTimeoutMs
     this.state = config.initialState
@@ -315,6 +322,7 @@ export class DesktopAgent {
       logPayloadDetail: this.logPayloadDetail,
       implementationMetadata: this.implementationMetadata,
       openContextListenerTimeoutMs: this.openContextListenerTimeoutMs,
+      heartbeatEnabled: this.heartbeatEnabled,
       heartbeatIntervalMs: this.heartbeatIntervalMs,
       heartbeatTimeoutMs: this.heartbeatTimeoutMs,
       pendingIntentPromises: this.pendingIntentPromises,

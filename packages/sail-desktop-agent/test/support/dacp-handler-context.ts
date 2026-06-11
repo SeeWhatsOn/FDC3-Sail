@@ -6,10 +6,7 @@
 import type { DACPHandlerContext } from "../../src/core/handlers/types"
 import { consoleLogger } from "../../src/core/interfaces/logger"
 import type { CustomWorld } from "../world/index.ts"
-import {
-  applyDesktopAgentStateUpdate,
-  getDesktopAgentPendingIntentPromises,
-} from "./agent-state"
+import { applyDesktopAgentStateUpdate, getDesktopAgentPendingIntentPromises } from "./agent-state"
 
 export function createHandlerContextForWorld(
   world: CustomWorld,
@@ -28,6 +25,7 @@ export function createHandlerContextForWorld(
     logger: consoleLogger,
     implementationMetadata: agent.getImplementationMetadata(),
     openContextListenerTimeoutMs: 2000,
+    heartbeatEnabled: true,
     heartbeatIntervalMs: 500,
     heartbeatTimeoutMs: 2000,
     pendingIntentPromises: getDesktopAgentPendingIntentPromises(agent),

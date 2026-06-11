@@ -49,9 +49,11 @@ export function createDACPTestContext(options: {
       providerVersion: "0.0.0",
     },
     openContextListenerTimeoutMs: 2000,
+    heartbeatEnabled: true,
     heartbeatIntervalMs: 500,
     heartbeatTimeoutMs: 2000,
-    pendingIntentPromises: options.pendingIntentPromises ?? new Map(),
+    pendingIntentPromises:
+      options.pendingIntentPromises ?? new Map<string, PendingIntentPromiseEntry>(),
   }
 
   return { context, getState: readState }

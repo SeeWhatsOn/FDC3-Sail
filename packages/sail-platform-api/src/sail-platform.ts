@@ -109,6 +109,13 @@ export interface SailPlatformConfig {
    */
   heartbeatTimeoutMs?: number
 
+  /**
+   * When `false`, the agent does not send DACP heartbeat events (host policy).
+   *
+   * @defaultValue `true`
+   */
+  heartbeatEnabled?: boolean
+
   // ===== Storage =====
 
   /**
@@ -227,6 +234,7 @@ export class SailPlatform {
       userChannels: this.config.userChannels,
       implementationMetadata: this.config.implementationMetadata,
       openContextListenerTimeoutMs: this.config.openContextListenerTimeoutMs,
+      heartbeatEnabled: this.config.heartbeatEnabled,
       heartbeatIntervalMs: this.config.heartbeatIntervalMs,
       heartbeatTimeoutMs: this.config.heartbeatTimeoutMs,
       intentResolver: this.config.intentResolver,

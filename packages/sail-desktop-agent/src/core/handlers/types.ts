@@ -198,6 +198,13 @@ export interface DACPHandlerContext {
   /** Timeout (ms) to wait for a context listener after open-with-context */
   openContextListenerTimeoutMs: number
 
+  /**
+   * When `true`, send DACP heartbeat events for connected instances (Desktop Agent policy).
+   *
+   * @defaultValue `true`
+   */
+  heartbeatEnabled: boolean
+
   /** Heartbeat interval (ms) for sending heartbeat events */
   heartbeatIntervalMs: number
 

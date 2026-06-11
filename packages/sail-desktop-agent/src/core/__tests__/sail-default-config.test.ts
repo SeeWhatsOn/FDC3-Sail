@@ -23,6 +23,42 @@ describe("resolveDesktopAgentConfig", () => {
 
     expect(config.implementationMetadata).toEqual(DEFAULT_SAIL_IMPLEMENTATION_METADATA)
     expect(config.implementationMetadata.provider).toBe("FDC3-Sail")
+    expect(config.heartbeatIntervalMs).toBe(30_000)
+    expect(config.heartbeatTimeoutMs).toBe(60_000)
+    expect(config.heartbeatEnabled).toBe(true)
+  })
+
+  it("does not let explicit undefined heartbeat options clobber product defaults", () => {
+    const config = resolveDesktopAgentConfig({
+      transport: new MockTransport(),
+      heartbeatEnabled: undefined,
+      heartbeatIntervalMs: undefined,
+      heartbeatTimeoutMs: undefined,
+    })
+
+    expect(config.heartbeatEnabled).toBe(true)
+    expect(config.heartbeatIntervalMs).toBe(30_000)
+    expect(config.heartbeatTimeoutMs).toBe(60_000)
+  })
+
+  it("allows disabling heartbeat at the Desktop Agent level", () => {
+    const config = resolveDesktopAgentConfig({
+      transport: new MockTransport(),
+      heartbeatEnabled: false,
+    })
+
+    expect(config.heartbeatEnabled).toBe(false)
+  })
+
+  it("does not let explicit undefined heartbeat timing clobber defaults", () => {
+    const config = resolveDesktopAgentConfig({
+      transport: new MockTransport(),
+      heartbeatIntervalMs: undefined,
+      heartbeatTimeoutMs: undefined,
+    })
+
+    expect(config.heartbeatIntervalMs).toBe(30_000)
+    expect(config.heartbeatTimeoutMs).toBe(60_000)
   })
 
   it("deep-merges partial implementationMetadata overrides", () => {

@@ -143,6 +143,7 @@ export interface BrowserDesktopAgentOptions extends Pick<
   | "userChannels"
   | "apps"
   | "openContextListenerTimeoutMs"
+  | "heartbeatEnabled"
   | "heartbeatIntervalMs"
   | "heartbeatTimeoutMs"
 > {
@@ -263,6 +264,7 @@ export function createBrowserDesktopAgent(options?: BrowserDesktopAgentOptions):
     userChannels: options?.userChannels,
     implementationMetadata: options?.implementationMetadata,
     openContextListenerTimeoutMs: options?.openContextListenerTimeoutMs,
+    heartbeatEnabled: options?.heartbeatEnabled,
     heartbeatIntervalMs: options?.heartbeatIntervalMs,
     heartbeatTimeoutMs: options?.heartbeatTimeoutMs,
     logger,
