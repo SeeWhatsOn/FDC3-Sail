@@ -1,0 +1,69 @@
+import { resolveWcpTempInstanceId } from "../heartbeat-runtime"
+import type { DACPHandlerContext } from "../../types"
+import { getInstance } from "../../../state/selectors"
+import { AppInstanceState } from "../../../state/types"
+
+type MessageWithDacpInstanceMeta = {
+  meta?: {
+    hostInstanceId?: string
+    source?: { appId?: string; instanceId?: string }
+  }
+}
+
+/**
+ * Resolve the agent instance bucket for DACP handlers during WCP handshake.
+ *
+ * MessagePort routing may still use a temp id while fdc3.open pre-registers a PENDING
+ * instance on the host launcher / iframe name. Prefer the host launcher id when present.
+ */
+export function resolveDacpHandlerInstanceId(
+  message: MessageWithDacpInstanceMeta,
+  context: DACPHandlerContext
+): string {
+  const { instanceId, getState } = context
+  const state = getState()
+  const hostInstanceId = message.meta?.hostInstanceId
+
+  if (hostInstanceId && getInstance(state, hostInstanceId)) {
+    return hostInstanceId
+  }
+
+  if (getInstance(state, instanceId)) {
+    return instanceId
+  }
+
+  if (instanceId.startsWith("temp-")) {
+    const linkedCanonicalId = resolveWcpTempInstanceId(instanceId)
+    if (linkedCanonicalId && getInstance(state, linkedCanonicalId)) {
+      return linkedCanonicalId
+    }
+  }
+
+  const sourceAppId = message.meta?.source?.appId
+  if (sourceAppId) {
+    const connectedInstancesForSourceApp = Object.values(state.instances).filter(
+      instance =>
+        instance.appId === sourceAppId &&
+        instance.state === AppInstanceState.CONNECTED &&
+        instance.instanceId !== instanceId
+    )
+    if (connectedInstancesForSourceApp.length === 1) {
+      return connectedInstancesForSourceApp[0].instanceId
+    }
+
+    const pendingHostInstance = Object.values(state.instances).find(
+      instance =>
+        instance.appId === sourceAppId &&
+        instance.state === AppInstanceState.PENDING &&
+        instance.instanceId !== instanceId
+    )
+    if (pendingHostInstance) {
+      return pendingHostInstance.instanceId
+    }
+  }
+
+  return instanceId
+}
+
+/** @deprecated Use {@link resolveDacpHandlerInstanceId}. */
+export const resolveContextListenerInstanceId = resolveDacpHandlerInstanceId
