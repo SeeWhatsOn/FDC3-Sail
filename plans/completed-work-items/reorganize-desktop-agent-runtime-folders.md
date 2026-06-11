@@ -3,7 +3,7 @@ title: "Reorganize desktop-agent runtime folders"
 slug: reorganize-desktop-agent-runtime-folders
 kind: task
 type: chore
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -81,7 +81,7 @@ None.
 
 ## Loop history
 
-None.
+- 2026-06-10: Archived done — `core/`, `protocols/`, `connectors/browser/`, `presets/` layout landed; verified on v3-pre (PR #64).
 
 ## Staged for review
 

@@ -3,7 +3,7 @@ title: "Reconcile downstream consumers of browser facade API"
 slug: reconcile-downstream-browser-facade-consumers
 kind: task
 type: feature
-status: draft
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -77,7 +77,7 @@ _(empty)_
 
 ## Loop history
 
-_(empty)_
+- 2026-06-10: Archived done — platform-api and conformance harness consume facade API; verified on v3-pre.
 
 ## Staged for review
 

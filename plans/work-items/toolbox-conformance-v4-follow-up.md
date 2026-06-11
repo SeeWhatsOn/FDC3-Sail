@@ -34,7 +34,7 @@ Maintainers need a second delivery wave after TB-00–TB-09: v4 shows agent rows
 
 ## Parent context
 
-v4 export ran 95 scenarios (31 pass). Agent fixes (#47–#48) and WCP bind (#49) merged but v4 still reports `desktopAgent`, `apps.length`, and channel timeouts. Deliver agent tasks first, then WCP extension, spike on UserCancelledResolution, baseline doc, optional re-run verification.
+v4 export ran 95 scenarios (31 pass). Agent fixes (#47–#48) and WCP bind (#49) merged but v4 still reports `desktopAgent`, `apps.length`, and channel timeouts. **Parallel tracks:** TV4-01→02→04 (findIntent / raiseIntent throws) blocked on FINOS clarification; proceed with TV4-03, TV4-05–08 and spike TV4-06 independently.
 
 ## Child work items
 
@@ -42,10 +42,10 @@ v4 export ran 95 scenarios (31 pass). Agent fixes (#47–#48) and WCP bind (#49)
 |------|------|------------|--------|
 | record-toolbox-v4-measured-baseline | task | — | draft |
 | verify-v4-agent-fixes-on-current-branch | task | — | draft |
-| dedupe-findintent-directory-running-apps | task | — | draft |
-| fix-findintent-empty-apps-noappsfound | task | dedupe-findintent-directory-running-apps | draft |
+| dedupe-findintent-directory-running-apps | task | — | blocked |
+| fix-findintent-empty-apps-noappsfound | task | dedupe-findintent-directory-running-apps | blocked |
 | populate-intent-result-metadata-toolbox | task | — | draft |
-| align-raise-intent-throws-v4-matrix | task | fix-findintent-empty-apps-noappsfound | draft |
+| align-raise-intent-throws-v4-matrix | task | fix-findintent-empty-apps-noappsfound | blocked |
 | diagnose-harness-user-cancelled-resolution | spike | — | draft |
 | extend-wcp-channel-delivery-integration-tests | task | verify-v4-agent-fixes-on-current-branch | draft |
 
@@ -61,7 +61,7 @@ none
 
 ## Test guidance
 
-Deliver `record-toolbox-v4-measured-baseline` and `verify-v4-agent-fixes-on-current-branch` first. Agent tasks TV4-01–04 before WCP TV4-05. Spike TV4-06 can run in parallel with agent work. Re-run toolbox manually after TV4-01–05 land.
+Deliver `record-toolbox-v4-measured-baseline` and `verify-v4-agent-fixes-on-current-branch` first. **Blocked:** TV4-01–04 until `findIntent` apps[] policy confirmed with FINOS. **Proceed:** TV4-03, TV4-05–08, spike TV4-06. Re-run toolbox manually after TV4-01–05 land.
 
 ## Blocked decisions
 

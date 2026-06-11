@@ -3,10 +3,10 @@ title: "Align raiseIntent throws error messages with v4 toolbox matrix"
 slug: align-raise-intent-throws-v4-matrix
 kind: task
 type: bug
-status: draft
+status: blocked
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-approval-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-raise-intent.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-raise-shared.ts
@@ -64,11 +64,14 @@ RED: Extend Vitest error-boundary table from fdc3-error-enum work with v4 scenar
 
 ## Blocked decisions
 
-_(empty)_
+**2026-06-11 — Blocked on findIntent dependency chain**
+
+- `fix-findintent-empty-apps-noappsfound` → `dedupe-findintent-directory-running-apps` (blocked on FINOS `findIntent` apps[] clarification).
+- Do not deliver TV4-04 until upstream findIntent items are unblocked.
 
 ## Loop history
 
-_(empty)_
+- 2026-06-11: blocked — transitive dependency on `dedupe-findintent-directory-running-apps`.
 
 ## Staged for review
 

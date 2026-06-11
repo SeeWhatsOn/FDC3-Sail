@@ -3,7 +3,7 @@ title: "Update conformance harness desktop-agent API usage"
 slug: update-conformance-harness-desktop-agent-api
 kind: task
 type: feature
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -84,7 +84,7 @@ None.
 
 ## Loop history
 
-None.
+- 2026-06-10: Archived done — harness uses top-level preset with `apps`, `intentResolver`, lifecycle callbacks; verified on v3-pre (PR #66).
 
 ## Staged for review
 

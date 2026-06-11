@@ -3,7 +3,7 @@ title: "Add top-level browser Desktop Agent preset"
 slug: add-top-level-browser-desktop-agent-preset
 kind: task
 type: feature
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -96,7 +96,7 @@ None.
 
 ## Loop history
 
-None.
+- 2026-06-10: Archived done — preset exported from top-level and `/presets`; verified on v3-pre (PR #63).
 
 ## Staged for review
 

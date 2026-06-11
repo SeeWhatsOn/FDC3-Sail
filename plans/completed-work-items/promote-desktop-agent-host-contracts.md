@@ -3,7 +3,7 @@ title: "Promote desktop-agent host contracts"
 slug: promote-desktop-agent-host-contracts
 kind: task
 type: feature
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -89,7 +89,7 @@ None.
 
 ## Loop history
 
-None.
+- 2026-06-10: Archived done — `host-contracts/` promoted and top-level exported; verified on v3-pre.
 
 ## Staged for review
 

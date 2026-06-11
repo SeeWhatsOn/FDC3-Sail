@@ -3,10 +3,10 @@ title: "Emit NoAppsFound when findIntent matches intent but zero apps"
 slug: fix-findintent-empty-apps-noappsfound
 kind: task
 type: bug
-status: draft
+status: blocked
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-approval-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-discovery-handlers.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-helpers.ts
@@ -64,11 +64,14 @@ RED: Vitest for `handleFindIntentRequest` wrong-context payload; Cucumber `@conf
 
 ## Blocked decisions
 
-_(empty)_
+**2026-06-11 — Blocked on `dedupe-findintent-directory-running-apps`**
+
+- Parent item blocked pending FINOS clarification (Kris West, Rob Moffat) on `findIntent` `AppIntent.apps` merge policy (`FindIntentAppD` vs `StartChat` example).
+- Do not deliver TV4-02 until dedupe policy is approved and parent is unblocked.
 
 ## Loop history
 
-_(empty)_
+- 2026-06-11: blocked — dependency `dedupe-findintent-directory-running-apps` blocked on FDC3 spec vs conformance oracle.
 
 ## Staged for review
 

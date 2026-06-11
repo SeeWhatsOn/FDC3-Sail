@@ -33,7 +33,7 @@ v4 has ~36 `AppTimeout` failures on user/app channels and context metadata. `bdd
 
 - `plans/prd-toolbox-conformance-v4-follow-up.md` (TV4-05)
 - `plans/completed-work-items/bdd-wcp-integration-scenario.md`
-- `packages/sail-desktop-agent/docs/conformance-traceability.md`
+- `website/docs/packages/desktop-agent/conformance.md`
 
 ## Parent context
 

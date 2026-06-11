@@ -3,10 +3,10 @@ title: "Dedupe findIntent apps when directory and running instance overlap"
 slug: dedupe-findintent-directory-running-apps
 kind: task
 type: bug
-status: draft
+status: blocked
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-approval-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-helpers.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-discovery-handlers.ts
@@ -36,7 +36,7 @@ v4 reports `FindIntentAppD` and `FindIntentByContextSingleContext` with length 2
 
 ## Parent context
 
-FDC3 conformance expects one `AppMetadata` per logical app in `AppIntent.apps` unless multiple distinct instances are intended. Prefer the running instance row (with `instanceId`) over the directory-only row when `appId` matches.
+v4 `FindIntentAppD` fails with `apps.length` 2 vs 1 when `createAppIntents` emits both a directory row (no `instanceId`) and a running listener row (with `instanceId`) for the same `appId`. **Blocked pending FINOS clarification:** FDC3 2.2 materials appear inconsistent — [DesktopAgent#findIntent `StartChat` example](https://fdc3.finos.org/docs/api/ref/DesktopAgent#findintent) illustrates duplicate `appId` rows (launch + existing instance), while [Intents-Tests `2.0-FindIntentAppD`](https://fdc3.finos.org/docs/api/conformance/Intents-Tests) says "only A `AppMetadata`" and the toolbox enforces `apps.length === 1`. Sail BDD (`find-intent.feature` "include both the app and running instances") expects directory + instance rows in multi-app cases. A naive same-`appId` dedupe may be the wrong fix; merge policy needs a spec-backed rule (single-app-running vs multi-app chooser) before delivery.
 
 ## Behavior spec
 
@@ -66,11 +66,20 @@ RED: Vitest table in `intent-handlers/__tests__/` loading `conformance-appd.json
 
 ## Blocked decisions
 
-_(empty)_
+**2026-06-10 — FDC3 spec vs conformance oracle for `findIntent` `apps[]` shape**
+
+- **Question:** When an app is in the App Directory and has a running intent listener, should `findIntent` return one `AppMetadata`, or both a no-`instanceId` row (launch) and an `instanceId` row (use existing) for the same `appId`?
+- **Why blocked:** API reference (`StartChat` example) and conformance/toolbox (`FindIntentAppD`, `apps.length === 1`) do not clearly agree for the single-app-already-running case. Implementing dedupe now risks fixing the toolbox while contradicting the documented API example and Sail multi-app BDD.
+- **Outreach:** Reach out to **Kris West** and **Rob Moffat** (FINOS FDC3) for normative guidance — clarify whether conformance text "only A `AppMetadata`" means exactly one array entry or only app A (no B/C/D), and how that reconciles with the `StartChat` duplicate-`appId` example.
+- **References to share:**
+  - Call: `fdc3.findIntent("aTestingIntent")` ([Intents-Tests](https://fdc3.finos.org/docs/api/conformance/Intents-Tests))
+  - API example: `findIntent("StartChat")` with Symphony listed twice ([DesktopAgent#findIntent](https://fdc3.finos.org/docs/api/ref/DesktopAgent#findintent))
+  - Sail failure: `conformance-report-v4.txt` — `Unexpected AppIntent.apps.length. Expected 1, got 2`
+  - Sail code: `createAppIntents` in `intent-helpers.ts` (directory pass + running listener pass)
 
 ## Loop history
 
-_(empty)_
+- 2026-06-10: blocked — pending FINOS clarification (Kris West, Rob Moffat) on spec vs conformance for `findIntent` apps merge policy.
 
 ## Staged for review
 

@@ -17,8 +17,8 @@ Refactor and document `@finos/sail-desktop-agent` as the primary platform-builde
 | `plans/prd-transport-platform-hardening.md` | Existing transport/platform hardening PRD | Extend concepts around typed platform APIs; do not duplicate transport bug fixes already planned or completed. |
 | `plans/prd-desktop-agent-conformance-gaps.md` | Existing conformance gap PRD | Defer conformance behavior gaps unless import/API changes affect the harness. |
 | `plans/prd-desktop-agent-release-p2.md` | Existing release planning artifact | No duplicate; this PRD narrows to package architecture and consumer API. |
-| `packages/sail-desktop-agent/README.md` | Current package docs reference `/browser` and `/transports` subpaths | Update to top-level package API and the new internal structure. |
-| `.cursor/skills/consume-sail-desktop-agent/SKILL.md` | Current skill teaches `/browser` and `/transports` package surface | Update after the new public package surface lands. |
+| `packages/sail-desktop-agent/README.md` | Brief summary linking to Docusaurus | **done** — points to `website/docs/packages/desktop-agent/`. |
+| `.cursor/skills/consume-sail-desktop-agent/SKILL.md` | Stale facade/session examples vs website integrator guide | **done** — aligned to integrator guide. |
 
 ## In scope
 
@@ -142,22 +142,26 @@ const desktopAgent = createBrowserDesktopAgent({
 | PKG-05 | Align sail-platform-api wrapper with new desktop-agent API | task | `align-sail-platform-wrapper-with-desktop-agent-preset` |
 | PKG-06 | Update conformance harness for desktop-agent top-level API | task | `update-conformance-harness-desktop-agent-api` |
 | PKG-07 | Update consume-sail-desktop-agent skill | task | `update-consume-sail-desktop-agent-skill` |
-| PKG-08 | Browser edge + DA integrator guide (`docs/browser-edge-and-da.md`) | task | `document-browser-edge-and-da-integrator-guide` |
+| PKG-08 | Browser edge + DA integrator guide | — | **Cancelled** — superseded by `website/docs/packages/desktop-agent/integrator-guide.md` |
 | PKG-09 | Facade API: return `DesktopAgent`, session registry, coupled lifecycle | task | `simplify-browser-desktop-agent-facade-api` |
 | PKG-10 | README / JSDoc examples for facade API | chore | `align-package-readme-browser-facade-examples` |
 | PKG-11 | Platform + harness facade consumer reconciliation | task | `reconcile-downstream-browser-facade-consumers` |
 
-## PRD accuracy gate (2026-06-02 / v3-pre)
+## PRD accuracy gate (2026-06-10 / v3-pre)
 
-| ID | Classification | Evidence | Work item slug (planned) |
+| ID | Classification | Status | Work item slug |
 |---|---|---|---|
-| PKG-01 | task | verified-partial: `packages/sail-desktop-agent/README.md` documents `/browser` and `/transports`; `src/index.ts` says browser-specific code is not top-level exported. | `define-desktop-agent-package-architecture` |
-| PKG-02 | task | verified-partial: `AppLauncher` exists under `src/core/interfaces/app-launcher.ts`; `IntentResolver` and `ChannelSelector` are defined in `packages/sail-platform-api/src/interfaces/*`, creating parallel package ownership. | `promote-desktop-agent-host-contracts` |
-| PKG-03 | task | verified-partial: `src/browser/browser-desktop-agent.ts` has `createBrowserDesktopAgent`, but options expose `appLauncher`/`userChannels` and `appDirectories`, not direct `apps` or a friendly `intentResolver` contract. | `add-top-level-browser-desktop-agent-preset` |
-| PKG-04 | task | verified-gap: WCP runtime files are under `src/browser/wcp/*`; DACP protocol files are under `src/core/dacp-protocol/*`; the current layout blurs protocol, connector, and preset responsibilities. | `reorganize-desktop-agent-runtime-folders` |
-| PKG-05 | task | verified-partial: `packages/sail-platform-api/src/sail-platform.ts` manually creates `DesktopAgent`, `WCPConnector`, and an in-memory transport pair rather than wrapping the package preset. | `align-sail-platform-wrapper-with-desktop-agent-preset` |
-| PKG-06 | task | verified-gap: `packages/sail-conformance-harness/src/main.tsx` imports `createBrowserDesktopAgent` from `@finos/sail-desktop-agent/browser` and manually adds apps after construction. | `update-conformance-harness-desktop-agent-api` |
-| PKG-07 | task | verified-gap: `.cursor/skills/consume-sail-desktop-agent/SKILL.md` teaches `/browser` and `/transports` as primary import paths. | `update-consume-sail-desktop-agent-skill` |
+| PKG-01 | task | **done** — Docusaurus package docs; no Vitest coverage of markdown/website docs. | `define-desktop-agent-package-architecture` |
+| PKG-02 | task | **done** — `host-contracts/` promoted; top-level export. | `promote-desktop-agent-host-contracts` |
+| PKG-03 | task | **done** — preset accepts `apps`, `intentResolver`, `userChannels`; exported top-level and `/presets`. | `add-top-level-browser-desktop-agent-preset` |
+| PKG-04 | chore | **done** — `protocols/`, `connectors/browser/`, `presets/` tree on disk. | `reorganize-desktop-agent-runtime-folders` |
+| PKG-05 | task | **done** — `SailPlatform` wraps `createBrowserDesktopAgent`. | `align-sail-platform-wrapper-with-desktop-agent-preset` |
+| PKG-06 | task | **done** — harness uses top-level preset API. | `update-conformance-harness-desktop-agent-api` |
+| PKG-07 | task | **done** — skill aligned to integrator guide and `/presets` canonical import. | `update-consume-sail-desktop-agent-skill` |
+| PKG-08 | — | **cancelled** — integrator guide lives on Docusaurus, not package-local `docs/`. | — |
+| PKG-09 | task | **done** — facade returns `DesktopAgent`; coupled lifecycle. | `simplify-browser-desktop-agent-facade-api` |
+| PKG-10 | chore | **done** — README links to website; facade example in place. | `align-package-readme-browser-facade-examples` |
+| PKG-11 | task | **done** — platform + harness reconciled to facade API. | `reconcile-downstream-browser-facade-consumers` |
 
 ## Parent context summary
 

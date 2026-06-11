@@ -3,7 +3,7 @@ title: "Simplify browser Desktop Agent facade API"
 slug: simplify-browser-desktop-agent-facade-api
 kind: task
 type: feature
-status: draft
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -118,7 +118,7 @@ _(empty)_
 
 ## Loop history
 
-_(empty)_
+- 2026-06-10: Archived done — `createBrowserDesktopAgent` returns `DesktopAgent` with coupled lifecycle; `getBrowserDesktopAgentSession` for edge access; verified on v3-pre.
 
 ## Staged for review
 

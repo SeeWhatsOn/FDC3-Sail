@@ -4,35 +4,31 @@
  * This is the main entry point for the FDC3 Desktop Agent core.
  * It exports only environment-agnostic components.
  *
- * ## Tree-Shaking
+ * ## Application code
  *
- * Browser-specific code is NOT exported from this entry point.
- * To use browser functionality, import from the /browser submodule:
+ * Prefer the browser preset from `@finos/sail-desktop-agent/presets` (also re-exported here).
+ * Advanced WCP edge access: `getBrowserDesktopAgentSession` from `/browser`.
  *
  * ```typescript
- * // ✅ Core only (no browser code in bundle)
- * import { DesktopAgent } from '@finos/sail-desktop-agent'
+ * import { createBrowserDesktopAgent } from '@finos/sail-desktop-agent/presets'
+ * import type { AppLauncher } from '@finos/sail-desktop-agent'
  *
- * // ✅ Browser module (includes WCP connector)
- * import { createBrowserDesktopAgent } from '@finos/sail-desktop-agent/browser'
- *
- * // ✅ Transports module
- * import { createInMemoryTransportPair } from '@finos/sail-desktop-agent/transports'
+ * const desktopAgent = createBrowserDesktopAgent({ appLauncher })
+ * // Auto-started by default — edge runs with desktopAgent.start() / stop()
  * ```
  *
  * ## What's Exported
  *
  * - **DesktopAgent** - Core Desktop Agent class
- * - **Interfaces** - Transport (core); AppLauncher and other host contracts via `./host-contracts`
- * - **State Registries** - App, Intent, Channel registries
- * - **App Directory** - App directory manager
- * - **Types** - TypeScript types and interfaces
+ * - **createBrowserDesktopAgent** - Browser preset (re-export from `./presets`)
+ * - **Host contracts** - AppLauncher, IntentResolver, ChannelControl via `./host-contracts`
+ * - **App Directory** - App directory manager and core types
  *
- * ## What's NOT Exported (Tree-Shakeable)
+ * ## Advanced subpaths
  *
- * - Browser WCP connector → Use `/browser` submodule
- * - MessagePort transport → Use `/browser` submodule
- * - InMemory transport → Use `/transports` submodule
+ * - `/browser` - WCPConnector, createWCPClient, getBrowserDesktopAgentSession
+ * - `/transports` - createInMemoryTransportPair, InMemoryTransport
+ * - `/presets` - canonical preset entry for application bundles
  */
 
 // Re-export everything from core

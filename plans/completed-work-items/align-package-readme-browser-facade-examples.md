@@ -3,7 +3,7 @@ title: "Align package README with browser facade API"
 slug: align-package-readme-browser-facade-examples
 kind: task
 type: chore
-status: draft
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -72,7 +72,7 @@ _(empty)_
 
 ## Loop history
 
-_(empty)_
+- 2026-06-10: Archived done — README uses facade example and links to website integrator guide; `src/index.ts` JSDoc refresh deferred to PKG-01 rework.
 
 ## Staged for review
 

@@ -3,7 +3,7 @@ title: "Align SailPlatform wrapper with desktop-agent preset"
 slug: align-sail-platform-wrapper-with-desktop-agent-preset
 kind: task
 type: feature
-status: pr_awaiting
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -89,7 +89,7 @@ None.
 
 ## Loop history
 
-None.
+- 2026-06-10: Archived done — `SailPlatform` delegates to `createBrowserDesktopAgent` + `getBrowserDesktopAgentSession`; verified on v3-pre (PR #65).
 
 ## Staged for review
 
