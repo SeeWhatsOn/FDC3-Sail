@@ -55,6 +55,42 @@ This is “on behalf of the app” in **identity** (source instance id), not “
 
 Apps still use **`fdc3.getCurrentChannel()`** inside the iframe over MessagePort — that is the app’s own DACP `getCurrentChannelRequest`.
 
+### Host reactivity pattern (push + pull)
+
+Desktop Agent owns channel membership (`AgentState`). Host chrome is a **read-only mirror** updated through public APIs — never by writing agent state directly.
+
+```text
+                    ┌─────────────────────────┐
+  User picks        │   Desktop Agent (SSOT)   │
+  channel in host   │  joinUserChannel handler │
+  chrome ──────────►│  updates instance state  │
+                    └───────────┬─────────────┘
+                                │
+              ┌─────────────────┴─────────────────┐
+              ▼                                   ▼
+   pull: getAppUserChannel(instanceId)    push: channelChanged
+   (initial render, connect hook)         (wcpConnector / onChannelChanged)
+              │                                   │
+              └──────────────► host UI store ◄───┘
+```
+
+| Direction | API | Use when |
+|-----------|-----|----------|
+| **Pull** | `SailPlatform.getAppUserChannel` / `DesktopAgent.getAppUserChannelId` | Component mount, `appConnected`, or after `changeAppChannel` promise resolves |
+| **Push** | `wcpConnector.on("channelChanged")` or `SailPlatform.start({ onChannelChanged })` | Any membership change — host-initiated join, app `joinUserChannel`, or leave |
+
+**Sail Web reference:** `packages/sail-web/src/stores/connection-store.ts` wires `channelChanged` into Zustand; `ChannelSelector.tsx` reads `connection.channelId` (not `getState()`). `SailPlatform` itself does not cache channel membership — it forwards events so consumers own UI state.
+
+### Do not use `getState()` for host chrome
+
+`DesktopAgent.getState()` returns the live internal `AgentState` object for **tests and debugging**. Host integrators must not:
+
+- Poll `getState()` on a timer to refresh channel dots
+- Mutate fields on the returned object (e.g. `instance.currentUserChannel`)
+- Treat `getState()` as a React/subscription source of truth
+
+Use **`getAppUserChannelId` / `getAppUserChannel`** for reads and **`channelChanged`** for updates. Full integrator examples: [Desktop Agent integrator guide — Host channel UI reactivity](../packages/desktop-agent/integrator-guide#host-channel-ui-reactivity-push--pull).
+
 ### Listen for updates
 
 | Consumer | Listen to |

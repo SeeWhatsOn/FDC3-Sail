@@ -61,9 +61,10 @@ function buildResolverAppIntents(
   intentCandidates: string[],
   contextType: string
 ) {
-  const { getState, appDirectory } = context
+  const { getState } = context
+  const catalog = getState().appDirectory
   return intentCandidates
-    .map(intentName => createResolverAppIntent(getState(), appDirectory, intentName, contextType))
+    .map(intentName => createResolverAppIntent(getState(), catalog, intentName, contextType))
     .filter(appIntent => appIntent.apps.length > 0)
 }
 
@@ -101,7 +102,8 @@ export async function handleRaiseIntentForContextRequest(
   message: BrowserTypes.RaiseIntentForContextRequest,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, getState, appDirectory, logger } = context
+  const { transport, instanceId, getState, logger } = context
+  const catalog = getState().appDirectory
 
   try {
     const payload = message.payload
@@ -125,7 +127,7 @@ export async function handleRaiseIntentForContextRequest(
       throw new IntentDeliveryFailedError(`Source instance ${instanceId} not found`)
     }
 
-    const intentMetadata = findIntentsByContext(getState(), appDirectory, validatedContext.type)
+    const intentMetadata = findIntentsByContext(getState(), catalog, validatedContext.type)
     if (intentMetadata.length === 0) {
       throw new NoAppsFoundError(
         `No intents found to handle context type: ${validatedContext.type}`
@@ -134,7 +136,7 @@ export async function handleRaiseIntentForContextRequest(
 
     const targetAppId = targetApp?.appId
     const directoryIntents = targetAppId
-      ? getDirectoryIntentsForContext(appDirectory, targetAppId, validatedContext.type)
+      ? getDirectoryIntentsForContext(catalog, targetAppId, validatedContext.type)
       : []
 
     const dynamicIntents = targetAppId
@@ -168,7 +170,7 @@ export async function handleRaiseIntentForContextRequest(
         const firstIntent = intentCandidates[0]
         const firstAppIntent = createResolverAppIntent(
           getState(),
-          appDirectory,
+          catalog,
           firstIntent,
           validatedContext.type
         )
@@ -197,7 +199,7 @@ export async function handleRaiseIntentForContextRequest(
       return
     } else {
       const state = getState()
-      const handlers = findIntentHandlers(state, appDirectory, {
+      const handlers = findIntentHandlers(state, catalog, {
         intent: selectedIntent,
         context: validatedContext,
         source: { appId: source.appId, instanceId: source.instanceId },

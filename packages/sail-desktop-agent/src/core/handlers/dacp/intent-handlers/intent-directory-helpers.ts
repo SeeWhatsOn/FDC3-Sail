@@ -1,12 +1,13 @@
-import type { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
+import type { AppDirectoryState } from "../../../state/types"
+import { retrieveAppsById } from "../../../app-directory/app-directory-queries"
 import { isContextTypeCompatible } from "./intent-helpers"
 
 export function getDirectoryIntentsForContext(
-  appDirectory: AppDirectoryManager,
+  catalog: AppDirectoryState,
   appId: string,
   contextType: string
 ): string[] {
-  const appInfo = appDirectory.retrieveAppsById(appId)[0]
+  const appInfo = retrieveAppsById(catalog, appId)[0]
   if (!appInfo) {
     return []
   }
@@ -28,10 +29,10 @@ export function getDirectoryIntentsForContext(
 }
 
 export function isDirectoryIntentCompatible(
-  appDirectory: AppDirectoryManager,
+  catalog: AppDirectoryState,
   appId: string,
   intentName: string,
   contextType: string
 ): boolean {
-  return getDirectoryIntentsForContext(appDirectory, appId, contextType).includes(intentName)
+  return getDirectoryIntentsForContext(catalog, appId, contextType).includes(intentName)
 }

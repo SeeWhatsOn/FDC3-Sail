@@ -1,20 +1,44 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
-import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import type { DirectoryApp } from "../../../app-directory/types"
+import { retrieveIntents } from "../../../app-directory/app-directory-queries"
 import { DesktopAgent } from "../../../desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
-import { connectInstance, updateInstanceState } from "../../../state/mutators"
+import {
+  addApplications,
+  connectInstance,
+  removeInstance,
+  updateInstanceState,
+} from "../../../state/mutators"
 import { registerIntentListener } from "../../../state/mutators/intent"
 import { createInitialState } from "../../../state/initial-state"
 import { AppInstanceState, type AgentState } from "../../../state/types"
 import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
+import { getActiveListenersForIntent } from "../../../state/selectors/intent"
+import { getInstance } from "../../../state/selectors/instance"
 import { createAppIntents, findIntentsByContext } from "../intent-handlers/intent-helpers"
 import {
   handleFindIntentRequest,
   handleFindIntentsByContextRequest,
 } from "../intent-handlers/intent-discovery-handlers"
+import { handleAddIntentListener } from "../intent-handlers/intent-listener-handlers"
+
+function applyDesktopAgentStateUpdate(
+  agent: DesktopAgent,
+  callback: (state: AgentState) => AgentState
+): void {
+  const internal = agent as unknown as { state: AgentState }
+  internal.state = callback(internal.state)
+}
+
+function withCatalog(state: AgentState, apps: DirectoryApp[]): AgentState {
+  return addApplications(state, apps)
+}
+
+function catalogOnly(apps: DirectoryApp[]) {
+  return addApplications(createInitialState(DEFAULT_FDC3_USER_CHANNELS), apps).appDirectory
+}
 
 const INTENT_APP_A_DISPLAY_NAME = "A Testing Intent"
 const INTENT_APP_A_INTENT_NAME = "aTestingIntent"
@@ -59,12 +83,6 @@ function loadConformanceIntentAppA(): DirectoryApp {
     throw new Error("IntentAppAId not found in conformance-appd.json")
   }
   return app
-}
-
-function createAppDirectory(apps: DirectoryApp[]): AppDirectoryManager {
-  const directory = new AppDirectoryManager()
-  directory.addApplications(apps)
-  return directory
 }
 
 type FindIntentSuccessResponse = {
@@ -117,12 +135,12 @@ describe("intent discovery metadata from app directory", () => {
     it.each(displayNameCases)(
       "maps directory displayName for aTestingIntent ($name)",
       ({ app }) => {
-        const directory = createAppDirectory([app])
+        const catalog = catalogOnly([app])
         const state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
 
         const appIntents = createAppIntents(
           state,
-          directory,
+          catalog,
           INTENT_APP_A_INTENT_NAME,
           TEST_CONTEXT_X
         )
@@ -136,10 +154,10 @@ describe("intent discovery metadata from app directory", () => {
 
   describe("findIntentsByContext", () => {
     it("returns directory displayName for intents matching the context", () => {
-      const directory = createAppDirectory([intentAppA])
+      const catalog = catalogOnly([intentAppA])
       const state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
 
-      const intents = findIntentsByContext(state, directory, TEST_CONTEXT_X)
+      const intents = findIntentsByContext(state, catalog, TEST_CONTEXT_X)
       const testingIntent = intents.find(entry => entry.name === INTENT_APP_A_INTENT_NAME)
 
       expect(testingIntent).toBeDefined()
@@ -156,9 +174,9 @@ describe("intent discovery metadata from app directory", () => {
         metadata: { appId: "TestApp", name: "TestApp" },
       })
       state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
+      state = withCatalog(state, [intentAppA])
 
       const transport = new MockTransport()
-      const directory = createAppDirectory([intentAppA])
       const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
 
       handleFindIntentRequest(
@@ -170,7 +188,7 @@ describe("intent discovery metadata from app directory", () => {
             context: { type: TEST_CONTEXT_X },
           },
         },
-        { ...context, transport, appDirectory: directory }
+        { ...context, transport }
       )
 
       const response = getFindIntentResponse(transport)
@@ -200,9 +218,9 @@ describe("intent discovery metadata from app directory", () => {
         metadata: { appId: "TestApp", name: "TestApp" },
       })
       state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
+      state = withCatalog(state, [intentAppA])
 
       const transport = new MockTransport()
-      const directory = createAppDirectory([intentAppA])
       const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
 
       handleFindIntentsByContextRequest(
@@ -213,7 +231,7 @@ describe("intent discovery metadata from app directory", () => {
             context: { type: TEST_CONTEXT_X },
           },
         },
-        { ...context, transport, appDirectory: directory }
+        { ...context, transport }
       )
 
       const response = getFindIntentsByContextResponse(transport)
@@ -271,9 +289,9 @@ describe("intent discovery metadata from app directory", () => {
         metadata: { appId: "TestApp", name: "TestApp" },
       })
       state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
+      state = withCatalog(state, [intentAppA, contextYOnlyApp])
 
       const transport = new MockTransport()
-      const directory = createAppDirectory([intentAppA, contextYOnlyApp])
       const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
 
       handleFindIntentsByContextRequest(
@@ -284,7 +302,7 @@ describe("intent discovery metadata from app directory", () => {
             context: { type: TEST_CONTEXT_X },
           },
         },
-        { ...context, transport, appDirectory: directory }
+        { ...context, transport }
       )
 
       const response = getFindIntentsByContextResponse(transport)
@@ -326,6 +344,127 @@ const launchOnlyApp: DirectoryApp = {
   },
 }
 
+describe("intent listener discovery uses global registry only", () => {
+  it("createAppIntents resolves running listeners from state.intents.listeners keyed by instanceId", () => {
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    state = connectInstance(state, {
+      instanceId: "registry-instance",
+      appId: "IntentAppAId",
+      metadata: { appId: "IntentAppAId", name: "IntentAppA" },
+    })
+    state = updateInstanceState(state, "registry-instance", AppInstanceState.CONNECTED)
+    state = registerIntentListener(state, {
+      listenerId: "registry-listener",
+      intentName: INTENT_APP_A_INTENT_NAME,
+      instanceId: "registry-instance",
+      appId: "IntentAppAId",
+      contextTypes: [],
+    })
+
+    const listeners = getActiveListenersForIntent(state, INTENT_APP_A_INTENT_NAME)
+    expect(listeners).toHaveLength(1)
+    expect(listeners[0].instanceId).toBe("registry-instance")
+
+    const instance = getInstance(state, "registry-instance")
+    expect(instance).toBeDefined()
+    expect(instance).not.toHaveProperty("intentListeners")
+
+    state = withCatalog(state, [intentAppA])
+    const appIntents = createAppIntents(
+      state,
+      state.appDirectory,
+      INTENT_APP_A_INTENT_NAME,
+      TEST_CONTEXT_X
+    )
+    const running = appIntents[0]?.apps.find(app => app.instanceId === "registry-instance")
+
+    expect(running).toBeDefined()
+    expect(running?.appId).toBe("IntentAppAId")
+  })
+
+  it("DACP addIntentListener registers globally without instance intentListeners denormalization", () => {
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    state = connectInstance(state, {
+      instanceId: "dacp-listener-instance",
+      appId: "IntentAppAId",
+      metadata: { appId: "IntentAppAId", name: "IntentAppA" },
+    })
+    state = updateInstanceState(state, "dacp-listener-instance", AppInstanceState.CONNECTED)
+
+    const transport = new MockTransport()
+    const { context, getState } = createDACPTestContext({
+      instanceId: "dacp-listener-instance",
+      initialState: state,
+    })
+
+    handleAddIntentListener(
+      {
+        type: "addIntentListenerRequest",
+        meta: createDacpRequestMeta("add-intent-listener-no-denorm"),
+        payload: { intent: INTENT_APP_A_INTENT_NAME },
+      },
+      { ...context, transport }
+    )
+
+    const updated = getState()
+    expect(Object.values(updated.intents.listeners)).toHaveLength(1)
+    expect(Object.values(updated.intents.listeners)[0]?.instanceId).toBe("dacp-listener-instance")
+
+    const instance = getInstance(updated, "dacp-listener-instance")
+    expect(instance).toBeDefined()
+    expect(instance).not.toHaveProperty("intentListeners")
+  })
+
+  it("findIntent excludes listeners whose instance was removed rather than marked TERMINATED", () => {
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    state = connectInstance(state, {
+      instanceId: "gone-instance",
+      appId: "IntentAppAId",
+      metadata: { appId: "IntentAppAId", name: "IntentAppA" },
+    })
+    state = updateInstanceState(state, "gone-instance", AppInstanceState.CONNECTED)
+    state = registerIntentListener(state, {
+      listenerId: "stale-listener",
+      intentName: INTENT_APP_A_INTENT_NAME,
+      instanceId: "gone-instance",
+      appId: "IntentAppAId",
+      contextTypes: [],
+    })
+    state = connectInstance(state, {
+      instanceId: "a1",
+      appId: "TestApp",
+      metadata: { appId: "TestApp", name: "TestApp" },
+    })
+    state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
+
+    state = removeInstance(state, "gone-instance")
+
+    expect(getInstance(state, "gone-instance")).toBeUndefined()
+
+    state = withCatalog(state, [intentAppA])
+
+    const transport = new MockTransport()
+    const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
+
+    handleFindIntentRequest(
+      {
+        type: "findIntentRequest",
+        meta: createDacpRequestMeta("find-intent-removed-instance"),
+        payload: {
+          intent: INTENT_APP_A_INTENT_NAME,
+          context: { type: TEST_CONTEXT_X },
+        },
+      },
+      { ...context, transport }
+    )
+
+    const response = getFindIntentResponse(transport)
+    expect(
+      response.payload.appIntent.apps.filter(app => app.instanceId === "gone-instance")
+    ).toHaveLength(0)
+  })
+})
+
 describe("state-owned app directory intent discovery contract", () => {
   it("createAppIntents derives launchable apps without instanceId separately from running instances", () => {
     let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
@@ -343,8 +482,13 @@ describe("state-owned app directory intent discovery contract", () => {
       contextTypes: [],
     })
 
-    const directory = createAppDirectory([intentAppA, launchOnlyApp])
-    const appIntents = createAppIntents(state, directory, INTENT_APP_A_INTENT_NAME, TEST_CONTEXT_X)
+    state = withCatalog(state, [intentAppA, launchOnlyApp])
+    const appIntents = createAppIntents(
+      state,
+      state.appDirectory,
+      INTENT_APP_A_INTENT_NAME,
+      TEST_CONTEXT_X
+    )
 
     expect(appIntents).toHaveLength(1)
     const apps = appIntents[0].apps
@@ -368,7 +512,7 @@ describe("state-owned app directory intent discovery contract", () => {
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       apps: [intentAppA],
     })
-    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    let state = withCatalog(createInitialState(DEFAULT_FDC3_USER_CHANNELS), [intentAppA])
     state = connectInstance(state, {
       instanceId: "a1",
       appId: "TestApp",
@@ -389,7 +533,7 @@ describe("state-owned app directory intent discovery contract", () => {
           context: { type: TEST_CONTEXT_X },
         },
       },
-      { ...context, transport, appDirectory: agent.getAppDirectory() }
+      { ...context, transport }
     )
 
     const response = getFindIntentResponse(transport)
@@ -405,14 +549,14 @@ describe("state-owned app directory intent discovery contract", () => {
     }
     const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
 
-    agent.getAppDirectory().addApplications([intentAppA, duplicateVariant])
+    applyDesktopAgentStateUpdate(agent, state =>
+      addApplications(state, [intentAppA, duplicateVariant])
+    )
 
     const stateSlice = expectAppDirectoryOnState(agent.getState())
     expect(stateSlice.apps.filter(app => app.appId === "IntentAppAId")).toHaveLength(1)
 
-    const intents = agent
-      .getAppDirectory()
-      .retrieveIntents(TEST_CONTEXT_X, INTENT_APP_A_INTENT_NAME, undefined)
+    const intents = retrieveIntents(stateSlice, TEST_CONTEXT_X, INTENT_APP_A_INTENT_NAME, undefined)
     expect(intents).toHaveLength(1)
     expect(intents[0].appId).toBe("IntentAppAId")
   })

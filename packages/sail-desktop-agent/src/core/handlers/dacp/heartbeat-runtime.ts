@@ -6,30 +6,43 @@
  * cleanup → heartbeat-handlers → cleanup).
  */
 
+import {
+  clearAllWcpInstanceIdMappingsForTesting,
+  linkTempToCanonical,
+  resolveCanonicalInstanceId,
+  unlinkCanonical,
+} from "../../../protocols/wcp/wcp-instance-id-resolver"
 import { stopHeartbeat as stopHeartbeatTransform } from "../../state/mutators"
 import type { StateSetter } from "../../state/types"
+import type { Transport } from "../../interfaces/transport"
 
 const heartbeatIntervals = new Map<string, NodeJS.Timeout>()
 
-/** WCP4 temp connection ids (temp-{uuid}) → canonical WCP5 instance ids used by startHeartbeat. */
-const wcpTempToCanonicalInstanceIds = new Map<string, string>()
+/** Browser preset: tear down WCP MessagePort wiring when DA removes an instance. */
+const browserEdgeDisconnectByTransport = new WeakMap<Transport, (instanceId: string) => void>()
 
-/** Record temp→canonical mapping when heartbeat starts during WCP4 validation. */
+export function registerBrowserEdgeInstanceDisconnect(
+  transport: Transport,
+  disconnect: (instanceId: string) => void
+): void {
+  browserEdgeDisconnectByTransport.set(transport, disconnect)
+}
+
+export function notifyBrowserEdgeInstanceDisconnected(
+  transport: Transport,
+  instanceId: string
+): void {
+  browserEdgeDisconnectByTransport.get(transport)?.(instanceId)
+}
+
+/** @deprecated Use {@link linkTempToCanonical} from wcp-instance-id-resolver. */
 export function linkWcpTempInstanceId(tempInstanceId: string, canonicalInstanceId: string): void {
-  wcpTempToCanonicalInstanceIds.set(tempInstanceId, canonicalInstanceId)
+  linkTempToCanonical(tempInstanceId, canonicalInstanceId)
 }
 
-/** Resolve canonical instance id from a WCP4 temp connection id, if linked. */
+/** @deprecated Use {@link resolveCanonicalInstanceId} from wcp-instance-id-resolver. */
 export function resolveWcpTempInstanceId(tempInstanceId: string): string | undefined {
-  return wcpTempToCanonicalInstanceIds.get(tempInstanceId)
-}
-
-function unlinkWcpTempMappingsForCanonical(canonicalInstanceId: string): void {
-  for (const [tempId, canonicalId] of wcpTempToCanonicalInstanceIds) {
-    if (canonicalId === canonicalInstanceId) {
-      wcpTempToCanonicalInstanceIds.delete(tempId)
-    }
-  }
+  return resolveCanonicalInstanceId(tempInstanceId)
 }
 
 /** @internal Returns active heartbeat interval count (for tests and diagnostics). */
@@ -47,7 +60,7 @@ export function clearAllHeartbeatTimersForTesting(): void {
   for (const instanceId of [...heartbeatIntervals.keys()]) {
     clearHeartbeatTimer(instanceId)
   }
-  wcpTempToCanonicalInstanceIds.clear()
+  clearAllWcpInstanceIdMappingsForTesting()
 }
 
 /** Clear the Node interval only (no Immer state change). */
@@ -69,6 +82,6 @@ export function setHeartbeatTimer(instanceId: string, intervalHandle: NodeJS.Tim
  */
 export function stopHeartbeat(instanceId: string, setState: StateSetter): void {
   clearHeartbeatTimer(instanceId)
-  unlinkWcpTempMappingsForCanonical(instanceId)
+  unlinkCanonical(instanceId)
   setState(state => stopHeartbeatTransform(state, instanceId))
 }

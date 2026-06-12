@@ -1,7 +1,6 @@
 import type { Context } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
 import { addPendingIntent, resolvePendingIntent } from "../../../state/mutators"
-import { AppInstanceState } from "../../../state/types"
 import { getInstance, getInstancesByAppId } from "../../../state/selectors"
 import {
   FDC3ResolveError,
@@ -15,6 +14,7 @@ import {
   queueIntentDelivery,
 } from "./intent-delivery-helpers"
 import type { DACPHandlerContext, IntentRequestType } from "../../types"
+import { retrieveAppsById } from "../../../app-directory/app-directory-queries"
 import { launchAppAndWaitForInstance } from "./intent-helpers"
 
 type RegisterPendingIntentStateOptions = {
@@ -70,7 +70,7 @@ export function validateRequestedTargetAvailability(
     return
   }
 
-  const apps = context.appDirectory.retrieveAppsById(targetApp.appId)
+  const apps = retrieveAppsById(context.getState().appDirectory, targetApp.appId)
   if (apps.length === 0) {
     throw new TargetAppUnavailableError(`App not found in directory: ${targetApp.appId}`)
   }
@@ -80,7 +80,7 @@ export function validateRequestedTargetAvailability(
   }
 
   const instance = getInstance(context.getState(), targetApp.instanceId)
-  if (!instance || instance.state === AppInstanceState.TERMINATED) {
+  if (!instance) {
     throw new TargetInstanceUnavailableError(
       `Instance not found or terminated: ${targetApp.instanceId}`
     )
@@ -95,7 +95,7 @@ export async function resolveAppTargetInstance(
 
   if (preferredInstanceId) {
     const instance = getInstance(context.getState(), preferredInstanceId)
-    if (instance && instance.state !== AppInstanceState.TERMINATED) {
+    if (instance) {
       return { targetInstanceId: instance.instanceId, targetInstanceIsLaunched: false }
     }
   }
@@ -104,9 +104,7 @@ export async function resolveAppTargetInstance(
     return { targetInstanceId: runningListenerInstanceId, targetInstanceIsLaunched: false }
   }
 
-  const runningInstances = getInstancesByAppId(context.getState(), appId).filter(
-    instance => instance.state !== AppInstanceState.TERMINATED
-  )
+  const runningInstances = getInstancesByAppId(context.getState(), appId)
   if (runningInstances.length > 0) {
     return { targetInstanceId: runningInstances[0].instanceId, targetInstanceIsLaunched: false }
   }

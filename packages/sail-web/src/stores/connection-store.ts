@@ -111,6 +111,11 @@ export const createConnectionStore = (platform: SailPlatform) => {
 
   // Handle app connected event
   connector.on("appConnected", (metadata: AppConnectionMetadata) => {
+    // Pull current channel once at connect when platform is running — channelChanged keeps UI in sync afterward.
+    const initialChannelId = platform.isRunning
+      ? platform.getAppUserChannel(metadata.instanceId)
+      : null
+
     store.setState(state => {
       // Create connection entry with panelId from metadata (extracted from iframe name)
       const connection: Connection = {
@@ -119,6 +124,7 @@ export const createConnectionStore = (platform: SailPlatform) => {
         status: "connected",
         connectedAt: metadata.connectedAt,
         panelId: metadata.hostIdentifier,
+        channelId: initialChannelId,
       }
       state.connections.set(metadata.instanceId, connection)
 

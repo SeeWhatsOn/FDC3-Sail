@@ -36,7 +36,16 @@ export * from "./state/selectors"
 export * from "./state/mutators"
 
 // App Directory
-export { AppDirectoryManager, isValidDirectoryUrl } from "./app-directory/app-directory-manager"
+export { isValidDirectoryUrl, fetchAppDirectory } from "./app-directory/fetch-app-directory"
+export {
+  retrieveAllApps,
+  retrieveAppsById,
+  retrieveAppsByUrl,
+  retrieveApps,
+  retrieveAllIntents,
+  retrieveIntents,
+  getDirectoryUrls,
+} from "./app-directory/app-directory-queries"
 export type {
   DirectoryApp,
   DirectoryData,

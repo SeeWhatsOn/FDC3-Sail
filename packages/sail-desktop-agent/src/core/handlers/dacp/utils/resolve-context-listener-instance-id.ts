@@ -1,4 +1,4 @@
-import { resolveWcpTempInstanceId } from "../heartbeat-runtime"
+import { resolveCanonicalInstanceId } from "../../../../protocols/wcp/wcp-instance-id-resolver"
 import type { DACPHandlerContext } from "../../types"
 import { getInstance } from "../../../state/selectors"
 import { AppInstanceState } from "../../../state/types"
@@ -43,7 +43,7 @@ export function resolveDacpHandlerInstanceId(
   }
 
   if (instanceId.startsWith("temp-")) {
-    const linkedCanonicalId = resolveWcpTempInstanceId(instanceId)
+    const linkedCanonicalId = resolveCanonicalInstanceId(instanceId)
     if (linkedCanonicalId && getInstance(state, linkedCanonicalId)) {
       return linkedCanonicalId
     }

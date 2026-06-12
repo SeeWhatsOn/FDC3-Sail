@@ -1,5 +1,4 @@
 import type { BrowserTypes } from "@finos/fdc3"
-import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { DEFAULT_SAIL_IMPLEMENTATION_METADATA } from "../../../sail-default-config"
 import { consoleLogger } from "../../../interfaces/logger"
@@ -42,7 +41,6 @@ export function createDACPTestContext(options: {
     instanceId: options.instanceId,
     getState: readState,
     setState,
-    appDirectory: new AppDirectoryManager(),
     logger: consoleLogger,
     implementationMetadata: {
       ...DEFAULT_SAIL_IMPLEMENTATION_METADATA,

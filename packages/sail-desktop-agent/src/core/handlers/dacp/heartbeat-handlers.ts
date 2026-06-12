@@ -2,7 +2,6 @@ import { createDACPEvent } from "../../../protocols/dacp/dacp-message-creators"
 import { generateEventUuid } from "../../../protocols/dacp/dacp-utils"
 import { type DACPHandlerContext } from "../types"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { Transport } from "../../interfaces/transport"
 import { getHeartbeatState } from "../../state/selectors"
 import {
   startHeartbeat as startHeartbeatTransform,
@@ -10,29 +9,11 @@ import {
   updateHeartbeatSent,
 } from "../../state/mutators"
 import { cleanupDACPHandlers } from "./cleanup"
-import {
-  stopHeartbeat,
-  setHeartbeatTimer,
-  clearHeartbeatTimer,
-  linkWcpTempInstanceId,
-} from "./heartbeat-runtime"
+import { stopHeartbeat, setHeartbeatTimer, clearHeartbeatTimer } from "./heartbeat-runtime"
+import { linkTempToCanonical } from "../../../protocols/wcp/wcp-instance-id-resolver"
 
 /** Re-export for callers that imported `stopHeartbeat` from this module. */
-export { stopHeartbeat } from "./heartbeat-runtime"
-
-/** Browser preset: tear down WCP MessagePort wiring when DA removes an instance. */
-const browserEdgeDisconnectByTransport = new WeakMap<Transport, (instanceId: string) => void>()
-
-export function registerBrowserEdgeInstanceDisconnect(
-  transport: Transport,
-  disconnect: (instanceId: string) => void
-): void {
-  browserEdgeDisconnectByTransport.set(transport, disconnect)
-}
-
-function notifyBrowserEdgeInstanceDisconnected(transport: Transport, instanceId: string): void {
-  browserEdgeDisconnectByTransport.get(transport)?.(instanceId)
-}
+export { stopHeartbeat, registerBrowserEdgeInstanceDisconnect } from "./heartbeat-runtime"
 
 /**
  * Start heartbeat for an instance
@@ -47,7 +28,7 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
   stopHeartbeat(instanceId, setState)
 
   if (context.instanceId.startsWith("temp-") && context.instanceId !== instanceId) {
-    linkWcpTempInstanceId(context.instanceId, instanceId)
+    linkTempToCanonical(context.instanceId, instanceId)
   }
 
   // Initialize heartbeat state
@@ -77,7 +58,6 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
     logger.warn("Instance failed heartbeat check, removing", { instanceId })
     // WCP4 validation runs under a temp connection context; heartbeat is keyed by the real instanceId.
     cleanupDACPHandlers({ ...context, instanceId })
-    notifyBrowserEdgeInstanceDisconnected(context.transport, instanceId)
   }
 
   // Send an initial heartbeat immediately for short test intervals.

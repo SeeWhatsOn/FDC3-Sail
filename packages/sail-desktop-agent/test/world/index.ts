@@ -5,7 +5,7 @@ import { MockAppLauncher } from "../support/mock-app-launcher"
 import { MockIntentResolver } from "../support/mock-intent-resolver"
 import type { BrowserTypes } from "@finos/fdc3"
 import type { DirectoryApp } from "../../src/core/app-directory/types"
-import { AppDirectoryManager } from "../../src/core/app-directory/app-directory-manager"
+import { retrieveAppsById } from "../../src/core/app-directory/app-directory-queries"
 import type { AgentState } from "../../src/core/state/types"
 import { connectInstance } from "../../src/core/state/mutators"
 import { applyDesktopAgentStateUpdate } from "../support/agent-state"
@@ -44,9 +44,6 @@ export class CustomWorld extends World {
   // The actual DesktopAgent instance being tested
   desktopAgent!: DesktopAgent
 
-  // App directory manager (for test setup and assertions)
-  appDirectoryManager!: AppDirectoryManager
-
   // MOCK external dependencies (to avoid side effects)
   mockTransport!: MockTransport
   mockAppLauncher!: MockAppLauncher
@@ -58,6 +55,17 @@ export class CustomWorld extends World {
 
   constructor(options: IWorldOptions<unknown>) {
     super(options)
+  }
+
+  /**
+   * Read-only catalog queries for steps that need app directory lookups.
+   * Backed by `desktopAgent.getState().appDirectory` (no manager instance).
+   */
+  get appDirectoryManager(): { retrieveAppsById: (appId: string) => DirectoryApp[] } {
+    const catalog = this.getState().appDirectory
+    return {
+      retrieveAppsById: (appId: string) => retrieveAppsById(catalog, appId),
+    }
   }
 
   /**
@@ -87,16 +95,12 @@ export class CustomWorld extends World {
     this.mockAppLauncher = new MockAppLauncher()
     this.mockIntentResolver = new MockIntentResolver()
 
-    // Create app directory manager for test setup
-    this.appDirectoryManager = new AppDirectoryManager()
-    this.appDirectoryManager.addApplications(apps)
-
-    // Create DesktopAgent with new state-based API
+    // Create DesktopAgent with catalog seeded via config.apps
     this.desktopAgent = new DesktopAgent({
       transport: this.mockTransport,
       appLauncher: this.mockAppLauncher,
       requestIntentResolution: this.mockIntentResolver.createCallback(),
-      appDirectoryManager: this.appDirectoryManager,
+      apps,
       userChannels: channels,
       implementationMetadata: {
         provider: "cucumber-provider",

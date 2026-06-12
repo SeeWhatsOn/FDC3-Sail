@@ -3,7 +3,6 @@ import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
-import { AppInstanceState } from "../../../state/types"
 import {
   NoAppsFoundError,
   IntentDeliveryFailedError,
@@ -30,7 +29,8 @@ export async function handleRaiseIntentRequest(
   message: BrowserTypes.RaiseIntentRequest,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, getState, appDirectory, logger, logPayloadDetail } = context
+  const { transport, instanceId, getState, logger, logPayloadDetail } = context
+  const catalog = getState().appDirectory
   const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
 
   try {
@@ -77,7 +77,7 @@ export async function handleRaiseIntentRequest(
     })
 
     const targetApp: { appId: string; instanceId?: string } | undefined = normalizeTargetApp(
-      payload.app as unknown
+      payload.app
     )
     validateRequestedTargetAvailability(context, targetApp)
 
@@ -87,7 +87,7 @@ export async function handleRaiseIntentRequest(
     }
 
     const state = getState()
-    const handlers = findIntentHandlers(state, appDirectory, {
+    const handlers = findIntentHandlers(state, catalog, {
       intent: payload.intent,
       context: validatedContext,
       source: { appId: source.appId, instanceId: source.instanceId },
@@ -95,23 +95,14 @@ export async function handleRaiseIntentRequest(
     })
 
     const targetAppId = targetApp?.appId
-    const runningInstances = targetAppId
-      ? getInstancesByAppId(state, targetAppId).filter(
-          instance => instance.state !== AppInstanceState.TERMINATED
-        )
-      : []
+    const runningInstances = targetAppId ? getInstancesByAppId(state, targetAppId) : []
     const isTargetRunning =
       !!targetApp?.instanceId || (targetAppId ? runningInstances.length > 0 : false)
 
     if (
       targetAppId &&
       isTargetRunning &&
-      !isDirectoryIntentCompatible(
-        appDirectory,
-        targetAppId,
-        payload.intent,
-        validatedContext.type
-      ) &&
+      !isDirectoryIntentCompatible(catalog, targetAppId, payload.intent, validatedContext.type) &&
       handlers.runningListeners.length === 0
     ) {
       throw new NoAppsFoundError(`No apps found to handle intent: ${payload.intent}`)
@@ -141,7 +132,7 @@ export async function handleRaiseIntentRequest(
     } else if (handlers.compatibleApps.length > 1) {
       const appIntent = createResolverAppIntent(
         getState(),
-        appDirectory,
+        catalog,
         payload.intent,
         validatedContext.type
       )

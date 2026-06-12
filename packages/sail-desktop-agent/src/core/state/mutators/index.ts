@@ -13,8 +13,6 @@ export {
   joinUserChannel,
   addContextListener,
   removeContextListener,
-  addIntentListener,
-  removeIntentListener,
   addPrivateChannel,
   removePrivateChannel,
 } from "./instance"
@@ -70,3 +68,14 @@ export {
   removePendingOpenWithContextByRequest,
   migratePendingOpenWithContextTarget,
 } from "./open-with-context"
+
+// App directory mutators
+export {
+  addApplication,
+  addApplications,
+  addDirectoryUrl,
+  removeDirectoryUrl,
+  clearDirectoryUrls,
+  loadDirectoryIntoState,
+  replaceAppDirectories,
+} from "./app-directory"

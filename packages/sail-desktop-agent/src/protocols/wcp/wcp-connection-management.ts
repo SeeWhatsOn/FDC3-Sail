@@ -2,6 +2,7 @@ import type { MessagePortTransport } from "../../connectors/browser/message-port
 import type { WebConnectionProtocolMessage } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type { AppConnectionMetadata, WCPConnectorEvents, WCPConnectorOptions } from "./wcp-types"
 import type { Logger } from "../../core/interfaces/logger"
+import { linkTempToCanonical, resolveCanonicalInstanceId } from "./wcp-instance-id-resolver"
 
 type EmitFunction = <EventName extends keyof WCPConnectorEvents>(
   event: EventName,
@@ -87,7 +88,8 @@ export function cleanupStaleDisconnects(context: WCPConnectionContext): void {
  * @param instanceId - The instance ID of the app to disconnect
  */
 export function disconnectAppByInstanceId(context: WCPConnectionContext, instanceId: string): void {
-  const appTransport = context.messagePortTransports.get(instanceId)
+  const resolvedInstanceId = resolveDisconnectInstanceId(context, instanceId)
+  const appTransport = context.messagePortTransports.get(resolvedInstanceId)
   if (appTransport && appTransport.isConnected()) {
     // Send WCP6Goodbye message to the app before disconnecting
     try {
@@ -99,10 +101,10 @@ export function disconnectAppByInstanceId(context: WCPConnectionContext, instanc
         },
       }
       appTransport.send(goodbyeMessage)
-      context.logger.debug(`Sent WCP6Goodbye to instance ${instanceId}`)
+      context.logger.debug(`Sent WCP6Goodbye to instance ${resolvedInstanceId}`)
     } catch (error) {
       context.logger.warn(
-        `[WCPConnector] Failed to send WCP6Goodbye to instance ${instanceId}:`,
+        `[WCPConnector] Failed to send WCP6Goodbye to instance ${resolvedInstanceId}:`,
         error
       )
       // Continue with disconnection even if goodbye fails
@@ -110,7 +112,7 @@ export function disconnectAppByInstanceId(context: WCPConnectionContext, instanc
   }
 
   // Disconnect the app (this will clean up resources and emit appDisconnected event)
-  disconnectApp(context, instanceId)
+  disconnectApp(context, resolvedInstanceId)
 }
 
 /**
@@ -134,8 +136,12 @@ export function tearDownAppConnection(context: WCPConnectionContext, instanceId:
  * This is the internal method that performs the actual cleanup
  */
 export function disconnectApp(context: WCPConnectionContext, instanceId: string): void {
+  const hadConnection =
+    context.connections.has(instanceId) || context.messagePortTransports.has(instanceId)
   tearDownAppConnection(context, instanceId)
-  context.emit("appDisconnected", instanceId)
+  if (hadConnection) {
+    context.emit("appDisconnected", instanceId)
+  }
 }
 
 /**
@@ -186,6 +192,8 @@ export function updateConnectionMetadata(
   metadata.instanceId = actualInstanceId
   metadata.appId = appId
 
+  linkTempToCanonical(tempInstanceId, actualInstanceId)
+
   // Migrate connection to actual instanceId key
   // This ensures future lookups use the validated instanceId
   context.connections.delete(tempInstanceId)
@@ -223,4 +231,13 @@ export function getConnection(
   instanceId: string
 ): AppConnectionMetadata | undefined {
   return context.connections.get(instanceId)
+}
+
+function resolveDisconnectInstanceId(context: WCPConnectionContext, instanceId: string): string {
+  if (context.connections.has(instanceId) || context.messagePortTransports.has(instanceId)) {
+    return instanceId
+  }
+
+  const canonicalId = resolveCanonicalInstanceId(instanceId)
+  return canonicalId ?? instanceId
 }

@@ -146,6 +146,81 @@ function currentChannel(instanceId: string) {
 
 `createBrowserDesktopAgent` returns a single `DesktopAgent` handle; the browser edge starts and stops with `desktopAgent.start()` / `desktopAgent.stop()`. You do not manage `WCPConnector` in application code.
 
+## One Desktop Agent per browsing context
+
+FDC3 expects **one Desktop Agent per user session** — in browser hosts, that maps to **one agent per top-level browsing context** (tab or host window). The library does not enforce this: tests and harnesses may construct multiple `DesktopAgent` instances in one process. **Production host shells must enforce a singleton** — two agents in the same tab split instance registries, channel membership, and intent resolution.
+
+| Deployment | Singleton scope | Why |
+|------------|-------------------|-----|
+| Browser tab (local DA) | One `createBrowserDesktopAgent()` per tab | Apps in iframes share one WCP edge + one `AgentState` |
+| Browser + remote DA | One server/worker `DesktopAgent` + one `createWCPClient()` per tab | Engine state lives remotely; each tab still has one edge client |
+| Node / Web Worker | One `DesktopAgent` per process or worker | Multiple agents need isolated transports and app launchers |
+
+### Browser singleton (module or `window`)
+
+Hold the agent in a module-level variable or on `window` for debugging. Create it once during host bootstrap; pass the same handle to lifecycle, channel chrome, and intent UI.
+
+```typescript
+import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
+import type { AppLauncher } from "@finos/sail-desktop-agent"
+
+let desktopAgent: ReturnType<typeof createBrowserDesktopAgent> | undefined
+
+/** One agent per tab — call from host init, not per iframe. */
+export function getDesktopAgent(appLauncher: AppLauncher) {
+  if (!desktopAgent) {
+    desktopAgent = createBrowserDesktopAgent({
+      appLauncher,
+      appDirectories: ["/apps.json"],
+    })
+  }
+  return desktopAgent
+}
+
+// Optional: expose for DevTools (browser hosts only)
+declare global {
+  interface Window {
+    __sailDesktopAgent?: ReturnType<typeof createBrowserDesktopAgent>
+  }
+}
+
+function bootstrapHost(appLauncher: AppLauncher) {
+  const agent = getDesktopAgent(appLauncher)
+  window.__sailDesktopAgent = agent
+  return agent
+}
+```
+
+Teardown on tab unload: `desktopAgent?.stop()` then clear the module reference. Hot Module Replacement in dev may recreate the agent — treat HMR as a full host restart.
+
+### Node module singleton (remote engine)
+
+When the engine runs in Node or a dedicated Web Worker, use the same module-singleton pattern. The browser tab holds only `createWCPClient()`; the server holds one `DesktopAgent`.
+
+```typescript
+import { DesktopAgent } from "@finos/sail-desktop-agent"
+import type { AppLauncher, Transport } from "@finos/sail-desktop-agent"
+
+let serverAgent: DesktopAgent | undefined
+
+export function getServerDesktopAgent(
+  transport: Transport,
+  appLauncher: AppLauncher
+): DesktopAgent {
+  if (!serverAgent) {
+    serverAgent = new DesktopAgent({
+      transport,
+      appLauncher,
+      appDirectories: [process.env.APP_DIRECTORY_URL ?? "/apps.json"],
+    })
+    serverAgent.start()
+  }
+  return serverAgent
+}
+```
+
+Wire `getServerDesktopAgent` once at process startup. Each connected browser tab uses its own `createWCPClient({ transport })` pointing at the shared server transport — one engine, many edges.
+
 ## `getAgent()` discovery support
 
 FDC3 `getAgent()` supports more than one web mechanism. Sail's browser host implements the browser-resident **proxy** mechanism: a child app sends `WCP1Hello` with `postMessage`, Sail replies with `WCP3Handshake`, and app API calls then travel over a `MessagePort` using DACP.
@@ -275,6 +350,51 @@ When `channelSelectorUrl` is `false` (default), the **host** renders channel chr
 1. **Read** current channel: `desktopAgent.getAppUserChannelId(instanceId)`
 2. **List** channels: `desktopAgent.getUserChannels()`
 3. **Change** channel: send `joinUserChannelRequest` / `leaveCurrentChannelRequest` on behalf of the app, then wait for `channelChanged` on the edge
+
+##### Host channel UI reactivity (push + pull)
+
+Host channel chrome must stay in sync with agent state **without** polling or mutating `DesktopAgent.getState()`. Use two complementary APIs:
+
+| Need | API | When |
+|------|-----|------|
+| **Push** — UI updates when membership changes | `wcpConnector.on("channelChanged", …)` or `SailPlatform` `onChannelChanged` | After join/leave (host-initiated or app-initiated) |
+| **Pull** — authoritative read for initial render | `desktopAgent.getAppUserChannelId(instanceId)` or `platform.getAppUserChannel(instanceId)` | Mount, tab focus, or after `changeAppChannel` resolves |
+
+`getState()` returns a **live mutable reference** to internal `AgentState`. It exists for **tests, Cucumber fixtures, and debugging** — not for host UI. Mutating the returned object bypasses DACP handlers and breaks conformance. Prefer granular getters (`getAppUserChannelId`, `getUserChannels`) plus connector events.
+
+```text
+  Desktop Agent (SSOT)
+        │
+        ├─ pull: getAppUserChannelId(instanceId)  → initial tile chrome
+        │
+        └─ push: channelChanged(instanceId, channelId)  → update UI store
+```
+
+**Reference stack (`sail-web`):** `connection-store.ts` seeds `channelId` via `getAppUserChannel` on `appConnected`, listens to `channelChanged` for updates, and mirrors `channelId` per connection; `ChannelSelector.tsx` reads `connection.channelId` for the dot color and calls `platform.changeAppChannel` on user pick.
+
+```typescript
+// Minimal host store pattern (framework-agnostic)
+const channelByInstance = new Map<string, string | null>()
+
+platform.connector.on("channelChanged", (instanceId, channelId) => {
+  channelByInstance.set(instanceId, channelId)
+  renderChannelDot(instanceId, channelId)
+})
+
+platform.connector.on("appConnected", meta => {
+  // Pull once at connect for tiles that mount before the first channelChanged
+  const current = platform.getAppUserChannel(meta.instanceId)
+  channelByInstance.set(meta.instanceId, current)
+  renderChannelDot(meta.instanceId, current)
+})
+
+async function onUserPicksChannel(instanceId: string, channelId: string | null) {
+  await platform.changeAppChannel(instanceId, channelId)
+  // UI updates via channelChanged — do not write agent state directly
+}
+```
+
+See [Channel selection architecture](../../../architecture/channel-selection) for the full host-vs-app-hosted split.
 
 With **`SailPlatform`** (easiest — wraps the DACP send):
 

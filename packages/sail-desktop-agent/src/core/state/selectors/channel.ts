@@ -12,6 +12,7 @@ type Channel = BrowserTypes.Channel
 export const getUserChannel = (state: AgentState, channelId: string): Channel | undefined =>
   state.channels.user[channelId]
 
+/** Runtime user channel list; seeded once at DesktopAgent construction from config. */
 export const getAllUserChannels = (state: AgentState): Channel[] =>
   Object.values(state.channels.user)
 

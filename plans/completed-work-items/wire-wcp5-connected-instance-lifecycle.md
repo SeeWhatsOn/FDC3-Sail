@@ -3,7 +3,7 @@ title: "Wire WCP5 CONNECTED lifecycle and heartbeat policy"
 slug: wire-wcp5-connected-instance-lifecycle
 kind: task
 type: feature
-status: in-progress
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow

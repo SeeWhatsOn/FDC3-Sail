@@ -19,7 +19,6 @@ import type { PendingIntentPromiseEntry } from "../../types"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { createDACPTestContext } from "./test-context"
 import { DesktopAgent } from "../../../desktop-agent"
-import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 
 afterEach(() => {
@@ -294,19 +293,17 @@ describe("heartbeat cleanup on disconnect", () => {
   })
 
   it("DesktopAgent.disconnectInstance clears active heartbeat interval and state entry", async () => {
-    const appDirectory = new AppDirectoryManager()
-    appDirectory.addApplications([
-      {
-        appId: "test-app",
-        title: "Test App",
-        type: "web",
-        details: { url: "https://example.com/app" },
-      },
-    ])
     const transport = new MockTransport()
     const agent = new DesktopAgent({
       transport,
-      appDirectoryManager: appDirectory,
+      apps: [
+        {
+          appId: "test-app",
+          title: "Test App",
+          type: "web",
+          details: { url: "https://example.com/app" },
+        },
+      ],
       heartbeatIntervalMs: 500,
       heartbeatTimeoutMs: 2000,
     })
@@ -397,19 +394,17 @@ describe("heartbeat cleanup on disconnect", () => {
   })
 
   it("DesktopAgent.disconnectInstance clears heartbeat when called with WCP4 connectionAttemptUuid", async () => {
-    const appDirectory = new AppDirectoryManager()
-    appDirectory.addApplications([
-      {
-        appId: "test-app",
-        title: "Test App",
-        type: "web",
-        details: { url: "https://example.com/app" },
-      },
-    ])
     const transport = new MockTransport()
     const agent = new DesktopAgent({
       transport,
-      appDirectoryManager: appDirectory,
+      apps: [
+        {
+          appId: "test-app",
+          title: "Test App",
+          type: "web",
+          details: { url: "https://example.com/app" },
+        },
+      ],
       heartbeatIntervalMs: 500,
       heartbeatTimeoutMs: 2000,
     })
@@ -446,19 +441,17 @@ describe("heartbeat cleanup on disconnect", () => {
   })
 
   it("transport disconnect clears all active heartbeat timers and state entries", async () => {
-    const appDirectory = new AppDirectoryManager()
-    appDirectory.addApplications([
-      {
-        appId: "test-app",
-        title: "Test App",
-        type: "web",
-        details: { url: "https://example.com/app" },
-      },
-    ])
     const transport = new MockTransport()
     const agent = new DesktopAgent({
       transport,
-      appDirectoryManager: appDirectory,
+      apps: [
+        {
+          appId: "test-app",
+          title: "Test App",
+          type: "web",
+          details: { url: "https://example.com/app" },
+        },
+      ],
       heartbeatIntervalMs: 500,
       heartbeatTimeoutMs: 2000,
     })
@@ -522,6 +515,24 @@ describe("heartbeat cleanup on disconnect", () => {
     expect(getState().instances[conformanceInstanceId]).toBeDefined()
     expect(getState().heartbeats[conformanceInstanceId]).toBeDefined()
     expect(getActiveHeartbeatTimerCount()).toBe(1)
+  })
+
+  it("cleanupDACPHandlers removes canonical instance state when invoked with WCP4 temp context id", () => {
+    const tempInstanceId = "temp-wcp4-state-cleanup"
+    const canonicalInstanceId = "canonical-wcp5-state-cleanup"
+    const initialState = connectTestInstance(canonicalInstanceId)
+    const { context, getState } = createHeartbeatTestContext({
+      instanceId: tempInstanceId,
+      initialState,
+    })
+
+    startHeartbeat(canonicalInstanceId, context)
+    expect(getState().instances[canonicalInstanceId]?.state).toBe(AppInstanceState.CONNECTED)
+
+    cleanupDACPHandlers(context)
+
+    expect(getState().instances[canonicalInstanceId]).toBeUndefined()
+    expectHeartbeatFullyCleared(getState, canonicalInstanceId)
   })
 
   it("cleanupDACPHandlers clears only the targeted heartbeat when multiple instances are connected and WCP4 temp context is used", () => {

@@ -4,10 +4,9 @@
  * Helpers for building appIntent payloads for resolver responses.
  */
 
-import type { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
-import type { AgentState } from "../../../state/types"
-import { AppInstanceState } from "../../../state/types"
+import type { AppDirectoryState, AgentState } from "../../../state/types"
 import type { IntentHandlerOption } from "../../types"
+import { retrieveAllApps, retrieveAppsById } from "../../../app-directory/app-directory-queries"
 import {
   getActiveListenersForIntent,
   getInstance,
@@ -17,15 +16,14 @@ import { isContextTypeCompatible, isResultTypeCompatible } from "./intent-helper
 
 /**
  * Convert resolver app list to IntentHandlerOption[] for requestIntentResolution.
- * isRunning is true when the app has an instanceId and that instance is not terminated.
+ * isRunning is true when the app has an instanceId and that instance is still registered.
  */
 export function appsToIntentHandlerOptions(
   state: AgentState,
   apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }>
 ): IntentHandlerOption[] {
   return apps.map(app => {
-    const isRunning =
-      !!app.instanceId && getInstance(state, app.instanceId)?.state !== AppInstanceState.TERMINATED
+    const isRunning = !!app.instanceId && !!getInstance(state, app.instanceId)
     return {
       appId: app.appId,
       name: app.name,
@@ -42,7 +40,7 @@ export function appsToIntentHandlerOptions(
  */
 export function createResolverAppIntent(
   state: AgentState,
-  appDirectory: AppDirectoryManager,
+  catalog: AppDirectoryState,
   intentName: string,
   contextType?: string,
   resultType?: string
@@ -58,7 +56,7 @@ export function createResolverAppIntent(
     )
   }
 
-  const allApps = appDirectory.retrieveAllApps()
+  const allApps = retrieveAllApps(catalog)
   const directoryMatches = allApps.filter(app => {
     const intents = app.interop?.intents?.listensFor
     if (!intents || typeof intents !== "object") return false
@@ -80,9 +78,7 @@ export function createResolverAppIntent(
 
   // 1) Running instances for directory apps (directory order).
   directoryMatches.forEach(app => {
-    const instances = getInstancesByAppId(state, app.appId).filter(
-      instance => instance.state !== AppInstanceState.TERMINATED
-    )
+    const instances = getInstancesByAppId(state, app.appId)
 
     instances.forEach(instance => {
       apps.push({
@@ -97,7 +93,7 @@ export function createResolverAppIntent(
   // 2) Running instances for dynamic listeners not in directory (registration order).
   const validRunningListeners = runningListeners.filter(listener => {
     const instance = getInstance(state, listener.instanceId)
-    return instance && instance.state !== AppInstanceState.TERMINATED
+    return !!instance
   })
 
   const filteredDynamicListeners =
@@ -106,7 +102,7 @@ export function createResolverAppIntent(
       : validRunningListeners.filter(listener => !directoryAppIds.has(listener.appId))
 
   filteredDynamicListeners.forEach(listener => {
-    const appInfo = appDirectory.retrieveAppsById(listener.appId)[0]
+    const appInfo = retrieveAppsById(catalog, listener.appId)[0]
     apps.push({
       appId: listener.appId,
       name: appInfo?.name,

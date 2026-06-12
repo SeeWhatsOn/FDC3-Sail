@@ -11,11 +11,10 @@ type Channel = BrowserTypes.Channel
 
 /**
  * Creates the initial agent state with default values.
+ * Seeds `state.channels.user` from config once at DesktopAgent construction; runtime reads use channel selectors.
  * @param userChannels - Custom user channels (required - DesktopAgent provides defaults)
  */
 export function createInitialState(userChannels: Channel[]): AgentState {
-  const channels = userChannels
-
   return {
     instances: {},
     intents: {
@@ -23,7 +22,7 @@ export function createInitialState(userChannels: Channel[]): AgentState {
       pending: {},
     },
     channels: {
-      user: Object.fromEntries(channels.map(channel => [channel.id, channel])),
+      user: Object.fromEntries(userChannels.map(channel => [channel.id, channel])),
       app: {},
       private: {},
       contexts: {},

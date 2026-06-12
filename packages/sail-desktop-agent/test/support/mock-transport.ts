@@ -12,6 +12,7 @@ import type {
   MessageHandler,
   DisconnectHandler,
 } from "../../src/core/interfaces/transport"
+import { linkTempToCanonical } from "../../src/protocols/wcp/wcp-instance-id-resolver"
 
 /**
  * DACP message structure (partial, just what we need for routing/querying)
@@ -92,6 +93,7 @@ export class MockTransport implements Transport {
   registerWcp5Mapping(connectionId: string, canonicalInstanceId: string): void {
     this.wcp5InstanceIdByConnectionId.set(connectionId, canonicalInstanceId)
     this.lastWcp5ValidatedInstanceId = canonicalInstanceId
+    linkTempToCanonical(`temp-${connectionId}`, canonicalInstanceId)
   }
 
   send(message: unknown): void {
@@ -100,14 +102,14 @@ export class MockTransport implements Transport {
     if (msg.type === "WCP5ValidateAppIdentityResponse") {
       const id = (msg.payload as { instanceId?: string } | undefined)?.instanceId
       const connectionId = msg.meta?.destination?.instanceId
-      const connectionAttemptUuid = (
-        msg.meta as { connectionAttemptUuid?: string } | undefined
-      )?.connectionAttemptUuid
+      const connectionAttemptUuid = (msg.meta as { connectionAttemptUuid?: string } | undefined)
+        ?.connectionAttemptUuid
       if (id) {
         this.lastWcp5ValidatedInstanceId = id
       }
       if (connectionId && id) {
         this.wcp5InstanceIdByConnectionId.set(connectionId, id)
+        linkTempToCanonical(connectionId, id)
       }
       if (connectionAttemptUuid && id) {
         const hostInstanceId = this.hostInstanceIdByConnectionAttempt.get(connectionAttemptUuid)
@@ -115,6 +117,7 @@ export class MockTransport implements Transport {
           this.wcp5InstanceIdByConnectionId.set(hostInstanceId, id)
           this.hostInstanceIdByConnectionAttempt.delete(connectionAttemptUuid)
         }
+        linkTempToCanonical(`temp-${connectionAttemptUuid}`, id)
       }
     }
 

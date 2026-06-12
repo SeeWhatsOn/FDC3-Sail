@@ -29,6 +29,7 @@ import {
   reconcileOrphanPendingHostInstances,
   tryAdoptHostPreRegisteredInstance,
 } from "./utils/wcp-host-instance-adoption"
+import { linkTempToCanonical } from "../../../protocols/wcp/wcp-instance-id-resolver"
 
 /** Browser preset: sync agent-state cleanup when app sends WCP6 over MessagePort. */
 const browserEdgeWcp6ByTransport = new WeakMap<Transport, (instanceId: string) => void>()
@@ -61,7 +62,7 @@ type WCP5ValidateAppIdentityFailedResponse = WebConnectionProtocol5ValidateAppId
  */
 export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHandlerContext): void {
   const wcp4Message = message as Wcp4ValidateAppIdentity
-  const { transport, getState, appDirectory, logger } = context
+  const { transport, getState, logger } = context
 
   logger.info("[WCP4] Received app identity validation request", wcp4Message.payload)
 
@@ -121,7 +122,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     }
 
     // 3. Look up app in app directory (spec: identityUrl is the lookup key)
-    const apps = appDirectory.allApps
+    const apps = getState().appDirectory.apps
     const appMetadata = findBestAppMatchByIdentityUrl(identityUrl, apps)
 
     if (!appMetadata) {
@@ -277,6 +278,10 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
 
     // WCP5 success is the CONNECTED boundary; host pre-register and WCP4 paths stay PENDING until here.
     context.setState(state => updateInstanceState(state, instanceId, AppInstanceState.CONNECTED))
+
+    if (sourceInstanceId.startsWith("temp-") && sourceInstanceId !== instanceId) {
+      linkTempToCanonical(sourceInstanceId, instanceId)
+    }
 
     if (context.heartbeatEnabled) {
       startHeartbeat(instanceId, context)

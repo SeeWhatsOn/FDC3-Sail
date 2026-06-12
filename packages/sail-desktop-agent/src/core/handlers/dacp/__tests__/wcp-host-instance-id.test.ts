@@ -3,7 +3,6 @@ import type { AppLauncher } from "../../../../host-contracts/app-launcher"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { OpenError } from "@finos/fdc3"
 import { DesktopAgent } from "../../../desktop-agent"
-import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { connectInstance, updateInstanceState } from "../../../state/mutators"
@@ -47,9 +46,6 @@ function createHostInstanceAppLauncher(): AppLauncher {
 }
 
 function createAgentWithSourceInstance(options?: { openContextListenerTimeoutMs?: number }) {
-  const appDirectory = new AppDirectoryManager()
-  appDirectory.addApplications([CHART_APP, PORTFOLIO_APP])
-
   const transport = new MockTransport()
   const initialState = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
   const stateWithSource = updateInstanceState(
@@ -64,7 +60,7 @@ function createAgentWithSourceInstance(options?: { openContextListenerTimeoutMs?
 
   const agent = new DesktopAgent({
     transport,
-    appDirectoryManager: appDirectory,
+    apps: [CHART_APP, PORTFOLIO_APP],
     appLauncher: createHostInstanceAppLauncher(),
     initialState: stateWithSource,
     openContextListenerTimeoutMs: options?.openContextListenerTimeoutMs ?? 5000,
@@ -198,9 +194,6 @@ describe("host-assigned instanceId at WCP4", () => {
   })
 
   it("adopts host-assigned instanceId as canonical WCP5 id on first WCP4 validation", async () => {
-    const appDirectory = new AppDirectoryManager()
-    appDirectory.addApplications([CHART_APP, PORTFOLIO_APP])
-
     const transport = new MockTransport()
     const initialState = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     const stateWithInstances = updateInstanceState(
@@ -222,7 +215,7 @@ describe("host-assigned instanceId at WCP4", () => {
 
     const agent = new DesktopAgent({
       transport,
-      appDirectoryManager: appDirectory,
+      apps: [CHART_APP, PORTFOLIO_APP],
       appLauncher: createHostInstanceAppLauncher(),
       initialState: stateWithInstances,
       heartbeatIntervalMs: 5000,

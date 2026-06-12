@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { BrowserTypes } from "@finos/fdc3"
 import { DesktopAgent } from "../../../desktop-agent"
-import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 import { cleanupDACPHandlers } from "../cleanup"
 import { startHeartbeat } from "../heartbeat-handlers"
@@ -46,13 +45,14 @@ function createWcp4Message(
   } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 }
 
-function createAgentWithTransport(options?: { heartbeatIntervalMs?: number; heartbeatTimeoutMs?: number }) {
-  const appDirectory = new AppDirectoryManager()
-  appDirectory.addApplications([TEST_APP])
+function createAgentWithTransport(options?: {
+  heartbeatIntervalMs?: number
+  heartbeatTimeoutMs?: number
+}) {
   const transport = new MockTransport()
   const agent = new DesktopAgent({
     transport,
-    appDirectoryManager: appDirectory,
+    apps: [TEST_APP],
     // Avoid immediate heartbeat on connect (see heartbeat-handlers short-interval branch).
     heartbeatIntervalMs: options?.heartbeatIntervalMs ?? 5000,
     heartbeatTimeoutMs: options?.heartbeatTimeoutMs ?? 15000,

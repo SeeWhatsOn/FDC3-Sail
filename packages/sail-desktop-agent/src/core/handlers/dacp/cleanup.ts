@@ -8,39 +8,64 @@ import * as eventHandlers from "./event-handlers"
 import * as privateChannelHandlers from "./private-channel-handlers"
 import {
   getActiveHeartbeatInstanceIds,
-  resolveWcpTempInstanceId,
   stopHeartbeat,
+  notifyBrowserEdgeInstanceDisconnected,
 } from "./heartbeat-runtime"
+import { resolveCanonicalInstanceId } from "../../../protocols/wcp/wcp-instance-id-resolver"
 import {
   clearPendingOpenWithContextForInstance,
   clearPendingOpenWithContextForSourceInstance,
 } from "./utils/open-with-context"
 import { pruneInstanceIdentity } from "./instance-identity-registry"
 import type { AgentState } from "../../state/types"
+import { AppInstanceState } from "../../state/types"
 
 /**
- * WCP4 validation runs under a temp connection id while heartbeat and instance state
- * use the canonical WCP5 instanceId (see wcp-handlers startHeartbeat call).
+ * WCP4 validation runs under a temp connection id while instance state uses the
+ * canonical WCP5 instanceId (linked at WCP5 success in wcp-handlers).
  */
 function resolveCleanupInstanceId(context: DACPHandlerContext): string {
   const { instanceId, getState } = context
   const state = getState()
 
-  if (state.heartbeats[instanceId] || getActiveHeartbeatInstanceIds().includes(instanceId)) {
+  if (
+    state.instances[instanceId] ||
+    state.heartbeats[instanceId] ||
+    getActiveHeartbeatInstanceIds().includes(instanceId)
+  ) {
     return instanceId
   }
 
   if (instanceId.startsWith("temp-")) {
-    const canonicalId = resolveWcpTempInstanceId(instanceId)
+    const canonicalId = resolveCanonicalInstanceId(instanceId)
     if (
       canonicalId &&
-      (state.heartbeats[canonicalId] || getActiveHeartbeatInstanceIds().includes(canonicalId))
+      (state.instances[canonicalId] ||
+        state.heartbeats[canonicalId] ||
+        getActiveHeartbeatInstanceIds().includes(canonicalId))
     ) {
       return canonicalId
+    }
+
+    // Production records mapping at WCP5; when only one app is CONNECTED, temp disconnect
+    // still targets that canonical id (heartbeat-disabled paths without heartbeat link).
+    const soleConnectedInstanceId = findSoleConnectedInstanceId(state)
+    if (soleConnectedInstanceId) {
+      return soleConnectedInstanceId
     }
   }
 
   return instanceId
+}
+
+function findSoleConnectedInstanceId(state: AgentState): string | undefined {
+  const connected = Object.values(state.instances).filter(
+    instance => instance.state === AppInstanceState.CONNECTED
+  )
+  if (connected.length === 1) {
+    return connected[0].instanceId
+  }
+  return undefined
 }
 
 function instanceHasCleanupWork(state: AgentState, instanceId: string): boolean {
@@ -133,6 +158,8 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
   setState(state => removeInstance(state, instanceId))
 
   pruneInstanceIdentity(resolvedContext.transport, instanceId)
+
+  notifyBrowserEdgeInstanceDisconnected(resolvedContext.transport, instanceId)
 
   logger.info("DACP handlers cleanup completed", { instanceId })
 }

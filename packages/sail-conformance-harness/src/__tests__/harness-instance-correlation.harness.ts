@@ -1,5 +1,5 @@
 import { expect } from "vitest"
-import { AppDirectoryManager, DesktopAgent, type Logger } from "@finos/sail-desktop-agent"
+import { DesktopAgent, type Logger } from "@finos/sail-desktop-agent"
 import { MockTransport } from "../../../sail-desktop-agent/test/support/mock-transport"
 import { createHarnessAppLauncher } from "../app-launcher"
 import type { HarnessPanel } from "../types"
@@ -35,26 +35,23 @@ export async function runHarnessOpenAndWcpHandshake(
     panels.push(panel)
   })
 
-  const appDirectory = new AppDirectoryManager()
-  appDirectory.addApplications([
-    {
-      appId,
-      title: "Chart App",
-      type: "web",
-      details: { url: appUrl },
-    },
-    {
-      appId: "Conformance1",
-      title: "Conformance Framework",
-      type: "web",
-      details: { url: "https://example.com/conformance1" },
-    },
-  ])
-
   const transport = new MockTransport()
   const agent = new DesktopAgent({
     transport,
-    appDirectoryManager: appDirectory,
+    apps: [
+      {
+        appId,
+        title: "Chart App",
+        type: "web",
+        details: { url: appUrl },
+      },
+      {
+        appId: "Conformance1",
+        title: "Conformance Framework",
+        type: "web",
+        details: { url: "https://example.com/conformance1" },
+      },
+    ],
     appLauncher,
     logger: options.logger,
     logPayloadDetail: options.logPayloadDetail ?? "full",

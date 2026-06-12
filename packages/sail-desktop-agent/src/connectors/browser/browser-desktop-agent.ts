@@ -29,6 +29,7 @@ import { WCPConnector } from "./wcp-connector"
 import type { AppConnectionMetadata, WCPConnectorOptions } from "./wcp-connector"
 import { createInMemoryTransportPair } from "../../transports/in-memory-transport"
 import { registerBrowserEdgeInstanceDisconnect } from "../../core/handlers/dacp/heartbeat-handlers"
+import { resolveCanonicalInstanceId } from "../../protocols/wcp/wcp-instance-id-resolver"
 import { registerBrowserEdgeWcp6Goodbye } from "../../core/handlers/dacp/wcp-handlers"
 import { registerBrowserDesktopAgentSession } from "./browser-desktop-agent-session"
 
@@ -216,6 +217,13 @@ function wireBrowserDesktopAgentLifecycle(
     wcpConnector.stop()
     originalStop()
   }
+
+  const originalDisconnect = desktopAgent.disconnectInstance.bind(desktopAgent)
+  desktopAgent.disconnectInstance = (instanceId: string) => {
+    const edgeInstanceId = resolveCanonicalInstanceId(instanceId) ?? instanceId
+    originalDisconnect(instanceId)
+    wcpConnector.disconnectAppByInstanceId(edgeInstanceId)
+  }
 }
 
 /**
@@ -276,9 +284,8 @@ export function createBrowserDesktopAgent(options?: BrowserDesktopAgentOptions):
 
   // Load app directories if provided
   if (options?.appDirectories && options.appDirectories.length > 0) {
-    const appDirectory = desktopAgent.getAppDirectory()
     for (const directory of options.appDirectories) {
-      void appDirectory.loadDirectory(directory)
+      void desktopAgent.loadDirectory(directory)
     }
   }
 

@@ -3,7 +3,7 @@ title: "Consolidate temp to canonical instance id resolver"
 slug: consolidate-temp-instance-id-resolver
 kind: task
 type: chore
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: spec-planner

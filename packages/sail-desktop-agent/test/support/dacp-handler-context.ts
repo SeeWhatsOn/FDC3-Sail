@@ -19,7 +19,6 @@ export function createHandlerContextForWorld(
     instanceId,
     getState: () => world.getState(),
     setState: fn => applyDesktopAgentStateUpdate(agent, fn),
-    appDirectory: world.appDirectoryManager,
     appLauncher: world.mockAppLauncher,
     requestIntentResolution: world.mockIntentResolver.createCallback(),
     logger: consoleLogger,

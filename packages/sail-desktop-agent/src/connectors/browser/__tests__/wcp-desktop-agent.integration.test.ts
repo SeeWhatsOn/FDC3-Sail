@@ -53,6 +53,7 @@ function createTestAgent(options?: {
 }): DesktopAgent {
   const agent = createBrowserDesktopAgent({
     userChannels: DEFAULT_FDC3_USER_CHANNELS,
+    apps: [PORTFOLIO_APP, CHART_APP],
     appLauncher: options?.appLauncher,
     heartbeatEnabled: options?.heartbeatEnabled,
     heartbeatIntervalMs: options?.heartbeatIntervalMs,
@@ -65,7 +66,6 @@ function createTestAgent(options?: {
     },
   })
 
-  agent.getAppDirectory().addApplications([PORTFOLIO_APP, CHART_APP])
   return agent
 }
 
@@ -350,6 +350,54 @@ describe("Option A instance lifecycle (WCP path)", () => {
     await flushAsyncDelivery()
 
     expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
+  })
+
+  it("host disconnectInstance with temp WCP4 id removes canonical instance when heartbeat is disabled", async () => {
+    const agent = createTestAgent({ heartbeatEnabled: false })
+    activeAgents.push(agent)
+
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "lifecycle-temp-disconnect-no-hb-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED
+    )
+    expect(
+      getBrowserDesktopAgentSession(agent).wcpConnector.getConnection(connected.canonicalInstanceId)
+    ).toBeDefined()
+
+    agent.disconnectInstance(connected.tempInstanceId)
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
+    expect(
+      getBrowserDesktopAgentSession(agent).wcpConnector.getConnection(connected.canonicalInstanceId)
+    ).toBeUndefined()
+  })
+
+  it("routes subsequent DACP using canonical instance id after WCP5 when app sends temp source id", async () => {
+    const agent = createTestAgent({ heartbeatEnabled: false })
+    activeAgents.push(agent)
+
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "lifecycle-canonical-routing-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    await postDacpOnPort(
+      connected.appPort,
+      createJoinUserChannelMessage(connected.tempInstanceId, connected.appId, CHANNEL_ID)
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().instances[connected.canonicalInstanceId]?.currentUserChannel).toBe(
+        CHANNEL_ID
+      )
+    })
+    expect(agent.getState().instances[connected.tempInstanceId]).toBeUndefined()
   })
 
   it("removes the instance on heartbeat timeout with the same cleanup as explicit disconnect", async () => {

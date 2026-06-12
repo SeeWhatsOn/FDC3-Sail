@@ -1,13 +1,29 @@
 import { describe, expect, it, vi } from "vitest"
 import { DesktopAgent } from "../../desktop-agent"
+import type { AgentState } from "../../state/types"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { createInitialState } from "../../state/initial-state"
+import { addApplication, addApplications, addDirectoryUrl } from "../../state/mutators"
+import {
+  retrieveAllApps,
+  retrieveApps,
+  retrieveAppsById,
+  getDirectoryUrls,
+} from "../app-directory-queries"
 import {
   expectAppDirectoryOnState,
   mockApp1,
   mockApp2,
   mockApp3,
 } from "./app-directory-test-fixtures"
+
+function applyDesktopAgentStateUpdate(
+  agent: DesktopAgent,
+  callback: (state: AgentState) => AgentState
+): void {
+  const internal = agent as unknown as { state: AgentState }
+  internal.state = callback(internal.state)
+}
 
 describe("AgentState.appDirectory ownership contract", () => {
   it("createInitialState includes empty appDirectory with apps and directoryUrls", () => {
@@ -26,23 +42,23 @@ describe("AgentState.appDirectory ownership contract", () => {
 
     const appDirectory = expectAppDirectoryOnState(agent.getState())
     expect(appDirectory.apps).toEqual(expect.arrayContaining([mockApp1, mockApp2]))
-    expect(agent.getAppDirectory().retrieveAllApps()).toEqual(appDirectory.apps)
+    expect(retrieveAllApps(appDirectory)).toEqual(appDirectory.apps)
   })
 
-  it("AppDirectoryManager.add updates state.appDirectory.apps through DesktopAgent", () => {
+  it("addApplication mutator updates state.appDirectory.apps through DesktopAgent", () => {
     const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
 
-    agent.getAppDirectory().add(mockApp1)
+    applyDesktopAgentStateUpdate(agent, state => addApplication(state, mockApp1))
 
     const appDirectory = expectAppDirectoryOnState(agent.getState())
     expect(appDirectory.apps).toContainEqual(mockApp1)
-    expect(agent.getAppDirectory().retrieveAppsById("app-1")).toEqual([mockApp1])
+    expect(retrieveAppsById(appDirectory, "app-1")).toEqual([mockApp1])
   })
 
-  it("AppDirectoryManager.addApplications updates state.appDirectory.apps", () => {
+  it("addApplications mutator updates state.appDirectory.apps", () => {
     const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
 
-    agent.getAppDirectory().addApplications([mockApp1, mockApp2])
+    applyDesktopAgentStateUpdate(agent, state => addApplications(state, [mockApp1, mockApp2]))
 
     const appDirectory = expectAppDirectoryOnState(agent.getState())
     expect(appDirectory.apps).toHaveLength(2)
@@ -55,7 +71,7 @@ describe("AgentState.appDirectory ownership contract", () => {
       apps: [mockApp1],
     })
 
-    agent.getAppDirectory().addApplications([mockApp1, mockApp2])
+    applyDesktopAgentStateUpdate(agent, state => addApplications(state, [mockApp1, mockApp2]))
 
     const appDirectory = expectAppDirectoryOnState(agent.getState())
     expect(appDirectory.apps).toHaveLength(2)
@@ -67,45 +83,41 @@ describe("AgentState.appDirectory ownership contract", () => {
     const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
     const url = "https://example.com/v2/apps"
 
-    agent.getAppDirectory().addDirectoryUrl(url)
+    applyDesktopAgentStateUpdate(agent, state => addDirectoryUrl(state, url))
 
     const appDirectory = expectAppDirectoryOnState(agent.getState())
     expect(appDirectory.directoryUrls).toEqual([url])
-    expect(agent.getAppDirectory().getDirectoryUrls()).toEqual(appDirectory.directoryUrls)
+    expect(getDirectoryUrls(appDirectory)).toEqual(appDirectory.directoryUrls)
   })
 
   it("loadDirectory updates state.appDirectory apps and directoryUrls", async () => {
     const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
     const url = "https://example.com/v2/apps"
-    const mockResponse = {
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue([mockApp1, mockApp2]),
-    }
+    })
 
-    global.fetch = vi.fn().mockResolvedValue(mockResponse)
-
-    await agent.getAppDirectory().loadDirectory(url)
+    await agent.loadDirectory(url)
 
     const appDirectory = expectAppDirectoryOnState(agent.getState())
     expect(appDirectory.apps).toHaveLength(2)
     expect(appDirectory.directoryUrls).toContain(url)
-    expect(agent.getAppDirectory().retrieveAllApps()).toEqual(appDirectory.apps)
+    expect(retrieveAllApps(appDirectory)).toEqual(appDirectory.apps)
   })
 
-  it("replace clears and reloads state.appDirectory apps and directoryUrls", async () => {
+  it("replaceDirectoryUrls clears and reloads state.appDirectory apps and directoryUrls", async () => {
     const agent = new DesktopAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       apps: [mockApp1],
     })
     const url = "https://example.com/v2/apps"
-    const mockResponse = {
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue([mockApp2, mockApp3]),
-    }
+    })
 
-    global.fetch = vi.fn().mockResolvedValue(mockResponse)
-
-    await agent.getAppDirectory().replace([url])
+    await agent.replaceDirectoryUrls([url])
 
     const appDirectory = expectAppDirectoryOnState(agent.getState())
     expect(appDirectory.apps.map(app => app.appId).sort()).toEqual(["app-2", "app-3"])
@@ -113,18 +125,18 @@ describe("AgentState.appDirectory ownership contract", () => {
     expect(appDirectory.directoryUrls).toEqual([url])
   })
 
-  it("AppDirectoryManager queries reflect state.appDirectory as the single source of truth", () => {
+  it("query helpers reflect state.appDirectory as the single source of truth", () => {
     const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
 
-    agent.getAppDirectory().addApplications([mockApp1, mockApp2, mockApp3])
+    applyDesktopAgentStateUpdate(agent, state =>
+      addApplications(state, [mockApp1, mockApp2, mockApp3])
+    )
 
-    const fromState = expectAppDirectoryOnState(agent.getState()).apps
-    const manager = agent.getAppDirectory()
+    const catalog = expectAppDirectoryOnState(agent.getState())
 
-    expect(manager.retrieveAllApps()).toEqual(fromState)
-    expect(manager.allApps).toEqual(fromState)
+    expect(retrieveAllApps(catalog)).toEqual(catalog.apps)
     expect(
-      manager.retrieveApps("fdc3.contact", "ViewContact", undefined).map(app => app.appId)
+      retrieveApps(catalog, "fdc3.contact", "ViewContact", undefined).map(app => app.appId)
     ).toEqual(["app-1", "app-3"])
   })
 })

@@ -9,10 +9,6 @@
 
 import type { Transport } from "./interfaces/transport"
 import type { AppLauncher } from "../host-contracts/app-launcher"
-import {
-  AppDirectoryManager,
-  type AppDirectoryStateBinding,
-} from "./app-directory/app-directory-manager"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
 import type {
   DACPHandlerContext,
@@ -24,10 +20,11 @@ import type { DirectoryApp } from "./app-directory/types"
 import type { BrowserTypes } from "@finos/fdc3"
 import type { AgentState, StateSetter } from "./state/types"
 import { createInitialState, createStateWithOverrides } from "./state/initial-state"
+import { addApplications, loadDirectoryIntoState, replaceAppDirectories } from "./state/mutators"
 import { consoleLogger, type Logger, type LogPayloadDetail } from "./interfaces/logger"
 import { resolveDesktopAgentConfig, type SailImplementationMetadata } from "./sail-default-config"
 import { InMemoryTransport } from "../transports/in-memory-transport"
-import { getInstance } from "./state/selectors"
+import { getAllUserChannels, getInstance } from "./state/selectors"
 
 /**
  * Structure of DACP message metadata for routing
@@ -53,7 +50,6 @@ export interface DesktopAgentOptions {
   transport?: Transport
 
   appLauncher?: AppLauncher
-  appDirectoryManager?: AppDirectoryManager
   apps?: DirectoryApp[]
   userChannels?: BrowserTypes.Channel[]
   requestIntentResolution?: IntentResolutionCallback
@@ -103,7 +99,6 @@ export interface DesktopAgentOptions {
 export interface DesktopAgentConfig {
   transport?: Transport
   appLauncher?: AppLauncher
-  appDirectoryManager?: AppDirectoryManager
   apps?: DirectoryApp[]
   userChannels: BrowserTypes.Channel[]
   requestIntentResolution?: IntentResolutionCallback
@@ -146,7 +141,6 @@ export interface DesktopAgentConfig {
 export class DesktopAgent {
   private state: AgentState
   private transport: Transport
-  private appDirectory: AppDirectoryManager
   private appLauncher?: AppLauncher
   private requestIntentResolution?: IntentResolutionCallback
   private validator?: MessageValidator
@@ -154,7 +148,6 @@ export class DesktopAgent {
   private logPayloadDetail: LogPayloadDetail
   private isStarted: boolean = false
   private implementationMetadata: SailImplementationMetadata
-  private userChannels: BrowserTypes.Channel[]
   private openContextListenerTimeoutMs: number
   private heartbeatEnabled: boolean
   private heartbeatIntervalMs: number
@@ -165,31 +158,20 @@ export class DesktopAgent {
     const config = resolveDesktopAgentConfig(options)
 
     this.transport = config.transport ?? new InMemoryTransport()
-    this.userChannels = config.userChannels
     this.implementationMetadata = config.implementationMetadata
     this.openContextListenerTimeoutMs = config.openContextListenerTimeoutMs
     this.heartbeatEnabled = config.heartbeatEnabled
     this.heartbeatIntervalMs = config.heartbeatIntervalMs
     this.heartbeatTimeoutMs = config.heartbeatTimeoutMs
+
+    // Config userChannels seed state.channels.user once at init; runtime reads use selectors only.
+    const seedUserChannels = config.userChannels
     this.state = config.initialState
-      ? createStateWithOverrides(config.initialState, this.userChannels)
-      : createInitialState(this.userChannels)
+      ? createStateWithOverrides(config.initialState, seedUserChannels)
+      : createInitialState(seedUserChannels)
 
-    const appDirectoryBinding: AppDirectoryStateBinding = {
-      getState: () => this.state.appDirectory,
-      setState: updater => {
-        this.state = {
-          ...this.state,
-          appDirectory: updater(this.state.appDirectory),
-        }
-      },
-    }
-
-    if (config.appDirectoryManager) {
-      this.appDirectory = config.appDirectoryManager
-      this.appDirectory.bindToState(appDirectoryBinding)
-    } else {
-      this.appDirectory = new AppDirectoryManager(appDirectoryBinding)
+    if (config.apps && config.apps.length > 0) {
+      this.state = addApplications(this.state, config.apps)
     }
 
     this.appLauncher = config.appLauncher
@@ -197,12 +179,20 @@ export class DesktopAgent {
     this.validator = config.validator
     this.logger = config.logger ?? consoleLogger
     this.logPayloadDetail = config.logPayloadDetail
+  }
 
-    if (config.apps) {
-      for (const app of config.apps) {
-        this.appDirectory.add(app)
-      }
-    }
+  /**
+   * Load applications from a remote FDC3 app directory URL into agent state.
+   */
+  async loadDirectory(url: string): Promise<void> {
+    this.state = await loadDirectoryIntoState(this.state, url)
+  }
+
+  /**
+   * Replace the catalog from multiple directory URLs (parallel fetch, merged apps).
+   */
+  async replaceDirectoryUrls(urls: string[]): Promise<void> {
+    this.state = await replaceAppDirectories(this.state, urls)
   }
 
   /**
@@ -334,7 +324,6 @@ export class DesktopAgent {
       instanceId,
       getState: () => this.getState(),
       setState,
-      appDirectory: this.appDirectory,
       appLauncher: this.appLauncher,
       requestIntentResolution: this.requestIntentResolution,
       validator: this.validator,
@@ -349,7 +338,15 @@ export class DesktopAgent {
     }
   }
   /**
-   * Get current state snapshot (for debugging/export)
+   * Return a live reference to internal agent state.
+   *
+   * **Test and debug only** — not for host UI or production reads. The returned
+   * object is mutable; writing to it bypasses DACP handlers and breaks invariants.
+   * For channel membership use {@link getAppUserChannelId}; for channel lists use
+   * {@link getUserChannels}. Host UI should subscribe to `channelChanged` on the
+   * WCP connector (or `SailPlatform` `onChannelChanged`).
+   *
+   * @returns Current {@link AgentState} (same reference as internal state — do not mutate)
    */
   getState(): AgentState {
     return this.state
@@ -367,15 +364,8 @@ export class DesktopAgent {
   exportState(): string {
     return JSON.stringify(this.state, null, 2)
   }
-  /**
-   * Get the app directory (for testing/inspection)
-   */
-  getAppDirectory(): AppDirectoryManager {
-    return this.appDirectory
-  }
-  /**
-   * Check if the agent is started
-   */
+
+  /** Check if the agent is started */
   getIsStarted(): boolean {
     return this.isStarted
   }
@@ -386,11 +376,11 @@ export class DesktopAgent {
     return this.implementationMetadata
   }
   /**
-   * Get the configured user channels.
-   * User channels are static configuration set at initialization and never change.
+   * Get user channels from agent state (`state.channels.user`).
+   * Constructor config seeds this map once at init; there is no separate runtime cache.
    */
   getUserChannels(): BrowserTypes.Channel[] {
-    return this.userChannels
+    return getAllUserChannels(this.state)
   }
 
   /**
