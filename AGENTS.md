@@ -64,6 +64,7 @@ All commands from the repo root — see `package.json` `scripts` for the full li
 - **InMemoryTransport tests:** Prefer `vi.waitFor` on observable counters over wall-clock sleeps; keep `flushAsyncDelivery()` (`setTimeout(0)`) for single-hop async.
 - **DACP error enum tests:** Table-driven Vitest in `dacp/__tests__` complements Cucumber; `ListenerNotFound` is a valid conformance payload though not in `@finos/fdc3` `ChannelError` enum.
 - **FDC3 default user channels** are defined once in `src/core/default-user-channels.ts` as `DEFAULT_FDC3_USER_CHANNELS`. Production, Vitest, and Cucumber (`generic.steps` / `CustomWorld.initializeDesktopAgent`) import that constant directly — feature files use spec IDs (`fdc3.channel.1`, …).
+- **App directory catalog** lives on `AgentState.appDirectory` (`apps`, `directoryUrls`); `AppDirectoryManager` mutates/queries that slice via `bindToState()` when wired by `DesktopAgent`. Injected managers (Cucumber/harness) keep object identity through `bindToState()` — do not copy-replace.
 
 ### Watson workflow (`plans/`)
 
