@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest"
-import type { BrowserTypes } from "@finos/fdc3"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import type { DirectoryApp } from "../../../app-directory/types"
+import { DesktopAgent } from "../../../desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { connectInstance, updateInstanceState } from "../../../state/mutators"
 import { createInitialState } from "../../../state/initial-state"
-import { AppInstanceState } from "../../../state/types"
-import { handleGetAppMetadataRequest } from "../app-handlers"
-import { createDACPTestContext } from "./test-context"
+import { AppInstanceState, type AgentState } from "../../../state/types"
+import { handleFindInstancesRequest, handleGetAppMetadataRequest } from "../app-handlers"
+import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
 
 const TEST_PROVIDER = "test-provider"
 
@@ -24,14 +24,6 @@ function createAppDirectory(apps: DirectoryApp[]): AppDirectoryManager {
   const directory = new AppDirectoryManager()
   directory.addApplications(apps)
   return directory
-}
-
-function createRequestMeta(requestUuid: string): BrowserTypes.RequestMessage["meta"] {
-  return {
-    requestUuid,
-    timestamp: new Date(),
-    source: { appId: "portfolioApp", instanceId: "a1" },
-  }
 }
 
 type GetAppMetadataSuccessResponse = {
@@ -72,7 +64,10 @@ describe("getAppMetadata desktopAgent field", () => {
     handleGetAppMetadataRequest(
       {
         type: "getAppMetadataRequest",
-        meta: createRequestMeta("get-app-metadata-directory-only"),
+        meta: createDacpRequestMeta("get-app-metadata-directory-only", {
+          appId: "portfolioApp",
+          instanceId: "a1",
+        }),
         payload: {
           app: { appId: "chartApp" },
         },
@@ -110,7 +105,10 @@ describe("getAppMetadata desktopAgent field", () => {
     handleGetAppMetadataRequest(
       {
         type: "getAppMetadataRequest",
-        meta: createRequestMeta("get-app-metadata-running-instance"),
+        meta: createDacpRequestMeta("get-app-metadata-running-instance", {
+          appId: "portfolioApp",
+          instanceId: "a1",
+        }),
         payload: {
           app: { appId: "chartApp" },
         },
@@ -130,5 +128,127 @@ describe("getAppMetadata desktopAgent field", () => {
     expect(response.payload.appMetadata.appId).toBe("chartApp")
     expect(response.payload.appMetadata.instanceId).toBe("chart-123")
     expect(response.payload.appMetadata.desktopAgent).toBe(TEST_PROVIDER)
+  })
+})
+
+type AppDirectorySlice = {
+  apps: DirectoryApp[]
+  directoryUrls: string[]
+}
+
+function expectAppDirectoryOnState(state: AgentState): AppDirectorySlice {
+  expect(state).toHaveProperty("appDirectory")
+  const slice = (state as AgentState & { appDirectory: AppDirectorySlice }).appDirectory
+  expect(Array.isArray(slice.apps)).toBe(true)
+  expect(Array.isArray(slice.directoryUrls)).toBe(true)
+  return slice
+}
+
+describe("app directory vs runtime instance separation", () => {
+  it("findInstances returns empty when app is in directory but not connected", () => {
+    const state = createConnectedCallerState()
+    const transport = new MockTransport()
+    const directory = createAppDirectory([chartApp])
+    const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
+
+    handleFindInstancesRequest(
+      {
+        type: "findInstancesRequest",
+        meta: createDacpRequestMeta("find-instances-directory-only", {
+          appId: "portfolioApp",
+          instanceId: "a1",
+        }),
+        payload: {
+          app: { appId: "chartApp" },
+        },
+      },
+      { ...context, transport, appDirectory: directory }
+    )
+
+    const response = transport.getLastMessage() as {
+      type: string
+      payload: { appIdentifiers: Array<{ appId: string; instanceId?: string }> }
+    }
+    expect(response.type).toBe("findInstancesResponse")
+    expect(response.payload.appIdentifiers).toEqual([])
+  })
+
+  it("getAppMetadata directory lookup reads from the same appDirectory slice as agent state", () => {
+    const agent = new DesktopAgent({
+      userChannels: DEFAULT_FDC3_USER_CHANNELS,
+      apps: [chartApp],
+    })
+    const state = createConnectedCallerState()
+    const transport = new MockTransport()
+    const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
+
+    handleGetAppMetadataRequest(
+      {
+        type: "getAppMetadataRequest",
+        meta: createDacpRequestMeta("get-app-metadata-state-slice", {
+          appId: "portfolioApp",
+          instanceId: "a1",
+        }),
+        payload: {
+          app: { appId: "chartApp" },
+        },
+      },
+      {
+        ...context,
+        transport,
+        appDirectory: agent.getAppDirectory(),
+        implementationMetadata: {
+          ...context.implementationMetadata,
+          provider: TEST_PROVIDER,
+        },
+      }
+    )
+
+    const response = getAppMetadataResponse(transport)
+    const stateSlice = expectAppDirectoryOnState(agent.getState())
+
+    expect(stateSlice.apps).toContainEqual(chartApp)
+    expect(response.payload.appMetadata.appId).toBe("chartApp")
+    expect(agent.getAppDirectory().retrieveAppsById("chartApp")).toEqual(
+      stateSlice.apps.filter(app => app.appId === "chartApp")
+    )
+  })
+
+  it("running instances remain keyed by instanceId and separate from directory apps", () => {
+    let state = createConnectedCallerState()
+    state = connectInstance(state, {
+      instanceId: "chart-456",
+      appId: "chartApp",
+      metadata: { appId: "chartApp", name: "chartApp" },
+    })
+    state = updateInstanceState(state, "chart-456", AppInstanceState.CONNECTED)
+
+    const transport = new MockTransport()
+    const directory = createAppDirectory([chartApp])
+    const { context, getState } = createDACPTestContext({ instanceId: "a1", initialState: state })
+
+    handleFindInstancesRequest(
+      {
+        type: "findInstancesRequest",
+        meta: createDacpRequestMeta("find-instances-running", {
+          appId: "portfolioApp",
+          instanceId: "a1",
+        }),
+        payload: {
+          app: { appId: "chartApp" },
+        },
+      },
+      { ...context, transport, appDirectory: directory }
+    )
+
+    const findResponse = transport.getLastMessage() as {
+      payload: { appIdentifiers: Array<{ appId: string; instanceId: string }> }
+    }
+    expect(findResponse.payload.appIdentifiers).toEqual([
+      { appId: "chartApp", instanceId: "chart-456" },
+    ])
+    expect(Object.keys(getState().instances)).toEqual(["a1", "chart-456"])
+    expect(directory.retrieveAllApps()).toHaveLength(1)
+    expect(directory.retrieveAllApps()[0]).not.toHaveProperty("instanceId")
   })
 })

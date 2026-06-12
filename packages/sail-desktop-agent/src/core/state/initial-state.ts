@@ -36,6 +36,10 @@ export function createInitialState(userChannels: Channel[]): AgentState {
     open: {
       pendingWithContext: {},
     },
+    appDirectory: {
+      apps: [],
+      directoryUrls: [],
+    },
   }
 }
 

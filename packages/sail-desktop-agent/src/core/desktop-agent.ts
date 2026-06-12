@@ -9,7 +9,10 @@
 
 import type { Transport } from "./interfaces/transport"
 import type { AppLauncher } from "../host-contracts/app-launcher"
-import { AppDirectoryManager } from "./app-directory/app-directory-manager"
+import {
+  AppDirectoryManager,
+  type AppDirectoryStateBinding,
+} from "./app-directory/app-directory-manager"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
 import type {
   DACPHandlerContext,
@@ -162,12 +165,6 @@ export class DesktopAgent {
     const config = resolveDesktopAgentConfig(options)
 
     this.transport = config.transport ?? new InMemoryTransport()
-    this.appDirectory = config.appDirectoryManager ?? new AppDirectoryManager()
-    this.appLauncher = config.appLauncher
-    this.requestIntentResolution = config.requestIntentResolution
-    this.validator = config.validator
-    this.logger = config.logger ?? consoleLogger
-    this.logPayloadDetail = config.logPayloadDetail
     this.userChannels = config.userChannels
     this.implementationMetadata = config.implementationMetadata
     this.openContextListenerTimeoutMs = config.openContextListenerTimeoutMs
@@ -177,6 +174,29 @@ export class DesktopAgent {
     this.state = config.initialState
       ? createStateWithOverrides(config.initialState, this.userChannels)
       : createInitialState(this.userChannels)
+
+    const appDirectoryBinding: AppDirectoryStateBinding = {
+      getState: () => this.state.appDirectory,
+      setState: updater => {
+        this.state = {
+          ...this.state,
+          appDirectory: updater(this.state.appDirectory),
+        }
+      },
+    }
+
+    if (config.appDirectoryManager) {
+      this.appDirectory = config.appDirectoryManager
+      this.appDirectory.bindToState(appDirectoryBinding)
+    } else {
+      this.appDirectory = new AppDirectoryManager(appDirectoryBinding)
+    }
+
+    this.appLauncher = config.appLauncher
+    this.requestIntentResolution = config.requestIntentResolution
+    this.validator = config.validator
+    this.logger = config.logger ?? consoleLogger
+    this.logPayloadDetail = config.logPayloadDetail
 
     if (config.apps) {
       for (const app of config.apps) {

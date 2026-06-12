@@ -8,66 +8,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { AppDirectoryManager, isValidDirectoryUrl } from "../app-directory-manager"
 import type { DirectoryApp, DirectoryData } from "../types"
+import { mockApp1, mockApp2, mockApp3 } from "./app-directory-test-fixtures"
 
 describe("AppDirectoryManager", () => {
   let directory: AppDirectoryManager
-
-  // Test data
-  const mockApp1: DirectoryApp = {
-    appId: "app-1",
-    title: "Test App 1",
-    type: "web",
-    details: {
-      url: "https://example.com/app1",
-    },
-    interop: {
-      intents: {
-        listensFor: {
-          ViewContact: {
-            contexts: ["fdc3.contact"],
-            resultType: "fdc3.contact",
-          },
-        },
-      },
-    },
-  }
-
-  const mockApp2: DirectoryApp = {
-    appId: "app-2",
-    title: "Test App 2",
-    type: "web",
-    details: {
-      url: "https://example.com/app2",
-    },
-    interop: {
-      intents: {
-        listensFor: {
-          ViewChart: {
-            contexts: ["fdc3.instrument"],
-          },
-        },
-      },
-    },
-  }
-
-  const mockApp3: DirectoryApp = {
-    appId: "app-3",
-    title: "Test App 3",
-    type: "native",
-    details: {
-      path: "/usr/bin/app3",
-    },
-    interop: {
-      intents: {
-        listensFor: {
-          ViewContact: {
-            contexts: ["fdc3.contact", "fdc3.instrument"],
-            resultType: "fdc3.contact",
-          },
-        },
-      },
-    },
-  }
 
   beforeEach(() => {
     directory = new AppDirectoryManager()

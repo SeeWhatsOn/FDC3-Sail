@@ -8,6 +8,7 @@
 
 import type { AppMetadata, Context } from "@finos/fdc3"
 import type { BrowserTypes } from "@finos/fdc3"
+import type { DirectoryApp } from "../app-directory/types"
 
 // ============================================================================
 // APP INSTANCE TYPES
@@ -281,6 +282,16 @@ export interface PendingOpenWithContext {
 }
 
 // ============================================================================
+// APP DIRECTORY STATE
+// ============================================================================
+
+/** Launchable app catalog — separate from runtime instances keyed by instanceId. */
+export interface AppDirectoryState {
+  apps: DirectoryApp[]
+  directoryUrls: string[]
+}
+
+// ============================================================================
 // UNIFIED AGENT STATE
 // ============================================================================
 
@@ -327,6 +338,9 @@ export interface AgentState {
     /** Pending open-with-context requests keyed by target instanceId */
     pendingWithContext: Record<string, PendingOpenWithContext[]>
   }
+
+  /** Launchable app directory (catalog), not runtime instances */
+  appDirectory: AppDirectoryState
 }
 
 // ============================================================================

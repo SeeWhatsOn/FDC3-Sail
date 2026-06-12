@@ -1,16 +1,12 @@
 import { describe, expect, it } from "vitest"
-import type { BrowserTypes, Context } from "@finos/fdc3"
-import {
-  ChannelError,
-  OpenError,
-  ResolveError,
-} from "@finos/fdc3"
+import type { Context } from "@finos/fdc3"
+import { ChannelError, OpenError, ResolveError } from "@finos/fdc3"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 import { connectInstance, updateInstanceState } from "../../../state/mutators"
 import { AppInstanceState } from "../../../state/types"
 import { createInitialState } from "../../../state/initial-state"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
-import { createDACPTestContext } from "./test-context"
+import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
 import { handleBroadcastRequest } from "../context-handlers"
 import { handleContextListenerUnsubscribe } from "../context-handlers"
 import { handleJoinUserChannelRequest } from "../channel-handlers"
@@ -37,14 +33,6 @@ function createConnectedHandlerContext(instanceId: string) {
   return { context: { ...context, transport }, transport }
 }
 
-function createRequestMeta(requestUuid: string): BrowserTypes.RequestMessage["meta"] {
-  return {
-    requestUuid,
-    timestamp: new Date(),
-    source: { appId: "TestApp", instanceId: "a1" },
-  }
-}
-
 function getLastErrorPayload(transport: MockTransport): ErrorResponseMessage["payload"] {
   const last = transport.getLastMessage() as ErrorResponseMessage
   return last.payload
@@ -64,7 +52,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
         handleBroadcastRequest(
           {
             type: "broadcastRequest",
-            meta: createRequestMeta("broadcast-malformed"),
+            meta: createDacpRequestMeta("broadcast-malformed"),
             payload: {
               channelId: "missing-channel",
               context: { bogus: true } as unknown as Context,
@@ -83,7 +71,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
         handleJoinUserChannelRequest(
           {
             type: "joinUserChannelRequest",
-            meta: createRequestMeta("join-missing-channel"),
+            meta: createDacpRequestMeta("join-missing-channel"),
             payload: { channelId: "nonexistent-user-channel" },
           },
           context
@@ -99,7 +87,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
         handleBroadcastRequest(
           {
             type: "broadcastRequest",
-            meta: createRequestMeta("broadcast-missing-channel"),
+            meta: createDacpRequestMeta("broadcast-missing-channel"),
             payload: {
               channelId: "nonexistent-app-channel",
               context: { type: "fdc3.instrument", id: { ticker: "AAPL" } },
@@ -118,7 +106,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
         handleContextListenerUnsubscribe(
           {
             type: "contextListenerUnsubscribeRequest",
-            meta: createRequestMeta("unsub-unknown-listener"),
+            meta: createDacpRequestMeta("unsub-unknown-listener"),
             payload: { listenerUUID: "unknown-listener-uuid" },
           },
           context
@@ -135,7 +123,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
         handleCreatePrivateChannelRequest(
           {
             type: "createPrivateChannelRequest",
-            meta: createRequestMeta("create-private-no-instance"),
+            meta: createDacpRequestMeta("create-private-no-instance"),
             payload: {},
           },
           { ...context, transport }
@@ -151,7 +139,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
         await handleOpenRequest(
           {
             type: "openRequest",
-            meta: createRequestMeta("open-no-launcher"),
+            meta: createDacpRequestMeta("open-no-launcher"),
             payload: { app: { appId: "SomeApp" } },
           },
           context
@@ -168,7 +156,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
         handleAddIntentListener(
           {
             type: "addIntentListenerRequest",
-            meta: createRequestMeta("intent-listener-missing-instance"),
+            meta: createDacpRequestMeta("intent-listener-missing-instance"),
             payload: { intent: "ViewChart" },
           },
           { ...context, transport }

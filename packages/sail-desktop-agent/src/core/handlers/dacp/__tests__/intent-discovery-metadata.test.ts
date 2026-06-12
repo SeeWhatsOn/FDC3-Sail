@@ -1,19 +1,16 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
-import type { BrowserTypes } from "@finos/fdc3"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import type { DirectoryApp } from "../../../app-directory/types"
+import { DesktopAgent } from "../../../desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { connectInstance, updateInstanceState } from "../../../state/mutators"
 import { registerIntentListener } from "../../../state/mutators/intent"
 import { createInitialState } from "../../../state/initial-state"
-import { AppInstanceState } from "../../../state/types"
-import { createDACPTestContext } from "./test-context"
-import {
-  createAppIntents,
-  findIntentsByContext,
-} from "../intent-handlers/intent-helpers"
+import { AppInstanceState, type AgentState } from "../../../state/types"
+import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
+import { createAppIntents, findIntentsByContext } from "../intent-handlers/intent-helpers"
 import {
   handleFindIntentRequest,
   handleFindIntentsByContextRequest,
@@ -68,14 +65,6 @@ function createAppDirectory(apps: DirectoryApp[]): AppDirectoryManager {
   const directory = new AppDirectoryManager()
   directory.addApplications(apps)
   return directory
-}
-
-function createRequestMeta(requestUuid: string): BrowserTypes.RequestMessage["meta"] {
-  return {
-    requestUuid,
-    timestamp: new Date(),
-    source: { appId: "TestApp", instanceId: "a1" },
-  }
 }
 
 type FindIntentSuccessResponse = {
@@ -175,7 +164,7 @@ describe("intent discovery metadata from app directory", () => {
       handleFindIntentRequest(
         {
           type: "findIntentRequest",
-          meta: createRequestMeta("find-intent-display-name"),
+          meta: createDacpRequestMeta("find-intent-display-name"),
           payload: {
             intent: INTENT_APP_A_INTENT_NAME,
             context: { type: TEST_CONTEXT_X },
@@ -219,7 +208,7 @@ describe("intent discovery metadata from app directory", () => {
       handleFindIntentsByContextRequest(
         {
           type: "findIntentsByContextRequest",
-          meta: createRequestMeta("find-intents-by-context-dedupe"),
+          meta: createDacpRequestMeta("find-intents-by-context-dedupe"),
           payload: {
             context: { type: TEST_CONTEXT_X },
           },
@@ -290,7 +279,7 @@ describe("intent discovery metadata from app directory", () => {
       handleFindIntentsByContextRequest(
         {
           type: "findIntentsByContextRequest",
-          meta: createRequestMeta("find-intents-by-context-no-listener-inflation"),
+          meta: createDacpRequestMeta("find-intents-by-context-no-listener-inflation"),
           payload: {
             context: { type: TEST_CONTEXT_X },
           },
@@ -304,5 +293,127 @@ describe("intent discovery metadata from app directory", () => {
       expect(intentNames).not.toContain("contextYOnlyIntent")
       expect(response.payload.appIntents).toHaveLength(2)
     })
+  })
+})
+
+type AppDirectorySlice = {
+  apps: DirectoryApp[]
+  directoryUrls: string[]
+}
+
+function expectAppDirectoryOnState(state: AgentState): AppDirectorySlice {
+  expect(state).toHaveProperty("appDirectory")
+  const slice = (state as AgentState & { appDirectory: AppDirectorySlice }).appDirectory
+  expect(Array.isArray(slice.apps)).toBe(true)
+  expect(Array.isArray(slice.directoryUrls)).toBe(true)
+  return slice
+}
+
+const launchOnlyApp: DirectoryApp = {
+  appId: "LaunchOnlyApp",
+  title: "Launch Only App",
+  type: "web",
+  details: { url: "https://example.com/launch-only" },
+  interop: {
+    intents: {
+      listensFor: {
+        [INTENT_APP_A_INTENT_NAME]: {
+          displayName: "Launch Only Copy",
+          contexts: [TEST_CONTEXT_X],
+        },
+      },
+    },
+  },
+}
+
+describe("state-owned app directory intent discovery contract", () => {
+  it("createAppIntents derives launchable apps without instanceId separately from running instances", () => {
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    state = connectInstance(state, {
+      instanceId: "running-instance",
+      appId: "IntentAppAId",
+      metadata: { appId: "IntentAppAId", name: "IntentAppA" },
+    })
+    state = updateInstanceState(state, "running-instance", AppInstanceState.CONNECTED)
+    state = registerIntentListener(state, {
+      listenerId: "listener-running",
+      intentName: INTENT_APP_A_INTENT_NAME,
+      instanceId: "running-instance",
+      appId: "IntentAppAId",
+      contextTypes: [],
+    })
+
+    const directory = createAppDirectory([intentAppA, launchOnlyApp])
+    const appIntents = createAppIntents(state, directory, INTENT_APP_A_INTENT_NAME, TEST_CONTEXT_X)
+
+    expect(appIntents).toHaveLength(1)
+    const apps = appIntents[0].apps
+    expect(apps).toHaveLength(3)
+
+    const launchableOnly = apps.find(app => app.appId === "LaunchOnlyApp")
+    const directoryLaunchable = apps.find(
+      app => app.appId === "IntentAppAId" && app.instanceId === undefined
+    )
+    const running = apps.find(app => app.instanceId === "running-instance")
+
+    expect(launchableOnly).toBeDefined()
+    expect(launchableOnly?.instanceId).toBeUndefined()
+    expect(directoryLaunchable).toBeDefined()
+    expect(running).toBeDefined()
+    expect(running?.appId).toBe("IntentAppAId")
+  })
+
+  it("DesktopAgent intent lookup uses state.appDirectory as the directory source", () => {
+    const agent = new DesktopAgent({
+      userChannels: DEFAULT_FDC3_USER_CHANNELS,
+      apps: [intentAppA],
+    })
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    state = connectInstance(state, {
+      instanceId: "a1",
+      appId: "TestApp",
+      metadata: { appId: "TestApp", name: "TestApp" },
+    })
+    state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
+
+    const transport = new MockTransport()
+    const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
+    const stateSlice = expectAppDirectoryOnState(agent.getState())
+
+    handleFindIntentRequest(
+      {
+        type: "findIntentRequest",
+        meta: createDacpRequestMeta("find-intent-state-owned-directory"),
+        payload: {
+          intent: INTENT_APP_A_INTENT_NAME,
+          context: { type: TEST_CONTEXT_X },
+        },
+      },
+      { ...context, transport, appDirectory: agent.getAppDirectory() }
+    )
+
+    const response = getFindIntentResponse(transport)
+    expect(stateSlice.apps).toContainEqual(intentAppA)
+    expect(response.payload.appIntent.intent.displayName).toBe(INTENT_APP_A_DISPLAY_NAME)
+    expect(response.payload.appIntent.apps.every(app => app.instanceId === undefined)).toBe(true)
+  })
+
+  it("preserves duplicate appId policy for intent lookup from state.appDirectory.apps", () => {
+    const duplicateVariant: DirectoryApp = {
+      ...intentAppA,
+      title: "Duplicate Intent App A",
+    }
+    const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
+
+    agent.getAppDirectory().addApplications([intentAppA, duplicateVariant])
+
+    const stateSlice = expectAppDirectoryOnState(agent.getState())
+    expect(stateSlice.apps.filter(app => app.appId === "IntentAppAId")).toHaveLength(1)
+
+    const intents = agent
+      .getAppDirectory()
+      .retrieveIntents(TEST_CONTEXT_X, INTENT_APP_A_INTENT_NAME, undefined)
+    expect(intents).toHaveLength(1)
+    expect(intents[0].appId).toBe("IntentAppAId")
   })
 })

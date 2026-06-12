@@ -1,3 +1,4 @@
+import type { BrowserTypes } from "@finos/fdc3"
 import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { DEFAULT_SAIL_IMPLEMENTATION_METADATA } from "../../../sail-default-config"
@@ -57,4 +58,15 @@ export function createDACPTestContext(options: {
   }
 
   return { context, getState: readState }
+}
+
+export function createDacpRequestMeta(
+  requestUuid: string,
+  source: BrowserTypes.AppIdentifier = { appId: "TestApp", instanceId: "a1" }
+): BrowserTypes.AppRequestMessageMeta {
+  return {
+    requestUuid,
+    timestamp: new Date(),
+    source,
+  }
 }

@@ -20,7 +20,14 @@
  */
 
 import type { DirectoryApp, DirectoryData, DirectoryIntent, WebAppDetails } from "./types"
+import type { AppDirectoryState } from "../state/types"
 import { consoleLogger } from "../interfaces/logger"
+
+/** Reads and writes the app-directory slice owned by agent state (or standalone fallback). */
+export type AppDirectoryStateBinding = {
+  getState: () => AppDirectoryState
+  setState: (updater: (current: AppDirectoryState) => AppDirectoryState) => void
+}
 
 /**
  * Helper function to check if result types match
@@ -152,19 +159,15 @@ export function isValidDirectoryUrl(url: string): boolean {
  * - URL-based application filtering
  */
 export class AppDirectoryManager {
-  /**
-   * Array of all applications in the directory
-   */
-  public allApps: DirectoryApp[]
-
-  /**
-   * List of configured directory URLs (RESTful endpoints)
-   * Multiple directories can be configured per FDC3 spec
-   */
-  private directoryUrls: string[] = []
+  private binding: AppDirectoryStateBinding
+  /** Used when no external state binding is supplied (tests, standalone use). */
+  private readonly standaloneState: AppDirectoryState = { apps: [], directoryUrls: [] }
 
   /**
    * Creates a new AppDirectoryManager instance with an empty directory.
+   *
+   * When bound to agent state, mutations update `AgentState.appDirectory` instead of
+   * holding a separate catalog copy.
    *
    * Load apps after construction using:
    * - `loadDirectory(url)` - Load from REST endpoint
@@ -177,8 +180,58 @@ export class AppDirectoryManager {
    * await directory.loadDirectory("https://example.com/v2/apps")
    * ```
    */
-  constructor() {
-    this.allApps = []
+  constructor(binding?: AppDirectoryStateBinding) {
+    this.binding = binding ?? {
+      getState: () => this.standaloneState,
+      setState: updater => {
+        const next = updater(this.standaloneState)
+        this.standaloneState.apps = next.apps
+        this.standaloneState.directoryUrls = next.directoryUrls
+      },
+    }
+  }
+
+  /**
+   * Rebind this manager to agent state, migrating apps and directory URLs from the
+   * current slice (standalone or prior binding). After bind, mutations update the
+   * supplied binding instead of the previous one.
+   */
+  bindToState(binding: AppDirectoryStateBinding): void {
+    const current = this.binding.getState()
+    this.binding = binding
+    this.replaceSlice({
+      apps: [...current.apps],
+      directoryUrls: [...current.directoryUrls],
+    })
+  }
+
+  /**
+   * Applications in the catalog. Same array reference as the bound state slice.
+   */
+  public get allApps(): DirectoryApp[] {
+    return this.binding.getState().apps
+  }
+
+  private get directoryUrls(): string[] {
+    return this.binding.getState().directoryUrls
+  }
+
+  private updateApps(updater: (apps: DirectoryApp[]) => DirectoryApp[]): void {
+    this.binding.setState(current => ({
+      ...current,
+      apps: updater(current.apps),
+    }))
+  }
+
+  private updateDirectoryUrls(updater: (urls: string[]) => string[]): void {
+    this.binding.setState(current => ({
+      ...current,
+      directoryUrls: updater(current.directoryUrls),
+    }))
+  }
+
+  private replaceSlice(next: AppDirectoryState): void {
+    this.binding.setState(() => next)
   }
 
   /**
@@ -245,7 +298,7 @@ export class AppDirectoryManager {
 
     // Add to list if not already present
     if (!this.directoryUrls.includes(url)) {
-      this.directoryUrls.push(url)
+      this.updateDirectoryUrls(urls => [...urls, url])
     }
   }
 
@@ -264,14 +317,14 @@ export class AppDirectoryManager {
    * @param url - The directory URL to remove
    */
   removeDirectoryUrl(url: string): void {
-    this.directoryUrls = this.directoryUrls.filter(u => u !== url)
+    this.updateDirectoryUrls(urls => urls.filter(u => u !== url))
   }
 
   /**
    * Clears all configured directory URLs
    */
   clearDirectoryUrls(): void {
-    this.directoryUrls = []
+    this.updateDirectoryUrls(() => [])
   }
 
   /**
@@ -292,8 +345,14 @@ export class AppDirectoryManager {
 
       // Add non-duplicate apps based on appId
       const existingAppIds = new Set(this.allApps.map(app => app.appId))
-      const newApps = apps.filter(app => !existingAppIds.has(app.appId))
-      this.allApps.push(...newApps)
+      const newApps: DirectoryApp[] = []
+      for (const app of apps) {
+        if (!existingAppIds.has(app.appId)) {
+          existingAppIds.add(app.appId)
+          newApps.push(app)
+        }
+      }
+      this.updateApps(current => [...current, ...newApps])
     } catch (error) {
       const errorMessage = `Failed to load applications from ${url}: ${
         error instanceof Error ? error.message : String(error)
@@ -319,8 +378,7 @@ export class AppDirectoryManager {
     }
 
     if (urls.length === 0) {
-      this.allApps = []
-      this.directoryUrls = []
+      this.replaceSlice({ apps: [], directoryUrls: [] })
       consoleLogger.info("No directories provided - cleared all applications and directory URLs")
       return
     }
@@ -336,10 +394,10 @@ export class AppDirectoryManager {
     }
 
     // Update directory URLs list
-    this.directoryUrls = [...urls]
-
-    // Clear existing applications
-    this.allApps = []
+    this.replaceSlice({
+      apps: [],
+      directoryUrls: [...urls],
+    })
 
     // Load from all sources in parallel using Promise.allSettled
     // This allows partial success even if some sources fail
@@ -373,7 +431,7 @@ export class AppDirectoryManager {
    * @param app - The DirectoryApp to add
    */
   add(app: DirectoryApp): void {
-    this.allApps.push(app)
+    this.updateApps(current => [...current, app])
   }
 
   /**
@@ -396,12 +454,17 @@ export class AppDirectoryManager {
     // Validate all applications
     validateApplications(applications)
 
-    // Prevent duplicates based on appId
+    // Prevent duplicates based on appId (existing catalog + within this batch)
     const existingAppIds = new Set(this.allApps.map(app => app.appId))
-    const newApps = applications.filter(app => !existingAppIds.has(app.appId))
+    const newApps: DirectoryApp[] = []
+    for (const app of applications) {
+      if (!existingAppIds.has(app.appId)) {
+        existingAppIds.add(app.appId)
+        newApps.push(app)
+      }
+    }
 
-    // Add non-duplicate apps
-    this.allApps.push(...newApps)
+    this.updateApps(current => [...current, ...newApps])
   }
 
   /**
