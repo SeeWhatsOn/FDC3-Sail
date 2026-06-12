@@ -164,10 +164,6 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
     if (canonicalId !== uuid) {
       this.updateState(state => removeInstance(state, uuid))
     }
-    // WCP5 creates instances as PENDING; tests treat validated apps as live/connected.
-    this.updateState(state => updateInstanceState(state, canonicalId, AppInstanceState.CONNECTED))
-  } else {
-    this.updateState(state => updateInstanceState(state, uuid, AppInstanceState.CONNECTED))
   }
 })
 

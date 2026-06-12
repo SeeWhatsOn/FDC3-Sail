@@ -18,7 +18,9 @@ import { sendDACPResponse } from "./utils/dacp-response-utils"
 import { startHeartbeat } from "./heartbeat-handlers"
 import { cleanupDACPHandlers } from "./cleanup"
 import { getInstance } from "../../state/selectors"
-import { connectInstance } from "../../state/mutators"
+import { connectInstance, updateInstanceState } from "../../state/mutators"
+import { AppInstanceState } from "../../state/types"
+import type { Transport } from "../../interfaces/transport"
 import type { DirectoryApp } from "../../app-directory/types"
 import { getInstanceIdentityMap, type InstanceIdentityRecord } from "./instance-identity-registry"
 import { takePendingWcpSourceWindow } from "./wcp-pending-source-window"
@@ -27,6 +29,20 @@ import {
   reconcileOrphanPendingHostInstances,
   tryAdoptHostPreRegisteredInstance,
 } from "./utils/wcp-host-instance-adoption"
+
+/** Browser preset: sync agent-state cleanup when app sends WCP6 over MessagePort. */
+const browserEdgeWcp6ByTransport = new WeakMap<Transport, (instanceId: string) => void>()
+
+export function registerBrowserEdgeWcp6Goodbye(
+  transport: Transport,
+  onGoodbye: (instanceId: string) => void
+): void {
+  browserEdgeWcp6ByTransport.set(transport, onGoodbye)
+}
+
+export function notifyBrowserEdgeWcp6Goodbye(transport: Transport, instanceId: string): void {
+  browserEdgeWcp6ByTransport.get(transport)?.(instanceId)
+}
 
 type Wcp4ValidateAppIdentity = WebConnectionProtocol4ValidateAppIdentity
 type WCP5ValidateAppIdentityResponse = WebConnectionProtocol5ValidateAppIdentitySuccessResponse
@@ -258,6 +274,9 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     }
 
     transport.send(responseWithRouting)
+
+    // WCP5 success is the CONNECTED boundary; host pre-register and WCP4 paths stay PENDING until here.
+    context.setState(state => updateInstanceState(state, instanceId, AppInstanceState.CONNECTED))
 
     if (context.heartbeatEnabled) {
       startHeartbeat(instanceId, context)

@@ -345,7 +345,9 @@ export function findIntentsByContext(
 
   return orderedIntentNames.map(name => ({
     name,
-    displayName: displayNameByIntent.get(name) ?? getIntentDisplayNameFromDirectory(appDirectory, name, contextType),
+    displayName:
+      displayNameByIntent.get(name) ??
+      getIntentDisplayNameFromDirectory(appDirectory, name, contextType),
   }))
 }
 
@@ -451,9 +453,8 @@ export async function launchAppAndWaitForInstance(
       })
     }
 
-    // Find a new instance (not in the existing set)
-    // Accept PENDING or CONNECTED state - PENDING means WCP handshake complete and ready to receive messages
-    // The 15 second timeout allows the app to add listeners per FDC3 spec
+    // Find a new instance (not in the existing set). PENDING is host pre-register only;
+    // CONNECTED means WCP5 succeeded. The 15 second timeout allows the app to add listeners per FDC3 spec.
     const newInstance = allInstances.find(instance => {
       const isNew = !existingInstanceIds.has(instance.instanceId)
       const isRecent = instance.createdAt.getTime() >= launchTimestamp

@@ -3,10 +3,10 @@ title: "Wire WCP5 CONNECTED lifecycle and heartbeat policy"
 slug: wire-wcp5-connected-instance-lifecycle
 kind: task
 type: feature
-status: approved
+status: in-progress
 loop_count: 0
 loop_limit: 3
-last_agent: spec-planner
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/wcp-handlers.ts
   - packages/sail-desktop-agent/src/core/state/mutators/instance.ts

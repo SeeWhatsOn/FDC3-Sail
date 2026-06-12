@@ -11,6 +11,8 @@ import { describe, it, expect, afterEach, vi } from "vitest"
 import type { BrowserTypes } from "@finos/fdc3"
 import type { AppLauncher } from "../../../host-contracts/app-launcher"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../core/default-user-channels"
+import { AppInstanceState } from "../../../core/state/types"
+import { getActiveHeartbeatTimerCount } from "../../../core/handlers/dacp/heartbeat-runtime"
 import { createBrowserDesktopAgent } from "../browser-desktop-agent"
 import type { DesktopAgent } from "../../../core/desktop-agent"
 import { getBrowserDesktopAgentSession } from "../browser-desktop-agent-session"
@@ -43,10 +45,18 @@ const CHART_APP = {
   details: { url: "https://example.com/chart" },
 }
 
-function createTestAgent(options?: { appLauncher?: AppLauncher }): DesktopAgent {
+function createTestAgent(options?: {
+  appLauncher?: AppLauncher
+  heartbeatEnabled?: boolean
+  heartbeatIntervalMs?: number
+  heartbeatTimeoutMs?: number
+}): DesktopAgent {
   const agent = createBrowserDesktopAgent({
     userChannels: DEFAULT_FDC3_USER_CHANNELS,
     appLauncher: options?.appLauncher,
+    heartbeatEnabled: options?.heartbeatEnabled,
+    heartbeatIntervalMs: options?.heartbeatIntervalMs,
+    heartbeatTimeoutMs: options?.heartbeatTimeoutMs,
     wcpOptions: {
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,
@@ -57,6 +67,15 @@ function createTestAgent(options?: { appLauncher?: AppLauncher }): DesktopAgent 
 
   agent.getAppDirectory().addApplications([PORTFOLIO_APP, CHART_APP])
   return agent
+}
+
+function createWCP6GoodbyeMessage(): BrowserTypes.WebConnectionProtocol6Goodbye {
+  return {
+    type: "WCP6Goodbye",
+    meta: {
+      timestamp: new Date(),
+    },
+  }
 }
 
 function createHostInstanceAppLauncher(): AppLauncher {
@@ -220,4 +239,145 @@ describe("WCP edge contract", () => {
 
     expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
   })
+})
+
+describe("Option A instance lifecycle (WCP path)", () => {
+  const activeAgents: DesktopAgent[] = []
+
+  afterEach(() => {
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+  })
+
+  it("marks the instance CONNECTED after WCP5 without manual state updates", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "lifecycle-wcp5-connected-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED
+    )
+  })
+
+  it("keeps host pre-registered launcher instance PENDING until WCP5 then CONNECTED", async () => {
+    const agent = createTestAgent({ appLauncher: createHostInstanceAppLauncher() })
+    activeAgents.push(agent)
+
+    const source = await connectWcpApp(agent, {
+      connectionAttemptUuid: "lifecycle-pending-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    await postDacpOnPort(
+      source.appPort,
+      createOpenRequestMessage(source.canonicalInstanceId, source.appId, CHART_APP.appId)
+    )
+    await flushAsyncDelivery()
+
+    await vi.waitFor(() => {
+      expect(agent.getState().instances[HOST_LAUNCHER_INSTANCE_ID]?.state).toBe(
+        AppInstanceState.PENDING
+      )
+    })
+
+    const chart = await connectWcpApp(agent, {
+      connectionAttemptUuid: "lifecycle-pending-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+      hostInstanceId: HOST_LAUNCHER_INSTANCE_ID,
+      instanceUuid: crypto.randomUUID(),
+    })
+
+    expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(agent.getState().instances[HOST_LAUNCHER_INSTANCE_ID]?.state).toBe(
+      AppInstanceState.CONNECTED
+    )
+  })
+
+  it("removes the instance when the app sends WCP6Goodbye over MessagePort", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "lifecycle-wcp6-goodbye-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED
+    )
+
+    connected.appPort.postMessage(createWCP6GoodbyeMessage())
+    await flushAsyncDelivery()
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
+    expect(
+      getBrowserDesktopAgentSession(agent).wcpConnector.getConnection(connected.canonicalInstanceId)
+    ).toBeUndefined()
+  })
+
+  it("does not start heartbeat timers when heartbeat is disabled but keeps instance until disconnect", async () => {
+    const agent = createTestAgent({ heartbeatEnabled: false })
+    activeAgents.push(agent)
+
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "lifecycle-heartbeat-off-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED
+    )
+    expect(getActiveHeartbeatTimerCount()).toBe(0)
+    expect(agent.getState().heartbeats[connected.canonicalInstanceId]).toBeUndefined()
+
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED
+    )
+
+    connected.appPort.postMessage(createWCP6GoodbyeMessage())
+    await flushAsyncDelivery()
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
+  })
+
+  it("removes the instance on heartbeat timeout with the same cleanup as explicit disconnect", async () => {
+    const agent = createTestAgent({
+      heartbeatIntervalMs: 500,
+      heartbeatTimeoutMs: 2000,
+    })
+    activeAgents.push(agent)
+
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "lifecycle-heartbeat-timeout-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED
+    )
+    expect(getActiveHeartbeatTimerCount()).toBe(1)
+
+    await new Promise(resolve => setTimeout(resolve, 2500))
+    await flushAsyncDelivery()
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
+    expect(getActiveHeartbeatTimerCount()).toBe(0)
+    expect(agent.getState().heartbeats[connected.canonicalInstanceId]).toBeUndefined()
+    expect(
+      getBrowserDesktopAgentSession(agent).wcpConnector.getConnection(connected.canonicalInstanceId)
+    ).toBeUndefined()
+  }, 10_000)
 })

@@ -6,6 +6,7 @@ import type {
 import { MessagePortTransport } from "../../connectors/browser/message-port-transport"
 import { isAgentMessage, isAppMessage, type WCPConnectorEvents } from "./wcp-types"
 import type { Logger } from "../../core/interfaces/logger"
+import { notifyBrowserEdgeWcp6Goodbye } from "../../core/handlers/dacp/wcp-handlers"
 
 type EmitFunction = <EventName extends keyof WCPConnectorEvents>(
   event: EventName,
@@ -71,7 +72,10 @@ export function bridgeTransports(
       const enrichedGoodbye = context.enrichMessageWithSource(message, currentInstanceId)
       context.desktopAgentTransport.send(enrichedGoodbye)
 
-      // Also handle locally for WCPConnector's own state (MessagePorts, connections map)
+      // Browser preset registers sync agent-state cleanup (Option A lifecycle).
+      notifyBrowserEdgeWcp6Goodbye(context.desktopAgentTransport, currentInstanceId)
+
+      // Tear down MessagePort maps immediately; appDisconnected is deferred for grace period.
       context.handleWCP6Goodbye(currentInstanceId)
       return
     }

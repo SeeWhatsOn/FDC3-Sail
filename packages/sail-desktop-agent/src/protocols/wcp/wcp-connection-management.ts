@@ -1,10 +1,6 @@
 import type { MessagePortTransport } from "../../connectors/browser/message-port-transport"
 import type { WebConnectionProtocolMessage } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import type {
-  AppConnectionMetadata,
-  WCPConnectorEvents,
-  WCPConnectorOptions,
-} from "./wcp-types"
+import type { AppConnectionMetadata, WCPConnectorEvents, WCPConnectorOptions } from "./wcp-types"
 import type { Logger } from "../../core/interfaces/logger"
 
 type EmitFunction = <EventName extends keyof WCPConnectorEvents>(
@@ -50,6 +46,10 @@ export function handleWCP6Goodbye(context: WCPConnectionContext, instanceId: str
   }
 
   const connection = context.connections.get(instanceId)
+
+  // Tear down MessagePort routing immediately; delay appDisconnected for false-positive pagehide.
+  tearDownAppConnection(context, instanceId)
+
   const timeoutId = setTimeout(() => {
     context.pendingDisconnects.delete(instanceId)
 
@@ -61,8 +61,7 @@ export function handleWCP6Goodbye(context: WCPConnectionContext, instanceId: str
       })
     }
 
-    // App is gracefully disconnecting - clean up
-    disconnectApp(context, instanceId)
+    context.emit("appDisconnected", instanceId)
   }, context.options.disconnectGracePeriod)
 
   context.pendingDisconnects.set(instanceId, timeoutId)
@@ -115,10 +114,10 @@ export function disconnectAppByInstanceId(context: WCPConnectionContext, instanc
 }
 
 /**
- * Disconnect an app and clean up resources
- * This is the internal method that performs the actual cleanup
+ * Tear down MessagePort wiring and connection maps without emitting appDisconnected.
+ * Used when WCP6 tears down routing immediately but defers the host event for grace period.
  */
-export function disconnectApp(context: WCPConnectionContext, instanceId: string): void {
+export function tearDownAppConnection(context: WCPConnectionContext, instanceId: string): void {
   const appTransport = context.messagePortTransports.get(instanceId)
   if (appTransport) {
     // Unregister before disconnect() so onDisconnect does not re-enter disconnectApp
@@ -128,6 +127,14 @@ export function disconnectApp(context: WCPConnectionContext, instanceId: string)
   }
 
   context.connections.delete(instanceId)
+}
+
+/**
+ * Disconnect an app and clean up resources
+ * This is the internal method that performs the actual cleanup
+ */
+export function disconnectApp(context: WCPConnectionContext, instanceId: string): void {
+  tearDownAppConnection(context, instanceId)
   context.emit("appDisconnected", instanceId)
 }
 

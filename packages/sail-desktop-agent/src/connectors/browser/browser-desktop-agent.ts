@@ -28,6 +28,8 @@ import type { Logger, LogPayloadDetail } from "../../core/interfaces/logger"
 import { WCPConnector } from "./wcp-connector"
 import type { AppConnectionMetadata, WCPConnectorOptions } from "./wcp-connector"
 import { createInMemoryTransportPair } from "../../transports/in-memory-transport"
+import { registerBrowserEdgeInstanceDisconnect } from "../../core/handlers/dacp/heartbeat-handlers"
+import { registerBrowserEdgeWcp6Goodbye } from "../../core/handlers/dacp/wcp-handlers"
 import { registerBrowserDesktopAgentSession } from "./browser-desktop-agent-session"
 
 // ============================================================================
@@ -285,8 +287,17 @@ export function createBrowserDesktopAgent(options?: BrowserDesktopAgentOptions):
     options?.onAppConnected?.(metadata)
   })
 
+  registerBrowserEdgeInstanceDisconnect(daTransport, instanceId => {
+    wcpConnector.disconnectAppByInstanceId(instanceId)
+  })
+
+  registerBrowserEdgeWcp6Goodbye(connectorTransport, instanceId => {
+    desktopAgent.disconnectInstance(instanceId)
+  })
+
   wcpConnector.on("appDisconnected", instanceId => {
     logger.info(`[BrowserDA] App disconnected: ${instanceId}`)
+    desktopAgent.disconnectInstance(instanceId)
     options?.onAppDisconnected?.(instanceId)
   })
 
