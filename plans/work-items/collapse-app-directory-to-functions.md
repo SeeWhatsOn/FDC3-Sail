@@ -3,7 +3,7 @@ title: "Collapse AppDirectoryManager to query and mutator functions"
 slug: collapse-app-directory-to-functions
 kind: task
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -30,8 +30,7 @@ file_manifest:
   - packages/sail-desktop-agent/src/core/app-directory/__tests__/app-directory-manager.test.ts
   - packages/sail-desktop-agent/src/core/app-directory/__tests__/app-directory-queries.test.ts
   - packages/sail-desktop-agent/src/core/state/mutators/__tests__/app-directory.test.ts
-depends_on:
-  - move-app-directory-into-agent-state
+depends_on: []
 integration_branch: v3-pre
 branch: cursor/collapse-app-directory-to-functions
 pr_url: ""
@@ -53,7 +52,9 @@ After `move-app-directory-into-agent-state`, the manager is mostly a binding wra
 
 ## Reference docs
 
-- `plans/work-items/move-app-directory-into-agent-state.md`
+- `plans/prd-desktop-agent-state-hardening.md`
+- `plans/work-items/epic-desktop-agent-state-hardening.md`
+- `plans/work-items/move-app-directory-into-agent-state.md` (landed on v3-pre)
 - `packages/sail-desktop-agent/src/core/app-directory/app-directory-manager.ts`
 - `packages/sail-desktop-agent/src/core/state/mutators/` (existing mutator pattern)
 - `packages/sail-desktop-agent/src/core/state/types.ts` (`AppDirectoryState`)
