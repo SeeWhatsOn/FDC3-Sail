@@ -3,7 +3,7 @@ title: "Epic: Desktop Agent state hardening (Option A lifecycle)"
 slug: epic-desktop-agent-state-hardening
 kind: epic
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: spec-planner
@@ -47,13 +47,13 @@ _(Epic — see child work items.)_
 
 | Slug | Kind | MoSCoW | depends_on | Status |
 |------|------|--------|------------|--------|
-| `wire-wcp5-connected-instance-lifecycle` | task | Must | — | draft |
-| `consolidate-temp-instance-id-resolver` | task | Must | `wire-wcp5-connected-instance-lifecycle` | draft |
-| `remove-dead-instance-state-denormalization` | task | Must | `wire-wcp5-connected-instance-lifecycle` | draft |
-| `user-channels-runtime-ssot` | task | Should | — | draft |
-| `collapse-app-directory-to-functions` | task | Must | — | draft |
-| `audit-host-channel-reactivity-read-apis` | task | Should | `wire-wcp5-connected-instance-lifecycle`, `user-channels-runtime-ssot` | draft |
-| `document-desktop-agent-singleton-and-reactivity` | task | Should | `audit-host-channel-reactivity-read-apis` | draft |
+| `wire-wcp5-connected-instance-lifecycle` | task | Must | — | approved |
+| `consolidate-temp-instance-id-resolver` | task | Must | `wire-wcp5-connected-instance-lifecycle` | approved |
+| `remove-dead-instance-state-denormalization` | task | Must | `wire-wcp5-connected-instance-lifecycle` | approved |
+| `user-channels-runtime-ssot` | task | Should | — | approved |
+| `collapse-app-directory-to-functions` | task | Must | — | approved |
+| `audit-host-channel-reactivity-read-apis` | task | Should | `wire-wcp5-connected-instance-lifecycle`, `user-channels-runtime-ssot` | approved |
+| `document-desktop-agent-singleton-and-reactivity` | task | Should | `audit-host-channel-reactivity-read-apis` | approved |
 
 **Suggested delivery order:**
 

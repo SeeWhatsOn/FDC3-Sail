@@ -3,7 +3,7 @@ title: "Collapse AppDirectoryManager to query and mutator functions"
 slug: collapse-app-directory-to-functions
 kind: task
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""

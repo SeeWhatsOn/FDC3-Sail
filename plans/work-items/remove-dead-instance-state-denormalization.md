@@ -3,7 +3,7 @@ title: "Remove dead instance state denormalization and unused lifecycle enums"
 slug: remove-dead-instance-state-denormalization
 kind: task
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: spec-planner

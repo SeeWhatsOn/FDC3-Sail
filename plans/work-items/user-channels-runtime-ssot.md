@@ -3,7 +3,7 @@ title: "User channels runtime single source of truth"
 slug: user-channels-runtime-ssot
 kind: task
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: spec-planner
