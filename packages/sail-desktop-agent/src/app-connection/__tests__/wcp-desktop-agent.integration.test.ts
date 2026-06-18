@@ -59,6 +59,7 @@ type TestAgentOptions = Pick<
 function createTestAgent(options?: TestAgentOptions): DesktopAgent {
   const agent = createBrowserDesktopAgent({
     userChannels: DEFAULT_FDC3_USER_CHANNELS,
+    apps: [PORTFOLIO_APP, CHART_APP],
     appLauncher: options?.appLauncher,
     heartbeatEnabled: options?.heartbeatEnabled,
     heartbeatIntervalMs: options?.heartbeatIntervalMs,
@@ -72,7 +73,6 @@ function createTestAgent(options?: TestAgentOptions): DesktopAgent {
     },
   })
 
-  agent.getAppDirectory().addApplications([PORTFOLIO_APP, CHART_APP])
   return agent
 }
 

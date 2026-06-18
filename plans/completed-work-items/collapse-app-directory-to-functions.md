@@ -3,16 +3,15 @@ title: "Collapse AppDirectoryManager to query and mutator functions"
 slug: collapse-app-directory-to-functions
 kind: task
 type: chore
-status: approved
-loop_count: 0
+status: done
+loop_count: 1
 loop_limit: 3
-last_agent: ""
+last_agent: implement-agent
 file_manifest:
   - packages/sail-desktop-agent/src/core/app-directory/app-directory-queries.ts
   - packages/sail-desktop-agent/src/core/app-directory/fetch-app-directory.ts
   - packages/sail-desktop-agent/src/core/state/mutators/app-directory.ts
   - packages/sail-desktop-agent/src/core/state/mutators/index.ts
-  - packages/sail-desktop-agent/src/core/app-directory/app-directory-manager.ts
   - packages/sail-desktop-agent/src/core/desktop-agent.ts
   - packages/sail-desktop-agent/src/core/handlers/types.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/app-handlers.ts
@@ -24,15 +23,25 @@ file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-raise-shared.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-directory-helpers.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-resolver-helpers.ts
+  - packages/sail-desktop-agent/src/core/handlers/dacp/intent-handlers/intent-launch-helpers.ts
   - packages/sail-desktop-agent/src/core/index.ts
+  - packages/sail-desktop-agent/src/index.ts
+  - packages/sail-desktop-agent/src/presets/create-browser-desktop-agent.ts
   - packages/sail-desktop-agent/test/world/index.ts
   - packages/sail-desktop-agent/test/support/dacp-handler-context.ts
-  - packages/sail-desktop-agent/src/core/app-directory/__tests__/app-directory-manager.test.ts
+  - packages/sail-desktop-agent/test/step-definitions/start-app.steps.ts
   - packages/sail-desktop-agent/src/core/app-directory/__tests__/app-directory-queries.test.ts
+  - packages/sail-desktop-agent/src/core/app-directory/__tests__/app-directory-no-manager-imports.test.ts
+  - packages/sail-desktop-agent/src/core/app-directory/__tests__/app-directory-agent-state.test.ts
+  - packages/sail-desktop-agent/src/core/handlers/dacp/__tests__/app-directory-handler-integration.test.ts
   - packages/sail-desktop-agent/src/core/state/mutators/__tests__/app-directory.test.ts
+  - packages/sail-web/src/stores/app-directory-store.ts
+  - packages/sail-conformance-harness/src/__tests__/harness-instance-correlation.harness.ts
+  - website/docs/architecture/channel-selection.md
+  - website/docs/packages/desktop-agent/overview.md
 depends_on: []
 integration_branch: v3-pre
-branch: cursor/collapse-app-directory-to-functions
+branch: v3-pre
 pr_url: ""
 merged_pr: ""
 external_tracker: ""
@@ -121,18 +130,53 @@ Assert no remaining production imports of `AppDirectoryManager` except a tempora
 
 _(empty)_
 
-## Loop history
-
-_(empty)_
+- 2026-06-18 Phase B GREEN (implement-agent, registered: yes): queries + mutators; handlers migrated; 328 Vitest + 15 Cucumber pass
+- 2026-06-18 Phase C Verify (verifier-agent, registered: yes): VERIFICATION: PASS
+- 2026-06-18 Phase D Review (code-reviewer, registered: yes): VERDICT: PASS
+- 2026-06-18 human changes: remove legacy AppDirectoryManager, getAppDirectory() facade, and DACPHandlerContext backwards-compat stubs — v3 breaking change OK
+- 2026-06-19 Loop 1 GREEN (implement-agent, registered: yes): deleted AppDirectoryManager + manager tests; removed getAppDirectory() and DACPHandlerContext.appDirectory; all call sites use getState().appDirectory + queries/mutators; 279 Vitest + 15 Cucumber pass
+- 2026-06-19 follow-up (implement-agent): sail-web app-directory-store → queries/mutators; conformance harness → config.apps; docs (channel-selection, overview layout); rebuild dist; 279 Vitest + 15 Cucumber pass
 
 ## Staged for review
 
-_(empty)_
+**Status:** waiting_on_user (staged 2026-06-19)
+
+### Phase audit
+| Phase | Subagent | Registered | Result |
+|-------|----------|------------|--------|
+| A RED | test-engineer | yes | 5 test files fail (expected) |
+| B GREEN | implement-agent | yes | 328 Vitest + 15 Cucumber pass |
+| C Verify | verifier-agent | yes | VERIFICATION: PASS |
+| D Review | code-reviewer | yes | VERDICT: PASS |
+| Loop 1 GREEN | implement-agent | yes | 279 Vitest + 15 Cucumber pass (legacy fully removed) |
+| Follow-up | implement-agent | yes | sail-web + harness + docs; 279 Vitest + 15 Cucumber pass |
+
+**ui_surface:** no
+
+### RED evidence
+- 5 new/updated test files; missing `app-directory-queries.ts` and `state/mutators/app-directory.ts`; 6 production files still imported `AppDirectoryManager`
+
+### Commands run
+- `npm run build -w @finos/sail-desktop-agent`: **pass** (dist exports queries/mutators)
+- `npm test -w @finos/sail-desktop-agent`: **279 Vitest + 15 Cucumber pass** (exit 0)
+
+### Diff summary
+- **Deleted:** `app-directory-manager.ts`, `app-directory-manager.test.ts`
+- **New:** `app-directory-queries.ts`, `fetch-app-directory.ts`, `state/mutators/app-directory.ts`
+- **Removed:** `DesktopAgent.getAppDirectory()`, `appDirectoryManager` constructor option, `DACPHandlerContext.appDirectory`
+- **Migrated:** DACP + intent handlers, browser preset, Cucumber world/steps read `getState().appDirectory` + query helpers; writes via mutators
+- **Follow-up:** `sail-web` store reads `retrieveAllApps(getState().appDirectory)`; URL loads via `replaceDirectoriesInState`; conformance harness seeds `config.apps`; docs updated
+- **Exports:** `core/index.ts` exports query/mutator functions instead of `AppDirectoryManager`
+
+### Learnings proposed
+- **[AGENTS.md candidate]** App catalog: `getState().appDirectory` + `app-directory-queries` / `state/mutators/app-directory`; do not attach catalog to `DACPHandlerContext`. Cucumber seeds via `DesktopAgent({ apps })` or mutators. Host UI (sail-web) applies async mutators via internal-state pattern — no public `setState` on DesktopAgent.
 
 ## Escalation notes
 
 _(empty)_
 
+- 2026-06-18 human pre-approve — user commits on v3-pre
+
 ## Learnings extracted
 
-_(empty)_
+- App catalog: `getState().appDirectory` + `app-directory-queries` / `state/mutators/app-directory`; no `AppDirectoryManager`, no `getAppDirectory()`, no `DACPHandlerContext.appDirectory`. Cucumber seeds via `DesktopAgent({ apps })` or mutators.

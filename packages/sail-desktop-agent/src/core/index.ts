@@ -11,7 +11,7 @@
  * - **State Registries** - App instances, intents, channels
  * - **Handlers** - DACP message handlers
  * - **Protocol** - DACP message types
- * - **App Directory** - App directory management
+ * - **App Directory** - Catalog queries, fetch helpers, and types
  */
 
 // Core Desktop Agent
@@ -36,7 +36,15 @@ export * from "./state/selectors"
 export * from "./state/mutators"
 
 // App Directory
-export { AppDirectoryManager, isValidDirectoryUrl } from "./app-directory/app-directory-manager"
+export { isValidDirectoryUrl, fetchAppDirectory } from "./app-directory/fetch-app-directory"
+export {
+  retrieveAllApps,
+  retrieveAppsById,
+  retrieveApps,
+  retrieveIntents,
+  retrieveAllIntents,
+  retrieveAppsByUrl,
+} from "./app-directory/app-directory-queries"
 export type {
   DirectoryApp,
   DirectoryData,

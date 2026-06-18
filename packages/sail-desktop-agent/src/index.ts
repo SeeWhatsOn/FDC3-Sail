@@ -22,7 +22,7 @@
  * - **DesktopAgent** - Core Desktop Agent class
  * - **createBrowserDesktopAgent** - Browser preset (re-export from `./presets`)
  * - **Host contracts** - AppLauncher, IntentResolver, ChannelControl via `./host-contracts`
- * - **App Directory** - App directory manager and core types
+ * - **App Directory** - Catalog query helpers, mutators, and core types
  *
  * ## Advanced subpaths
  *

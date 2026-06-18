@@ -1,4 +1,5 @@
 import type { Context } from "@finos/fdc3"
+import { retrieveAppsById } from "../../../app-directory/app-directory-queries"
 import type { DACPHandlerContext } from "../../types"
 import { getInstance, getInstancesByAppId } from "../../../state/selectors"
 import { AppInstanceState } from "../../../state/types"
@@ -20,13 +21,13 @@ export async function launchAppAndWaitForInstance(
   context: DACPHandlerContext,
   validatedContext: unknown
 ): Promise<string> {
-  const { appLauncher, appDirectory, getState, logger } = context
+  const { appLauncher, getState, logger } = context
 
   if (!appLauncher) {
     throw new Error("App launching not available - no AppLauncher configured")
   }
 
-  const apps = appDirectory.retrieveAppsById(appId)
+  const apps = retrieveAppsById(getState().appDirectory, appId)
   if (apps.length === 0) {
     throw new Error(`App not found in directory: ${appId}`)
   }

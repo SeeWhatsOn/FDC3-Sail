@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
-import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import type { DirectoryApp } from "../../../app-directory/types"
+import { retrieveAppsById } from "../../../app-directory/app-directory-queries"
+import { addApplications } from "../../../state/mutators/app-directory"
 import { DesktopAgent } from "../../../desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { connectInstance, updateInstanceState } from "../../../state/mutators"
@@ -20,10 +21,8 @@ const chartApp: DirectoryApp = {
   details: { url: "https://example.com/chart" },
 }
 
-function createAppDirectory(apps: DirectoryApp[]): AppDirectoryManager {
-  const directory = new AppDirectoryManager()
-  directory.addApplications(apps)
-  return directory
+function withCatalogApps(state: AgentState, apps: DirectoryApp[]): AgentState {
+  return addApplications(state, apps)
 }
 
 type GetAppMetadataSuccessResponse = {
@@ -56,9 +55,8 @@ function createConnectedCallerState() {
 
 describe("getAppMetadata desktopAgent field", () => {
   it("includes desktopAgent for directory-only lookup", () => {
-    const state = createConnectedCallerState()
+    const state = withCatalogApps(createConnectedCallerState(), [chartApp])
     const transport = new MockTransport()
-    const directory = createAppDirectory([chartApp])
     const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
 
     handleGetAppMetadataRequest(
@@ -75,7 +73,6 @@ describe("getAppMetadata desktopAgent field", () => {
       {
         ...context,
         transport,
-        appDirectory: directory,
         implementationMetadata: {
           ...context.implementationMetadata,
           provider: TEST_PROVIDER,
@@ -97,9 +94,9 @@ describe("getAppMetadata desktopAgent field", () => {
       metadata: { appId: "chartApp", name: "chartApp" },
     })
     state = updateInstanceState(state, "chart-123", AppInstanceState.CONNECTED)
+    state = withCatalogApps(state, [chartApp])
 
     const transport = new MockTransport()
-    const directory = createAppDirectory([chartApp])
     const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
 
     handleGetAppMetadataRequest(
@@ -116,7 +113,6 @@ describe("getAppMetadata desktopAgent field", () => {
       {
         ...context,
         transport,
-        appDirectory: directory,
         implementationMetadata: {
           ...context.implementationMetadata,
           provider: TEST_PROVIDER,
@@ -146,9 +142,8 @@ function expectAppDirectoryOnState(state: AgentState): AppDirectorySlice {
 
 describe("app directory vs runtime instance separation", () => {
   it("findInstances returns empty when app is in directory but not connected", () => {
-    const state = createConnectedCallerState()
+    const state = withCatalogApps(createConnectedCallerState(), [chartApp])
     const transport = new MockTransport()
-    const directory = createAppDirectory([chartApp])
     const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
 
     handleFindInstancesRequest(
@@ -162,7 +157,7 @@ describe("app directory vs runtime instance separation", () => {
           app: { appId: "chartApp" },
         },
       },
-      { ...context, transport, appDirectory: directory }
+      { ...context, transport }
     )
 
     const response = transport.getLastMessage() as {
@@ -180,7 +175,9 @@ describe("app directory vs runtime instance separation", () => {
     })
     const state = createConnectedCallerState()
     const transport = new MockTransport()
-    const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
+    const { context, getState } = createDACPTestContext({ instanceId: "a1", initialState: state })
+
+    context.setState(current => withCatalogApps(current, agent.getState().appDirectory.apps))
 
     handleGetAppMetadataRequest(
       {
@@ -196,7 +193,6 @@ describe("app directory vs runtime instance separation", () => {
       {
         ...context,
         transport,
-        appDirectory: agent.getAppDirectory(),
         implementationMetadata: {
           ...context.implementationMetadata,
           provider: TEST_PROVIDER,
@@ -205,11 +201,11 @@ describe("app directory vs runtime instance separation", () => {
     )
 
     const response = getAppMetadataResponse(transport)
-    const stateSlice = expectAppDirectoryOnState(agent.getState())
+    const stateSlice = expectAppDirectoryOnState(getState())
 
     expect(stateSlice.apps).toContainEqual(chartApp)
     expect(response.payload.appMetadata.appId).toBe("chartApp")
-    expect(agent.getAppDirectory().retrieveAppsById("chartApp")).toEqual(
+    expect(retrieveAppsById(getState().appDirectory, "chartApp")).toEqual(
       stateSlice.apps.filter(app => app.appId === "chartApp")
     )
   })
@@ -222,9 +218,9 @@ describe("app directory vs runtime instance separation", () => {
       metadata: { appId: "chartApp", name: "chartApp" },
     })
     state = updateInstanceState(state, "chart-456", AppInstanceState.CONNECTED)
+    state = withCatalogApps(state, [chartApp])
 
     const transport = new MockTransport()
-    const directory = createAppDirectory([chartApp])
     const { context, getState } = createDACPTestContext({ instanceId: "a1", initialState: state })
 
     handleFindInstancesRequest(
@@ -238,7 +234,7 @@ describe("app directory vs runtime instance separation", () => {
           app: { appId: "chartApp" },
         },
       },
-      { ...context, transport, appDirectory: directory }
+      { ...context, transport }
     )
 
     const findResponse = transport.getLastMessage() as {
@@ -248,7 +244,7 @@ describe("app directory vs runtime instance separation", () => {
       { appId: "chartApp", instanceId: "chart-456" },
     ])
     expect(Object.keys(getState().instances)).toEqual(["a1", "chart-456"])
-    expect(directory.retrieveAllApps()).toHaveLength(1)
-    expect(directory.retrieveAllApps()[0]).not.toHaveProperty("instanceId")
+    expect(getState().appDirectory.apps).toHaveLength(1)
+    expect(getState().appDirectory.apps[0]).not.toHaveProperty("instanceId")
   })
 })

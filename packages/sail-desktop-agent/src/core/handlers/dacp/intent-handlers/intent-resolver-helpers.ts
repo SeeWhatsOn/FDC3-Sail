@@ -5,9 +5,9 @@
  */
 
 import type { AppMetadata } from "@finos/fdc3"
-import type { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import type { DirectoryApp } from "../../../app-directory/types"
-import type { AgentState } from "../../../state/types"
+import type { AgentState, AppDirectoryState } from "../../../state/types"
+import { retrieveAllApps, retrieveAppsById } from "../../../app-directory/app-directory-queries"
 import { AppInstanceState, type AppInstance } from "../../../state/types"
 import type { IntentHandlerOption, IntentResolutionChoice } from "../intent-resolution-callback"
 import {
@@ -89,7 +89,7 @@ function appToMetadata(
  */
 export function createResolverAppIntent(
   state: AgentState,
-  appDirectory: AppDirectoryManager,
+  catalog: AppDirectoryState,
   intentName: string,
   contextType?: string,
   resultType?: string
@@ -105,7 +105,7 @@ export function createResolverAppIntent(
     )
   }
 
-  const allApps = appDirectory.retrieveAllApps()
+  const allApps = retrieveAllApps(catalog)
   const directoryMatches = allApps.filter(app => {
     const intents = app.interop?.intents?.listensFor
     if (!intents || typeof intents !== "object") return false
@@ -154,7 +154,7 @@ export function createResolverAppIntent(
       : validRunningListeners.filter(listener => !directoryAppIds.has(listener.appId))
 
   filteredDynamicListeners.forEach(listener => {
-    const appInfo = appDirectory.retrieveAppsById(listener.appId)[0]
+    const appInfo = retrieveAppsById(catalog, listener.appId)[0]
     const instance = getInstance(state, listener.instanceId)
     apps.push(appToMetadata(appInfo, listener.appId, intentName, instance))
   })

@@ -46,7 +46,7 @@ type WCP5ValidateAppIdentityFailedResponse = WebConnectionProtocol5ValidateAppId
  */
 export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHandlerContext): void {
   const wcp4Message = message as Wcp4ValidateAppIdentity
-  const { transport, getState, appDirectory, logger } = context
+  const { transport, getState, logger } = context
 
   logger.info("[WCP4] Received app identity validation request", wcp4Message.payload)
 
@@ -106,7 +106,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     }
 
     // 3. Look up app in app directory (spec: identityUrl is the lookup key)
-    const apps = appDirectory.allApps
+    const apps = getState().appDirectory.apps
     const appMetadata = findBestAppMatchByIdentityUrl(identityUrl, apps)
 
     if (!appMetadata) {

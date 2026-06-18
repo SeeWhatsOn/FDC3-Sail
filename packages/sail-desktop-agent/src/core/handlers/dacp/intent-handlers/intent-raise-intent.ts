@@ -35,7 +35,7 @@ export async function handleRaiseIntentRequest(
   message: BrowserTypes.RaiseIntentRequest,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, getState, appDirectory, logger, logPayloadDetail } = context
+  const { transport, instanceId, getState, logger, logPayloadDetail } = context
   const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
 
   try {
@@ -92,7 +92,7 @@ export async function handleRaiseIntentRequest(
     }
 
     const state = getState()
-    const handlers = findIntentHandlers(state, appDirectory, {
+    const handlers = findIntentHandlers(state, state.appDirectory, {
       intent: payload.intent,
       context: validatedContext,
       source: { appId: source.appId, instanceId: source.instanceId },
@@ -112,7 +112,7 @@ export async function handleRaiseIntentRequest(
       targetAppId &&
       isTargetRunning &&
       !isDirectoryIntentCompatible(
-        appDirectory,
+        state.appDirectory,
         targetAppId,
         payload.intent,
         validatedContext.type
@@ -147,7 +147,7 @@ export async function handleRaiseIntentRequest(
     } else if (handlers.compatibleApps.length > 1) {
       const appIntent = createResolverAppIntent(
         getState(),
-        appDirectory,
+        getState().appDirectory,
         payload.intent,
         validatedContext.type
       )

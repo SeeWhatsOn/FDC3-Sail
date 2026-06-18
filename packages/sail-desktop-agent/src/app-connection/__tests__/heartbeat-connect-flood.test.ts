@@ -31,13 +31,13 @@ describe("heartbeat connect flood", () => {
   it("does not flood heartbeatEvent to the app immediately after WCP5", async () => {
     const agent = createBrowserDesktopAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
+      apps: [PORTFOLIO_APP],
       wcpOptions: {
         getIntentResolverUrl: () => false,
         getChannelSelectorUrl: () => false,
       },
     })
     activeAgents.push(agent)
-    agent.getAppDirectory().addApplications([PORTFOLIO_APP])
 
     const heartbeatEvents: BrowserTypes.AgentEventMessage[] = []
     const connected = await connectWcpApp(agent, {
@@ -63,6 +63,7 @@ describe("heartbeat connect flood", () => {
   it("does not start heartbeat when heartbeatEnabled is false", async () => {
     const agent = createBrowserDesktopAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
+      apps: [PORTFOLIO_APP],
       heartbeatEnabled: false,
       wcpOptions: {
         getIntentResolverUrl: () => false,
@@ -70,7 +71,6 @@ describe("heartbeat connect flood", () => {
       },
     })
     activeAgents.push(agent)
-    agent.getAppDirectory().addApplications([PORTFOLIO_APP])
 
     const heartbeatEvents: BrowserTypes.AppRequestMessage[] = []
     const connected = await connectWcpApp(agent, {

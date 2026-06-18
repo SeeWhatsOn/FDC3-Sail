@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import type { BrowserTypes } from "@finos/fdc3"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 import { connectInstance, updateInstanceState } from "../../../state/mutators/instance"
+import { addApp } from "../../../state/mutators/app-directory"
 import { registerIntentListener } from "../../../state/mutators/intent"
 import { createInitialState } from "../../../state/initial-state"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
@@ -10,6 +11,7 @@ import type {
   IntentResolutionRequest,
   IntentResolutionResponse,
 } from "../intent-resolution-callback"
+import type { DirectoryApp } from "../../../app-directory/types"
 import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
 import { handleRaiseIntentRequest } from "../intent-handlers/intent-raise-intent"
 import { handleRaiseIntentForContextRequest } from "../intent-handlers/intent-raise-intent-for-context"
@@ -50,6 +52,13 @@ function createRaiseIntentRequest(
   }
 }
 
+function seedCatalogApp(
+  context: ReturnType<typeof createDACPTestContext>["context"],
+  app: DirectoryApp
+): void {
+  context.setState(state => addApp(state, app))
+}
+
 describe("intent resolver selection delivery", () => {
   it("delivers raiseIntent to the selected running instance with rich resolver metadata", async () => {
     let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
@@ -66,7 +75,7 @@ describe("intent resolver selection delivery", () => {
     const transport = new MockTransport()
     const { context } = createDACPTestContext({ instanceId: "source-1", initialState: state })
     context.transport = transport
-    context.appDirectory.add({
+    seedCatalogApp(context, {
       appId: "chart-app",
       title: "Chart App",
       type: "web",
@@ -80,7 +89,7 @@ describe("intent resolver selection delivery", () => {
         },
       },
     })
-    context.appDirectory.add({
+    seedCatalogApp(context, {
       appId: "portfolio-app",
       title: "Portfolio App",
       type: "web",
@@ -167,7 +176,7 @@ describe("intent resolver selection delivery", () => {
     const transport = new MockTransport()
     const { context } = createDACPTestContext({ instanceId: "source-1", initialState: state })
     context.transport = transport
-    context.appDirectory.add({
+    seedCatalogApp(context, {
       appId: "chart-app",
       title: "Chart App",
       type: "web",
@@ -210,7 +219,7 @@ describe("intent resolver selection delivery", () => {
     const transport = new MockTransport()
     const { context } = createDACPTestContext({ instanceId: "source-1", initialState: state })
     context.transport = transport
-    context.appDirectory.add({
+    seedCatalogApp(context, {
       appId: "chart-app",
       title: "Chart App",
       type: "web",
@@ -223,7 +232,7 @@ describe("intent resolver selection delivery", () => {
         },
       },
     })
-    context.appDirectory.add({
+    seedCatalogApp(context, {
       appId: "portfolio-app",
       title: "Portfolio App",
       type: "web",
@@ -276,7 +285,7 @@ describe("intent resolver selection delivery", () => {
     const transport = new MockTransport()
     const { context } = createDACPTestContext({ instanceId: "source-1", initialState: state })
     context.transport = transport
-    context.appDirectory.add({
+    seedCatalogApp(context, {
       appId: "portfolio-app",
       title: "Portfolio App",
       type: "web",
@@ -289,7 +298,7 @@ describe("intent resolver selection delivery", () => {
         },
       },
     })
-    context.appDirectory.add({
+    seedCatalogApp(context, {
       appId: "chart-app",
       title: "Chart App",
       type: "web",

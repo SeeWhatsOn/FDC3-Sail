@@ -5,6 +5,8 @@
 import type { Context } from "@finos/fdc3"
 import { DesktopAgent } from "../core/desktop-agent"
 import type { DesktopAgentOptions } from "../core/desktop-agent"
+import type { AgentState } from "../core/state/types"
+import { loadDirectoryIntoState } from "../core/state/mutators/app-directory"
 import type { SailImplementationMetadata } from "../core/sail-default-config"
 import { consoleLogger } from "../core/interfaces/logger"
 import type { Logger, LogPayloadDetail } from "../core/interfaces/logger"
@@ -28,6 +30,16 @@ import {
 
 const DEFAULT_WCP_INTENT_RESOLUTION_TIMEOUT_MS = 60000
 const HOST_RESOLVER_TIMEOUT_BUFFER_MS = 1000
+
+/** Preset-only access to DesktopAgent private state for async directory URL loading. */
+type DesktopAgentMutableState = { state: AgentState }
+
+async function loadAppDirectoriesFromUrls(agent: DesktopAgent, urls: string[]): Promise<void> {
+  const internal = agent as unknown as DesktopAgentMutableState
+  for (const url of urls) {
+    internal.state = await loadDirectoryIntoState(internal.state, url)
+  }
+}
 
 /**
  * Options for {@link createBrowserDesktopAgent}.
@@ -195,10 +207,7 @@ export function createBrowserDesktopAgent(
   }) as BrowserDesktopAgent
 
   if (localOptions.appDirectories && localOptions.appDirectories.length > 0) {
-    const appDirectory = desktopAgent.getAppDirectory()
-    for (const directory of localOptions.appDirectories) {
-      void appDirectory.loadDirectory(directory)
-    }
+    void loadAppDirectoriesFromUrls(desktopAgent, localOptions.appDirectories)
   }
 
   wcpConnector.on("appConnected", metadata => {

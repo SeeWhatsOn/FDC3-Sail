@@ -19,8 +19,14 @@ import type { PendingIntentPromiseEntry } from "../../types"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { createDACPTestContext } from "./test-context"
 import { DesktopAgent } from "../../../desktop-agent"
-import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
+
+const TEST_WCP_DIRECTORY_APP = {
+  appId: "test-app",
+  title: "Test App",
+  type: "web" as const,
+  details: { url: "https://example.com/app" },
+}
 
 afterEach(() => {
   clearAllPendingOpenWithContextTimeoutsForTesting()
@@ -294,19 +300,10 @@ describe("heartbeat cleanup on disconnect", () => {
   })
 
   it("DesktopAgent.disconnectInstance clears active heartbeat interval and state entry", async () => {
-    const appDirectory = new AppDirectoryManager()
-    appDirectory.addApplications([
-      {
-        appId: "test-app",
-        title: "Test App",
-        type: "web",
-        details: { url: "https://example.com/app" },
-      },
-    ])
     const transport = new MockTransport()
     const agent = new DesktopAgent({
       transport,
-      appDirectoryManager: appDirectory,
+      apps: [TEST_WCP_DIRECTORY_APP],
       heartbeatIntervalMs: 500,
       heartbeatTimeoutMs: 2000,
     })
@@ -397,19 +394,10 @@ describe("heartbeat cleanup on disconnect", () => {
   })
 
   it("DesktopAgent.disconnectInstance clears heartbeat when called with WCP4 connectionAttemptUuid", async () => {
-    const appDirectory = new AppDirectoryManager()
-    appDirectory.addApplications([
-      {
-        appId: "test-app",
-        title: "Test App",
-        type: "web",
-        details: { url: "https://example.com/app" },
-      },
-    ])
     const transport = new MockTransport()
     const agent = new DesktopAgent({
       transport,
-      appDirectoryManager: appDirectory,
+      apps: [TEST_WCP_DIRECTORY_APP],
       heartbeatIntervalMs: 500,
       heartbeatTimeoutMs: 2000,
     })
@@ -446,19 +434,10 @@ describe("heartbeat cleanup on disconnect", () => {
   })
 
   it("transport disconnect clears all active heartbeat timers and state entries", async () => {
-    const appDirectory = new AppDirectoryManager()
-    appDirectory.addApplications([
-      {
-        appId: "test-app",
-        title: "Test App",
-        type: "web",
-        details: { url: "https://example.com/app" },
-      },
-    ])
     const transport = new MockTransport()
     const agent = new DesktopAgent({
       transport,
-      appDirectoryManager: appDirectory,
+      apps: [TEST_WCP_DIRECTORY_APP],
       heartbeatIntervalMs: 500,
       heartbeatTimeoutMs: 2000,
     })

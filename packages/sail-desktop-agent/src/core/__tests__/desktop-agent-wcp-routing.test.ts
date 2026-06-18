@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest"
 import type { BrowserTypes } from "@finos/fdc3"
 import { DesktopAgent } from "../desktop-agent"
-import { AppDirectoryManager } from "../app-directory/app-directory-manager"
 import { MockTransport } from "../../__tests__/utils/mock-transport"
 
 describe("DesktopAgent WCP routing", () => {
@@ -13,12 +12,10 @@ describe("DesktopAgent WCP routing", () => {
       details: { url: string }
     }>
   ) {
-    const appDirectory = new AppDirectoryManager()
-    appDirectory.addApplications(apps)
     const transport = new MockTransport()
     const agent = new DesktopAgent({
       transport,
-      appDirectoryManager: appDirectory,
+      apps,
     })
     agent.start()
     return { agent, transport }

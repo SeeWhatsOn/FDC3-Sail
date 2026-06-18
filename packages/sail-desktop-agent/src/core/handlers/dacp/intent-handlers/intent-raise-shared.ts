@@ -10,6 +10,7 @@ import {
   TargetInstanceUnavailableError,
 } from "../../../errors/fdc3-errors"
 import { attemptIntentDelivery, queueIntentDelivery } from "./intent-delivery-helpers"
+import { retrieveAppsById } from "../../../app-directory/app-directory-queries"
 import type { DACPHandlerContext, IntentRequestType } from "../../types"
 import { shouldWaitForIntentListenerBeforeDelivery } from "./intent-helpers"
 import { launchAppAndWaitForInstance } from "./intent-launch-helpers"
@@ -68,7 +69,7 @@ export function validateRequestedTargetAvailability(
     return
   }
 
-  const apps = context.appDirectory.retrieveAppsById(targetApp.appId)
+  const apps = retrieveAppsById(context.getState().appDirectory, targetApp.appId)
   if (apps.length === 0) {
     throw new TargetAppUnavailableError(`App not found in directory: ${targetApp.appId}`)
   }

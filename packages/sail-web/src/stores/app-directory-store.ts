@@ -1,7 +1,26 @@
+import {
+  retrieveAllApps,
+  replaceDirectoriesInState,
+  type AgentState,
+  type DesktopAgent,
+} from "@finos/sail-desktop-agent"
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
 import type { DirectoryApp } from "../types/common"
 import type { SailPlatform } from "@finos/sail-platform-api"
+
+type DesktopAgentInternals = {
+  state: AgentState
+}
+
+/** Host-side catalog writes — same internal path as DACP handler setState. */
+async function applyAgentStateUpdateAsync(
+  agent: DesktopAgent,
+  callback: (state: AgentState) => Promise<AgentState>
+): Promise<void> {
+  const internal = agent as unknown as DesktopAgentInternals
+  internal.state = await callback(agent.getState())
+}
 
 interface AppDirectoryState {
   apps: DirectoryApp[]
@@ -32,7 +51,7 @@ export const createAppDirectoryStore = (platform: SailPlatform) =>
     immer((set, get) => ({
       // Initial state
       apps: [] as DirectoryApp[],
-      isLoading: false as boolean,
+      isLoading: false,
       error: null as string | null,
       lastUpdated: null as Date | null,
       directoryUrls: [] as string[],
@@ -104,9 +123,7 @@ export const createAppDirectoryStore = (platform: SailPlatform) =>
           setLoading(true)
           setError(null)
 
-          // Get all apps from the desktop agent's app directory
-          const appDirectory = platform.agent.getAppDirectory()
-          const apps = appDirectory.retrieveAllApps()
+          const apps = retrieveAllApps(platform.agent.getState().appDirectory)
 
           setApps(apps)
         } catch (error) {
@@ -127,13 +144,10 @@ export const createAppDirectoryStore = (platform: SailPlatform) =>
           setError(null)
           setDirectoryUrls(urls)
 
-          // Get the app directory manager
-          const appDirectory = platform.agent.getAppDirectory()
+          await applyAgentStateUpdateAsync(platform.agent, state =>
+            replaceDirectoriesInState(state, urls)
+          )
 
-          // Replace all directories with the new URLs
-          await appDirectory.replace(urls)
-
-          // Reload apps from the desktop agent
           loadApps()
         } catch (error) {
           const errorMessage =

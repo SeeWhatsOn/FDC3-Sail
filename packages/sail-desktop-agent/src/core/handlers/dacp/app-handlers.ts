@@ -6,6 +6,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import { OpenError, ResolveError } from "@finos/fdc3"
 import { AppNotFoundError, ErrorOnLaunchError, FDC3OpenError } from "../../errors/fdc3-errors"
 import type { DirectoryApp } from "../../app-directory/types"
+import { retrieveAppsById } from "../../app-directory/app-directory-queries"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
 import { registerOpenWithContext } from "./utils/open-with-context"
@@ -18,7 +19,7 @@ export function handleGetInfoRequest(
   message: BrowserTypes.GetInfoRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, implementationMetadata, logger, getState, appDirectory } = context
+  const { transport, instanceId, implementationMetadata, logger, getState } = context
 
   try {
     const callerInstance = getInstance(getState(), instanceId)
@@ -26,7 +27,7 @@ export function handleGetInfoRequest(
     let appMetadata: BrowserTypes.AppMetadata | undefined
 
     if (callerInstance) {
-      const directoryApps = appDirectory.retrieveAppsById(callerInstance.appId)
+      const directoryApps = retrieveAppsById(getState().appDirectory, callerInstance.appId)
       if (directoryApps.length > 0) {
         appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0], provider, instanceId)
       } else {
@@ -76,7 +77,7 @@ export async function handleOpenRequest(
   message: BrowserTypes.OpenRequest,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, appDirectory, appLauncher, logger } = context
+  const { transport, instanceId, appLauncher, logger, getState } = context
 
   try {
     const payload = message.payload
@@ -102,7 +103,7 @@ export async function handleOpenRequest(
     }
 
     // Get app metadata from directory
-    const apps = appDirectory.retrieveAppsById(appId)
+    const apps = retrieveAppsById(getState().appDirectory, appId)
     if (apps.length === 0) {
       throw new AppNotFoundError(`App not found in directory: ${appId}`)
     }
@@ -185,14 +186,14 @@ export function handleFindInstancesRequest(
   message: BrowserTypes.FindInstancesRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, logger, appDirectory } = context
+  const { transport, instanceId, getState, logger } = context
 
   try {
     const { app: appIdentifier } = message.payload
 
     logger.info("DACP: Finding instances for app", { appId: appIdentifier.appId })
 
-    if (appDirectory.retrieveAppsById(appIdentifier.appId).length === 0) {
+    if (retrieveAppsById(getState().appDirectory, appIdentifier.appId).length === 0) {
       sendDACPErrorResponse({
         message,
         errorType: ResolveError.NoAppsFound,
@@ -264,7 +265,7 @@ export function handleGetAppMetadataRequest(
   message: BrowserTypes.GetAppMetadataRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, appDirectory, logger, implementationMetadata } = context
+  const { transport, instanceId, getState, logger, implementationMetadata } = context
   const provider = implementationMetadata.provider
 
   try {
@@ -285,7 +286,7 @@ export function handleGetAppMetadataRequest(
     // Step 2: If running instance found, return metadata with instanceId
     if (runningInstance) {
       // Query directory for full metadata
-      const directoryApps = appDirectory.retrieveAppsById(appId)
+      const directoryApps = retrieveAppsById(getState().appDirectory, appId)
       const directoryApp = directoryApps[0]
 
       if (directoryApp) {
@@ -322,7 +323,7 @@ export function handleGetAppMetadataRequest(
     }
 
     // Step 3: No running instance - fallback to App Directory
-    const directoryApps = appDirectory.retrieveAppsById(appId)
+    const directoryApps = retrieveAppsById(getState().appDirectory, appId)
     if (directoryApps.length > 0) {
       const appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0], provider)
 

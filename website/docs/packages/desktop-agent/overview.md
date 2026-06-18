@@ -34,9 +34,8 @@ Pure, transport-agnostic FDC3 2.2 Desktop Agent — DACP handlers, channel and i
 packages/sail-desktop-agent/src/
 ├── core/              # DesktopAgent, DACP handlers, state, app directory
 ├── host-contracts/    # AppLauncher, IntentResolver, ChannelControl, …
-├── protocols/         # DACP and WCP types and helpers
+├── app-connection/    # WCPConnector, MessagePortTransport, WCP protocol
 ├── transports/        # InMemoryTransport, transport pairs
-├── connectors/        # Browser WCP connector, MessagePort bridge
 └── presets/           # createBrowserDesktopAgent and related factories
 ```
 

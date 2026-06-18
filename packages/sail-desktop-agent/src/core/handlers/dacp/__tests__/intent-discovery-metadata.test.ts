@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
-import { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import type { DirectoryApp } from "../../../app-directory/types"
+import { retrieveIntents } from "../../../app-directory/app-directory-queries"
+import { addApplications } from "../../../state/mutators/app-directory"
 import { DesktopAgent } from "../../../desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { connectInstance, updateInstanceState } from "../../../state/mutators"
@@ -61,10 +62,8 @@ function loadConformanceIntentAppA(): DirectoryApp {
   return app
 }
 
-function createAppDirectory(apps: DirectoryApp[]): AppDirectoryManager {
-  const directory = new AppDirectoryManager()
-  directory.addApplications(apps)
-  return directory
+function withCatalogApps(state: AgentState, apps: DirectoryApp[]): AgentState {
+  return addApplications(state, apps)
 }
 
 type FindIntentSuccessResponse = {
@@ -117,12 +116,11 @@ describe("intent discovery metadata from app directory", () => {
     it.each(displayNameCases)(
       "maps directory displayName for aTestingIntent ($name)",
       ({ app }) => {
-        const directory = createAppDirectory([app])
-        const state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+        const state = withCatalogApps(createInitialState(DEFAULT_FDC3_USER_CHANNELS), [app])
 
         const appIntents = createAppIntents(
           state,
-          directory,
+          state.appDirectory,
           INTENT_APP_A_INTENT_NAME,
           TEST_CONTEXT_X
         )
@@ -136,10 +134,9 @@ describe("intent discovery metadata from app directory", () => {
 
   describe("findIntentsByContext", () => {
     it("returns directory displayName for intents matching the context", () => {
-      const directory = createAppDirectory([intentAppA])
-      const state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+      const state = withCatalogApps(createInitialState(DEFAULT_FDC3_USER_CHANNELS), [intentAppA])
 
-      const intents = findIntentsByContext(state, directory, TEST_CONTEXT_X)
+      const intents = findIntentsByContext(state, state.appDirectory, TEST_CONTEXT_X)
       const testingIntent = intents.find(entry => entry.name === INTENT_APP_A_INTENT_NAME)
 
       expect(testingIntent).toBeDefined()
@@ -157,8 +154,9 @@ describe("intent discovery metadata from app directory", () => {
       })
       state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
 
+      state = withCatalogApps(state, [intentAppA])
+
       const transport = new MockTransport()
-      const directory = createAppDirectory([intentAppA])
       const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
 
       handleFindIntentRequest(
@@ -170,7 +168,7 @@ describe("intent discovery metadata from app directory", () => {
             context: { type: TEST_CONTEXT_X },
           },
         },
-        { ...context, transport, appDirectory: directory }
+        { ...context, transport }
       )
 
       const response = getFindIntentResponse(transport)
@@ -201,8 +199,9 @@ describe("intent discovery metadata from app directory", () => {
       })
       state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
 
+      state = withCatalogApps(state, [intentAppA])
+
       const transport = new MockTransport()
-      const directory = createAppDirectory([intentAppA])
       const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
 
       handleFindIntentsByContextRequest(
@@ -213,7 +212,7 @@ describe("intent discovery metadata from app directory", () => {
             context: { type: TEST_CONTEXT_X },
           },
         },
-        { ...context, transport, appDirectory: directory }
+        { ...context, transport }
       )
 
       const response = getFindIntentsByContextResponse(transport)
@@ -272,8 +271,9 @@ describe("intent discovery metadata from app directory", () => {
       })
       state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
 
+      state = withCatalogApps(state, [intentAppA, contextYOnlyApp])
+
       const transport = new MockTransport()
-      const directory = createAppDirectory([intentAppA, contextYOnlyApp])
       const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
 
       handleFindIntentsByContextRequest(
@@ -284,7 +284,7 @@ describe("intent discovery metadata from app directory", () => {
             context: { type: TEST_CONTEXT_X },
           },
         },
-        { ...context, transport, appDirectory: directory }
+        { ...context, transport }
       )
 
       const response = getFindIntentsByContextResponse(transport)
@@ -343,8 +343,13 @@ describe("state-owned app directory intent discovery contract", () => {
       contextTypes: [],
     })
 
-    const directory = createAppDirectory([intentAppA, launchOnlyApp])
-    const appIntents = createAppIntents(state, directory, INTENT_APP_A_INTENT_NAME, TEST_CONTEXT_X)
+    state = withCatalogApps(state, [intentAppA, launchOnlyApp])
+    const appIntents = createAppIntents(
+      state,
+      state.appDirectory,
+      INTENT_APP_A_INTENT_NAME,
+      TEST_CONTEXT_X
+    )
 
     expect(appIntents).toHaveLength(1)
     const apps = appIntents[0].apps
@@ -376,9 +381,11 @@ describe("state-owned app directory intent discovery contract", () => {
     })
     state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
 
+    state = withCatalogApps(state, agent.getState().appDirectory.apps)
+
     const transport = new MockTransport()
     const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
-    const stateSlice = expectAppDirectoryOnState(agent.getState())
+    const stateSlice = expectAppDirectoryOnState(context.getState())
 
     handleFindIntentRequest(
       {
@@ -389,7 +396,7 @@ describe("state-owned app directory intent discovery contract", () => {
           context: { type: TEST_CONTEXT_X },
         },
       },
-      { ...context, transport, appDirectory: agent.getAppDirectory() }
+      { ...context, transport }
     )
 
     const response = getFindIntentResponse(transport)
@@ -405,14 +412,13 @@ describe("state-owned app directory intent discovery contract", () => {
     }
     const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
 
-    agent.getAppDirectory().addApplications([intentAppA, duplicateVariant])
+    const internal = agent as unknown as { state: AgentState }
+    internal.state = addApplications(internal.state, [intentAppA, duplicateVariant])
 
     const stateSlice = expectAppDirectoryOnState(agent.getState())
     expect(stateSlice.apps.filter(app => app.appId === "IntentAppAId")).toHaveLength(1)
 
-    const intents = agent
-      .getAppDirectory()
-      .retrieveIntents(TEST_CONTEXT_X, INTENT_APP_A_INTENT_NAME, undefined)
+    const intents = retrieveIntents(stateSlice, TEST_CONTEXT_X, INTENT_APP_A_INTENT_NAME, undefined)
     expect(intents).toHaveLength(1)
     expect(intents[0].appId).toBe("IntentAppAId")
   })

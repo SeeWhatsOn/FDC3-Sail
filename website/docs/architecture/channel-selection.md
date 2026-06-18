@@ -49,7 +49,7 @@ This is “on behalf of the app” in **identity** (source instance id), not “
 
 | What chrome needs | API / mechanism today | Notes |
 |-------------------|----------------------|--------|
-| List of user channels | `platform.getUserChannels()` | Reads agent config / channel registry (not per-app DACP). |
+| List of user channels | `platform.getUserChannels()` | Reads `state.channels.user` from agent state (not per-app DACP). |
 | Current channel for a tile | `platform.getAppUserChannel(instanceId)` | Reads `instance.currentUserChannel` from agent state (no DACP round-trip). |
 | Event-driven mirror | `onChannelChanged` → connection store (`channelId`) | Optional; matches what the app receives via `userChannelChanged`. |
 

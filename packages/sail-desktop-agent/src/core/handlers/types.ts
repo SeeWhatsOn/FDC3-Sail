@@ -1,7 +1,6 @@
 import type { BrowserTypes } from "@finos/fdc3"
 import type { Transport } from "../interfaces/transport"
 import type { AppLauncher } from "../../host-contracts/app-launcher"
-import type { AppDirectoryManager } from "../app-directory/app-directory-manager"
 import type { AgentState, StateSetter } from "../state/types"
 import type { Logger, LogPayloadDetail } from "../interfaces/logger"
 import type { DesktopAgentConfig } from "../desktop-agent"
@@ -118,9 +117,6 @@ export interface DACPHandlerContext {
 
   /** Update state with a transform function */
   setState: StateSetter
-
-  /** App directory manager for app metadata lookups */
-  appDirectory: AppDirectoryManager
 
   /** App launcher for opening/launching applications (optional) */
   appLauncher?: AppLauncher

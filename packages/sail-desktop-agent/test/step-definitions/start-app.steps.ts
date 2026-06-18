@@ -7,6 +7,7 @@ import type { GetInfoRequest } from "@finos/fdc3-schema/dist/generated/api/Brows
 import { AppInstanceState } from "../../src/core/state/types"
 import { getInstance, getInstancesByState } from "../../src/core/state/selectors"
 import { connectInstance, removeInstance, updateInstanceState } from "../../src/core/state/mutators"
+import { retrieveAppsById } from "../../src/core/app-directory/app-directory-queries"
 
 type OpenRequest = BrowserTypes.OpenRequest
 type GetAppMetadataRequest = BrowserTypes.GetAppMetadataRequest
@@ -38,7 +39,7 @@ async function sendWcp4ValidateForInstance(
     return
   }
 
-  const apps = world.appDirectoryManager.retrieveAppsById(instance.appId)
+  const apps = retrieveAppsById(world.getState().appDirectory, instance.appId)
   const appUrl =
     apps.length > 0 &&
     apps[0].details &&
@@ -104,7 +105,7 @@ async function connectTestAppInstance(
     )
   }
 
-  const inDirectory = world.appDirectoryManager.retrieveAppsById(appId).length > 0
+  const inDirectory = retrieveAppsById(world.getState().appDirectory, appId).length > 0
   if (inDirectory) {
     // Background "is opened" runs WCP4 for CONNECTED state; keep WCP5 out of DACP message assertions.
     await sendWcp4ValidateForInstance(world, instanceId, { retainWcp5InLog: false })
@@ -208,7 +209,7 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
   const instance = getInstance(state, uuid)
   const appUrl = instance
     ? (() => {
-        const apps = this.appDirectoryManager.retrieveAppsById(instance.appId)
+        const apps = retrieveAppsById(this.getState().appDirectory, instance.appId)
         return apps.length > 0 &&
           apps[0].details &&
           typeof apps[0].details === "object" &&

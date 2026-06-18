@@ -5,7 +5,6 @@ import { MockAppLauncher } from "../support/mock-app-launcher"
 import { MockIntentResolver } from "../support/mock-intent-resolver"
 import type { BrowserTypes } from "@finos/fdc3"
 import type { DirectoryApp } from "../../src/core/app-directory/types"
-import { AppDirectoryManager } from "../../src/core/app-directory/app-directory-manager"
 import type { AgentState } from "../../src/core/state/types"
 import { connectInstance } from "../../src/core/state/mutators"
 import { applyDesktopAgentStateUpdate } from "../support/agent-state"
@@ -43,9 +42,6 @@ export interface TestProps {
 export class CustomWorld extends World {
   // The actual DesktopAgent instance being tested
   desktopAgent!: DesktopAgent
-
-  // App directory manager (for test setup and assertions)
-  appDirectoryManager!: AppDirectoryManager
 
   // MOCK external dependencies (to avoid side effects)
   mockTransport!: MockTransport
@@ -108,15 +104,11 @@ export class CustomWorld extends World {
       this.enableIntentResolverCallback()
     }
 
-    // Create app directory manager for test setup
-    this.appDirectoryManager = new AppDirectoryManager()
-    this.appDirectoryManager.addApplications(apps)
-
-    // Create DesktopAgent with new state-based API
+    // Create DesktopAgent with catalog seeded via config.apps (state.appDirectory.apps)
     this.desktopAgent = new DesktopAgent({
       transport: this.mockTransport,
       appLauncher: this.mockAppLauncher,
-      appDirectoryManager: this.appDirectoryManager,
+      apps,
       userChannels: channels,
       implementationMetadata: {
         provider: "cucumber-provider",

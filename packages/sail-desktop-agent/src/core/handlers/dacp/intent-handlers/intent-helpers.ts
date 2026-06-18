@@ -6,11 +6,15 @@
  */
 
 import type { Context } from "@finos/fdc3"
-import type { AgentState, IntentListener } from "../../../state/types"
-import type { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
+import type { AgentState, IntentListener, AppDirectoryState } from "../../../state/types"
 import type { DACPHandlerContext } from "../../types"
 import { getInstance, getActiveListenersForIntent } from "../../../state/selectors"
 import { AppInstanceState } from "../../../state/types"
+import {
+  retrieveAllApps,
+  retrieveAppsById,
+  retrieveIntents,
+} from "../../../app-directory/app-directory-queries"
 import { isIntentListenerReady } from "./intent-delivery-helpers"
 
 /** AppIntent shape returned on raiseIntent* wire responses when the host resolver UI is not wired. */
@@ -60,11 +64,11 @@ export function shouldWaitForIntentListenerBeforeDelivery(
  * surface directory metadata, not the internal intent name.
  */
 function getIntentDisplayNameFromDirectory(
-  appDirectory: AppDirectoryManager,
+  catalog: AppDirectoryState,
   intentName: string,
   contextType?: string
 ): string {
-  const directoryIntents = appDirectory.retrieveIntents(contextType, intentName, undefined)
+  const directoryIntents = retrieveIntents(catalog, contextType, intentName, undefined)
   const withDisplayName = directoryIntents.find(
     entry => typeof entry.displayName === "string" && entry.displayName.length > 0
   )
@@ -117,7 +121,7 @@ export function isResultTypeCompatible(
  */
 export function findIntentHandlers(
   state: AgentState,
-  appDirectory: AppDirectoryManager,
+  catalog: AppDirectoryState,
   request: {
     intent: string
     context: Context
@@ -167,7 +171,7 @@ export function findIntentHandlers(
   }
 
   // Get app capabilities from app directory
-  const allApps = appDirectory.retrieveAllApps()
+  const allApps = retrieveAllApps(catalog)
   let availableApps = allApps
     .filter(app => {
       const intents = app.interop?.intents?.listensFor
@@ -216,7 +220,7 @@ export function findIntentHandlers(
  */
 export function createAppIntents(
   state: AgentState,
-  appDirectory: AppDirectoryManager,
+  catalog: AppDirectoryState,
   intentName: string,
   contextType?: string,
   resultType?: string
@@ -224,7 +228,7 @@ export function createAppIntents(
   intent: { name: string; displayName?: string }
   apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }>
 }> {
-  const allApps = appDirectory.retrieveAllApps()
+  const allApps = retrieveAllApps(catalog)
   const appIntentsMap = new Map<
     string,
     {
@@ -257,7 +261,7 @@ export function createAppIntents(
   const filteredRunningListeners =
     resultType !== undefined
       ? validRunningListeners.filter(listener => {
-          const apps = appDirectory.retrieveAppsById(listener.appId)
+          const apps = retrieveAppsById(catalog, listener.appId)
           const appInfo = apps[0]
           if (!appInfo) {
             // If app is not in directory, we can't check resultType, so exclude it
@@ -297,7 +301,7 @@ export function createAppIntents(
           displayName:
             typeof intentDef.displayName === "string"
               ? intentDef.displayName
-              : getIntentDisplayNameFromDirectory(appDirectory, intentName, contextType),
+              : getIntentDisplayNameFromDirectory(catalog, intentName, contextType),
         },
         apps: [],
       })
@@ -318,7 +322,7 @@ export function createAppIntents(
       appIntentsMap.set(intentName, {
         intent: {
           name: intentName,
-          displayName: getIntentDisplayNameFromDirectory(appDirectory, intentName, contextType),
+          displayName: getIntentDisplayNameFromDirectory(catalog, intentName, contextType),
         },
         apps: [],
       })
@@ -329,7 +333,7 @@ export function createAppIntents(
       const instance = getInstance(state, listener.instanceId)
       if (!instance) return
 
-      const apps = appDirectory.retrieveAppsById(listener.appId)
+      const apps = retrieveAppsById(catalog, listener.appId)
       const appInfo = apps[0] // Take first matching app
 
       appIntent.apps.push({
@@ -350,14 +354,14 @@ export function createAppIntents(
  */
 export function findIntentsByContext(
   _state: AgentState,
-  appDirectory: AppDirectoryManager,
+  catalog: AppDirectoryState,
   contextType: string
 ): Array<{ name: string; displayName?: string }> {
   const orderedIntentNames: string[] = []
   const intentNameSet = new Set<string>()
   const displayNameByIntent = new Map<string, string>()
 
-  const allApps = appDirectory.retrieveAllApps()
+  const allApps = retrieveAllApps(catalog)
   allApps.forEach(app => {
     const intents = app.interop?.intents?.listensFor
     if (!intents || typeof intents !== "object") return
@@ -385,6 +389,6 @@ export function findIntentsByContext(
     name,
     displayName:
       displayNameByIntent.get(name) ??
-      getIntentDisplayNameFromDirectory(appDirectory, name, contextType),
+      getIntentDisplayNameFromDirectory(catalog, name, contextType),
   }))
 }

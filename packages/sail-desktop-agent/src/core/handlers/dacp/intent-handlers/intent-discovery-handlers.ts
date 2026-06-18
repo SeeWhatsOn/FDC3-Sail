@@ -16,7 +16,7 @@ export function handleFindIntentRequest(
   message: BrowserTypes.FindIntentRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, appDirectory, logger } = context
+  const { transport, instanceId, getState, logger } = context
 
   try {
     const payload = message.payload
@@ -34,7 +34,13 @@ export function handleFindIntentRequest(
     const contextType = payload.context?.type
     const resultType = payload.resultType
 
-    const appIntents = createAppIntents(getState(), appDirectory, intent, contextType, resultType)
+    const appIntents = createAppIntents(
+      getState(),
+      getState().appDirectory,
+      intent,
+      contextType,
+      resultType
+    )
 
     if (appIntents.length === 0) {
       throw new Error(`No apps found to handle intent: ${intent}`)
@@ -61,7 +67,7 @@ export function handleFindIntentsByContextRequest(
   message: BrowserTypes.FindIntentsByContextRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, appDirectory, logger } = context
+  const { transport, instanceId, getState, logger } = context
 
   try {
     const payload = message.payload
@@ -81,13 +87,19 @@ export function handleFindIntentsByContextRequest(
     logger.info("DACP: Finding intents for context type", { contextType, resultType })
 
     // Find all intents that can handle this context type
-    const intentMetadata = findIntentsByContext(getState(), appDirectory, contextType)
+    const intentMetadata = findIntentsByContext(getState(), getState().appDirectory, contextType)
 
     // Convert to AppIntent[] format, applying resultType filter via createAppIntents
     const appIntents = intentMetadata
       .map(
         metadata =>
-          createAppIntents(getState(), appDirectory, metadata.name, contextType, resultType)[0]
+          createAppIntents(
+            getState(),
+            getState().appDirectory,
+            metadata.name,
+            contextType,
+            resultType
+          )[0]
       )
       .filter((appIntent): appIntent is NonNullable<typeof appIntent> => !!appIntent)
       .filter(appIntent => appIntent.apps.length > 0)

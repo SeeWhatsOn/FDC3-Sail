@@ -23,6 +23,7 @@ import * as sailDesktopAgent from "../../index"
 import { getBrowserDesktopAgentSession, isBrowserDesktopAgent } from "../browser-session"
 
 import type { DirectoryApp } from "../../core/app-directory/types"
+import { retrieveAllApps } from "../../core/app-directory/app-directory-queries"
 
 import type { DesktopAgent } from "../../core/desktop-agent"
 
@@ -122,7 +123,7 @@ describe("createBrowserDesktopAgent top-level preset", () => {
 
     activeAgents.push(desktopAgent)
 
-    const registeredApps = desktopAgent.getAppDirectory().retrieveAllApps()
+    const registeredApps = retrieveAllApps(desktopAgent.getState().appDirectory)
 
     expect(registeredApps).toEqual(
       expect.arrayContaining([

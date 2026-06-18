@@ -34,6 +34,17 @@ export {
 // Channel mutators
 export { createAppChannel, removeAppChannel, storeContext, clearChannelContexts } from "./channel"
 
+// App directory mutators
+export {
+  addApp,
+  addApplications,
+  addDirectoryUrl,
+  loadDirectoryIntoState,
+  replaceDirectoriesInState,
+  removeDirectoryUrl,
+  clearDirectoryUrls,
+} from "./app-directory"
+
 // Private channel mutators
 export {
   createPrivateChannel,

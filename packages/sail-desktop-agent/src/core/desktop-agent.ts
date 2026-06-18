@@ -9,10 +9,6 @@
 
 import type { Transport } from "./interfaces/transport"
 import type { AppLauncher } from "../host-contracts/app-launcher"
-import {
-  AppDirectoryManager,
-  type AppDirectoryStateBinding,
-} from "./app-directory/app-directory-manager"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
 import type {
   DACPHandlerContext,
@@ -21,6 +17,7 @@ import type {
 } from "./handlers/types"
 import type { IntentResolutionCallback } from "./handlers/dacp/intent-resolution-callback"
 import type { DirectoryApp } from "./app-directory/types"
+import { addApp } from "./state/mutators/app-directory"
 import type { BrowserTypes } from "@finos/fdc3"
 import type { AgentState, StateSetter } from "./state/types"
 import { createInitialState, createStateWithOverrides } from "./state/initial-state"
@@ -53,7 +50,7 @@ export interface DesktopAgentOptions {
   transport?: Transport
 
   appLauncher?: AppLauncher
-  appDirectoryManager?: AppDirectoryManager
+  /** Pre-seeded catalog apps (merged into `state.appDirectory.apps` at construction). */
   apps?: DirectoryApp[]
   userChannels?: BrowserTypes.Channel[]
   requestIntentResolution?: IntentResolutionCallback
@@ -103,7 +100,6 @@ export interface DesktopAgentOptions {
 export interface DesktopAgentConfig {
   transport?: Transport
   appLauncher?: AppLauncher
-  appDirectoryManager?: AppDirectoryManager
   apps?: DirectoryApp[]
   userChannels: BrowserTypes.Channel[]
   requestIntentResolution?: IntentResolutionCallback
@@ -146,7 +142,6 @@ export interface DesktopAgentConfig {
 export class DesktopAgent {
   private state: AgentState
   private transport: Transport
-  private appDirectory: AppDirectoryManager
   private appLauncher?: AppLauncher
   private requestIntentResolution?: IntentResolutionCallback
   private validator?: MessageValidator
@@ -174,21 +169,10 @@ export class DesktopAgent {
       ? createStateWithOverrides(config.initialState, config.userChannels)
       : createInitialState(config.userChannels)
 
-    const appDirectoryBinding: AppDirectoryStateBinding = {
-      getState: () => this.state.appDirectory,
-      setState: updater => {
-        this.state = {
-          ...this.state,
-          appDirectory: updater(this.state.appDirectory),
-        }
-      },
-    }
-
-    if (config.appDirectoryManager) {
-      this.appDirectory = config.appDirectoryManager
-      this.appDirectory.bindToState(appDirectoryBinding)
-    } else {
-      this.appDirectory = new AppDirectoryManager(appDirectoryBinding)
+    if (config.apps) {
+      for (const app of config.apps) {
+        this.state = addApp(this.state, app)
+      }
     }
 
     this.appLauncher = config.appLauncher
@@ -196,12 +180,6 @@ export class DesktopAgent {
     this.validator = config.validator
     this.logger = config.logger ?? consoleLogger
     this.logPayloadDetail = config.logPayloadDetail
-
-    if (config.apps) {
-      for (const app of config.apps) {
-        this.appDirectory.add(app)
-      }
-    }
   }
 
   /**
@@ -333,7 +311,6 @@ export class DesktopAgent {
       instanceId,
       getState: () => this.getState(),
       setState,
-      appDirectory: this.appDirectory,
       appLauncher: this.appLauncher,
       requestIntentResolution: this.requestIntentResolution,
       validator: this.validator,
@@ -366,15 +343,8 @@ export class DesktopAgent {
   exportState(): string {
     return JSON.stringify(this.state, null, 2)
   }
-  /**
-   * Get the app directory (for testing/inspection)
-   */
-  getAppDirectory(): AppDirectoryManager {
-    return this.appDirectory
-  }
-  /**
-   * Check if the agent is started
-   */
+
+  /** Check if the agent is started */
   getIsStarted(): boolean {
     return this.isStarted
   }
