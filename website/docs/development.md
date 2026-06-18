@@ -196,6 +196,42 @@ type: brief description
 - **Vitest** - Testing framework
 - **Cucumber** - BDD testing for FDC3 compliance
 
+## Publishing packages (maintainers)
+
+Public npm packages: `@finos/sail-desktop-agent` and `@finos/sail-platform-api`. Other workspaces are private and are not versioned or published.
+
+Releases use [Changesets](https://github.com/changesets/changesets). Contributors do not need to add changesets; maintainers batch weekly (or per merge) on `main`.
+
+### Weekly release ritual
+
+1. Review merged PRs since the last release.
+2. On `main`, add one or more changeset files (CLI or hand-written markdown):
+
+   ```bash
+   npm run changeset
+   ```
+
+   Example `.changeset/wcp-heartbeat-fix.md`:
+
+   ```md
+   ---
+   "@finos/sail-desktop-agent": patch
+   ---
+
+   Fix heartbeat cleanup for canonical WCP5 instance ids (#123, #124).
+   ```
+
+3. Commit and push the `.changeset/` file(s) to `main`.
+4. The **Release** GitHub Action opens or updates a **Version Packages** pull request (version bumps + `CHANGELOG.md` updates).
+5. Merge the Version Packages PR. CI builds, publishes to npm, pushes git tags, and opens GitHub Releases.
+
+Packages can ship independently and stay on different semver lines. Desktop Agent is in Changesets **pre** mode (`3.0.0-pre.x`); run `npx changeset pre exit` before the first stable `3.0.0` release.
+
+### Prerequisites
+
+- Repository secret `NPM_TOKEN` with publish access to the `@finos` scope on npm.
+- Workflow: `.github/workflows/release.yml` (targets branch `main`).
+
 ## Recommended VS Code Extensions
 
 - ESLint
