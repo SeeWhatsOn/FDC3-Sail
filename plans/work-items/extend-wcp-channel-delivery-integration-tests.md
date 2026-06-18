@@ -8,9 +8,9 @@ loop_count: 0
 loop_limit: 3
 last_agent: ""
 file_manifest:
-  - packages/sail-desktop-agent/src/connectors/browser/__tests__/wcp-desktop-agent.integration.test.ts
-  - packages/sail-desktop-agent/src/connectors/browser/__tests__/wcp-edge-test-helpers.ts
-  - packages/sail-desktop-agent/src/connectors/browser/
+  - packages/sail-desktop-agent/src/app-connection/__tests__/wcp-desktop-agent.integration.test.ts
+  - packages/sail-desktop-agent/src/app-connection/__tests__/wcp-edge-test-helpers.ts
+  - packages/sail-desktop-agent/src/app-connection/
 depends_on:
   - verify-v4-agent-fixes-on-current-branch
 integration_branch: v3-pre

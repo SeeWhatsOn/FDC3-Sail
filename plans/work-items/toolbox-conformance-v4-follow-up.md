@@ -30,7 +30,7 @@ Maintainers need a second delivery wave after TB-00–TB-09: v4 shows agent rows
 - `plans/prd-toolbox-conformance-v4-follow-up.md`
 - `conformance-report-v4.txt`
 - `conformance-test-failure-review.md`
-- `packages/sail-desktop-agent/docs/conformance-traceability.md`
+- `website/docs/packages/desktop-agent/conformance.md`
 
 ## Parent context
 

@@ -11,8 +11,8 @@ file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/dacp/heartbeat-runtime.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/cleanup.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/utils/resolve-context-listener-instance-id.ts
-  - packages/sail-desktop-agent/src/connectors/browser/wcp-connector.ts
-  - packages/sail-desktop-agent/src/protocols/wcp/wcp-connection-management.ts
+  - packages/sail-desktop-agent/src/app-connection/wcp-connector.ts
+  - packages/sail-desktop-agent/src/app-connection/wcp/wcp-connection-management.ts
   - packages/sail-desktop-agent/test/support/mock-transport.ts
 depends_on:
   - wire-wcp5-connected-instance-lifecycle
