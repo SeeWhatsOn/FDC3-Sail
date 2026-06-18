@@ -3,18 +3,19 @@ title: "User channels runtime single source of truth"
 slug: user-channels-runtime-ssot
 kind: task
 type: chore
-status: approved
+status: done
 loop_count: 0
 loop_limit: 3
-last_agent: spec-planner
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/core/desktop-agent.ts
   - packages/sail-desktop-agent/src/core/state/initial-state.ts
   - packages/sail-desktop-agent/src/core/state/selectors/channel.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/channel-handlers.ts
+  - packages/sail-desktop-agent/src/core/__tests__/desktop-agent-user-channels.test.ts
 depends_on: []
 integration_branch: v3-pre
-branch: cursor/user-channels-runtime-ssot
+branch: v3-pre
 pr_url: ""
 merged_pr: ""
 external_tracker: ""
@@ -70,18 +71,50 @@ RED: add test that `getUserChannels()` (or replacement API) reads from state not
 
 _(empty)_
 
-## Loop history
-
-_(empty)_
+- 2026-06-18 Phase B GREEN (implement-agent, registered: yes): getUserChannels reads state via getAllUserChannels; removed duplicate field
+- 2026-06-18 Phase C Verify (verifier-agent, registered: yes): PASS (scope reconciled)
+- 2026-06-18 Phase D Review (code-reviewer, registered: yes): VERDICT: PASS
+- 2026-06-18 staged for human review
 
 ## Staged for review
 
-_(empty)_
+**Status:** waiting_on_user (staged 2026-06-18)
+
+### Phase audit
+| Phase | Subagent | Registered | Result |
+|-------|----------|------------|--------|
+| A RED | test-engineer | yes | 2/3 Vitest tests fail (expected) |
+| B GREEN | implement-agent | yes | 300 Vitest + 15 Cucumber pass |
+| C Verify | verifier-agent | yes | PASS (plans bookkeeping only) |
+| D Review | code-reviewer | yes | VERDICT: PASS |
+
+**ui_surface:** no
+
+### RED evidence
+- Test file: `desktop-agent-user-channels.test.ts` (new)
+- Command: `npm test -w @finos/sail-desktop-agent`
+- Failure: `getUserChannels()` returned constructor config copy after `state.channels.user` mutated; DACP handler already used state
+- Expected: dual read path bug before fix
+
+### Commands run
+- `npm test -w @finos/sail-desktop-agent`: **300 Vitest + 15 Cucumber pass** (exit 0)
+
+### Files changed
+- `desktop-agent.ts` — removed `private userChannels`; `getUserChannels()` → `getAllUserChannels(this.state)`
+- `desktop-agent-user-channels.test.ts` — 3 regression tests (seeding, SSOT, host/DACP alignment)
+
+### Diff summary
+`state.channels.user` is now the sole runtime source. Constructor `userChannels` config seeds state once at init only. Host API and DACP `getUserChannelsResponse` share the same selector path.
+
+### Learnings proposed
+- **[AGENTS.md candidate]** `DesktopAgent.getUserChannels()` and DACP `getUserChannelsResponse` both read via `getAllUserChannels(state)`; constructor `userChannels` seeds state once — no runtime instance field.
 
 ## Escalation notes
 
 _(empty)_
 
+- 2026-06-18 human approve — user will commit on v3-pre
+
 ## Learnings extracted
 
-_(empty)_
+- `DesktopAgent.getUserChannels()` and DACP `getUserChannelsResponse` both read via `getAllUserChannels(state)`; constructor `userChannels` seeds `state.channels.user` once at init — no runtime instance field.

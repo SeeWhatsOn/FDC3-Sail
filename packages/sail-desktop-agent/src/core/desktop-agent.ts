@@ -27,7 +27,7 @@ import { createInitialState, createStateWithOverrides } from "./state/initial-st
 import { consoleLogger, type Logger, type LogPayloadDetail } from "./interfaces/logger"
 import { resolveDesktopAgentConfig, type SailImplementationMetadata } from "./sail-default-config"
 import { InMemoryTransport } from "../transports/in-memory-transport"
-import { getInstance } from "./state/selectors"
+import { getAllUserChannels, getInstance } from "./state/selectors"
 
 /**
  * Structure of DACP message metadata for routing
@@ -154,7 +154,6 @@ export class DesktopAgent {
   private logPayloadDetail: LogPayloadDetail
   private isStarted: boolean = false
   private implementationMetadata: SailImplementationMetadata
-  private userChannels: BrowserTypes.Channel[]
   private openContextListenerTimeoutMs: number
   private heartbeatEnabled: boolean
   private heartbeatIntervalMs: number
@@ -165,15 +164,15 @@ export class DesktopAgent {
     const config = resolveDesktopAgentConfig(options)
 
     this.transport = config.transport ?? new InMemoryTransport()
-    this.userChannels = config.userChannels
     this.implementationMetadata = config.implementationMetadata
     this.openContextListenerTimeoutMs = config.openContextListenerTimeoutMs
     this.heartbeatEnabled = config.heartbeatEnabled
     this.heartbeatIntervalMs = config.heartbeatIntervalMs
     this.heartbeatTimeoutMs = config.heartbeatTimeoutMs
+    // userChannels config seeds state once; runtime reads use state.channels.user only.
     this.state = config.initialState
-      ? createStateWithOverrides(config.initialState, this.userChannels)
-      : createInitialState(this.userChannels)
+      ? createStateWithOverrides(config.initialState, config.userChannels)
+      : createInitialState(config.userChannels)
 
     const appDirectoryBinding: AppDirectoryStateBinding = {
       getState: () => this.state.appDirectory,
@@ -386,11 +385,10 @@ export class DesktopAgent {
     return this.implementationMetadata
   }
   /**
-   * Get the configured user channels.
-   * User channels are static configuration set at initialization and never change.
+   * Get user channels from agent state (same source as DACP getUserChannelsResponse).
    */
   getUserChannels(): BrowserTypes.Channel[] {
-    return this.userChannels
+    return getAllUserChannels(this.state)
   }
 
   /**
