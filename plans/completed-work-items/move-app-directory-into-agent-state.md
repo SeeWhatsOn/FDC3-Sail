@@ -3,7 +3,7 @@ title: "Move app directory into agent state"
 slug: move-app-directory-into-agent-state
 kind: task
 type: chore
-status: waiting_on_user
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -155,6 +155,9 @@ Launchable app catalog (`apps`, `directoryUrls`) now lives on `AgentState.appDir
 
 _(empty)_
 
+- 2026-06-18 human approve — implementation already on v3-pre; user commits manually
+
 ## Learnings extracted
 
-_(empty)_
+- Launchable app catalog lives on `AgentState.appDirectory`; `AppDirectoryManager` mutates that slice when bound by `DesktopAgent`. Injected managers must be rebound via `bindToState()`, not copy-replaced.
+- Cucumber/test harnesses holding a pre-construction `AppDirectoryManager` reference remain valid after `bindToState()` — same object, now backed by agent state.
