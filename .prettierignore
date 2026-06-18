@@ -1,3 +1,4 @@
+website/.docusaurus/**/*
 **/dist/**/*
 **/node_modules/**/*
 **/build/**/*

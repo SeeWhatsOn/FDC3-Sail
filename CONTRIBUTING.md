@@ -1,6 +1,6 @@
-# Electron FDC3 Desktop Agent & App Directory Contribution and Governance Policies
+# FDC3 Sail Contribution and Governance Policies
 
-This document describes the contribution process and governance policies of the FINOS Electron FDC3 Desktop Agent & App Directory project. The project is also governed by the [Linux Foundation Antitrust Policy](https://www.linuxfoundation.org/antitrust-policy/), and the FINOS [IP Policy](https://github.com/finos/community/blob/master/governance/IP-Policy.pdf), [Code of Conduct](https://github.com/finos/community/blob/master/governance/Code-of-Conduct.md), [Collaborative Principles](https://github.com/finos/community/blob/master/governance/Collaborative-Principles.md), and [Meeting Procedures](https://github.com/finos/community/blob/master/governance/Meeting-Procedures.md).
+This document describes the contribution process and governance policies of the FINOS FDC3 Sail project. The project is also governed by the [Linux Foundation Antitrust Policy](https://www.linuxfoundation.org/antitrust-policy/), and the FINOS [IP Policy](https://github.com/finos/community/blob/master/governance/IP-Policy.pdf), [Code of Conduct](https://github.com/finos/community/blob/master/governance/Code-of-Conduct.md), [Collaborative Principles](https://github.com/finos/community/blob/master/governance/Collaborative-Principles.md), and [Meeting Procedures](https://github.com/finos/community/blob/master/governance/Meeting-Procedures.md).
 
 ## Contribution Process
 
@@ -13,6 +13,8 @@ Before making a contribution, please take the following steps:
 5. Submit a pull request.
 
 NOTE: All contributors must have a contributor license agreement (CLA) on file with FINOS before their pull requests will be merged. Please review the FINOS [contribution requirements](https://finosfoundation.atlassian.net/wiki/spaces/FINOS/pages/75530375/Contribution+Compliance+Requirements) and submit (or have your employer submit) the required CLA before submitting a pull request.
+
+Maintainers publish `@finos/sail-desktop-agent` and `@finos/sail-platform-api` via Changesets on `main`; see [Publishing packages](https://finos.github.io/FDC3-Sail/docs/development#publishing-packages-maintainers) in the development guide. Contributors do not need to add changesets.
 
 ## Governance
 
