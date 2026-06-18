@@ -14,7 +14,11 @@ import {
   findIntentsByContext,
   launchAppAndWaitForInstance,
 } from "./intent-helpers"
-import { createResolverAppIntent, appsToIntentHandlerOptions } from "./intent-resolver-helpers"
+import {
+  createResolverAppIntent,
+  appsToIntentHandlerOptions,
+  findMatchingIntentResolutionChoice,
+} from "./intent-resolver-helpers"
 import { getDirectoryIntentsForContext } from "./intent-directory-helpers"
 import { isValidContext } from "../utils/context-validation"
 import {
@@ -151,9 +155,10 @@ export async function handleRaiseIntentForContextRequest(
       validatedContext.type
     )
 
-    const selectedIntent = intentCandidates[0]
+    let selectedIntent = intentCandidates[0]
     let targetInstanceId: string | undefined
     let targetInstanceIsLaunched = false
+    let resolverSelectedAppId: string | undefined
 
     if (!targetApp && intentCandidates.length > 1) {
       const appIntents = buildResolverAppIntents(context, intentCandidates, validatedContext.type)
@@ -163,38 +168,59 @@ export async function handleRaiseIntentForContextRequest(
       }
 
       if (context.requestIntentResolution) {
-        // Keep cancellation semantics for environments that provide an out-of-band resolver callback,
-        // but always return chooser data to the requesting app for multi-intent context resolution.
-        const firstIntent = intentCandidates[0]
-        const firstAppIntent = createResolverAppIntent(
-          getState(),
-          appDirectory,
-          firstIntent,
-          validatedContext.type
+        const choices = appIntents.flatMap(appIntent =>
+          appsToIntentHandlerOptions(getState(), appIntent.apps).map(handler => ({
+            intent: appIntent.intent,
+            handler,
+          }))
         )
-        if (firstAppIntent.apps.length === 0) {
+
+        if (choices.length === 0) {
           throw new NoAppsFoundError(
             `No apps found to handle context type: ${validatedContext.type}`
           )
         }
+
         const requestId = message.meta.requestUuid
-        const handlerOptions = appsToIntentHandlerOptions(getState(), firstAppIntent.apps)
         const resolution = await context.requestIntentResolution({
           requestId,
-          intent: firstIntent,
+          intent: choices[0].intent.name,
           context: validatedContext,
-          handlers: handlerOptions,
+          handlers: choices.map(choice => choice.handler),
+          choices,
         })
-        if (resolution.selectedHandler === null) {
+        if (resolution.selectedHandler == null) {
           throw new UserCancelledError("User cancelled intent resolution")
         }
+        if (!resolution.intent) {
+          throw new IntentDeliveryFailedError("Intent resolver did not select an intent")
+        }
+        const selectedChoice = findMatchingIntentResolutionChoice(
+          choices,
+          resolution.selectedHandler,
+          resolution.intent
+        )
+        if (!selectedChoice) {
+          throw new IntentDeliveryFailedError("Intent resolver selected an unavailable handler")
+        }
+        selectedIntent = selectedChoice.intent.name
+        const selectedTarget = selectedChoice.handler
+        resolverSelectedAppId = selectedTarget.appId
+        const resolvedTarget = await resolveAppTargetInstance(context, {
+          appId: selectedTarget.appId,
+          validatedContext,
+          preferredInstanceId: selectedTarget.instanceId,
+          forceLaunch: !selectedTarget.instanceId,
+        })
+        targetInstanceId = resolvedTarget.targetInstanceId
+        targetInstanceIsLaunched = resolvedTarget.targetInstanceIsLaunched
+      } else {
+        const response = createDACPSuccessResponse(message, "raiseIntentForContextResponse", {
+          appIntents,
+        })
+        sendDACPResponse({ response, instanceId, transport })
+        return
       }
-
-      const response = createDACPSuccessResponse(message, "raiseIntentForContextResponse", {
-        appIntents,
-      })
-      sendDACPResponse({ response, instanceId, transport })
-      return
     } else {
       const state = getState()
       const handlers = findIntentHandlers(state, appDirectory, {
@@ -236,7 +262,8 @@ export async function handleRaiseIntentForContextRequest(
     }
 
     const targetInstance = getInstance(getState(), targetInstanceId)
-    const resolvedTargetAppId = targetInstance?.appId ?? targetAppId ?? source.appId
+    const resolvedTargetAppId =
+      targetInstance?.appId ?? targetAppId ?? resolverSelectedAppId ?? source.appId
 
     finalizeRaiseIntentForContextDelivery(
       context,

@@ -4,16 +4,33 @@
  * Helpers for building appIntent payloads for resolver responses.
  */
 
+import type { AppMetadata } from "@finos/fdc3"
 import type { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
+import type { DirectoryApp } from "../../../app-directory/types"
 import type { AgentState } from "../../../state/types"
-import { AppInstanceState } from "../../../state/types"
-import type { IntentHandlerOption } from "../../types"
-import {
-  getActiveListenersForIntent,
-  getInstance,
-  getInstancesByAppId,
-} from "../../../state/selectors"
+import { AppInstanceState, type AppInstance } from "../../../state/types"
+import type { IntentHandlerOption, IntentResolutionChoice } from "../intent-resolution-callback"
+import { getActiveListenersForIntent, getInstance } from "../../../state/selectors"
 import { isContextTypeCompatible, isResultTypeCompatible } from "./intent-helpers"
+
+export function findMatchingIntentResolutionChoice(
+  choices: IntentResolutionChoice[],
+  selectedHandler: { appId: string; instanceId?: string },
+  selectedIntent?: string
+): IntentResolutionChoice | undefined {
+  return choices.find(choice => {
+    if (selectedIntent && choice.intent.name !== selectedIntent) {
+      return false
+    }
+    if (choice.handler.appId !== selectedHandler.appId) {
+      return false
+    }
+    if (selectedHandler.instanceId) {
+      return choice.handler.instanceId === selectedHandler.instanceId
+    }
+    return choice.handler.instanceId === undefined
+  })
+}
 
 /**
  * Convert resolver app list to IntentHandlerOption[] for requestIntentResolution.
@@ -21,12 +38,13 @@ import { isContextTypeCompatible, isResultTypeCompatible } from "./intent-helper
  */
 export function appsToIntentHandlerOptions(
   state: AgentState,
-  apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }>
+  apps: AppMetadata[]
 ): IntentHandlerOption[] {
   return apps.map(app => {
     const isRunning =
       !!app.instanceId && getInstance(state, app.instanceId)?.state !== AppInstanceState.TERMINATED
     return {
+      ...app,
       appId: app.appId,
       name: app.name,
       version: app.version,
@@ -34,6 +52,31 @@ export function appsToIntentHandlerOptions(
       isRunning,
     }
   })
+}
+
+function appToMetadata(
+  app: DirectoryApp | undefined,
+  appId: string,
+  intentName: string,
+  instance?: AppInstance
+): AppMetadata {
+  const intentDef = app?.interop?.intents?.listensFor?.[intentName]
+  const resultType = typeof intentDef?.resultType === "string" ? intentDef.resultType : undefined
+  const instanceMetadata = instance?.instanceMetadata ?? instance?.metadata.instanceMetadata
+
+  return {
+    appId,
+    name: app?.name ?? instance?.metadata.name,
+    version: app?.version ?? instance?.metadata.version,
+    title: app?.title ?? instance?.metadata.title,
+    tooltip: app?.tooltip ?? instance?.metadata.tooltip,
+    description: app?.description ?? instance?.metadata.description,
+    icons: app?.icons ?? instance?.metadata.icons,
+    screenshots: app?.screenshots ?? instance?.metadata.screenshots,
+    resultType,
+    instanceId: instance?.instanceId,
+    instanceMetadata,
+  }
 }
 
 /**
@@ -48,9 +91,9 @@ export function createResolverAppIntent(
   resultType?: string
 ): {
   intent: { name: string; displayName?: string }
-  apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }>
+  apps: AppMetadata[]
 } {
-  const apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }> = []
+  const apps: AppMetadata[] = []
   let runningListeners = getActiveListenersForIntent(state, intentName)
   if (contextType) {
     runningListeners = runningListeners.filter(listener =>
@@ -75,22 +118,22 @@ export function createResolverAppIntent(
 
     return true
   })
+  const displayName =
+    directoryMatches
+      .map(app => app.interop?.intents?.listensFor?.[intentName]?.displayName)
+      .find((value): value is string => typeof value === "string" && value.length > 0) ?? intentName
 
   const directoryAppIds = new Set(directoryMatches.map(app => app.appId))
 
   // 1) Running instances for directory apps (directory order).
   directoryMatches.forEach(app => {
-    const instances = getInstancesByAppId(state, app.appId).filter(
-      instance => instance.state !== AppInstanceState.TERMINATED
-    )
+    const listenerInstances = runningListeners
+      .filter(listener => listener.appId === app.appId)
+      .map(listener => getInstance(state, listener.instanceId))
+      .filter((instance): instance is AppInstance => !!instance)
 
-    instances.forEach(instance => {
-      apps.push({
-        appId: app.appId,
-        name: app.name,
-        version: app.version,
-        instanceId: instance.instanceId,
-      })
+    listenerInstances.forEach(instance => {
+      apps.push(appToMetadata(app, app.appId, intentName, instance))
     })
   })
 
@@ -107,12 +150,8 @@ export function createResolverAppIntent(
 
   filteredDynamicListeners.forEach(listener => {
     const appInfo = appDirectory.retrieveAppsById(listener.appId)[0]
-    apps.push({
-      appId: listener.appId,
-      name: appInfo?.name,
-      version: appInfo?.version,
-      instanceId: listener.instanceId,
-    })
+    const instance = getInstance(state, listener.instanceId)
+    apps.push(appToMetadata(appInfo, listener.appId, intentName, instance))
   })
 
   const runningInstanceAppIds = new Set(
@@ -124,11 +163,7 @@ export function createResolverAppIntent(
     app => !runningInstanceAppIds.has(app.appId)
   )
   directoryAppsWithoutInstances.forEach(app => {
-    apps.push({
-      appId: app.appId,
-      name: app.name,
-      version: app.version,
-    })
+    apps.push(appToMetadata(app, app.appId, intentName))
   })
 
   // 4) Directory apps with running instances (directory order).
@@ -136,15 +171,11 @@ export function createResolverAppIntent(
     runningInstanceAppIds.has(app.appId)
   )
   directoryAppsWithInstances.forEach(app => {
-    apps.push({
-      appId: app.appId,
-      name: app.name,
-      version: app.version,
-    })
+    apps.push(appToMetadata(app, app.appId, intentName))
   })
 
   return {
-    intent: { name: intentName, displayName: intentName },
+    intent: { name: intentName, displayName },
     apps,
   }
 }

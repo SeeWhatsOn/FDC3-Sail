@@ -1,4 +1,4 @@
-import type { AppIdentifier, AppMetadata, BrowserTypes, Context } from "@finos/fdc3"
+import type { BrowserTypes } from "@finos/fdc3"
 import type { Transport } from "../interfaces/transport"
 import type { AppLauncher } from "../../host-contracts/app-launcher"
 import type { AppDirectoryManager } from "../app-directory/app-directory-manager"
@@ -6,51 +6,7 @@ import type { AgentState, StateSetter } from "../state/types"
 import type { Logger, LogPayloadDetail } from "../interfaces/logger"
 import type { DesktopAgentConfig } from "../desktop-agent"
 import type { DACPMessageType } from "../../protocols/dacp/dacp-messages"
-
-// ============================================================================
-// INTENT RESOLUTION CALLBACK
-// ============================================================================
-
-/**
- * Handler option for intent resolution UI.
- * Extends FDC3 AppMetadata with runtime state.
- */
-export type IntentHandlerOption = AppMetadata & {
-  /** Whether this is a running instance (has active listener) */
-  isRunning: boolean
-}
-
-/**
- * Request payload for intent resolution
- */
-export interface IntentResolutionRequest {
-  /** Unique request ID for correlation */
-  requestId: string
-  /** Intent name being raised */
-  intent: string
-  /** Context being passed with intent */
-  context: Context
-  /** Available handlers to choose from */
-  handlers: IntentHandlerOption[]
-}
-
-/**
- * Response from intent resolution
- */
-export interface IntentResolutionResponse {
-  /** Request ID this is responding to */
-  requestId: string
-  /** Selected handler, or null if cancelled */
-  selectedHandler: AppIdentifier | null
-}
-
-/**
- * Callback type for requesting UI-based intent resolution
- * Returns selected handler or throws if cancelled/timeout
- */
-export type IntentResolutionCallback = (
-  request: IntentResolutionRequest
-) => Promise<IntentResolutionResponse>
+import type { IntentResolutionCallback } from "./dacp/intent-resolution-callback"
 
 // ============================================================================
 // MESSAGE VALIDATOR

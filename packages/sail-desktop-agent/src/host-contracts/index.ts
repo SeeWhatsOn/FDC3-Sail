@@ -9,10 +9,19 @@
 export type { AppLauncher } from "./app-launcher"
 
 export type {
+  HostIntentResolver,
+  HostIntentResolverChoice,
+  HostIntentResolverHandler,
+  HostIntentResolverOptions,
+  HostIntentResolverPayload,
+  HostIntentResolverResponse,
   IntentResolver,
+  IntentResolverUIMethods,
+  IntentResolutionChoice,
   IntentResolutionRequest,
   IntentResolutionResponse,
   IntentHandler,
 } from "./intent-resolver"
+export { createHostIntentResolver } from "./intent-resolver"
 
 export type { ChannelControl, ChannelSelectionRequest } from "./channel-control"

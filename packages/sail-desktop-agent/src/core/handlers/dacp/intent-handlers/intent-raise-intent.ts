@@ -11,7 +11,11 @@ import {
 } from "../../../errors/fdc3-errors"
 import { getInstance, getInstancesByAppId } from "../../../state/selectors"
 import { findIntentHandlers, launchAppAndWaitForInstance } from "./intent-helpers"
-import { appsToIntentHandlerOptions, createResolverAppIntent } from "./intent-resolver-helpers"
+import {
+  appsToIntentHandlerOptions,
+  createResolverAppIntent,
+  findMatchingIntentResolutionChoice,
+} from "./intent-resolver-helpers"
 import { isDirectoryIntentCompatible } from "./intent-directory-helpers"
 import { isValidContext } from "../utils/context-validation"
 import {
@@ -77,7 +81,7 @@ export async function handleRaiseIntentRequest(
     })
 
     const targetApp: { appId: string; instanceId?: string } | undefined = normalizeTargetApp(
-      payload.app as unknown
+      payload.app
     )
     validateRequestedTargetAvailability(context, targetApp)
 
@@ -123,6 +127,7 @@ export async function handleRaiseIntentRequest(
 
     let targetInstanceId: string
     let targetInstanceIsLaunched = false
+    let resolverSelectedAppId: string | undefined
 
     // Resolve target instance in priority order: explicit instance -> targeted app -> resolver selection -> running listener -> launch.
     if (targetApp?.instanceId) {
@@ -146,19 +151,44 @@ export async function handleRaiseIntentRequest(
         validatedContext.type
       )
       if (context.requestIntentResolution) {
+        const handlerOptions = appsToIntentHandlerOptions(getState(), appIntent.apps)
+        const choices = handlerOptions.map(handler => ({
+          intent: appIntent.intent,
+          handler,
+        }))
         const resolution = await context.requestIntentResolution({
           requestId: message.meta.requestUuid,
           intent: payload.intent,
           context: validatedContext,
-          handlers: appsToIntentHandlerOptions(getState(), appIntent.apps),
+          handlers: handlerOptions,
+          choices,
         })
         if (resolution.selectedHandler == null) {
           throw new UserCancelledError("User cancelled intent resolution")
         }
+        const selectedChoice = findMatchingIntentResolutionChoice(
+          choices,
+          resolution.selectedHandler,
+          payload.intent
+        )
+        if (!selectedChoice) {
+          throw new IntentDeliveryFailedError("Intent resolver selected an unavailable handler")
+        }
+        const selectedTarget = selectedChoice.handler
+        resolverSelectedAppId = selectedTarget.appId
+        const resolvedTarget = await resolveAppTargetInstance(context, {
+          appId: selectedTarget.appId,
+          validatedContext,
+          preferredInstanceId: selectedTarget.instanceId,
+          forceLaunch: !selectedTarget.instanceId,
+        })
+        targetInstanceId = resolvedTarget.targetInstanceId
+        targetInstanceIsLaunched = resolvedTarget.targetInstanceIsLaunched
+      } else {
+        const response = createDACPSuccessResponse(message, "raiseIntentResponse", { appIntent })
+        sendDACPResponse({ response, instanceId, transport })
+        return
       }
-      const response = createDACPSuccessResponse(message, "raiseIntentResponse", { appIntent })
-      sendDACPResponse({ response, instanceId, transport })
-      return
     } else if (handlers.runningListeners.length > 0) {
       targetInstanceId = handlers.runningListeners[0].instanceId
     } else if (handlers.availableApps.length > 0) {
@@ -177,7 +207,8 @@ export async function handleRaiseIntentRequest(
     registerPendingIntentPromise(context, requestId, "raiseIntentRequest")
 
     const targetInstance = getInstance(getState(), targetInstanceId)
-    const resolvedTargetAppId = targetInstance?.appId ?? targetAppId ?? source.appId
+    const resolvedTargetAppId =
+      targetInstance?.appId ?? targetAppId ?? resolverSelectedAppId ?? source.appId
 
     // Keep pending intent in both runtime map (timeouts/delivery state) and serializable state (routing/result lifecycle).
     registerPendingIntentState(context, {

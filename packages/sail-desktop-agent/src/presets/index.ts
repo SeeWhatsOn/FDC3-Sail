@@ -7,6 +7,7 @@
  */
 export {
   createBrowserDesktopAgent,
+  type BrowserDesktopAgent,
   type BrowserDesktopAgentOptions,
 } from "./browser-desktop-agent.js"
 

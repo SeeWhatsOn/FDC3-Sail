@@ -72,7 +72,7 @@ const desktopAgent = createBrowserDesktopAgent({
 // Auto-started by default — iframe apps can await fdc3.getAgent()
 ```
 
-Returns a single `DesktopAgent`; the browser edge starts and stops with `desktopAgent.start()` / `desktopAgent.stop()`.
+Returns a single `DesktopAgent`; the browser edge starts and stops with `desktopAgent.start()` / `desktopAgent.stop()`. Browser hosts can wire custom resolver UI with `desktopAgent.intentResolverUI?.onRequest(...)`; these host UI methods are not FDC3 DACP/WCP wire messages.
 
 See the [integrator guide](./integrator-guide) for intent resolution, channel chrome, remote DA, and lifecycle callbacks.
 

@@ -44,23 +44,24 @@ import {
   type WCPConnectionContext,
 } from "../../protocols/wcp/wcp-connection-management"
 import { WCPEventEmitter } from "../../protocols/wcp/wcp-event-emitter"
-import { clearPendingWcpSourceWindow, setPendingWcpSourceWindow } from "../../core/handlers/dacp/wcp-pending-source-window"
+import {
+  clearPendingWcpSourceWindow,
+  setPendingWcpSourceWindow,
+} from "../../core/handlers/dacp/wcp-pending-source-window"
+import type { HostIntentResolverPayload, HostIntentResolverResponse } from "../../host-contracts"
 import type {
   AppConnectionMetadata,
-  IntentResolverPayload,
-  IntentResolverResponse,
   WCP1HelloMessage,
   WCPConnectorOptions,
 } from "../../protocols/wcp/wcp-types"
 
+export type { AppConnectionMetadata, WCPConnectorOptions } from "../../protocols/wcp/wcp-types"
+export type { WCPConnectorEvents } from "./wcp-connector-events"
 export type {
-  AppConnectionMetadata,
-  IntentHandler,
-  IntentResolverPayload,
-  IntentResolverResponse,
-  WCPConnectorEvents,
-  WCPConnectorOptions,
-} from "../../protocols/wcp/wcp-types"
+  HostIntentResolverHandler as IntentHandler,
+  HostIntentResolverPayload as IntentResolverPayload,
+  HostIntentResolverResponse as IntentResolverResponse,
+} from "../../host-contracts"
 
 /**
  * WCP Connector for browser-based Desktop Agents.
@@ -380,9 +381,9 @@ export class WCPConnector extends WCPEventEmitter {
    * @returns Promise that resolves with the user's selection or rejects on timeout/cancel
    */
   requestIntentResolution(
-    payload: IntentResolverPayload,
+    payload: HostIntentResolverPayload,
     timeoutMs?: number
-  ): Promise<IntentResolverResponse> {
+  ): Promise<HostIntentResolverResponse> {
     const timeout = timeoutMs ?? this.options.intentResolutionTimeout
     return requestIntentResolution(
       this.pendingIntentResolutions,
@@ -397,7 +398,7 @@ export class WCPConnector extends WCPEventEmitter {
    *
    * @param response - User's selection (or null if cancelled)
    */
-  resolveIntentSelection(response: IntentResolverResponse): void {
+  resolveIntentSelection(response: HostIntentResolverResponse): void {
     resolveIntentSelection(this.pendingIntentResolutions, response)
   }
 

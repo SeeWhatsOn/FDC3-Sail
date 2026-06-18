@@ -1,4 +1,4 @@
-import type { AppMetadata, BrowserTypes } from "@finos/fdc3"
+import type { BrowserTypes } from "@finos/fdc3"
 import type { Logger } from "../../core/interfaces/logger"
 import type {
   AppRequestMessage,
@@ -68,7 +68,7 @@ export function isAgentMessage(
 }
 
 /** WCP3Handshake `payload.intentResolverUrl` / `payload.channelSelectorUrl` per FDC3 2.2 */
-export type WcpInjectedUiUrl = string | false
+export type WcpInjectedUiUrl = string | boolean
 
 /**
  * Configuration options for WCPConnector
@@ -192,68 +192,4 @@ export interface AppConnectionMetadata {
    * Can be used by hosting applications to correlate connections with UI elements.
    */
   hostIdentifier?: string
-}
-
-/**
- * Handler option for intent resolution
- */
-export type IntentHandler = AppMetadata & {
-  /** Whether this is a running instance (has active listener) */
-  isRunning: boolean
-}
-
-/**
- * Payload for intent resolution request to UI
- */
-export interface IntentResolverPayload {
-  /** Unique request ID for correlation */
-  requestId: string
-  /** Intent name being raised */
-  intent: string
-  /** Context being passed with intent */
-  context: unknown
-  /** Available handlers to choose from */
-  handlers: IntentHandler[]
-}
-
-/**
- * Response from UI with user's handler selection
- */
-export interface IntentResolverResponse {
-  /** Request ID this is responding to */
-  requestId: string
-  /** Selected handler, or null if cancelled */
-  selectedHandler: { instanceId?: string; appId: string } | null
-}
-
-/**
- * Event types emitted by WCPConnector
- */
-export interface WCPConnectorEvents {
-  /**
-   * Fired when a new app successfully completes WCP handshake
-   */
-  appConnected: (metadata: AppConnectionMetadata) => void
-
-  /**
-   * Fired when an app disconnects
-   */
-  appDisconnected: (instanceId: string) => void
-
-  /**
-   * Fired when handshake fails
-   */
-  handshakeFailed: (error: Error, connectionAttemptUuid: string) => void
-
-  /**
-   * Fired when an app's channel membership changes
-   * channelId is null when app leaves all channels
-   */
-  channelChanged: (instanceId: string, channelId: string | null) => void
-
-  /**
-   * Fired when intent resolution UI is needed
-   * UI should display handler options and call resolveIntentSelection()
-   */
-  intentResolverNeeded: (payload: IntentResolverPayload) => void
 }

@@ -36,6 +36,7 @@ type ResolveAppTargetInstanceOptions = {
   validatedContext: Context
   preferredInstanceId?: string
   runningListenerInstanceId?: string
+  forceLaunch?: boolean
 }
 
 export function normalizeTargetApp(target: unknown): NormalizedTargetApp | undefined {
@@ -102,6 +103,11 @@ export async function resolveAppTargetInstance(
 
   if (runningListenerInstanceId) {
     return { targetInstanceId: runningListenerInstanceId, targetInstanceIsLaunched: false }
+  }
+
+  if (options.forceLaunch) {
+    const targetInstanceId = await launchAppAndWaitForInstance(appId, context, validatedContext)
+    return { targetInstanceId, targetInstanceIsLaunched: true }
   }
 
   const runningInstances = getInstancesByAppId(context.getState(), appId).filter(

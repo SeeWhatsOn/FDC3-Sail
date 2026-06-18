@@ -1,18 +1,18 @@
-import type { IntentResolverPayload, IntentResolverResponse } from "./wcp-types"
+import type { HostIntentResolverPayload, HostIntentResolverResponse } from "../../host-contracts"
 import { consoleLogger } from "../../core/interfaces/logger"
 
 export interface PendingIntentResolution {
-  resolve: (response: IntentResolverResponse) => void
+  resolve: (response: HostIntentResolverResponse) => void
   reject: (error: Error) => void
   timeoutId: ReturnType<typeof setTimeout>
 }
 
 export function requestIntentResolution(
   pendingIntentResolutions: Map<string, PendingIntentResolution>,
-  emitIntentResolverNeeded: (payload: IntentResolverPayload) => void,
-  payload: IntentResolverPayload,
+  emitIntentResolverNeeded: (payload: HostIntentResolverPayload) => void,
+  payload: HostIntentResolverPayload,
   timeoutMs: number
-): Promise<IntentResolverResponse> {
+): Promise<HostIntentResolverResponse> {
   return new Promise((resolve, reject) => {
     // Set up timeout to reject if UI doesn't respond
     const timeoutId = setTimeout(() => {
@@ -34,7 +34,7 @@ export function requestIntentResolution(
 
 export function resolveIntentSelection(
   pendingIntentResolutions: Map<string, PendingIntentResolution>,
-  response: IntentResolverResponse
+  response: HostIntentResolverResponse
 ): void {
   const pending = pendingIntentResolutions.get(response.requestId)
   if (!pending) {

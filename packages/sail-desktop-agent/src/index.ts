@@ -40,6 +40,7 @@ export * from "./host-contracts"
 // Browser Desktop Agent preset (WCP + in-memory transport wiring)
 export {
   createBrowserDesktopAgent,
+  type BrowserDesktopAgent,
   type BrowserDesktopAgentOptions,
 } from "./presets/browser-desktop-agent.js"
 

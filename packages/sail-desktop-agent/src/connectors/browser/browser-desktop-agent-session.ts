@@ -1,10 +1,12 @@
 import type { DesktopAgent } from "../../core/desktop-agent"
+import type { IntentResolverUIMethods } from "../../host-contracts"
 import type { Transport } from "../../core/interfaces/transport"
 import type { WCPConnector } from "./wcp-connector"
 
 export interface BrowserDesktopAgentSession {
   wcpConnector: WCPConnector
   connectorTransport: Transport
+  intentResolverUI?: IntentResolverUIMethods
 }
 
 const browserDesktopAgentSessions = new WeakMap<DesktopAgent, BrowserDesktopAgentSession>()
@@ -24,7 +26,9 @@ export function isBrowserDesktopAgent(desktopAgent: DesktopAgent): boolean {
  * Edge internals for a {@link DesktopAgent} created by {@link createBrowserDesktopAgent}.
  * Integrators normally do not need this — use {@link SailPlatform} or host contracts instead.
  */
-export function getBrowserDesktopAgentSession(desktopAgent: DesktopAgent): BrowserDesktopAgentSession {
+export function getBrowserDesktopAgentSession(
+  desktopAgent: DesktopAgent
+): BrowserDesktopAgentSession {
   const session = browserDesktopAgentSessions.get(desktopAgent)
   if (!session) {
     throw new Error(

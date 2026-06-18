@@ -16,10 +16,10 @@ import {
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
 import type {
   DACPHandlerContext,
-  IntentResolutionCallback,
   MessageValidator,
   PendingIntentPromiseEntry,
 } from "./handlers/types"
+import type { IntentResolutionCallback } from "./handlers/dacp/intent-resolution-callback"
 import type { DirectoryApp } from "./app-directory/types"
 import type { BrowserTypes } from "@finos/fdc3"
 import type { AgentState, StateSetter } from "./state/types"
