@@ -3,7 +3,7 @@ title: "Wire WCP5 CONNECTED lifecycle and heartbeat policy"
 slug: wire-wcp5-connected-instance-lifecycle
 kind: task
 type: feature
-status: waiting_on_user
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -153,6 +153,10 @@ Option A lifecycle: host pre-register stays `PENDING` until WCP5 sets `CONNECTED
 
 _(empty)_
 
+- 2026-06-18 human approve — committed and pushed by user on v3-pre
+
 ## Learnings extracted
 
-_(empty)_
+- Cucumber `initializeDesktopAgent()` defaults `heartbeatEnabled: false`; heartbeat scenarios opt in via `A desktop agent with heartbeat checking`.
+- Do not wire `requestIntentResolution` on default Cucumber init; lazy-wire for cancel scenarios so resolver UI tests assert `appIntent` payload.
+- BDD apps without app-directory entries may use direct CONNECTED; directory apps use production WCP4→WCP5.
