@@ -54,7 +54,8 @@ export class CustomWorld extends World {
 
   // Test data storage (for sharing data between steps)
   props: TestProps = {}
-  private uuidCounter: number = 0
+  /** Deterministic ids for step createMeta / createUUID only — not wire response/event ids. */
+  private testUuidCounter: number = 0
 
   constructor(options: IWorldOptions<unknown>) {
     super(options)
@@ -72,20 +73,40 @@ export class CustomWorld extends World {
     channels: BrowserTypes.Channel[],
     heartbeatConfig?: { intervalMs?: number; timeoutMs?: number }
   ): void {
-    this.uuidCounter = 0
-    const deterministicRandomUUID = () => `uuid${this.uuidCounter++}`
+    // Cucumber defaults: no heartbeat timers unless a scenario opts in via heartbeatConfig
+    // (see "A desktop agent with heartbeat checking"). WCP5-on-open would otherwise leave
+    // timers active and break disconnect-cleanup assertions.
+    const heartbeatEnabled = heartbeatConfig !== undefined
+    this.testUuidCounter = 0
+    // Fresh scenario: drop stale instance/uuid harness state from the prior scenario.
+    delete this.props.instances
+    delete this.props.lastContextListenerId
+    delete this.props.lastIntentListenerId
+    delete this.props.contextListenersByInstance
+    delete this.props.intentListenersByInstance
+    // Wire ids (DACP responseUuid, eventUuid, WCP mint) must not advance the test request counter
+    // used by createMeta / hard-coded uuid3 listener tables.
+    let wireUuidCounter = 0
+    const wireRandomUUID = () => `wire-${wireUuidCounter++}`
     if (!globalThis.crypto) {
       globalThis.crypto = {
-        randomUUID: deterministicRandomUUID as unknown as Crypto["randomUUID"],
+        randomUUID: wireRandomUUID as unknown as Crypto["randomUUID"],
       } as Crypto
     } else {
-      globalThis.crypto.randomUUID = deterministicRandomUUID as unknown as Crypto["randomUUID"]
+      globalThis.crypto.randomUUID = wireRandomUUID as unknown as Crypto["randomUUID"]
     }
 
     // Create MOCK external dependencies - avoid side effects
     this.mockTransport = new MockTransport()
     this.mockAppLauncher = new MockAppLauncher()
     this.mockIntentResolver = new MockIntentResolver()
+    const originalCancelNext = this.mockIntentResolver.cancelNextResolution.bind(
+      this.mockIntentResolver
+    )
+    this.mockIntentResolver.cancelNextResolution = () => {
+      originalCancelNext()
+      this.enableIntentResolverCallback()
+    }
 
     // Create app directory manager for test setup
     this.appDirectoryManager = new AppDirectoryManager()
@@ -95,7 +116,6 @@ export class CustomWorld extends World {
     this.desktopAgent = new DesktopAgent({
       transport: this.mockTransport,
       appLauncher: this.mockAppLauncher,
-      requestIntentResolution: this.mockIntentResolver.createCallback(),
       appDirectoryManager: this.appDirectoryManager,
       userChannels: channels,
       implementationMetadata: {
@@ -103,6 +123,7 @@ export class CustomWorld extends World {
         providerVersion: "1.0.0",
       },
       openContextListenerTimeoutMs: 2000,
+      heartbeatEnabled,
       heartbeatIntervalMs: heartbeatConfig?.intervalMs ?? 30_000,
       heartbeatTimeoutMs: heartbeatConfig?.timeoutMs ?? 60_000,
     })
@@ -126,6 +147,17 @@ export class CustomWorld extends World {
   }
 
   /**
+   * Wire host intent resolver callback on the live agent (no re-init).
+   * Used when a scenario simulates user cancellation via the mock resolver.
+   */
+  enableIntentResolverCallback(): void {
+    const agent = this.desktopAgent as unknown as {
+      requestIntentResolution?: ReturnType<MockIntentResolver["createCallback"]>
+    }
+    agent.requestIntentResolution = this.mockIntentResolver.createCallback()
+  }
+
+  /**
    * Get current agent state for assertions.
    * Use this instead of accessing registries directly.
    */
@@ -141,10 +173,10 @@ export class CustomWorld extends World {
   }
 
   /**
-   * Helper to create unique UUIDs for test messages
+   * Deterministic request ids for Cucumber steps (createMeta). Wire responses use crypto.randomUUID.
    */
   createUUID(): string {
-    return crypto.randomUUID()
+    return `uuid${this.testUuidCounter++}`
   }
 }
 

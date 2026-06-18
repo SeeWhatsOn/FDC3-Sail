@@ -10,7 +10,8 @@ import {
   UserCancelledError,
 } from "../../../errors/fdc3-errors"
 import { getInstance, getInstancesByAppId } from "../../../state/selectors"
-import { findIntentHandlers, launchAppAndWaitForInstance } from "./intent-helpers"
+import { findIntentHandlers, appIntentForWireResponse } from "./intent-helpers"
+import { launchAppAndWaitForInstance } from "./intent-launch-helpers"
 import {
   appsToIntentHandlerOptions,
   createResolverAppIntent,
@@ -185,7 +186,9 @@ export async function handleRaiseIntentRequest(
         targetInstanceId = resolvedTarget.targetInstanceId
         targetInstanceIsLaunched = resolvedTarget.targetInstanceIsLaunched
       } else {
-        const response = createDACPSuccessResponse(message, "raiseIntentResponse", { appIntent })
+        const response = createDACPSuccessResponse(message, "raiseIntentResponse", {
+          appIntent: appIntentForWireResponse(appIntent),
+        })
         sendDACPResponse({ response, instanceId, transport })
         return
       }

@@ -18,7 +18,8 @@ import { sendDACPResponse } from "./utils/dacp-response-utils"
 import { startHeartbeat } from "./heartbeat-handlers"
 import { cleanupDACPHandlers } from "./cleanup"
 import { getInstance } from "../../state/selectors"
-import { connectInstance } from "../../state/mutators"
+import { connectInstance, updateInstanceState } from "../../state/mutators"
+import { AppInstanceState } from "../../state/types"
 import type { DirectoryApp } from "../../app-directory/types"
 import { getInstanceIdentityMap, type InstanceIdentityRecord } from "./instance-identity-registry"
 import { takePendingWcpSourceWindow } from "./wcp-pending-source-window"
@@ -242,6 +243,9 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
 
     logger.info("[WCP4] Validation successful, sending WCP5 response", response.payload)
 
+    // Option A lifecycle: host open pre-register stays PENDING until WCP5 succeeds.
+    context.setState(state => updateInstanceState(state, instanceId, AppInstanceState.CONNECTED))
+
     // Use the source instanceId (temporary) as destination so WCP connector can migrate it
     // The WCP connector will intercept this response and migrate from temp to actual instanceId
     const sourceInstanceId = context.instanceId
@@ -259,6 +263,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
 
     transport.send(responseWithRouting)
 
+    // Heartbeat liveness is optional; WCP6 still removes the instance when heartbeat is off.
     if (context.heartbeatEnabled) {
       startHeartbeat(instanceId, context)
     }

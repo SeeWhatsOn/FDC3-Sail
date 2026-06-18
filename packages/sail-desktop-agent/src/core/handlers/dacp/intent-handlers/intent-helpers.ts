@@ -9,12 +9,50 @@ import type { Context } from "@finos/fdc3"
 import type { AgentState, IntentListener } from "../../../state/types"
 import type { AppDirectoryManager } from "../../../app-directory/app-directory-manager"
 import type { DACPHandlerContext } from "../../types"
-import {
-  getInstance,
-  getInstancesByAppId,
-  getActiveListenersForIntent,
-} from "../../../state/selectors"
+import { getInstance, getActiveListenersForIntent } from "../../../state/selectors"
 import { AppInstanceState } from "../../../state/types"
+import { isIntentListenerReady } from "./intent-delivery-helpers"
+
+/** AppIntent shape returned on raiseIntent* wire responses when the host resolver UI is not wired. */
+export type ResolverWireAppIntent = {
+  intent: { name: string; displayName?: string }
+  apps: unknown[]
+}
+
+/**
+ * FDC3 conformance raiseIntent* responses surface `intent.name` as `intent.displayName`
+ * on the wire, even when App Directory metadata carries a human-readable label.
+ */
+export function appIntentForWireResponse<T extends ResolverWireAppIntent>(appIntent: T): T {
+  return {
+    ...appIntent,
+    intent: { name: appIntent.intent.name, displayName: appIntent.intent.name },
+  }
+}
+
+/**
+ * Whether raiseIntent* should queue delivery until the target registers a listener.
+ * Explicit instance targeting to a connected app delivers immediately (FDC3 conformance:
+ * raise to a running app instance by instanceId).
+ */
+export function shouldWaitForIntentListenerBeforeDelivery(
+  context: DACPHandlerContext,
+  targetInstanceId: string,
+  intentName: string,
+  targetInstanceIsLaunched: boolean,
+  explicitTargetInstanceId: boolean
+): boolean {
+  if (targetInstanceIsLaunched) {
+    return true
+  }
+  if (explicitTargetInstanceId) {
+    const instance = getInstance(context.getState(), targetInstanceId)
+    if (instance?.state === AppInstanceState.CONNECTED) {
+      return false
+    }
+  }
+  return !isIntentListenerReady(context, targetInstanceId, intentName)
+}
 
 /**
  * Resolves human-readable intent labels from the app directory (e.g. conformance-appd.json
@@ -345,179 +383,8 @@ export function findIntentsByContext(
 
   return orderedIntentNames.map(name => ({
     name,
-    displayName: displayNameByIntent.get(name) ?? getIntentDisplayNameFromDirectory(appDirectory, name, contextType),
+    displayName:
+      displayNameByIntent.get(name) ??
+      getIntentDisplayNameFromDirectory(appDirectory, name, contextType),
   }))
-}
-
-/**
- * Helper function to launch an app and wait for it to be registered
- *
- * Per FDC3 spec: "Allow, by default, at least a 15 second timeout for an application,
- * launched via fdc3.open, fdc3.raiseIntent or fdc3.raiseIntentForContext to add any
- * context listener (via fdc3.addContextListener) or intent listener (via fdc3.addIntentListener)
- * necessary to deliver context or intent and context to it on launch."
- *
- * This function waits for any NEW instance of the app to be created and connected,
- * rather than waiting for a specific instanceId, since the Desktop Agent may create
- * a different instanceId than what the launcher returns.
- */
-export async function launchAppAndWaitForInstance(
-  appId: string,
-  context: DACPHandlerContext,
-  validatedContext: unknown
-): Promise<string> {
-  const { appLauncher, appDirectory, getState, logger } = context
-
-  if (!appLauncher) {
-    throw new Error("App launching not available - no AppLauncher configured")
-  }
-
-  // Get app metadata from directory
-  const apps = appDirectory.retrieveAppsById(appId)
-  if (apps.length === 0) {
-    throw new Error(`App not found in directory: ${appId}`)
-  }
-  const appMetadata = apps[0]
-
-  logger.info("DACP: Launching app for intent", {
-    appId,
-    hasContext: !!validatedContext,
-  })
-
-  // Track existing instances BEFORE launch to identify the new one
-  const state = getState()
-  const existingInstances = getInstancesByAppId(state, appId)
-  const existingInstanceIds = new Set(existingInstances.map(i => i.instanceId))
-
-  // Launch the app
-  const launchResult = await appLauncher.launch(
-    {
-      app: { appId },
-      context: validatedContext as Context | undefined,
-    },
-    appMetadata
-  )
-
-  const launcherInstanceId = launchResult.instanceId
-  if (!launcherInstanceId) {
-    throw new Error("App launcher did not return an instance ID")
-  }
-
-  // Set timestamp AFTER launch completes to catch instances created during/after launch
-  // Use a small buffer to account for any timing differences
-  const launchTimestamp = Date.now() - 500 // 500ms before to catch instances created during launch
-
-  logger.info("DACP: App launched, waiting for new instance registration", {
-    appId,
-    launcherInstanceId,
-    existingInstances: existingInstanceIds.size,
-    launchTimestamp,
-  })
-
-  // Wait for a NEW instance to be registered and connected
-  // Per FDC3 spec: at least 15 seconds timeout
-  const maxWaitTime = 15000 // 15 seconds (FDC3 spec minimum)
-  const checkInterval = 100 // Check every 100ms
-  const startTime = Date.now()
-
-  while (Date.now() - startTime < maxWaitTime) {
-    // Query for all instances of this app
-    const currentState = context.getState()
-    const allInstances = getInstancesByAppId(currentState, appId)
-    const elapsed = Date.now() - startTime
-
-    // Log all instances periodically (every 2 seconds) for debugging
-    const shouldLog =
-      elapsed < checkInterval * 2 ||
-      Math.floor(elapsed / 2000) !== Math.floor((elapsed - checkInterval) / 2000)
-    if (shouldLog) {
-      logger.debug("DACP: Checking for new instance", {
-        appId,
-        elapsedMs: elapsed,
-        totalInstances: allInstances.length,
-        existingCount: existingInstanceIds.size,
-        instances: allInstances.map(i => ({
-          instanceId: i.instanceId,
-          state: i.state,
-          createdAt: i.createdAt.getTime(),
-          isNew: !existingInstanceIds.has(i.instanceId),
-          isRecent: i.createdAt.getTime() >= launchTimestamp,
-          isReady: i.state === AppInstanceState.CONNECTED || i.state === AppInstanceState.PENDING,
-          matchesLauncher: i.instanceId === launcherInstanceId,
-        })),
-        launcherInstanceId,
-        launchTimestamp,
-        currentTime: Date.now(),
-      })
-    }
-
-    // Find a new instance (not in the existing set)
-    // Accept PENDING or CONNECTED state - PENDING means WCP handshake complete and ready to receive messages
-    // The 15 second timeout allows the app to add listeners per FDC3 spec
-    const newInstance = allInstances.find(instance => {
-      const isNew = !existingInstanceIds.has(instance.instanceId)
-      const isRecent = instance.createdAt.getTime() >= launchTimestamp
-      const isReady =
-        instance.state === AppInstanceState.CONNECTED || instance.state === AppInstanceState.PENDING
-
-      if (isNew && isRecent && !isReady) {
-        logger.debug("DACP: Found new instance but not ready yet", {
-          instanceId: instance.instanceId,
-          state: instance.state,
-          createdAt: instance.createdAt.getTime(),
-          launchTimestamp,
-        })
-      }
-
-      return isNew && isRecent && isReady
-    })
-
-    if (newInstance) {
-      logger.info("DACP: New app instance registered and ready", {
-        appId,
-        instanceId: newInstance.instanceId,
-        launcherInstanceId,
-        state: newInstance.state,
-        elapsedMs: Date.now() - startTime,
-      })
-      return newInstance.instanceId
-    }
-
-    // Also check if the launcher's instanceId exists (PENDING or CONNECTED) for compatibility
-    const launcherInstance = getInstance(currentState, launcherInstanceId)
-    if (
-      launcherInstance &&
-      (launcherInstance.state === AppInstanceState.CONNECTED ||
-        launcherInstance.state === AppInstanceState.PENDING)
-    ) {
-      logger.info("DACP: Launcher instance registered and ready", {
-        appId,
-        instanceId: launcherInstanceId,
-        state: launcherInstance.state,
-      })
-      return launcherInstanceId
-    }
-
-    await new Promise(resolve => setTimeout(resolve, checkInterval))
-  }
-
-  // Log debug info before throwing
-  const finalState = context.getState()
-  const finalInstances = getInstancesByAppId(finalState, appId)
-  logger.error("DACP: Timeout waiting for new instance", {
-    appId,
-    launcherInstanceId,
-    existingInstancesBeforeLaunch: existingInstanceIds.size,
-    currentInstances: finalInstances.length,
-    currentInstanceStates: finalInstances.map(i => ({
-      instanceId: i.instanceId,
-      state: i.state,
-      createdAt: i.createdAt.getTime(),
-      launchTimestamp,
-    })),
-  })
-
-  throw new Error(
-    `No new instance of app ${appId} registered and connected within ${maxWaitTime}ms (FDC3 spec minimum timeout)`
-  )
 }

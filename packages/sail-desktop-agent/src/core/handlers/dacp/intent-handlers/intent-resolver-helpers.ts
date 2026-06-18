@@ -10,7 +10,11 @@ import type { DirectoryApp } from "../../../app-directory/types"
 import type { AgentState } from "../../../state/types"
 import { AppInstanceState, type AppInstance } from "../../../state/types"
 import type { IntentHandlerOption, IntentResolutionChoice } from "../intent-resolution-callback"
-import { getActiveListenersForIntent, getInstance } from "../../../state/selectors"
+import {
+  getActiveListenersForIntent,
+  getInstance,
+  getInstancesByAppId,
+} from "../../../state/selectors"
 import { isContextTypeCompatible, isResultTypeCompatible } from "./intent-helpers"
 
 export function findMatchingIntentResolutionChoice(
@@ -125,14 +129,15 @@ export function createResolverAppIntent(
 
   const directoryAppIds = new Set(directoryMatches.map(app => app.appId))
 
-  // 1) Running instances for directory apps (directory order).
+  // 1) Connected instances for directory apps (directory order).
+  // Include running apps that declare the intent in AppD even when they have not yet
+  // registered an intent listener for this intent name (FDC3 resolver / conformance BDD).
   directoryMatches.forEach(app => {
-    const listenerInstances = runningListeners
-      .filter(listener => listener.appId === app.appId)
-      .map(listener => getInstance(state, listener.instanceId))
-      .filter((instance): instance is AppInstance => !!instance)
+    const connectedInstances = getInstancesByAppId(state, app.appId).filter(
+      instance => instance.state === AppInstanceState.CONNECTED
+    )
 
-    listenerInstances.forEach(instance => {
+    connectedInstances.forEach(instance => {
       apps.push(appToMetadata(app, app.appId, intentName, instance))
     })
   })

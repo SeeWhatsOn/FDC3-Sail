@@ -3,7 +3,7 @@ import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
-import { FDC3ChannelError, ListenerNotFoundChannelError } from "../../errors/fdc3-errors"
+import { FDC3ChannelError } from "../../errors/fdc3-errors"
 import { getInstance, getEventListenersForType } from "../../state/selectors"
 import {
   addEventListener,
@@ -105,7 +105,10 @@ export function handleEventListenerUnsubscribeRequest(
     // Check if listener exists before removing
     const listener = getState().events.listeners[listenerUUID]
     if (!listener) {
-      throw new ListenerNotFoundChannelError(`Event listener ${listenerUUID} not found`)
+      throw new FDC3ChannelError(
+        "ListenerError" as ChannelError,
+        `Event listener ${listenerUUID} not found`
+      )
     }
 
     setState(state => removeEventListener(state, listenerUUID))

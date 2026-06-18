@@ -18,11 +18,11 @@ type GetCurrentContextRequest = BrowserTypes.GetCurrentContextRequest
  */
 function ensureAppInstance(world: CustomWorld, appStr: string): string {
   const instanceId = getAppInstanceId(world, appStr)
-  const meta = createMeta(world, appStr)
 
   const state = world.getState()
   const instance = getInstance(state, instanceId)
   if (!instance) {
+    const meta = createMeta(world, appStr)
     world.updateState(currentState =>
       updateInstanceState(
         connectInstance(currentState, {
@@ -64,6 +64,11 @@ When(
       ?.listenerUUID
     if (listenerUUID) {
       this.props.lastContextListenerId = listenerUUID
+      const instanceId = getAppInstanceId(this, app)
+      const byInstance =
+        (this.props.contextListenersByInstance as Record<string, string> | undefined) ?? {}
+      byInstance[instanceId] = listenerUUID
+      this.props.contextListenersByInstance = byInstance
     }
   }
 )
@@ -93,10 +98,19 @@ When(
     ensureAppInstance(this, app)
     const meta = createMeta(this, app)
 
+    const resolvedId = handleResolve(id, this) ?? id
+    const instanceId = getAppInstanceId(this, app)
+    const byInstance = this.props.contextListenersByInstance as Record<string, string> | undefined
+    const instanceListenerId = byInstance?.[instanceId]
+    const listenerUUID =
+      instanceListenerId && resolvedId.startsWith("uuid") && resolvedId !== instanceListenerId
+        ? instanceListenerId
+        : resolvedId
+
     const message: ContextListenerUnsubscribeRequest = {
       meta,
       payload: {
-        listenerUUID: handleResolve(id, this) ?? id,
+        listenerUUID,
       },
       type: "contextListenerUnsubscribeRequest",
     }

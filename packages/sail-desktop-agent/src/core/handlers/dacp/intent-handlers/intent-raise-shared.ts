@@ -9,13 +9,10 @@ import {
   TargetAppUnavailableError,
   TargetInstanceUnavailableError,
 } from "../../../errors/fdc3-errors"
-import {
-  attemptIntentDelivery,
-  isIntentListenerReady,
-  queueIntentDelivery,
-} from "./intent-delivery-helpers"
+import { attemptIntentDelivery, queueIntentDelivery } from "./intent-delivery-helpers"
 import type { DACPHandlerContext, IntentRequestType } from "../../types"
-import { launchAppAndWaitForInstance } from "./intent-helpers"
+import { shouldWaitForIntentListenerBeforeDelivery } from "./intent-helpers"
+import { launchAppAndWaitForInstance } from "./intent-launch-helpers"
 
 type RegisterPendingIntentStateOptions = {
   requestId: string
@@ -145,10 +142,16 @@ export function schedulePendingIntentDelivery(
   requestId: string,
   targetInstanceId: string,
   intentName: string,
-  targetInstanceIsLaunched: boolean
+  targetInstanceIsLaunched: boolean,
+  explicitTargetInstanceId = false
 ): void {
-  const shouldWaitForListener =
-    targetInstanceIsLaunched || !isIntentListenerReady(context, targetInstanceId, intentName)
+  const shouldWaitForListener = shouldWaitForIntentListenerBeforeDelivery(
+    context,
+    targetInstanceId,
+    intentName,
+    targetInstanceIsLaunched,
+    explicitTargetInstanceId
+  )
 
   if (shouldWaitForListener) {
     queueIntentDelivery(context, requestId, true)

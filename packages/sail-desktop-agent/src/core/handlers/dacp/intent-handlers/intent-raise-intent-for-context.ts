@@ -12,8 +12,9 @@ import { getAllIntentListeners, getInstance } from "../../../state/selectors"
 import {
   findIntentHandlers,
   findIntentsByContext,
-  launchAppAndWaitForInstance,
+  appIntentForWireResponse,
 } from "./intent-helpers"
+import { launchAppAndWaitForInstance } from "./intent-launch-helpers"
 import {
   createResolverAppIntent,
   appsToIntentHandlerOptions,
@@ -79,7 +80,8 @@ function finalizeRaiseIntentForContextDelivery(
   validatedContext: BrowserTypes.Context,
   targetInstanceId: string,
   targetAppId: string,
-  targetInstanceIsLaunched: boolean
+  targetInstanceIsLaunched: boolean,
+  explicitTargetInstanceId: boolean
 ): void {
   const requestId = message.meta.requestUuid
   registerPendingIntentPromise(context, requestId, "raiseIntentForContextRequest")
@@ -96,7 +98,8 @@ function finalizeRaiseIntentForContextDelivery(
     requestId,
     targetInstanceId,
     intentName,
-    targetInstanceIsLaunched
+    targetInstanceIsLaunched,
+    explicitTargetInstanceId
   )
   attachPendingIntentTimeout(context, requestId)
 }
@@ -216,7 +219,7 @@ export async function handleRaiseIntentForContextRequest(
         targetInstanceIsLaunched = resolvedTarget.targetInstanceIsLaunched
       } else {
         const response = createDACPSuccessResponse(message, "raiseIntentForContextResponse", {
-          appIntents,
+          appIntents: appIntents.map(appIntentForWireResponse),
         })
         sendDACPResponse({ response, instanceId, transport })
         return
@@ -273,7 +276,8 @@ export async function handleRaiseIntentForContextRequest(
       validatedContext,
       targetInstanceId,
       resolvedTargetAppId,
-      targetInstanceIsLaunched
+      targetInstanceIsLaunched,
+      Boolean(targetApp?.instanceId)
     )
   } catch (error) {
     const requestId = message.meta.requestUuid

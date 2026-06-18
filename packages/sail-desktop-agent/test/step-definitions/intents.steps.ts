@@ -29,38 +29,40 @@ type ListensFor = {
  */
 function ensureAppInstance(world: CustomWorld, appStr: string): string {
   let instanceId = getAppInstanceId(world, appStr)
-  const meta = createMeta(world, appStr)
 
   const state = world.getState()
   let instance = getInstance(state, instanceId)
-  if (!instance && meta.source?.appId) {
-    const existingInstances = getInstancesByAppId(state, meta.source.appId).filter(
-      candidate => candidate.state === AppInstanceState.CONNECTED
-    )
-    if (existingInstances.length === 1) {
-      instanceId = existingInstances[0].instanceId
-      if (!world.props.instances) {
-        world.props.instances = {}
-      }
-      world.props.instances[appStr] = instanceId
-      instance = getInstance(state, instanceId)
-    }
-  }
   if (!instance) {
-    world.updateState(currentState =>
-      updateInstanceState(
-        connectInstance(currentState, {
-          instanceId,
-          appId: meta.source.appId,
-          metadata: {
-            appId: meta.source.appId,
-            name: meta.source.appId,
-          },
-        }),
-        instanceId,
-        AppInstanceState.CONNECTED
+    const meta = createMeta(world, appStr)
+    if (meta.source?.appId) {
+      const existingInstances = getInstancesByAppId(state, meta.source.appId).filter(
+        candidate => candidate.state === AppInstanceState.CONNECTED
       )
-    )
+      if (existingInstances.length === 1) {
+        instanceId = existingInstances[0].instanceId
+        if (!world.props.instances) {
+          world.props.instances = {}
+        }
+        world.props.instances[appStr] = instanceId
+        instance = getInstance(state, instanceId)
+      }
+    }
+    if (!instance) {
+      world.updateState(currentState =>
+        updateInstanceState(
+          connectInstance(currentState, {
+            instanceId,
+            appId: meta.source.appId,
+            metadata: {
+              appId: meta.source.appId,
+              name: meta.source.appId,
+            },
+          }),
+          instanceId,
+          AppInstanceState.CONNECTED
+        )
+      )
+    }
   }
 
   return instanceId
@@ -170,7 +172,7 @@ When(
     const message: FindIntentsByContextRequest = {
       meta,
       payload: {
-        context: contextMap[contextType],
+        context: contextMap[contextType] ?? { type: contextType },
         resultType: handleResolve(resultType, this) ?? undefined,
       },
       type: "findIntentsByContextRequest",
@@ -195,6 +197,18 @@ Given(
     }
 
     await this.mockTransport.receiveMessage(message)
+
+    const lastMessage = this.mockTransport.getLastMessage()
+    const listenerUUID = (lastMessage?.msg?.payload as { listenerUUID?: string } | undefined)
+      ?.listenerUUID
+    if (listenerUUID) {
+      this.props.lastIntentListenerId = listenerUUID
+      const instanceId = getAppInstanceId(this, appStr)
+      const byInstance =
+        (this.props.intentListenersByInstance as Record<string, string> | undefined) ?? {}
+      byInstance[instanceId] = listenerUUID
+      this.props.intentListenersByInstance = byInstance
+    }
   }
 )
 
@@ -215,6 +229,18 @@ Given(
     }
 
     await this.mockTransport.receiveMessage(message)
+
+    const lastMessage = this.mockTransport.getLastMessage()
+    const listenerUUID = (lastMessage?.msg?.payload as { listenerUUID?: string } | undefined)
+      ?.listenerUUID
+    if (listenerUUID) {
+      this.props.lastIntentListenerId = listenerUUID
+      const instanceId = getAppInstanceId(this, appStr)
+      const byInstance =
+        (this.props.intentListenersByInstance as Record<string, string> | undefined) ?? {}
+      byInstance[instanceId] = listenerUUID
+      this.props.intentListenersByInstance = byInstance
+    }
   }
 )
 
@@ -224,11 +250,20 @@ Given(
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
 
+    const resolvedId = handleResolve(id, this) as string
+    const instanceId = getAppInstanceId(this, appStr)
+    const byInstance = this.props.intentListenersByInstance as Record<string, string> | undefined
+    const instanceListenerId = byInstance?.[instanceId]
+    const listenerUUID =
+      instanceListenerId && resolvedId.startsWith("uuid") && resolvedId !== instanceListenerId
+        ? instanceListenerId
+        : resolvedId
+
     const message: IntentListenerUnsubscribeRequest = {
       type: "intentListenerUnsubscribeRequest",
       meta,
       payload: {
-        listenerUUID: handleResolve(id, this) as string,
+        listenerUUID,
       },
     }
 

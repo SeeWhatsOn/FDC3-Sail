@@ -22,3 +22,4 @@ packages/da-impl/coverage/*
 
 # Watson workflow — personal overrides (see plans/local/README.md)
 plans/local/user-overrides.yaml
+packages/sail-desktop-agent/reports/*

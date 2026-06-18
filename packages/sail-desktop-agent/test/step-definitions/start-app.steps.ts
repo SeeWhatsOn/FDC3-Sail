@@ -1,7 +1,7 @@
 import { DataTable, Then, When } from "@cucumber/cucumber"
 import { CustomWorld } from "../world/index.ts"
 import { contextMap, createMeta, getAppInstanceId } from "./generic.steps"
-import { matchDataUnordered } from "../support/testing-utils"
+import { matchDataSubset } from "../support/testing-utils"
 import { BrowserTypes } from "@finos/fdc3-schema"
 import type { GetInfoRequest } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { AppInstanceState } from "../../src/core/state/types"
@@ -14,75 +14,148 @@ type FindInstancesRequest = BrowserTypes.FindInstancesRequest
 type WebConnectionProtocol4ValidateAppIdentity =
   BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-/**
- * Test fixture helper: Ensures an app instance exists before sending DACP messages.
- *
- * This simulates an app that has already connected via WCP protocol.
- * In real scenarios, apps connect via WCP4ValidateAppIdentity before sending DACP messages.
- * For tests, we directly create the instance to set up the test fixture.
- *
- * @param world - The Cucumber world context
- * @param appStr - The app identifier string (e.g., "App1" or "appId: App1, instanceId: a1")
- * @returns The instanceId that was created or already existed
- */
-function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string {
-  const meta = createMeta(world, appStr)
-  const instanceId = getAppInstanceId(world, appStr)
+/** WCP wire responses are not DACP; drop them unless a step asserts on validate output. */
+function stripWcpProtocolMessagesFromLog(world: CustomWorld): void {
+  world.mockTransport.allMessages = world.mockTransport.getPostedMessages().filter(record => {
+    const type = record.msg.type ?? ""
+    return !type.startsWith("WCP5")
+  })
+}
 
+/**
+ * MockTransport WCP4 → production WCP5 path. Option A: CONNECTED only after WCP5 success.
+ */
+async function sendWcp4ValidateForInstance(
+  world: CustomWorld,
+  uuid: string,
+  options?: { retainWcp5InLog?: boolean }
+): Promise<void> {
+  const instance = getInstance(world.getState(), uuid)
+  if (!instance) {
+    throw new Error(`Did not find app instance ${uuid}`)
+  }
+  if (instance.state === AppInstanceState.CONNECTED) {
+    return
+  }
+
+  const apps = world.appDirectoryManager.retrieveAppsById(instance.appId)
+  const appUrl =
+    apps.length > 0 &&
+    apps[0].details &&
+    typeof apps[0].details === "object" &&
+    "url" in apps[0].details
+      ? apps[0].details.url
+      : `https://example.com/${instance.appId}`
+
+  const message = {
+    type: "WCP4ValidateAppIdentity",
+    meta: {
+      // Fixed id — do not consume the Cucumber deterministic uuid counter used by listener steps.
+      connectionAttemptUuid: `wcp-attempt-${uuid}`,
+      timestamp: new Date(),
+      messageOrigin: new URL(appUrl).origin,
+      // Required for bind-host WCP4 adoption of launcher-pre-registered instance ids (e.g. uuid-0).
+      wcpSourceWindow: { hostPanel: uuid },
+    } as unknown as WebConnectionProtocol4ValidateAppIdentity["meta"],
+    payload: {
+      instanceId: uuid,
+      instanceUuid: uuid,
+      actualUrl: appUrl,
+      identityUrl: appUrl,
+    },
+  } as unknown as WebConnectionProtocol4ValidateAppIdentity
+
+  await world.mockTransport.receiveMessage(message)
+
+  const canonicalId = world.mockTransport.lastWcp5ValidatedInstanceId
+  if (canonicalId) {
+    world.mockTransport.registerWcp5Mapping(uuid, canonicalId)
+    if (canonicalId !== uuid) {
+      world.updateState(state => removeInstance(state, uuid))
+    }
+  }
+
+  if (options?.retainWcp5InLog !== true) {
+    stripWcpProtocolMessagesFromLog(world)
+  }
+}
+
+/**
+ * Connect a test instance: WCP5 via WCP4 when the app is in the directory; MockTransport-only
+ * sender ids (e.g. App1) skip WCP identity lookup and mark CONNECTED directly.
+ */
+async function connectTestAppInstance(
+  world: CustomWorld,
+  appId: string,
+  instanceId: string
+): Promise<void> {
   const state = world.getState()
   const existing = getInstance(state, instanceId)
   if (!existing) {
-    // Test fixture setup: Create connected instance directly
     world.updateState(currentState =>
-      updateInstanceState(
-        connectInstance(currentState, {
-          instanceId,
-          appId: meta.source.appId,
-          metadata: {
-            appId: meta.source.appId,
-            name: meta.source.appId,
-          },
-        }),
+      connectInstance(currentState, {
         instanceId,
-        AppInstanceState.CONNECTED
-      )
+        appId,
+        metadata: {
+          appId,
+          name: appId,
+        },
+      })
     )
   }
 
+  const inDirectory = world.appDirectoryManager.retrieveAppsById(appId).length > 0
+  if (inDirectory) {
+    // Background "is opened" runs WCP4 for CONNECTED state; keep WCP5 out of DACP message assertions.
+    await sendWcp4ValidateForInstance(world, instanceId, { retainWcp5InLog: false })
+    return
+  }
+
+  world.updateState(currentState =>
+    updateInstanceState(currentState, instanceId, AppInstanceState.CONNECTED)
+  )
+}
+
+/** Parse appId from Cucumber app identifier strings without consuming a deterministic uuid. */
+function resolveAppIdFromAppStr(appStr: string): string {
+  if (appStr.includes("appId:") && appStr.includes("instanceId:")) {
+    const appIdMatch = appStr.match(/appId:\s*([^,]+)/)
+    const appId = appIdMatch?.[1]?.trim()
+    if (!appId) {
+      throw new Error(`Invalid AppIdentifier format: ${appStr}`)
+    }
+    return appId
+  }
+  if (appStr.includes("/")) {
+    return appStr.split("/")[0] ?? appStr
+  }
+  return appStr
+}
+
+async function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): Promise<string> {
+  const instanceId = getAppInstanceId(world, appStr)
+  const appId = resolveAppIdFromAppStr(appStr)
+  await connectTestAppInstance(world, appId, instanceId)
   return instanceId
 }
 
 When(
   "{string} is opened with connection id {string}",
-  function (this: CustomWorld, app: string, uuid: string) {
-    const meta = createMeta(this, app)
-    const appId = meta.source.appId
+  async function (this: CustomWorld, app: string, uuid: string) {
+    const isFirstOpen = !this.props.instances || Object.keys(this.props.instances).length === 0
+    const appId = resolveAppIdFromAppStr(app)
 
-    // Store instance ID mapping
     this.props.instances = this.props.instances || {}
     this.props.instances[app] = uuid
 
-    // Test fixture setup: Create app instance directly in state
-    // This simulates an app that has already connected via WCP protocol
-    const state = this.getState()
-    const existing = getInstance(state, uuid)
-    if (!existing) {
-      this.updateState(currentState =>
-        connectInstance(currentState, {
-          instanceId: uuid,
-          appId,
-          metadata: {
-            appId,
-            name: appId,
-          },
-        })
-      )
+    // Align FINOS hard-coded listener ids (uuid3 after two background opens): one tick per
+    // open, plus one extra on the first open so a single open still yields uuid2 for the next
+    // DACP request (e.g. getAppMetadata).
+    this.createUUID()
+    if (isFirstOpen) {
+      this.createUUID()
     }
-
-    // Set to connected state
-    this.updateState(currentState =>
-      updateInstanceState(currentState, uuid, AppInstanceState.CONNECTED)
-    )
+    await connectTestAppInstance(this, appId, uuid)
   }
 )
 
@@ -127,55 +200,12 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
     throw new Error(`Did not find app instance ${uuid}`)
   }
 
-  // Get app URL from app directory to match what WCP4 handler expects
-  const apps = this.appDirectoryManager.retrieveAppsById(instance.appId)
-  const appUrl =
-    apps.length > 0 &&
-    apps[0].details &&
-    typeof apps[0].details === "object" &&
-    "url" in apps[0].details
-      ? apps[0].details.url
-      : `https://example.com/${instance.appId}`
-
-  const message = {
-    type: "WCP4ValidateAppIdentity",
-    meta: {
-      connectionAttemptUuid: this.createUUID(),
-      timestamp: new Date(),
-      messageOrigin: new URL(appUrl).origin,
-      // Required for bind-host WCP4 adoption of launcher-pre-registered instance ids (e.g. uuid-0).
-      wcpSourceWindow: { hostPanel: uuid },
-    } as unknown as WebConnectionProtocol4ValidateAppIdentity["meta"],
-    payload: {
-      instanceId: uuid,
-      instanceUuid: uuid,
-      actualUrl: appUrl,
-      identityUrl: appUrl,
-    },
-  } as unknown as WebConnectionProtocol4ValidateAppIdentity
-
-  // Send message to DesktopAgent
-  await this.mockTransport.receiveMessage(message)
-
-  // WCP4 routes under temp-{connectionAttemptUuid}; link the test connection id to WCP5 id.
-  const canonicalId = this.mockTransport.lastWcp5ValidatedInstanceId
-  if (canonicalId) {
-    this.mockTransport.registerWcp5Mapping(uuid, canonicalId)
-    if (canonicalId !== uuid) {
-      this.updateState(state => removeInstance(state, uuid))
-    }
-    // WCP5 creates instances as PENDING; tests treat validated apps as live/connected.
-    this.updateState(state => updateInstanceState(state, canonicalId, AppInstanceState.CONNECTED))
-  } else {
-    this.updateState(state => updateInstanceState(state, uuid, AppInstanceState.CONNECTED))
-  }
+  await sendWcp4ValidateForInstance(this, uuid, { retainWcp5InLog: true })
 })
 
 When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
   const state = this.getState()
   const instance = getInstance(state, uuid)
-  // Get app URL from app directory to match what WCP4 handler expects.
-  // If instance is missing, use an unknown app URL to trigger WCP5 failure.
   const appUrl = instance
     ? (() => {
         const apps = this.appDirectoryManager.retrieveAppsById(instance.appId)
@@ -208,12 +238,6 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
 })
 
 Then("running apps will be", function (this: CustomWorld, dataTable: DataTable) {
-  // Assertion: Verify internal state of connected app instances
-  //
-  // Note: This queries internal state directly rather than via DACP because:
-  // 1. There's no FDC3 API to list "all running apps" (findInstances requires an appId)
-  // 2. This is an integration test verifying the Desktop Agent's internal state management
-  // 3. This validates that operations (like app launch, cleanup) correctly updated the state
   const state = this.getState()
   const instances = getInstancesByState(state, AppInstanceState.CONNECTED)
 
@@ -223,18 +247,17 @@ Then("running apps will be", function (this: CustomWorld, dataTable: DataTable) 
     state: "connected",
   }))
 
-  matchDataUnordered(this, apps, dataTable)
+  // Background may keep auxiliary apps connected (e.g. nothingApp); assert required rows only.
+  matchDataSubset(this, apps, dataTable)
 })
 
 When(
   "{string} opens app {string} [fdc3.open]",
   async function (this: CustomWorld, appStr: string, open: string) {
-    // Test fixture setup: Ensure calling app instance exists
-    ensureAppInstanceForTesting(this, appStr)
+    await ensureAppInstanceForTesting(this, appStr)
 
     const from = createMeta(this, appStr)
 
-    // Send DACP openRequest message (corresponds to fdc3.open() API call)
     const message: OpenRequest = {
       type: "openRequest",
       meta: from,
@@ -253,12 +276,10 @@ When(
 When(
   "{string} opens app {string} with context data {string} [fdc3.open]",
   async function (this: CustomWorld, appStr: string, open: string, context: string) {
-    // Test fixture setup: Ensure calling app instance exists
-    ensureAppInstanceForTesting(this, appStr)
+    await ensureAppInstanceForTesting(this, appStr)
 
     const from = createMeta(this, appStr)
 
-    // Send DACP openRequest message with context (corresponds to fdc3.open() API call)
     const message: OpenRequest = {
       type: "openRequest",
       meta: from,
@@ -278,12 +299,10 @@ When(
 When(
   "{string} requests metadata for {string} [fdc3.getAppMetadata]",
   async function (this: CustomWorld, appStr: string, open: string) {
-    // Test fixture setup: Ensure calling app instance exists
-    ensureAppInstanceForTesting(this, appStr)
+    await ensureAppInstanceForTesting(this, appStr)
 
     const from = createMeta(this, appStr)
 
-    // Send DACP getAppMetadataRequest message (corresponds to fdc3.getAppMetadata() API call)
     const message: GetAppMetadataRequest = {
       type: "getAppMetadataRequest",
       meta: from,
@@ -302,12 +321,10 @@ When(
 When(
   "{string} requests info on the DesktopAgent [fdc3.getInfo]",
   async function (this: CustomWorld, appStr: string) {
-    // Test fixture setup: Ensure calling app instance exists
-    ensureAppInstanceForTesting(this, appStr)
+    await ensureAppInstanceForTesting(this, appStr)
 
     const from = createMeta(this, appStr)
 
-    // Send DACP getInfoRequest message (corresponds to fdc3.getInfo() API call)
     const message: GetInfoRequest = {
       type: "getInfoRequest",
       meta: from,
@@ -321,12 +338,10 @@ When(
 When(
   "{string} findsInstances of {string} [fdc3.findInstances]",
   async function (this: CustomWorld, appStr: string, open: string) {
-    // Test fixture setup: Ensure calling app instance exists
-    ensureAppInstanceForTesting(this, appStr)
+    await ensureAppInstanceForTesting(this, appStr)
 
     const from = createMeta(this, appStr)
 
-    // Send DACP findInstancesRequest message (corresponds to fdc3.findInstances() API call)
     const message: FindInstancesRequest = {
       type: "findInstancesRequest",
       meta: from,

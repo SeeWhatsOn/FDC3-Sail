@@ -185,12 +185,23 @@ export function handleFindInstancesRequest(
   message: BrowserTypes.FindInstancesRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, logger } = context
+  const { transport, instanceId, getState, logger, appDirectory } = context
 
   try {
     const { app: appIdentifier } = message.payload
 
     logger.info("DACP: Finding instances for app", { appId: appIdentifier.appId })
+
+    if (appDirectory.retrieveAppsById(appIdentifier.appId).length === 0) {
+      sendDACPErrorResponse({
+        message,
+        errorType: ResolveError.NoAppsFound,
+        errorMessage: `App not found in directory: ${appIdentifier.appId}`,
+        instanceId,
+        transport,
+      })
+      return
+    }
 
     // Query for all instances of this app
     const instances = getInstancesByAppId(getState(), appIdentifier.appId)

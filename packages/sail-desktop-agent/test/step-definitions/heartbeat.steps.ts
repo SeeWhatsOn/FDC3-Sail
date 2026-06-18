@@ -30,12 +30,12 @@ function resolveCanonicalInstanceId(world: CustomWorld, appStr: string): string 
  */
 function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string {
   const instanceId = resolveCanonicalInstanceId(world, appStr)
-  const meta = createMeta(world, appStr)
-  meta.source.instanceId = instanceId
 
   const state = world.getState()
   const instance = getInstance(state, instanceId)
   if (!instance) {
+    const meta = createMeta(world, appStr)
+    meta.source.instanceId = instanceId
     // Test fixture setup: Create connected instance directly
     world.updateState(currentState =>
       updateInstanceState(
@@ -152,25 +152,20 @@ Then("I get the heartbeat times", function (this: CustomWorld) {
   this.props["result"] = result
 })
 
-Then(
-  "no DA event listeners remain for {string}",
-  function (this: CustomWorld, appStr: string) {
-    const instanceId = getAppInstanceId(this, appStr)
-    const remaining = getEventListenersForInstance(this.getState(), instanceId)
-    if (remaining.length > 0) {
-      throw new Error(
-        `Expected no DA event listeners for ${instanceId}, but found: ${JSON.stringify(remaining)}`
-      )
-    }
+Then("no DA event listeners remain for {string}", function (this: CustomWorld, appStr: string) {
+  const instanceId = getAppInstanceId(this, appStr)
+  const remaining = getEventListenersForInstance(this.getState(), instanceId)
+  if (remaining.length > 0) {
+    throw new Error(
+      `Expected no DA event listeners for ${instanceId}, but found: ${JSON.stringify(remaining)}`
+    )
   }
-)
+})
 
 Then("no DA event listeners remain for the WCP-validated instance", function (this: CustomWorld) {
   const instanceId = this.mockTransport.lastWcp5ValidatedInstanceId
   if (!instanceId) {
-    throw new Error(
-      "No WCP5 validated instance id recorded; send WCP4 validate before this step."
-    )
+    throw new Error("No WCP5 validated instance id recorded; send WCP4 validate before this step.")
   }
   const remaining = getEventListenersForInstance(this.getState(), instanceId)
   if (remaining.length > 0) {

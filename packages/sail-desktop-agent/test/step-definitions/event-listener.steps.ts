@@ -14,11 +14,11 @@ type EventListenerUnsubscribeRequest = BrowserTypes.EventListenerUnsubscribeRequ
  */
 function ensureAppInstance(world: CustomWorld, appStr: string): string {
   const instanceId = getAppInstanceId(world, appStr)
-  const meta = createMeta(world, appStr)
 
   const state = world.getState()
   const instance = getInstance(state, instanceId)
   if (!instance) {
+    const meta = createMeta(world, appStr)
     world.updateState(currentState =>
       updateInstanceState(
         connectInstance(currentState, {
