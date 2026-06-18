@@ -9,8 +9,8 @@ import {
   createCapturingLogger,
   SENSITIVE_MARKER,
   serializeLogCalls,
-} from "../../../__tests__/utils/capturing-logger"
-import type { Logger } from "../../../core/interfaces/logger"
+} from "../../__tests__/utils/capturing-logger"
+import type { Logger } from "../../core/interfaces/logger"
 import { MessagePortTransport } from "../message-port-transport"
 
 type MessagePortTransportLoggingOptions = {
@@ -22,7 +22,7 @@ function createTransportWithLogging(
   port: MessagePort,
   options?: MessagePortTransportLoggingOptions
 ): MessagePortTransport {
-  return new MessagePortTransport(port, options as never)
+  return new MessagePortTransport(port, options)
 }
 
 describe("MessagePortTransport logging", () => {

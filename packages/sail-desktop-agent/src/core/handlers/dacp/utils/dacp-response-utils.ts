@@ -1,10 +1,7 @@
 import type { BrowserTypes } from "@finos/fdc3"
 import type { Transport } from "../../../interfaces/transport"
-import {
-  createDACPErrorResponse,
-  type DACPRequestLike,
-} from "../../../../protocols/dacp/dacp-message-creators"
-import type { DACPResponseType } from "../../../../protocols/dacp/dacp-messages"
+import { createDACPErrorResponse, type DACPRequestLike } from "../../../dacp/dacp-message-creators"
+import type { DACPResponseType } from "../../../dacp/dacp-messages"
 
 /**
  * Options for sending a DACP response

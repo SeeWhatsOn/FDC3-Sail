@@ -22,7 +22,7 @@ flowchart TB
     HC["Channel chrome (optional)"]
   end
 
-  subgraph edge ["Browser edge — connectors/browser"]
+  subgraph edge ["App connection — app-connection/"]
     WCP["WCPConnector"]
     MP1["MessagePortTransport"]
     MP2["MessagePortTransport"]
@@ -92,6 +92,7 @@ packages/sail-desktop-agent/src/
 │
 ├── core/
 │   ├── desktop-agent.ts       # DesktopAgent class — start/stop, handler dispatch
+│   ├── dacp/                  # DACP message types and helpers
 │   ├── handlers/dacp/         # All FDC3 operations (open, channels, intents, …)
 │   ├── handlers/dacp/wcp-handlers.ts  # WCP4–5 identity validation
 │   ├── state/                 # Immutable AgentState (selectors + mutators)
@@ -102,21 +103,18 @@ packages/sail-desktop-agent/src/
 │   ├── intent-resolver.ts     # IntentResolver — disambiguation UI contract
 │   └── channel-control.ts     # ChannelControl — picker contract shape
 │
-├── protocols/
-│   ├── dacp/                  # DACP message types
-│   └── wcp/                   # WCP handshake, routing, connection map
-│
-├── transports/
-│   └── in-memory-transport.ts # Same-process linked endpoints
-│
-├── connectors/browser/
+├── app-connection/
+│   ├── wcp/                   # WCP handshake, routing, connection map
 │   ├── wcp-connector.ts       # WCP1–3, postMessage listener, port map
-│   ├── message-port-transport.ts
-│   ├── browser-desktop-agent.ts   # createBrowserDesktopAgent core factory
-│   └── browser-desktop-agent-session.ts  # getBrowserDesktopAgentSession
+│   └── message-port-transport.ts
 │
-└── presets/
-    └── browser-desktop-agent.ts   # Top-level preset + intentResolver wiring
+├── presets/
+│   ├── create-browser-desktop-agent.ts  # createBrowserDesktopAgent (local DA + edge)
+│   ├── create-wcp-client.ts             # createWCPClient (remote DA mode)
+│   └── browser-session.ts               # getBrowserDesktopAgentSession
+│
+└── transports/
+    └── in-memory-transport.ts # Same-process linked endpoints
 ```
 
 ## WCP and DACP ownership
@@ -152,8 +150,8 @@ sequenceDiagram
 
 | Phase | Owner | Code location |
 |-------|--------|---------------|
-| WCP1–3 | Edge | `wcp-connector.ts`, `protocols/wcp/wcp1-3-handshake.ts` |
-| MessagePort bridge | Edge | `message-port-transport.ts`, `wcp-message-routing.ts` |
+| WCP1–3 | Edge | `app-connection/wcp-connector.ts`, `app-connection/wcp/wcp1-3-handshake.ts` |
+| MessagePort bridge | Edge | `app-connection/message-port-transport.ts`, `app-connection/wcp/wcp-message-routing.ts` |
 | WCP4–5 | DA (+ edge port migration) | `core/handlers/dacp/wcp-handlers.ts` |
 | WCP6 Goodbye | Both | Edge drops port; DA removes instance |
 | DACP (all `fdc3.*`) | DA | `core/handlers/dacp/*` |
@@ -179,7 +177,7 @@ flowchart LR
 | Launcher returns id | `host-contracts/app-launcher.ts` |
 | Open registers PENDING | `core/handlers/dacp/app-handlers.ts` |
 | WCP4 adopt vs mint | `core/handlers/dacp/wcp-handlers.ts` |
-| Port map migration | `protocols/wcp/wcp-connection-management.ts` |
+| Port map migration | `app-connection/wcp/wcp-connection-management.ts` |
 
 ## Intent resolution flow
 

@@ -17,7 +17,7 @@ Everything else is detail under one of those two boxes.
 ```text
 ┌────────────────────────── BROWSER EDGE ──────────────────────────┐
 │  Host shell: iframes, AppLauncher, optional IntentResolver UI    │
-│  WCPConnector (connectors/browser)                               │
+│  WCPConnector (app-connection/)                                  │
 │    • WCP1–3 handshake (postMessage + MessageChannel)             │
 │    • MessagePort per connected app                               │
 │    • Routes DACP by meta.destination.instanceId                  │
@@ -34,8 +34,8 @@ Everything else is detail under one of those two boxes.
 
 | Role | Package path | Speaks to |
 |------|--------------|-----------|
-| Browser edge | `src/connectors/browser/`, `src/protocols/wcp/` | iframe or child-window apps (WCP + MessagePort) |
-| Desktop Agent | `src/core/`, `src/protocols/dacp/` | Host via `Transport`; apps only via edge |
+| Browser edge | `src/app-connection/` (incl. `wcp/`) | iframe or child-window apps (WCP + MessagePort) |
+| Desktop Agent | `src/core/` (incl. `dacp/`) | Host via `Transport`; apps only via edge |
 
 **InMemoryTransport** (local mode) is only the **short internal wire** between edge and DA in the same JS process. It is **not** how apps connect. Toolbox `AppTimeout` failures usually mean **MessagePort routing or instanceId mismatch** on the edge, not broken InMemoryTransport.
 
@@ -261,7 +261,7 @@ const desktopAgent = createBrowserDesktopAgent({
 **Option 3 — connector event listener (advanced):** use only when you already hold `wcpConnector` (`createWCPClient`) or need `getBrowserDesktopAgentSession`:
 
 ```typescript
-import { getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/browser"
+import { getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/presets"
 
 const { wcpConnector } = getBrowserDesktopAgentSession(desktopAgent)
 
@@ -318,7 +318,7 @@ platform.connector.on("channelChanged", (id, channelId) => {
 With **`createBrowserDesktopAgent` only** (no platform-api):
 
 ```typescript
-import { getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/browser"
+import { getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/presets"
 
 const { wcpConnector, connectorTransport } = getBrowserDesktopAgentSession(desktopAgent)
 
@@ -389,7 +389,7 @@ See `packages/sail-web/src/contexts/SailDesktopAgentContext.tsx` for provider wi
 Host contracts stay the same on the **browser** side; only engine placement changes.
 
 ```typescript
-import { createWCPClient } from "@finos/sail-desktop-agent/browser"
+import { createWCPClient } from "@finos/sail-desktop-agent/presets"
 import { DesktopAgent } from "@finos/sail-desktop-agent"
 import type { AppLauncher } from "@finos/sail-desktop-agent"
 
@@ -548,8 +548,8 @@ sequenceDiagram
 
 | Phase | Owner | Location |
 |-------|--------|----------|
-| WCP1–3 (Hello, Handshake, MessageChannel) | **Edge** | `wcp-connector.ts`, `protocols/wcp/wcp1-3-handshake.ts` |
-| Per-app MessagePort bridge | **Edge** | `message-port-transport.ts`, `protocols/wcp/wcp-message-routing.ts` |
+| WCP1–3 (Hello, Handshake, MessageChannel) | **Edge** | `app-connection/wcp-connector.ts`, `app-connection/wcp/wcp1-3-handshake.ts` |
+| Per-app MessagePort bridge | **Edge** | `app-connection/message-port-transport.ts`, `app-connection/wcp/wcp-message-routing.ts` |
 | WCP4–5 (validate identity, canonical id) | **DA** | `core/handlers/dacp/wcp-handlers.ts` |
 | WCP6 (Goodbye) | **Both** | Edge disconnects port; DA cleans registry |
 | DACP (open, channels, intents, …) | **DA** | `core/handlers/dacp/*` |
@@ -580,7 +580,7 @@ Where does the Desktop Agent run?
 | Remote DA | `createWCPClient` + server `DesktopAgent` | Duplicating WCP in app code |
 | Unit-test FDC3 handlers | `MockTransport` + `DesktopAgent` | Expecting this to prove iframe delivery |
 
-**Canonical import:** `@finos/sail-desktop-agent/presets` for application code. `@finos/sail-desktop-agent/browser` remains for tree-shaking and advanced composition.
+**Canonical import:** `@finos/sail-desktop-agent/presets` for application code and factories. `@finos/sail-desktop-agent/browser` (app-connection) remains for tree-shaking when you only need `WCPConnector` or `MessagePortTransport`.
 
 ## Public API — today vs simplified story
 
@@ -591,10 +591,10 @@ Where does the Desktop Agent run?
 import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
 
 // Pattern 2 — same factory, different path
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/browser"
+import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
 
 // Pattern 3 — remote client
-import { createWCPClient } from "@finos/sail-desktop-agent/browser"
+import { createWCPClient } from "@finos/sail-desktop-agent/presets"
 
 // Pattern 4 — manual
 const [daTransport, wcpTransport] = createInMemoryTransportPair()
@@ -611,7 +611,7 @@ const wcpConnector = new WCPConnector(wcpTransport)
 
 You do **not** destructure or manage `wcpConnector` in application code. Host code uses `desktopAgent` plus `appLauncher` / `intentResolverUI`. Optional `onAppConnected` / `onAppDisconnected` callbacks replace direct `wcpConnector.on(...)` wiring.
 
-Advanced access (host channel control via `connectorTransport`, edge-contract tests): `getBrowserDesktopAgentSession(desktopAgent)` from `@finos/sail-desktop-agent/browser`.
+Advanced access (host channel control via `connectorTransport`, edge-contract tests): `getBrowserDesktopAgentSession(desktopAgent)` from `@finos/sail-desktop-agent/presets`.
 
 ### Simplified integrator surface
 
@@ -658,7 +658,7 @@ createBrowserDesktopAgent({
 
 ```typescript
 // Remote DA — browser side only
-import { createWCPClient } from "@finos/sail-desktop-agent/browser"
+import { createWCPClient } from "@finos/sail-desktop-agent/presets"
 
 const { wcpConnector, start } = createWCPClient({
   transport: myWebSocketClientTransport,
@@ -709,7 +709,7 @@ Relevant code today:
 - Launcher contract: `src/host-contracts/app-launcher.ts`
 - Open registers **PENDING**: `src/core/handlers/dacp/app-handlers.ts`
 - WCP4 adopt vs mint: `src/core/handlers/dacp/wcp-handlers.ts` (`canAdoptPendingHostInstance`, `createAppInstance`)
-- Port map migration: `src/protocols/wcp/wcp-connection-management.ts`, `wcp-message-routing.ts`
+- Port map migration: `src/app-connection/wcp/wcp-connection-management.ts`, `wcp-message-routing.ts`
 - Open-with-context waits on target id: `src/core/handlers/dacp/utils/open-with-context.ts`
 
 ```mermaid

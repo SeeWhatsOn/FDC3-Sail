@@ -2,9 +2,9 @@
  * Verifies SailPlatform delegates browser Desktop Agent wiring to the top-level preset.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vitest"
 import * as sailDesktopAgent from "@finos/sail-desktop-agent"
-import * as sailDesktopAgentBrowser from "@finos/sail-desktop-agent/browser"
+import * as sailDesktopAgentPresets from "@finos/sail-desktop-agent/presets"
 import { SailPlatform } from "../sail-platform"
 
 describe("SailPlatform preset wiring", () => {
@@ -22,17 +22,18 @@ describe("SailPlatform preset wiring", () => {
     send: vi.fn(),
   }
 
-  let createBrowserDesktopAgentSpy: ReturnType<typeof vi.spyOn>
-  let getBrowserDesktopAgentSessionSpy: ReturnType<typeof vi.spyOn>
+  let createBrowserDesktopAgentSpy: MockInstance
+  let getBrowserDesktopAgentSessionSpy: MockInstance
 
   beforeEach(() => {
-    createBrowserDesktopAgentSpy = vi.spyOn(sailDesktopAgent, "createBrowserDesktopAgent").mockReturnValue(
-      mockDesktopAgent as unknown as sailDesktopAgent.DesktopAgent
-    )
+    createBrowserDesktopAgentSpy = vi
+      .spyOn(sailDesktopAgent, "createBrowserDesktopAgent")
+      .mockReturnValue(mockDesktopAgent as unknown as sailDesktopAgent.DesktopAgent)
     getBrowserDesktopAgentSessionSpy = vi
-      .spyOn(sailDesktopAgentBrowser, "getBrowserDesktopAgentSession")
+      .spyOn(sailDesktopAgentPresets, "getBrowserDesktopAgentSession")
       .mockReturnValue({
-        wcpConnector: mockWcpConnector as unknown as import("@finos/sail-desktop-agent/browser").WCPConnector,
+        wcpConnector:
+          mockWcpConnector as unknown as import("@finos/sail-desktop-agent/presets").WCPConnector,
         connectorTransport: mockConnectorTransport as unknown as sailDesktopAgent.Transport,
       })
   })
@@ -67,7 +68,10 @@ describe("SailPlatform preset wiring", () => {
     platform.start()
 
     expect(createBrowserDesktopAgentSpy).toHaveBeenCalledOnce()
-    expect(createBrowserDesktopAgentSpy).toHaveBeenCalledWith({
+    const createOptions = createBrowserDesktopAgentSpy.mock.calls[0]?.[0] as Parameters<
+      typeof sailDesktopAgent.createBrowserDesktopAgent
+    >[0]
+    expect(createOptions).toMatchObject({
       appLauncher,
       apps,
       userChannels: undefined,
@@ -77,11 +81,11 @@ describe("SailPlatform preset wiring", () => {
       heartbeatTimeoutMs: 45000,
       intentResolver,
       wcpOptions: {
-        getIntentResolverUrl: expect.any(Function),
-        getChannelSelectorUrl: expect.any(Function),
         fdc3Version: "2.2",
       },
     })
+    expect(typeof createOptions.wcpOptions?.getIntentResolverUrl).toBe("function")
+    expect(typeof createOptions.wcpOptions?.getChannelSelectorUrl).toBe("function")
     expect(getBrowserDesktopAgentSessionSpy).toHaveBeenCalledWith(mockDesktopAgent)
     expect(platform.isRunning).toBe(true)
     expect(platform.agent).toBe(mockDesktopAgent)

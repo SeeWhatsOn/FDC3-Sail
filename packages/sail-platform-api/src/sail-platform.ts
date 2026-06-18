@@ -20,7 +20,7 @@ import {
   getBrowserDesktopAgentSession,
   type WCPConnector,
   type AppConnectionMetadata,
-} from "@finos/sail-desktop-agent/browser"
+} from "@finos/sail-desktop-agent/presets"
 import type { BrowserTypes } from "@finos/fdc3"
 import { generateUuid } from "./utils/uuid"
 

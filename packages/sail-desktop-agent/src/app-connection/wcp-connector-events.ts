@@ -1,5 +1,5 @@
-import type { HostIntentResolverPayload } from "../../host-contracts"
-import type { AppConnectionMetadata } from "../../protocols/wcp/wcp-types"
+import type { HostIntentResolverPayload } from "../host-contracts"
+import type { AppConnectionMetadata } from "./wcp/wcp-types"
 
 /**
  * Browser connector events emitted by {@link WCPConnector}.

@@ -1,4 +1,4 @@
-import type { WCPConnectorEvents } from "../../connectors/browser/wcp-connector-events"
+import type { WCPConnectorEvents } from "../wcp-connector-events"
 import { consoleLogger } from "../../core/interfaces/logger"
 
 export class WCPEventEmitter {

@@ -1,9 +1,6 @@
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { OpenError } from "@finos/fdc3"
-import {
-  createDACPEvent,
-  createDACPSuccessResponse,
-} from "../../../../protocols/dacp/dacp-message-creators"
+import { createDACPEvent, createDACPSuccessResponse } from "../../../dacp/dacp-message-creators"
 import { sendDACPResponse, sendDACPErrorResponse } from "./dacp-response-utils"
 import type { DACPHandlerContext } from "../../types"
 import { getInstance } from "../../../state/selectors"
@@ -159,9 +156,7 @@ export function clearPendingOpenWithContextForInstance(
   pendingList.forEach(pending => {
     clearPendingTimeout(pending.message.meta.requestUuid)
   })
-  context.setState(state =>
-    setPendingOpenWithContextForInstance(state, targetInstanceId, [])
-  )
+  context.setState(state => setPendingOpenWithContextForInstance(state, targetInstanceId, []))
 }
 
 /**

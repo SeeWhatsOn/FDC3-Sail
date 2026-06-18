@@ -12,8 +12,8 @@
  * - Manage app connection lifecycle
  */
 
-import type { Transport } from "../../core/interfaces/transport"
-import { type Logger, consoleLogger } from "../../core/interfaces/logger"
+import type { Transport } from "../core/interfaces/transport"
+import { type Logger, consoleLogger } from "../core/interfaces/logger"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type {
   AppRequestMessage,
@@ -23,16 +23,16 @@ import type { MessagePortTransport } from "./message-port-transport"
 import {
   handleWCP1Hello as handleWCP1HelloHandshake,
   type WCPHandshakeContext,
-} from "../../protocols/wcp/wcp1-3-handshake"
+} from "./wcp/wcp1-3-handshake"
 import {
   handleDesktopAgentMessage as handleDesktopAgentMessageRouting,
   type WCPRoutingContext,
-} from "../../protocols/wcp/wcp-message-routing"
+} from "./wcp/wcp-message-routing"
 import {
   requestIntentResolution,
   resolveIntentSelection,
   type PendingIntentResolution,
-} from "../../protocols/wcp/wcp-intent-resolver"
+} from "./wcp/wcp-intent-resolver"
 import {
   cleanupStaleDisconnects,
   disconnectApp,
@@ -42,26 +42,22 @@ import {
   handleWCP6Goodbye,
   updateConnectionMetadata,
   type WCPConnectionContext,
-} from "../../protocols/wcp/wcp-connection-management"
-import { WCPEventEmitter } from "../../protocols/wcp/wcp-event-emitter"
+} from "./wcp/wcp-connection-management"
+import { WCPEventEmitter } from "./wcp/wcp-event-emitter"
 import {
   clearPendingWcpSourceWindow,
   setPendingWcpSourceWindow,
-} from "../../core/handlers/dacp/wcp-pending-source-window"
-import type { HostIntentResolverPayload, HostIntentResolverResponse } from "../../host-contracts"
-import type {
-  AppConnectionMetadata,
-  WCP1HelloMessage,
-  WCPConnectorOptions,
-} from "../../protocols/wcp/wcp-types"
+} from "../core/handlers/dacp/wcp-pending-source-window"
+import type { HostIntentResolverPayload, HostIntentResolverResponse } from "../host-contracts"
+import type { AppConnectionMetadata, WCP1HelloMessage, WCPConnectorOptions } from "./wcp/wcp-types"
 
-export type { AppConnectionMetadata, WCPConnectorOptions } from "../../protocols/wcp/wcp-types"
+export type { AppConnectionMetadata, WCPConnectorOptions } from "./wcp/wcp-types"
 export type { WCPConnectorEvents } from "./wcp-connector-events"
 export type {
   HostIntentResolverHandler as IntentHandler,
   HostIntentResolverPayload as IntentResolverPayload,
   HostIntentResolverResponse as IntentResolverResponse,
-} from "../../host-contracts"
+} from "../host-contracts"
 
 /**
  * WCP Connector for browser-based Desktop Agents.

@@ -1,7 +1,4 @@
-import {
-  createDACPSuccessResponse,
-  createDACPEvent,
-} from "../../../protocols/dacp/dacp-message-creators"
+import { createDACPSuccessResponse, createDACPEvent } from "../../dacp/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import { getEventListeners, ALL_DA_EVENT_TYPES } from "./event-handlers"
@@ -73,8 +70,7 @@ export function handleGetCurrentChannelRequest(
     })
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
+    const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get current channel"
 
     sendDACPErrorResponse({
@@ -128,8 +124,7 @@ export function handleJoinUserChannelRequest(
 
     notifyChannelChanged(instanceId, channelId, context)
   } catch (error) {
-    const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
+    const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to join user channel"
 
     sendDACPErrorResponse({
@@ -159,8 +154,7 @@ export function handleLeaveCurrentChannelRequest(
 
     notifyChannelChanged(instanceId, null, context)
   } catch (error) {
-    const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
+    const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to leave current channel"
 
     sendDACPErrorResponse({
@@ -190,8 +184,7 @@ export function handleGetUserChannelsRequest(
     })
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
+    const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get user channels"
 
     sendDACPErrorResponse({
@@ -237,8 +230,7 @@ export function handleGetCurrentContextRequest(
     })
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
-    const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
+    const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get current context"
 
     sendDACPErrorResponse({

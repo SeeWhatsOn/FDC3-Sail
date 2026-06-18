@@ -1,5 +1,5 @@
-import type { MessagePortTransport } from "../../connectors/browser/message-port-transport"
-import type { WCPConnectorEvents } from "../../connectors/browser/wcp-connector-events"
+import type { MessagePortTransport } from "../message-port-transport"
+import type { WCPConnectorEvents } from "../wcp-connector-events"
 import type { WebConnectionProtocolMessage } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type { AppConnectionMetadata, WCPConnectorOptions } from "./wcp-types"
 import type { Logger } from "../../core/interfaces/logger"

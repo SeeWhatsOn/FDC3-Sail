@@ -8,12 +8,8 @@
  * browser environments.
  */
 
-import type { Transport, MessageHandler, DisconnectHandler } from "../../core/interfaces/transport"
-import {
-  consoleLogger,
-  type Logger,
-  type LogPayloadDetail,
-} from "../../core/interfaces/logger"
+import type { Transport, MessageHandler, DisconnectHandler } from "../core/interfaces/transport"
+import { consoleLogger, type Logger, type LogPayloadDetail } from "../core/interfaces/logger"
 
 export interface MessagePortTransportOptions {
   logger?: Logger
@@ -98,9 +94,7 @@ export class MessagePortTransport implements Transport {
     }
 
     const messageType =
-      message && typeof message === "object" && "type" in message
-        ? (message as { type: unknown }).type
-        : "unknown"
+      message && typeof message === "object" && "type" in message ? message.type : "unknown"
 
     this.logger.debug("[MessagePortTransport] Sending message", {
       messageType,
@@ -111,10 +105,7 @@ export class MessagePortTransport implements Transport {
       this.port.postMessage(message)
       this.logger.debug("[MessagePortTransport] Message posted successfully", { messageType })
     } catch (error) {
-      this.logger.error(
-        "[MessagePortTransport] Error sending message through MessagePort:",
-        error
-      )
+      this.logger.error("[MessagePortTransport] Error sending message through MessagePort:", error)
       // If posting fails, treat as disconnection
       this.handleDisconnect()
       throw error
@@ -214,9 +205,7 @@ export class MessagePortTransport implements Transport {
 
     const message = event.data as unknown
     const messageType =
-      message && typeof message === "object" && "type" in message
-        ? (message as { type: unknown }).type
-        : "unknown"
+      message && typeof message === "object" && "type" in message ? message.type : "unknown"
 
     this.logger.debug("[MessagePortTransport] Received message", {
       messageType,
@@ -233,9 +222,7 @@ export class MessagePortTransport implements Transport {
         channelId: payload?.channelId,
         contextType: (payload?.context as Record<string, unknown>)?.type,
         contextId: (payload?.context as Record<string, unknown>)?.id,
-        contextKeys: payload?.context
-          ? Object.keys(payload.context as Record<string, unknown>)
-          : undefined,
+        contextKeys: payload?.context ? Object.keys(payload.context) : undefined,
       }
 
       if (this.logPayloadDetail === "full") {

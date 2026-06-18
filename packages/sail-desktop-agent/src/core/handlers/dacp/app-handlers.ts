@@ -1,14 +1,10 @@
 import type { DesktopAgentConfig } from "../../desktop-agent"
-import { createDACPSuccessResponse } from "../../../protocols/dacp/dacp-message-creators"
+import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { OpenError, ResolveError } from "@finos/fdc3"
-import {
-  AppNotFoundError,
-  ErrorOnLaunchError,
-  FDC3OpenError,
-} from "../../errors/fdc3-errors"
+import { AppNotFoundError, ErrorOnLaunchError, FDC3OpenError } from "../../errors/fdc3-errors"
 import type { DirectoryApp } from "../../app-directory/types"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
@@ -32,11 +28,7 @@ export function handleGetInfoRequest(
     if (callerInstance) {
       const directoryApps = appDirectory.retrieveAppsById(callerInstance.appId)
       if (directoryApps.length > 0) {
-        appMetadata = convertDirectoryAppToAppMetadata(
-          directoryApps[0],
-          provider,
-          instanceId
-        )
+        appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0], provider, instanceId)
       } else {
         appMetadata = {
           appId: callerInstance.appId,
@@ -173,8 +165,7 @@ export async function handleOpenRequest(
   } catch (error) {
     logger.error("DACP: openRequest failed", error)
 
-    const errorType =
-      error instanceof FDC3OpenError ? error.errorType : OpenError.ErrorOnLaunch
+    const errorType = error instanceof FDC3OpenError ? error.errorType : OpenError.ErrorOnLaunch
     const errorMessage = error instanceof Error ? error.message : "Failed to open app"
 
     sendDACPErrorResponse({

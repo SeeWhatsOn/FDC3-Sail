@@ -7,7 +7,7 @@
  * ## Application code
  *
  * Prefer the browser preset from `@finos/sail-desktop-agent/presets` (also re-exported here).
- * Advanced WCP edge access: `getBrowserDesktopAgentSession` from `/browser`.
+ * Advanced WCP edge access: `getBrowserDesktopAgentSession` from `/presets`.
  *
  * ```typescript
  * import { createBrowserDesktopAgent } from '@finos/sail-desktop-agent/presets'
@@ -26,9 +26,8 @@
  *
  * ## Advanced subpaths
  *
- * - `/browser` - WCPConnector, createWCPClient, getBrowserDesktopAgentSession
- * - `/transports` - createInMemoryTransportPair, InMemoryTransport
- * - `/presets` - canonical preset entry for application bundles
+ * - `/browser` (app-connection) - WCPConnector, MessagePortTransport
+ * - `/presets` - createBrowserDesktopAgent, createWCPClient, getBrowserDesktopAgentSession
  */
 
 // Re-export everything from core
@@ -42,12 +41,17 @@ export {
   createBrowserDesktopAgent,
   type BrowserDesktopAgent,
   type BrowserDesktopAgentOptions,
-} from "./presets/browser-desktop-agent.js"
+} from "./presets/create-browser-desktop-agent.js"
 
 // NOTE: Lower-level browser connector APIs are NOT exported here
 // Import from @finos/sail-desktop-agent/browser for:
 // - WCPConnector
 // - MessagePortTransport
+//
+// Import from @finos/sail-desktop-agent/presets for:
+// - createBrowserDesktopAgent
+// - createWCPClient
+// - getBrowserDesktopAgentSession
 
 // NOTE: Transport implementations are NOT exported here
 // Import from @finos/sail-desktop-agent/transports for:

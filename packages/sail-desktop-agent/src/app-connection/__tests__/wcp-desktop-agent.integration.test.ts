@@ -9,11 +9,11 @@
 
 import { describe, it, expect, afterEach, vi } from "vitest"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { AppLauncher } from "../../../host-contracts/app-launcher"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../../core/default-user-channels"
-import { createBrowserDesktopAgent } from "../browser-desktop-agent"
-import type { DesktopAgent } from "../../../core/desktop-agent"
-import { getBrowserDesktopAgentSession } from "../browser-desktop-agent-session"
+import type { AppLauncher } from "../../host-contracts/app-launcher"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../core/default-user-channels"
+import { createBrowserDesktopAgent } from "../../presets/create-browser-desktop-agent"
+import type { DesktopAgent } from "../../core/desktop-agent"
+import { getBrowserDesktopAgentSession } from "../../presets/browser-session"
 import {
   INSTRUMENT_CONTEXT,
   connectWcpApp,

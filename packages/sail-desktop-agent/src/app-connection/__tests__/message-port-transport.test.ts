@@ -6,10 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { disconnectApp, type WCPConnectionContext } from "../../../protocols/wcp/wcp-connection-management"
+import { disconnectApp, type WCPConnectionContext } from "../wcp/wcp-connection-management"
 import { MessagePortTransport } from "../message-port-transport"
-import type { AppConnectionMetadata } from "../../../protocols/wcp/wcp-types"
-import { consoleLogger } from "../../../core/interfaces/logger"
+import type { AppConnectionMetadata } from "../wcp/wcp-types"
+import { consoleLogger } from "../../core/interfaces/logger"
 
 function createListenerTracker(port: MessagePort) {
   const activeListeners = new Map<string, Set<EventListenerOrEventListenerObject>>()

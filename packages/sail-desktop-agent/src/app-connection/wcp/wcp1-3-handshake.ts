@@ -1,4 +1,4 @@
-import { MessagePortTransport } from "../../connectors/browser/message-port-transport"
+import { MessagePortTransport } from "../message-port-transport"
 import { bridgeTransports } from "./wcp-message-routing"
 import type { WCPRoutingContext } from "./wcp-message-routing"
 import type {

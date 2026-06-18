@@ -9,7 +9,7 @@
 import {
   createDACPSuccessResponse,
   createDACPErrorResponse,
-} from "../../../../protocols/dacp/dacp-message-creators"
+} from "../../../dacp/dacp-message-creators"
 import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"

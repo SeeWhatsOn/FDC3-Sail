@@ -20,10 +20,7 @@ import type { Context } from "@finos/fdc3"
 
 import * as sailDesktopAgent from "../../index"
 
-import {
-  getBrowserDesktopAgentSession,
-  isBrowserDesktopAgent,
-} from "../../connectors/browser/browser-desktop-agent-session"
+import { getBrowserDesktopAgentSession, isBrowserDesktopAgent } from "../browser-session"
 
 import type { DirectoryApp } from "../../core/app-directory/types"
 

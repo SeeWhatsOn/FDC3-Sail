@@ -1,8 +1,5 @@
-import {
-  createDACPSuccessResponse,
-  createDACPEvent,
-} from "../../../protocols/dacp/dacp-message-creators"
-import { generateEventUuid } from "../../../protocols/dacp/dacp-utils"
+import { createDACPSuccessResponse, createDACPEvent } from "../../dacp/dacp-message-creators"
+import { generateEventUuid } from "../../dacp/dacp-utils"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
@@ -140,8 +137,7 @@ export function handlePrivateChannelDisconnectRequest(
   } catch (error) {
     logger.error("DACP: Private channel disconnect failed", error)
 
-    const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
+    const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage =
       error instanceof Error ? error.message : "Failed to disconnect from private channel"
 
@@ -225,8 +221,7 @@ export function handlePrivateChannelAddContextListenerRequest(
   } catch (error) {
     logger.error("DACP: Private channel add context listener failed", error)
 
-    const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
+    const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage =
       error instanceof Error ? error.message : "Failed to add context listener to private channel"
 
@@ -296,8 +291,7 @@ export function handlePrivateChannelUnsubscribeEventListenerRequest(
     sendDACPResponse({ response, instanceId, transport })
   } catch (error) {
     logger.error("DACP: Private channel unsubscribe event listener failed", error)
-    const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
+    const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage =
       error instanceof Error ? error.message : "Failed to unsubscribe private channel listener"
     sendDACPErrorResponse({

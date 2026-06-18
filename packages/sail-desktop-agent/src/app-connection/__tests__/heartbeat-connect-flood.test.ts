@@ -6,10 +6,10 @@
 
 import { describe, it, expect, afterEach } from "vitest"
 import type { BrowserTypes } from "@finos/fdc3"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../../core/default-user-channels"
-import { getActiveHeartbeatTimerCount } from "../../../core/handlers/dacp/heartbeat-runtime"
-import { createBrowserDesktopAgent } from "../browser-desktop-agent"
-import type { DesktopAgent } from "../../../core/desktop-agent"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../core/default-user-channels"
+import { getActiveHeartbeatTimerCount } from "../../core/handlers/dacp/heartbeat-runtime"
+import { createBrowserDesktopAgent } from "../../presets/create-browser-desktop-agent"
+import type { DesktopAgent } from "../../core/desktop-agent"
 import { connectWcpApp, flushAsyncDelivery } from "./wcp-edge-test-helpers"
 
 const PORTFOLIO_APP = {

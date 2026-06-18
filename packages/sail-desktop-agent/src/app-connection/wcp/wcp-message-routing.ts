@@ -3,8 +3,8 @@ import type {
   AppRequestMessage,
   WebConnectionProtocolMessage,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import { MessagePortTransport } from "../../connectors/browser/message-port-transport"
-import type { WCPConnectorEvents } from "../../connectors/browser/wcp-connector-events"
+import { MessagePortTransport } from "../message-port-transport"
+import type { WCPConnectorEvents } from "../wcp-connector-events"
 import { isAgentMessage, isAppMessage } from "./wcp-types"
 import type { Logger } from "../../core/interfaces/logger"
 

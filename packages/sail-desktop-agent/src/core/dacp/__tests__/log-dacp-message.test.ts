@@ -20,7 +20,7 @@ function logWithOptions(
   source: string,
   options: LogDACPMessageOptions
 ): void {
-  logDACPMessage(direction, message, source, options as never)
+  logDACPMessage(direction, message, source, options)
 }
 
 describe("logDACPMessage", () => {

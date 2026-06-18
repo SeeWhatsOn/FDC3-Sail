@@ -4,8 +4,8 @@
  * Handlers for adding and removing intent listeners
  */
 
-import { createDACPSuccessResponse } from "../../../../protocols/dacp/dacp-message-creators"
-import { generateEventUuid } from "../../../../protocols/dacp/dacp-utils"
+import { createDACPSuccessResponse } from "../../../dacp/dacp-message-creators"
+import { generateEventUuid } from "../../../dacp/dacp-utils"
 import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
@@ -54,8 +54,7 @@ export function handleAddIntentListener(
     logger.error("DACP: Add intent listener failed", error)
 
     // Use ResolveError for intent listener errors (AddIntentListenerResponse validates ResolveError enum values)
-    const errorType =
-      error instanceof FDC3ResolveError ? error.errorType : ResolveError.ApiTimeout
+    const errorType = error instanceof FDC3ResolveError ? error.errorType : ResolveError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to add intent listener"
 
     sendDACPErrorResponse({
@@ -92,8 +91,7 @@ export function handleIntentListenerUnsubscribe(
     logger.error("DACP: Intent listener unsubscribe failed", error)
 
     // Use ResolveError for intent listener errors
-    const errorType =
-      error instanceof FDC3ResolveError ? error.errorType : ResolveError.ApiTimeout
+    const errorType = error instanceof FDC3ResolveError ? error.errorType : ResolveError.ApiTimeout
     const errorMessage =
       error instanceof Error ? error.message : "Failed to unsubscribe intent listener"
 

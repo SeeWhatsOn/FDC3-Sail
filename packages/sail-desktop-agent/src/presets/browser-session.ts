@@ -1,7 +1,7 @@
-import type { DesktopAgent } from "../../core/desktop-agent"
-import type { IntentResolverUIMethods } from "../../host-contracts"
-import type { Transport } from "../../core/interfaces/transport"
-import type { WCPConnector } from "./wcp-connector"
+import type { DesktopAgent } from "../core/desktop-agent"
+import type { IntentResolverUIMethods } from "../host-contracts"
+import type { Transport } from "../core/interfaces/transport"
+import type { WCPConnector } from "../app-connection/wcp-connector"
 
 export interface BrowserDesktopAgentSession {
   wcpConnector: WCPConnector

@@ -6,8 +6,8 @@
 
 import { expect, vi } from "vitest"
 import type { BrowserTypes, Context } from "@finos/fdc3"
-import type { DesktopAgent } from "../../../core/desktop-agent"
-import { getBrowserDesktopAgentSession } from "../browser-desktop-agent-session"
+import type { DesktopAgent } from "../../core/desktop-agent"
+import { getBrowserDesktopAgentSession } from "../../presets/browser-session"
 
 export const TEST_ORIGIN = "https://example.com"
 
@@ -19,7 +19,10 @@ export type WcpConnectedApp = {
   appId: string
 }
 
-export function createWCP1Hello(connectionAttemptUuid: string, identityUrl: string): BrowserTypes.WebConnectionProtocol1Hello {
+export function createWCP1Hello(
+  connectionAttemptUuid: string,
+  identityUrl: string
+): BrowserTypes.WebConnectionProtocol1Hello {
   return {
     type: "WCP1Hello",
     meta: {
@@ -34,7 +37,11 @@ export function createWCP1Hello(connectionAttemptUuid: string, identityUrl: stri
   } as unknown as BrowserTypes.WebConnectionProtocol1Hello
 }
 
-export function createMessageEvent(data: unknown, source: Window = window, origin = TEST_ORIGIN): MessageEvent {
+export function createMessageEvent(
+  data: unknown,
+  source: Window = window,
+  origin = TEST_ORIGIN
+): MessageEvent {
   return new MessageEvent("message", { data, source, origin })
 }
 
@@ -83,13 +90,12 @@ export async function connectWcpApp(
 
   expect(wcpConnector.getConnection(tempInstanceId)).toBeDefined()
 
-  const wcp5Response = new Promise<BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse>(
-    resolve => {
+  const wcp5Response =
+    new Promise<BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse>(resolve => {
       appPort.onmessage = event => {
         resolve(event.data as BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse)
       }
-    }
-  )
+    })
 
   const wcp4Message: BrowserTypes.WebConnectionProtocol4ValidateAppIdentity = {
     type: "WCP4ValidateAppIdentity",
@@ -111,7 +117,10 @@ export async function connectWcpApp(
   const resolvedWcp5 = await Promise.race([
     wcp5Response,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Timed out waiting for WCP5ValidateAppIdentityResponse")), 5000)
+      setTimeout(
+        () => reject(new Error("Timed out waiting for WCP5ValidateAppIdentityResponse")),
+        5000
+      )
     ),
   ])
 
@@ -134,7 +143,10 @@ export async function connectWcpApp(
   }
 }
 
-export async function postDacpOnPort(appPort: MessagePort, message: BrowserTypes.AppRequestMessage): Promise<void> {
+export async function postDacpOnPort(
+  appPort: MessagePort,
+  message: BrowserTypes.AppRequestMessage
+): Promise<void> {
   appPort.postMessage(message)
   await flushAsyncDelivery()
 }
@@ -145,7 +157,10 @@ export function waitForPortMessage<T>(
   timeoutMs = 5000
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("Timed out waiting for MessagePort message")), timeoutMs)
+    const timer = setTimeout(
+      () => reject(new Error("Timed out waiting for MessagePort message")),
+      timeoutMs
+    )
     appPort.onmessage = event => {
       if (predicate(event.data)) {
         clearTimeout(timer)
@@ -173,7 +188,7 @@ export function createJoinUserChannelMessage(
       source: { appId, instanceId },
     },
     payload: { channelId },
-  } as BrowserTypes.JoinUserChannelRequest
+  }
 }
 
 export function createAddContextListenerMessage(
@@ -190,7 +205,7 @@ export function createAddContextListenerMessage(
       source: { appId, instanceId },
     },
     payload: { channelId, contextType },
-  } as BrowserTypes.AddContextListenerRequest
+  }
 }
 
 export function createBroadcastMessage(
@@ -207,7 +222,7 @@ export function createBroadcastMessage(
       source: { appId, instanceId },
     },
     payload: { channelId, context },
-  } as BrowserTypes.BroadcastRequest
+  }
 }
 
 export function createOpenRequestMessage(
@@ -227,5 +242,5 @@ export function createOpenRequestMessage(
       app: { appId: targetAppId },
       ...(context ? { context } : {}),
     },
-  } as BrowserTypes.OpenRequest
+  }
 }

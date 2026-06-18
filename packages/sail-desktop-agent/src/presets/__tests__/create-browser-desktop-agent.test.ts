@@ -9,13 +9,11 @@
 
 import { describe, it, expect, afterEach, vi } from "vitest"
 import type { BrowserTypes } from "@finos/fdc3"
-import { createBrowserDesktopAgent } from "../browser-desktop-agent"
-import type { DesktopAgent } from "../../../core/desktop-agent"
-import { getBrowserDesktopAgentSession } from "../browser-desktop-agent-session"
+import { createBrowserDesktopAgent } from "../create-browser-desktop-agent"
+import type { DesktopAgent } from "../../core/desktop-agent"
+import { getBrowserDesktopAgentSession } from "../browser-session"
 
-function createWCP1Hello(
-  connectionAttemptUuid: string
-): BrowserTypes.WebConnectionProtocol1Hello {
+function createWCP1Hello(connectionAttemptUuid: string): BrowserTypes.WebConnectionProtocol1Hello {
   const message = {
     type: "WCP1Hello",
     meta: {

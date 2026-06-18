@@ -80,9 +80,9 @@ See the [integrator guide](./integrator-guide) for intent resolution, channel ch
 
 ```typescript
 import { DesktopAgent } from "@finos/sail-desktop-agent"
-import { getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/browser"
+import { getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/presets"
 import { createInMemoryTransportPair } from "@finos/sail-desktop-agent/transports"
 import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
 ```
 
-Application code should prefer `@finos/sail-desktop-agent/presets`. Use `/browser` for tree-shaking and advanced edge access via `getBrowserDesktopAgentSession`.
+Application code should prefer `@finos/sail-desktop-agent/presets` for factories and `getBrowserDesktopAgentSession`. Use `/browser` (app-connection) for tree-shaking when you only need `WCPConnector` or `MessagePortTransport`.

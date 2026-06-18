@@ -1,7 +1,4 @@
-import {
-  createDACPSuccessResponse,
-  createDACPEvent,
-} from "../../../protocols/dacp/dacp-message-creators"
+import { createDACPSuccessResponse, createDACPEvent } from "../../dacp/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes, Context } from "@finos/fdc3"
@@ -31,7 +28,7 @@ import {
   setPrivateChannelLastContext,
   connectInstanceToPrivateChannel,
 } from "../../state/mutators"
-import { generateEventUuid } from "../../../protocols/dacp/dacp-utils"
+import { generateEventUuid } from "../../dacp/dacp-utils"
 import {
   notifyPrivateChannelAddContextListener,
   notifyPrivateChannelUnsubscribe,
