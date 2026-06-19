@@ -24,7 +24,14 @@ import { createInitialState, createStateWithOverrides } from "./state/initial-st
 import { consoleLogger, type Logger, type LogPayloadDetail } from "./interfaces/logger"
 import { resolveDesktopAgentConfig, type SailImplementationMetadata } from "./sail-default-config"
 import { InMemoryTransport } from "../transports/in-memory-transport"
-import { getAllUserChannels, getInstance } from "./state/selectors"
+import { createDACPEvent } from "./dacp/dacp-message-creators"
+import {
+  handleJoinUserChannelRequest,
+  handleLeaveCurrentChannelRequest,
+} from "./handlers/dacp/channel-handlers"
+import { ALL_DA_EVENT_TYPES, getEventListeners } from "./handlers/dacp/event-handlers"
+import { NoChannelFoundError } from "./errors/fdc3-errors"
+import { getAllUserChannels, getInstance, getUserChannel } from "./state/selectors"
 
 /**
  * Structure of DACP message metadata for routing
@@ -325,7 +332,12 @@ export class DesktopAgent {
     }
   }
   /**
-   * Get current state snapshot (for debugging/export)
+   * Full agent state snapshot — **tests and debugging only**.
+   *
+   * Do not use for host channel UI. Prefer {@link getAppUserChannelId},
+   * {@link getUserChannels}, and WCP connector `channelChanged` events (or
+   * platform-api `getAppUserChannel` / `changeAppChannel` when using SailPlatform).
+   * Mutating the returned object bypasses Desktop Agent invariants.
    */
   getState(): AgentState {
     return this.state
@@ -369,5 +381,91 @@ export class DesktopAgent {
   getAppUserChannelId(instanceId: string): string | null {
     const instance = getInstance(this.state, instanceId)
     return instance?.currentUserChannel ?? null
+  }
+
+  /**
+   * Host-initiated user channel join or leave for an app instance.
+   *
+   * Runs the same DACP join/leave handlers as app-originated requests but does not
+   * require an app MessagePort to receive the response. When no apps registered
+   * `channelChanged` event listeners, emits a `channelChangedEvent` on the transport
+   * so the WCP connector can raise `channelChanged` for host UI (push model).
+   */
+  changeAppUserChannel(instanceId: string, channelId: string | null): void {
+    if (channelId !== null && !getUserChannel(this.state, channelId)) {
+      throw new NoChannelFoundError(`Channel ${channelId} does not exist`)
+    }
+
+    const context = this.createHandlerContext(instanceId)
+    const requestUuid = crypto.randomUUID()
+    const instance = getInstance(this.state, instanceId)
+    const source: BrowserTypes.AppIdentifier = {
+      appId: instance?.appId ?? "unknown",
+      instanceId,
+    }
+    const meta: BrowserTypes.AppRequestMessageMeta = {
+      requestUuid,
+      timestamp: new Date(),
+      source,
+    }
+
+    if (channelId !== null) {
+      handleJoinUserChannelRequest(
+        {
+          type: "joinUserChannelRequest",
+          payload: { channelId },
+          meta,
+        },
+        context
+      )
+    } else {
+      handleLeaveCurrentChannelRequest(
+        {
+          type: "leaveCurrentChannelRequest",
+          payload: {},
+          meta,
+        },
+        context
+      )
+    }
+
+    this.emitHostVisibleChannelChanged(instanceId, channelId)
+  }
+
+  /**
+   * When no app registered channelChanged listeners, notifyChannelChanged sends nothing.
+   * Host chrome listens on WCP connector channelChanged (intercepted from transport events).
+   */
+  private emitHostVisibleChannelChanged(instanceId: string, channelId: string | null): void {
+    const state = this.getState()
+    const hasChannelEventSubscribers =
+      getEventListeners("channelChanged", () => state).length > 0 ||
+      getEventListeners(ALL_DA_EVENT_TYPES, () => state).length > 0
+
+    if (hasChannelEventSubscribers) {
+      return
+    }
+
+    const instance = getInstance(state, instanceId)
+    if (!instance) {
+      return
+    }
+
+    const channelChangedEvent = createDACPEvent("channelChangedEvent", {
+      channelId,
+      newChannelId: channelId,
+      identity: {
+        appId: instance.appId,
+        instanceId: instance.instanceId,
+      },
+    })
+
+    this.transport.send({
+      ...channelChangedEvent,
+      meta: {
+        ...channelChangedEvent.meta,
+        destination: { instanceId },
+      },
+    })
   }
 }

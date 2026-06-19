@@ -1,6 +1,10 @@
+import { enableMapSet } from "immer"
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
 import type { AppConnectionMetadata, SailPlatform } from "@finos/sail-platform-api"
+
+// Immer draft support for Map/Set in connection state
+enableMapSet()
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected"
 
@@ -171,7 +175,8 @@ export const createConnectionStore = (platform: SailPlatform) => {
     // Could add temporary "failed" connection entries here if needed
   })
 
-  // Handle channel changed event
+  // Handle channel changed event — host UI uses push updates from WCP connector,
+  // not agent state snapshot polling (see getAppUserChannel for one-off reads).
   connector.on("channelChanged", (instanceId: string, channelId: string | null) => {
     console.log("[ConnectionStore] Channel changed:", instanceId, channelId)
     store.setState(state => {

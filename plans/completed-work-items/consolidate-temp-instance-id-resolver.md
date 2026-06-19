@@ -3,7 +3,7 @@ title: "Consolidate temp to canonical instance id resolver"
 slug: consolidate-temp-instance-id-resolver
 kind: task
 type: chore
-status: waiting_on_user
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -32,7 +32,7 @@ depends_on:
 integration_branch: v3-pre
 branch: v3-pre
 pr_url: ""
-merged_pr: ""
+merged_pr: "88753b7d6"
 external_tracker: ""
 tags:
   - api
@@ -145,4 +145,9 @@ _(empty)_
 
 ## Learnings extracted
 
-_(empty)_
+- WCP5 links handshake routing id → `instanceId` at validation success (not only when heartbeat starts); cleanup/disconnect must resolve via that map.
+
+## Loop history
+
+- 2026-06-18 staged for human review (waiting_on_user)
+- 2026-06-19 Marked **done** — committed on `v3-pre` as `88753b7d6` (stacked with `move-wcp-temp-id-alias-to-agent-state`)

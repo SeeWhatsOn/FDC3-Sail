@@ -294,11 +294,13 @@ No `intentResolver` contract needed — `@finos/fdc3` hosts the picker inside ea
 
 When `channelSelectorUrl` is `false` (default), the **host** renders channel chrome (toolbar button, per-app dropdown). The app does not get an injected channel iframe.
 
-1. **Read** current channel: `desktopAgent.getAppUserChannelId(instanceId)`
+1. **Read** current channel: `desktopAgent.getAppUserChannelId(instanceId)` (or `platform.getAppUserChannel`)
 2. **List** channels: `desktopAgent.getUserChannels()`
-3. **Change** channel: send `joinUserChannelRequest` / `leaveCurrentChannelRequest` on behalf of the app, then wait for `channelChanged` on the edge
+3. **Change** channel: `desktopAgent.changeAppUserChannel(instanceId, channelId)` (or `platform.changeAppChannel`), then keep UI in sync via WCP connector `channelChanged` events
 
-With **`SailPlatform`** (easiest — wraps the DACP send):
+Do **not** read or mutate `desktopAgent.getState()` for channel chrome. `getState()` is for tests and debugging only; host UI should use the granular getters above plus push events from the connector.
+
+With **`SailPlatform`** (easiest — wraps host channel commands):
 
 ```typescript
 const platform = new SailPlatform({ appLauncher, intentResolver })
@@ -309,7 +311,7 @@ const channels = platform.getUserChannels()
 const currentId = platform.getAppUserChannel(instanceId)
 await platform.changeAppChannel(instanceId, channelId) // or null to leave
 
-// Keep toolbar state in sync
+// Keep toolbar state in sync (push model — do not poll getState())
 platform.connector.on("channelChanged", (id, channelId) => {
   updateTabChrome(id, channelId)
 })
@@ -320,11 +322,10 @@ With **`createBrowserDesktopAgent` only** (no platform-api):
 ```typescript
 import { getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/presets"
 
-const { wcpConnector, connectorTransport } = getBrowserDesktopAgentSession(desktopAgent)
+const { wcpConnector } = getBrowserDesktopAgentSession(desktopAgent)
 
 function changeAppChannel(instanceId: string, channelId: string | null): Promise<void> {
   return new Promise((resolve, reject) => {
-    const requestUuid = crypto.randomUUID()
     const timeout = setTimeout(() => {
       cleanup()
       reject(new Error("Channel change timeout"))
@@ -343,15 +344,12 @@ function changeAppChannel(instanceId: string, channelId: string | null): Promise
 
     wcpConnector.on("channelChanged", onChanged)
 
-    connectorTransport.send({
-      type: channelId ? "joinUserChannelRequest" : "leaveCurrentChannelRequest",
-      payload: channelId ? { channelId } : {},
-      meta: {
-        requestUuid,
-        timestamp: new Date().toISOString(),
-        source: { instanceId },
-      },
-    })
+    try {
+      desktopAgent.changeAppUserChannel(instanceId, channelId)
+    } catch (error) {
+      cleanup()
+      reject(error instanceof Error ? error : new Error(String(error)))
+    }
   })
 }
 
@@ -361,7 +359,7 @@ channelButton.onclick = () => {
 }
 ```
 
-`ChannelControl` in `host-contracts/` describes the **picker contract** (`selectChannel(request)`); wire your toolbar to call `changeAppChannel` with the returned channel id. Sail web does not use `ChannelControl` directly — it uses `SailPlatform.changeAppChannel` plus `channelChanged` events (`connection-store.ts`).
+`ChannelControl` in `host-contracts/` describes the **picker contract** (`selectChannel(request)`); wire your toolbar to call `changeAppChannel` with the returned channel id. Sail web does not use `ChannelControl` directly — it uses `SailPlatform.changeAppChannel` plus `channelChanged` push events (`connection-store.ts` subscribes to the connector; `ChannelSelector.tsx` reads from the store, not `getState()`).
 
 **Injected channel iframe (uncommon):**
 

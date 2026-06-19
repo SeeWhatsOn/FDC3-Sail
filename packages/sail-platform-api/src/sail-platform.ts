@@ -22,7 +22,6 @@ import {
   type AppConnectionMetadata,
 } from "@finos/sail-desktop-agent/presets"
 import type { BrowserTypes } from "@finos/fdc3"
-import { generateUuid } from "./utils/uuid"
 
 import type { ChannelSelector } from "./interfaces/channel-selector"
 import { SailPlatformClient, type SailPlatformClientConfig } from "./client/sail-platform-client"
@@ -313,10 +312,11 @@ export class SailPlatform {
   // ===== Channel Management =====
 
   /**
-   * Change an app's channel membership.
+   * Change an app's channel membership on behalf of the host shell.
    *
-   * This sends a DACP message on behalf of the app to join or leave a channel.
-   * The change is confirmed via the `onChannelChanged` callback.
+   * Updates agent state via {@link DesktopAgent.changeAppUserChannel} and resolves
+   * when the WCP connector emits `channelChanged` (push model for host UI).
+   * Do not poll `getState()` — use {@link getAppUserChannel} for one-off reads.
    *
    * @param instanceId - The app instance to change channel for
    * @param channelId - The channel ID to join, or null to leave current channel
@@ -325,7 +325,7 @@ export class SailPlatform {
   async changeAppChannel(instanceId: string, channelId: string | null): Promise<void> {
     this.ensureStarted()
 
-    // Validate channel exists before sending DACP message
+    // Validate channel exists before mutating agent state
     if (channelId !== null) {
       const channels = this.getUserChannels()
       if (!channels.find(c => c.id === channelId)) {
@@ -334,20 +334,15 @@ export class SailPlatform {
     }
 
     return new Promise<void>((resolve, reject) => {
-      const requestUuid = generateUuid()
       const timeout = setTimeout(() => {
         cleanup()
         reject(new Error(`Channel change timeout for instance ${instanceId}`))
-      }, 10000) // 10 second timeout
+      }, 10000)
 
-      // Listen for channel change confirmation
       const handleChannelChanged = (changedInstanceId: string, newChannelId: string | null) => {
-        if (changedInstanceId === instanceId) {
-          // Verify it's the channel we requested (or null for leave)
-          if (newChannelId === channelId) {
-            cleanup()
-            resolve()
-          }
+        if (changedInstanceId === instanceId && newChannelId === channelId) {
+          cleanup()
+          resolve()
         }
       }
 
@@ -358,31 +353,11 @@ export class SailPlatform {
 
       this._wcpConnector!.on("channelChanged", handleChannelChanged)
 
-      // Send DACP message on behalf of the app via connector transport
-      if (channelId) {
-        // Join channel
-        const message = {
-          type: "joinUserChannelRequest",
-          payload: { channelId },
-          meta: {
-            requestUuid,
-            timestamp: new Date().toISOString(),
-            source: { instanceId },
-          },
-        }
-        this._connectorTransport!.send(message)
-      } else {
-        // Leave channel
-        const message = {
-          type: "leaveCurrentChannelRequest",
-          payload: {},
-          meta: {
-            requestUuid,
-            timestamp: new Date().toISOString(),
-            source: { instanceId },
-          },
-        }
-        this._connectorTransport!.send(message)
+      try {
+        this._desktopAgent!.changeAppUserChannel(instanceId, channelId)
+      } catch (error) {
+        cleanup()
+        reject(error instanceof Error ? error : new Error(String(error)))
       }
     })
   }

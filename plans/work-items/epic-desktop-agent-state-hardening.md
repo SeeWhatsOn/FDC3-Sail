@@ -47,13 +47,13 @@ _(Epic — see child work items.)_
 
 | Slug | Kind | MoSCoW | depends_on | Status |
 |------|------|--------|------------|--------|
-| `wire-wcp5-connected-instance-lifecycle` | task | Must | — | approved |
-| `consolidate-temp-instance-id-resolver` | task | Must | `wire-wcp5-connected-instance-lifecycle` | approved |
-| `move-wcp-temp-id-alias-to-agent-state` | task | Should | `consolidate-temp-instance-id-resolver` | waiting_on_user |
+| `wire-wcp5-connected-instance-lifecycle` | task | Must | — | done |
+| `consolidate-temp-instance-id-resolver` | task | Must | `wire-wcp5-connected-instance-lifecycle` | done |
+| `move-wcp-temp-id-alias-to-agent-state` | task | Should | `consolidate-temp-instance-id-resolver` | done |
 | `reorganize-core-handlers-colocate-state` | task | Should | `move-wcp-temp-id-alias-to-agent-state` | draft |
-| `remove-dead-instance-state-denormalization` | task | Must | `wire-wcp5-connected-instance-lifecycle` | approved |
-| `user-channels-runtime-ssot` | task | Should | — | approved |
-| `collapse-app-directory-to-functions` | task | Must | — | approved |
+| `remove-dead-instance-state-denormalization` | task | Must | `wire-wcp5-connected-instance-lifecycle` | done |
+| `user-channels-runtime-ssot` | task | Should | — | done |
+| `collapse-app-directory-to-functions` | task | Must | — | done |
 | `audit-host-channel-reactivity-read-apis` | task | Should | `wire-wcp5-connected-instance-lifecycle`, `user-channels-runtime-ssot` | approved |
 | `document-desktop-agent-singleton-and-reactivity` | task | Should | `audit-host-channel-reactivity-read-apis` | approved |
 

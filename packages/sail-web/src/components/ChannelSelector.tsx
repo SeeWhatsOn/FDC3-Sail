@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import type { BrowserTypes } from "@finos/fdc3"
+import { useStore, type StoreApi } from "zustand"
 
 import { useSailPlatform, useConnectionStore } from "../contexts"
+import type { ConnectionStore } from "../stores/connection-store"
 
 interface ChannelSelectorProps {
   instanceId: string
@@ -13,19 +15,24 @@ export function ChannelSelector({ instanceId }: ChannelSelectorProps) {
   const [error, setError] = useState<string | null>(null)
 
   const platform = useSailPlatform()
-  const connectionStore = useConnectionStore()
+  const platformRef = useRef(platform)
+  platformRef.current = platform
 
-  const connection = connectionStore.getConnection(instanceId)
+  const connectionStore = useConnectionStore()
+  const storeApi = connectionStore as unknown as StoreApi<ConnectionStore>
+  // Subscribe to connection-store push updates (channelChanged) — not agent state snapshots.
+  const connection = useStore(storeApi, state => state.getConnection(instanceId))
   const currentChannelId = connection?.channelId ?? null
 
   const channels = useMemo<BrowserTypes.Channel[]>(() => {
     try {
-      return platform.getUserChannels()
+      return platformRef.current.getUserChannels()
     } catch (err) {
       console.error("[ChannelSelector] Failed to get user channels:", err)
       return []
     }
-  }, [platform])
+    // User channels are fixed at Desktop Agent construction.
+  }, [])
 
   const currentChannel = channels.find(channel => channel.id === currentChannelId)
   const currentColor = currentChannel?.displayMetadata?.color ?? "#808080"
@@ -41,7 +48,8 @@ export function ChannelSelector({ instanceId }: ChannelSelectorProps) {
     setError(null)
 
     try {
-      await platform.changeAppChannel(instanceId, channelId)
+      // changeAppChannel resolves after connector channelChanged; store updates via push.
+      await platformRef.current.changeAppChannel(instanceId, channelId)
       setIsOpen(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to change channel")

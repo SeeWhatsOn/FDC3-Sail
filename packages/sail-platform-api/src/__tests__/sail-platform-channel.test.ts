@@ -56,7 +56,7 @@ function setInstanceUserChannel(
 function createTestPlatform(): SailPlatform {
   return new SailPlatform({
     appLauncher: {
-      launch: vi.fn(async () => ({ appId: "test-app", instanceId: INSTANCE_ID })),
+      launch: vi.fn(() => Promise.resolve({ appId: "test-app", instanceId: INSTANCE_ID })),
     },
   })
 }
@@ -126,10 +126,51 @@ describe("SailPlatform channel APIs", () => {
         /does not exist/i
       )
     })
+
+    it("joins channel and getAppUserChannel returns the updated channel id", async () => {
+      platform.start()
+      seedConnectedInstance(platform.agent)
+
+      await platform.changeAppChannel(INSTANCE_ID, CHANNEL_ID)
+
+      expect(platform.getAppUserChannel(INSTANCE_ID)).toBe(CHANNEL_ID)
+    })
+
+    it("leaves channel and getAppUserChannel returns null", async () => {
+      platform.start()
+      seedConnectedInstance(platform.agent)
+
+      await platform.changeAppChannel(INSTANCE_ID, CHANNEL_ID)
+      await platform.changeAppChannel(INSTANCE_ID, null)
+
+      expect(platform.getAppUserChannel(INSTANCE_ID)).toBeNull()
+    })
+
+    it("emits channelChanged on connector when changeAppChannel joins a channel", async () => {
+      platform.start()
+      seedConnectedInstance(platform.agent)
+      const onChannelChanged = vi.fn()
+      platform.connector.on("channelChanged", onChannelChanged)
+
+      await platform.changeAppChannel(INSTANCE_ID, CHANNEL_ID)
+
+      expect(onChannelChanged).toHaveBeenCalledWith(INSTANCE_ID, CHANNEL_ID)
+    })
   })
 })
 
 describe("createSailBrowserDesktopAgent", () => {
+  beforeEach(() => {
+    vi.stubGlobal("window", {
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it("does not expose sendDACPMessageOnBehalfOf", () => {
     const result = createSailBrowserDesktopAgent()
 

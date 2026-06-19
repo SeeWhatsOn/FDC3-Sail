@@ -3,7 +3,7 @@ title: "Move WCP temp→instanceId links to AgentState"
 slug: move-wcp-temp-id-alias-to-agent-state
 kind: task
 type: chore
-status: waiting_on_user
+status: done
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -31,7 +31,7 @@ depends_on:
 integration_branch: v3-pre
 branch: v3-pre
 pr_url: ""
-merged_pr: ""
+merged_pr: "88753b7d6"
 external_tracker: ""
 tags:
   - api
@@ -42,7 +42,7 @@ tags:
 
 ## Goal
 
-Store WCP **handshake routing id → instanceId** links on `AgentState` (not a module singleton), and rename APIs to match what each id is — no “tempInstanceId”, no “canonical”.
+Store WCP **handshake routing id → instanceId** links on `AgentState` (not a module singleton), and rename APIs to match what each id is — no "tempInstanceId", no "canonical".
 
 ## Naming (KISS — call it what it is)
 
@@ -53,14 +53,14 @@ FDC3 puts a string in `meta.destination.instanceId` during the handshake. That v
 | tempInstanceId | Routing id during WCP4 (`temp-{connectionAttemptUuid}` on mint path, or host launcher id on adopt path) | **`handshakeRoutingId`** |
 | canonical instanceId | WCP5-validated id — row key in `state.instances` | **`instanceId`** |
 | connectionAttemptUuid | UUID from WCP1 Hello (spec field) | **`connectionAttemptUuid`** |
-| “canonical”, “temp link resolver” | Map from pre-WCP5 routing → post-WCP5 id | **`handshakeRoutingIdToInstanceId`** |
+| "canonical", "temp link resolver" | Map from pre-WCP5 routing → post-WCP5 id | **`handshakeRoutingIdToInstanceId`** |
 
-**Two handshake paths (why one word “temp” was wrong):**
+**Two handshake paths (why one word "temp" was wrong):**
 
 1. **Mint path** — routing id is `temp-{connectionAttemptUuid}` until WCP5 assigns `instanceId`.
-2. **Host-adopt path** — routing id may already be the launcher’s `instanceId` (still `PENDING` until WCP5).
+2. **Host-adopt path** — routing id may already be the launcher's `instanceId` (still `PENDING` until WCP5).
 
-So the map is not “temp → canonical”; it is **“whatever id DACP used to route this connection before validation → the validated `instanceId`”**.
+So the map is not "temp → canonical"; it is **"whatever id DACP used to route this connection before validation → the validated `instanceId`"**.
 
 **API names:**
 
@@ -81,7 +81,7 @@ Browser edge (`WCPConnector`) keeps `connections` / `messagePortTransports` for 
 ## Reference docs
 
 - `plans/prd-desktop-agent-state-hardening.md` (PRD-04d follow-up)
-- `plans/work-items/consolidate-temp-instance-id-resolver.md`
+- `plans/completed-work-items/consolidate-temp-instance-id-resolver.md`
 - `AGENTS.md` WCP4 temp vs WCP5 instance ids (update wording when this lands)
 
 ## Parent context
@@ -108,7 +108,7 @@ Scenario: Coupled browser reads links from agent state
 
 ## Out of scope
 
-- Backward-compatibility shims (`@deprecated` re-exports, legacy facades, “migration” APIs) — v3-pre breaking change unless human requests compat
+- Backward-compatibility shims (`@deprecated` re-exports, legacy facades, "migration" APIs) — v3-pre breaking change unless human requests compat
 - Moving connector `connections` / `messagePortTransports` into `AgentState`
 - FDC3 WCP message shape changes
 - Cross-process link sync for remote DA (each DA owns its own `AgentState`)
@@ -165,7 +165,8 @@ _(empty)_
 
 ## Loop history
 
-- 2026-06-19 approved by human; delivered same session (stacked on uncommitted consolidate work)
+- 2026-06-19 approved by human; delivered same session (stacked on consolidate work)
+- 2026-06-19 Marked **done** — committed on `v3-pre` as `88753b7d6`
 
 ## Escalation notes
 
