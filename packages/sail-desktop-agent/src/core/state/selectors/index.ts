@@ -13,7 +13,6 @@ export {
   getConnectedInstances,
   getInstancesByState,
   getInstancesWithContextListener,
-  getInstancesWithIntentListener,
   getInstancesWithPrivateChannel,
 } from "./instance"
 

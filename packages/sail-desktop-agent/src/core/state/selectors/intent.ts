@@ -4,7 +4,8 @@
  * Pure functions for querying intent-related state.
  */
 
-import type { AgentState, IntentListener, PendingIntent } from "../types"
+import type { AgentState, AppInstance, IntentListener, PendingIntent } from "../types"
+import { getInstance } from "./instance"
 
 export const getIntentListener = (
   state: AgentState,
@@ -19,6 +20,19 @@ export const getActiveListenersForIntent = (
   intentName: string
 ): IntentListener[] =>
   Object.values(state.intents.listeners).filter(l => l.intentName === intentName && l.active)
+
+/** Resolve app instances that have active intent listeners via the global registry. */
+export const getInstancesWithIntentListener = (
+  state: AgentState,
+  intentName: string
+): AppInstance[] => {
+  const instanceIds = new Set(
+    getActiveListenersForIntent(state, intentName).map(listener => listener.instanceId)
+  )
+  return [...instanceIds]
+    .map(instanceId => getInstance(state, instanceId))
+    .filter((instance): instance is AppInstance => instance !== undefined)
+}
 
 export const getListenersForInstance = (state: AgentState, instanceId: string): IntentListener[] =>
   Object.values(state.intents.listeners).filter(l => l.instanceId === instanceId)
