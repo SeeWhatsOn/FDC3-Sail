@@ -7,8 +7,14 @@ type AppProps = {
   onPanelsChange?: (setter: Dispatch<SetStateAction<HarnessPanel[]>>) => void
 }
 
+function panelLabel(panel: HarnessPanel): string {
+  const title = panel.title ?? panel.appId
+  return panel.launchMode === "popup" ? `${title} (tab)` : title
+}
+
 /**
- * Minimal unstyled host: one iframe per mounted panel plus a debug list.
+ * Minimal unstyled host: Conformance1 and other iframe apps render inline;
+ * `forceNewWindow` apps open in separate tabs via AppLauncher (listed only here).
  */
 export default function App({ initialPanels, onPanelsChange }: AppProps) {
   const [panels, setPanels] = useState<HarnessPanel[]>(initialPanels)
@@ -16,6 +22,8 @@ export default function App({ initialPanels, onPanelsChange }: AppProps) {
   useEffect(() => {
     onPanelsChange?.(setPanels)
   }, [onPanelsChange])
+
+  const iframePanels = panels.filter(panel => panel.launchMode === "iframe")
 
   return (
     <div>
@@ -25,13 +33,13 @@ export default function App({ initialPanels, onPanelsChange }: AppProps) {
         <ul>
           {panels.map(panel => (
             <li key={panel.instanceId}>
-              {panel.title ?? panel.appId} — {panel.instanceId}
+              {panelLabel(panel)} — {panel.instanceId}
             </li>
           ))}
         </ul>
       </section>
       <section>
-        {panels.map(panel => (
+        {iframePanels.map(panel => (
           <div key={panel.instanceId}>
             <div>{panel.title ?? panel.appId}</div>
             <iframe

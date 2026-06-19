@@ -1,8 +1,8 @@
 import type { AppLauncher, DirectoryApp } from "@finos/sail-desktop-agent"
 import type { AppIdentifier, AppMetadata, BrowserTypes } from "@finos/fdc3"
-import type { HarnessPanel } from "./types"
+import type { HarnessLaunchMode, HarnessPanel } from "./types"
 
-type AppMetadataWithDetails = AppMetadata & Partial<Pick<DirectoryApp, "details">>
+type AppMetadataWithDetails = AppMetadata & Partial<Pick<DirectoryApp, "details" | "hostManifests">>
 
 export type HarnessLaunchCallback = (panel: HarnessPanel) => void
 
@@ -18,13 +18,23 @@ function extractAppUrl(appMetadata: AppMetadataWithDetails): string | undefined 
 }
 
 /**
+ * Conformance mock apps set `hostManifests.sail.forceNewWindow` so FINOS open tests
+ * run in a top-level browsing context (tab/popup), not an iframe.
+ */
+export function resolveHarnessLaunchMode(appMetadata: AppMetadataWithDetails): HarnessLaunchMode {
+  const sailManifest = appMetadata.hostManifests?.sail
+  if (sailManifest && typeof sailManifest === "object" && sailManifest.forceNewWindow === true) {
+    return "popup"
+  }
+  return "iframe"
+}
+
+/**
  * Minimal AppLauncher for the conformance harness.
  *
  * Each launch generates a fresh {@link crypto.randomUUID} instance id unless
  * the open request targets an existing instance. The returned id must match the
- * iframe `name` attribute so the app can claim it in WCP4 — but the desktop
- * agent still mints a separate WCP5 canonical id on first connect until
- * bind-host-instance-id-at-wcp4 is implemented.
+ * iframe `name` or popup `window.name` so the app can claim it in WCP4.
  */
 export function createHarnessAppLauncher(onLaunch: HarnessLaunchCallback): AppLauncher {
   return {
@@ -46,6 +56,7 @@ export function createHarnessAppLauncher(onLaunch: HarnessLaunchCallback): AppLa
         appId: request.app.appId,
         url,
         title: metadata.title ?? metadata.name ?? request.app.appId,
+        launchMode: resolveHarnessLaunchMode(metadata),
       })
 
       return Promise.resolve({

@@ -13,12 +13,16 @@ export type IntentResolutionRequest = {
   handlers: IntentHandlerOption[]
 }
 
-/** One mounted conformance app iframe in the harness host. */
+/** How the harness mounts a launched conformance app. */
+export type HarnessLaunchMode = "iframe" | "popup"
+
+/** One mounted conformance app panel in the harness host. */
 export type HarnessPanel = {
   instanceId: string
   appId: string
   url: string
   title?: string
+  launchMode: HarnessLaunchMode
 }
 
 /** React host state for mounted app panels. */

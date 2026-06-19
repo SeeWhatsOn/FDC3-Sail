@@ -17,11 +17,13 @@ export type PopupCloseWatcher = {
 }
 
 /**
- * Open a conformance app in a named popup. The window name must match
- * {@link HarnessPanel.instanceId} so the app can claim it in WCP4.
+ * Open a conformance app in a new top-level browsing context (tab). The window
+ * name must match {@link HarnessPanel.instanceId} so the app can claim it in WCP4.
+ *
+ * Omit window features so browsers open a tab rather than a sized popup.
  */
 export function openHarnessPopup(panel: HarnessPanel): Window | null {
-  return window.open(panel.url, panel.instanceId, HARNESS_POPUP_FEATURES)
+  return window.open(panel.url, panel.instanceId)
 }
 
 /**

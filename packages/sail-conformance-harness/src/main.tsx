@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client"
 import {
   createBrowserDesktopAgent,
   DEFAULT_FDC3_USER_CHANNELS,
+  type BrowserDesktopAgent,
   type DirectoryApp,
 } from "@finos/sail-desktop-agent"
 import type { AppIdentifier } from "@finos/fdc3"
@@ -13,6 +14,7 @@ import conformanceAppDirectory from "../../../conformance-appd.json"
 import App from "./App"
 import { createHarnessAppLauncher } from "./app-launcher"
 import { createHarnessIntentResolver } from "./intent-resolver-wiring"
+import { createPopupCloseWatcher, openHarnessPopup } from "./popup-launcher"
 import type { HarnessPanel } from "./types"
 
 const HARNESS_DEBUG = true
@@ -52,16 +54,43 @@ function bootstrapHarness(): {
       appId: "Conformance1",
       url: conformance1Url,
       title: "FDC3 Conformance Framework",
+      launchMode: "iframe",
     },
   ]
 
-  let appendPanel: Dispatch<SetStateAction<HarnessPanel[]>> | null = null
+  let setPanels: Dispatch<SetStateAction<HarnessPanel[]>> | null = null
+  // eslint-disable-next-line prefer-const
+  let desktopAgent: BrowserDesktopAgent | undefined
 
-  const appLauncher = createHarnessAppLauncher(panel => {
-    appendPanel?.(current => [...current, panel])
+  const removePanel = (instanceId: string) => {
+    setPanels?.(current => current.filter(panel => panel.instanceId !== instanceId))
+  }
+
+  const popupWatcher = createPopupCloseWatcher({
+    onPopupClosed: instanceId => {
+      removePanel(instanceId)
+      desktopAgent?.disconnectInstance(instanceId)
+    },
   })
 
-  void createBrowserDesktopAgent({
+  const mountLaunchedPanel = (panel: HarnessPanel) => {
+    if (panel.launchMode === "popup") {
+      const popup = openHarnessPopup(panel)
+      if (!popup) {
+        console.error(
+          `[ConformanceHarness] Failed to open tab for ${panel.appId} (${panel.instanceId}) — popup blocked?`
+        )
+        return
+      }
+      popupWatcher.registerPopup(panel.instanceId, popup)
+    }
+
+    setPanels?.(current => [...current, panel])
+  }
+
+  const appLauncher = createHarnessAppLauncher(mountLaunchedPanel)
+
+  desktopAgent = createBrowserDesktopAgent({
     apps: conformanceApps,
     appLauncher,
     intentResolver: createHarnessIntentResolver(HARNESS_DEBUG),
@@ -78,6 +107,8 @@ function bootstrapHarness(): {
       console.log(`[ConformanceHarness] WCP connected: ${metadata.appId} (${metadata.instanceId})`)
     },
     onAppDisconnected: (instanceId: AppInstance["instanceId"]) => {
+      popupWatcher.unregisterPopup(instanceId)
+      removePanel(instanceId)
       console.log(`[ConformanceHarness] WCP disconnected: ${instanceId}`)
     },
   })
@@ -89,7 +120,7 @@ function bootstrapHarness(): {
   return {
     initialPanels,
     onPanelsChange: setter => {
-      appendPanel = setter
+      setPanels = setter
     },
   }
 }
