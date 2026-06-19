@@ -86,4 +86,4 @@ _(empty)_
 
 ## Learnings extracted
 
-_(empty)_
+Phase 1 (2026-06-19): v4 shows 9 `UserCancelledResolution` on raiseIntent Result. **v5: 0 rows** — spike complete; Phase 2 not needed. Remaining Result failures are `getResultMetadata` empty (4) → `fix-toolbox-metadata-client-and-dacp-paths`. Recommend human approve → archive to `completed-work-items/` after v5 doc update.

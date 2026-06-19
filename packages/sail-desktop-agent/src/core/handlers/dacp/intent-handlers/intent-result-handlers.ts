@@ -16,6 +16,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import { ResultError, ResolveError } from "@finos/fdc3"
 import { getInstance, getPendingIntent } from "../../../state/selectors"
 import { resolvePendingIntent } from "../../../state/mutators"
+import { buildIntentResultWirePayload } from "./intent-result-metadata"
 
 function isHandlerRejection(intentResult: unknown): boolean {
   return (
@@ -56,13 +57,31 @@ export function handleIntentResultRequest(
 
     const intentResult = payload.intentResult
     const sourceInstanceId = pendingIntent.sourceInstanceId
+    const resultTimestamp = new Date().toISOString()
 
     const promiseData = context.pendingIntentPromises.get(originalRequestId)
+    let wireIntentResult: BrowserTypes.IntentResult = intentResult
+    let resultMetadata:
+      | ReturnType<typeof buildIntentResultWirePayload>["resultMetadata"]
+      | undefined = undefined
+
     if (promiseData) {
       if (promiseData.timeoutHandle) {
         clearTimeout(promiseData.timeoutHandle)
       }
-      promiseData.resolve(intentResult)
+
+      if (intentResult !== null && !isHandlerRejection(intentResult)) {
+        const normalized = buildIntentResultWirePayload(
+          intentResult,
+          pendingIntent.targetAppId,
+          pendingIntent.targetInstanceId,
+          resultTimestamp
+        )
+        wireIntentResult = normalized.wireIntentResult
+        resultMetadata = normalized.resultMetadata
+      }
+
+      promiseData.resolve(wireIntentResult)
       context.pendingIntentPromises.delete(originalRequestId)
     }
 
@@ -108,10 +127,22 @@ export function handleIntentResultRequest(
         transport,
       })
     } else {
+      const normalized =
+        resultMetadata ??
+        buildIntentResultWirePayload(
+          intentResult,
+          pendingIntent.targetAppId,
+          pendingIntent.targetInstanceId,
+          resultTimestamp
+        ).resultMetadata
+
       const resultResponse = createDACPSuccessResponse(
         raiseIntentRequestLike,
         "raiseIntentResultResponse",
-        { intentResult }
+        {
+          intentResult: wireIntentResult,
+          metadata: normalized,
+        }
       )
       sendDACPResponse({
         response: resultResponse,

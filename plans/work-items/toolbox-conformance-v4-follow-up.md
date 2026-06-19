@@ -19,7 +19,7 @@ tags: [fdc3]
 
 ## Goal
 
-Close the measured gap between merged toolbox burn-down work and `conformance-report-v4.txt` (31/64) via agent oracle fixes, WCP multi-app delivery tests, and an updated failure-review baseline.
+Close the measured gap between merged toolbox burn-down work and harness exports: v4 **31/64**, v5 **53/49** (2026-06-19). Remaining work is client `getResultMetadata`, harness teardown, and blocked findIntent policy items.
 
 ## User or system context
 
@@ -28,26 +28,30 @@ Maintainers need a second delivery wave after TB-00–TB-09: v4 shows agent rows
 ## Reference docs
 
 - `plans/prd-toolbox-conformance-v4-follow-up.md`
-- `conformance-report-v4.txt`
+- `conformance-report-v5.txt`
 - `conformance-test-failure-review.md`
 - `website/docs/packages/desktop-agent/conformance.md`
 
 ## Parent context
 
-v4 export ran 95 scenarios (31 pass). Agent fixes (#47–#48) and WCP bind (#49) merged but v4 still reports `desktopAgent`, `apps.length`, and channel timeouts. **Parallel tracks:** TV4-01→02→04 (findIntent / raiseIntent throws) blocked on FINOS clarification; proceed with TV4-03, TV4-05–08 and spike TV4-06 independently.
+v5 export: **53 pass / 49 fail** (102 scenarios). UCR and AppTimeout clusters largely cleared. **New gaps:** `getResultMetadata` client API (4 rows), close-context teardown (26 rows), stale instances inflating findIntent. **Blocked:** TV4-01→04 findIntent / throws until FINOS clarification. **Proceed:** close completed harness items; add TV4-03b (client metadata), teardown tasks (see `conformance-test-failure-review.md` §6).
 
 ## Child work items
 
 | Slug | Kind | Depends on | Status |
 |------|------|------------|--------|
-| record-toolbox-v4-measured-baseline | task | — | draft |
-| verify-v4-agent-fixes-on-current-branch | task | — | draft |
+| record-toolbox-v4-measured-baseline | task | — | in-progress |
+| verify-v4-agent-fixes-on-current-branch | task | — | in-progress |
 | dedupe-findintent-directory-running-apps | task | — | blocked |
 | fix-findintent-empty-apps-noappsfound | task | dedupe-findintent-directory-running-apps | blocked |
-| populate-intent-result-metadata-toolbox | task | — | draft |
+| populate-intent-result-metadata-toolbox | task | — | in-progress |
 | align-raise-intent-throws-v4-matrix | task | fix-findintent-empty-apps-noappsfound | blocked |
-| diagnose-harness-user-cancelled-resolution | spike | — | draft |
-| extend-wcp-channel-delivery-integration-tests | task | verify-v4-agent-fixes-on-current-branch | draft |
+| diagnose-harness-user-cancelled-resolution | spike | — | in-progress (Phase 1 done) |
+| extend-wcp-channel-delivery-integration-tests | task | verify-v4-agent-fixes-on-current-branch | in-progress |
+| pre-register-conformance1-pending-instance | task | verify-v4-agent-fixes-on-current-branch | in-progress |
+| harness-popup-wcp-disconnect-cleanup | task | pre-register-conformance1-pending-instance | in-progress (partial — v5) |
+
+**v5 follow-up epic:** `epic-toolbox-conformance-v5-follow-up` — grouped tasks `fix-toolbox-metadata-client-and-dacp-paths`, `fix-harness-finOs-session-teardown`. See `conformance-test-failure-review.md` §6.
 
 ## Out of scope
 

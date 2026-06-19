@@ -3,7 +3,7 @@ title: "Record measured toolbox v4 baseline in failure review"
 slug: record-toolbox-v4-measured-baseline
 kind: task
 type: chore
-status: draft
+status: in-progress
 loop_count: 0
 loop_limit: 3
 last_agent: ""

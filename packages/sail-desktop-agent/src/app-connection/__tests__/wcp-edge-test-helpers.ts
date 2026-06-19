@@ -244,3 +244,19 @@ export function createOpenRequestMessage(
     },
   }
 }
+
+export function createGetOrCreateChannelMessage(
+  instanceId: string,
+  appId: string,
+  channelId: string
+): BrowserTypes.GetOrCreateChannelRequest {
+  return {
+    type: "getOrCreateChannelRequest",
+    meta: {
+      requestUuid: crypto.randomUUID(),
+      timestamp: new Date(),
+      source: { appId, instanceId },
+    },
+    payload: { channelId },
+  }
+}

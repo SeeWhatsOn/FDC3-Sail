@@ -32,6 +32,7 @@ import {
 import { ALL_DA_EVENT_TYPES, getEventListeners } from "./handlers/dacp/event-handlers"
 import { NoChannelFoundError } from "./errors/fdc3-errors"
 import { getAllUserChannels, getInstance, getUserChannel } from "./state/selectors"
+import { connectInstance } from "./state/mutators"
 
 /**
  * Structure of DACP message metadata for routing
@@ -341,6 +342,25 @@ export class DesktopAgent {
    */
   getState(): AgentState {
     return this.state
+  }
+
+  /**
+   * Pre-register a host-assigned instance id before WCP4 (same contract as openRequest pre-register).
+   * Used when the host sets iframe/window `name` before the app connects.
+   */
+  registerPendingHostInstance(params: { appId: string; instanceId: string }): void {
+    if (getInstance(this.state, params.instanceId)) {
+      return
+    }
+
+    this.state = connectInstance(this.state, {
+      instanceId: params.instanceId,
+      appId: params.appId,
+      metadata: {
+        appId: params.appId,
+        name: params.appId,
+      },
+    })
   }
 
   /**

@@ -3,7 +3,7 @@ title: "Harness popup disconnect cleanup after fdc3.open"
 slug: harness-popup-wcp-disconnect-cleanup
 kind: task
 type: chore
-status: draft
+status: in-progress
 loop_count: 0
 loop_limit: 3
 last_agent: ""

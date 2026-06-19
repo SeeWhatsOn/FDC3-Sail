@@ -3,7 +3,7 @@ title: "WCP integration tests for two-app channel delivery"
 slug: extend-wcp-channel-delivery-integration-tests
 kind: task
 type: feature
-status: draft
+status: in-progress
 loop_count: 0
 loop_limit: 3
 last_agent: ""

@@ -25,6 +25,7 @@ import {
   connectWcpApp,
   createAddContextListenerMessage,
   createBroadcastMessage,
+  createGetOrCreateChannelMessage,
   createJoinUserChannelMessage,
   createOpenRequestMessage,
   flushAsyncDelivery,
@@ -163,6 +164,60 @@ describe("WCP edge contract", () => {
     await postDacpOnPort(
       appB.appPort,
       createBroadcastMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID, INSTRUMENT_CONTEXT)
+    )
+
+    const broadcastEvent = await broadcastPromise
+
+    expect(broadcastEvent.type).toBe("broadcastEvent")
+    const destination = broadcastEvent.meta.destination as { instanceId?: string } | undefined
+    expect(destination?.instanceId).toBe(appA.canonicalInstanceId)
+    expect(broadcastEvent.payload.context?.type).toBe(INSTRUMENT_CONTEXT.type)
+  })
+
+  it("delivers app-channel broadcast from app B to app A listener over MessagePort routing", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+
+    const appChannelId = "shared-wcp-app-channel"
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "edge-app-channel-listener-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const appB = await connectWcpApp(agent, {
+      connectionAttemptUuid: "edge-app-channel-broadcaster-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+    })
+
+    await postDacpOnPort(
+      appA.appPort,
+      createGetOrCreateChannelMessage(appA.canonicalInstanceId, appA.appId, appChannelId)
+    )
+    await postDacpOnPort(
+      appB.appPort,
+      createGetOrCreateChannelMessage(appB.canonicalInstanceId, appB.appId, appChannelId)
+    )
+
+    const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent"
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createAddContextListenerMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        appChannelId,
+        INSTRUMENT_CONTEXT.type
+      )
+    )
+    await postDacpOnPort(
+      appB.appPort,
+      createBroadcastMessage(appB.canonicalInstanceId, appB.appId, appChannelId, INSTRUMENT_CONTEXT)
     )
 
     const broadcastEvent = await broadcastPromise

@@ -3,7 +3,7 @@ title: "Populate getResultMetadata for toolbox intent results"
 slug: populate-intent-result-metadata-toolbox
 kind: task
 type: bug
-status: draft
+status: in-progress
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -84,4 +84,4 @@ _(empty)_
 
 ## Learnings extracted
 
-_(empty)_
+Wire metadata on `raiseIntentResultResponse` landed in this item (Vitest + Cucumber). v5 toolbox still fails `getResultMetadata()` — **client API follow-up:** `fix-toolbox-metadata-client-and-dacp-paths`. Mark this item **done** after human approve of wire-only scope, or extend into child task delivery.

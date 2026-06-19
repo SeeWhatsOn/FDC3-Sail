@@ -3,7 +3,7 @@ title: "Verify v4 agent fixes on current branch and re-run guidance"
 slug: verify-v4-agent-fixes-on-current-branch
 kind: task
 type: chore
-status: draft
+status: in-progress
 loop_count: 0
 loop_limit: 3
 last_agent: ""
