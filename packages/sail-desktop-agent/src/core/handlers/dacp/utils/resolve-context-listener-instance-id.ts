@@ -1,4 +1,4 @@
-import { resolveWcpTempInstanceId } from "../heartbeat-runtime"
+import { resolveLinkedInstanceId } from "../../../state/selectors/wcp-handshake-routing"
 import type { DACPHandlerContext } from "../../types"
 import { getInstance } from "../../../state/selectors"
 import { AppInstanceState } from "../../../state/types"
@@ -42,11 +42,9 @@ export function resolveDacpHandlerInstanceId(
     return instanceId
   }
 
-  if (instanceId.startsWith("temp-")) {
-    const linkedCanonicalId = resolveWcpTempInstanceId(instanceId)
-    if (linkedCanonicalId && getInstance(state, linkedCanonicalId)) {
-      return linkedCanonicalId
-    }
+  const linkedInstanceId = resolveLinkedInstanceId(state, instanceId)
+  if (linkedInstanceId && getInstance(state, linkedInstanceId)) {
+    return linkedInstanceId
   }
 
   if (sourceAppId) {
@@ -96,6 +94,3 @@ function findPendingOpenWithContextHostInstanceId(
 
   return pendingTargets[0][0]
 }
-
-/** @deprecated Use {@link resolveDacpHandlerInstanceId}. */
-export const resolveContextListenerInstanceId = resolveDacpHandlerInstanceId

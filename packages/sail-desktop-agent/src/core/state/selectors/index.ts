@@ -56,3 +56,5 @@ export { getHeartbeatState, getAllHeartbeatStates } from "./heartbeat"
 
 // Stats selectors
 export { getStats } from "./stats"
+
+export { resolveInstanceId, resolveLinkedInstanceId } from "./wcp-handshake-routing"

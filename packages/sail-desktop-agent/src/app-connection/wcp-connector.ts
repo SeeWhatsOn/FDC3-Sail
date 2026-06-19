@@ -48,6 +48,8 @@ import {
   clearPendingWcpSourceWindow,
   setPendingWcpSourceWindow,
 } from "../core/handlers/dacp/wcp-pending-source-window"
+import { resolveInstanceId } from "../core/state/selectors/wcp-handshake-routing"
+import type { AgentState, StateSetter } from "../core/state/types"
 import type { HostIntentResolverPayload, HostIntentResolverResponse } from "../host-contracts"
 import type { AppConnectionMetadata, WCP1HelloMessage, WCPConnectorOptions } from "./wcp/wcp-types"
 
@@ -114,6 +116,16 @@ export class WCPConnector extends WCPEventEmitter {
   >()
   // Cleanup interval for stale disconnected entries
   private cleanupInterval?: ReturnType<typeof setInterval>
+  private getAgentState?: () => AgentState
+  private setAgentState?: StateSetter
+
+  /**
+   * Wire coupled Desktop Agent state access (browser preset). Optional for remote DA clients.
+   */
+  bindAgentState(access: { getAgentState: () => AgentState; setAgentState: StateSetter }): void {
+    this.getAgentState = access.getAgentState
+    this.setAgentState = access.setAgentState
+  }
 
   /**
    * Create a new WCP Connector
@@ -327,8 +339,13 @@ export class WCPConnector extends WCPEventEmitter {
    * This is the internal method that performs the actual cleanup
    */
   private disconnectApp(instanceId: string): void {
+    const state = this.getAgentState?.()
+    const resolvedInstanceId = state ? resolveInstanceId(state, instanceId) : instanceId
     clearPendingWcpSourceWindow(this.desktopAgentTransport, instanceId)
-    disconnectApp(this.getConnectionContext(), instanceId)
+    if (resolvedInstanceId !== instanceId) {
+      clearPendingWcpSourceWindow(this.desktopAgentTransport, resolvedInstanceId)
+    }
+    disconnectApp(this.getConnectionContext(), resolvedInstanceId)
   }
 
   /**
@@ -422,6 +439,8 @@ export class WCPConnector extends WCPEventEmitter {
       recentlyDisconnected: this.recentlyDisconnected,
       emit: this.emit.bind(this),
       logger: this.options.logger,
+      getAgentState: this.getAgentState,
+      setAgentState: this.setAgentState,
     }
   }
 

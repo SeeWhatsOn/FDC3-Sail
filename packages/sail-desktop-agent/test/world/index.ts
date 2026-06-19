@@ -7,6 +7,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import type { DirectoryApp } from "../../src/core/app-directory/types"
 import type { AgentState } from "../../src/core/state/types"
 import { connectInstance } from "../../src/core/state/mutators"
+import { linkHandshakeRoutingId } from "../../src/core/state/mutators/wcp-handshake-routing"
 import { applyDesktopAgentStateUpdate } from "../support/agent-state"
 
 /**
@@ -119,6 +120,12 @@ export class CustomWorld extends World {
       heartbeatIntervalMs: heartbeatConfig?.intervalMs ?? 30_000,
       heartbeatTimeoutMs: heartbeatConfig?.timeoutMs ?? 60_000,
     })
+
+    this.mockTransport.onHandshakeRoutingLinked = (handshakeRoutingId, instanceId) => {
+      applyDesktopAgentStateUpdate(this.desktopAgent, state =>
+        linkHandshakeRoutingId(state, handshakeRoutingId, instanceId)
+      )
+    }
 
     // Wire up MockAppLauncher callback to register instances in state
     this.mockAppLauncher.onInstanceCreated = (instanceId, appId) => {

@@ -206,6 +206,14 @@ export function createBrowserDesktopAgent(
     requestIntentResolution: request => wcpConnector.requestIntentResolution(request),
   }) as BrowserDesktopAgent
 
+  const agentWithState = desktopAgent as unknown as DesktopAgentMutableState
+  wcpConnector.bindAgentState({
+    getAgentState: () => desktopAgent.getState(),
+    setAgentState: callback => {
+      agentWithState.state = callback(agentWithState.state)
+    },
+  })
+
   if (localOptions.appDirectories && localOptions.appDirectories.length > 0) {
     void loadAppDirectoriesFromUrls(desktopAgent, localOptions.appDirectories)
   }

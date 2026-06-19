@@ -114,7 +114,6 @@ export const contextMap: Record<string, Context> = {
  * Supports FDC3 AppIdentifier-like formats:
  * - "appId" (instanceId optional)
  * - "appId: App1, instanceId: a1" (explicit FDC3 AppIdentifier format)
- * - "App1/a1" (legacy format, still supported for backwards compatibility)
  */
 export function createMeta(cw: CustomWorld, appStr: string) {
   let app: AppIdentifier
@@ -137,11 +136,6 @@ export function createMeta(cw: CustomWorld, appStr: string) {
       throw new Error(`Invalid AppIdentifier format: ${appStr}`)
     }
   }
-  // Legacy format: "App1/a1"
-  else if (appStr.includes("/")) {
-    const [appId, instanceId] = appStr.split("/")
-    app = { appId, instanceId, desktopAgent: desktopAgentName }
-  }
   // Simple format: just appId
   else {
     app = { appId: appStr, desktopAgent: desktopAgentName }
@@ -159,7 +153,6 @@ export function createMeta(cw: CustomWorld, appStr: string) {
  * Returns the instance ID that should be used for this app.
  * Supports FDC3 AppIdentifier-like formats:
  * - "appId: App1, instanceId: a1" (explicit FDC3 AppIdentifier format)
- * - "App1/a1" (legacy format, still supported for backwards compatibility)
  * - "appId" (will generate instance ID)
  */
 export function getAppInstanceId(cw: CustomWorld, appStr: string): string {

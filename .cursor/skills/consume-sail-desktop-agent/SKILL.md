@@ -26,7 +26,7 @@ Application code should import the browser preset from **`@finos/sail-desktop-ag
 | `IntentResolver` | Host contract — platform-owned intent picker UI |
 | `ChannelControl` | Host contract shape — picker contract; not wired as a preset option yet |
 | `DEFAULT_FDC3_USER_CHANNELS` | FDC3 default user channel definitions (override via `userChannels`) |
-| `AppDirectoryManager`, `resolveDesktopAgentConfig`, core types | Directory management, config helpers, DACP types |
+| `retrieveAllApps`, `retrieveIntents`, `fetchAppDirectory`, `resolveDesktopAgentConfig`, core types | App directory queries, fetch helpers, config, DACP types |
 
 ### Advanced subpaths
 
@@ -269,16 +269,14 @@ createBrowserDesktopAgent({
 ### After `DesktopAgent` exists (manual or post-factory)
 
 ```typescript
-const dir = desktopAgent.getAppDirectory()
+import { retrieveAllApps, retrieveIntents } from "@finos/sail-desktop-agent"
 
-await dir.loadDirectory("https://example.com/appd")
-dir.addApplications([{ appId: "my-app", title: "My App", type: "web", details: { url: "https://app.example" } }])
-
-const apps = dir.retrieveAllApps()
-const intents = dir.retrieveIntents("fdc3.instrument", "ViewChart")
+const catalog = desktopAgent.getState().appDirectory
+const apps = retrieveAllApps(catalog)
+const intents = retrieveIntents(catalog, "fdc3.instrument", "ViewChart")
 ```
 
-Constructor alternatives on `new DesktopAgent({ apps, appDirectoryManager })` for pre-seeded or custom manager instances.
+Seed at construction with `apps: [...]` or load remote URLs via preset `appDirectories: ["https://example.com/appd"]` (preset calls `loadDirectoryIntoState` internally). There is no `getAppDirectory()` facade — catalog data lives on `AgentState.appDirectory`.
 
 ---
 
@@ -328,7 +326,7 @@ createBrowserDesktopAgent({
 | Use unpaired default transport in browser production | `createBrowserDesktopAgent` or `createInMemoryTransportPair` |
 | Wire `intentResolverNeeded` manually when using the `IntentResolver` contract on presets | Pass `intentResolver` to `createBrowserDesktopAgent` |
 | Add `*ForTesting` methods to `DesktopAgent` in consumer code | Production APIs only |
-| Duplicate full App Directory tutorial here | `fdc3-expert` + `getAppDirectory()` hooks above |
+| Duplicate full App Directory tutorial here | `fdc3-expert` + `getState().appDirectory` + query exports above |
 | Document `SailPlatform` as part of this skill | Mention it exists in platform-api; stay package-only |
 
 ---
@@ -337,7 +335,7 @@ createBrowserDesktopAgent({
 
 | API | Role |
 |-----|------|
-| `createBrowserDesktopAgent(...)` | Returns **`DesktopAgent`** — FDC3 host APIs (`getInfo`, `getAppDirectory`, `disconnectInstance`, `getAppUserChannelId`, …) |
+| `createBrowserDesktopAgent(...)` | Returns **`DesktopAgent`** — FDC3 host APIs (`getInfo`, `getState`, `disconnectInstance`, `getAppUserChannelId`, …) |
 | `desktopAgent.start()` / `stop()` | Starts/stops DA **and** coupled browser edge (unless `autoStart: false`) |
 | `getBrowserDesktopAgentSession(da)` | From `/browser` — `{ wcpConnector, connectorTransport }` for edge events and host channel DACP |
 | `onAppConnected` / `onAppDisconnected` | Preset options — lifecycle without direct `wcpConnector.on(...)` |

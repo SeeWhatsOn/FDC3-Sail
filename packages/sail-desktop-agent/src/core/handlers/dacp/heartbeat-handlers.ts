@@ -9,12 +9,8 @@ import {
   updateHeartbeatSent,
 } from "../../state/mutators"
 import { cleanupDACPHandlers } from "./cleanup"
-import {
-  stopHeartbeat,
-  setHeartbeatTimer,
-  clearHeartbeatTimer,
-  linkWcpTempInstanceId,
-} from "./heartbeat-runtime"
+import { stopHeartbeat, setHeartbeatTimer, clearHeartbeatTimer } from "./heartbeat-runtime"
+import { linkHandshakeRoutingId } from "../../state/mutators/wcp-handshake-routing"
 
 /** Re-export for callers that imported `stopHeartbeat` from this module. */
 export { stopHeartbeat } from "./heartbeat-runtime"
@@ -31,8 +27,8 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
   // Stop any existing heartbeat
   stopHeartbeat(instanceId, setState)
 
-  if (context.instanceId.startsWith("temp-") && context.instanceId !== instanceId) {
-    linkWcpTempInstanceId(context.instanceId, instanceId)
+  if (context.instanceId !== instanceId) {
+    setState(state => linkHandshakeRoutingId(state, context.instanceId, instanceId))
   }
 
   // Initialize heartbeat state

@@ -291,6 +291,11 @@ export interface AppDirectoryState {
   directoryUrls: string[]
 }
 
+/** Pre-WCP5 DACP routing id → validated instanceId (mint and host-adopt paths). */
+export interface WcpHandshakeRoutingState {
+  handshakeRoutingIdToInstanceId: Record<string, string>
+}
+
 // ============================================================================
 // UNIFIED AGENT STATE
 // ============================================================================
@@ -341,6 +346,9 @@ export interface AgentState {
 
   /** Launchable app directory (catalog), not runtime instances */
   appDirectory: AppDirectoryState
+
+  /** WCP4 routing id → WCP5-validated instanceId links */
+  wcpHandshakeRouting: WcpHandshakeRoutingState
 }
 
 // ============================================================================

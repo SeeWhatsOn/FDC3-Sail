@@ -3,21 +3,34 @@ title: "Consolidate temp to canonical instance id resolver"
 slug: consolidate-temp-instance-id-resolver
 kind: task
 type: chore
-status: approved
+status: waiting_on_user
 loop_count: 0
 loop_limit: 3
-last_agent: spec-planner
+last_agent: top-level-delivery-workflow
 file_manifest:
+  - packages/sail-desktop-agent/src/core/instance-id-resolver.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/heartbeat-runtime.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/cleanup.ts
+  - packages/sail-desktop-agent/src/core/handlers/dacp/wcp-handlers.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/utils/resolve-context-listener-instance-id.ts
   - packages/sail-desktop-agent/src/app-connection/wcp-connector.ts
   - packages/sail-desktop-agent/src/app-connection/wcp/wcp-connection-management.ts
   - packages/sail-desktop-agent/test/support/mock-transport.ts
+  - packages/sail-desktop-agent/src/core/handlers/dacp/__tests__/cleanup.test.ts
+  - packages/sail-desktop-agent/src/core/handlers/dacp/utils/__tests__/resolve-context-listener-instance-id.test.ts
+  - packages/sail-desktop-agent/src/core/handlers/dacp/heartbeat-handlers.ts
+  - packages/sail-desktop-agent/test/step-definitions/generic.steps.ts
+  - packages/sail-desktop-agent/test/features/channels/private-channel.feature
+  - packages/sail-desktop-agent/test/features/intents/raise-intent.feature
+  - packages/sail-desktop-agent/test/features/intents/raise-intent-with-context.feature
+  - packages/sail-desktop-agent/src/__tests__/import-path-smoke.test.ts
+  - AGENTS.md
+  - .cursor/skills/consume-sail-desktop-agent/SKILL.md
+  - packages/sail-desktop-agent/src/app-connection/__tests__/wcp-desktop-agent.integration.test.ts
 depends_on:
   - wire-wcp5-connected-instance-lifecycle
 integration_branch: v3-pre
-branch: cursor/consolidate-temp-instance-id-resolver
+branch: v3-pre
 pr_url: ""
 merged_pr: ""
 external_tracker: ""
@@ -89,13 +102,42 @@ RED: add failing tests in `cleanup.test.ts` and `wcp-desktop-agent.integration.t
 
 _(empty)_
 
-## Loop history
-
-_(empty)_
+- 2026-06-18 Phase B GREEN (implement-agent, registered: yes): instance-id-resolver.ts; link at WCP5 even heartbeat off
+- 2026-06-18 Phase C Verify (verifier-agent, registered: yes): VERIFICATION: PASS
+- 2026-06-18 Phase D Review (code-reviewer, registered: yes): VERDICT: PASS
+- 2026-06-18 staged for human review
 
 ## Staged for review
 
-_(empty)_
+**Status:** waiting_on_user (staged 2026-06-18)
+
+### Phase audit
+| Phase | Subagent | Registered | Result |
+|-------|----------|------------|--------|
+| A RED | test-engineer | yes | 5 tests fail (expected) |
+| B GREEN | implement-agent | yes | 284 Vitest + 15 Cucumber pass |
+| C Verify | verifier-agent | yes | VERIFICATION: PASS |
+| D Review | code-reviewer | yes | VERDICT: PASS |
+
+**ui_surface:** no
+
+### RED evidence
+- 5 new tests: 3 contract + 2 behavioral (temp cleanup/disconnect misses canonical when heartbeat off)
+
+### Commands run
+- `npm test -w @finos/sail-desktop-agent`: **284 Vitest + 15 Cucumber pass** (exit 0)
+
+### Diff summary
+- **New:** `instance-id-resolver.ts` — `linkTempToCanonical`, `resolveCanonicalInstanceId`, `unlinkCanonical`
+- **WCP5:** links temp→canonical in `wcp-handlers.ts` always (not only when heartbeat starts)
+- **Cleanup:** `resolveCleanupInstanceId` uses resolver + `state.instances[canonicalId]`
+- **Connector:** `wcp-connection-management.ts`, `wcp-connector.ts` migrated
+- **MockTransport:** `registerWcp5Mapping` delegates to shared resolver
+- **No shims:** removed `@deprecated` `linkWcpTempInstanceId` / `resolveWcpTempInstanceId` and `resolveContextListenerInstanceId` alias; Cucumber `App1/a1` legacy app id format; stale backward-compat wording in tests/comments/skills
+- **Feature files:** five scenarios updated to explicit `appId: …, instanceId: …` after legacy slash parsing removal (private-channel, raise-intent, raise-intent-with-context)
+
+### Learnings proposed
+- **[AGENTS.md candidate]** WCP5 temp→canonical mapping in `instance-id-resolver.ts`; link at WCP5 success always; cleanup/disconnect resolve via resolver, not heartbeat presence alone.
 
 ## Escalation notes
 

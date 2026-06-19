@@ -17,6 +17,7 @@ import type { DACPHandlerContext } from "../types"
 import { sendDACPResponse } from "./utils/dacp-response-utils"
 import { startHeartbeat } from "./heartbeat-handlers"
 import { cleanupDACPHandlers } from "./cleanup"
+import { linkHandshakeRoutingId } from "../../state/mutators/wcp-handshake-routing"
 import { getInstance } from "../../state/selectors"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { AppInstanceState } from "../../state/types"
@@ -262,6 +263,10 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     }
 
     transport.send(responseWithRouting)
+
+    if (sourceInstanceId !== instanceId) {
+      context.setState(state => linkHandshakeRoutingId(state, sourceInstanceId, instanceId))
+    }
 
     // Heartbeat liveness is optional; WCP6 still removes the instance when heartbeat is off.
     if (context.heartbeatEnabled) {

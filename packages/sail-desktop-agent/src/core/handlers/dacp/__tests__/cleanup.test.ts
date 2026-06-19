@@ -7,6 +7,14 @@ import {
   clearAllHeartbeatTimersForTesting,
   getActiveHeartbeatTimerCount,
 } from "../heartbeat-runtime"
+import {
+  linkHandshakeRoutingId,
+  clearHandshakeRoutingIdsForInstance,
+} from "../../../state/mutators/wcp-handshake-routing"
+import {
+  resolveLinkedInstanceId,
+  resolveInstanceId,
+} from "../../../state/selectors/wcp-handshake-routing"
 import { registerOpenWithContext } from "../utils/open-with-context"
 import {
   clearAllPendingOpenWithContextTimeoutsForTesting,
@@ -20,6 +28,7 @@ import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { createDACPTestContext } from "./test-context"
 import { DesktopAgent } from "../../../desktop-agent"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
+import { MockTransport as CucumberMockTransport } from "../../../../../test/support/mock-transport"
 
 const TEST_WCP_DIRECTORY_APP = {
   appId: "test-app",
@@ -32,6 +41,46 @@ afterEach(() => {
   clearAllPendingOpenWithContextTimeoutsForTesting()
   clearAllHeartbeatTimersForTesting()
   vi.useRealTimers()
+})
+
+describe("wcp handshake routing state contract", () => {
+  it("resolveLinkedInstanceId returns linked instanceId for a handshake routing id", () => {
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    state = linkHandshakeRoutingId(state, "temp-resolver-contract", "canonical-resolver-contract")
+
+    expect(resolveLinkedInstanceId(state, "temp-resolver-contract")).toBe(
+      "canonical-resolver-contract"
+    )
+    expect(resolveLinkedInstanceId(state, "temp-unlinked")).toBeUndefined()
+    expect(resolveInstanceId(state, "temp-unlinked")).toBe("temp-unlinked")
+  })
+
+  it("clearHandshakeRoutingIdsForInstance removes all routing entries for the instanceId", () => {
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    state = linkHandshakeRoutingId(state, "temp-unlink-a", "canonical-unlink-target")
+    state = linkHandshakeRoutingId(state, "temp-unlink-b", "canonical-unlink-target")
+
+    state = clearHandshakeRoutingIdsForInstance(state, "canonical-unlink-target")
+
+    expect(resolveLinkedInstanceId(state, "temp-unlink-a")).toBeUndefined()
+    expect(resolveLinkedInstanceId(state, "temp-unlink-b")).toBeUndefined()
+  })
+
+  it("MockTransport.registerWcp5Mapping mirrors routing links via onHandshakeRoutingLinked", () => {
+    const transport = new CucumberMockTransport()
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    transport.onHandshakeRoutingLinked = (handshakeRoutingId, instanceId) => {
+      state = linkHandshakeRoutingId(state, handshakeRoutingId, instanceId)
+    }
+
+    const tempConnectionId = "temp-cucumber-wcp5"
+    const canonicalInstanceId = "canonical-cucumber-wcp5"
+
+    transport.registerWcp5Mapping(tempConnectionId, canonicalInstanceId)
+
+    expect(resolveLinkedInstanceId(state, tempConnectionId)).toBe(canonicalInstanceId)
+    expect(transport.resolveWcp5InstanceId(tempConnectionId)).toBe(canonicalInstanceId)
+  })
 })
 
 function connectTestInstance(instanceId: string): AgentState {
@@ -501,6 +550,25 @@ describe("heartbeat cleanup on disconnect", () => {
     expect(getState().instances[conformanceInstanceId]).toBeDefined()
     expect(getState().heartbeats[conformanceInstanceId]).toBeDefined()
     expect(getActiveHeartbeatTimerCount()).toBe(1)
+  })
+
+  it("cleanupDACPHandlers removes canonical instance state when invoked with WCP4 temp context after WCP5 link without heartbeat", () => {
+    const tempInstanceId = "temp-wcp5-no-heartbeat-cleanup"
+    const canonicalInstanceId = "canonical-wcp5-no-heartbeat-cleanup"
+    let initialState = connectTestInstance(canonicalInstanceId)
+    initialState = linkHandshakeRoutingId(initialState, tempInstanceId, canonicalInstanceId)
+
+    const { context, getState } = createHeartbeatTestContext({
+      instanceId: tempInstanceId,
+      initialState,
+    })
+
+    expect(getState().instances[canonicalInstanceId]).toBeDefined()
+    expect(getActiveHeartbeatTimerCount()).toBe(0)
+
+    cleanupDACPHandlers(context)
+
+    expect(getState().instances[canonicalInstanceId]).toBeUndefined()
   })
 
   it("cleanupDACPHandlers clears only the targeted heartbeat when multiple instances are connected and WCP4 temp context is used", () => {

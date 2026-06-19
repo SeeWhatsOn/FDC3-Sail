@@ -40,6 +40,9 @@ export function createInitialState(userChannels: Channel[]): AgentState {
       apps: [],
       directoryUrls: [],
     },
+    wcpHandshakeRouting: {
+      handshakeRoutingIdToInstanceId: {},
+    },
   }
 }
 

@@ -150,7 +150,7 @@ export interface HostIntentResolverPayload {
   /** Context being resolved. */
   context: unknown
 
-  /** Available handlers for single-intent UIs and backwards-compatible consumers. */
+  /** Available handlers for single-intent UIs. */
   handlers: HostIntentResolverHandler[]
 
   /** Available intent/app choices; may contain multiple intents for raiseIntentForContext. */

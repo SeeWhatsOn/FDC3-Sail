@@ -81,3 +81,8 @@ export {
   removePendingOpenWithContextByRequest,
   migratePendingOpenWithContextTarget,
 } from "./open-with-context"
+
+export {
+  linkHandshakeRoutingId,
+  clearHandshakeRoutingIdsForInstance,
+} from "./wcp-handshake-routing"

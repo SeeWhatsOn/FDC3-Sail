@@ -30,7 +30,7 @@ Feature: Raising Intents For Context
 
   @conformance2.2
   Scenario: Raising An Intent With Context To A Non-Existent App Instance
-    When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.portfolio" on app "portfolioApp/unknownInstance" [fdc3.raiseIntentForContext]
+    When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.portfolio" on app "appId: portfolioApp, instanceId: unknownInstance" [fdc3.raiseIntentForContext]
     Then messaging will have outgoing posts
       | msg.type                      | msg.payload.error         | to.instanceId |
       | raiseIntentForContextResponse | TargetInstanceUnavailable | a1            |

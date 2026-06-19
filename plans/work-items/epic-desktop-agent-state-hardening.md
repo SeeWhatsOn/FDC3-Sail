@@ -49,6 +49,8 @@ _(Epic — see child work items.)_
 |------|------|--------|------------|--------|
 | `wire-wcp5-connected-instance-lifecycle` | task | Must | — | approved |
 | `consolidate-temp-instance-id-resolver` | task | Must | `wire-wcp5-connected-instance-lifecycle` | approved |
+| `move-wcp-temp-id-alias-to-agent-state` | task | Should | `consolidate-temp-instance-id-resolver` | waiting_on_user |
+| `reorganize-core-handlers-colocate-state` | task | Should | `move-wcp-temp-id-alias-to-agent-state` | draft |
 | `remove-dead-instance-state-denormalization` | task | Must | `wire-wcp5-connected-instance-lifecycle` | approved |
 | `user-channels-runtime-ssot` | task | Should | — | approved |
 | `collapse-app-directory-to-functions` | task | Must | — | approved |
@@ -62,6 +64,8 @@ _(Epic — see child work items.)_
 3. `user-channels-runtime-ssot` + `collapse-app-directory-to-functions` (parallel)
 4. `audit-host-channel-reactivity-read-apis`
 5. `document-desktop-agent-singleton-and-reactivity`
+6. `move-wcp-temp-id-alias-to-agent-state` (after `consolidate-temp-instance-id-resolver` merges)
+7. `reorganize-core-handlers-colocate-state` (after handshake routing links live on `AgentState`)
 
 ## Out of scope
 

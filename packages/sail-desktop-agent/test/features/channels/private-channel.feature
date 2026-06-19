@@ -46,7 +46,7 @@ Feature: Relaying Private Channel Broadcast messages
   @conformance2.2
   Scenario: Event Listener created for addContextListener and unsubscribe
     When "appId: App2, instanceId: a2" adds an "addContextListener" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
-    And "App2/a2" adds an "unsubscribe" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
+    And "appId: App2, instanceId: a2" adds an "unsubscribe" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
     And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
     And we wait for a period of "10" ms
     Then messaging will have outgoing posts
@@ -65,7 +65,7 @@ Feature: Relaying Private Channel Broadcast messages
   Scenario: Disconnecting from a channel sends unsubscribe and disconnect messages
     When "appId: App2, instanceId: a2" adds an "disconnect" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
     And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
-    And "App2/a2" adds an "unsubscribe" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
+    And "appId: App2, instanceId: a2" adds an "unsubscribe" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
     And "appId: App1, instanceId: a1" disconnects from private channel "{channel1Id}" [PrivateChannel.disconnect]
     Then messaging will have outgoing posts
       | msg.matches_type                 | msg.payload.privateChannelId | msg.payload.contextType | to.appId | to.instanceId |

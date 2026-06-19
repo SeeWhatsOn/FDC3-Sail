@@ -14,7 +14,7 @@ import {
 } from "../../app-directory/fetch-app-directory"
 import type { AgentState } from "../types"
 
-/** Adds one app without dedupe (config seed / legacy add() parity). */
+/** Adds one app without dedupe (config seed). */
 export function addApp(state: AgentState, app: DirectoryApp): AgentState {
   return {
     ...state,

@@ -6,11 +6,9 @@ import {
 import { type DACPHandlerContext } from "../types"
 import * as eventHandlers from "./event-handlers"
 import * as privateChannelHandlers from "./private-channel-handlers"
-import {
-  getActiveHeartbeatInstanceIds,
-  resolveWcpTempInstanceId,
-  stopHeartbeat,
-} from "./heartbeat-runtime"
+import { resolveLinkedInstanceId } from "../../state/selectors/wcp-handshake-routing"
+import { clearHandshakeRoutingIdsForInstance } from "../../state/mutators/wcp-handshake-routing"
+import { getActiveHeartbeatInstanceIds, stopHeartbeat } from "./heartbeat-runtime"
 import {
   clearPendingOpenWithContextForInstance,
   clearPendingOpenWithContextForSourceInstance,
@@ -31,12 +29,14 @@ function resolveCleanupInstanceId(context: DACPHandlerContext): string {
   }
 
   if (instanceId.startsWith("temp-")) {
-    const canonicalId = resolveWcpTempInstanceId(instanceId)
+    const linkedInstanceId = resolveLinkedInstanceId(state, instanceId)
     if (
-      canonicalId &&
-      (state.heartbeats[canonicalId] || getActiveHeartbeatInstanceIds().includes(canonicalId))
+      linkedInstanceId &&
+      (state.heartbeats[linkedInstanceId] ||
+        getActiveHeartbeatInstanceIds().includes(linkedInstanceId) ||
+        state.instances[linkedInstanceId])
     ) {
-      return canonicalId
+      return linkedInstanceId
     }
   }
 
@@ -125,6 +125,8 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
 
   // Stop heartbeat
   stopHeartbeat(instanceId, setState)
+
+  setState(state => clearHandshakeRoutingIdsForInstance(state, instanceId))
 
   // Remove intent listeners
   setState(state => removeListenersForInstance(state, instanceId))

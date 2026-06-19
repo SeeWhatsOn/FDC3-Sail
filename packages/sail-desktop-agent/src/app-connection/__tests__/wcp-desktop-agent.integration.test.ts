@@ -352,6 +352,28 @@ describe("Option A instance lifecycle (WCP path)", () => {
     expect(getActiveHeartbeatTimerCount()).toBe(0)
   })
 
+  it("removes canonical instance when disconnectInstance is called with WCP4 temp id and heartbeat is disabled", async () => {
+    const agent = createTestAgent({
+      heartbeatEnabled: false,
+      disconnectGracePeriod: 0,
+    })
+    activeAgents.push(agent)
+
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "lifecycle-temp-disconnect-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED
+    )
+
+    agent.disconnectInstance(connected.tempInstanceId)
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
+  })
+
   it("removes instance on heartbeat timeout when heartbeat is enabled", async () => {
     const agent = createTestAgent({
       heartbeatEnabled: true,

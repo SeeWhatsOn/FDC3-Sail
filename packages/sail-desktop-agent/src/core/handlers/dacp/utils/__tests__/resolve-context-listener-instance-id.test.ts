@@ -9,8 +9,9 @@ import { AppInstanceState } from "../../../../state/types"
 import { createInitialState } from "../../../../state/initial-state"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../../default-user-channels"
 import { createDACPTestContext } from "../../__tests__/test-context"
-import { resolveContextListenerInstanceId } from "../resolve-context-listener-instance-id"
-import { linkWcpTempInstanceId, clearAllHeartbeatTimersForTesting } from "../../heartbeat-runtime"
+import { resolveDacpHandlerInstanceId } from "../resolve-context-listener-instance-id"
+import { linkHandshakeRoutingId } from "../../../../state/mutators/wcp-handshake-routing"
+import { clearAllHeartbeatTimersForTesting } from "../../heartbeat-runtime"
 
 const CHART_APP_ID = "chartApp"
 
@@ -18,7 +19,7 @@ afterEach(() => {
   clearAllHeartbeatTimersForTesting()
 })
 
-describe("resolveContextListenerInstanceId", () => {
+describe("resolveDacpHandlerInstanceId", () => {
   it("routes temp WCP connection id to host launcher placeholder instance", () => {
     const hostInstanceId = "launcher-instance-id"
     const tempInstanceId = "temp-wcp-handshake"
@@ -44,23 +45,23 @@ describe("resolveContextListenerInstanceId", () => {
       payload: { channelId: null, contextType: "*" },
     } as BrowserTypes.AddContextListenerRequest
 
-    expect(resolveContextListenerInstanceId(message, context)).toBe(hostInstanceId)
+    expect(resolveDacpHandlerInstanceId(message, context)).toBe(hostInstanceId)
   })
 
-  it("routes temp id to linked canonical instance after WCP4 heartbeat mapping", () => {
-    const canonicalInstanceId = "canonical-wcp5-id"
-    const tempInstanceId = "temp-linked-handshake"
-    linkWcpTempInstanceId(tempInstanceId, canonicalInstanceId)
+  it("routes temp id to linked instance after WCP4 handshake mapping", () => {
+    const instanceId = "canonical-wcp5-id"
+    const handshakeRoutingId = "temp-linked-handshake"
 
     const initialState = connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
-      instanceId: canonicalInstanceId,
+      instanceId,
       appId: CHART_APP_ID,
       metadata: { appId: CHART_APP_ID, name: CHART_APP_ID },
     })
+    const stateWithLink = linkHandshakeRoutingId(initialState, handshakeRoutingId, instanceId)
 
     const { context } = createDACPTestContext({
-      instanceId: tempInstanceId,
-      initialState,
+      instanceId: handshakeRoutingId,
+      initialState: stateWithLink,
     })
 
     const message = {
@@ -68,12 +69,12 @@ describe("resolveContextListenerInstanceId", () => {
       meta: {
         requestUuid: "listener-2",
         timestamp: new Date(),
-        source: { appId: CHART_APP_ID, instanceId: tempInstanceId },
+        source: { appId: CHART_APP_ID, instanceId: handshakeRoutingId },
       },
       payload: { channelId: null, contextType: "fdc3.instrument" },
     } as BrowserTypes.AddContextListenerRequest
 
-    expect(resolveContextListenerInstanceId(message, context)).toBe(canonicalInstanceId)
+    expect(resolveDacpHandlerInstanceId(message, context)).toBe(instanceId)
   })
 
   it("routes a stale source id to the only connected instance for that app", () => {
@@ -105,7 +106,7 @@ describe("resolveContextListenerInstanceId", () => {
       payload: { channelId: "app-control", contextType: "windowClosed" },
     } as BrowserTypes.AddContextListenerRequest
 
-    expect(resolveContextListenerInstanceId(message, context)).toBe(liveInstanceId)
+    expect(resolveDacpHandlerInstanceId(message, context)).toBe(liveInstanceId)
   })
 
   it("routes to host launcher pending bucket when open-with-context is pending there", () => {
@@ -161,7 +162,7 @@ describe("resolveContextListenerInstanceId", () => {
       payload: { channelId: null, contextType: "fdc3.instrument" },
     } as BrowserTypes.AddContextListenerRequest
 
-    expect(resolveContextListenerInstanceId(message, context)).toBe(hostInstanceId)
+    expect(resolveDacpHandlerInstanceId(message, context)).toBe(hostInstanceId)
   })
 
   it("does not guess a stale source id when multiple connected instances share the appId", () => {
@@ -201,6 +202,6 @@ describe("resolveContextListenerInstanceId", () => {
       payload: { channelId: "app-control", contextType: "windowClosed" },
     } as BrowserTypes.AddContextListenerRequest
 
-    expect(resolveContextListenerInstanceId(message, context)).toBe(staleInstanceId)
+    expect(resolveDacpHandlerInstanceId(message, context)).toBe(staleInstanceId)
   })
 })

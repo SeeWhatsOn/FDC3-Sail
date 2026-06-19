@@ -57,7 +57,7 @@ Feature: Raising Intents
 
   @conformance2.2
   Scenario: Raising An Intent To A Non-Existent App Instance
-    When "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "portfolioApp/unknownInstance" [fdc3.raiseIntent]
+    When "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: portfolioApp, instanceId: unknownInstance" [fdc3.raiseIntent]
     Then messaging will have outgoing posts
       | msg.type            | msg.payload.error         | to.instanceId |
       | raiseIntentResponse | TargetInstanceUnavailable | a1            |
@@ -107,7 +107,7 @@ Feature: Raising Intents
   Scenario: Raising An Intent To A Non-Running App without A Context Type in the listener
     When "appId: App1, instanceId: a1" raises an intent for "UpdatePortfolio" with contextType "fdc3.portfolio" on app "portfolioApp" [fdc3.raiseIntent]
     And "uuid-0" sends validate
-    And "portfolioApp/uuid-0" registers an intent listener for "UpdatePortfolio" [fdc3.addIntentListener]
+    And "appId: portfolioApp, instanceId: uuid-0" registers an intent listener for "UpdatePortfolio" [fdc3.addIntentListener]
     Then messaging will have outgoing posts
       | msg.matches_type          | msg.payload.intent | to.instanceId | to.appId     | msg.payload.context.type |
       | addIntentListenerResponse | {null}             | uuid-0        | portfolioApp | {null}                   |

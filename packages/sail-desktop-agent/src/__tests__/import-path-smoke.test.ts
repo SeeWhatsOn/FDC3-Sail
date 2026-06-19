@@ -23,7 +23,7 @@ describe("reorganized import paths", () => {
     expect(appConnection.MessagePortTransport).toBeTypeOf("function")
   })
 
-  it("re-exports DACP protocol from core entry for backward-compatible imports", async () => {
+  it("re-exports DACP protocol from core entry", async () => {
     const core = await import("../core/index.js")
     expect(core.DACP_TIMEOUTS).toBeDefined()
     expect(core.createDACPSuccessResponse).toBeTypeOf("function")
