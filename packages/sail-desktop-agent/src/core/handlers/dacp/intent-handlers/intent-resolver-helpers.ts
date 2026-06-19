@@ -45,8 +45,7 @@ export function appsToIntentHandlerOptions(
   apps: AppMetadata[]
 ): IntentHandlerOption[] {
   return apps.map(app => {
-    const isRunning =
-      !!app.instanceId && getInstance(state, app.instanceId)?.state !== AppInstanceState.TERMINATED
+    const isRunning = !!app.instanceId && getInstance(state, app.instanceId) !== undefined
     return {
       ...app,
       appId: app.appId,
@@ -144,8 +143,7 @@ export function createResolverAppIntent(
 
   // 2) Running instances for dynamic listeners not in directory (registration order).
   const validRunningListeners = runningListeners.filter(listener => {
-    const instance = getInstance(state, listener.instanceId)
-    return instance && instance.state !== AppInstanceState.TERMINATED
+    return getInstance(state, listener.instanceId) !== undefined
   })
 
   const filteredDynamicListeners =

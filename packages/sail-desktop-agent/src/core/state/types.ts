@@ -18,11 +18,8 @@ import type { DirectoryApp } from "../app-directory/types"
  * FDC3 App Instance connection states
  */
 export enum AppInstanceState {
-  PENDING = "pending", // App launched but not completed FDC3 handshake
-  CONNECTED = "connected", // App completed FDC3 handshake and ready
-  NOT_RESPONDING = "not_responding", // App not responding to heartbeat
-  DISCONNECTING = "disconnecting", // App in process of disconnecting
-  TERMINATED = "terminated", // App has disconnected or been terminated
+  PENDING = "pending", // Host pre-register before WCP5 completes (Sail extension)
+  CONNECTED = "connected", // WCP5 handshake complete; instance ready for DACP
 }
 
 /**
@@ -62,9 +59,6 @@ export interface AppInstance {
 
   /** Context listeners keyed by listener UUID */
   contextListeners: Record<string, InstanceContextListener>
-
-  /** Array of intents this instance listens for */
-  intentListeners: string[]
 
   /** Array of private channel IDs this instance has access to */
   privateChannels: string[]

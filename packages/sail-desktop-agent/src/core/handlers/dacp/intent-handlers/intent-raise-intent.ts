@@ -3,7 +3,6 @@ import { type DACPHandlerContext } from "../../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
-import { AppInstanceState } from "../../../state/types"
 import {
   NoAppsFoundError,
   IntentDeliveryFailedError,
@@ -100,11 +99,7 @@ export async function handleRaiseIntentRequest(
     })
 
     const targetAppId = targetApp?.appId
-    const runningInstances = targetAppId
-      ? getInstancesByAppId(state, targetAppId).filter(
-          instance => instance.state !== AppInstanceState.TERMINATED
-        )
-      : []
+    const runningInstances = targetAppId ? getInstancesByAppId(state, targetAppId) : []
     const isTargetRunning =
       !!targetApp?.instanceId || (targetAppId ? runningInstances.length > 0 : false)
 

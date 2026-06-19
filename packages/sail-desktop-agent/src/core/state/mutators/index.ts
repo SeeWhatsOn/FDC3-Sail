@@ -13,8 +13,6 @@ export {
   joinUserChannel,
   addContextListener,
   removeContextListener,
-  addIntentListener,
-  removeIntentListener,
   addPrivateChannel,
   removePrivateChannel,
 } from "./instance"

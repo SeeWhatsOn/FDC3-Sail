@@ -18,8 +18,7 @@ export const getInstancesByAppId = (state: AgentState, appId: string): AppInstan
 export const instanceContextListenerMatchesBroadcast = (
   listener: InstanceContextListener,
   broadcastContextType: string
-): boolean =>
-  listener.contextType === broadcastContextType || listener.contextType === "*"
+): boolean => listener.contextType === broadcastContextType || listener.contextType === "*"
 
 export const getConnectedInstances = (state: AgentState): AppInstance[] =>
   Object.values(state.instances).filter(i => i.state === AppInstanceState.CONNECTED)
@@ -41,12 +40,6 @@ export const getInstancesWithContextListener = (
       instanceContextListenerMatchesBroadcast(listener, contextType)
     )
   )
-
-export const getInstancesWithIntentListener = (
-  state: AgentState,
-  intentName: string
-): AppInstance[] =>
-  Object.values(state.instances).filter(i => i.intentListeners.includes(intentName))
 
 export const getInstancesWithPrivateChannel = (
   state: AgentState,

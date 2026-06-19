@@ -247,10 +247,9 @@ export function createAppIntents(
     )
   }
 
-  // Filter out listeners for terminated instances
+  // Filter out listeners whose instance was removed (Option A lifecycle)
   const validRunningListeners = runningListeners.filter(listener => {
-    const instance = getInstance(state, listener.instanceId)
-    return instance && instance.state !== AppInstanceState.TERMINATED
+    return getInstance(state, listener.instanceId) !== undefined
   })
 
   // Filter running listeners by resultType if provided

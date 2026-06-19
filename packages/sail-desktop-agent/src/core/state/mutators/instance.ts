@@ -33,7 +33,6 @@ export const connectInstance = (
       lastActivity: now,
       currentUserChannel: null,
       contextListeners: {},
-      intentListeners: [],
       privateChannels: [],
       instanceMetadata: params.instanceMetadata,
     }
@@ -94,9 +93,7 @@ export const addContextListener = (
   return produce(state, draft => {
     const instance = draft.instances[instanceId]
     const entry =
-      channelId != null && channelId !== ""
-        ? { contextType, channelId }
-        : { contextType }
+      channelId != null && channelId !== "" ? { contextType, channelId } : { contextType }
     instance.contextListeners[listenerId] = entry
     instance.lastActivity = new Date()
   })
@@ -112,36 +109,6 @@ export const removeContextListener = (
   return produce(state, draft => {
     const instance = draft.instances[instanceId]
     delete instance.contextListeners[listenerId]
-    instance.lastActivity = new Date()
-  })
-}
-
-export const addIntentListener = (
-  state: AgentState,
-  instanceId: string,
-  intentName: string
-): AgentState => {
-  if (!state.instances[instanceId]) return state
-
-  return produce(state, draft => {
-    const instance = draft.instances[instanceId]
-    if (!instance.intentListeners.includes(intentName)) {
-      instance.intentListeners.push(intentName)
-    }
-    instance.lastActivity = new Date()
-  })
-}
-
-export const removeIntentListener = (
-  state: AgentState,
-  instanceId: string,
-  intentName: string
-): AgentState => {
-  if (!state.instances[instanceId]) return state
-
-  return produce(state, draft => {
-    const instance = draft.instances[instanceId]
-    instance.intentListeners = instance.intentListeners.filter(intent => intent !== intentName)
     instance.lastActivity = new Date()
   })
 }
