@@ -32,9 +32,6 @@ plans/
   prd-example-workload.md
   work-items/
     add-context-broadcast-handler.md
-    resolve-order-race-condition.md
-  completed-work-items/
-    resolve-order-race-condition.md   # status: done — archived from work-items/
   dead-letter/
     add-context-broadcast-handler.md
 
@@ -156,9 +153,8 @@ atomic planning skills:
 
 ## Archive on done
 
-When `status` becomes `done`, immediately move the file from
-`plans/work-items/` to `plans/completed-work-items/`. See
-[references/archive-on-done.md](references/archive-on-done.md).
+When `status` becomes `done`, **delete** the work item file and record delivery in the parent PRD **Work item retention** section. See
+[references/archive-on-done.md](references/archive-on-done.md). (This repo does not use `plans/completed-work-items/`.)
 
 ## Project Health Check
 
@@ -172,7 +168,6 @@ Hard requirements:
 Hard directories:
   plans/
   plans/work-items/
-  plans/completed-work-items/   # create on first archive if missing
   plans/dead-letter/
 
 TypeScript project requirements, when applicable:

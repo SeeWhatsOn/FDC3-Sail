@@ -11,7 +11,7 @@ Full lifecycle for the FDC3-Sail Watson planning and delivery workflow.
 | `/ww-plan` | Plan: interview → PRD → arch review → work breakdown → human gate |
 | `/ww-approve` | Review and approve draft work items (standalone, after a break) |
 | `/ww-deliver` | Implement one approved work item (RED → GREEN → verify → review) |
-| `/ww-reconcile` | Sync PR status after merge; archive done items |
+| `/ww-reconcile` | Sync PR status after merge; delete done work items (record in PRD + project-docs) |
 
 ---
 
@@ -55,7 +55,7 @@ flowchart TD
         AC --> AG[Per-item: validate → human gate]
         AG -->|approve| AS[status: approved]
         AG -->|revise| AG
-        AG -->|done| AD[status: done → archive]
+        AG -->|done| AD[status: done → delete work item; PRD retention]
         AG -->|skip| AG
     end
 
@@ -77,7 +77,7 @@ flowchart TD
 
     subgraph RECONCILE [Reconcile — /ww-reconcile]
         R1([/ww-reconcile]) --> R2[Check pr_awaiting + committed items\nvia gh pr view]
-        R2 -->|merged| R3[status: done → archive\nplans/completed-work-items/]
+        R2 -->|merged| R3[status: done → delete work item\nrecord in PRD Work item retention]
         R2 -->|closed not merged| R4[status: draft — surface to human]
         R2 -->|still open| R5[leave as-is]
     end

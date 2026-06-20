@@ -24,8 +24,7 @@ file_manifest:
   - AGENTS.md
   - .cursor/skills/consume-sail-desktop-agent/SKILL.md
   - website/docs/packages/desktop-agent/composition.md
-depends_on:
-  - move-wcp-temp-id-alias-to-agent-state
+depends_on: []
 integration_branch: v3-pre
 branch: v3-pre
 pr_url: ""

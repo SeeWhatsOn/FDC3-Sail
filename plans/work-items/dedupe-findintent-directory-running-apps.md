@@ -30,9 +30,9 @@ v4 reports `FindIntentAppD` and `FindIntentByContextSingleContext` with length 2
 
 ## Reference docs
 
-- `plans/prd-toolbox-conformance-v4-follow-up.md` (TV4-01)
+- `plans/prd-toolbox-conformance-v5-follow-up.md` (TV5-03)
 - `conformance-appd.json`
-- `plans/completed-work-items/fix-intent-discovery-displayname-dedupe.md`
+- `plans/project-docs.md` (TB-02 delivered)
 
 ## Parent context
 

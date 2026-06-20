@@ -7,14 +7,12 @@ DRY=false
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WI="$ROOT/work-items"
-COMPLETED="$ROOT/completed-work-items"
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "gh CLI not found; run /ww-reconcile manually or install gh." >&2
   exit 1
 fi
 
-mkdir -p "$COMPLETED"
 updated=0
 for f in "$WI"/*.md; do
   [[ -f "$f" ]] || continue
@@ -27,16 +25,9 @@ for f in "$WI"/*.md; do
   fi
   state=$(gh pr view "$pr_url" --json state -q .state 2>/dev/null || echo "UNKNOWN")
   if [[ "$state" == "MERGED" ]]; then
-    echo "${DRY:+[dry-run] }$slug: MERGED -> done (archive to completed-work-items/)"
+    echo "${DRY:+[dry-run] }$slug: MERGED -> done (delete work item; record in parent PRD Work item retention)"
     if [[ "$DRY" == false ]]; then
-      sed -i 's/^status: pr_awaiting$/status: done/' "$f"
-      merged_at=$(date -u +%Y-%m-%d)
-      if ! grep -q '^merged_pr:' "$f"; then
-        sed -i "/^slug:/a merged_pr: \"$pr_url\"" "$f"
-      fi
-      echo "- ${merged_at}: reconcile-queue.sh — PR merged" >> "$f"
-      dest="$COMPLETED/$(basename "$f")"
-      git mv "$f" "$dest" 2>/dev/null || mv "$f" "$dest"
+      git rm -f "$f" 2>/dev/null || rm -f "$f"
       updated=$((updated + 1))
     fi
   else

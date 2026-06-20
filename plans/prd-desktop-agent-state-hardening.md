@@ -14,14 +14,16 @@ Maintainers and integrators of `@finos/sail-desktop-agent` who need a single, sp
 
 Harden `AgentState` as the single source of truth for FDC3 runtime data with **Option A** instance lifecycle (`PENDING` → `CONNECTED` → removed), consolidate temp→canonical instance id resolution, remove dead state fields, align user-channel reads with `state.channels.user`, collapse `AppDirectoryManager` into queries + Immer mutators, and document singleton + host reactivity patterns — without preemptive FIFO locking.
 
+**Delivery status (2026-06-20):** Must-have lifecycle, identity, denormalization, user-channel SSOT, and app-directory collapse **landed on `v3-pre`**. Remaining: host reactivity audit (PRD-04h) and integrator docs (PRD-04j). Optional: `reorganize-core-handlers-colocate-state` (folder hygiene).
+
 ## PRD-03 — Relationship to other plans
 
 | Existing plan / item | Status on `v3-pre` | This PRD action |
 |----------------------|-------------------|-----------------|
-| `move-app-directory-into-agent-state` | Landed (`state.appDirectory`) | **extend** — prerequisite done |
-| `collapse-app-directory-to-functions` | Draft WI exists | **extend** — same epic |
-| `audit-heartbeat-disconnect-cleanup` | completed-work-items | **no duplicate** — reference only |
-| `bind-host-instance-id-at-wcp4` | completed-work-items | **no duplicate** — adoption stays |
+| `move-app-directory-into-agent-state` | **done** — prerequisite; work item deleted | **extend** — prerequisite done |
+| `collapse-app-directory-to-functions` | **done** — work item deleted | **extend** — same epic |
+| `audit-heartbeat-disconnect-cleanup` | **done** — work item deleted | **no duplicate** — reference only |
+| `bind-host-instance-id-at-wcp4` | **done** — work item deleted | **no duplicate** — adoption stays |
 | Conformance / toolbox PRDs | separate | **defer** — unless regression found |
 | FIFO message queue | n/a | **won't-have** (YAGNI) |
 
@@ -155,23 +157,36 @@ npm run typecheck
 
 ## PRD-13 — Parent context summary
 
-`@finos/sail-desktop-agent` already uses a unified `AgentState` with Immer mutators. Production gaps: `CONNECTED` never set after WCP5; dead `intentListeners` on instances; temp→canonical id logic scattered; dual user-channel config read paths; `AppDirectoryManager` still bound beside `state.appDirectory`. This workload wires spec-aligned lifecycle (Option A), consolidates identity routing, prunes dead fields, collapses app-directory access to functions, audits host read paths for channel UI, and documents singleton + reactivity — without a preemptive message queue.
+`@finos/sail-desktop-agent` uses unified `AgentState` with Immer mutators. **Delivered:** Option A lifecycle (`CONNECTED` at WCP5), temp→canonical id contract, dead field removal, `state.channels.user` SSOT, app-directory queries/mutators. **Remaining:** host channel reactivity audit, singleton/reactivity docs; optional handler folder hygiene.
 
 ---
 
-## PRD accuracy gate (2026-06-11 / v3-pre @ 2e5f992f)
+## PRD accuracy gate (2026-06-20 / v3-pre)
 
-| ID | Classification | Evidence | Work item slug |
-|----|----------------|----------|----------------|
-| PRD-04a | task | verified-gap: `wcp-handlers.ts` calls `connectInstance` (PENDING) but never `updateInstanceState(CONNECTED)` in `src/core/handlers/` (only `__tests__`) | `wire-wcp5-connected-instance-lifecycle` |
-| PRD-04b | task | verified-partial: `heartbeatEnabled` gated in `wcp-handlers.ts:262`; timeout → `cleanupDACPHandlers` in `heartbeat-handlers.ts:61-64` | `wire-wcp5-connected-instance-lifecycle` |
-| PRD-04c | task | verified-gap: Cucumber `start-app.steps` / Vitest manually set `CONNECTED` | `wire-wcp5-connected-instance-lifecycle` |
-| PRD-04d | task | verified-gap: maps in `heartbeat-runtime.ts`, `cleanup.ts`, `resolve-context-listener-instance-id.ts`, `wcp-connector.ts` | `consolidate-temp-instance-id-resolver` |
-| PRD-04e | task | verified-gap: `addIntentListener` on instance mutator unused; handlers use `registerIntentListener` only | `remove-dead-instance-state-denormalization` |
-| PRD-04f | task | verified-gap: `NOT_RESPONDING`/`DISCONNECTING`/`TERMINATED` never assigned in production `src/` | `remove-dead-instance-state-denormalization` |
-| PRD-04g | task | verified-partial: `state.channels.user` at init; `DesktopAgent.getUserChannels()` reads `this.userChannels` config field | `user-channels-runtime-ssot` |
-| PRD-04h | task | verified-partial: `getState()` returns live ref; sail-web uses `channelChanged` + platform APIs (`connection-store.ts`) | `audit-host-channel-reactivity-read-apis` |
-| PRD-04i | task | verified-partial: `state.appDirectory` on AgentState; manager still on `DACPHandlerContext` | `collapse-app-directory-to-functions` |
-| PRD-04j | task | verified-gap: no singleton doc section in integrator guide | `document-desktop-agent-singleton-and-reactivity` |
+| ID | Status | Work item slug |
+|----|--------|----------------|
+| PRD-04a–c | **done** — work item deleted | `wire-wcp5-connected-instance-lifecycle` |
+| PRD-04d | **done** — work item deleted | `consolidate-temp-instance-id-resolver` |
+| PRD-04e–f | **done** — work item deleted | `remove-dead-instance-state-denormalization` |
+| PRD-04g | **done** — work item deleted | `user-channels-runtime-ssot` |
+| PRD-04h | **active** | `audit-host-channel-reactivity-read-apis` |
+| PRD-04i | **done** — work item deleted | `collapse-app-directory-to-functions` |
+| PRD-04j | **active** | `document-desktop-agent-singleton-and-reactivity` |
+| — | **optional** | `reorganize-core-handlers-colocate-state` |
 
-**Gate result:** PASS — all rows classified; no blockers.
+**Gate result:** PASS — delivered rows verified on branch; active rows remain in `plans/work-items/`.
+
+## Work item retention
+
+**Policy (2026-06-20):** Delivered slices below are recorded here only; work item files **deleted**:
+
+| Slug | Status |
+|------|--------|
+| `wire-wcp5-connected-instance-lifecycle` | done — work item deleted |
+| `consolidate-temp-instance-id-resolver` | done — work item deleted |
+| `remove-dead-instance-state-denormalization` | done — work item deleted |
+| `user-channels-runtime-ssot` | done — work item deleted |
+| `collapse-app-directory-to-functions` | done — work item deleted |
+| `move-wcp-temp-id-alias-to-agent-state` | done — work item deleted |
+
+Active queue (`audit-host-channel-reactivity-read-apis`, `document-desktop-agent-singleton-and-reactivity`, `reorganize-core-handlers-colocate-state`) remains in `plans/work-items/`.

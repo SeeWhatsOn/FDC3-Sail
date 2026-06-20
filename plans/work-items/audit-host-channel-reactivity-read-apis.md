@@ -13,9 +13,7 @@ file_manifest:
   - packages/sail-web/src/stores/connection-store.ts
   - packages/sail-web/src/components/ChannelSelector.tsx
   - website/docs/packages/desktop-agent/integrator-guide.md
-depends_on:
-  - wire-wcp5-connected-instance-lifecycle
-  - user-channels-runtime-ssot
+depends_on: []
 integration_branch: v3-pre
 branch: cursor/audit-host-channel-reactivity-read-apis
 pr_url: ""

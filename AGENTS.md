@@ -96,7 +96,7 @@ draft → approved → in-progress → waiting_on_user → committed / pr_awaiti
 
 Full lifecycle + frontmatter fields: `.cursor/skills/ww-work-items/references/status-lifecycle.md`.
 PR reconcile procedure: `.cursor/skills/ww-work-items/references/reconcile.md`.
-Done items archive to `plans/completed-work-items/`.
+Done work item files are **deleted** after delivery; the parent PRD **Work item retention** section and `plans/project-docs.md` **Delivered work index** are the durable record. Completed PRD files are also deleted when superseded (not moved to archive folders).
 
 #### Plans / git policy
 

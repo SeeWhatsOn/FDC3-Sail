@@ -14,7 +14,7 @@ Expose a small, typed, destructurable host-facing API on the Browser Desktop Age
 
 | Existing plan / artifact | Current status | This PRD action |
 |---|---|---|
-| `plans/prd-desktop-agent-composable-package.md` | Existing package architecture PRD; core/preset split mostly delivered. | Extend with a browser-host controller API on top of the delivered preset; do not reopen completed folder/export work. |
+| `plans/project-docs.md` (composable package delivered) | Package architecture **done**; core/preset split delivered. | Extend with browser-host controller API; do not reopen PKG work. |
 | `plans/prd-desktop-agent-state-hardening.md` | Existing state hardening PRD with app-directory-in-state and WCP routing work. | Reuse existing app-directory selectors/mutators and instance routing state; do not duplicate cleanup/routing tasks. |
 | `website/docs/packages/desktop-agent/integrator-guide.md` | Current docs describe intent resolver and channel chrome, but channel set uses advanced session transport. | Update docs to match the new package-only host API and remove the need for integrators to call WCP internals for MVP flows. |
 | `packages/sail-desktop-agent/src/host-contracts/channel-control.ts` | Exported contract shape, not wired into the browser preset. | Clarify or supersede via `desktopAgent.channels` host controller. |

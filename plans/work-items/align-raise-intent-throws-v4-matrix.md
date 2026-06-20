@@ -31,8 +31,8 @@ v4 reports mismatches on `RaiseIntentFailedResolve`, `RaiseIntentFailTargetedApp
 
 ## Reference docs
 
-- `plans/prd-toolbox-conformance-v4-follow-up.md` (TV4-04)
-- `plans/completed-work-items/fdc3-error-enum-boundary-tests.md`
+- `plans/prd-toolbox-conformance-v5-follow-up.md` (TV5-05)
+- `plans/project-docs.md` (item 7 `fdc3-error-enum-boundary-tests` delivered)
 - `conformance-report-v4.txt` (fdc3.raiseIntent throws error)
 
 ## Parent context

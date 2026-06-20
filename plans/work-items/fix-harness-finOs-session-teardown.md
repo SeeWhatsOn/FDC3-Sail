@@ -12,8 +12,7 @@ file_manifest:
   - packages/sail-conformance-harness/src/popup-launcher.ts
   - packages/sail-conformance-harness/src/__tests__/harness-instance-correlation.harness.ts
   - packages/sail-conformance-harness/README.md
-depends_on:
-  - harness-popup-wcp-disconnect-cleanup
+depends_on: []
 integration_branch: v3-pre
 branch: cursor/fix-harness-finOs-session-teardown
 pr_url: ""
@@ -36,8 +35,7 @@ v5 export shows **26×** `App didn't return close context within 1 sec` (user/ap
 - `conformance-report-v5.txt`
 - `AGENTS.md` (harness conventions, no `window.close` override on real popups)
 - FINOS conformance utils: `closeMockAppWindow`, `app-control` channel
-- `plans/work-items/harness-popup-wcp-disconnect-cleanup.md`
-- `plans/work-items/pre-register-conformance1-pending-instance.md`
+- `plans/prd-toolbox-conformance-v5-follow-up.md` (TV5-01)
 
 ## Parent context
 

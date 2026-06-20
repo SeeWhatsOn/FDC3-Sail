@@ -11,8 +11,7 @@ file_manifest:
   - packages/sail-desktop-agent/src/app-connection/__tests__/wcp-desktop-agent.integration.test.ts
   - packages/sail-desktop-agent/src/app-connection/__tests__/wcp-edge-test-helpers.ts
   - packages/sail-desktop-agent/src/app-connection/
-depends_on:
-  - verify-v4-agent-fixes-on-current-branch
+depends_on: []
 integration_branch: v3-pre
 branch: cursor/extend-wcp-channel-delivery-integration-tests
 pr_url: ""
@@ -31,8 +30,8 @@ v4 has ~36 `AppTimeout` failures on user/app channels and context metadata. `bdd
 
 ## Reference docs
 
-- `plans/prd-toolbox-conformance-v4-follow-up.md` (TV4-05)
-- `plans/completed-work-items/bdd-wcp-integration-scenario.md`
+- `plans/prd-toolbox-conformance-v5-follow-up.md` (TV5-02)
+- `plans/project-docs.md` (TB-09 `bdd-wcp-integration-scenario` delivered)
 - `website/docs/packages/desktop-agent/conformance.md`
 
 ## Parent context
