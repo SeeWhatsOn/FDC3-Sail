@@ -4,7 +4,7 @@ import { SailAppLauncher, SailPlatform, type DirectoryApp } from "@finos/sail-pl
 import type { AppMetadata } from "@finos/fdc3"
 
 import conformanceAppDirectory from "../../sail-conformance-harness/conformance-appd.json"
-import defaultAppDirectory from "../../../fdc3-app-directory.json"
+import defaultAppDirectory from "../fixtures/default-app-directory.json"
 
 import "./index.css"
 import App from "./App"
