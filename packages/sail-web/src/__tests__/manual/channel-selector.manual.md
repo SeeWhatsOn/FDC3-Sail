@@ -1,7 +1,7 @@
 ## Channel Selector Manual Test
 
 ### Prerequisites
-- Run `npm run dev:web`
+- Run `npm run dev`
 - Open `http://localhost:8090`
 - Ensure at least two example apps are available to launch
 

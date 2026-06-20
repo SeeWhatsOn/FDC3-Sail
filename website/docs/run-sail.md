@@ -52,6 +52,17 @@ This starts the Desktop Agent, platform API, server stub, and Sail web UI. Open 
 npm run dev:desktop
 ```
 
+Starts the server stub and Electron shell (`sail-server` + `@finos/sail-electron`). The Electron window loads `http://localhost:8090` by default (`SAIL_URL`).
+
+For the full Sail web UI inside Electron during development, run the browser stack first, then point Electron at port 3000:
+
+```bash
+npm run dev   # terminal 1 — agent, platform-api, server, web on :3000
+SAIL_URL=http://localhost:3000 npm run dev -w @finos/sail-electron   # terminal 2
+```
+
+`@finos/sail-electron` is optional and not part of the default root `npm run build` until its build is restored.
+
 ## App directory
 
 FDC3 Sail loads application metadata from an **app directory** — JSON describing which apps exist, their URLs, intents, and context types.
@@ -64,7 +75,7 @@ Point your deployment at the directory URL or file your build expects (see `pack
 
 ### Web (production)
 
-Build the static web application from the monorepo root:
+Build the static web application from the monorepo root (CI-aligned workspaces; excludes `sail-electron`):
 
 ```bash
 npm run build

@@ -36,9 +36,9 @@ npm run dev
 Starts Desktop Agent (watch), platform API (watch), server stub, and Sail web UI on **http://localhost:3000**.
 
 ```bash
-npm run dev:desktop   # Electron desktop mode
+npm run dev:desktop   # Electron desktop mode (server + Electron shell)
+npm run dev:harness   # FDC3 toolbox clean room on :3001
 npm run docs:dev      # Documentation site (use --port 3002 if web app is running)
-npm run dev -w @finos/sail-conformance-harness   # FDC3 toolbox clean room on :3001
 ```
 
 ## Project Structure
@@ -71,10 +71,13 @@ The main package docs focus on packages adopters are likely to use directly. The
 
 ```bash
 # Start browser-based development (most common)
-npm run dev:web
+npm run dev
 
 # Start Electron desktop development
 npm run dev:desktop
+
+# FDC3 conformance toolbox host
+npm run dev:harness
 
 # Start documentation site
 npm run docs:dev
@@ -105,20 +108,23 @@ npm run format:fix
 npm run test
 
 # Run tests once
-npm run test:run
+npm test -- --run
 
-# Desktop Agent tests
-npm run test --workspace=@finos/sail-desktop-agent
+# Desktop Agent tests (Vitest + Cucumber)
+npm test -w @finos/sail-desktop-agent
 
 # FDC3 Compliance tests (Cucumber BDD)
-npm run test:cucumber --workspace=@finos/sail-desktop-agent
+npm run test:cucumber
 ```
 
 ### Building
 
 ```bash
-# Build all workspaces
+# Build publishable / CI workspaces (excludes sail-electron until fixed)
 npm run build
+
+# Documentation site
+npm run docs:build
 
 # Build specific workspace
 npm run build --workspace=@finos/sail-platform-api
@@ -148,22 +154,28 @@ git checkout -b fix/your-bug-fix
 #### 2. Development Standards
 
 **Code Quality Requirements:**
-- All ESLint rules must pass (`npm run lint`)
-- All TypeScript type checks must pass (`npm run typecheck`)
-- Code must be formatted with Prettier (`npm run format`)
-- All builds must succeed (`npm run build`)
+
+Run `npm run validate` before commits. It runs the same gate as CI: Prettier, ESLint, TypeScript, workspace build, docs build, Vitest (`npm test -- --run`), and Cucumber (`npm run test:cucumber`).
+
+Individual steps when iterating:
+
+- `npm run lint` / `npm run lint:fix`
+- `npm run typecheck`
+- `npm run format` / `npm run format:fix`
+- `npm run build` (CI workspaces; excludes `sail-electron` until fixed)
+- `npm run docs:build`
 
 #### 3. Quality Check Before Submission
 
 ```bash
-# Run this before every commit
+# Run this before every commit (full CI gate)
 npm run validate
 
-# If any step fails:
-npm run lint:fix      # Fix linting issues
-npm run format:fix    # Fix formatting
-# Fix any type errors manually
-npm run build         # Verify build works
+# If a step fails, fix and re-run validate:
+npm run lint:fix      # Lint
+npm run format:fix    # Format
+# Fix type errors manually, then:
+npm run validate
 ```
 
 ### Commit Message Format
