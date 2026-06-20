@@ -71,6 +71,35 @@ export class MockAppLauncher implements AppLauncher {
   }
 
   /**
+   * Close an app instance (no-op by default). Override to simulate close failures.
+   */
+  async close(instanceId: string): Promise<void> {
+    if (this.failCloseInstances.has(instanceId)) {
+      throw new Error("Close failed")
+    }
+    this.closeHistory.push(instanceId)
+  }
+
+  private failCloseInstances: Set<string> = new Set()
+  private closeHistory: string[] = []
+
+  /**
+   * Configure a specific instance to fail on close
+   */
+  setInstanceToFailOnClose(instanceId: string): void {
+    this.failCloseInstances.add(instanceId)
+  }
+
+  getCloseHistory(): string[] {
+    return [...this.closeHistory]
+  }
+
+  clearCloseHistory(): void {
+    this.closeHistory = []
+    this.failCloseInstances.clear()
+  }
+
+  /**
    * Configure specific app to fail on launch (simulates AppNotFound)
    */
   setAppToFail(appId: string): void {

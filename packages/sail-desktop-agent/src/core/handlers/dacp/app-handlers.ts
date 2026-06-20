@@ -4,13 +4,20 @@ import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { OpenError, ResolveError } from "@finos/fdc3"
-import { AppNotFoundError, ErrorOnLaunchError, FDC3OpenError } from "../../errors/fdc3-errors"
+import {
+  AppNotFoundError,
+  CloseError,
+  ErrorOnLaunchError,
+  FDC3OpenError,
+} from "../../errors/fdc3-errors"
 import type { DirectoryApp } from "../../app-directory/types"
 import { retrieveAppsById } from "../../app-directory/app-directory-queries"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
 import { registerOpenWithContext } from "./utils/open-with-context"
 import { isValidContext } from "./utils/context-validation"
+import { resolveDacpHandlerInstanceId } from "./utils/resolve-context-listener-instance-id"
+import { cleanupDACPHandlers } from "./cleanup"
 
 /**
  * Handles getInfoRequest to return implementation metadata.
@@ -344,6 +351,58 @@ export function handleGetAppMetadataRequest(
       errorType: ResolveError.TargetAppUnavailable,
       errorMessage: error instanceof Error ? error.message : "Failed to get app metadata",
       instanceId,
+      transport,
+    })
+  }
+}
+
+/** FDC3 v3.0 closeRequest — not yet in @finos/fdc3 2.2 BrowserTypes. */
+export type CloseRequestMessage = {
+  type: "closeRequest"
+  meta: BrowserTypes.AppRequestMessageMeta
+  payload: Record<string, never>
+}
+
+/**
+ * Handles closeRequest when an app calls fdc3.close() on itself.
+ *
+ * Self-close only: WCPConnector overwrites `meta.source.instanceId` from the MessagePort
+ * connection in production; the handler always closes the resolved caller instance.
+ *
+ * Per FDC3 v3.0 DACP spec: on success the app container is torn down before a success
+ * `closeResponse` can be delivered — only error `closeResponse` is sent. The `@finos/fdc3`
+ * v3.0 client treats `CloseError.ApiTimeout` (no response before exchange timeout) as the
+ * expected successful outcome.
+ */
+export async function handleCloseRequest(
+  message: CloseRequestMessage,
+  context: DACPHandlerContext
+): Promise<void> {
+  const { transport, appLauncher, logger, getState } = context
+  const targetInstanceId = resolveDacpHandlerInstanceId(message, context)
+
+  try {
+    const instance = getInstance(getState(), targetInstanceId)
+    if (!instance) {
+      throw new Error(`Instance not found: ${targetInstanceId}`)
+    }
+
+    if (!appLauncher?.close) {
+      throw new Error("App close not available - no AppLauncher.close configured")
+    }
+
+    logger.info("DACP: Closing app instance", { instanceId: targetInstanceId })
+
+    await appLauncher.close(targetInstanceId)
+
+    cleanupDACPHandlers({ ...context, instanceId: targetInstanceId })
+  } catch (error) {
+    logger.error("DACP: closeRequest failed", error)
+    sendDACPErrorResponse({
+      message,
+      errorType: CloseError.ErrorOnClose as BrowserTypes.ResponsePayloadError,
+      errorMessage: error instanceof Error ? error.message : "Failed to close app instance",
+      instanceId: targetInstanceId,
       transport,
     })
   }

@@ -47,7 +47,9 @@ export function handleBroadcastRequest(
   message: BrowserTypes.BroadcastRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { transport, getState, setState, logger } = context
+  const instanceId = resolveDacpHandlerInstanceId(message, context)
+  const handlerContext = { ...context, instanceId }
 
   try {
     const { channelId: payloadChannelId, context: broadcastContext } = message.payload
@@ -113,9 +115,9 @@ export function handleBroadcastRequest(
       setState(state =>
         setPrivateChannelLastContext(state, channelId, broadcastContext.type, broadcastContext)
       )
-      notifyPrivateChannelContextListeners(channelId, broadcastContext, context)
+      notifyPrivateChannelContextListeners(channelId, broadcastContext, handlerContext)
     } else {
-      notifyContextListeners(channelId, broadcastContext, context)
+      notifyContextListeners(channelId, broadcastContext, handlerContext)
     }
 
     const response = createDACPSuccessResponse(message, "broadcastResponse")
@@ -272,7 +274,8 @@ export function handleContextListenerUnsubscribe(
   message: BrowserTypes.ContextListenerUnsubscribeRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { transport, getState, setState, logger } = context
+  const instanceId = resolveDacpHandlerInstanceId(message, context)
 
   try {
     const { listenerUUID } = message.payload

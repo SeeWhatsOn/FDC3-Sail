@@ -36,7 +36,13 @@ export function resolveHarnessLaunchMode(appMetadata: AppMetadataWithDetails): H
  * the open request targets an existing instance. The returned id must match the
  * iframe `name` or popup `window.name` so the app can claim it in WCP4.
  */
-export function createHarnessAppLauncher(onLaunch: HarnessLaunchCallback): AppLauncher {
+export function createHarnessAppLauncher(
+  onLaunch: HarnessLaunchCallback,
+  options?: {
+    closePopup?: (instanceId: string) => boolean
+    removePanel?: (instanceId: string) => void
+  }
+): AppLauncher {
   return {
     launch(
       request: BrowserTypes.OpenRequestPayload,
@@ -63,6 +69,14 @@ export function createHarnessAppLauncher(onLaunch: HarnessLaunchCallback): AppLa
         appId: request.app.appId,
         instanceId,
       })
+    },
+
+    close(instanceId: string): Promise<void> {
+      const closedPopup = options?.closePopup?.(instanceId) ?? false
+      if (!closedPopup) {
+        options?.removePanel?.(instanceId)
+      }
+      return Promise.resolve()
     },
   }
 }

@@ -37,4 +37,15 @@ export interface AppLauncher {
    * @throws Error if launch fails (Desktop Agent will convert to FDC3 error response)
    */
   launch(request: BrowserTypes.OpenRequestPayload, appMetadata: AppMetadata): Promise<AppIdentifier>
+
+  /**
+   * Close an app instance's browsing context (tab, window, iframe, etc.).
+   *
+   * Invoked by the Desktop Agent when an app calls `fdc3.close()` (FDC3 v3.0). Implementations
+   * should tear down the host container; agent state cleanup runs after this resolves.
+   *
+   * @param instanceId - Canonical WCP5 instance id for the app to close
+   * @throws Error if the host cannot close the container (mapped to CloseError.ErrorOnClose)
+   */
+  close?(instanceId: string): Promise<void>
 }

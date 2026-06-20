@@ -13,6 +13,7 @@ export type PopupCloseWatcher = {
   registerPopup: (instanceId: string, popup: Window) => void
   unregisterPopup: (instanceId: string) => void
   hasPopup: (instanceId: string) => boolean
+  closePopup: (instanceId: string) => boolean
   stop: () => void
 }
 
@@ -32,7 +33,7 @@ export function openHarnessPopup(panel: HarnessPanel): Window | null {
  */
 export function createPopupCloseWatcher(options: PopupCloseWatcherOptions): PopupCloseWatcher {
   const popups = new Map<string, Window>()
-  const pollIntervalMs = options.pollIntervalMs ?? 500
+  const pollIntervalMs = options.pollIntervalMs ?? 100
   let intervalId: ReturnType<typeof setInterval> | undefined
 
   const stopPolling = () => {
@@ -78,6 +79,15 @@ export function createPopupCloseWatcher(options: PopupCloseWatcherOptions): Popu
 
     hasPopup(instanceId: string) {
       return popups.has(instanceId)
+    },
+
+    closePopup(instanceId: string) {
+      const popup = popups.get(instanceId)
+      if (!popup || popup.closed) {
+        return false
+      }
+      popup.close()
+      return true
     },
 
     stop() {

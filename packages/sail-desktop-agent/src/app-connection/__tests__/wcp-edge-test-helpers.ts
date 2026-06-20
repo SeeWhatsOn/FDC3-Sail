@@ -194,7 +194,7 @@ export function createJoinUserChannelMessage(
 export function createAddContextListenerMessage(
   instanceId: string,
   appId: string,
-  channelId: string,
+  channelId: string | null,
   contextType: string
 ): BrowserTypes.AddContextListenerRequest {
   return {
@@ -206,6 +206,14 @@ export function createAddContextListenerMessage(
     },
     payload: { channelId, contextType },
   }
+}
+
+/** Generic user-channel listener (AOpensBWithContext3 / FINOS open-with-context path). */
+export function createGenericContextListenerMessage(
+  instanceId: string,
+  appId: string
+): BrowserTypes.AddContextListenerRequest {
+  return createAddContextListenerMessage(instanceId, appId, null, "*")
 }
 
 export function createBroadcastMessage(

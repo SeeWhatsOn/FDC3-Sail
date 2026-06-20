@@ -3,15 +3,14 @@ title: "Fix harness FINOS session teardown and stale instances"
 slug: fix-harness-finOs-session-teardown
 kind: task
 type: bug
-status: draft
-loop_count: 0
-loop_limit: 3
-last_agent: ""
+status: waiting_on_user
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-conformance-harness/src/harness-bootstrap.ts
+  - packages/sail-conformance-harness/src/harness-instance-lifecycle.ts
+  - packages/sail-conformance-harness/src/harness-instance-lifecycle.test.ts
   - packages/sail-conformance-harness/src/popup-launcher.ts
-  - packages/sail-conformance-harness/src/app-launcher.ts
-  - packages/sail-conformance-harness/src/main.test.ts
+  - packages/sail-conformance-harness/src/__tests__/harness-instance-correlation.harness.ts
   - packages/sail-conformance-harness/README.md
 depends_on:
   - harness-popup-wcp-disconnect-cleanup
@@ -110,7 +109,14 @@ _(empty)_
 
 ## Staged for review
 
-_(empty)_
+- **Build fix:** repaired corrupted `intent-result-metadata.ts` (`isContextWithMetadata` return type / stray syntax).
+- **Harness lifecycle:** `harness-instance-lifecycle.ts` — `prepareLaunchedHostInstance` (pre-register before popup/iframe) + `disconnectHarnessInstance` (panel + popup + agent disconnect).
+- **Bootstrap wiring:** launch path pre-registers; `onAppDisconnected` and popup close both call `disconnectHarnessInstance`.
+- **Popup poll:** default 100ms (was 500ms).
+- **Tests:** `harness-instance-lifecycle.test.ts` (2); updated correlation assertions (launcher id === WCP5 id after pre-register).
+- **Targeted:** `npm test -w @finos/sail-conformance-harness` — 21/21 pass; desktop-agent build green.
+
+**Manual gate:** harness `:3001` v6 toolbox re-run (user/app channels + Open-Tests) to confirm close-context 1s budget and reduced stale instances.
 
 ## Escalation notes
 

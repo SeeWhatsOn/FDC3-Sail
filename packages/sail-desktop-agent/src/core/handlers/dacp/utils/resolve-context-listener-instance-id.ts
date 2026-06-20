@@ -28,6 +28,14 @@ export function resolveDacpHandlerInstanceId(
     return hostInstanceId
   }
 
+  // Prefer the MessagePort-routed instance when it is already registered. Pending
+  // open-with-context targets are for a *different* instance awaiting a listener;
+  // redirecting here breaks broadcastResponse routing back to the connected sender
+  // (orphan tabs accumulate when windowClosed broadcasts time out).
+  if (getInstance(state, instanceId)) {
+    return instanceId
+  }
+
   const sourceAppId = message.meta?.source?.appId
   const pendingHostInstanceId = findPendingOpenWithContextHostInstanceId(
     state,
@@ -36,10 +44,6 @@ export function resolveDacpHandlerInstanceId(
   )
   if (pendingHostInstanceId) {
     return pendingHostInstanceId
-  }
-
-  if (getInstance(state, instanceId)) {
-    return instanceId
   }
 
   const linkedInstanceId = resolveLinkedInstanceId(state, instanceId)

@@ -199,8 +199,8 @@ async function completeWcp4Handshake(
 }
 
 /**
- * Phase 1 spike assertions: all four correlation fields are present and reflect
- * today's agent behavior (host launcher id vs WCP5 canonical id diverge on first connect).
+ * Phase 1 spike assertions: launcher id, iframe name, WCP5 id, and findInstances align
+ * when openRequest pre-registers the host-assigned instance before WCP4 completes.
  */
 export function assertInstanceIdentityCorrelated(
   snapshot: InstanceIdentityCorrelationSnapshot
@@ -214,13 +214,11 @@ export function assertInstanceIdentityCorrelated(
   // Harness contract: iframe name mirrors AppLauncher.instanceId at open time.
   expect(iframeName).toBe(launcherInstanceId)
 
-  // WCP4 createAppInstance mints a fresh UUID on first connect; reconnect reuse
-  // only applies when sourceWindow + identity registry already match the claimed id.
-  expect(wcp5InstanceId).not.toBe(launcherInstanceId)
+  // Host pre-register (openRequest / prepareLaunchedHostInstance) keeps launcher id through WCP5.
+  expect(wcp5InstanceId).toBe(launcherInstanceId)
 
-  // findInstances() lists canonical WCP5-registered instances, not launcher placeholders.
+  // findInstances() lists the canonical WCP5-registered instance (same id as launcher).
   expect(findInstancesInstanceIds).toEqual(expect.arrayContaining([wcp5InstanceId]))
-  expect(findInstancesInstanceIds).not.toEqual(expect.arrayContaining([launcherInstanceId]))
 }
 
 export function findHarnessCorrelationLog(

@@ -2,6 +2,7 @@ import type { Context } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
 import { addPendingIntent, resolvePendingIntent } from "../../../state/mutators"
 import { getInstance, getInstancesByAppId } from "../../../state/selectors"
+import { AppInstanceState } from "../../../state/types"
 import {
   FDC3ResolveError,
   NoAppsFoundError,
@@ -107,9 +108,19 @@ export async function resolveAppTargetInstance(
     return { targetInstanceId, targetInstanceIsLaunched: true }
   }
 
-  const runningInstances = getInstancesByAppId(context.getState(), appId)
+  const runningInstances = getInstancesByAppId(context.getState(), appId).filter(
+    instance =>
+      instance.state === AppInstanceState.CONNECTED || instance.state === AppInstanceState.PENDING
+  )
   if (runningInstances.length > 0) {
-    return { targetInstanceId: runningInstances[0].instanceId, targetInstanceIsLaunched: false }
+    const connectedInstances = runningInstances.filter(
+      instance => instance.state === AppInstanceState.CONNECTED
+    )
+    const candidates = connectedInstances.length > 0 ? connectedInstances : runningInstances
+    const targetInstance = candidates.reduce((latest, instance) =>
+      instance.lastActivity.getTime() > latest.lastActivity.getTime() ? instance : latest
+    )
+    return { targetInstanceId: targetInstance.instanceId, targetInstanceIsLaunched: false }
   }
 
   const targetInstanceId = await launchAppAndWaitForInstance(appId, context, validatedContext)

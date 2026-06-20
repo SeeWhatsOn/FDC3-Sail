@@ -3,7 +3,7 @@ title: "Pre-register Conformance1 PENDING instance for WCP4 host bind"
 slug: pre-register-conformance1-pending-instance
 kind: task
 type: bug
-status: done
+status: in-progress
 loop_count: 0
 loop_limit: 3
 last_agent: ""

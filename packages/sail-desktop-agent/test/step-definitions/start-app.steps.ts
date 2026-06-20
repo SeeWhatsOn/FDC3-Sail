@@ -133,7 +133,10 @@ function resolveAppIdFromAppStr(appStr: string): string {
   return appStr
 }
 
-async function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): Promise<string> {
+export async function ensureAppInstanceForTesting(
+  world: CustomWorld,
+  appStr: string
+): Promise<string> {
   const instanceId = getAppInstanceId(world, appStr)
   const appId = resolveAppIdFromAppStr(appStr)
   await connectTestAppInstance(world, appId, instanceId)

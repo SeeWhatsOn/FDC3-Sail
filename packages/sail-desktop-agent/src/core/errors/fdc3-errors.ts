@@ -69,7 +69,7 @@ export class IntentDeliveryFailedError extends FDC3ResolveError {
  */
 export class UserCancelledError extends FDC3ResolveError {
   constructor(message: string) {
-    super((ResolveError.UserCancelled || "UserCancelledResolution") as ResolveError, message)
+    super(ResolveError.UserCancelled || "UserCancelledResolution", message)
   }
 }
 
@@ -161,5 +161,37 @@ export class ChannelCreationFailedError extends FDC3ChannelError {
 export class ListenerNotFoundChannelError extends FDC3ChannelError {
   constructor(message: string) {
     super("ListenerNotFound" as ChannelError, message)
+  }
+}
+
+// ============================================================================
+// CLOSE ERRORS (for fdc3.close — FDC3 v3.0)
+// ============================================================================
+
+/** FDC3 v3.0 CloseError enum (not yet exported from @finos/fdc3 2.2). */
+export enum CloseError {
+  ErrorOnClose = "ErrorOnClose",
+  ApiTimeout = "ApiTimeout",
+}
+
+/**
+ * Base class for FDC3 Close errors
+ */
+export class FDC3CloseError extends Error {
+  constructor(
+    public readonly errorType: CloseError,
+    message: string
+  ) {
+    super(message)
+    this.name = "FDC3CloseError"
+  }
+}
+
+/**
+ * Error thrown when the host cannot close the app's window or frame
+ */
+export class ErrorOnCloseError extends FDC3CloseError {
+  constructor(message: string) {
+    super(CloseError.ErrorOnClose, message)
   }
 }

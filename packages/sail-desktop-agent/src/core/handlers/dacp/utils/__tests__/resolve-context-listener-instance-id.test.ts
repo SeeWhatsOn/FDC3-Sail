@@ -111,7 +111,7 @@ describe("resolveDacpHandlerInstanceId", () => {
 
   it("routes to host launcher pending bucket when open-with-context is pending there", () => {
     const hostInstanceId = "launcher-instance-id"
-    const mintedInstanceId = "minted-canonical-id"
+    const tempRoutedInstanceId = "temp-wcp-not-in-registry"
     const openRequest = {
       type: "openRequest",
       meta: {
@@ -126,18 +126,11 @@ describe("resolveDacpHandlerInstanceId", () => {
     } as BrowserTypes.OpenRequest
 
     const initialState = addPendingOpenWithContext(
-      connectInstance(
-        connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
-          instanceId: hostInstanceId,
-          appId: CHART_APP_ID,
-          metadata: { appId: CHART_APP_ID, name: CHART_APP_ID },
-        }),
-        {
-          instanceId: mintedInstanceId,
-          appId: CHART_APP_ID,
-          metadata: { appId: CHART_APP_ID, name: CHART_APP_ID },
-        }
-      ),
+      connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
+        instanceId: hostInstanceId,
+        appId: CHART_APP_ID,
+        metadata: { appId: CHART_APP_ID, name: CHART_APP_ID },
+      }),
       hostInstanceId,
       {
         message: openRequest,
@@ -148,7 +141,7 @@ describe("resolveDacpHandlerInstanceId", () => {
     )
 
     const { context } = createDACPTestContext({
-      instanceId: mintedInstanceId,
+      instanceId: tempRoutedInstanceId,
       initialState,
     })
 
@@ -157,12 +150,74 @@ describe("resolveDacpHandlerInstanceId", () => {
       meta: {
         requestUuid: "listener-pending-host",
         timestamp: new Date(),
-        source: { appId: CHART_APP_ID, instanceId: mintedInstanceId },
+        source: { appId: CHART_APP_ID, instanceId: tempRoutedInstanceId },
       },
       payload: { channelId: null, contextType: "fdc3.instrument" },
     } as BrowserTypes.AddContextListenerRequest
 
     expect(resolveDacpHandlerInstanceId(message, context)).toBe(hostInstanceId)
+  })
+
+  it("keeps the connected sender when another instance has pending open-with-context", () => {
+    const connectedSenderId = "connected-mock-instance"
+    const pendingTargetId = "pending-mock-launch"
+    const appId = "MockAppId"
+    const openRequest = {
+      type: "openRequest",
+      meta: {
+        requestUuid: "open-req-pending-other",
+        timestamp: new Date(),
+        source: { appId: "Conformance1", instanceId: "conformance-1" },
+      },
+      payload: {
+        app: { appId, instanceId: pendingTargetId },
+        context: { type: "fdc3.instrument", id: { ticker: "MSFT" } },
+      },
+    } as BrowserTypes.OpenRequest
+
+    const withConnected = updateInstanceState(
+      connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
+        instanceId: connectedSenderId,
+        appId,
+        metadata: { appId, name: appId },
+      }),
+      connectedSenderId,
+      AppInstanceState.CONNECTED
+    )
+    const initialState = addPendingOpenWithContext(
+      connectInstance(withConnected, {
+        instanceId: pendingTargetId,
+        appId,
+        metadata: { appId, name: appId },
+      }),
+      pendingTargetId,
+      {
+        message: openRequest,
+        appIdentifier: { appId, instanceId: pendingTargetId },
+        launchContext: openRequest.payload.context!,
+        sourceInstanceId: "conformance-1",
+      }
+    )
+
+    const { context } = createDACPTestContext({
+      instanceId: connectedSenderId,
+      initialState,
+    })
+
+    const message = {
+      type: "broadcastRequest",
+      meta: {
+        requestUuid: "window-closed-broadcast",
+        timestamp: new Date(),
+        source: { appId, instanceId: connectedSenderId },
+      },
+      payload: {
+        channelId: "app-control",
+        context: { type: "windowClosed", testId: "teardown-1" },
+      },
+    } as BrowserTypes.BroadcastRequest
+
+    expect(resolveDacpHandlerInstanceId(message, context)).toBe(connectedSenderId)
   })
 
   it("does not guess a stale source id when multiple connected instances share the appId", () => {

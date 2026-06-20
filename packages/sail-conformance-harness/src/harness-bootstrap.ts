@@ -11,6 +11,10 @@ import type { AppInstance } from "@finos/sail-desktop-agent"
 import conformanceAppDirectory from "../../../conformance-appd.json"
 
 import { createHarnessAppLauncher } from "./app-launcher"
+import {
+  createHarnessInstanceCleanup,
+  type HarnessInstanceCleanup,
+} from "./harness-instance-lifecycle"
 import { createHarnessIntentResolver } from "./intent-resolver-wiring"
 import { createPopupCloseWatcher, openHarnessPopup } from "./popup-launcher"
 import type { HarnessPanel } from "./types"
@@ -67,14 +71,20 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     setPanels?.(current => current.filter(panel => panel.instanceId !== instanceId))
   }
 
+  const instanceCleanup: HarnessInstanceCleanup = {
+    prepareLaunchedHostInstance() {},
+    disconnectHarnessInstance() {},
+  }
+
   const popupWatcher = createPopupCloseWatcher({
     onPopupClosed: instanceId => {
-      removePanel(instanceId)
-      desktopAgent.disconnectInstance(instanceId)
+      instanceCleanup.disconnectHarnessInstance(instanceId)
     },
   })
 
   const mountLaunchedPanel = (panel: HarnessPanel) => {
+    instanceCleanup.prepareLaunchedHostInstance(panel)
+
     if (panel.launchMode === "popup") {
       const popup = openHarnessPopup(panel)
       if (!popup) {
@@ -89,7 +99,10 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     setPanels?.(current => [...current, panel])
   }
 
-  const appLauncher = createHarnessAppLauncher(mountLaunchedPanel)
+  const appLauncher = createHarnessAppLauncher(mountLaunchedPanel, {
+    closePopup: instanceId => popupWatcher.closePopup(instanceId),
+    removePanel,
+  })
 
   const desktopAgent = createBrowserDesktopAgent({
     apps: conformanceApps,
@@ -108,11 +121,19 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
       console.log(`[ConformanceHarness] WCP connected: ${metadata.appId} (${metadata.instanceId})`)
     },
     onAppDisconnected: (instanceId: AppInstance["instanceId"]) => {
-      popupWatcher.unregisterPopup(instanceId)
-      removePanel(instanceId)
       console.log(`[ConformanceHarness] WCP disconnected: ${instanceId}`)
+      instanceCleanup.disconnectHarnessInstance(instanceId)
     },
   })
+
+  Object.assign(
+    instanceCleanup,
+    createHarnessInstanceCleanup({
+      desktopAgent,
+      popupWatcher,
+      removePanel,
+    })
+  )
 
   desktopAgent.registerPendingHostInstance({
     appId: "Conformance1",

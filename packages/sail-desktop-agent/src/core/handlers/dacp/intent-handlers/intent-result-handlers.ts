@@ -16,7 +16,12 @@ import type { BrowserTypes } from "@finos/fdc3"
 import { ResultError, ResolveError } from "@finos/fdc3"
 import { getInstance, getPendingIntent } from "../../../state/selectors"
 import { resolvePendingIntent } from "../../../state/mutators"
-import { buildIntentResultWirePayload } from "./intent-result-metadata"
+import {
+  buildIntentResultWirePayload,
+  attachIntentResultClientMetadata,
+  cloneIntentResultContextMetadata,
+} from "./intent-result-metadata"
+import { resolveDacpHandlerInstanceId } from "../utils/resolve-context-listener-instance-id"
 
 function isHandlerRejection(intentResult: unknown): boolean {
   return (
@@ -49,9 +54,10 @@ export function handleIntentResultRequest(
       throw new Error(`No pending intent found for request: ${originalRequestId}`)
     }
 
-    if (pendingIntent.targetInstanceId !== instanceId) {
+    const resolvedInstanceId = resolveDacpHandlerInstanceId(message, context)
+    if (pendingIntent.targetInstanceId !== resolvedInstanceId) {
       throw new Error(
-        `Intent result from wrong instance. Expected ${pendingIntent.targetInstanceId}, got ${instanceId}`
+        `Intent result from wrong instance. Expected ${pendingIntent.targetInstanceId}, got ${resolvedInstanceId}`
       )
     }
 
@@ -64,6 +70,7 @@ export function handleIntentResultRequest(
     let resultMetadata:
       | ReturnType<typeof buildIntentResultWirePayload>["resultMetadata"]
       | undefined = undefined
+    let isContextWithMetadata = false
 
     if (promiseData) {
       if (promiseData.timeoutHandle) {
@@ -79,6 +86,7 @@ export function handleIntentResultRequest(
         )
         wireIntentResult = normalized.wireIntentResult
         resultMetadata = normalized.resultMetadata
+        isContextWithMetadata = normalized.isContextWithMetadata
       }
 
       promiseData.resolve(wireIntentResult)
@@ -127,21 +135,34 @@ export function handleIntentResultRequest(
         transport,
       })
     } else {
-      const normalized =
-        resultMetadata ??
-        buildIntentResultWirePayload(
+      let metadata = resultMetadata
+      let contextWithMetadataFlag = isContextWithMetadata
+      if (!metadata) {
+        const built = buildIntentResultWirePayload(
           intentResult,
           pendingIntent.targetAppId,
           pendingIntent.targetInstanceId,
           resultTimestamp
-        ).resultMetadata
+        )
+        metadata = built.resultMetadata
+        contextWithMetadataFlag = built.isContextWithMetadata
+      }
+
+      const payloadMetadata = metadata
+      const clientMetadata = cloneIntentResultContextMetadata(payloadMetadata)
+
+      const intentResultForClient = attachIntentResultClientMetadata(
+        wireIntentResult,
+        clientMetadata,
+        contextWithMetadataFlag
+      )
 
       const resultResponse = createDACPSuccessResponse(
         raiseIntentRequestLike,
         "raiseIntentResultResponse",
         {
-          intentResult: wireIntentResult,
-          metadata: normalized,
+          intentResult: intentResultForClient,
+          metadata: payloadMetadata,
         }
       )
       sendDACPResponse({

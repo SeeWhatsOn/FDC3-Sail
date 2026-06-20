@@ -185,6 +185,7 @@ function getHandlerForMessageType(messageType: string): RoutedHandler | null {
     // App management handlers
     getInfoRequest: appHandlers.handleGetInfoRequest,
     openRequest: appHandlers.handleOpenRequest,
+    closeRequest: appHandlers.handleCloseRequest,
     findInstancesRequest: appHandlers.handleFindInstancesRequest,
     getAppMetadataRequest: appHandlers.handleGetAppMetadataRequest,
 

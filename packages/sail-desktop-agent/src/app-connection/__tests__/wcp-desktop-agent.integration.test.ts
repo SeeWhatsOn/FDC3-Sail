@@ -8,18 +8,10 @@
  */
 
 import { describe, it, expect, afterEach, vi } from "vitest"
-import type { BrowserTypes } from "@finos/fdc3"
-import type { AppLauncher } from "../../host-contracts/app-launcher"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../core/default-user-channels"
-import { createBrowserDesktopAgent } from "../../presets/create-browser-desktop-agent"
-import type { BrowserDesktopAgentOptions } from "../../presets/create-browser-desktop-agent"
+import type { BrowserTypes, Context } from "@finos/fdc3"
 import type { DesktopAgent } from "../../core/desktop-agent"
 import { getBrowserDesktopAgentSession } from "../../presets/browser-session"
-import { AppInstanceState } from "../../core/state/types"
-import {
-  clearAllHeartbeatTimersForTesting,
-  getActiveHeartbeatTimerCount,
-} from "../../core/handlers/dacp/heartbeat-runtime"
+import { clearAllHeartbeatTimersForTesting } from "../../core/handlers/dacp/heartbeat-runtime"
 import {
   INSTRUMENT_CONTEXT,
   connectWcpApp,
@@ -27,66 +19,187 @@ import {
   createBroadcastMessage,
   createGetOrCreateChannelMessage,
   createJoinUserChannelMessage,
+  createGenericContextListenerMessage,
   createOpenRequestMessage,
   flushAsyncDelivery,
   postDacpOnPort,
   waitForPortMessage,
 } from "./wcp-edge-test-helpers"
+import {
+  CHANNEL_ID,
+  CHART_APP,
+  createHostInstanceAppLauncher,
+  createTestAgent,
+  HOST_LAUNCHER_INSTANCE_ID,
+  PORTFOLIO_APP,
+} from "./wcp-desktop-agent.integration.fixtures"
 
-const CHANNEL_ID = "fdc3.channel.1"
-const HOST_LAUNCHER_INSTANCE_ID = "uuid-host-0"
-
-const PORTFOLIO_APP = {
-  appId: "portfolioApp",
-  title: "Portfolio",
-  type: "web" as const,
-  details: { url: "https://example.com/portfolio" },
+const OPEN_WITH_CONTEXT_LAUNCH: Context = {
+  type: "testContextY",
+  id: { value: "conformance-open-context" },
 }
 
-const CHART_APP = {
-  appId: "chartApp",
-  title: "Chart",
-  type: "web" as const,
-  details: { url: "https://example.com/chart" },
-}
+describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
+  const activeAgents: DesktopAgent[] = []
 
-type TestAgentOptions = Pick<
-  BrowserDesktopAgentOptions,
-  "appLauncher" | "heartbeatEnabled" | "heartbeatIntervalMs" | "heartbeatTimeoutMs"
-> & {
-  disconnectGracePeriod?: number
-}
-
-function createTestAgent(options?: TestAgentOptions): DesktopAgent {
-  const agent = createBrowserDesktopAgent({
-    userChannels: DEFAULT_FDC3_USER_CHANNELS,
-    apps: [PORTFOLIO_APP, CHART_APP],
-    appLauncher: options?.appLauncher,
-    heartbeatEnabled: options?.heartbeatEnabled,
-    heartbeatIntervalMs: options?.heartbeatIntervalMs,
-    heartbeatTimeoutMs: options?.heartbeatTimeoutMs,
-    wcpOptions: {
-      getIntentResolverUrl: () => false,
-      getChannelSelectorUrl: () => false,
-      fdc3Version: "2.2",
-      handshakeTimeout: 30_000,
-      disconnectGracePeriod: options?.disconnectGracePeriod,
-    },
+  afterEach(() => {
+    clearAllHeartbeatTimersForTesting()
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
   })
 
-  return agent
-}
+  it("delivers launch context via broadcastEvent when B adds a generic * listener after host-pre-registered open", async () => {
+    const agent = createTestAgent({
+      appLauncher: createHostInstanceAppLauncher(),
+      openContextListenerTimeoutMs: 5000,
+    })
+    activeAgents.push(agent)
 
-function createHostInstanceAppLauncher(): AppLauncher {
-  return {
-    launch(request) {
-      return Promise.resolve({
-        appId: request.app.appId,
-        instanceId: request.app.instanceId ?? HOST_LAUNCHER_INSTANCE_ID,
-      })
-    },
-  }
-}
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "open-with-context-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse"
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHART_APP.appId,
+        OPEN_WITH_CONTEXT_LAUNCH
+      )
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length).toBe(1)
+      expect(agent.getState().instances[HOST_LAUNCHER_INSTANCE_ID]?.appId).toBe(CHART_APP.appId)
+    })
+
+    const appB = await connectWcpApp(agent, {
+      connectionAttemptUuid: "open-with-context-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+      hostInstanceId: HOST_LAUNCHER_INSTANCE_ID,
+      instanceUuid: crypto.randomUUID(),
+    })
+
+    expect(appB.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+
+    const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      appB.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent"
+    )
+
+    await postDacpOnPort(
+      appB.appPort,
+      createGenericContextListenerMessage(appB.canonicalInstanceId, appB.appId)
+    )
+
+    const [broadcastEvent, openResponse] = await Promise.all([
+      broadcastPromise,
+      openResponsePromise,
+    ])
+
+    expect(broadcastEvent.type).toBe("broadcastEvent")
+    const destination = broadcastEvent.meta.destination as { instanceId?: string } | undefined
+    expect(destination?.instanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(broadcastEvent.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
+    expect(broadcastEvent.payload.channelId).toBeNull()
+
+    expect(openResponse.type).toBe("openResponse")
+    expect(openResponse.payload.error).toBeUndefined()
+    expect(openResponse.payload.appIdentifier?.instanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length ?? 0).toBe(0)
+  })
+
+  it("does not deliver open-with-context to a stale chart instance when a new host-pre-registered open is pending", async () => {
+    const staleHostInstanceId = "uuid-host-stale"
+
+    const agent = createTestAgent({
+      appLauncher: createHostInstanceAppLauncher(),
+      openContextListenerTimeoutMs: 5000,
+    })
+    activeAgents.push(agent)
+
+    const staleChart = await connectWcpApp(agent, {
+      connectionAttemptUuid: "open-with-context-stale-chart-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+      hostInstanceId: staleHostInstanceId,
+      instanceUuid: crypto.randomUUID(),
+    })
+
+    await postDacpOnPort(
+      staleChart.appPort,
+      createGenericContextListenerMessage(staleChart.canonicalInstanceId, staleChart.appId)
+    )
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "open-with-context-stale-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const staleBroadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      staleChart.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+      500
+    ).catch(() => null)
+
+    const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+      6000
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHART_APP.appId,
+        OPEN_WITH_CONTEXT_LAUNCH
+      )
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length).toBe(1)
+    })
+
+    const newChart = await connectWcpApp(agent, {
+      connectionAttemptUuid: "open-with-context-stale-new-chart-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+      hostInstanceId: HOST_LAUNCHER_INSTANCE_ID,
+      instanceUuid: crypto.randomUUID(),
+    })
+
+    const newBroadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      newChart.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent"
+    )
+
+    await postDacpOnPort(
+      newChart.appPort,
+      createGenericContextListenerMessage(newChart.canonicalInstanceId, newChart.appId)
+    )
+
+    const staleBroadcast = await staleBroadcastPromise
+    const newBroadcast = await newBroadcastPromise
+    const openResponse = await openResponsePromise
+
+    expect(staleBroadcast).toBeNull()
+    expect(newBroadcast.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
+    expect(openResponse.payload.error).toBeUndefined()
+  })
+})
 
 describe("WCP edge contract", () => {
   const activeAgents: DesktopAgent[] = []
@@ -292,169 +405,5 @@ describe("WCP edge contract", () => {
     })
 
     expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
-  })
-})
-
-describe("Option A instance lifecycle (WCP path)", () => {
-  const activeAgents: DesktopAgent[] = []
-
-  afterEach(() => {
-    clearAllHeartbeatTimersForTesting()
-    for (const agent of activeAgents.splice(0)) {
-      agent.stop()
-    }
-  })
-
-  it("marks instance connected after WCP5 success without manual state updates", async () => {
-    const agent = createTestAgent()
-    activeAgents.push(agent)
-
-    const connected = await connectWcpApp(agent, {
-      connectionAttemptUuid: "lifecycle-wcp5-connected-uuid",
-      appId: "portfolioApp",
-      identityUrl: PORTFOLIO_APP.details.url,
-    })
-
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.appId).toBe("portfolioApp")
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
-      AppInstanceState.CONNECTED
-    )
-  })
-
-  it("keeps host pre-registered instance pending until WCP5 succeeds", async () => {
-    const agent = createTestAgent({ appLauncher: createHostInstanceAppLauncher() })
-    activeAgents.push(agent)
-
-    const source = await connectWcpApp(agent, {
-      connectionAttemptUuid: "lifecycle-pending-source-uuid",
-      appId: "portfolioApp",
-      identityUrl: PORTFOLIO_APP.details.url,
-    })
-
-    await postDacpOnPort(
-      source.appPort,
-      createOpenRequestMessage(source.canonicalInstanceId, source.appId, CHART_APP.appId)
-    )
-    await flushAsyncDelivery()
-
-    await vi.waitFor(() => {
-      const preWcp5 = agent.getState().instances[HOST_LAUNCHER_INSTANCE_ID]
-      expect(preWcp5?.appId).toBe(CHART_APP.appId)
-      expect(preWcp5?.state).toBe(AppInstanceState.PENDING)
-    })
-
-    const chart = await connectWcpApp(agent, {
-      connectionAttemptUuid: "lifecycle-pending-target-uuid",
-      appId: "chartApp",
-      identityUrl: CHART_APP.details.url,
-      hostInstanceId: HOST_LAUNCHER_INSTANCE_ID,
-      instanceUuid: crypto.randomUUID(),
-    })
-
-    expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
-    expect(agent.getState().instances[HOST_LAUNCHER_INSTANCE_ID]?.state).toBe(
-      AppInstanceState.CONNECTED
-    )
-  })
-
-  it("removes instance from agent state when app sends WCP6Goodbye", async () => {
-    const agent = createTestAgent({ disconnectGracePeriod: 0 })
-    activeAgents.push(agent)
-
-    const connected = await connectWcpApp(agent, {
-      connectionAttemptUuid: "lifecycle-wcp6-goodbye-uuid",
-      appId: "portfolioApp",
-      identityUrl: PORTFOLIO_APP.details.url,
-    })
-
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
-      AppInstanceState.CONNECTED
-    )
-
-    connected.appPort.postMessage({
-      type: "WCP6Goodbye",
-      meta: { timestamp: new Date().toISOString() },
-    })
-    await flushAsyncDelivery()
-
-    await vi.waitFor(() => {
-      expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
-    })
-  })
-
-  it("skips heartbeat machinery when heartbeat is disabled and keeps instance until disconnect", async () => {
-    const agent = createTestAgent({
-      heartbeatEnabled: false,
-      disconnectGracePeriod: 0,
-    })
-    activeAgents.push(agent)
-
-    const connected = await connectWcpApp(agent, {
-      connectionAttemptUuid: "lifecycle-heartbeat-off-uuid",
-      appId: "portfolioApp",
-      identityUrl: PORTFOLIO_APP.details.url,
-    })
-
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
-      AppInstanceState.CONNECTED
-    )
-    expect(getActiveHeartbeatTimerCount()).toBe(0)
-    expect(agent.getState().heartbeats[connected.canonicalInstanceId]).toBeUndefined()
-
-    await new Promise(resolve => setTimeout(resolve, 300))
-
-    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeDefined()
-    expect(getActiveHeartbeatTimerCount()).toBe(0)
-  })
-
-  it("removes canonical instance when disconnectInstance is called with WCP4 temp id and heartbeat is disabled", async () => {
-    const agent = createTestAgent({
-      heartbeatEnabled: false,
-      disconnectGracePeriod: 0,
-    })
-    activeAgents.push(agent)
-
-    const connected = await connectWcpApp(agent, {
-      connectionAttemptUuid: "lifecycle-temp-disconnect-uuid",
-      appId: "portfolioApp",
-      identityUrl: PORTFOLIO_APP.details.url,
-    })
-
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
-      AppInstanceState.CONNECTED
-    )
-
-    agent.disconnectInstance(connected.tempInstanceId)
-
-    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
-  })
-
-  it("removes instance on heartbeat timeout when heartbeat is enabled", async () => {
-    const agent = createTestAgent({
-      heartbeatEnabled: true,
-      heartbeatIntervalMs: 50,
-      heartbeatTimeoutMs: 150,
-      disconnectGracePeriod: 0,
-    })
-    activeAgents.push(agent)
-
-    const connected = await connectWcpApp(agent, {
-      connectionAttemptUuid: "lifecycle-heartbeat-timeout-uuid",
-      appId: "portfolioApp",
-      identityUrl: PORTFOLIO_APP.details.url,
-    })
-
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
-      AppInstanceState.CONNECTED
-    )
-    expect(getActiveHeartbeatTimerCount()).toBeGreaterThan(0)
-
-    await vi.waitFor(
-      () => {
-        expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
-      },
-      { timeout: 2000 }
-    )
-    expect(getActiveHeartbeatTimerCount()).toBe(0)
   })
 })

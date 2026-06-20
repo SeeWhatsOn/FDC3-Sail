@@ -15,6 +15,16 @@ type AppProvidedResultMetadata = {
   custom?: Record<string, unknown>
 }
 
+/** App-provided fields on ContextWithMetadata for intent raise events. */
+export type AppProvidedIntentContextMetadata = AppProvidedResultMetadata & {
+  antiReplay?: string
+}
+
+type IntentEventBaseMetadata = {
+  source: { appId: string; instanceId?: string }
+  timestamp: string
+}
+
 function isAppProvidedMetadata(value: unknown): value is AppProvidedResultMetadata {
   if (typeof value !== "object" || value === null) {
     return false
@@ -64,12 +74,13 @@ export function buildIntentResultWirePayload(
 ): {
   wireIntentResult: BrowserTypes.IntentResult
   resultMetadata: IntentResultContextMetadata
+  isContextWithMetadata: boolean
 } {
   const daTraceId = crypto.randomUUID()
   const baseMetadata = buildDaResultMetadata(targetAppId, targetInstanceId, timestamp, daTraceId)
 
   if (typeof intentResult !== "object" || intentResult === null) {
-    return { wireIntentResult: {}, resultMetadata: baseMetadata }
+    return { wireIntentResult: {}, resultMetadata: baseMetadata, isContextWithMetadata: false }
   }
 
   const record = intentResult as Record<string, unknown>
@@ -83,6 +94,7 @@ export function buildIntentResultWirePayload(
         ...(appMetadata.signature !== undefined ? { signature: appMetadata.signature } : {}),
         ...(appMetadata.custom !== undefined ? { custom: appMetadata.custom } : {}),
       },
+      isContextWithMetadata: true,
     }
   }
 
@@ -90,6 +102,7 @@ export function buildIntentResultWirePayload(
     return {
       wireIntentResult: { channel: record.channel as BrowserTypes.Channel },
       resultMetadata: baseMetadata,
+      isContextWithMetadata: false,
     }
   }
 
@@ -97,8 +110,96 @@ export function buildIntentResultWirePayload(
     return {
       wireIntentResult: { context: record.context as Context },
       resultMetadata: baseMetadata,
+      isContextWithMetadata: false,
     }
   }
 
-  return { wireIntentResult: {}, resultMetadata: baseMetadata }
+  return { wireIntentResult: {}, resultMetadata: baseMetadata, isContextWithMetadata: false }
+}
+
+/** Shallow copy so payload.metadata and intentResult.metadata are distinct for transport clone. */
+export function cloneIntentResultContextMetadata(
+  metadata: IntentResultContextMetadata
+): IntentResultContextMetadata {
+  return {
+    ...metadata,
+    source: { ...metadata.source },
+    ...(metadata.custom !== undefined ? { custom: { ...metadata.custom } } : {}),
+  }
+}
+
+/**
+ * ContextWithMetadata wire intentResult stays `{ context }` for getResult(), while
+ * getResultMetadata() reads merged fields from a non-enumerable metadata property.
+ */
+export function attachIntentResultClientMetadata(
+  wireIntentResult: BrowserTypes.IntentResult,
+  resultMetadata: IntentResultContextMetadata,
+  isContextWithMetadata: boolean
+): BrowserTypes.IntentResult & { metadata?: IntentResultContextMetadata } {
+  if (!isContextWithMetadata) {
+    return { ...wireIntentResult, metadata: resultMetadata }
+  }
+
+  const intentResultWithClientMetadata = { ...wireIntentResult }
+  Object.defineProperty(intentResultWithClientMetadata, "metadata", {
+    value: resultMetadata,
+    enumerable: false,
+    writable: true,
+    configurable: true,
+  })
+  return intentResultWithClientMetadata
+}
+
+function extractAppProvidedFieldsFromContextMetadata(
+  metadata: unknown
+): AppProvidedIntentContextMetadata | undefined {
+  if (typeof metadata !== "object" || metadata === null) {
+    return undefined
+  }
+  const record = metadata as Record<string, unknown>
+  const appFields: AppProvidedIntentContextMetadata = {}
+  if (typeof record.traceId === "string") {
+    appFields.traceId = record.traceId
+  }
+  if (typeof record.signature === "string") {
+    appFields.signature = record.signature
+  }
+  if (typeof record.antiReplay === "string") {
+    appFields.antiReplay = record.antiReplay
+  }
+  if (record.custom !== undefined && typeof record.custom === "object" && record.custom !== null) {
+    appFields.custom = record.custom as Record<string, unknown>
+  }
+  return Object.keys(appFields).length > 0 ? appFields : undefined
+}
+
+/** Reads app metadata from a ContextWithMetadata raise payload. */
+export function extractAppProvidedIntentContextMetadata(
+  context: unknown
+): AppProvidedIntentContextMetadata | undefined {
+  if (typeof context !== "object" || context === null || !("metadata" in context)) {
+    return undefined
+  }
+  return extractAppProvidedFieldsFromContextMetadata(context.metadata)
+}
+
+/**
+ * Merges app-provided ContextWithMetadata fields onto DA-built intentEvent metadata.
+ * DA source/timestamp win; app traceId/signature/antiReplay/custom are forwarded when present.
+ */
+export function mergeIntentEventContextMetadata(
+  baseMetadata: IntentEventBaseMetadata,
+  appMetadata?: AppProvidedIntentContextMetadata
+): IntentEventBaseMetadata & AppProvidedIntentContextMetadata {
+  if (!appMetadata) {
+    return baseMetadata
+  }
+  return {
+    ...baseMetadata,
+    ...(appMetadata.traceId !== undefined ? { traceId: appMetadata.traceId } : {}),
+    ...(appMetadata.signature !== undefined ? { signature: appMetadata.signature } : {}),
+    ...(appMetadata.antiReplay !== undefined ? { antiReplay: appMetadata.antiReplay } : {}),
+    ...(appMetadata.custom !== undefined ? { custom: appMetadata.custom } : {}),
+  }
 }

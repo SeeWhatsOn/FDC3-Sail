@@ -3,7 +3,7 @@ title: "Populate getResultMetadata for toolbox intent results"
 slug: populate-intent-result-metadata-toolbox
 kind: task
 type: bug
-status: done
+status: in-progress
 loop_count: 0
 loop_limit: 3
 last_agent: ""
