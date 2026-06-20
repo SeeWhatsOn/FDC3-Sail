@@ -3,7 +3,7 @@ title: "Promote browser intent resolver controller"
 slug: promote-browser-intent-resolver-controller
 kind: task
 type: feature
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""

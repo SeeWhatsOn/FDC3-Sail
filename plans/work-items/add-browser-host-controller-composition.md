@@ -3,10 +3,10 @@ title: "Add browser host controller composition"
 slug: add-browser-host-controller-composition
 kind: task
 type: feature
-status: draft
+status: in-progress
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/presets/create-browser-desktop-agent.ts
   - packages/sail-desktop-agent/src/presets/browser-session.ts

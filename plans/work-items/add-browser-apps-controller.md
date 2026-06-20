@@ -3,7 +3,7 @@ title: "Add browser apps controller"
 slug: add-browser-apps-controller
 kind: task
 type: feature
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
