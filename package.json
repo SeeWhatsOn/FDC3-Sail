@@ -12,7 +12,7 @@
     "build": "npm run build -w @finos/sail-desktop-agent -w @finos/sail-platform-api -w @finos/sail-ui -w @finos/sail-web -w @finos/sail-conformance-harness -w @finos/sail-server",
     "dev": "concurrently -n agent,api,server,web \"npm run dev -w @finos/sail-desktop-agent\" \"npm run dev -w @finos/sail-platform-api\" \"npm run dev -w @finos/sail-server\" \"npm run dev -w @finos/sail-web\"",
     "dev:desktop": "concurrently -n server,electron \"npm run dev -w @finos/sail-server\" \"npm run dev -w @finos/sail-electron\"",
-    "dev:harness": "npm run dev -w @finos/sail-conformance-harness",
+    "dev:conformance": "npm run dev -w @finos/sail-conformance-harness",
     "docs:dev": "npm run start --workspace=@finos/sail-docs",
     "docs:build": "npm run build --workspace=@finos/sail-docs",
     "lint": "eslint .",

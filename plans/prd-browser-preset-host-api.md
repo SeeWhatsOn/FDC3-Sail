@@ -191,7 +191,7 @@ const controllers = createBrowserHostControllers({
 |---|---|---|---|---|
 | BHA-01 | Browser preset does not expose grouped host controllers today. | **done** — work item deleted (2026-06-20) | Grouped `intentResolver`, `channels`, `apps` via `createBrowserHostControllers` | `add-browser-host-controller-composition` |
 | BHA-02 | Intent resolver UI exists but canonical property/name is not the agreed controller surface. | **done** — work item deleted (2026-06-20) | `desktopAgent.intentResolver` canonical; `BrowserIntentResolverController` = `IntentResolverUIMethods` | `promote-browser-intent-resolver-controller` |
-| BHA-03 | Package-only host channel changes are not first-class. | verified-gap | Docs show `getBrowserDesktopAgentSession(...).connectorTransport.send(...)`; no `DesktopAgent.changeAppChannel` or `channels` controller exists. | `add-browser-channels-controller` |
+| BHA-03 | Package-only host channel changes are not first-class. | **done** — work item deleted (2026-06-20) | `desktopAgent.channels` with changeAppChannel and onAppChannelChange | `add-browser-channels-controller` |
 | BHA-04 | App directory state can be mutated internally but runtime host catalog registration is not exposed as a grouped browser API. | verified-gap | `addApplications` and `loadDirectoryIntoState` exist in core state mutators; preset only accepts initial `apps` / `appDirectories` options. | `add-browser-apps-controller` |
 | BHA-05 | Website docs describe broad concepts but not the agreed grouped API or runtime registration examples. | verified-gap | `integrator-guide.md` documents `intentResolverUI`, advanced channel transport, and `AppLauncher`, not `intentResolver` / `channels` / `apps` controllers. | `document-browser-preset-host-controllers` |
 
@@ -203,6 +203,7 @@ const controllers = createBrowserHostControllers({
 |------|--------|-----------|
 | `add-browser-host-controller-composition` | done — work item deleted | 2026-06-20 — `createBrowserHostControllers`, grouped controllers on browser preset |
 | `promote-browser-intent-resolver-controller` | done — work item deleted | 2026-06-20 — canonical `intentResolver` controller with full UI method surface |
+| `add-browser-channels-controller` | done — work item deleted | 2026-06-20 — `desktopAgent.channels` host channel controller + WCP integration tests |
 
 ## Parent context summary
 

@@ -26,8 +26,14 @@ import { getBrowserDesktopAgentSession, isBrowserDesktopAgent } from "../browser
 import * as sailPresets from "../index"
 import { WCPConnector } from "../index"
 
+import {
+  mockApp1,
+  mockApp2,
+  mockApp3,
+} from "../../core/app-directory/__tests__/app-directory-test-fixtures"
 import type { DirectoryApp } from "../../core/app-directory/types"
 import { retrieveAllApps } from "../../core/app-directory/app-directory-queries"
+import type { AppConnectionMetadata } from "../../app-connection/wcp-connector"
 
 import type {
   IntentHandler,
@@ -57,9 +63,45 @@ type BrowserHostControllerSurface = {
       }) => void
     ) => () => void
   }
-  apps: {
-    getAll: () => DirectoryApp[]
-  }
+  apps: BrowserAppsControllerSurface
+}
+
+type BrowserAppOpenOptions = {
+  context?: Context
+  instanceId?: string
+}
+
+type BrowserAppInstance = {
+  appId: string
+  instanceId: string
+  status: "pending" | "connected"
+  currentUserChannel?: string | null
+}
+
+type HandshakeFailureEvent = {
+  error: Error
+  connectionAttemptUuid: string
+}
+
+type BrowserAppsControllerSurface = {
+  add: (app: DirectoryApp) => void
+  addAll: (apps: DirectoryApp[]) => void
+  addDirectory: (url: string) => Promise<void>
+  remove: (appId: string) => void
+  getAll: () => DirectoryApp[]
+  getById: (appId: string) => DirectoryApp | undefined
+  open: (
+    app: string | BrowserTypes.AppIdentifier,
+    options?: BrowserAppOpenOptions
+  ) => Promise<BrowserTypes.AppIdentifier>
+  getInstances: () => BrowserAppInstance[]
+  getInstance: (instanceId: string) => BrowserAppInstance | undefined
+  getConnections: () => AppConnectionMetadata[]
+  getConnection: (instanceId: string) => AppConnectionMetadata | undefined
+  disconnect: (instanceId: string) => void
+  onConnect: (listener: (metadata: AppConnectionMetadata) => void) => () => void
+  onDisconnect: (listener: (instanceId: string) => void) => () => void
+  onHandshakeFailure: (listener: (event: HandshakeFailureEvent) => void) => () => void
 }
 
 type TestBrowserDesktopAgent = DesktopAgent &
@@ -733,5 +775,226 @@ describe("browser host controller composition", () => {
 
     expect(typeof apps.getAll).toBe("function")
     expect(() => apps.getAll()).not.toThrow()
+  })
+})
+
+describe("desktopAgent.apps canonical host controller", () => {
+  const activeAgents: DesktopAgent[] = []
+
+  afterEach(() => {
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
+
+  it("exposes the full apps controller surface on the browser preset handle", () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent()
+    activeAgents.push(desktopAgent)
+
+    const { apps } = desktopAgent
+
+    expect(typeof apps.add).toBe("function")
+    expect(typeof apps.addAll).toBe("function")
+    expect(typeof apps.addDirectory).toBe("function")
+    expect(typeof apps.remove).toBe("function")
+    expect(typeof apps.getAll).toBe("function")
+    expect(typeof apps.getById).toBe("function")
+    expect(typeof apps.open).toBe("function")
+    expect(typeof apps.getInstances).toBe("function")
+    expect(typeof apps.getInstance).toBe("function")
+    expect(typeof apps.getConnections).toBe("function")
+    expect(typeof apps.getConnection).toBe("function")
+    expect(typeof apps.disconnect).toBe("function")
+    expect(typeof apps.onConnect).toBe("function")
+    expect(typeof apps.onDisconnect).toBe("function")
+    expect(typeof apps.onHandshakeFailure).toBe("function")
+  })
+
+  it("adds a runtime app to the catalog after agent creation", () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent()
+    activeAgents.push(desktopAgent)
+
+    desktopAgent.apps.add(mockApp1)
+
+    expect(desktopAgent.apps.getAll()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ appId: "app-1" })])
+    )
+    expect(desktopAgent.apps.getById("app-1")).toMatchObject({
+      appId: "app-1",
+      title: "Test App 1",
+    })
+  })
+
+  it("addAll merges apps with duplicate appId dedupe", () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent({ apps: [mockApp1] })
+    activeAgents.push(desktopAgent)
+
+    desktopAgent.apps.addAll([mockApp1, mockApp2])
+
+    const catalog = desktopAgent.apps.getAll()
+    expect(catalog).toHaveLength(2)
+    expect(catalog.map(app => app.appId).sort()).toEqual(["app-1", "app-2"])
+  })
+
+  it("loads apps from addDirectory and makes them readable from the controller", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue([mockApp2, mockApp3]),
+      })
+    )
+
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent()
+    activeAgents.push(desktopAgent)
+
+    await desktopAgent.apps.addDirectory("https://example.com/v2/apps")
+
+    expect(desktopAgent.apps.getAll()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ appId: "app-2" }),
+        expect.objectContaining({ appId: "app-3" }),
+      ])
+    )
+    expect(desktopAgent.apps.getById("app-3")).toMatchObject({ appId: "app-3" })
+  })
+
+  it("remove drops an app from catalog reads", () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent({ apps: [mockApp1, mockApp2] })
+    activeAgents.push(desktopAgent)
+
+    desktopAgent.apps.remove("app-1")
+
+    expect(desktopAgent.apps.getById("app-1")).toBeUndefined()
+    expect(desktopAgent.apps.getAll()).toHaveLength(1)
+    expect(desktopAgent.apps.getById("app-2")).toMatchObject({ appId: "app-2" })
+  })
+
+  it("opens a catalog app through the configured app launcher", async () => {
+    const launchMock = vi.fn((request: { app: BrowserTypes.AppIdentifier }) =>
+      Promise.resolve({
+        appId: request.app.appId,
+        instanceId: "host-open-instance-1",
+      })
+    )
+
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent({
+      apps: [mockApp1],
+      appLauncher: { launch: launchMock },
+    })
+    activeAgents.push(desktopAgent)
+
+    const opened = await desktopAgent.apps.open("app-1")
+
+    expect(launchMock).toHaveBeenCalledOnce()
+    expect(opened).toEqual({ appId: "app-1", instanceId: "host-open-instance-1" })
+    expect(desktopAgent.apps.getInstance("host-open-instance-1")).toMatchObject({
+      appId: "app-1",
+      instanceId: "host-open-instance-1",
+      status: "pending",
+    })
+  })
+
+  it("passes open options context and instanceId to the app launcher", async () => {
+    const launchMock = vi.fn((request: BrowserTypes.OpenRequestPayload) =>
+      Promise.resolve({
+        appId: request.app.appId,
+        instanceId: request.app.instanceId ?? "fallback-instance",
+      })
+    )
+    const launchContext = { type: "fdc3.contact", name: "Open Contact" } satisfies Context
+
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent({
+      apps: [mockApp1],
+      appLauncher: { launch: launchMock },
+    })
+    activeAgents.push(desktopAgent)
+
+    await desktopAgent.apps.open(
+      { appId: "app-1", instanceId: "preset-open-instance" },
+      { context: launchContext }
+    )
+
+    expect(launchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        app: { appId: "app-1", instanceId: "preset-open-instance" },
+        context: launchContext,
+      }),
+      expect.objectContaining({ appId: "app-1" })
+    )
+  })
+
+  it("returns empty connection reads before any WCP handshake", () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent()
+    activeAgents.push(desktopAgent)
+
+    expect(desktopAgent.apps.getConnections()).toEqual([])
+    expect(desktopAgent.apps.getConnection("unknown-instance")).toBeUndefined()
+  })
+
+  it("lists pending instances from host-initiated open", async () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent({
+      apps: [mockApp1, mockApp2],
+      appLauncher: {
+        launch: (request: BrowserTypes.OpenRequestPayload) =>
+          Promise.resolve({
+            appId: request.app.appId,
+            instanceId: `pending-${request.app.appId}`,
+          }),
+      },
+    })
+    activeAgents.push(desktopAgent)
+
+    await desktopAgent.apps.open("app-1")
+    await desktopAgent.apps.open("app-2")
+
+    expect(desktopAgent.apps.getInstances()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ appId: "app-1", instanceId: "pending-app-1", status: "pending" }),
+        expect.objectContaining({ appId: "app-2", instanceId: "pending-app-2", status: "pending" }),
+      ])
+    )
+  })
+
+  it("allows destructured apps methods without the original Desktop Agent as this", async () => {
+    const launchMock = vi.fn((request: { app: BrowserTypes.AppIdentifier }) =>
+      Promise.resolve({
+        appId: request.app.appId,
+        instanceId: "destructured-open-instance",
+      })
+    )
+
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent({
+      apps: [mockApp1],
+      appLauncher: { launch: launchMock },
+    })
+    activeAgents.push(desktopAgent)
+
+    const { add, getAll, getById, open } = desktopAgent.apps
+
+    add(mockApp2)
+    expect(getAll()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ appId: "app-1" }),
+        expect.objectContaining({ appId: "app-2" }),
+      ])
+    )
+    expect(getById("app-2")).toMatchObject({ appId: "app-2" })
+
+    await open("app-1")
+    expect(launchMock).toHaveBeenCalledOnce()
   })
 })

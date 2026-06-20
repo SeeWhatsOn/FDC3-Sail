@@ -3,16 +3,17 @@ title: "Add browser apps controller"
 slug: add-browser-apps-controller
 kind: task
 type: feature
-status: approved
+status: waiting_on_user
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/presets/create-browser-desktop-agent.ts
   - packages/sail-desktop-agent/src/presets/browser-session.ts
   - packages/sail-desktop-agent/src/core/state/mutators/app-directory.ts
   - packages/sail-desktop-agent/src/core/app-directory/app-directory-queries.ts
   - packages/sail-desktop-agent/src/core/state/selectors/instance.ts
+  - packages/sail-desktop-agent/src/presets/index.ts
   - packages/sail-desktop-agent/src/presets/__tests__/browser-desktop-agent-preset.test.ts
   - packages/sail-desktop-agent/src/app-connection/__tests__/wcp-desktop-agent.integration.test.ts
 depends_on:
@@ -39,7 +40,6 @@ Browser hosts often load app metadata after shell creation, show launch menus fr
 
 - `plans/prd-browser-preset-host-api.md` (BHA-05)
 - `plans/work-items/epic-browser-preset-host-api.md`
-- `plans/work-items/add-browser-host-controller-composition.md`
 - `packages/sail-desktop-agent/src/core/state/mutators/app-directory.ts`
 - `packages/sail-desktop-agent/src/host-contracts/app-launcher.ts`
 
@@ -133,11 +133,34 @@ _(empty)_
 
 ## Loop history
 
-_(empty)_
+- 2026-06-20: delivery RED → GREEN → verify (TS fix) → review PASS; staged
 
 ## Staged for review
 
-_(empty)_
+### RED evidence
+- 15 failing tests — placeholder `apps` only had `getAll`
+
+### Commands run
+- `npx vitest run -t "desktopAgent.apps|browser apps controller"` — **15/15** pass
+- Full package vitest — **352/352** pass
+
+### Files changed
+- `packages/sail-desktop-agent/src/presets/browser-session.ts` — full `BrowserAppsController`
+- `packages/sail-desktop-agent/src/core/state/mutators/app-directory.ts` — `removeApplicationsByAppId`
+- `packages/sail-desktop-agent/src/presets/index.ts` — type exports
+- Preset + WCP integration tests
+
+### Phase audit
+| Phase | Result |
+|-------|--------|
+| A | 15 RED |
+| B | GREEN |
+| C | PASS (after TS7006 fix on test) |
+| D | PASS |
+
+### Notes
+- No `apps.close()` — deferred per agreement
+- `remove(appId)` removes all case-insensitive matches
 
 ## Escalation notes
 

@@ -26,6 +26,18 @@ export function addApp(state: AgentState, app: DirectoryApp): AgentState {
 }
 
 /** Adds apps with duplicate appId skipping and required-field validation. */
+/** Removes every catalog entry whose appId matches case-insensitively. */
+export function removeApplicationsByAppId(state: AgentState, appId: string): AgentState {
+  const normalizedAppId = appId.toLowerCase()
+  return {
+    ...state,
+    appDirectory: {
+      ...state.appDirectory,
+      apps: state.appDirectory.apps.filter(app => app.appId.toLowerCase() !== normalizedAppId),
+    },
+  }
+}
+
 export function addApplications(
   state: AgentState,
   data: DirectoryApp[] | DirectoryData

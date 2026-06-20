@@ -31,7 +31,7 @@ Slugs only — implementation is on `v3-pre`; details were in deleted PRDs/work 
 
 **State hardening (partial):** `wire-wcp5-connected-instance-lifecycle`, `consolidate-temp-instance-id-resolver`, `remove-dead-instance-state-denormalization`, `user-channels-runtime-ssot`, `collapse-app-directory-to-functions`, `move-wcp-temp-id-alias-to-agent-state`
 
-**Browser preset host API:** `add-browser-host-controller-composition`, `promote-browser-intent-resolver-controller`
+**Browser preset host API:** `add-browser-host-controller-composition`, `promote-browser-intent-resolver-controller`, `add-browser-channels-controller`
 
 **Toolbox v4 wave:** see `plans/prd-toolbox-conformance-v5-follow-up.md` **Work item retention**
 

@@ -29,6 +29,9 @@ export {
   type BrowserChannelsController,
   type AppChannelChangeEvent,
   type BrowserAppsController,
+  type BrowserAppOpenOptions,
+  type BrowserAppInstance,
+  type HandshakeFailureEvent,
 } from "./browser-session.js"
 
 export { WCPConnector } from "../app-connection/wcp-connector.js"

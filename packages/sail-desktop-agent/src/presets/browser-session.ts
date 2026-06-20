@@ -1,10 +1,21 @@
-import type { BrowserTypes } from "@finos/fdc3"
+import type { BrowserTypes, Context } from "@finos/fdc3"
 
-import { retrieveAllApps } from "../core/app-directory/app-directory-queries"
+import { retrieveAllApps, retrieveAppsById } from "../core/app-directory/app-directory-queries"
 import type { DirectoryApp } from "../core/app-directory/types"
 import type { DesktopAgent } from "../core/desktop-agent"
 import type { Transport } from "../core/interfaces/transport"
+import type { AppLauncher } from "../host-contracts/app-launcher"
+import type { AgentState, AppInstance } from "../core/state/types"
+import { AppInstanceState } from "../core/state/types"
+import {
+  addApp,
+  addApplications,
+  loadDirectoryIntoState,
+  removeApplicationsByAppId,
+} from "../core/state/mutators/app-directory"
+import { getAllInstances, getInstance } from "../core/state/selectors/instance"
 import type { WCPConnector } from "../app-connection/wcp-connector"
+import type { AppConnectionMetadata } from "../app-connection/wcp/wcp-types"
 import type {
   BrowserIntentResolverController,
   IntentHandler,
@@ -14,6 +25,26 @@ import type {
 } from "../host-contracts"
 
 export type { BrowserIntentResolverController } from "../host-contracts"
+
+/** Options for host-initiated {@link BrowserAppsController.open}. */
+export interface BrowserAppOpenOptions {
+  context?: Context
+  instanceId?: string
+}
+
+/** Host-facing app instance snapshot (pending until WCP5, then connected). */
+export interface BrowserAppInstance {
+  appId: string
+  instanceId: string
+  status: "pending" | "connected"
+  currentUserChannel?: string | null
+}
+
+/** WCP handshake failure surfaced to host apps controller subscribers. */
+export interface HandshakeFailureEvent {
+  error: Error
+  connectionAttemptUuid: string
+}
 
 /** Grouped browser host controllers attached to the preset handle. */
 export interface BrowserHostControllers {
@@ -38,9 +69,27 @@ export interface BrowserChannelsController {
   onAppChannelChange: (listener: (event: AppChannelChangeEvent) => void) => () => void
 }
 
-/** App catalog host chrome placeholder — full behavior added in follow-up slices. */
+/** App catalog and instance lifecycle host chrome for the browser preset. */
 export interface BrowserAppsController {
+  add: (app: DirectoryApp) => void
+  addAll: (apps: DirectoryApp[]) => void
+  addDirectory: (url: string) => Promise<void>
+  /** Removes all catalog entries whose appId matches case-insensitively. */
+  remove: (appId: string) => void
   getAll: () => DirectoryApp[]
+  getById: (appId: string) => DirectoryApp | undefined
+  open: (
+    app: string | BrowserTypes.AppIdentifier,
+    options?: BrowserAppOpenOptions
+  ) => Promise<BrowserTypes.AppIdentifier>
+  getInstances: () => BrowserAppInstance[]
+  getInstance: (instanceId: string) => BrowserAppInstance | undefined
+  getConnections: () => AppConnectionMetadata[]
+  getConnection: (instanceId: string) => AppConnectionMetadata | undefined
+  disconnect: (instanceId: string) => void
+  onConnect: (listener: (metadata: AppConnectionMetadata) => void) => () => void
+  onDisconnect: (listener: (instanceId: string) => void) => () => void
+  onHandshakeFailure: (listener: (event: HandshakeFailureEvent) => void) => () => void
 }
 
 export interface BrowserHostControllerOptions {
@@ -57,6 +106,35 @@ export interface BrowserDesktopAgentSession {
 }
 
 const browserDesktopAgentSessions = new WeakMap<DesktopAgent, BrowserDesktopAgentSession>()
+
+/** Preset-only access to DesktopAgent private state and injected launcher. */
+type DesktopAgentInternals = {
+  state: AgentState
+  appLauncher?: AppLauncher
+}
+
+function getDesktopAgentInternals(desktopAgent: DesktopAgent): DesktopAgentInternals {
+  return desktopAgent as unknown as DesktopAgentInternals
+}
+
+function resolveOpenAppIdentifier(
+  app: string | BrowserTypes.AppIdentifier,
+  options?: BrowserAppOpenOptions
+): BrowserTypes.AppIdentifier {
+  if (typeof app === "string") {
+    return options?.instanceId ? { appId: app, instanceId: options.instanceId } : { appId: app }
+  }
+  return options?.instanceId ? { ...app, instanceId: options.instanceId } : app
+}
+
+function mapToBrowserAppInstance(instance: AppInstance): BrowserAppInstance {
+  return {
+    appId: instance.appId,
+    instanceId: instance.instanceId,
+    status: instance.state === AppInstanceState.CONNECTED ? "connected" : "pending",
+    currentUserChannel: instance.currentUserChannel,
+  }
+}
 
 export function registerBrowserDesktopAgentSession(
   desktopAgent: DesktopAgent,
@@ -107,6 +185,7 @@ export function createBrowserHostControllers(
   options: BrowserHostControllerOptions
 ): BrowserHostControllers {
   const { desktopAgent, wcpConnector, intentResolverUI } = options
+  const agentInternals = getDesktopAgentInternals(desktopAgent)
 
   const intentResolver: BrowserIntentResolverController = {
     getPendingRequests: () => intentResolverUI?.getPendingRequests() ?? [],
@@ -147,7 +226,83 @@ export function createBrowserHostControllers(
   }
 
   const apps: BrowserAppsController = {
+    add: app => {
+      agentInternals.state = addApp(agentInternals.state, app)
+    },
+    addAll: appsToAdd => {
+      agentInternals.state = addApplications(agentInternals.state, appsToAdd)
+    },
+    addDirectory: async url => {
+      agentInternals.state = await loadDirectoryIntoState(agentInternals.state, url)
+    },
+    remove: appId => {
+      agentInternals.state = removeApplicationsByAppId(agentInternals.state, appId)
+    },
     getAll: () => retrieveAllApps(desktopAgent.getState().appDirectory),
+    getById: appId => retrieveAppsById(desktopAgent.getState().appDirectory, appId)[0],
+    open: async (app, openOptions) => {
+      const appLauncher = agentInternals.appLauncher
+      if (!appLauncher) {
+        throw new Error("App launching not available - no AppLauncher configured")
+      }
+
+      const appIdentifier = resolveOpenAppIdentifier(app, openOptions)
+      const catalogApps = retrieveAppsById(
+        desktopAgent.getState().appDirectory,
+        appIdentifier.appId
+      )
+      if (catalogApps.length === 0) {
+        throw new Error(`App not found in directory: ${appIdentifier.appId}`)
+      }
+
+      const payload: BrowserTypes.OpenRequestPayload = {
+        app: appIdentifier,
+        ...(openOptions?.context !== undefined ? { context: openOptions.context } : {}),
+      }
+
+      const launched = await appLauncher.launch(payload, catalogApps[0])
+
+      if (launched.instanceId) {
+        desktopAgent.registerPendingHostInstance({
+          appId: launched.appId,
+          instanceId: launched.instanceId,
+        })
+      }
+
+      return launched
+    },
+    getInstances: () => getAllInstances(desktopAgent.getState()).map(mapToBrowserAppInstance),
+    getInstance: instanceId => {
+      const instance = getInstance(desktopAgent.getState(), instanceId)
+      return instance ? mapToBrowserAppInstance(instance) : undefined
+    },
+    getConnections: () => wcpConnector.getConnections(),
+    getConnection: instanceId => wcpConnector.getConnection(instanceId),
+    disconnect: instanceId => {
+      wcpConnector.disconnectAppByInstanceId(instanceId)
+      desktopAgent.disconnectInstance(instanceId)
+    },
+    onConnect: listener => {
+      wcpConnector.on("appConnected", listener)
+      return () => {
+        wcpConnector.off("appConnected", listener)
+      }
+    },
+    onDisconnect: listener => {
+      wcpConnector.on("appDisconnected", listener)
+      return () => {
+        wcpConnector.off("appDisconnected", listener)
+      }
+    },
+    onHandshakeFailure: listener => {
+      const handler = (error: Error, connectionAttemptUuid: string) => {
+        listener({ error, connectionAttemptUuid })
+      }
+      wcpConnector.on("handshakeFailed", handler)
+      return () => {
+        wcpConnector.off("handshakeFailed", handler)
+      }
+    },
   }
 
   return { intentResolver, channels, apps }

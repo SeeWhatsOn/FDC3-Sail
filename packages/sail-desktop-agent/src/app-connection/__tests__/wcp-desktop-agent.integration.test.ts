@@ -10,6 +10,8 @@
 import { describe, it, expect, afterEach, vi } from "vitest"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import type { DesktopAgent } from "../../core/desktop-agent"
+import type { AppConnectionMetadata } from "../wcp-connector"
+import { AppInstanceState } from "../../core/state/types"
 import { getBrowserDesktopAgentSession } from "../../presets/browser-session"
 import { clearAllHeartbeatTimersForTesting } from "../../core/handlers/dacp/heartbeat-runtime"
 import {
@@ -21,7 +23,9 @@ import {
   createGetOrCreateChannelMessage,
   createJoinUserChannelMessage,
   createGenericContextListenerMessage,
+  createMessageEvent,
   createOpenRequestMessage,
+  createWCP1Hello,
   flushAsyncDelivery,
   postDacpOnPort,
   waitForPortMessage,
@@ -56,7 +60,43 @@ type BrowserChannelsController = {
   onAppChannelChange: (listener: (event: AppChannelChangeEvent) => void) => () => void
 }
 
-type TestBrowserAgent = DesktopAgent & { channels: BrowserChannelsController }
+type BrowserAppInstance = {
+  appId: string
+  instanceId: string
+  status: "pending" | "connected"
+  currentUserChannel?: string | null
+}
+
+type HandshakeFailureEvent = {
+  error: Error
+  connectionAttemptUuid: string
+}
+
+type BrowserAppsController = {
+  add: (app: typeof PORTFOLIO_APP) => void
+  addAll: (apps: (typeof PORTFOLIO_APP)[]) => void
+  addDirectory: (url: string) => Promise<void>
+  remove: (appId: string) => void
+  getAll: () => Array<typeof PORTFOLIO_APP>
+  getById: (appId: string) => typeof PORTFOLIO_APP | undefined
+  open: (
+    app: string | BrowserTypes.AppIdentifier,
+    options?: { context?: Context; instanceId?: string }
+  ) => Promise<BrowserTypes.AppIdentifier>
+  getInstances: () => BrowserAppInstance[]
+  getInstance: (instanceId: string) => BrowserAppInstance | undefined
+  getConnections: () => AppConnectionMetadata[]
+  getConnection: (instanceId: string) => AppConnectionMetadata | undefined
+  disconnect: (instanceId: string) => void
+  onConnect: (listener: (metadata: AppConnectionMetadata) => void) => () => void
+  onDisconnect: (listener: (instanceId: string) => void) => () => void
+  onHandshakeFailure: (listener: (event: HandshakeFailureEvent) => void) => () => void
+}
+
+type TestBrowserAgent = DesktopAgent & {
+  channels: BrowserChannelsController
+  apps: BrowserAppsController
+}
 
 function requireChannelsController(agent: DesktopAgent): BrowserChannelsController {
   const { channels } = agent as TestBrowserAgent
@@ -66,6 +106,19 @@ function requireChannelsController(agent: DesktopAgent): BrowserChannelsControll
   expect(typeof channels.changeAppChannel).toBe("function")
   expect(typeof channels.onAppChannelChange).toBe("function")
   return channels
+}
+
+function requireAppsController(agent: DesktopAgent): BrowserAppsController {
+  const { apps } = agent as TestBrowserAgent
+  expect(apps).toBeDefined()
+  expect(typeof apps.onConnect).toBe("function")
+  expect(typeof apps.onDisconnect).toBe("function")
+  expect(typeof apps.disconnect).toBe("function")
+  expect(typeof apps.getConnections).toBe("function")
+  expect(typeof apps.getConnection).toBe("function")
+  expect(typeof apps.getInstances).toBe("function")
+  expect(typeof apps.getInstance).toBe("function")
+  return apps
 }
 
 function waitForChannelChangedEvent(
@@ -663,6 +716,167 @@ describe("browser channels controller (WCP integration)", () => {
     unsubscribe()
 
     await channels.changeAppChannel(app.canonicalInstanceId, CHANNEL_ID_2)
+
+    await flushAsyncDelivery()
+
+    expect(notificationCount).toBe(1)
+  })
+})
+
+describe("browser apps controller (WCP integration)", () => {
+  const activeAgents: DesktopAgent[] = []
+
+  afterEach(() => {
+    clearAllHeartbeatTimersForTesting()
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+  })
+
+  it("notifies onConnect when WCP identity validation completes", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const apps = requireAppsController(agent)
+
+    const connectEvents: AppConnectionMetadata[] = []
+    apps.onConnect(metadata => {
+      connectEvents.push(metadata)
+    })
+
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "apps-on-connect-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    expect(connectEvents).toEqual([
+      expect.objectContaining({
+        instanceId: connected.canonicalInstanceId,
+        appId: "portfolioApp",
+        connectionAttemptUuid: "apps-on-connect-uuid",
+      }),
+    ])
+  })
+
+  it("exposes connected instances and WCP connections after handshake", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const apps = requireAppsController(agent)
+
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "apps-connected-reads-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    expect(apps.getConnection(connected.canonicalInstanceId)).toMatchObject({
+      instanceId: connected.canonicalInstanceId,
+      appId: "portfolioApp",
+    })
+    expect(apps.getConnections()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ instanceId: connected.canonicalInstanceId }),
+      ])
+    )
+    expect(apps.getInstance(connected.canonicalInstanceId)).toMatchObject({
+      appId: "portfolioApp",
+      instanceId: connected.canonicalInstanceId,
+      status: "connected",
+    })
+    expect(apps.getInstances()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          appId: "portfolioApp",
+          instanceId: connected.canonicalInstanceId,
+          status: "connected",
+        }),
+      ])
+    )
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED
+    )
+  })
+
+  it("notifies onDisconnect and removes instance when disconnect is called", async () => {
+    const agent = createTestAgent({
+      heartbeatEnabled: false,
+      disconnectGracePeriod: 0,
+    })
+    activeAgents.push(agent)
+    const apps = requireAppsController(agent)
+
+    const disconnectedIds: string[] = []
+    apps.onDisconnect(instanceId => {
+      disconnectedIds.push(instanceId)
+    })
+
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "apps-disconnect-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    apps.disconnect(connected.canonicalInstanceId)
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
+    expect(disconnectedIds).toContain(connected.canonicalInstanceId)
+    expect(apps.getConnection(connected.canonicalInstanceId)).toBeUndefined()
+  })
+
+  it("notifies onHandshakeFailure when WCP handshake fails", () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const apps = requireAppsController(agent)
+
+    const failures: HandshakeFailureEvent[] = []
+    apps.onHandshakeFailure(event => {
+      failures.push(event)
+    })
+
+    const originalMessageChannel = global.MessageChannel
+    class FailingMessageChannel {
+      constructor() {
+        throw new Error("MessageChannel creation failed")
+      }
+    }
+    global.MessageChannel = FailingMessageChannel as unknown as typeof MessageChannel
+
+    window.dispatchEvent(createMessageEvent(createWCP1Hello("apps-handshake-fail-uuid")))
+
+    expect(failures).toHaveLength(1)
+    expect(failures[0]?.error).toBeInstanceOf(Error)
+    expect(failures[0]?.connectionAttemptUuid).toBe("apps-handshake-fail-uuid")
+
+    global.MessageChannel = originalMessageChannel
+  })
+
+  it("stops delivering onConnect after unsubscribe", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const apps = requireAppsController(agent)
+
+    let notificationCount = 0
+    const unsubscribe = apps.onConnect(() => {
+      notificationCount += 1
+    })
+
+    await connectWcpApp(agent, {
+      connectionAttemptUuid: "apps-unsub-first-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    await vi.waitFor(() => {
+      expect(notificationCount).toBe(1)
+    })
+
+    unsubscribe()
+
+    await connectWcpApp(agent, {
+      connectionAttemptUuid: "apps-unsub-second-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+    })
 
     await flushAsyncDelivery()
 
