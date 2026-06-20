@@ -120,9 +120,8 @@ export function handleJoinUserChannelRequest(
 
     if (!wasAlreadyOnChannel) {
       deliverCurrentContextToInstanceListeners(instanceId, channelId, context)
+      notifyChannelChanged(instanceId, channelId, context)
     }
-
-    notifyChannelChanged(instanceId, channelId, context)
   } catch (error) {
     const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to join user channel"
@@ -403,6 +402,18 @@ function notifyChannelChanged(
 
     transport.send(channelChangedEventWithRouting)
   })
+
+  // When no app registered channelChanged listeners, still emit on the transport so
+  // WCP connector can raise channelChanged for host chrome (same path as host-initiated joins).
+  if (subscriberInstanceIds.size === 0) {
+    transport.send({
+      ...channelChangedEvent,
+      meta: {
+        ...channelChangedEvent.meta,
+        destination: { instanceId },
+      },
+    })
+  }
 
   logger.debug("Channel changed event broadcast", {
     instanceId,

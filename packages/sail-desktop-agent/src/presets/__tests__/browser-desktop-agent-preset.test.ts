@@ -46,6 +46,16 @@ type BrowserHostControllerSurface = {
   }
   channels: {
     getUserChannels: () => BrowserTypes.Channel[]
+    getAppChannel: (instanceId: string) => BrowserTypes.Channel | null
+    getAppChannelId: (instanceId: string) => string | null
+    changeAppChannel: (instanceId: string, channelId: string | null) => Promise<void>
+    onAppChannelChange: (
+      listener: (event: {
+        instanceId: string
+        channelId: string | null
+        channel: BrowserTypes.Channel | null
+      }) => void
+    ) => () => void
   }
   apps: {
     getAll: () => DirectoryApp[]
@@ -563,6 +573,43 @@ describe("desktopAgent.intentResolver canonical host controller", () => {
       selectedHandler: { appId: "handler-a", instanceId: "instance-a" },
       intent: "ViewContact",
     })
+  })
+})
+
+describe("desktopAgent.channels canonical host controller", () => {
+  const activeAgents: DesktopAgent[] = []
+
+  afterEach(() => {
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+
+    vi.useRealTimers()
+  })
+
+  it("exposes getAppChannelId, getAppChannel, changeAppChannel, and onAppChannelChange", () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent()
+    activeAgents.push(desktopAgent)
+
+    const { channels } = desktopAgent
+
+    expect(typeof channels.getUserChannels).toBe("function")
+    expect(typeof channels.getAppChannelId).toBe("function")
+    expect(typeof channels.getAppChannel).toBe("function")
+    expect(typeof channels.changeAppChannel).toBe("function")
+    expect(typeof channels.onAppChannelChange).toBe("function")
+  })
+
+  it("returns null from getAppChannelId for an unknown instance id", () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent()
+    activeAgents.push(desktopAgent)
+
+    const { channels } = desktopAgent
+
+    expect(channels.getAppChannelId("nonexistent-instance")).toBeNull()
+    expect(channels.getAppChannel("nonexistent-instance")).toBeNull()
   })
 })
 

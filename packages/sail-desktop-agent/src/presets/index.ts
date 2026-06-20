@@ -27,6 +27,7 @@ export {
   type BrowserHostControllerOptions,
   type BrowserIntentResolverController,
   type BrowserChannelsController,
+  type AppChannelChangeEvent,
   type BrowserAppsController,
 } from "./browser-session.js"
 

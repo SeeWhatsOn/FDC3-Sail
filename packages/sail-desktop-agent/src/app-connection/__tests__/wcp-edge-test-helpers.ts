@@ -175,6 +175,22 @@ export const INSTRUMENT_CONTEXT: Context = {
   id: { ticker: "AAPL" },
 }
 
+export function createAddEventListenerMessage(
+  instanceId: string,
+  appId: string,
+  eventType: BrowserTypes.AddEventListenerRequest["payload"]["type"]
+): BrowserTypes.AddEventListenerRequest {
+  return {
+    type: "addEventListenerRequest",
+    meta: {
+      requestUuid: crypto.randomUUID(),
+      timestamp: new Date(),
+      source: { appId, instanceId },
+    },
+    payload: { type: eventType },
+  }
+}
+
 export function createJoinUserChannelMessage(
   instanceId: string,
   appId: string,

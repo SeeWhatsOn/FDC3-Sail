@@ -3,10 +3,10 @@ title: "Add browser channels controller"
 slug: add-browser-channels-controller
 kind: task
 type: feature
-status: approved
+status: waiting_on_user
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - packages/sail-desktop-agent/src/presets/create-browser-desktop-agent.ts
   - packages/sail-desktop-agent/src/presets/browser-session.ts
@@ -38,7 +38,6 @@ Host channel chrome lives outside iframe apps. Apps still use standard FDC3 chan
 
 - `plans/prd-browser-preset-host-api.md` (BHA-04)
 - `plans/work-items/epic-browser-preset-host-api.md`
-- `plans/work-items/add-browser-host-controller-composition.md`
 - `website/docs/architecture/channel-selection.md`
 - `packages/sail-desktop-agent/src/core/handlers/dacp/channel-handlers.ts`
 
@@ -108,11 +107,36 @@ _(empty)_
 
 ## Loop history
 
-_(empty)_
+- 2026-06-20: delivery RED → GREEN → verify → review PASS; staged for human review
 
 ## Staged for review
 
-_(empty)_
+### RED evidence
+- 9 failing tests (7 WCP integration + 2 preset) — placeholder `channels` missing methods
+- Command: `npx vitest run src/app-connection/__tests__/wcp-desktop-agent.integration.test.ts src/presets/__tests__/browser-desktop-agent-preset.test.ts`
+
+### Commands run
+- **31/31** targeted tests pass; **337/337** package vitest pass
+
+### Files changed
+- `packages/sail-desktop-agent/src/presets/browser-session.ts` — full `BrowserChannelsController`
+- `packages/sail-desktop-agent/src/presets/index.ts` — export `AppChannelChangeEvent`
+- `packages/sail-desktop-agent/src/core/desktop-agent.ts` — removed duplicate host emit
+- `packages/sail-desktop-agent/src/core/handlers/dacp/channel-handlers.ts` — app-driven host notify fallback
+- `packages/sail-desktop-agent/src/presets/__tests__/browser-desktop-agent-preset.test.ts`
+- `packages/sail-desktop-agent/src/app-connection/__tests__/wcp-desktop-agent.integration.test.ts`
+- `packages/sail-desktop-agent/src/app-connection/__tests__/wcp-edge-test-helpers.ts`
+
+### Phase audit
+| Phase | Result |
+|-------|--------|
+| A test-engineer | 9 RED |
+| B implement-agent | 31 green |
+| C verifier-agent | PASS |
+| D code-reviewer | PASS |
+
+### Scope note
+`channel-handlers.ts` outside manifest — required so app-driven joins notify `onAppChannelChange` via WCP.
 
 ## Escalation notes
 

@@ -16,6 +16,7 @@ import {
   INSTRUMENT_CONTEXT,
   connectWcpApp,
   createAddContextListenerMessage,
+  createAddEventListenerMessage,
   createBroadcastMessage,
   createGetOrCreateChannelMessage,
   createJoinUserChannelMessage,
@@ -37,6 +38,51 @@ import {
 const OPEN_WITH_CONTEXT_LAUNCH: Context = {
   type: "testContextY",
   id: { value: "conformance-open-context" },
+}
+
+const CHANNEL_ID_2 = "fdc3.channel.2"
+
+type AppChannelChangeEvent = {
+  instanceId: string
+  channelId: string | null
+  channel: BrowserTypes.Channel | null
+}
+
+type BrowserChannelsController = {
+  getUserChannels: () => BrowserTypes.Channel[]
+  getAppChannel: (instanceId: string) => BrowserTypes.Channel | null
+  getAppChannelId: (instanceId: string) => string | null
+  changeAppChannel: (instanceId: string, channelId: string | null) => Promise<void>
+  onAppChannelChange: (listener: (event: AppChannelChangeEvent) => void) => () => void
+}
+
+type TestBrowserAgent = DesktopAgent & { channels: BrowserChannelsController }
+
+function requireChannelsController(agent: DesktopAgent): BrowserChannelsController {
+  const { channels } = agent as TestBrowserAgent
+  expect(channels).toBeDefined()
+  expect(typeof channels.getAppChannelId).toBe("function")
+  expect(typeof channels.getAppChannel).toBe("function")
+  expect(typeof channels.changeAppChannel).toBe("function")
+  expect(typeof channels.onAppChannelChange).toBe("function")
+  return channels
+}
+
+function waitForChannelChangedEvent(
+  appPort: MessagePort,
+  expectedChannelId: string | null
+): Promise<BrowserTypes.ChannelChangedEvent> {
+  return waitForPortMessage<BrowserTypes.ChannelChangedEvent>(appPort, data => {
+    const message = data as {
+      type?: string
+      payload?: { channelId?: string | null; newChannelId?: string | null }
+    }
+    if (message.type !== "channelChangedEvent") {
+      return false
+    }
+    const channelId = message.payload?.channelId ?? message.payload?.newChannelId ?? null
+    return channelId === expectedChannelId
+  })
 }
 
 describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
@@ -405,5 +451,221 @@ describe("WCP edge contract", () => {
     })
 
     expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+  })
+})
+
+describe("browser channels controller (WCP integration)", () => {
+  const activeAgents: DesktopAgent[] = []
+
+  afterEach(() => {
+    clearAllHeartbeatTimersForTesting()
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+  })
+
+  it("reads null app channel before any join", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const channels = requireChannelsController(agent)
+
+    const app = await connectWcpApp(agent, {
+      connectionAttemptUuid: "channels-read-null-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    expect(channels.getAppChannelId(app.canonicalInstanceId)).toBeNull()
+    expect(channels.getAppChannel(app.canonicalInstanceId)).toBeNull()
+  })
+
+  it("host changeAppChannel delivers channelChangedEvent to the app over MessagePort", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const channels = requireChannelsController(agent)
+
+    const app = await connectWcpApp(agent, {
+      connectionAttemptUuid: "channels-host-change-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    await postDacpOnPort(
+      app.appPort,
+      createAddEventListenerMessage(app.canonicalInstanceId, app.appId, "channelChanged")
+    )
+
+    const channelChangedPromise = waitForChannelChangedEvent(app.appPort, CHANNEL_ID)
+
+    await channels.changeAppChannel(app.canonicalInstanceId, CHANNEL_ID)
+
+    const channelChangedEvent = await channelChangedPromise
+
+    expect(channelChangedEvent.type).toBe("channelChangedEvent")
+    expect(channelChangedEvent.payload.channelId ?? channelChangedEvent.payload.newChannelId).toBe(
+      CHANNEL_ID
+    )
+    expect(channels.getAppChannelId(app.canonicalInstanceId)).toBe(CHANNEL_ID)
+    expect(channels.getAppChannel(app.canonicalInstanceId)).toMatchObject({
+      id: CHANNEL_ID,
+      type: "user",
+    })
+    expect(agent.getState().instances[app.canonicalInstanceId]?.currentUserChannel).toBe(CHANNEL_ID)
+  })
+
+  it("host changeAppChannel to null leaves the channel and notifies the app", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const channels = requireChannelsController(agent)
+
+    const app = await connectWcpApp(agent, {
+      connectionAttemptUuid: "channels-host-leave-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    await postDacpOnPort(
+      app.appPort,
+      createAddEventListenerMessage(app.canonicalInstanceId, app.appId, "channelChanged")
+    )
+    await postDacpOnPort(
+      app.appPort,
+      createJoinUserChannelMessage(app.canonicalInstanceId, app.appId, CHANNEL_ID)
+    )
+
+    await vi.waitFor(() => {
+      expect(channels.getAppChannelId(app.canonicalInstanceId)).toBe(CHANNEL_ID)
+    })
+
+    const leavePromise = waitForChannelChangedEvent(app.appPort, null)
+
+    await channels.changeAppChannel(app.canonicalInstanceId, null)
+
+    const leaveEvent = await leavePromise
+
+    expect(leaveEvent.type).toBe("channelChangedEvent")
+    expect(leaveEvent.payload.channelId ?? leaveEvent.payload.newChannelId).toBeNull()
+    expect(channels.getAppChannelId(app.canonicalInstanceId)).toBeNull()
+    expect(channels.getAppChannel(app.canonicalInstanceId)).toBeNull()
+    expect(agent.getState().instances[app.canonicalInstanceId]?.currentUserChannel).toBeNull()
+  })
+
+  it("getAppChannel reflects app-driven join through the same agent state path", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const channels = requireChannelsController(agent)
+
+    const app = await connectWcpApp(agent, {
+      connectionAttemptUuid: "channels-app-join-read-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    await postDacpOnPort(
+      app.appPort,
+      createJoinUserChannelMessage(app.canonicalInstanceId, app.appId, CHANNEL_ID_2)
+    )
+
+    await vi.waitFor(() => {
+      expect(channels.getAppChannelId(app.canonicalInstanceId)).toBe(CHANNEL_ID_2)
+    })
+
+    expect(channels.getAppChannel(app.canonicalInstanceId)).toMatchObject({
+      id: CHANNEL_ID_2,
+      type: "user",
+    })
+    expect(agent.getState().instances[app.canonicalInstanceId]?.currentUserChannel).toBe(
+      CHANNEL_ID_2
+    )
+  })
+
+  it("onAppChannelChange notifies when the app joins a channel through its FDC3 API", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const channels = requireChannelsController(agent)
+
+    const app = await connectWcpApp(agent, {
+      connectionAttemptUuid: "channels-app-driven-notify-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const hostEvents: AppChannelChangeEvent[] = []
+    channels.onAppChannelChange(event => {
+      hostEvents.push(event)
+    })
+
+    await postDacpOnPort(
+      app.appPort,
+      createJoinUserChannelMessage(app.canonicalInstanceId, app.appId, CHANNEL_ID)
+    )
+
+    await vi.waitFor(() => {
+      expect(hostEvents).toHaveLength(1)
+      expect(hostEvents[0]).toMatchObject({
+        instanceId: app.canonicalInstanceId,
+        channelId: CHANNEL_ID,
+        channel: { id: CHANNEL_ID, type: "user" },
+      })
+    })
+  })
+
+  it("onAppChannelChange notifies when the host changes the app channel", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const channels = requireChannelsController(agent)
+
+    const app = await connectWcpApp(agent, {
+      connectionAttemptUuid: "channels-host-driven-notify-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const hostEvents: AppChannelChangeEvent[] = []
+    channels.onAppChannelChange(event => {
+      hostEvents.push(event)
+    })
+
+    await channels.changeAppChannel(app.canonicalInstanceId, CHANNEL_ID_2)
+
+    await vi.waitFor(() => {
+      expect(hostEvents).toHaveLength(1)
+      expect(hostEvents[0]).toMatchObject({
+        instanceId: app.canonicalInstanceId,
+        channelId: CHANNEL_ID_2,
+        channel: { id: CHANNEL_ID_2, type: "user" },
+      })
+    })
+  })
+
+  it("stops delivering onAppChannelChange after unsubscribe", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const channels = requireChannelsController(agent)
+
+    const app = await connectWcpApp(agent, {
+      connectionAttemptUuid: "channels-unsub-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    let notificationCount = 0
+    const unsubscribe = channels.onAppChannelChange(() => {
+      notificationCount += 1
+    })
+
+    await channels.changeAppChannel(app.canonicalInstanceId, CHANNEL_ID)
+
+    await vi.waitFor(() => {
+      expect(notificationCount).toBe(1)
+    })
+
+    unsubscribe()
+
+    await channels.changeAppChannel(app.canonicalInstanceId, CHANNEL_ID_2)
+
+    await flushAsyncDelivery()
+
+    expect(notificationCount).toBe(1)
   })
 })

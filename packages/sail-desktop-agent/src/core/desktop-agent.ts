@@ -24,12 +24,10 @@ import { createInitialState, createStateWithOverrides } from "./state/initial-st
 import { consoleLogger, type Logger, type LogPayloadDetail } from "./interfaces/logger"
 import { resolveDesktopAgentConfig, type SailImplementationMetadata } from "./sail-default-config"
 import { InMemoryTransport } from "../transports/in-memory-transport"
-import { createDACPEvent } from "./dacp/dacp-message-creators"
 import {
   handleJoinUserChannelRequest,
   handleLeaveCurrentChannelRequest,
 } from "./handlers/dacp/channel-handlers"
-import { ALL_DA_EVENT_TYPES, getEventListeners } from "./handlers/dacp/event-handlers"
 import { NoChannelFoundError } from "./errors/fdc3-errors"
 import { getAllUserChannels, getInstance, getUserChannel } from "./state/selectors"
 import { connectInstance } from "./state/mutators"
@@ -448,44 +446,5 @@ export class DesktopAgent {
         context
       )
     }
-
-    this.emitHostVisibleChannelChanged(instanceId, channelId)
-  }
-
-  /**
-   * When no app registered channelChanged listeners, notifyChannelChanged sends nothing.
-   * Host chrome listens on WCP connector channelChanged (intercepted from transport events).
-   */
-  private emitHostVisibleChannelChanged(instanceId: string, channelId: string | null): void {
-    const state = this.getState()
-    const hasChannelEventSubscribers =
-      getEventListeners("channelChanged", () => state).length > 0 ||
-      getEventListeners(ALL_DA_EVENT_TYPES, () => state).length > 0
-
-    if (hasChannelEventSubscribers) {
-      return
-    }
-
-    const instance = getInstance(state, instanceId)
-    if (!instance) {
-      return
-    }
-
-    const channelChangedEvent = createDACPEvent("channelChangedEvent", {
-      channelId,
-      newChannelId: channelId,
-      identity: {
-        appId: instance.appId,
-        instanceId: instance.instanceId,
-      },
-    })
-
-    this.transport.send({
-      ...channelChangedEvent,
-      meta: {
-        ...channelChangedEvent.meta,
-        destination: { instanceId },
-      },
-    })
   }
 }
