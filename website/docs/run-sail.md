@@ -56,7 +56,7 @@ npm run dev:desktop
 
 FDC3 Sail loads application metadata from an **app directory** — JSON describing which apps exist, their URLs, intents, and context types.
 
-The development build uses the FINOS conformance fixture at the repository root (`conformance-appd.json`) so you can exercise standard FDC3 behaviour immediately. For your own deployment, replace or extend this with your organisation's app directory (same [FDC3 App Directory](https://fdc3.finos.org/docs/app-directory/spec) schema).
+The development build merges the FINOS conformance fixture from `packages/sail-conformance-harness/conformance-appd.json` so you can exercise standard FDC3 behaviour immediately. For your own deployment, replace or extend this with your organisation's app directory (same [FDC3 App Directory](https://fdc3.finos.org/docs/app-directory/spec) schema).
 
 Point your deployment at the directory URL or file your build expects (see `packages/sail-web` wiring for the current default). For app metadata examples, see [Add your app to Sail](./add-your-app#app-directory-entry).
 

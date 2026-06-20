@@ -8,7 +8,7 @@ import {
 import type { AppIdentifier } from "@finos/fdc3"
 import type { AppInstance } from "@finos/sail-desktop-agent"
 
-import conformanceAppDirectory from "../../../conformance-appd.json"
+import conformanceAppDirectory from "../conformance-appd.json"
 
 import { createHarnessAppLauncher } from "./app-launcher"
 import {

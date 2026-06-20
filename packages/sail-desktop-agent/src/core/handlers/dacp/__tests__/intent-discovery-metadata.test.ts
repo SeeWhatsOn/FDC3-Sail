@@ -51,7 +51,7 @@ const intentAppA: DirectoryApp = {
 
 function loadConformanceIntentAppA(): DirectoryApp {
   const raw = readFileSync(
-    new URL("../../../../../../../conformance-appd.json", import.meta.url),
+    new URL("../../../../../../sail-conformance-harness/conformance-appd.json", import.meta.url),
     "utf-8"
   )
   const data = JSON.parse(raw) as { applications: DirectoryApp[] }

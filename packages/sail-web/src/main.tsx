@@ -3,8 +3,9 @@ import { createRoot } from "react-dom/client"
 import { SailAppLauncher, SailPlatform, type DirectoryApp } from "@finos/sail-platform-api"
 import type { AppMetadata } from "@finos/fdc3"
 
-import conformanceAppDirectory from "../../../conformance-appd.json"
+import conformanceAppDirectory from "../../sail-conformance-harness/conformance-appd.json"
 import defaultAppDirectory from "../../../fdc3-app-directory.json"
+
 import "./index.css"
 import App from "./App"
 import { useWorkspaceStore } from "./stores/workspace-store"

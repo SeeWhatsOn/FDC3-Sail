@@ -1,129 +1,85 @@
 # FDC3 Toolbox conformance — failure review
 
-Record of discovery against the official FDC3 conformance toolbox (FINOS), comparing two local result dumps and mapping failures to Sail packages.
+Attribution matrix for the FINOS FDC3 conformance toolbox against `@finos/sail-conformance-harness` (clean-room host, port **3001**). **Current baseline: `conformance-report-v5.txt` (53 pass / 49 fail, 102 scenarios).** Older harness exports (v3, v4) are kept for progression history only.
 
 ## Sources
 
 | File | Notes |
 |------|--------|
-| `conformance-report.txt` | Earlier toolbox run |
-| `conformance-report-v2.txt` | After recent PRs/commits — **18 pass / 56 fail**, ~172s |
-| `conformance-report-v3.txt` | Clean-room conformance harness run — **15 pass / 45 fail**, ~155s |
+| `conformance-report-v3.txt` | First harness clean-room run — **15 pass / 45 fail**, ~155s |
 | `conformance-report-v4.txt` | Measured harness export — **31 pass / 64 fail**, ~305s, **95 scenarios** |
-| `conformance-report-v5.txt` | Post TV4-03/05/06 batch — **53 pass / 49 fail**, ~516s, **102 scenarios** |
-| `conformance-appd.json` | Conformance app directory; merged in `packages/sail-web/src/main.tsx` and loaded by `packages/sail-conformance-harness` (desktop-agent-only clean room) |
+| `conformance-report-v5.txt` | **Current baseline** — **53 pass / 49 fail**, ~516s, **102 scenarios** |
+| `../conformance-appd.json` | FINOS conformance app directory; merged in `packages/sail-web/src/main.tsx` and loaded by the harness |
 
-The toolbox exercises the **full browser stack** (sail-web → SailPlatform / SailAppLauncher → WCP → `@finos/sail-desktop-agent`), not Cucumber’s `MockTransport` path. In-repo BDD coverage is documented in `website/docs/packages/desktop-agent/conformance.md` (~101 `@conformance2.2` scenarios).
+Removed from repo (2026-06): `conformance-report.txt` and `conformance-report-v2.txt` — early dumps from the full **sail-web** stack (`:3000`), not comparable to harness clean-room runs.
 
-## v1 → v2 delta (high level)
+The harness exercises **browser WCP + `@finos/sail-desktop-agent`** only (no `SailPlatform`). In-repo BDD uses `MockTransport` — documented in `website/docs/packages/desktop-agent/conformance.md` (**104** `@conformance2.2` scenarios, **2** `@conformance3.0` in `close.feature`).
 
-**Improved**
+## Harness progression (v3 → v5)
 
-- `fdc3.open`: `AOpensB3`, `AFailsToOpenB3`, `AOpensB4` now pass; fewer 20s timeouts on simple open.
+| Export | Pass / fail | Scenarios | Dominant failure symptom |
+|--------|-------------|-----------|--------------------------|
+| v3 | 15 / 45 | ~60 | `AppTimeout` — delivery never reached mock apps |
+| v4 | 31 / 64 | 95 | `AppTimeout` (~33) + agent oracle rows |
+| v5 | **53 / 49** | 102 | **Close-context teardown (26)** + client metadata (4) + stale `findIntent` inflation |
 
-**Regressed / new signals**
-
-- `basicRI1`: was passing in v1 → v2 reports `IntentDeliveryFailed`.
-- v2 runs more channel scenarios; almost all report `AppTimeout` (v1 showed fewer channel rows).
-
-**Unchanged themes**
-
-- `findIntent` / `findIntentsByContext` shape and error-code mismatches.
-- `getAppMetadata` missing `desktopAgent` property.
-- Multi-app `AppTimeout` clusters (channels, open-with-context, context metadata).
+**v4 → v5 delta:** Passes **+22**, failures **−15**, scenarios **+7** (`fdc3.intentListenerConflict` — all pass). Symptom shift: **`AppTimeout` (~33 → 1)** — one residual open-path timeout (`AOpensBWithWrongContext`); **`UserCancelledResolution` (9 → 0)**; new dominant cluster **`App didn't return close context within 1 sec` (26)** plus **6** explicit Mocha timeouts (3×20s open, 1×10s GetInfo2, 2×80s delayed results).
 
 ---
 
-## Attribution summary
+## Attribution summary (v5 baseline)
 
-| Layer | Share of pain (v3 measured) | v4 measured (95 scenarios) | Confidence |
-|--------|-----------------------------|------------------------------|------------|
-| **Integration** (web + WCP + launcher `instanceId` lifecycle) | **Largest** — most `AppTimeout`, multi-app channels/open/metadata | **~33 `AppTimeout`** rows — open-with-context, user/app channels, context metadata, GetInfo2 | High |
-| **@finos/sail-desktop-agent** | **Real but narrower** — metadata, intent discovery shape, some error codes | **`desktopAgent` (2)**, **`findIntent` apps.length (2)**, **`getResultMetadata` empty (2)**, wrong-context / raiseIntent throws | High for items below |
-| **@finos/sail-web** | Launch context dropped, cross-origin iframes, intent UI not automated | Unchanged for harness (:3001); full-stack (:3000) deferral still applies | High |
-| **@finos/sail-platform-api** | Launcher pre-assigns `instanceId` that first WCP connect does not bind | Harness uses desktop-agent preset directly; Conformance1 pre-register was missing (fixed in harness bootstrap) | High |
+| Layer | v5 share of remaining 49 failures | Confidence |
+|--------|-----------------------------------|------------|
+| **Harness session hygiene** | **Largest** — 26 close-context rows; stale instances inflate `findIntent` (`apps.length` 4 vs 1); open-with-context 20s timeouts (3); `findInstances` instanceId mismatch (1) | High |
+| **@finos/sail-desktop-agent** (client + DACP path) | **`getResultMetadata` empty (4)**, **`desktopAgent` missing (2)**, intent context traceId (1), `findIntent` wrong-context `NoAppsFound` (1), `raiseIntent` throws message (3) | High |
+| **@finos/sail-web** (`:3000`) | Deferral for harness work — launch context, resolver UI, cross-origin panels still apply to full stack only | High |
+| **Blocked on FINOS** | `findIntent` dedupe / `NoAppsFound` / throws matrix (~6 rows) — policy before code | Medium |
 
-**Takeaway:** Toolbox failures do **not** imply the desktop agent core is largely unimplemented — many APIs are green in BDD. Failures strongly indicate **browser/WCP integration** and **instance identity** gaps between launcher, iframe host, and WCP4/WCP5.
-
-**v3 → v4 measured delta:** v3 = **15 / 45** (60 scenarios). v4 = **31 / 64** (95 scenarios). Passes **+16**, failures **+19**, scenarios **+35**. Category movement below uses committed exports, not projections.
-
-**v4 → v5 measured delta:** v4 = **31 / 64** (95 scenarios). v5 = **53 / 49** (102 scenarios). Passes **+22**, failures **−15**, scenarios **+7** (new `fdc3.intentListenerConflict` pack — all pass). Duration **305s → 516s** (longer runs, including 61s delay scenarios). Primary symptom shift: **`AppTimeout` (33 → 0)** replaced by **`App didn't return close context within 1 sec` (26)** and explicit Mocha timeouts (6).
+**Takeaway:** v5 proves **delivery works** (UCR and bulk AppTimeout cleared). Remaining pain is **FINOS scenario teardown** (mock apps must return close context between scenarios) and **client-side metadata APIs**, not missing DACP handlers.
 
 ---
 
-## 1. `@finos/sail-desktop-agent`
+## v5 remaining failures by symptom
 
-### Likely product issues (fix in library)
+### A. Close-context teardown (26 rows) — harness first
 
-| Failure (v2) | Likely cause | Resolution direction |
-|--------------|--------------|----------------------|
-| **getAppMetadata** — `desktopAgent` missing | `convertDirectoryAppToAppMetadata` in `app-handlers.ts` sets `desktopAgent` only when `instanceId` is present; directory-only responses omit it | Always set `desktopAgent` to `implementationMetadata.provider` on `AppMetadata` responses |
-| **findIntent** — all “deeply equal” failures | `createAppIntents` in `intent-helpers.ts` uses `displayName: intentName` instead of directory `displayName` (e.g. `"A Testing Intent"` in `conformance-appd.json`) | Map `intentDef.displayName` from app directory |
-| **findIntentsByContext** — length 7 vs 6 | Extra `AppIntent` (duplicate intent/app from directory + running listeners) | Dedupe when building `appIntents`; align with conformance app directory |
-| **findIntent wrong context** — expected `NoAppsFound`, got `assert.fail()` | Client does not receive `ResolveError.NoAppsFound` for “intent exists, context doesn’t” | Ensure DACP error type propagates on that path |
-| **raiseIntent (throws)** — `NoAppsFound` vs `TargetInstanceUnavailable` / generic rejection | Spec expects `NoAppsFound` in some “bad correlation” cases | Align error mapping with FDC3 conformance matrix (see `plans/prd-desktop-agent-conformance-gaps.md` item 7) |
-| **findInstances** — missing `AppIdentifier` in array | `handleFindInstancesRequest` only returns instances in agent state; launched-but-not-connected instances may be absent | Tie launch `instanceId` to WCP5 identity (see integration section) |
-| **open-with-context** (when not purely timeout) | `registerOpenWithContext` (`open-with-context.ts`) waits on **launcher** `instanceId`; WCP4 `createAppInstance` (`wcp-handlers.ts`) issues a **new UUID** on first connect unless reconnect reuse succeeds | Pre-register instance on launch, or bind host panel id → WCP5 `instanceId` |
+**Areas:** `fdc3.appChannels` (9), `fdc3.userChannels` (12), `fdc3.contextMetadata` (5).
 
-### Probably not desktop-agent alone
+**Pattern:** Scenario completes but the mock app does not return close context / call `fdc3.close()` within 1s before the next scenario. Popups and WCP instances accumulate, inflating stale `findIntent` counts.
 
-Mass **`AppTimeout`** on user/app channels, open-with-context, and context metadata. BDD covers broadcast/join/listeners via `MockTransport`. Traceability doc notes: **no `@conformance2.2` WCP path** — `bdd-wcp-integration-scenario` / platform integration still partial.
+**Owner:** `fix-harness-finOs-session-teardown` (with `harness-popup-wcp-disconnect-cleanup`).
 
----
+### B. Client metadata API (7 rows) — desktop-agent
 
-## 2. `@finos/sail-platform-api`
+| Symptom | Rows | Owner |
+|---------|------|-------|
+| `getResultMetadata()` returns empty while result resolves | 4 | `fix-toolbox-metadata-client-and-dacp-paths` |
+| `AppMetadata` missing `desktopAgent` on harness path | 2 | same |
+| Intent `ContextMetadata` traceId not forwarded (`intent-trace-456`) | 1 | same |
 
-| Issue | Evidence | Resolution direction |
-|--------|----------|----------------------|
-| **Launcher vs agent instance IDs** | `SailAppLauncher.launch()` generates and returns `instanceId`; WCP4 `createAppInstance` creates `crypto.randomUUID()` unless reconnect reuse (`reconnectInstanceId` + `instanceUuid` in WCP4 payload) | Contract: host-assigned `instanceId` from launcher must become the WCP5 canonical id |
-| **Intent resolution bridge** | `SailPlatform.start()` wires `requestIntentResolution` → `WCPConnector` → UI `intentResolverNeeded` | Headless / auto resolver for conformance (single handler → auto-select) |
-| **Origin allowlist** | `wireWcp4OriginAllowlist` in `wcp4-origin-allowlist.ts` — optional; sail-web does not wire it today | Only if deployment restricts origins; default allows `fdc3.finos.org` |
+Wire metadata on `raiseIntentResultResponse` is done (`populate-intent-result-metadata-toolbox`); toolbox still red until the **FDC3 client** exposes `getResultMetadata()`.
 
----
+### C. findIntent / findIntentsByContext (4 rows) — hygiene + blocked policy
 
-## 3. `@finos/sail-web`
+- **`apps.length` 4 vs 1** (2 `findIntent` + 1 `findIntentsByContext`) — stale CONNECTED instances; fix teardown before dedupe policy.
+- **Wrong context `NoAppsFound`** (1) — `assert.fail()` vs `NoAppsFound`; blocked: `fix-findintent-empty-apps-noappsfound`.
+- **`raiseIntent` throws** wrong `message` (3) — blocked: `align-raise-intent-throws-v4-matrix`.
 
-| Issue | Evidence | Resolution direction |
-|--------|----------|----------------------|
-| **Launch context ignored** | `main.tsx` `onLaunchApp`: `void context` — context never passed to panel/iframe | Pass context into panel bootstrap or fix agent open-with-context after instance IDs align |
-| **Cross-origin conformance apps** | Apps load from `https://fdc3.finos.org/...`; `wcp1-3-handshake.ts` cannot read `window.name` → `hostIdentifier` undefined (`SecurityError`) | Same-origin proxy, bundled conformance apps, or map `connectionAttemptUuid` ↔ panel without `window.name` |
-| **Pre-register instance (TODO)** | Comment in `main.tsx`; `FDC3IframePanel` sets `name={panel.panelId}` but agent does not reserve that id at WCP4 | Register pending instance with desktop agent before iframe load |
-| **Intent resolver UI** | `intent-resolver-store.ts` opens dialog; toolbox does not click → **UserCancelledResolution** / timeouts | Auto-resolve when one handler; conformance profile with programmatic resolver |
-| **Multi-instance panel linking** | `connection-store.ts` falls back to **appId** when `panelId` missing — wrong instance risk | Fix instance id pipeline first; then strict panel ↔ instance mapping |
+### D. Open / timing (5 rows)
 
----
+- Open-with-context **20s Mocha timeouts** (3): `AOpensBWithContext3`, `AOpensBWithSpecificContext`, `AOpensBMultipleListen`.
+- **`AOpensBWithWrongContext`** — 1 App timeout (residual delivery edge).
+- **`GetInfo2`** — 10s timeout (1).
+- **61s delayed intent results** — 2× 80s Mocha timeout (agent/toolbox budget).
 
-## 4. Failure groups by symptom (v2)
+### E. Cleared in v5 (keep regression nets green)
 
-### A. `AppTimeout` (~33 scenarios in v4) — integration first
+`basicRI1`/`basicRI2`, intent Result delivery (void/context/channel/private, 5s), `RaiseIntentSingleResolve`, `fdc3.intentListenerConflict` (7), base `IntentContextMetadata`, bulk channel/open delivery (no bulk AppTimeout).
 
-**Areas:** `fdc3.open` (with context / specific context / multiple listeners), all listed **appChannels** and **userChannels**, **contextMetadata**, **getInfo** `GetInfo2`, parts of **raiseIntent** (“close context”).
+### Full-stack deferral (`sail-web` :3000 only)
 
-**Pattern:** Target app never receives context or listener in time. Consistent with wrong `meta.destination.instanceId`, apps not fully connected, or cross-origin handshake without host correlation.
-
-**Suggested slice:** Open two conformance channel apps; log launcher `instanceId`, iframe `name`, WCP5 `instanceId`, and one user-channel broadcast end-to-end.
-
-### B. Intent discovery / metadata — desktop-agent
-
-- All **findIntent** deep-equal failures  
-- **findIntentsByContext** count + wrong error type  
-- **getAppMetadata** `desktopAgent` property  
-
-These are good **library-only** fixes with high signal in a re-run.
-
-### C. Intent raise / resolve — mixed
-
-| Test area | Symptom | Primary layer |
-|-----------|---------|----------------|
-| **RaiseIntentSingleResolve** | No context received | Integration (instance / delivery) |
-| **basicRI1** / **intentContextMetadata** | `IntentDeliveryFailed` | Integration + delivery |
-| **basicRI2** | `UserCancelledResolution` | sail-web resolver |
-| **raiseIntent (throws)** | Error code mismatches | sail-desktop-agent |
-| **RaiseIntentVoidResult** | 20s timeout | Integration + result path |
-
-### D. Improved in v2 (keep regression tests)
-
-- **fdc3.open** without context, AppNotFound, open by `appId` + `instanceId`
+Launch context dropped, cross-origin conformance iframes, intent resolver UI automation — relevant when comparing harness (:3001) vs platform (:3000), not the current v5 baseline host.
 
 ---
 
@@ -140,7 +96,7 @@ The traceability map is useful for API-area coverage, but several `covered` rows
 | `getResultMetadata` on intent results | `expected '' to not equal ''` | Product bug — client API gap | `populate-intent-result-metadata-toolbox` (wire); **`fix-toolbox-metadata-client-and-dacp-paths`** | **2 rows** (+ UCR on siblings) | **4 rows** — delivery passes, metadata API empty | Client API + harness re-run |
 | `raiseIntent (Result)` | `UserCancelledResolution` | Mixed harness / agent | `diagnose-harness-user-cancelled-resolution` | **9 rows** | **0 rows** — cleared | Spike done; no Phase 2 |
 | `raiseIntent` throws | Wrong error `message` | Product bug | `align-raise-intent-throws-v4-matrix` | **4 rows** | **4 rows** (different messages) | Blocked with findIntent policy |
-| `fdc3.open` / channels / metadata | `AppTimeout` | WCP integration | `pre-register-conformance1-pending-instance`; **`fix-harness-finOs-session-teardown`** | **~33 AppTimeout** | **0 AppTimeout**; **26** close-context; **6** Mocha timeout | Grouped harness teardown task |
+| `fdc3.open` / channels / metadata | `AppTimeout` / close-context | WCP integration + teardown | `pre-register-conformance1-pending-instance`; **`fix-harness-finOs-session-teardown`** | **~33 AppTimeout** | **1 AppTimeout**; **26** close-context; **6** Mocha timeout | Grouped harness teardown task |
 | `findInstances` | Missing / wrong instanceId | Integration | **`fix-harness-finOs-session-teardown`** | `IntentDeliveryFailed` | **instanceId mismatch** (1 row) | Launcher ↔ WCP5 correlation |
 | `intentContextMetadata` traceId | App traceId not forwarded | Product bug | **`fix-toolbox-metadata-client-and-dacp-paths`** | `IntentDeliveryFailed` | **1 row** — antiReplay/traceId | Intent raise event metadata |
 
@@ -173,7 +129,7 @@ Manual acceptance step for the toolbox-conformance-burn-down epic. v3-pre merged
 2. Start the clean-room harness: `npm run dev -w @finos/sail-conformance-harness`.
 3. Open **http://localhost:3001** in a browser (Conformance1 loads automatically).
 4. Run the **full FINOS toolbox export** inside Conformance1 (browser UI — not reliable headless in cloud VM).
-5. Save export as `conformance-report-v4.txt` at repo root (committed for TV4-08).
+5. Save export as `packages/sail-conformance-harness/results/conformance-report-v4.txt` (or the next versioned filename).
 6. Update this doc if counts change on the next export.
 
 See `packages/sail-conformance-harness/README.md` for architecture and instance-identity notes.
@@ -213,22 +169,13 @@ npm test -w @finos/sail-desktop-agent -- intent-result-metadata wcp-desktop-agen
 npm test -w @finos/sail-conformance-harness
 ```
 
-### Post-merge expected category movement (superseded by measured v4 above)
+### Post-merge expected category movement
 
-Merged burn-down items on v3-pre; **expected** harness impact pending maintainer v4 export:
-
-| Item | Merged scope | v3 failure categories affected | Expected v4 movement | Status |
-|------|--------------|-------------------------------|----------------------|--------|
-| **TB-01** | `AppMetadata.desktopAgent` always set from `implementationMetadata.provider` | `getAppMetadata` / `AppInstanceMetadata` | Both metadata rows pass | expected pending v4 export |
-| **TB-02** | Directory `displayName` on intents; `findIntentsByContext` dedupe | All `findIntent` deep-equal rows; `findIntentsByContext` count | Deep-equal rows pass; count 7→6 | expected pending v4 export |
-| **TB-04b** | Host-assigned launcher `instanceId` → WCP5 canonical id at WCP4 | `fdc3.open` (with/without context), `findInstances`, channel `AppTimeout` cluster, parts of `raiseIntent` delivery | Fewer `AppTimeout`; `findInstances` complete; no-context open (`AOpensB3`, `AOpensB4`) may return to pass | expected pending v4 export |
-| **TB-05** | Cucumber launch-via-raiseIntent `uuid-0` correlation | `basicRI1`, `basicRI2`, `RaiseIntentSingleResolve` (BDD + harness delivery) | Cucumber `@conformance2.2` raise-intent scenarios green; harness may show fewer `IntentDeliveryFailed` if instance routing aligns | expected pending v4 export |
-
-**Not claimed without re-run:** whether TB-01/TB-02/TB-04b fixes cleared rows — v4 measured export still shows those failures; see TV4-07 table.
+*Historical — superseded by measured v4 (TB-08) and v5 (TB-09) exports above.*
 
 ### Raw export policy
 
-`conformance-report-v4.txt` and `conformance-report-v5.txt` are committed at repo root. Record future exports as `conformance-report-v6.txt` (or update v5 only when human requests).
+Committed harness exports: `conformance-report-v3.txt`, `conformance-report-v4.txt`, `conformance-report-v5.txt` under `packages/sail-conformance-harness/results/`. Record future runs as `conformance-report-v6.txt` in the same folder. Removed early sail-web dumps (`conformance-report.txt`, `conformance-report-v2.txt`) — not comparable to harness clean-room runs.
 
 ---
 
@@ -244,7 +191,7 @@ Post-delivery batch: Conformance1 pre-register, popup `disconnectInstance`, inte
 | Fail | **64** | **49** | **−15** |
 | Scenarios | **95** | **102** | +7 (`intentListenerConflict` — all pass) |
 | Duration | ~305s | ~516s | longer (61s delay cases run) |
-| `AppTimeout` | **~33** | **0** | delivery reaches apps |
+| `AppTimeout` | **~33** | **1** (`AOpensBWithWrongContext`) | bulk delivery fixed |
 | `UserCancelledResolution` | **9** | **0** | resolver + delivery fixed |
 | `App didn't return close context within 1 sec` | (subset) | **26** | dominant new failure cluster |
 | `getResultMetadata` empty | **2** (+ UCR siblings) | **4** | wire fixed; client API not |
@@ -255,7 +202,7 @@ Post-delivery batch: Conformance1 pre-register, popup `disconnectInstance`, inte
 | Area | v4 → v5 |
 |------|---------|
 | `basicRI1`, `basicRI2` | fail → **pass** |
-| `fdc3.open` no-context / AppNotFound / wrong-context / `AOpensB4` | improved |
+| `fdc3.open` no-context / AppNotFound / `AOpensB4` | improved (`AOpensBWithWrongContext` still 1 App timeout) |
 | `raiseIntent (Result)` delivery (void, context, channel, private channel, 5s) | **pass** |
 | `RaiseIntentSingleResolve`, `RaiseIntentTargetedAppResolve`, private channel raiseIntent | **pass** |
 | `PrivateChannels*` raiseIntent scenarios | **pass** |
@@ -333,10 +280,10 @@ npx cucumber-js --profile single test/features/intents/intent-result.feature -w 
 
 | Question | Answer |
 |----------|--------|
-| Did the v4 follow-up batch help? | **Yes — +22 passes.** UCR and AppTimeout clusters largely cleared; intent Result delivery mostly green. |
+| Did the v4 follow-up batch help? | **Yes — +22 passes to v5.** UCR and bulk AppTimeout cleared; intent Result delivery mostly green. |
 | Is `populate-intent-result-metadata-toolbox` done? | **Partial** — wire yes; client path owned by **`fix-toolbox-metadata-client-and-dacp-paths`**. |
 | Are **any** failures still in sail-desktop-agent? | **Yes** — client metadata API, `desktopAgent` on harness path, findIntent shape (blocked), throws matrix (blocked), intent context traceId. |
 | Where is most v5 pain? | **Harness session hygiene** (~26 close-context) + **client metadata wiring** (4 rows). |
 | Existing queue enough? | **Partially** — v5 wave filed as `epic-toolbox-conformance-v5-follow-up` (2 grouped tasks); blocked findIntent items still apply after teardown + FINOS. |
 
-*Review date: 2026-06-19. Based on measured **v4** and **v5** exports. Re-run procedure in [TB-09 v5](#tb-09-v5-harness-re-run--measured-baseline-2026-06-19).*
+*Review date: 2026-06-20. **Current baseline: v5.** Historical progression: v3, v4. Re-run procedure in [TB-09 v5](#tb-09-v5-harness-re-run--measured-baseline-2026-06-19).*

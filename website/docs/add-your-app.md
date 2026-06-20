@@ -159,7 +159,7 @@ If you want same-page components to call FDC3-like APIs, that requires a Sail-sp
 
 During development, add your app entry to the app directory used by the Sail host, start Sail, and launch the app from the workspace.
 
-The development platform currently uses the repository `conformance-appd.json` fixture as an example app directory. For your deployment, point Sail at your own app directory JSON.
+The development platform currently uses the `packages/sail-conformance-harness/conformance-appd.json` fixture as an example app directory. For your deployment, point Sail at your own app directory JSON.
 
 ## Related Sail Docs
 

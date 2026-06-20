@@ -13,7 +13,7 @@ Ask for or locate:
 
 | Input | Typical path |
 |-------|----------------|
-| Conformance export | `conformance-report-v4.txt` (or latest `conformance-report*.txt` in repo root) |
+| Conformance export | `packages/sail-conformance-harness/results/conformance-report-v5.txt` (or latest `conformance-report-v*.txt` in that folder) |
 | App directory oracle | `conformance-appd.json` |
 | Prior review / matrix | `conformance-test-failure-review.md` |
 | BDD map | `website/docs/packages/desktop-agent/conformance.md` |
