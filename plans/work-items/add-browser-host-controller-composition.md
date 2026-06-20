@@ -3,7 +3,7 @@ title: "Add browser host controller composition"
 slug: add-browser-host-controller-composition
 kind: task
 type: feature
-status: in-progress
+status: waiting_on_user
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -94,11 +94,40 @@ _(empty)_
 
 ## Loop history
 
-_(empty)_
+- 2026-06-20: approved by human (batch approve all PRD items; sequential delivery)
+- 2026-06-20: delivery RED → GREEN → verify → review PASS; staged for human review
 
 ## Staged for review
 
-_(empty)_
+**Work item:** add-browser-host-controller-composition  
+**Status:** waiting_on_user  
+**Automation tier:** stage_only
+
+### RED evidence
+- Test file: `packages/sail-desktop-agent/src/presets/__tests__/browser-desktop-agent-preset.test.ts`
+- Command: `npx vitest run src/presets/__tests__/browser-desktop-agent-preset.test.ts`
+- 4 new tests failed before implementation (missing grouped controllers + export)
+
+### Commands run
+- `npx vitest run packages/sail-desktop-agent/src/presets/__tests__/browser-desktop-agent-preset.test.ts` — 10 passed
+- Root vitest — 392 passed
+
+### Files changed
+- `packages/sail-desktop-agent/src/presets/browser-session.ts` — `createBrowserHostControllers` + controller interfaces
+- `packages/sail-desktop-agent/src/presets/create-browser-desktop-agent.ts` — attach controllers to preset handle
+- `packages/sail-desktop-agent/src/presets/index.ts` — export helper and types
+- `packages/sail-desktop-agent/src/presets/__tests__/browser-desktop-agent-preset.test.ts` — 4 RED tests
+
+### Phase audit
+| Phase | Subagent | Registered subagent | Result |
+|-------|----------|---------------------|--------|
+| A RED | test-engineer | yes | 4 failing tests |
+| B GREEN | implement-agent | yes | 10 passing |
+| C Verify | verifier-agent | yes | VERIFICATION: PASS |
+| D Review | code-reviewer | yes | VERDICT: PASS |
+
+### Learnings proposed
+- `createBrowserHostControllers` in `presets/browser-session.ts`; attach grouped `intentResolver`, `channels`, `apps` on browser preset
 
 ## Escalation notes
 

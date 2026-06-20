@@ -24,8 +24,10 @@ import {
   type IntentResolutionRequest,
 } from "../host-contracts"
 import {
+  createBrowserHostControllers,
   getBrowserDesktopAgentSession,
   registerBrowserDesktopAgentSession,
+  type BrowserHostControllers,
 } from "./browser-session.js"
 
 const DEFAULT_WCP_INTENT_RESOLUTION_TIMEOUT_MS = 60000
@@ -71,9 +73,10 @@ export interface BrowserDesktopAgentOptions extends Pick<
   intentResolver?: IntentResolver
 }
 
-export type BrowserDesktopAgent = DesktopAgent & {
-  readonly intentResolverUI?: IntentResolverUIMethods
-}
+export type BrowserDesktopAgent = DesktopAgent &
+  BrowserHostControllers & {
+    readonly intentResolverUI?: IntentResolverUIMethods
+  }
 
 function wireBrowserDesktopAgentLifecycle(
   desktopAgent: DesktopAgent,
@@ -239,6 +242,23 @@ export function createBrowserDesktopAgent(
   if (intentResolverUI) {
     Object.defineProperty(desktopAgent, "intentResolverUI", {
       value: intentResolverUI,
+      enumerable: true,
+      configurable: false,
+    })
+  }
+
+  const controllers = createBrowserHostControllers({
+    desktopAgent,
+    wcpConnector,
+    connectorTransport,
+    intentResolverUI,
+  })
+
+  for (const [key, controller] of Object.entries(controllers) as Array<
+    [keyof BrowserHostControllers, BrowserHostControllers[keyof BrowserHostControllers]]
+  >) {
+    Object.defineProperty(desktopAgent, key, {
+      value: controller,
       enumerable: true,
       configurable: false,
     })

@@ -21,7 +21,13 @@ export {
   getBrowserDesktopAgentSession,
   isBrowserDesktopAgent,
   clearBrowserDesktopAgentSession,
+  createBrowserHostControllers,
   type BrowserDesktopAgentSession,
+  type BrowserHostControllers,
+  type BrowserHostControllerOptions,
+  type BrowserIntentResolverController,
+  type BrowserChannelsController,
+  type BrowserAppsController,
 } from "./browser-session.js"
 
 export { WCPConnector } from "../app-connection/wcp-connector.js"

@@ -16,26 +16,44 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import type { Context } from "@finos/fdc3"
+import type { BrowserTypes, Context } from "@finos/fdc3"
 
 import * as sailDesktopAgent from "../../index"
 
+import { DesktopAgent } from "../../core/desktop-agent"
+import { createInMemoryTransportPair } from "../../transports/in-memory-transport"
 import { getBrowserDesktopAgentSession, isBrowserDesktopAgent } from "../browser-session"
+import * as sailPresets from "../index"
+import { WCPConnector } from "../index"
 
 import type { DirectoryApp } from "../../core/app-directory/types"
 import { retrieveAllApps } from "../../core/app-directory/app-directory-queries"
 
-import type { DesktopAgent } from "../../core/desktop-agent"
-
 import type {
+  IntentHandler,
   IntentResolutionRequest,
   IntentResolver,
   IntentResolverUIMethods,
 } from "../../host-contracts"
 
-type TestBrowserDesktopAgent = DesktopAgent & {
-  readonly intentResolverUI?: IntentResolverUIMethods
+type BrowserHostControllerSurface = {
+  intentResolver: {
+    getPendingRequests: () => IntentResolutionRequest[]
+    onRequest: (listener: (request: IntentResolutionRequest) => void) => () => void
+    select: (requestId: string, choice: IntentHandler) => void
+  }
+  channels: {
+    getUserChannels: () => BrowserTypes.Channel[]
+  }
+  apps: {
+    getAll: () => DirectoryApp[]
+  }
 }
+
+type TestBrowserDesktopAgent = DesktopAgent &
+  BrowserHostControllerSurface & {
+    readonly intentResolverUI?: IntentResolverUIMethods
+  }
 
 type BrowserDesktopAgentFactory = (options?: {
   appLauncher?: unknown
@@ -295,5 +313,128 @@ describe("createBrowserDesktopAgent top-level preset", () => {
       requestId: "preset-ui-timeout-1",
       selectedHandler: null,
     })
+  })
+})
+
+describe("browser host controller composition", () => {
+  const activeAgents: DesktopAgent[] = []
+
+  afterEach(() => {
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+
+    vi.useRealTimers()
+  })
+
+  it("exposes intentResolver, channels, and apps controller objects on the browser preset handle", () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent()
+    activeAgents.push(desktopAgent)
+
+    expect(desktopAgent.intentResolver).toBeDefined()
+    expect(desktopAgent.channels).toBeDefined()
+    expect(desktopAgent.apps).toBeDefined()
+    expect(typeof desktopAgent.intentResolver).toBe("object")
+    expect(typeof desktopAgent.channels).toBe("object")
+    expect(typeof desktopAgent.apps).toBe("object")
+  })
+
+  it("allows destructured controller methods without the original Desktop Agent as this", async () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent()
+    activeAgents.push(desktopAgent)
+
+    const { intentResolver, channels, apps } = desktopAgent
+
+    expect(typeof intentResolver.getPendingRequests).toBe("function")
+    expect(intentResolver.getPendingRequests()).toEqual([])
+
+    expect(typeof channels.getUserChannels).toBe("function")
+    expect(() => channels.getUserChannels()).not.toThrow()
+
+    expect(typeof apps.getAll).toBe("function")
+    expect(() => apps.getAll()).not.toThrow()
+
+    let requestFromDestructuredResolver: IntentResolutionRequest | undefined
+    const unsubscribe = intentResolver.onRequest(request => {
+      requestFromDestructuredResolver = request
+    })
+
+    const session = getBrowserDesktopAgentSession(desktopAgent)
+    const resolutionPromise = session.wcpConnector.requestIntentResolution({
+      requestId: "destructure-intent-req-1",
+      intent: "ViewContact",
+      context: { type: "fdc3.contact", name: "Destructured Contact" } satisfies Context,
+      handlers: [
+        {
+          appId: "handler-a",
+          title: "Handler A",
+          isRunning: true,
+          instanceId: "instance-a",
+        },
+      ],
+    })
+
+    await vi.waitFor(() => {
+      expect(requestFromDestructuredResolver).toBeDefined()
+    })
+
+    expect(intentResolver.getPendingRequests()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ requestId: "destructure-intent-req-1" })])
+    )
+
+    intentResolver.select("destructure-intent-req-1", requestFromDestructuredResolver!.handlers[0])
+    await expect(resolutionPromise).resolves.toEqual({
+      requestId: "destructure-intent-req-1",
+      selectedHandler: { appId: "handler-a", instanceId: "instance-a" },
+      intent: "ViewContact",
+    })
+
+    unsubscribe()
+  })
+
+  it("exports createBrowserHostControllers for manual DesktopAgent + WCPConnector composition", () => {
+    const createBrowserHostControllers = (sailPresets as Record<string, unknown>)
+      .createBrowserHostControllers
+
+    expect(createBrowserHostControllers).toBeDefined()
+    expect(typeof createBrowserHostControllers).toBe("function")
+  })
+
+  it("constructs the same controller shape via createBrowserHostControllers without the preset factory", () => {
+    const createBrowserHostControllers = (sailPresets as Record<string, unknown>)
+      .createBrowserHostControllers as (options: {
+      desktopAgent: DesktopAgent
+      wcpConnector: WCPConnector
+      connectorTransport: ReturnType<typeof createInMemoryTransportPair>[1]
+      intentResolverUI?: IntentResolverUIMethods
+    }) => BrowserHostControllerSurface
+
+    const [daTransport, connectorTransport] = createInMemoryTransportPair()
+    const wcpConnector = new WCPConnector(connectorTransport)
+    const desktopAgent = new DesktopAgent({ transport: daTransport })
+    activeAgents.push(desktopAgent)
+
+    const controllers = createBrowserHostControllers({
+      desktopAgent,
+      wcpConnector,
+      connectorTransport,
+    })
+
+    expect(controllers.intentResolver).toBeDefined()
+    expect(controllers.channels).toBeDefined()
+    expect(controllers.apps).toBeDefined()
+
+    const { intentResolver, channels, apps } = controllers
+
+    expect(typeof intentResolver.getPendingRequests).toBe("function")
+    expect(intentResolver.getPendingRequests()).toEqual([])
+
+    expect(typeof channels.getUserChannels).toBe("function")
+    expect(() => channels.getUserChannels()).not.toThrow()
+
+    expect(typeof apps.getAll).toBe("function")
+    expect(() => apps.getAll()).not.toThrow()
   })
 })
