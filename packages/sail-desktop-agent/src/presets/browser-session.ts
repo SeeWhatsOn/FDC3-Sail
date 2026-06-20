@@ -5,24 +5,15 @@ import type { DirectoryApp } from "../core/app-directory/types"
 import type { DesktopAgent } from "../core/desktop-agent"
 import type { Transport } from "../core/interfaces/transport"
 import type { WCPConnector } from "../app-connection/wcp-connector"
-import type {
-  IntentHandler,
-  IntentResolutionRequest,
-  IntentResolverUIMethods,
-} from "../host-contracts"
+import type { BrowserIntentResolverController, IntentResolverUIMethods } from "../host-contracts"
+
+export type { BrowserIntentResolverController } from "../host-contracts"
 
 /** Grouped browser host controllers attached to the preset handle. */
 export interface BrowserHostControllers {
   intentResolver: BrowserIntentResolverController
   channels: BrowserChannelsController
   apps: BrowserAppsController
-}
-
-/** Intent resolver host chrome — delegates to {@link IntentResolverUIMethods} when wired. */
-export interface BrowserIntentResolverController {
-  getPendingRequests: () => IntentResolutionRequest[]
-  onRequest: (listener: (request: IntentResolutionRequest) => void) => () => void
-  select: (requestId: string, choice: IntentHandler) => void
 }
 
 /** Channel host chrome placeholder — full behavior added in follow-up slices. */
@@ -95,6 +86,9 @@ export function createBrowserHostControllers(
     onRequest: listener => intentResolverUI?.onRequest(listener) ?? (() => {}),
     select: (requestId, choice) => {
       intentResolverUI?.select(requestId, choice)
+    },
+    cancel: requestId => {
+      intentResolverUI?.cancel(requestId)
     },
   }
 

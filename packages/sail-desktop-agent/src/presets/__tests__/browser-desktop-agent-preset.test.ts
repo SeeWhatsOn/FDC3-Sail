@@ -31,6 +31,7 @@ import { retrieveAllApps } from "../../core/app-directory/app-directory-queries"
 
 import type {
   IntentHandler,
+  IntentResolutionChoice,
   IntentResolutionRequest,
   IntentResolver,
   IntentResolverUIMethods,
@@ -40,7 +41,8 @@ type BrowserHostControllerSurface = {
   intentResolver: {
     getPendingRequests: () => IntentResolutionRequest[]
     onRequest: (listener: (request: IntentResolutionRequest) => void) => () => void
-    select: (requestId: string, choice: IntentHandler) => void
+    select: (requestId: string, choice: IntentResolutionChoice | IntentHandler) => void
+    cancel: (requestId: string) => void
   }
   channels: {
     getUserChannels: () => BrowserTypes.Channel[]
@@ -312,6 +314,254 @@ describe("createBrowserDesktopAgent top-level preset", () => {
     await expect(resolutionPromise).resolves.toEqual({
       requestId: "preset-ui-timeout-1",
       selectedHandler: null,
+    })
+  })
+})
+
+describe("desktopAgent.intentResolver canonical host controller", () => {
+  const activeAgents: DesktopAgent[] = []
+
+  const ambiguousHandlers = [
+    {
+      appId: "handler-a",
+      title: "Handler A",
+      icons: [{ src: "https://example.com/handler-a.svg" }],
+      isRunning: true,
+      instanceId: "instance-a",
+    },
+    {
+      appId: "handler-b",
+      title: "Handler B",
+      isRunning: false,
+    },
+  ]
+
+  afterEach(() => {
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+
+    vi.useRealTimers()
+  })
+
+  it("receives typed ambiguous intent requests via onRequest", async () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent()
+    activeAgents.push(desktopAgent)
+
+    const session = getBrowserDesktopAgentSession(desktopAgent)
+    const { intentResolver } = desktopAgent
+
+    let requestFromResolver: IntentResolutionRequest | undefined
+    intentResolver.onRequest(request => {
+      requestFromResolver = request
+    })
+
+    const resolutionPromise = session.wcpConnector.requestIntentResolution({
+      requestId: "canonical-on-request-1",
+      intent: "ViewContact",
+      context: { type: "fdc3.contact", name: "Canonical Contact" } satisfies Context,
+      handlers: ambiguousHandlers,
+    })
+
+    await vi.waitFor(() => {
+      expect(requestFromResolver).toBeDefined()
+    })
+
+    expect(requestFromResolver).toMatchObject({
+      requestId: "canonical-on-request-1",
+      intent: "ViewContact",
+    })
+    expect(requestFromResolver?.handlers).toHaveLength(2)
+    expect(requestFromResolver?.handlers[0]).toMatchObject({
+      app: {
+        appId: "handler-a",
+        title: "Handler A",
+        icons: [{ src: "https://example.com/handler-a.svg" }],
+      },
+      isRunning: true,
+      instanceId: "instance-a",
+    })
+
+    intentResolver.select("canonical-on-request-1", requestFromResolver!.handlers[0])
+
+    await expect(resolutionPromise).resolves.toEqual({
+      requestId: "canonical-on-request-1",
+      selectedHandler: { appId: "handler-a", instanceId: "instance-a" },
+      intent: "ViewContact",
+    })
+  })
+
+  it("continues intent delivery when select is called with an IntentResolutionChoice", async () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent()
+    activeAgents.push(desktopAgent)
+
+    const session = getBrowserDesktopAgentSession(desktopAgent)
+    const { intentResolver } = desktopAgent
+
+    let requestFromResolver: IntentResolutionRequest | undefined
+    intentResolver.onRequest(request => {
+      requestFromResolver = request
+    })
+
+    const resolutionPromise = session.wcpConnector.requestIntentResolution({
+      requestId: "canonical-choice-select-1",
+      intent: "ViewContact",
+      context: { type: "fdc3.contact", name: "Choice Select Contact" } satisfies Context,
+      handlers: [ambiguousHandlers[0]],
+    })
+
+    await vi.waitFor(() => {
+      expect(requestFromResolver).toBeDefined()
+    })
+
+    const choice: IntentResolutionChoice = {
+      intent: { name: "ViewContact", displayName: "View Contact" },
+      handler: requestFromResolver!.handlers[0],
+    }
+
+    intentResolver.select("canonical-choice-select-1", choice)
+
+    await expect(resolutionPromise).resolves.toEqual({
+      requestId: "canonical-choice-select-1",
+      selectedHandler: { appId: "handler-a", instanceId: "instance-a" },
+      intent: "ViewContact",
+    })
+  })
+
+  it("cancels pending resolution when cancel is called", async () => {
+    vi.useFakeTimers()
+
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent({
+      wcpOptions: { intentResolutionTimeout: 60_000 },
+    })
+    activeAgents.push(desktopAgent)
+
+    const session = getBrowserDesktopAgentSession(desktopAgent)
+    const { intentResolver } = desktopAgent
+
+    expect(typeof intentResolver.cancel).toBe("function")
+
+    let requestFromResolver: IntentResolutionRequest | undefined
+    intentResolver.onRequest(request => {
+      requestFromResolver = request
+    })
+
+    const resolutionPromise = session.wcpConnector.requestIntentResolution({
+      requestId: "canonical-cancel-1",
+      intent: "ViewContact",
+      context: { type: "fdc3.contact", name: "Cancel Contact" } satisfies Context,
+      handlers: [ambiguousHandlers[1]],
+    })
+
+    await vi.waitFor(() => {
+      expect(requestFromResolver).toBeDefined()
+    })
+
+    intentResolver.cancel("canonical-cancel-1")
+
+    await expect(resolutionPromise).resolves.toEqual({
+      requestId: "canonical-cancel-1",
+      selectedHandler: null,
+    })
+
+    await vi.advanceTimersByTimeAsync(60_000)
+  })
+
+  it("stops delivering requests to a listener after onRequest unsubscribe", async () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent()
+    activeAgents.push(desktopAgent)
+
+    const session = getBrowserDesktopAgentSession(desktopAgent)
+    const { intentResolver } = desktopAgent
+
+    let notificationCount = 0
+    const unsubscribe = intentResolver.onRequest(() => {
+      notificationCount += 1
+    })
+
+    const firstResolution = session.wcpConnector.requestIntentResolution({
+      requestId: "canonical-unsub-1",
+      intent: "ViewContact",
+      context: { type: "fdc3.contact", name: "Unsub Contact One" } satisfies Context,
+      handlers: [ambiguousHandlers[0]],
+    })
+
+    await vi.waitFor(() => {
+      expect(notificationCount).toBe(1)
+    })
+
+    const pendingAfterFirst = intentResolver.getPendingRequests()
+    intentResolver.select("canonical-unsub-1", pendingAfterFirst[0].handlers[0])
+    await firstResolution
+
+    unsubscribe()
+
+    const secondResolution = session.wcpConnector.requestIntentResolution({
+      requestId: "canonical-unsub-2",
+      intent: "ViewContact",
+      context: { type: "fdc3.contact", name: "Unsub Contact Two" } satisfies Context,
+      handlers: [ambiguousHandlers[0]],
+    })
+
+    await vi.waitFor(() => {
+      expect(intentResolver.getPendingRequests()).toEqual(
+        expect.arrayContaining([expect.objectContaining({ requestId: "canonical-unsub-2" })])
+      )
+    })
+
+    expect(notificationCount).toBe(1)
+
+    const pendingAfterSecond = intentResolver.getPendingRequests()
+    intentResolver.select("canonical-unsub-2", pendingAfterSecond[0].handlers[0])
+    await secondResolution
+  })
+
+  it("keeps intentResolverUI compatible with the canonical intentResolver surface", async () => {
+    const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
+    const desktopAgent = createBrowserDesktopAgent()
+    activeAgents.push(desktopAgent)
+
+    const session = getBrowserDesktopAgentSession(desktopAgent)
+    const { intentResolver, intentResolverUI } = desktopAgent
+
+    expect(intentResolverUI).toBeDefined()
+    expect(session.intentResolverUI).toBe(intentResolverUI)
+
+    let requestFromCanonical: IntentResolutionRequest | undefined
+    let requestFromAlias: IntentResolutionRequest | undefined
+
+    intentResolver.onRequest(request => {
+      requestFromCanonical = request
+    })
+    intentResolverUI!.onRequest(request => {
+      requestFromAlias = request
+    })
+
+    const resolutionPromise = session.wcpConnector.requestIntentResolution({
+      requestId: "canonical-alias-compat-1",
+      intent: "ViewContact",
+      context: { type: "fdc3.contact", name: "Alias Compat Contact" } satisfies Context,
+      handlers: [ambiguousHandlers[0]],
+    })
+
+    await vi.waitFor(() => {
+      expect(requestFromCanonical).toBeDefined()
+      expect(requestFromAlias).toBeDefined()
+    })
+
+    expect(requestFromCanonical).toEqual(requestFromAlias)
+    expect(intentResolver.getPendingRequests()).toEqual(intentResolverUI!.getPendingRequests())
+
+    intentResolverUI!.select("canonical-alias-compat-1", requestFromAlias!.handlers[0])
+
+    await expect(resolutionPromise).resolves.toEqual({
+      requestId: "canonical-alias-compat-1",
+      selectedHandler: { appId: "handler-a", instanceId: "instance-a" },
+      intent: "ViewContact",
     })
   })
 })

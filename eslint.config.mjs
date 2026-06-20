@@ -135,7 +135,11 @@ export default defineConfig([
   // Allow larger generated/tests in constrained spots
   {
     files: [
-      "packages/sail-desktop-agent/src/browser/__tests__/**/*.ts",
+      "packages/sail-desktop-agent/**/__tests__/**/*.ts",
+      "packages/sail-desktop-agent/**/*.test.ts",
+      "packages/sail-desktop-agent/test/**/*.ts",
+      "packages/sail-platform-api/**/__tests__/**/*.ts",
+      "packages/sail-platform-api/**/*.test.ts",
       "packages/sail-desktop-agent/src/core/app-directory/app-directory-manager.ts",
       "packages/sail-platform-api/src/services/validation/dacp-schemas.ts",
     ],

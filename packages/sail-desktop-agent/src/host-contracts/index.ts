@@ -15,6 +15,7 @@ export type {
   HostIntentResolverOptions,
   HostIntentResolverPayload,
   HostIntentResolverResponse,
+  BrowserIntentResolverController,
   IntentResolver,
   IntentResolverUIMethods,
   IntentResolutionChoice,
