@@ -157,7 +157,7 @@ Docs-only slices use human review plus optional docs build; do not add executabl
 | BFDA-02 | verified-gap | `presets/create-browser-desktop-agent.ts` builds the default browser DA through an `InMemoryTransport` pair; `presets/create-wcp-client.ts` exposes remote DA client mode as public preset | `simplify-browser-desktop-agent-preset` |
 | BFDA-03 | verified-partial | `dacp-response-utils.ts` sends all responses through generic `Transport`; this centralizes routing but carries remote-placement assumptions into handler code | `simplify-dacp-handler-response-plumbing` |
 | BFDA-04 | verified-partial | `browser-session.ts` exposes grouped `intentResolver`, `channels`, and `apps`; `sail-platform.ts` still exposes raw connector/session state and waits for `channelChanged` after local state mutation | `unify-browser-host-ui-controllers` |
-| BFDA-05 | verified-gap | `wcp-message-routing.ts` owns app `MessagePortTransport` routing and WCP5 instance migration; this must be preserved before removing internal transport assumptions | `preserve-wcp-messageport-connectivity` |
+| BFDA-05 | **done** (2026-06-21) | WCP MessagePort routing guard integration tests added; work item deleted | `preserve-wcp-messageport-connectivity` |
 | BFDA-06 | verified-gap | `integrator-guide.md` still documents Node/server singleton and `createWCPClient`; `composition.md` lists a remote DA pattern alongside the browser preset | `document-browser-first-desktop-agent` |
 | BFDA-07 | investigate | Current logging exists in `MessagePortTransport`, WCP routing, connector, and handlers, but there is no domain-level middleware/OTEL hook contract | `define-browser-da-observability-hooks` |
 
@@ -168,4 +168,8 @@ Sail should be browser-first: one browser-resident `DesktopAgent` owns local FDC
 ## Work item retention
 
 Delivered work item `.md` files are **deleted** after delivery. This section and `plans/project-docs.md` are the durable record for completed work.
+
+| Slug | Status | Delivered | Notes |
+|------|--------|-----------|-------|
+| `preserve-wcp-messageport-connectivity` | done — work item deleted | 2026-06-21 | Added `WCP MessagePort routing guard` integration tests (targeted routing, WCP6 cleanup, host disconnect with two apps); no production code changes |
 

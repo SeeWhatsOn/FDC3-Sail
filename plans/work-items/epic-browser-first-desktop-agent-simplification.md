@@ -13,7 +13,6 @@ file_manifest:
   - plans/work-items/simplify-browser-desktop-agent-preset.md
   - plans/work-items/simplify-dacp-handler-response-plumbing.md
   - plans/work-items/unify-browser-host-ui-controllers.md
-  - plans/work-items/preserve-wcp-messageport-connectivity.md
   - plans/work-items/document-browser-first-desktop-agent.md
   - plans/work-items/define-browser-da-observability-hooks.md
 depends_on: []
@@ -54,7 +53,7 @@ Sail should be browser-first: one browser-resident `DesktopAgent` owns local FDC
 | Slug | Kind | depends_on | Status |
 |------|------|------------|--------|
 | `spike-browser-first-transport-simplification` | spike | [] | draft |
-| `preserve-wcp-messageport-connectivity` | task | [`spike-browser-first-transport-simplification`] | draft |
+| `preserve-wcp-messageport-connectivity` | task | [`spike-browser-first-transport-simplification`] | done — work item deleted |
 | `simplify-browser-desktop-agent-preset` | task | [`spike-browser-first-transport-simplification`, `preserve-wcp-messageport-connectivity`] | draft |
 | `simplify-dacp-handler-response-plumbing` | task | [`spike-browser-first-transport-simplification`, `preserve-wcp-messageport-connectivity`] | draft |
 | `unify-browser-host-ui-controllers` | task | [`simplify-browser-desktop-agent-preset`] | draft |

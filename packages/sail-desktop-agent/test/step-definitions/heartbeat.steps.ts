@@ -185,7 +185,7 @@ Then(
       )
     }
 
-    const headers = dataTable.raw()[0]!
+    const headers = dataTable.raw()[0]
     const resolvedRows = dataTable.hashes().map(row => {
       const resolved = { ...row }
       if (headers.includes("to.instanceId")) {

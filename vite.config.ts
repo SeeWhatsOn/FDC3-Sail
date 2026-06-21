@@ -2,8 +2,8 @@ import { defineConfig } from "vite-plus"
 
 export default defineConfig({
   staged: {
-    "packages/*/src/**/*.{ts,tsx}": "vp fmt && vp lint --fix --max-warnings=0",
-    "website/**/*.{ts,tsx}": "vp fmt && vp lint --fix --max-warnings=0",
+    "packages/*/src/**/*.{ts,tsx}": "vp check --fix",
+    "website/**/*.{ts,tsx}": "vp check --fix",
   },
   lint: {
     plugins: ["oxc", "typescript", "unicorn", "react"],

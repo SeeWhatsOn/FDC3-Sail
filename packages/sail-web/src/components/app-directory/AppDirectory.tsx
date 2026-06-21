@@ -117,7 +117,7 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
 
   // Fetch app directory from desktop agent once on mount
   useEffect(() => {
-    void loadApps()
+    loadApps()
   }, [loadApps])
 
   const handleAppClick = (app: DirectoryApp) => {

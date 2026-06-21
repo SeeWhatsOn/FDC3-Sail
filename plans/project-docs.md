@@ -58,11 +58,13 @@ Slugs only — implementation is on `v3-pre`; details were in deleted PRDs/work 
 
 **Toolbox v4 wave:** see `plans/prd-toolbox-conformance-v5-follow-up.md` **Work item retention**
 
+**Browser-first DA simplification (BFDA):** `preserve-wcp-messageport-connectivity` — WCP MessagePort routing guard integration tests (2026-06-21); see `plans/prd-browser-first-desktop-agent-simplification.md` **Work item retention**
+
 **Toolbox v5 partial (TV5-01 hygiene slice):** `harness-instance-lifecycle` — `prepareLaunchedHostInstance` + `disconnectHarnessInstance` merged on `v3-pre` (2026-06); close-context handshake still open under `fix-harness-finOs-session-teardown`
 
 ## PRD source
 
-- Active PRDs: `plans/prd-toolbox-conformance-v5-follow-up.md`, `plans/prd-fdc3-3-0-dual-version-support.md`
+- Active PRDs: `plans/prd-toolbox-conformance-v5-follow-up.md`, `plans/prd-fdc3-3-0-dual-version-support.md`, `plans/prd-browser-first-desktop-agent-simplification.md`
 - Attribution: `conformance-test-failure-review.md`, `conformance-report-v*.txt`
 - FDC3 review / remediation: `FDC3_2_2_COMPLIANCE_REVIEW.MD`, `FDC3_2_2_REMEDIATION_PLAN.MD`
 
