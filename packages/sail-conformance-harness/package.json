@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n agent,harness \"npm run dev -w @finos/sail-desktop-agent --prefix ../..\" \"vite\"",
+    "dev": "concurrently -k -n agent,harness \"npm run dev -w @finos/sail-desktop-agent --prefix ../..\" \"vp dev\"",
     "build": "vp build",
     "typecheck": "tsc --noEmit",
     "test": "vp test run",

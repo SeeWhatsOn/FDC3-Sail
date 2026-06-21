@@ -3,7 +3,7 @@ title: "Toolbox conformance v5 follow-up (epic)"
 slug: epic-toolbox-conformance-v5-follow-up
 kind: epic
 type: feature
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -39,15 +39,13 @@ Single active conformance coordinator (v4 PRD and epic **deleted**). See PRD **W
 
 | Slug | Kind | Status | Notes |
 |------|------|--------|-------|
-| `fix-harness-finOs-session-teardown` | task | waiting_on_user | TV5-01 — proceed first |
-| `extend-wcp-channel-delivery-integration-tests` | task | in-progress | TV5-02 |
-| `dedupe-findintent-directory-running-apps` | task | blocked | TV5-03 — FINOS + teardown |
-| `fix-findintent-empty-apps-noappsfound` | task | blocked | TV5-04 |
-| `align-raise-intent-throws-v4-matrix` | task | blocked | TV5-05 |
+| `fix-harness-finOs-session-teardown` | task | waiting_on_user | TV5-01 — lifecycle merged; close-context + manual v6 |
+| `extend-wcp-channel-delivery-integration-tests` | task | waiting_on_user | TV5-02 — implementation complete |
+| `fix-findintent-raise-intent-oracle` | task | blocked | TV5-03–05 merged |
 
 **Delivered (work items deleted):** `fix-toolbox-metadata-client-and-dacp-paths`, `populate-intent-result-metadata-toolbox`, `pre-register-conformance1-pending-instance`, `harness-popup-wcp-disconnect-cleanup`, `record-toolbox-v4-measured-baseline`, `verify-v4-agent-fixes-on-current-branch`, `diagnose-harness-user-cancelled-resolution`, epic `toolbox-conformance-v4-follow-up`.
 
-**Suggested order:** TV5-01 → TV5-02 → manual v6 export → unblock TV5-03–05 if FINOS policy clear.
+**Suggested order:** TV5-01 manual v6 → approve TV5-02 → manual v6 export → unblock TV5-03–05 if FINOS policy clear.
 
 ## Out of scope
 

@@ -6,6 +6,8 @@ sidebar_position: 4
 
 FDC3 user channels can be changed in two ways. Sail supports both at the protocol level; **Sail Web uses host-controlled chrome** by default.
 
+For **one agent per browsing context** and why host chrome must not poll `getState()`, see [Integrator guide — One Desktop Agent per context](../packages/desktop-agent/integrator-guide.md#one-desktop-agent-per-context).
+
 ## Roles
 
 | Layer | Responsibility |
@@ -111,6 +113,7 @@ Embedders using **`createBrowserDesktopAgent`** directly should use **`channels.
 
 ## Related work
 
+- Integrator singleton + channel reactivity: [Desktop Agent integrator guide](../packages/desktop-agent/integrator-guide.md#one-desktop-agent-per-context)
 - Transport hardening: `plans/work-items/replace-dacp-impersonation-with-channel-api.md`
 - Architecture overview: [Overview](./overview.md) (Sail-controlled UI)
 - Platform API: [@finos/sail-platform-api](../packages/platform-api/overview)

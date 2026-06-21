@@ -50,9 +50,7 @@ This item is **folder and import hygiene** after handshake routing links are on 
 
 ## Reference docs
 
-- `plans/work-items/move-wcp-temp-id-alias-to-agent-state.md` (prerequisite — deletes `instance-id-resolver.ts`, adds `state.wcpHandshakeRouting`)
-- `plans/work-items/consolidate-temp-instance-id-resolver.md` (historical — module singleton introduced here)
-- `plans/work-items/epic-desktop-agent-state-hardening.md`
+- `plans/project-docs.md` (state hardening delivered index; prerequisite `move-wcp-temp-id-alias-to-agent-state` done)
 - `AGENTS.md` (`src/` layout, WCP handshake routing vs instance id, testing conventions)
 - `.cursor/skills/consume-sail-desktop-agent/SKILL.md` (integrator-facing; no monorepo paths today)
 

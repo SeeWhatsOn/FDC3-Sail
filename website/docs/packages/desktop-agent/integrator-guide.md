@@ -39,6 +39,105 @@ Everything else is detail under one of those two boxes.
 
 **InMemoryTransport** (local mode) is only the **short internal wire** between edge and DA in the same JS process. It is **not** how apps connect. Toolbox `AppTimeout` failures usually mean **MessagePort routing or instanceId mismatch** on the edge, not broken InMemoryTransport.
 
+## One Desktop Agent per context
+
+FDC3 assumes **one logical Desktop Agent per user session** — one channel graph, one app instance registry, one intent resolution flow. `@finos/sail-desktop-agent` does not enforce that globally: tests and advanced setups may construct multiple `DesktopAgent` instances. **Host integrators must enforce a singleton** in their deployment context.
+
+| Context | Singleton scope | Typical pattern |
+|---------|-----------------|-----------------|
+| Browser host page | One agent per top-level `window` (tab) | Module-level holder or `window` property |
+| Node / worker server | One agent per process (or worker) | Module-level `let` initialized once |
+| Remote split | One `DesktopAgent` on the server; one `createWCPClient` edge per browser tab | Server module singleton + per-tab client |
+
+Creating two agents in the same browser tab (for example two `createBrowserDesktopAgent()` calls without sharing state) yields **split-brain**: duplicate WCP listeners, conflicting instance registries, and channel UI that reads the wrong agent.
+
+### Browser tab singleton
+
+Hold the preset handle once for the lifetime of the host page. HMR and strict-mode double mount in dev may call your factory twice — guard with a module-level or `window` holder:
+
+```typescript
+import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
+import type { AppLauncher } from "@finos/sail-desktop-agent"
+
+declare global {
+  interface Window {
+    __sailDesktopAgent?: ReturnType<typeof createBrowserDesktopAgent>
+  }
+}
+
+function createAgent(appLauncher: AppLauncher) {
+  return createBrowserDesktopAgent({ appLauncher })
+}
+
+export function getBrowserDesktopAgent(appLauncher: AppLauncher) {
+  if (!window.__sailDesktopAgent) {
+    window.__sailDesktopAgent = createAgent(appLauncher)
+  }
+  return window.__sailDesktopAgent
+}
+
+// Host bootstrap (once)
+const desktopAgent = getBrowserDesktopAgent(myAppLauncher)
+const { intentResolver, channels, apps } = desktopAgent
+
+// Teardown when the host shell unmounts (SPA route change, logout, etc.)
+export function destroyBrowserDesktopAgent() {
+  window.__sailDesktopAgent?.stop()
+  window.__sailDesktopAgent = undefined
+}
+```
+
+`SailPlatform` and `createBrowserDesktopAgent` follow the same rule: construct **one** platform or preset handle per host page and reuse it for intent, channel, and app controllers.
+
+### Node / server singleton
+
+When the Desktop Agent runs in Node (or a dedicated worker), use a module singleton. The browser tab still runs **`createWCPClient`** — one client edge per tab, one server agent per process:
+
+```typescript
+// server/desktop-agent.ts
+import { DesktopAgent } from "@finos/sail-desktop-agent"
+import { createServerTransport } from "./transport" // WebSocket, IPC, etc.
+
+let agent: DesktopAgent | undefined
+
+export function getServerDesktopAgent(): DesktopAgent {
+  if (!agent) {
+    agent = new DesktopAgent({ transport: createServerTransport() })
+    agent.start()
+  }
+  return agent
+}
+
+export async function stopServerDesktopAgent(): Promise<void> {
+  await agent?.stop()
+  agent = undefined
+}
+```
+
+```typescript
+// browser/host.ts — one WCP client per tab; transport pairs with the server singleton above
+import { createWCPClient } from "@finos/sail-desktop-agent/presets"
+import { createBrowserClientTransport } from "./transport"
+
+let wcpClient: ReturnType<typeof createWCPClient> | undefined
+
+export function getWcpClient() {
+  if (!wcpClient) {
+    wcpClient = createWCPClient({ transport: createBrowserClientTransport() })
+    wcpClient.start()
+  }
+  return wcpClient
+}
+```
+
+See [How to wire (decision tree)](#how-to-wire-decision-tree) for local vs remote entry points.
+
+### Host channel UI and `getState()`
+
+Channel chrome must use **push events plus granular getters**, not full state snapshots. Prefer `channels.onAppChannelChange` / `channels.getAppChannelId` on the browser preset, or `SailPlatform.changeAppChannel` / `getAppUserChannel` on the reference stack. Do **not** poll or mutate `desktopAgent.getState()` for UI — that API is for tests and debugging only.
+
+Details and platform vs preset APIs: [Channel selector — host shell UI](#channel-selector--host-shell-ui) and [Channel selection architecture](../../architecture/channel-selection.md).
+
 ## Host contract example
 
 FDC3 in the browser is three runtime parts. Only the bottom two come from this package; **your host shell** wires the contracts in the middle.

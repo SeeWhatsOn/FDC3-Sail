@@ -21,8 +21,8 @@ Success is:
 | Prior plan | Status | This PRD |
 |------------|--------|----------|
 | `plans/prd-toolbox-conformance-v5-follow-up.md` | Active — 2.2 harness hygiene + WCP | **Extend** — finish 2.2 before flipping advertised version; no duplicate teardown rows |
-| `plans/prd-browser-preset-host-api.md` | Active — host controllers | **No duplicate** — `AppLauncher.close` already wired for v3.0 self-close |
-| `plans/prd-desktop-agent-state-hardening.md` | Mostly delivered | **No duplicate** unless instance lifecycle blocks 3.0 open-with-context |
+| Browser preset host API | **Delivered** — PRD deleted | **No duplicate** — `AppLauncher.close` wired for v3.0 self-close |
+| State hardening PRD | **Delivered** — PRD deleted | **No duplicate** unless instance lifecycle regression |
 | `FDC3_2_2_REMEDIATION_PLAN.MD` | Partial | **Superseded for versioning strategy** — this PRD owns 2.2→3.0 path; keep open 2.2 rows until closed |
 | FINOS toolbox v5 export | Baseline 53/49 pass | **Extend** with future v6+ 3.0 pack when `@finos/fdc3` 3.x client ships |
 

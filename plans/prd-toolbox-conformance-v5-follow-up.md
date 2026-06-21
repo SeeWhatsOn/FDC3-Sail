@@ -16,8 +16,7 @@ Close the gap between v5 export and a v6 re-run by fixing **harness FINOS sessio
 | Toolbox burn-down TB-00–TB-09 | **done** — work items deleted | Historical; see `plans/project-docs.md` delivered index |
 | v4 follow-up wave (TV4-03–08, harness pre-register/popup, metadata client) | **done** — work items deleted | Absorbed below in **Work item retention** |
 | `conformance-test-failure-review.md` | v4 + v5 baselines recorded | **Extend** for v6 after delivery |
-| `plans/prd-desktop-agent-state-hardening.md` | separate | **No duplicate** unless regression |
-| `plans/prd-browser-preset-host-api.md` | separate | **No duplicate** |
+| State hardening / browser preset PRDs | **Delivered** — PRDs deleted | **No duplicate** unless regression |
 
 ## Evidence summary (v4 → v5)
 
@@ -37,9 +36,7 @@ Close the gap between v5 export and a v6 re-run by fixing **harness FINOS sessio
 | TV5-00 | Epic coordinating v5 follow-up | epic | `epic-toolbox-conformance-v5-follow-up` |
 | TV5-01 | Harness FINOS session teardown (`closeWindow` / `app-control` close context) | task | `fix-harness-finOs-session-teardown` |
 | TV5-02 | WCP Vitest: two connected apps — user/app channel broadcast delivery | task | `extend-wcp-channel-delivery-integration-tests` |
-| TV5-03 | Dedupe `AppIntent.apps` when directory + running instance overlap | task | `dedupe-findintent-directory-running-apps` |
-| TV5-04 | `findIntent` wrong-context → `NoAppsFound` (not `assert.fail()`) | task | `fix-findintent-empty-apps-noappsfound` |
-| TV5-05 | Align raiseIntent throws `message` with FDC3 matrix | task | `align-raise-intent-throws-v4-matrix` |
+| TV5-03–05 | findIntent apps[] oracle, NoAppsFound, raiseIntent throws matrix | task | `fix-findintent-raise-intent-oracle` |
 
 ## Out of scope
 
@@ -75,9 +72,7 @@ npm run dev -w @finos/sail-conformance-harness   # :3001 manual toolbox → conf
 |----|--------|----------|----------------|
 | TV5-01 | **active** | v5: 26× close-context; stale instances inflate findIntent | `fix-harness-finOs-session-teardown` |
 | TV5-02 | **active** | v5: AppTimeout cleared; need two-app WCP channel path | `extend-wcp-channel-delivery-integration-tests` |
-| TV5-03 | **blocked** | FINOS apps[] policy ambiguous; v5 findIntent 4 vs 1 may be stale state | `dedupe-findintent-directory-running-apps` |
-| TV5-04 | **blocked** | depends TV5-03 policy | `fix-findintent-empty-apps-noappsfound` |
-| TV5-05 | **blocked** | depends TV5-04 | `align-raise-intent-throws-v4-matrix` |
+| TV5-03–05 | **blocked** | FINOS apps[] policy + TV5-01 v6 attribution | `fix-findintent-raise-intent-oracle` |
 | TV5-00 | **active** | coordinates TV5-01–05 | `epic-toolbox-conformance-v5-follow-up` |
 
 ## Work item retention
@@ -100,3 +95,17 @@ npm run dev -w @finos/sail-conformance-harness   # :3001 manual toolbox → conf
 ### Burn-down TB-00–TB-09
 
 All delivered — slugs listed in `plans/project-docs.md` **Delivered work index**.
+
+### v5 partial (TV5-01 hygiene slice, 2026-06-21)
+
+| Slug | Status |
+|------|--------|
+| `harness-instance-lifecycle` (in `fix-harness-finOs-session-teardown`) | partial — `prepareLaunchedHostInstance` + `disconnectHarnessInstance` merged; close-context handshake still open |
+
+### Grooming (2026-06-21)
+
+| Slug | Status |
+|------|--------|
+| `dedupe-findintent-directory-running-apps` | merged → `fix-findintent-raise-intent-oracle` |
+| `fix-findintent-empty-apps-noappsfound` | merged → `fix-findintent-raise-intent-oracle` |
+| `align-raise-intent-throws-v4-matrix` | merged → `fix-findintent-raise-intent-oracle` |

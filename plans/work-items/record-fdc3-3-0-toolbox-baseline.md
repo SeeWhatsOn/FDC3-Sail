@@ -3,7 +3,7 @@ title: "Record FDC3 3.0 toolbox harness baseline"
 slug: record-fdc3-3-0-toolbox-baseline
 kind: task
 type: chore
-status: draft
+status: blocked
 loop_count: 0
 loop_limit: 3
 last_agent: ""

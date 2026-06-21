@@ -23,7 +23,7 @@ tags: [fdc3]
 
 ## Goal
 
-Make the conformance harness complete FINOS toolbox teardown (`closeWindow` / `app-control` close context) and remove stale WCP instances so channel, metadata, open, and findIntent scenarios run against a clean agent session.
+Complete FINOS toolbox teardown for the **close-context handshake** (`closeWindow` / `app-control`) after channel/metadata scenarios. **Stale-instance hygiene** is merged — see **Staged for review**.
 
 ## User or system context
 
@@ -39,7 +39,7 @@ v5 export shows **26×** `App didn't return close context within 1 sec` (user/ap
 
 ## Parent context
 
-Child of `epic-toolbox-conformance-v5-follow-up`. Complements completed Conformance1 pre-register and popup disconnect; this item closes the **session hygiene** loop for v6. Distinct from blocked agent `dedupe-findintent-directory-running-apps` — teardown must land first so toolbox `apps.length` reflects product behavior not accumulated state.
+Child of `epic-toolbox-conformance-v5-follow-up`. Complements completed Conformance1 pre-register and popup disconnect; this item closes the **session hygiene** loop for v6. Distinct from blocked agent `fix-findintent-raise-intent-oracle` — run manual v6 after this item's close-context work to see if findIntent failures are stale state vs oracle gaps.
 
 ## Behavior spec
 
@@ -55,15 +55,15 @@ Given a contextMetadata scenario (user or app channel) finishes
 When teardown runs
 Then the same close-context contract is satisfied within the toolbox budget
 
-### Stale instance hygiene
+### Stale instance hygiene (merged — verify on v6)
 
 Given multiple mock apps were opened during the toolbox run
 When each test scenario completes (success or failure)
-Then harness removes panel entries and calls `desktopAgent.disconnectInstance(canonicalInstanceId)` for CONNECTED/PENDING mock instances from that scenario where the browsing context has closed
+Then harness removes panel entries and calls `desktopAgent.disconnectInstance` for mock instances from that scenario
 
-Given a full toolbox run completes
+Given a full toolbox run completes after lifecycle merge
 When `findIntent` runs late in the pack
-Then `AppIntent.apps.length` is not inflated by stale CONNECTED rows from earlier scenarios (target: oracle 1 vs 1 for `FindIntentAppD` once agent dedupe is unblocked)
+Then stale CONNECTED rows from earlier scenarios are reduced vs v5 (attribute remaining oracle gaps to `fix-findintent-raise-intent-oracle`)
 
 ### Open-with-context and findInstances
 
@@ -79,7 +79,7 @@ Then the canonical WCP5 instance id matches the launcher-assigned id (no UUID mi
 
 - sail-web / platform-api launcher
 - Changing FINOS toolbox protocol or 1s close budget
-- Agent `findIntent` dedupe logic (blocked separate item)
+- Agent `findIntent` oracle logic (`fix-findintent-raise-intent-oracle`)
 - Heartbeat interval tuning
 - Overriding `window.close` on real popup browsing contexts
 
@@ -107,14 +107,18 @@ _(empty)_
 
 ## Staged for review
 
-- **Build fix:** repaired corrupted `intent-result-metadata.ts` (`isContextWithMetadata` return type / stray syntax).
-- **Harness lifecycle:** `harness-instance-lifecycle.ts` — `prepareLaunchedHostInstance` (pre-register before popup/iframe) + `disconnectHarnessInstance` (panel + popup + agent disconnect).
-- **Bootstrap wiring:** launch path pre-registers; `onAppDisconnected` and popup close both call `disconnectHarnessInstance`.
-- **Popup poll:** default 100ms (was 500ms).
-- **Tests:** `harness-instance-lifecycle.test.ts` (2); updated correlation assertions (launcher id === WCP5 id after pre-register).
-- **Targeted:** `npm test -w @finos/sail-conformance-harness` — 21/21 pass; desktop-agent build green.
+### Merged — instance lifecycle hygiene
 
-**Manual gate:** harness `:3001` v6 toolbox re-run (user/app channels + Open-Tests) to confirm close-context 1s budget and reduced stale instances.
+- `harness-instance-lifecycle.ts` — `prepareLaunchedHostInstance` + `disconnectHarnessInstance`
+- Bootstrap wiring: pre-register on launch; `onAppDisconnected` and popup close call `disconnectHarnessInstance`
+- Popup poll default 100ms (was 500ms)
+- Tests: `harness-instance-lifecycle.test.ts` (2); updated correlation harness assertions
+- `npm test -w @finos/sail-conformance-harness` — 21/21 pass
+
+### Open — close-context handshake + manual v6 gate
+
+- No harness `app-control` / `closeWindow` close-context listener found yet (dominant v5 cluster: 26×)
+- **Manual gate:** harness `:3001` v6 toolbox re-run (user/app channels + Open-Tests) after close-context path lands
 
 ## Escalation notes
 

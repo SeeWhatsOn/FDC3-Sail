@@ -3,7 +3,7 @@ title: "WCP integration tests for two-app channel delivery"
 slug: extend-wcp-channel-delivery-integration-tests
 kind: task
 type: feature
-status: in-progress
+status: waiting_on_user
 loop_count: 0
 loop_limit: 3
 last_agent: ""
@@ -76,7 +76,14 @@ _(empty)_
 
 ## Staged for review
 
-Partial delivery (2026-06): three Vitest cases in `wcp-desktop-agent.integration.test.ts` — temp→canonical handshake, two-app user-channel broadcast, host-adopt open→PENDING→WCP4. Shared helpers in `wcp-edge-test-helpers.ts`. Remaining: explicit app-channel scenario if still required for TV4-05; confirm `broadcastEvent.meta.destination.instanceId` assertion is stable across schema versions.
+**TV5-02 complete (2026-06-21 grooming audit).** Vitest cases in `wcp-desktop-agent.integration.test.ts`:
+
+- `"delivers user-channel broadcast from app B to app A listener over MessagePort routing"` (~L341)
+- `"delivers app-channel broadcast from app B to app A listener over MessagePort routing"` (~L397)
+- `broadcastEvent.meta.destination.instanceId` asserted in both broadcast tests
+- Temp→canonical handshake and host pre-register / PENDING→WCP4 adopt cases
+
+Shared helpers in `wcp-edge-test-helpers.ts`. Awaiting human `approve` at delivery gate.
 
 ## Escalation notes
 
