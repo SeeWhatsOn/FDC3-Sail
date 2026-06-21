@@ -36,22 +36,26 @@ FDC3 user channels can be changed in two ways. Sail supports both at the protoco
 
 ### Set (join / leave) on behalf of an instance
 
-The host calls **`SailPlatform.changeAppChannel(instanceId, channelId | null)`**:
+**Browser preset** hosts call **`channels.changeAppChannel(instanceId, channelId | null)`** on the `createBrowserDesktopAgent` handle.
 
-1. Platform sends a typed **`joinUserChannelRequest`** or **`leaveCurrentChannelRequest`** with `meta.source.instanceId` set to that app.
+**Sail platform** hosts call **`SailPlatform.changeAppChannel(instanceId, channelId | null)`**.
+
+Both paths:
+
+1. Send a typed **`joinUserChannelRequest`** or **`leaveCurrentChannelRequest`** with `meta.source.instanceId` set to that app.
 2. Desktop Agent handlers update `instance.currentUserChannel`.
 3. Agent emits **`channelChangedEvent`** toward the app.
-4. WCP routes the event and emits **`channelChanged`** on the connector for host UI.
+4. WCP routes the event and emits **`channelChanged`** on the connector; the `channels` controller surfaces this via **`onAppChannelChange`**.
 
 This is “on behalf of the app” in **identity** (source instance id), not “bypass FDC3”.
 
 ### Get (read) for chrome
 
-| What chrome needs | API / mechanism today | Notes |
-|-------------------|----------------------|--------|
-| List of user channels | `platform.getUserChannels()` | Reads `state.channels.user` from agent state (not per-app DACP). |
-| Current channel for a tile | `platform.getAppUserChannel(instanceId)` | Reads `instance.currentUserChannel` from agent state (no DACP round-trip). |
-| Event-driven mirror | `onChannelChanged` → connection store (`channelId`) | Optional; matches what the app receives via `userChannelChanged`. |
+| What chrome needs | Browser preset API | SailPlatform API | Notes |
+|-------------------|-------------------|------------------|--------|
+| List of user channels | `channels.getUserChannels()` | `platform.getUserChannels()` | Reads agent state (not per-app DACP). |
+| Current channel for a tile | `channels.getAppChannelId(instanceId)` or `channels.getAppChannel(instanceId)` | `platform.getAppUserChannel(instanceId)` | No DACP round-trip. |
+| Event-driven mirror | `channels.onAppChannelChange(listener)` | `onChannelChanged` → connection store | Push model — do not poll `getState()`. |
 
 Apps still use **`fdc3.getCurrentChannel()`** inside the iframe over MessagePort — that is the app’s own DACP `getCurrentChannelRequest`.
 
@@ -59,8 +63,9 @@ Apps still use **`fdc3.getCurrentChannel()`** inside the iframe over MessagePort
 
 | Consumer | Listen to |
 |----------|-----------|
-| **Host chrome** | `SailPlatform` config `onChannelChanged`, or `wcpConnector.on("channelChanged")`, or a store fed by those events. |
-| **App iframe** | `fdc3.addEventListener("userChannelChanged", …)` (FDC3 2.2). |
+| **Host chrome (preset)** | `channels.onAppChannelChange` on the `createBrowserDesktopAgent` handle |
+| **Host chrome (Sail platform)** | `SailPlatform` config `onChannelChanged`, or `wcpConnector.on("channelChanged")`, or a store fed by those events |
+| **App iframe** | `fdc3.addEventListener("userChannelChanged", …)` (FDC3 2.2) |
 
 Both reflect the same agent state change; the host does not need to poke the iframe DOM.
 
@@ -80,27 +85,29 @@ Both reflect the same agent state change; the host does not need to poke the ifr
 
 ## What not to do
 
-- **Raw DACP impersonation** (`sendDACPMessageOnBehalfOf`, private `handleMessage`) — bypasses WCP validation; use typed **`SailPlatform`** channel APIs instead.
+- **Raw DACP impersonation** (`sendDACPMessageOnBehalfOf`, private `handleMessage`) — bypasses WCP validation; use typed **`channels.changeAppChannel`** on the browser preset or **`SailPlatform.changeAppChannel`** instead.
 - **Chrome writing agent state without DACP handlers** — breaks conformance and app event delivery.
 
-## Platform API surface
+## Platform and preset API surface
 
 ```typescript
-// Set — join / leave on behalf of an instance
+// Browser preset — createBrowserDesktopAgent handle
+const { channels } = desktopAgent
+await channels.changeAppChannel(instanceId, "fdc3.channel.1")
+await channels.changeAppChannel(instanceId, null) // leave
+const channelList = channels.getUserChannels()
+const channelId = channels.getAppChannelId(instanceId)
+channels.onAppChannelChange(({ instanceId, channelId }) => { ... })
+
+// Sail platform — reference stack wrapper
 await platform.changeAppChannel(instanceId, "fdc3.channel.1")
-await platform.changeAppChannel(instanceId, null) // leave
-
-// List channels
-const channels = platform.getUserChannels()
-
-// Get current user channel for a tile (read agent state)
-const channelId = platform.getAppUserChannel(instanceId)
-
-// Events — optional mirror for UI stores
+await platform.changeAppChannel(instanceId, null)
+const platformChannels = platform.getUserChannels()
+const platformChannelId = platform.getAppUserChannel(instanceId)
 platform.start({ onChannelChanged: (instanceId, channelId) => { ... } })
 ```
 
-Low-level **`createSailBrowserDesktopAgent`** (returns a `DesktopAgent`) remains for advanced hosts; channel chrome should use **`SailPlatform`**, not raw DACP injection.
+Embedders using **`createBrowserDesktopAgent`** directly should use **`channels.*`**, not raw `connectorTransport.send` or `getAppUserChannelId` alone. **`SailPlatform`** remains the reference stack for workspace and layout.
 
 ## Related work
 

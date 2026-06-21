@@ -50,7 +50,7 @@ Use child work items for behavior specs.
 | `add-browser-host-controller-composition` | task | `epic-browser-preset-host-api` | **done** |
 | `promote-browser-intent-resolver-controller` | task | `add-browser-host-controller-composition` | **done** |
 | `add-browser-channels-controller` | task | `add-browser-host-controller-composition` | **done** |
-| `add-browser-apps-controller` | task | `add-browser-host-controller-composition` | draft |
+| `add-browser-apps-controller` | task | `add-browser-host-controller-composition` | **done** |
 | `document-browser-preset-host-controllers` | task | `promote-browser-intent-resolver-controller`, `add-browser-channels-controller`, `add-browser-apps-controller` | draft |
 
 ## Out of scope

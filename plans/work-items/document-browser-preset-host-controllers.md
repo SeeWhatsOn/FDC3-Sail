@@ -3,10 +3,10 @@ title: "Document browser preset host controllers"
 slug: document-browser-preset-host-controllers
 kind: task
 type: chore
-status: approved
+status: waiting_on_user
 loop_count: 0
 loop_limit: 3
-last_agent: ""
+last_agent: top-level-delivery-workflow
 file_manifest:
   - website/docs/packages/desktop-agent/integrator-guide.md
   - website/docs/packages/desktop-agent/overview.md
@@ -93,11 +93,30 @@ _(empty)_
 
 ## Loop history
 
-_(empty)_
+- 2026-06-20: docs-only delivery; verify + review PASS; staged
 
 ## Staged for review
 
-_(empty)_
+Docs-only — no RED phase.
+
+### Files changed
+- `website/docs/packages/desktop-agent/integrator-guide.md`
+- `website/docs/packages/desktop-agent/overview.md`
+- `website/docs/packages/desktop-agent/composition.md`
+- `website/docs/getting-started.md`
+- `website/docs/architecture/channel-selection.md`
+
+### Phase audit
+| Phase | Result |
+|-------|--------|
+| A | skipped (docs-only) |
+| B implement-agent | docs updated |
+| C verifier | PASS |
+| D reviewer | PASS (alias wording fixed) |
+
+### Notes
+- `npm run docs:build` fails pre-existing `@docusaurus/faster` missing — not introduced by this slice
+- Completes BHA PRD workload after commit + archive
 
 ## Escalation notes
 

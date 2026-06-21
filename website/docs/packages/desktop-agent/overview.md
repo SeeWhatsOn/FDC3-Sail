@@ -23,9 +23,9 @@ Pure, transport-agnostic FDC3 2.2 Desktop Agent — DACP handlers, channel and i
 
 ```text
   FDC3 Apps          Your host                 FDC3 engine
-  (external)    →   contracts you wire   →   createBrowserDesktopAgent()
-  fdc3.getAgent()    launcher · directory      (browser edge + DA)
-                     intent · channel UI
+  (external)    →   contracts + controllers →   createBrowserDesktopAgent()
+  fdc3.getAgent()    launcher · intentResolver     (browser edge + DA)
+                     channels · apps
 ```
 
 ## Package layout
@@ -63,25 +63,28 @@ const appLauncher: AppLauncher = {
   },
 }
 
-const desktopAgent = createBrowserDesktopAgent({
-  appDirectories: ["/apps.json"],
-  appLauncher,
-})
+const desktopAgent = createBrowserDesktopAgent({ appLauncher })
+
+const { intentResolver, channels, apps } = desktopAgent
+await apps.addDirectory("/apps.json")
+
+intentResolver.onRequest(/* your picker UI */)
+channels.onAppChannelChange(/* update channel chrome */)
+apps.onConnect(/* tab / tile lifecycle */)
 
 // Auto-started by default — iframe apps can await fdc3.getAgent()
 ```
 
-Returns a single `DesktopAgent`; the browser edge starts and stops with `desktopAgent.start()` / `desktopAgent.stop()`. Browser hosts can wire custom resolver UI with `desktopAgent.intentResolverUI?.onRequest(...)`; these host UI methods are not FDC3 DACP/WCP wire messages.
+Returns a single `DesktopAgent` with grouped host controllers (`intentResolver`, `channels`, `apps`); the browser edge starts and stops with `desktopAgent.start()` / `desktopAgent.stop()`. Prefer `intentResolver` over the transitional `intentResolverUI` alias.
 
-See the [integrator guide](./integrator-guide) for intent resolution, channel chrome, remote DA, and lifecycle callbacks.
+See the [integrator guide](./integrator-guide) for intent resolution, channel chrome, runtime catalog registration, and lifecycle.
 
 ## Subpath exports
 
 ```typescript
 import { DesktopAgent } from "@finos/sail-desktop-agent"
-import { getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/presets"
+import { createBrowserDesktopAgent, createBrowserHostControllers, getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/presets"
 import { createInMemoryTransportPair } from "@finos/sail-desktop-agent/transports"
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
 ```
 
-Application code should prefer `@finos/sail-desktop-agent/presets` for factories and `getBrowserDesktopAgentSession`. Use `/browser` (app-connection) for tree-shaking when you only need `WCPConnector` or `MessagePortTransport`.
+Application code should prefer `@finos/sail-desktop-agent/presets` for factories. Use `createBrowserHostControllers` when composing `DesktopAgent` + `WCPConnector` manually. Use `/browser` (app-connection) for tree-shaking when you only need `WCPConnector` or `MessagePortTransport`.

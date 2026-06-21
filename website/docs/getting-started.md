@@ -26,7 +26,7 @@ flowchart TD
   Preset --> Package["@finos/sail-desktop-agent"]
   Manual --> Package
 
-  Preset --> HostUI[You provide: app launcher, intent UI, channel UI]
+  Preset --> HostUI[AppLauncher + intentResolver, channels, apps]
   Manual --> HostUI
 
   HostUI --> Apps["Your FDC3 apps use @finos/fdc3 — getAgent()"]
@@ -81,11 +81,11 @@ The desktop agent package exposes several entry points:
 
 ## Path 1 — Preset (`createBrowserDesktopAgent`)
 
-The preset couples the **browser edge** (WCP, MessagePort per app) and **Desktop Agent** (FDC3 logic) in one process. You implement **host contracts** — how your UI opens apps, resolves intents, and shows channel chrome.
+The preset couples the **browser edge** (WCP, MessagePort per app) and **Desktop Agent** (FDC3 logic) in one process. You implement **`AppLauncher`** (iframe/window creation) and wire host shell UI through the grouped controllers on the preset handle.
 
 ```typescript
 import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
-import type { AppLauncher, IntentResolver } from "@finos/sail-desktop-agent"
+import type { AppLauncher } from "@finos/sail-desktop-agent"
 
 const appShell = document.getElementById("app-shell")!
 
@@ -98,34 +98,37 @@ const appLauncher: AppLauncher = {
     appShell.appendChild(iframe)
     return { appId: app.appId, instanceId }
   },
-}
-
-const intentResolver: IntentResolver = {
-  async resolve(request) {
-    const picked = await showIntentPicker(request.handlers) // your UI
-    if (!picked) return null
-    return {
-      selectedHandler: picked,
-      target: { appId: picked.app.appId, instanceId: picked.instanceId },
-    }
-  },
-}
-
-const desktopAgent = createBrowserDesktopAgent({
-  appDirectories: ["/apps.json"],
-  appLauncher,
-  intentResolver,
-  onAppConnected: meta => console.log("connected", meta.appId),
-  onAppDisconnected: instanceId => {
+  async close(instanceId) {
     appShell.querySelector(`iframe[name="${instanceId}"]`)?.remove()
   },
+}
+
+const desktopAgent = createBrowserDesktopAgent({ appLauncher })
+const { intentResolver, channels, apps } = desktopAgent
+
+await apps.addDirectory("/apps.json")
+
+intentResolver.onRequest(async request => {
+  const picked = await showIntentPicker(request.handlers) // your UI
+  if (picked) intentResolver.select(request.requestId, picked)
+  else intentResolver.cancel(request.requestId)
+})
+
+channels.onAppChannelChange(({ instanceId, channelId }) => {
+  updateChannelChrome(instanceId, channelId)
+})
+
+apps.onConnect(meta => console.log("connected", meta.appId))
+apps.onDisconnect(instanceId => {
+  appShell.querySelector(`iframe[name="${instanceId}"]`)?.remove()
 })
 
 // Edge starts with the agent — apps can await fdc3.getAgent()
-await desktopAgent.start()
 ```
 
-Copy-paste examples, lifecycle teardown, and channel membership reads are in the [integrator guide](./packages/desktop-agent/integrator-guide).
+**FDC3 boundary:** apps use `@finos/fdc3` `getAgent()` inside iframes; host shell code uses Sail preset controllers (`intentResolver`, `channels`, `apps`).
+
+Copy-paste examples, unsubscribe patterns, and lifecycle teardown are in the [integrator guide](./packages/desktop-agent/integrator-guide).
 
 ## Path 2 — Manual (`DesktopAgent` + connectors)
 
@@ -161,11 +164,11 @@ When you embed a Desktop Agent, **your web application** owns the shell UI. Sail
 
 | Contract | Required? | Your responsibility |
 |----------|-----------|---------------------|
-| **`AppLauncher`** | **Yes** | Create the iframe (or window) when FDC3 `open()` runs; set `iframe.name` to the instance id |
-| **App directory** | **Yes** | `appDirectories` URLs or inline `apps` — metadata for open and intent resolution |
-| **`IntentResolver`** | When multiple handlers match | Modal or picker in **your** UI when `raiseIntent` needs disambiguation |
-| **Channel UI** | Recommended | Toolbar or control that joins/leaves user channels; read state via `getAppUserChannelId` |
-| **Lifecycle hooks** | Recommended | `onAppConnected` / `onAppDisconnected` / `onHandshakeFailed` for tabs and cleanup |
+| **`AppLauncher`** | **Yes** | Create the iframe (or window) when FDC3 `open()` runs; set `iframe.name` to the instance id; optional `close` for FDC3 v3.0 `fdc3.close()` |
+| **App catalog** | **Yes** | `apps.addDirectory` / `apps.add` at runtime (or constructor `appDirectories` / `apps`) |
+| **Intent resolver UI** | When multiple handlers match | `intentResolver.onRequest` / `select` / `cancel` on the preset handle |
+| **Channel UI** | Recommended | `channels.getUserChannels`, `channels.changeAppChannel`, `channels.onAppChannelChange` |
+| **Instance lifecycle** | Recommended | `apps.onConnect` / `onDisconnect` / `onHandshakeFailure`; host tab close via `apps.disconnect` |
 
 FDC3 also allows **WCP3 iframe injection** for intent resolver and channel selector pages inside the app window (`wcpOptions.intentResolverUrl` / `channelSelectorUrl`). Sail and the browser preset default to host-owned UI instead. See [integrator guide — wiring intent and channel UI](./packages/desktop-agent/integrator-guide#wiring-intent-resolver-and-channel-selector-ui).
 
@@ -180,8 +183,9 @@ flowchart TB
 
   subgraph host ["Your web app"]
     L["AppLauncher"]
-    I["IntentResolver"]
-    C["Channel UI"]
+    IR["intentResolver"]
+    CH["channels"]
+    AP["apps"]
   end
 
   subgraph sail ["@finos/sail-desktop-agent"]

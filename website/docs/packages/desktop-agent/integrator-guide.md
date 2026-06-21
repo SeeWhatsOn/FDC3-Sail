@@ -44,23 +44,23 @@ Everything else is detail under one of those two boxes.
 FDC3 in the browser is three runtime parts. Only the bottom two come from this package; **your host shell** wires the contracts in the middle.
 
 ```text
-  FDC3 Apps          Your host (contracts)       FDC3 engine
-  @finos/fdc3    →   launcher · directory   →   createBrowserDesktopAgent()
-  getAgent()         intent UI · channel UI      (edge + DA, in-process)
-                     open/close · lifecycle
+  FDC3 Apps          Your host (contracts + controllers)   FDC3 engine
+  @finos/fdc3    →   launcher · intentResolver · channels  →   createBrowserDesktopAgent()
+  getAgent()         apps · channel UI · lifecycle              (edge + DA, in-process)
+                     open/close · catalog
 ```
 
-Iframe apps call `fdc3.getAgent()` via `@finos/fdc3` — you do not implement that layer. You **do** implement the host contracts below, then pass them to `createBrowserDesktopAgent`.
+Iframe apps call `fdc3.getAgent()` via `@finos/fdc3` — you do not implement that layer. You **do** implement the host contracts below, then pass them to `createBrowserDesktopAgent`. Host shell UI (intent picker, channel toolbar, app catalog, tab lifecycle) uses the **grouped host controllers** on the preset handle — Sail preset APIs, not FDC3 wire messages.
 
 ### Browser mode (engine in same tab)
 
 ```typescript
 import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
-import type { AppLauncher, ChannelControl } from "@finos/sail-desktop-agent"
-
-// --- Host contract: open apps (required) ---
+import type { AppLauncher } from "@finos/sail-desktop-agent"
 
 const appShell = document.getElementById("app-shell")!
+
+// --- Host contract: open / close browsing contexts (required) ---
 
 const appLauncher: AppLauncher = {
   async launch(request, app) {
@@ -72,76 +72,122 @@ const appLauncher: AppLauncher = {
     appShell.appendChild(iframe)
     return { appId: app.appId, instanceId }
   },
-}
-
-// --- Host contract: channel chrome (optional) ---
-// Default wcpOptions omit channelSelectorUrl injection — the host owns channel UI.
-// ChannelControl is the contract shape for your toolbar (not a createBrowserDesktopAgent option yet).
-// SailPlatform implements channel changes via changeAppChannel; pure DA hosts use getAppUserChannelId + shell UI.
-
-const channelToolbar: ChannelControl = {
-  async selectChannel(request) {
-    return showChannelPicker(request.availableChannels, request.currentChannel)
-  },
-}
-// channelToolbar.selectChannel(...) from your shell when the user picks a channel
-
-// --- Wire engine + host contracts ---
-
-const desktopAgent = createBrowserDesktopAgent({
-  appDirectories: ["/apps.json"],
-  appLauncher,
-  // wcpOptions omitted → intentResolverUrl/channelSelectorUrl false (host-owned UI)
-
-  onAppConnected: meta => {
-    tabs.markConnected(meta.instanceId, meta.appId)
-  },
-  onAppDisconnected: instanceId => {
-    tabs.remove(instanceId)
+  // FDC3 v3.0: invoked when an app calls fdc3.close() — app-initiated self-close
+  async close(instanceId) {
     appShell.querySelector(`iframe[name="${instanceId}"]`)?.remove()
   },
-  onHandshakeFailed: (error, connectionId) => {
-    console.error("WCP handshake failed", connectionId, error)
-  },
+}
+
+const desktopAgent = createBrowserDesktopAgent({
+  appLauncher,
+  // wcpOptions omitted → intentResolverUrl/channelSelectorUrl false (host-owned UI)
 })
 
-// Auto-started by default — iframe apps can await fdc3.getAgent()
+// Grouped host controllers — primary setup pattern for browser preset hosts
+const { intentResolver, channels, apps } = desktopAgent
 
-// Host-owned intent resolver UI. The engine calls this only for ambiguous resolution.
-desktopAgent.intentResolverUI?.onRequest(request => {
+// Runtime app catalog (primary — not only constructor appDirectories)
+await apps.addDirectory("/apps.json")
+// apps.add(singleApp) or apps.addAll([...]) for inline entries
+
+// Intent resolver — canonical; intentResolverUI is a transitional alias (same methods)
+intentResolver.onRequest(request => {
   void showIntentPicker(request.choices ?? []).then(choice => {
-    if (choice) {
-      desktopAgent.intentResolverUI?.select(request.requestId, choice)
-    } else {
-      desktopAgent.intentResolverUI?.cancel(request.requestId)
-    }
+    if (choice) intentResolver.select(request.requestId, choice)
+    else intentResolver.cancel(request.requestId)
   })
 })
 
-// Host closes an app: tear down iframe, then tell the engine
-function closeApp(instanceId: string) {
+// Channel chrome (default: host toolbar, not WCP3 iframe injection)
+const userChannels = channels.getUserChannels()
+const currentId = channels.getAppChannelId(activeInstanceId)
+await channels.changeAppChannel(activeInstanceId, "fdc3.channel.1")
+channels.onAppChannelChange(({ instanceId, channelId }) => {
+  updateTabChrome(instanceId, channelId)
+})
+
+// Instance lifecycle — replaces direct wcpConnector.on(...) in application code
+apps.onConnect(meta => tabs.markConnected(meta.instanceId, meta.appId))
+apps.onDisconnect(instanceId => {
+  tabs.remove(instanceId)
   appShell.querySelector(`iframe[name="${instanceId}"]`)?.remove()
-  desktopAgent.disconnectInstance(instanceId)
+})
+apps.onHandshakeFailure(({ error, connectionAttemptUuid }) => {
+  console.error("WCP handshake failed", connectionAttemptUuid, error)
+})
+
+// Host tab close — host teardown, not fdc3.close() from the host page
+function closeAppTab(instanceId: string) {
+  appShell.querySelector(`iframe[name="${instanceId}"]`)?.remove()
+  apps.disconnect(instanceId)
 }
 
-// Host reads channel membership for chrome (join usually via app fdc3 API or your channel bar)
-function currentChannel(instanceId: string) {
-  return desktopAgent.getAppUserChannelId(instanceId)
-}
+// Host-initiated open from your launcher UI
+await apps.open("portfolio-app", { context: instrumentContext })
 
-// Teardown
-// desktopAgent.stop()
+// desktopAgent.stop() when tearing down the host
 ```
 
-| Host contract | Required? | Wired via |
-|---------------|-----------|-----------|
-| `appLauncher` | **Yes** — FDC3 `open()` needs a host that creates iframes/windows | `createBrowserDesktopAgent({ appLauncher })` |
-| `appDirectories` or `apps` | **Yes** — app metadata for open/intent resolution | `appDirectories: [...]` or `apps: [...]` |
-| `intentResolverUI` | When multiple handlers — host shell UI, not WCP3 iframe injection | Returned on the browser preset `DesktopAgent` handle |
-| Channel UI | When `channelSelectorUrl` is false (default) — host toolbar/chrome | `ChannelControl` contract; read state with `getAppUserChannelId` |
-| Lifecycle | Recommended — tab chrome, cleanup | `onAppConnected` / `onAppDisconnected` / `onHandshakeFailed` |
+| Host concern | Required? | Primary API |
+|--------------|-----------|-------------|
+| `appLauncher` | **Yes** — FDC3 `open()` creates iframes/windows | `createBrowserDesktopAgent({ appLauncher })` |
+| App catalog | **Yes** — metadata for open/intent resolution | `apps.addDirectory`, `apps.add` / `apps.addAll` (or constructor `appDirectories` / `apps`) |
+| Intent resolver UI | When multiple handlers match | `intentResolver.*` (`intentResolverUI` alias — prefer `intentResolver`) |
+| Channel chrome | Recommended when `channelSelectorUrl` is false (default) | `channels.getUserChannels`, `channels.changeAppChannel`, `channels.onAppChannelChange` |
+| Instance lifecycle | Recommended — tabs, cleanup | `apps.onConnect` / `onDisconnect` / `onHandshakeFailure`; host tab close via `apps.disconnect` |
+| App self-close | When supporting FDC3 v3.0 `fdc3.close()` | `AppLauncher.close` on the launcher you pass to the preset |
 
-`createBrowserDesktopAgent` returns a single `DesktopAgent` handle; the browser edge starts and stops with `desktopAgent.start()` / `desktopAgent.stop()`. Browser hosts also get `desktopAgent.intentResolverUI` for framework-neutral resolver UI wiring. You do not manage `WCPConnector` in application code.
+`createBrowserDesktopAgent` returns a single `DesktopAgent` handle with grouped controllers attached; the browser edge starts and stops with `desktopAgent.start()` / `desktopAgent.stop()`. You do not manage `WCPConnector` in application code.
+
+### FDC3 boundary
+
+| Who | API |
+|-----|-----|
+| **Apps** (iframe / child window) | `@finos/fdc3` — `getAgent()`, `joinUserChannel`, `broadcast`, `raiseIntent`, `fdc3.close()`, … |
+| **Host shell** (your page) | Sail preset controllers — `intentResolver`, `channels`, `apps` on the `createBrowserDesktopAgent` handle |
+
+Apps must not import `@finos/sail-desktop-agent`. Host code must not call `fdc3.close()` on behalf of an app — use `apps.disconnect` for host-initiated teardown and implement `AppLauncher.close` for app-initiated `fdc3.close()`.
+
+### Host controllers reference
+
+Grouped controllers are attached to every `createBrowserDesktopAgent` handle. Destructure once and pass slices to your UI layer.
+
+| Controller | Key methods | Notes |
+|------------|-------------|-------|
+| **`intentResolver`** | `onRequest`, `select`, `cancel`, `getPendingRequests` | Canonical; `intentResolverUI` is the same surface |
+| **`channels`** | `getUserChannels`, `getAppChannelId`, `getAppChannel`, `changeAppChannel`, `onAppChannelChange` | Host channel chrome — not raw `connectorTransport` |
+| **`apps`** | `addDirectory`, `add`, `addAll`, `remove`, `getAll`, `getById`, `open`, `getInstances`, `getInstance`, `getConnections`, `getConnection`, `disconnect`, `onConnect`, `onDisconnect`, `onHandshakeFailure` | Runtime catalog + instance lifecycle; no `apps.close` |
+
+Constructor `appDirectories` / `apps` still work for static seeding; **`apps.addDirectory` and `apps.add` are the primary runtime pattern** when the catalog loads after host init or changes over time.
+
+### Unsubscribe pattern (framework-neutral)
+
+Controller subscription methods return an unsubscribe function. Call it when your UI unmounts or the listener is no longer needed.
+
+**React:**
+
+```typescript
+useEffect(() => {
+  const offConnect = apps.onConnect(meta => setTabs(t => [...t, meta]))
+  const offChannel = channels.onAppChannelChange(e => setChannel(e.channelId))
+  const offIntent = intentResolver.onRequest(req => setPending(req))
+  return () => {
+    offConnect()
+    offChannel()
+    offIntent()
+  }
+}, [apps, channels, intentResolver])
+```
+
+**Vanilla:**
+
+```typescript
+const offDisconnect = apps.onDisconnect(id => removeTab(id))
+// later, when tearing down the host shell:
+offDisconnect()
+```
+
+**Svelte / Vue:** store the returned function and call it in `onDestroy` / `onUnmounted` (or when replacing the listener).
 
 ## `getAgent()` discovery support
 
@@ -202,8 +248,8 @@ FDC3 defines **two different mechanisms** for each UI. Sail and this package def
 
 | UI | Mechanism A — host shell (recommended) | Mechanism B — WCP3 iframe injection |
 |----|----------------------------------------|-------------------------------------|
-| Intent resolver | `desktopAgent.intentResolverUI` or low-level `intentResolver` contract | `wcpOptions.intentResolverUrl` — `@finos/fdc3` loads a page **inside the app window** |
-| Channel selector | Host toolbar + `joinUserChannel` on behalf of the app | `wcpOptions.channelSelectorUrl` — `@finos/fdc3` loads a page **inside the app window** |
+| Intent resolver | `desktopAgent.intentResolver` (canonical; `intentResolverUI` transitional alias) or low-level `IntentResolver` contract | `wcpOptions.intentResolverUrl` — `@finos/fdc3` loads a page **inside the app window** |
+| Channel selector | Host toolbar + `channels.changeAppChannel` | `wcpOptions.channelSelectorUrl` — `@finos/fdc3` loads a page **inside the app window** |
 
 **Default (omit `wcpOptions`):** both URLs are `false` — your host shell owns both UIs. This matches FDC3 when the [browser-resident host](https://fdc3.finos.org/docs/api/specs/browserResidentDesktopAgents) renders chrome outside the app iframe.
 
@@ -211,30 +257,32 @@ FDC3 defines **two different mechanisms** for each UI. Sail and this package def
 
 When `raiseIntent` or `raiseIntentForContext` is ambiguous, the engine pauses and asks the host to pick one choice. Explicit `AppIdentifier` targets and unambiguous matches bypass this UI.
 
-**Option 1 — browser preset UI methods (simplest):** use the framework-neutral `intentResolverUI` returned on the browser preset handle:
+**Option 1 — grouped controller (recommended):** use `intentResolver` on the browser preset handle:
 
 ```typescript
-const desktopAgent = createBrowserDesktopAgent({ appLauncher, appDirectories: ["/apps.json"] })
+const desktopAgent = createBrowserDesktopAgent({ appLauncher })
+const { intentResolver } = desktopAgent
 
-desktopAgent.intentResolverUI?.onRequest(request => {
+const offRequest = intentResolver.onRequest(request => {
   // Open YOUR modal — React dialog, Vue component, native picker, etc.
-  // Use choices for raiseIntentForContext, where the user may choose intent + app.
   void myIntentModal.open({
     context: request.context,
     choices: request.choices ?? [],
   }).then(choice => {
-    if (choice) {
-      desktopAgent.intentResolverUI?.select(request.requestId, choice)
-    } else {
-      desktopAgent.intentResolverUI?.cancel(request.requestId)
-    }
+    if (choice) intentResolver.select(request.requestId, choice)
+    else intentResolver.cancel(request.requestId)
   })
 })
+
+// intentResolver.getPendingRequests() for multi-request UI state
+// Call offRequest() on teardown (see Unsubscribe pattern above)
 ```
+
+`intentResolverUI` exposes the same methods and remains on the handle for backward compatibility — prefer **`intentResolver`**.
 
 The resolver request includes running app instances, launchable app rows, and display metadata from the app directory where available (`title`, `name`, `icons`, `screenshots`, `instanceMetadata`). A selected choice feeds the normal Desktop Agent delivery path: launch if needed, wait for the listener if needed, send the `intentEvent`, and return `IntentResolution` to the raising app.
 
-The `intentResolverUI` request/response shapes are Sail host UI adapter types, not official FDC3 DACP or WCP wire messages.
+The `intentResolver` request/response shapes are Sail host UI adapter types, not official FDC3 DACP or WCP wire messages.
 
 **Option 2 — low-level host contract:** provide your own `IntentResolver` if you want to own promise correlation yourself:
 
@@ -277,7 +325,7 @@ wcpConnector.on("intentResolverNeeded", payload => {
 })
 ```
 
-`intentResolverNeeded` is a Sail browser connector event, not an official FDC3 WCP wire message. Prefer `desktopAgent.intentResolverUI` unless you are doing manual connector composition.
+`intentResolverNeeded` is a Sail browser connector event, not an official FDC3 WCP wire message. Prefer **`intentResolver`** unless you are doing manual connector composition.
 
 **Option 4 — injected iframe (uncommon for custom hosts):**
 
@@ -294,13 +342,34 @@ No `intentResolver` contract needed — `@finos/fdc3` hosts the picker inside ea
 
 When `channelSelectorUrl` is `false` (default), the **host** renders channel chrome (toolbar button, per-app dropdown). The app does not get an injected channel iframe.
 
-1. **Read** current channel: `desktopAgent.getAppUserChannelId(instanceId)` (or `platform.getAppUserChannel`)
-2. **List** channels: `desktopAgent.getUserChannels()`
-3. **Change** channel: `desktopAgent.changeAppUserChannel(instanceId, channelId)` (or `platform.changeAppChannel`), then keep UI in sync via WCP connector `channelChanged` events
+Use the **`channels`** controller on the browser preset handle:
 
-Do **not** read or mutate `desktopAgent.getState()` for channel chrome. `getState()` is for tests and debugging only; host UI should use the granular getters above plus push events from the connector.
+1. **List** channels: `channels.getUserChannels()`
+2. **Read** current channel: `channels.getAppChannelId(instanceId)` or `channels.getAppChannel(instanceId)` (includes channel object)
+3. **Change** channel: `await channels.changeAppChannel(instanceId, channelId | null)`
+4. **Listen** for updates: `channels.onAppChannelChange(listener)` — push model; do not poll `getState()`
 
-With **`SailPlatform`** (easiest — wraps host channel commands):
+Do **not** read or mutate `desktopAgent.getState()` for channel chrome. `getState()` is for tests and debugging only.
+
+With **`createBrowserDesktopAgent`** (preset — no platform-api):
+
+```typescript
+const { channels } = desktopAgent
+
+const userChannels = channels.getUserChannels()
+const currentId = channels.getAppChannelId(instanceId)
+
+channels.onAppChannelChange(({ instanceId, channelId, channel }) => {
+  updateTabChrome(instanceId, channelId, channel)
+})
+
+// Host toolbar click handler
+channelButton.onclick = () => {
+  void channels.changeAppChannel(activeInstanceId, "fdc3.channel.1")
+}
+```
+
+With **`SailPlatform`** (reference stack — wraps the same engine path):
 
 ```typescript
 const platform = new SailPlatform({ appLauncher, intentResolver })
@@ -317,49 +386,7 @@ platform.connector.on("channelChanged", (id, channelId) => {
 })
 ```
 
-With **`createBrowserDesktopAgent` only** (no platform-api):
-
-```typescript
-import { getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/presets"
-
-const { wcpConnector } = getBrowserDesktopAgentSession(desktopAgent)
-
-function changeAppChannel(instanceId: string, channelId: string | null): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      cleanup()
-      reject(new Error("Channel change timeout"))
-    }, 10_000)
-
-    const onChanged = (changedId: string, newChannelId: string | null) => {
-      if (changedId === instanceId && newChannelId === channelId) {
-        cleanup()
-        resolve()
-      }
-    }
-    const cleanup = () => {
-      clearTimeout(timeout)
-      wcpConnector.off("channelChanged", onChanged)
-    }
-
-    wcpConnector.on("channelChanged", onChanged)
-
-    try {
-      desktopAgent.changeAppUserChannel(instanceId, channelId)
-    } catch (error) {
-      cleanup()
-      reject(error instanceof Error ? error : new Error(String(error)))
-    }
-  })
-}
-
-// Host toolbar click handler
-channelButton.onclick = () => {
-  void changeAppChannel(activeInstanceId, "fdc3.channel.1")
-}
-```
-
-`ChannelControl` in `host-contracts/` describes the **picker contract** (`selectChannel(request)`); wire your toolbar to call `changeAppChannel` with the returned channel id. Sail web does not use `ChannelControl` directly — it uses `SailPlatform.changeAppChannel` plus `channelChanged` push events (`connection-store.ts` subscribes to the connector; `ChannelSelector.tsx` reads from the store, not `getState()`).
+`ChannelControl` in `host-contracts/` describes the **picker contract** (`selectChannel(request)`); wire your toolbar to call `channels.changeAppChannel` (or `platform.changeAppChannel`) with the chosen channel id. Sail web uses `SailPlatform.changeAppChannel` plus connector push events (`connection-store.ts` subscribes; `ChannelSelector.tsx` reads from the store, not `getState()`).
 
 **Injected channel iframe (uncommon):**
 
@@ -456,7 +483,8 @@ This package defaults both to **`false`** when `wcpOptions` is omitted. That is 
 | Mechanism | Purpose |
 |-----------|---------|
 | WCP3 `intentResolverUrl` | iframe URL injected **into the app window** by `@finos/fdc3` |
-| `intentResolverUI` on the browser preset handle | Host UI methods when DA needs disambiguation; not an official DACP/WCP message |
+| `intentResolver` on the browser preset handle | Host UI methods when DA needs disambiguation; not an official DACP/WCP message |
+| `intentResolverUI` on the browser preset handle | Transitional alias — same methods as `intentResolver` |
 | `intentResolver` option on `createBrowserDesktopAgent` | Low-level host callback for custom composition |
 
 Most browser hosts use **`false`** for WCP3 URLs and implement resolver/channel UI in the host shell via [host contracts](https://github.com/finos/FDC3-Sail/tree/main/packages/sail-desktop-agent/src/host-contracts).
@@ -564,7 +592,7 @@ Where does the Desktop Agent run?
 ├─ Same browser tab as your host UI
 │    → createBrowserDesktopAgent() from @finos/sail-desktop-agent/presets
 │    → Implement AppLauncher (iframes + instanceId on iframe name)
-│    → Optional: intentResolverUI host methods; channel UI in host (omit wcpOptions → both URLs false)
+│    → Wire host UI via intentResolver, channels, apps controllers
 │
 └─ Remote (Node server, Web Worker, …)
      → Server/worker: new DesktopAgent({ transport: serverTransport })
@@ -607,9 +635,9 @@ const wcpConnector = new WCPConnector(wcpTransport)
 - `desktopAgent.start()` also starts the edge (`window` listener for WCP1, MessagePort routing)
 - `desktopAgent.stop()` tears down the edge and the DA transport
 
-You do **not** destructure or manage `wcpConnector` in application code. Host code uses `desktopAgent` plus `appLauncher` / `intentResolverUI`. Optional `onAppConnected` / `onAppDisconnected` callbacks replace direct `wcpConnector.on(...)` wiring.
+You do **not** destructure or manage `wcpConnector` in application code. Host code uses grouped controllers (`intentResolver`, `channels`, `apps`) plus `appLauncher`. Optional `onAppConnected` / `onAppDisconnected` callbacks remain for backward compatibility — prefer `apps.onConnect` / `apps.onDisconnect`.
 
-Advanced access (host channel control via `connectorTransport`, edge-contract tests): `getBrowserDesktopAgentSession(desktopAgent)` from `@finos/sail-desktop-agent/presets`.
+Advanced access (manual composition, edge-contract tests): `getBrowserDesktopAgentSession(desktopAgent)` or `createBrowserHostControllers({ desktopAgent, wcpConnector, connectorTransport, intentResolverUI })` from `@finos/sail-desktop-agent/presets`.
 
 ### Simplified integrator surface
 
@@ -617,12 +645,14 @@ Advanced access (host channel control via `connectorTransport`, edge-contract te
 // 90% of browser hosts — one entry
 import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
 
-const desktopAgent = createBrowserDesktopAgent({
-  appLauncher: myLauncher,
-  // wcpOptions optional — defaults intentResolverUrl/channelSelectorUrl to false (FDC3 host-controlled)
-})
+const desktopAgent = createBrowserDesktopAgent({ appLauncher: myLauncher })
+const { intentResolver, channels, apps } = desktopAgent
 
-desktopAgent.intentResolverUI?.onRequest(showIntentResolver)
+await apps.addDirectory("/apps.json")
+
+intentResolver.onRequest(showIntentResolver)
+channels.onAppChannelChange(updateChannelChrome)
+apps.onConnect(meta => mountTab(meta))
 
 // Auto-started by default — iframe apps connect via fdc3.getAgent()
 ```

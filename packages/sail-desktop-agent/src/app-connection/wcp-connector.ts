@@ -262,7 +262,7 @@ export class WCPConnector extends WCPEventEmitter {
     const storedSourceWindow = storedConnection?.source
 
     const nextMeta = {
-      ...(currentMeta ?? {}),
+      ...currentMeta,
     } as typeof message.meta
 
     // Always include source.instanceId for app->DesktopAgent routing.

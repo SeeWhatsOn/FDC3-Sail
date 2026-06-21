@@ -18,8 +18,9 @@ flowchart TB
 
   subgraph host ["Your host shell"]
     HL["AppLauncher"]
-    HI["IntentResolver (optional)"]
-    HC["Channel chrome (optional)"]
+    HI["intentResolver"]
+    HC["channels"]
+    HA["apps"]
   end
 
   subgraph edge ["App connection — app-connection/"]
@@ -80,8 +81,9 @@ flowchart LR
 
 | Pattern | Returns | You manage |
 |---------|---------|------------|
-| `createBrowserDesktopAgent` | `DesktopAgent` | Host contracts only; edge coupled to `start()`/`stop()` |
-| `getBrowserDesktopAgentSession(da)` | `{ wcpConnector, connectorTransport }` | Advanced channel DACP, edge tests |
+| `createBrowserDesktopAgent` | `DesktopAgent` + `intentResolver`, `channels`, `apps` | `AppLauncher`; wire host UI via controllers |
+| `createBrowserHostControllers` | `{ intentResolver, channels, apps }` | Manual `DesktopAgent` + `WCPConnector` composition |
+| `getBrowserDesktopAgentSession(da)` | `{ wcpConnector, connectorTransport }` | Advanced edge tests |
 | `createWCPClient` | `{ wcpConnector, start, stop }` | Browser side of remote DA |
 | Manual pair | `DesktopAgent` + `WCPConnector` | Both transports and lifecycle |
 
@@ -111,7 +113,7 @@ packages/sail-desktop-agent/src/
 ├── presets/
 │   ├── create-browser-desktop-agent.ts  # createBrowserDesktopAgent (local DA + edge)
 │   ├── create-wcp-client.ts             # createWCPClient (remote DA mode)
-│   └── browser-session.ts               # getBrowserDesktopAgentSession
+│   └── browser-session.ts               # createBrowserHostControllers, getBrowserDesktopAgentSession
 │
 └── transports/
     └── in-memory-transport.ts # Same-process linked endpoints
@@ -200,7 +202,7 @@ sequenceDiagram
 
 Two mechanisms exist for intent UI — see [integrator guide — intent resolver](./integrator-guide#intent-resolver--host-shell-ui):
 
-- **Host shell (default):** `intentResolver` contract or `intentResolverNeeded` event
+- **Host shell (default):** `intentResolver` controller (canonical; `intentResolverUI` transitional alias) or low-level `IntentResolver` contract
 - **WCP3 injection:** `wcpOptions.intentResolverUrl` — `@finos/fdc3` loads iframe in app window
 
 ## Channel change flow (host chrome)
@@ -208,21 +210,23 @@ Two mechanisms exist for intent UI — see [integrator guide — intent resolver
 ```mermaid
 sequenceDiagram
   participant Chrome as Host channel toolbar
-  participant Plat as SailPlatform (optional)
+  participant Ctrl as channels controller
   participant Edge as WCPConnector
   participant DA as DesktopAgent
   participant App as App iframe
 
-  Chrome->>Plat: changeAppChannel(instanceId, channelId)
-  Plat->>Edge: joinUserChannelRequest via connectorTransport
-  Edge->>DA: DACP + meta.source.instanceId
+  Chrome->>Ctrl: changeAppChannel(instanceId, channelId)
+  Ctrl->>DA: changeAppUserChannel
   DA->>DA: update instance.currentUserChannel
   DA->>Edge: channelChangedEvent
   Edge->>App: userChannelChanged
-  Edge->>Chrome: channelChanged event
+  Edge->>Ctrl: channelChanged event
+  Ctrl->>Chrome: onAppChannelChange callback
 ```
 
-Pure DA hosts without `SailPlatform` use `getBrowserDesktopAgentSession` — see [integrator guide](./integrator-guide#channel-selector--host-shell-ui).
+Browser preset hosts use **`channels.changeAppChannel`** and **`channels.onAppChannelChange`**. `SailPlatform` wraps the same engine path for the reference stack — see [integrator guide](./integrator-guide#channel-selector--host-shell-ui).
+
+Manual composition without the preset factory: build controllers with **`createBrowserHostControllers({ desktopAgent, wcpConnector, connectorTransport })`** from `@finos/sail-desktop-agent/presets`.
 
 ## Testing layers
 
