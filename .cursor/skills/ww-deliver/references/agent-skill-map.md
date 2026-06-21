@@ -72,3 +72,10 @@ Add `source-driven-development` only for an unfamiliar library. Add
 - `doubt-driven-development` (blocked decisions / escalation only)
 - `continual-learning` (after human `approve` only)
 
+## Orchestrator-only gates
+
+After Phase D `VERDICT: PASS`, the top-level agent runs
+[pre-review-validation.md](pre-review-validation.md) before staging. Do not
+delegate format, lint, typecheck, or validate to subagents for the final
+human review gate.
+

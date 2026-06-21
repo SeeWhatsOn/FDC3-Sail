@@ -1,9 +1,10 @@
+import { getBrowserDaEdgeLinkPeer } from "../../../app-connection/browser-da-edge-link"
 import type { Transport } from "../../interfaces/transport"
 import { getInMemoryTransportPeer } from "../../../transports/in-memory-transport"
 
 /**
  * WCP4 identity validation needs the WCP1Hello source window for reconnect binding.
- * Window references cannot cross {@link InMemoryTransport} (structuredClone rejects them),
+ * Window references cannot cross cloned transports (e.g. {@link InMemoryTransport}),
  * so the WCP connector stores them here keyed by temp instance id.
  */
 const pendingSourceWindowRegistry = new WeakMap<Transport, Map<string, unknown>>()
@@ -17,8 +18,12 @@ function getPendingMap(transport: Transport): Map<string, unknown> {
   return map
 }
 
+function getCoupledTransportPeer(transport: Transport): Transport | undefined {
+  return getInMemoryTransportPeer(transport) ?? getBrowserDaEdgeLinkPeer(transport)
+}
+
 function forTransportEndpoints(transport: Transport): Transport[] {
-  const peer = getInMemoryTransportPeer(transport)
+  const peer = getCoupledTransportPeer(transport)
   return peer ? [transport, peer] : [transport]
 }
 

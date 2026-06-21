@@ -2,7 +2,7 @@
  * App connection layer — browser mechanisms for connecting FDC3 apps to the Desktop Agent.
  *
  * WCP1–3 handshake, MessagePort bridging, and connection lifecycle. Convenience factories
- * live under `presets/` (`createBrowserDesktopAgent`, `createWCPClient`).
+ * live under `presets/` (`createBrowserDesktopAgent`).
  */
 
 export { WCPConnector } from "./wcp-connector.js"

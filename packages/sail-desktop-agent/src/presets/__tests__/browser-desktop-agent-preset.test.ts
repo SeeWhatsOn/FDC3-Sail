@@ -21,7 +21,7 @@ import type { BrowserTypes, Context } from "@finos/fdc3"
 import * as sailDesktopAgent from "../../index"
 
 import { DesktopAgent } from "../../core/desktop-agent"
-import { createInMemoryTransportPair } from "../../transports/in-memory-transport"
+import { createBrowserDesktopAgentEdgeLink } from "../../app-connection/browser-da-edge-link"
 import { getBrowserDesktopAgentSession, isBrowserDesktopAgent } from "../browser-session"
 import * as sailPresets from "../index"
 import { WCPConnector } from "../index"
@@ -746,19 +746,17 @@ describe("browser host controller composition", () => {
       .createBrowserHostControllers as (options: {
       desktopAgent: DesktopAgent
       wcpConnector: WCPConnector
-      connectorTransport: ReturnType<typeof createInMemoryTransportPair>[1]
       intentResolverUI?: IntentResolverUIMethods
     }) => BrowserHostControllerSurface
 
-    const [daTransport, connectorTransport] = createInMemoryTransportPair()
-    const wcpConnector = new WCPConnector(connectorTransport)
-    const desktopAgent = new DesktopAgent({ transport: daTransport })
+    const [daEdge, wcpEdge] = createBrowserDesktopAgentEdgeLink()
+    const wcpConnector = new WCPConnector(wcpEdge)
+    const desktopAgent = new DesktopAgent({ transport: daEdge })
     activeAgents.push(desktopAgent)
 
     const controllers = createBrowserHostControllers({
       desktopAgent,
       wcpConnector,
-      connectorTransport,
     })
 
     expect(controllers.intentResolver).toBeDefined()

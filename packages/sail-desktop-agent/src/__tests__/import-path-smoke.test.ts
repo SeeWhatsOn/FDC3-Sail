@@ -32,7 +32,6 @@ describe("reorganized import paths", () => {
   it("resolves preset factories from presets", async () => {
     const presets = await import("../presets/index.js")
     expect(presets.createBrowserDesktopAgent).toBeTypeOf("function")
-    expect(presets.createWCPClient).toBeTypeOf("function")
     expect(presets.getBrowserDesktopAgentSession).toBeTypeOf("function")
   })
 })

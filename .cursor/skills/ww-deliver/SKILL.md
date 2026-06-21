@@ -144,6 +144,9 @@ For each eligible work item, track:
 - [ ] Phase C: `verifier-agent` launched → `VERIFICATION: PASS` + learnings captured
 - [ ] Phase D: `code-reviewer` launched → `VERDICT: PASS` + learnings captured
 - [ ] Phase D.5: `security-auditor` launched when `security` tag present
+- [ ] **Pre-review validation gate** run by orchestrator (format, lint,
+  typecheck, validate) — see
+  [references/pre-review-validation.md](references/pre-review-validation.md)
 - [ ] Staged-for-review procedure run (`ww-work-items`)
 - [ ] Human responded: `approve` | `changes [note]` | `skip`
 - [ ] On `approve`: learning extraction and commit completed
@@ -165,10 +168,22 @@ When staged, present a concise summary with:
 
 - work item title and slug
 - test result
+- **validation gate result** (format, lint, typecheck, validate — all PASS)
 - RED evidence
 - phase audit proving isolated subagents ran
 - staged files
 - learnings proposed (aggregated from subagent reports)
+
+## Pre-Review Validation Gate
+
+After Phase D passes and before staging, the **orchestrator** (not
+subagents) must run the checks in
+[references/pre-review-validation.md](references/pre-review-validation.md).
+
+Required: format check, lint, typecheck, and full `validate` when the
+project defines it. Re-run commands locally even if subagents reported
+success. On any failure, route to `implement-agent` and do not present
+the work item for human review until the gate passes.
 
 Accept exactly:
 
@@ -225,4 +240,6 @@ After processing the queue, report:
 - Create fake tracker identifiers
 - Write to `AGENTS.md` directly
 - Continue past a failed health check
+- Present staged work for human review before the pre-review validation
+  gate passes (format, lint, typecheck, validate)
 

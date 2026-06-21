@@ -27,7 +27,7 @@
  * ## Advanced subpaths
  *
  * - `/browser` (app-connection) - WCPConnector, MessagePortTransport
- * - `/presets` - createBrowserDesktopAgent, createWCPClient, getBrowserDesktopAgentSession
+ * - `/presets` - createBrowserDesktopAgent, getBrowserDesktopAgentSession
  */
 
 // Re-export everything from core
@@ -36,7 +36,7 @@ export * from "./core"
 // UI-free host contracts for platform builders (launch, intent resolver, channel control)
 export * from "./host-contracts"
 
-// Browser Desktop Agent preset (WCP + in-memory transport wiring)
+// Browser Desktop Agent preset (WCP + in-tab edge link wiring)
 export {
   createBrowserDesktopAgent,
   type BrowserDesktopAgent,
@@ -50,7 +50,6 @@ export {
 //
 // Import from @finos/sail-desktop-agent/presets for:
 // - createBrowserDesktopAgent
-// - createWCPClient
 // - getBrowserDesktopAgentSession
 
 // NOTE: Transport implementations are NOT exported here

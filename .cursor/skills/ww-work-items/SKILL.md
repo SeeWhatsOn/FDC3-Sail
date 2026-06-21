@@ -208,8 +208,13 @@ When verification and review pass:
 
 1. Confirm role isolation evidence exists for test, implementation,
    verification, and review phases.
-2. Run the final project test command.
-3. Write `## Staged for review` with RED evidence, commands run, files
+2. Run the orchestrator **pre-review validation gate** per
+   `ww-deliver-work-items` →
+   [pre-review-validation.md](../ww-deliver/references/pre-review-validation.md):
+   format check, lint, typecheck, and validate (when defined). All must
+   pass before staging.
+3. Write `## Staged for review` with RED evidence, validation commands run,
+   files
    changed, phase audit (including `Registered subagent: yes|no` per
    phase — see `ww-deliver-work-items` → `subagent-launch.md`), diff
    summary, and **Learnings proposed**

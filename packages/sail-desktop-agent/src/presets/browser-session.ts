@@ -3,7 +3,6 @@ import type { BrowserTypes, Context } from "@finos/fdc3"
 import { retrieveAllApps, retrieveAppsById } from "../core/app-directory/app-directory-queries"
 import type { DirectoryApp } from "../core/app-directory/types"
 import type { DesktopAgent } from "../core/desktop-agent"
-import type { Transport } from "../core/interfaces/transport"
 import type { AppLauncher } from "../host-contracts/app-launcher"
 import type { AgentState, AppInstance } from "../core/state/types"
 import { AppInstanceState } from "../core/state/types"
@@ -95,13 +94,11 @@ export interface BrowserAppsController {
 export interface BrowserHostControllerOptions {
   desktopAgent: DesktopAgent
   wcpConnector: WCPConnector
-  connectorTransport: Transport
   intentResolverUI?: IntentResolverUIMethods
 }
 
 export interface BrowserDesktopAgentSession {
   wcpConnector: WCPConnector
-  connectorTransport: Transport
   intentResolverUI?: IntentResolverUIMethods
 }
 

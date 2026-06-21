@@ -83,7 +83,8 @@ return effect cleanups for subscriptions; follow frontend-ui-engineering.
 Add human-review comments per COMMENT REQUIREMENTS and implement-agent
 Human-readable comments section. Include ### Comment coverage in report.
 
-Return full test, typecheck, and lint output.
+Return full test, format check, lint, typecheck, and validate output
+(use project commands from AGENTS.md / package.json).
 
 ## Learnings proposed
 - [AGENTS.md candidate] ... — or "none"
@@ -102,6 +103,7 @@ CHECKLIST:
 1. Diff files ⊆ file_manifest
 2. Tests not weakened or skipped
 3. Run checks from verification-checklist.md / package-manager-detection.md
+   (format check, lint, typecheck, validate — all must pass)
 4. Report matches actual output
 
 End with exactly one line: VERIFICATION: PASS or VERIFICATION: FAIL

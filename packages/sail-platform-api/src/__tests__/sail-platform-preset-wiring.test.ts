@@ -25,9 +25,6 @@ describe("SailPlatform preset wiring", () => {
     on: vi.fn(),
     off: vi.fn(),
   }
-  const mockConnectorTransport = {
-    send: vi.fn(),
-  }
 
   let createBrowserDesktopAgentSpy: MockInstance
   let getBrowserDesktopAgentSessionSpy: MockInstance
@@ -41,7 +38,6 @@ describe("SailPlatform preset wiring", () => {
       .mockReturnValue({
         wcpConnector:
           mockWcpConnector as unknown as import("@finos/sail-desktop-agent/presets").WCPConnector,
-        connectorTransport: mockConnectorTransport as unknown as sailDesktopAgent.Transport,
       })
   })
 

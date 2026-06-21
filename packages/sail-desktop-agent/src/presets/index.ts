@@ -12,12 +12,6 @@ export {
 } from "./create-browser-desktop-agent.js"
 
 export {
-  createWCPClient,
-  type WCPClientOptions,
-  type WCPClientResult,
-} from "./create-wcp-client.js"
-
-export {
   getBrowserDesktopAgentSession,
   isBrowserDesktopAgent,
   clearBrowserDesktopAgentSession,

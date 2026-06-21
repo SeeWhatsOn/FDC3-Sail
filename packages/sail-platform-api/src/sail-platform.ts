@@ -12,15 +12,11 @@ import {
   DesktopAgent,
   type AppLauncher,
   type DirectoryApp,
-  type Transport,
   type SailImplementationMetadata,
   type IntentResolver,
 } from "@finos/sail-desktop-agent"
-import {
-  getBrowserDesktopAgentSession,
-  type WCPConnector,
-  type AppConnectionMetadata,
-} from "@finos/sail-desktop-agent/presets"
+import { getBrowserDesktopAgentSession, type WCPConnector } from "@finos/sail-desktop-agent/presets"
+import type { AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
 import type { BrowserTypes } from "@finos/fdc3"
 
 import type { ChannelSelector } from "./interfaces/channel-selector"
@@ -199,7 +195,6 @@ export class SailPlatform {
   // Browser Desktop Agent session (created on start via preset)
   private _desktopAgent: DesktopAgent | null = null
   private _wcpConnector: WCPConnector | null = null
-  private _connectorTransport: Transport | null = null
   private _stopBrowserSession: (() => void) | null = null
 
   // Namespaced APIs (initialized in constructor)
@@ -245,11 +240,10 @@ export class SailPlatform {
       },
     })
 
-    const { wcpConnector, connectorTransport } = getBrowserDesktopAgentSession(desktopAgent)
+    const { wcpConnector } = getBrowserDesktopAgentSession(desktopAgent)
 
     this._desktopAgent = desktopAgent
     this._wcpConnector = wcpConnector
-    this._connectorTransport = connectorTransport
     this._stopBrowserSession = () => desktopAgent.stop()
 
     this.wireEvents()
@@ -273,7 +267,6 @@ export class SailPlatform {
 
     this._wcpConnector = null
     this._desktopAgent = null
-    this._connectorTransport = null
     this._stopBrowserSession = null
     this.started = false
 
@@ -387,7 +380,7 @@ export class SailPlatform {
   // ===== Private Methods =====
 
   private ensureStarted(): void {
-    if (!this.started || !this._desktopAgent || !this._wcpConnector || !this._connectorTransport) {
+    if (!this.started || !this._desktopAgent || !this._wcpConnector) {
       throw new Error("SailPlatform not started. Call start() first.")
     }
   }

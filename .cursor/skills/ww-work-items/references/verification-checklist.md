@@ -9,6 +9,12 @@ or `ww-work-items` in the verifier context.
 4. Confirm tests were not weakened, skipped, or rewritten to fit code.
 5. Run project checks from `AGENTS.md` or
    [package-manager-detection.md](package-manager-detection.md).
+   **Required when scripts exist:**
+   - format check (`<pm> run format`)
+   - lint (`<pm> run lint`)
+   - typecheck (`<pm> run typecheck`)
+   - full validate (`<pm> run validate`)
+   All must pass. Report exact commands and output for each.
 
 6. Confirm implementation report matches actual command output.
 

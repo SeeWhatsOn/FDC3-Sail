@@ -54,7 +54,7 @@ Sail should be browser-first: one browser-resident `DesktopAgent` owns local FDC
 |------|------|------------|--------|
 | `spike-browser-first-transport-simplification` | spike | [] | draft |
 | `preserve-wcp-messageport-connectivity` | task | [`spike-browser-first-transport-simplification`] | done — work item deleted |
-| `simplify-browser-desktop-agent-preset` | task | [`spike-browser-first-transport-simplification`, `preserve-wcp-messageport-connectivity`] | draft |
+| `simplify-browser-desktop-agent-preset` | task | [`spike-browser-first-transport-simplification`, `preserve-wcp-messageport-connectivity`] | staged |
 | `simplify-dacp-handler-response-plumbing` | task | [`spike-browser-first-transport-simplification`, `preserve-wcp-messageport-connectivity`] | draft |
 | `unify-browser-host-ui-controllers` | task | [`simplify-browser-desktop-agent-preset`] | draft |
 | `document-browser-first-desktop-agent` | task | [`simplify-browser-desktop-agent-preset`] | draft |

@@ -12,7 +12,7 @@ import { consoleLogger } from "../core/interfaces/logger"
 import type { Logger, LogPayloadDetail } from "../core/interfaces/logger"
 import { WCPConnector } from "../app-connection/wcp-connector"
 import type { AppConnectionMetadata, WCPConnectorOptions } from "../app-connection/wcp-connector"
-import { createInMemoryTransportPair } from "../transports/in-memory-transport"
+import { createBrowserDesktopAgentEdgeLink } from "../app-connection/browser-da-edge-link"
 import {
   createHostIntentResolver,
   type HostIntentResolverChoice,
@@ -188,14 +188,14 @@ export function createBrowserDesktopAgent(
     })
   const intentResolverUI = hasIntentResolverUI(hostIntentResolver) ? hostIntentResolver : undefined
 
-  const [daTransport, connectorTransport] = createInMemoryTransportPair()
-  const wcpConnector = new WCPConnector(connectorTransport, {
+  const [daEdge, wcpEdge] = createBrowserDesktopAgentEdgeLink()
+  const wcpConnector = new WCPConnector(wcpEdge, {
     ...localOptions.wcpOptions,
     logger,
   })
 
   const desktopAgent = new DesktopAgent({
-    transport: daTransport,
+    transport: daEdge,
     appLauncher: localOptions.appLauncher,
     apps: localOptions.apps,
     userChannels: localOptions.userChannels,
@@ -236,7 +236,7 @@ export function createBrowserDesktopAgent(
     localOptions.onHandshakeFailed?.(error, connectionAttemptUuid)
   })
 
-  registerBrowserDesktopAgentSession(desktopAgent, { wcpConnector, connectorTransport })
+  registerBrowserDesktopAgentSession(desktopAgent, { wcpConnector })
   wireBrowserDesktopAgentLifecycle(desktopAgent, wcpConnector)
 
   if (intentResolverUI) {
@@ -250,7 +250,6 @@ export function createBrowserDesktopAgent(
   const controllers = createBrowserHostControllers({
     desktopAgent,
     wcpConnector,
-    connectorTransport,
     intentResolverUI,
   })
 

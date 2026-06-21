@@ -3,17 +3,19 @@ title: "Simplify browser Desktop Agent preset"
 slug: simplify-browser-desktop-agent-preset
 kind: task
 type: chore
-status: draft
-loop_count: 0
+status: staged
+loop_count: 1
 loop_limit: 3
-last_agent: ""
+last_agent: cursor
 file_manifest:
+  - packages/sail-desktop-agent/src/app-connection/browser-da-edge-link.ts
   - packages/sail-desktop-agent/src/presets/create-browser-desktop-agent.ts
-  - packages/sail-desktop-agent/src/presets/create-wcp-client.ts
   - packages/sail-desktop-agent/src/presets/browser-session.ts
   - packages/sail-desktop-agent/src/presets/index.ts
   - packages/sail-desktop-agent/src/index.ts
-  - packages/sail-desktop-agent/package.json
+  - packages/sail-desktop-agent/src/app-connection/index.ts
+  - packages/sail-desktop-agent/src/core/handlers/dacp/wcp-pending-source-window.ts
+  - packages/sail-platform-api/src/sail-platform.ts
 depends_on:
   - spike-browser-first-transport-simplification
   - preserve-wcp-messageport-connectivity
@@ -70,21 +72,21 @@ Run focused preset and WCP integration tests for `@finos/sail-desktop-agent`. If
 
 ## Blocked decisions
 
-Depends on `spike-browser-first-transport-simplification` for whether a tiny internal dispatcher remains and how `createWCPClient` is handled.
+None — spike approved direct in-tab edge link; `createWCPClient` removed from public presets.
 
 ## Loop history
 
-Not started.
+- Loop 1: Replaced `createInMemoryTransportPair` in browser preset with `createBrowserDesktopAgentEdgeLink`; removed `createWCPClient` and `connectorTransport` from session/API; updated platform wiring and tests. Vitest: preset (27), WCP integration (19), import smoke (5), platform wiring (2).
 
 ## Staged for review
 
-Not staged.
-
-## Escalation notes
-
-None.
+- `BrowserDaEdgeLink` — same-process DA↔WCP delivery (no structuredClone).
+- `createBrowserDesktopAgent` uses edge link instead of in-memory transport pair.
+- Deleted `create-wcp-client.ts`; dropped `connectorTransport` from `BrowserDesktopAgentSession` / `createBrowserHostControllers`.
+- `SailPlatform.ensureStarted` no longer requires connector transport.
+- `wcp-pending-source-window` peers edge link endpoints like in-memory pairs.
 
 ## Learnings extracted
 
-None yet.
+- Edge link keeps handler `context.transport` until BFDA-03; it is not a remote-DA abstraction.
 

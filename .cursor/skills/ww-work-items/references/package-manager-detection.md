@@ -25,6 +25,9 @@ Read `package.json` scripts and use project scripts when present:
 - test: `<pm> test`
 - typecheck: `<pm> run typecheck`
 - lint: `<pm> run lint`
+- format (check): `<pm> run format`
+- format (fix): `<pm> run format:fix` when check fails and script exists
+- validate: `<pm> run validate` (full pre-review gate when defined)
 - build: `<pm> run build`
 
 If a script is missing, do not invent a command. Report the missing
