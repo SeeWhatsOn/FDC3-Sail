@@ -2,7 +2,7 @@
  * Pure query functions over AppDirectoryState (replaces AppDirectoryManager query methods).
  */
 
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach } from "vite-plus/test"
 import { retrieveAllApps, retrieveAppsById, retrieveIntents } from "../app-directory-queries"
 import type { AppDirectoryState } from "../../state/types"
 import { mockApp1, mockApp2, mockApp3 } from "./app-directory-test-fixtures"

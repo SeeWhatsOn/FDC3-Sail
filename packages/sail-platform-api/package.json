@@ -25,16 +25,16 @@
     }
   },
   "scripts": {
-    "build": "tsdown",
-    "dev": "tsdown --watch",
+    "build": "vp pack",
+    "dev": "vp pack --watch",
     "clean": "rimraf dist",
     "typecheck": "tsc",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --check .",
-    "format:fix": "prettier --write .",
+    "lint": "vp lint .",
+    "lint:fix": "vp lint . --fix",
+    "format": "vp fmt --check .",
+    "format:fix": "vp fmt .",
     "unused:check": "knip",
-    "test": "vitest run",
+    "test": "vp test run",
     "validate": "npm run typecheck && npm run lint && npm run format"
   },
   "devDependencies": {},

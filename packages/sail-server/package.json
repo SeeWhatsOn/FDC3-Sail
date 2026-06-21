@@ -6,12 +6,12 @@
   "main": "dist/main.js",
   "scripts": {
     "dev": "vite-node --watch src/main.ts",
-    "build": "vite build",
+    "build": "vp build",
     "build:tsc": "tsc",
     "start": "vite-node src/main.ts",
     "typecheck": "tsc",
-    "lint": "eslint .",
-    "format": "prettier --check .",
+    "lint": "vp lint .",
+    "format": "vp fmt --check .",
     "validate": "npm run typecheck && npm run lint && npm run format"
   },
   "devDependencies": {

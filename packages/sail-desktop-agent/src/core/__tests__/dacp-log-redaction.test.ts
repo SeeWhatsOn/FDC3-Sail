@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 
 import {
@@ -42,6 +42,7 @@ function createSensitiveRaiseIntentMessage(instanceId: string): BrowserTypes.Rai
     type: "raiseIntentRequest",
     meta: {
       requestUuid: "raise-intent-log-redaction-uuid",
+      timestamp: new Date(),
       source: { instanceId, appId: "SourceApp" },
     },
     payload: {

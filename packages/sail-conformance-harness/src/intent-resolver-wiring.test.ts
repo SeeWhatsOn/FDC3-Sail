@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import type { Context } from "@finos/fdc3"
 import type { IntentResolutionRequest } from "@finos/sail-desktop-agent"
 import { createHarnessIntentResolver } from "./intent-resolver-wiring"

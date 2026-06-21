@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { startHeartbeat } from "../heartbeat-handlers"
 import {
   clearAllHeartbeatTimersForTesting,
@@ -37,8 +37,14 @@ describe("heartbeat-runtime", () => {
   it("replaces an existing interval when setHeartbeatTimer is called again", () => {
     const clearSpy = vi.spyOn(globalThis, "clearInterval")
 
-    setHeartbeatTimer("a1", setInterval(() => {}, 1000))
-    setHeartbeatTimer("a1", setInterval(() => {}, 1000))
+    setHeartbeatTimer(
+      "a1",
+      setInterval(() => {}, 1000)
+    )
+    setHeartbeatTimer(
+      "a1",
+      setInterval(() => {}, 1000)
+    )
 
     expect(getActiveHeartbeatTimerCount()).toBe(1)
     expect(clearSpy).toHaveBeenCalled()
@@ -53,7 +59,10 @@ describe("heartbeat scenario isolation", () => {
   })
 
   it("has no active timers after explicit cleanup (simulates scenario teardown expectation)", () => {
-    setHeartbeatTimer("orphan", setInterval(() => {}, 1000))
+    setHeartbeatTimer(
+      "orphan",
+      setInterval(() => {}, 1000)
+    )
     clearAllHeartbeatTimersForTesting()
     expect(getActiveHeartbeatTimerCount()).toBe(0)
   })

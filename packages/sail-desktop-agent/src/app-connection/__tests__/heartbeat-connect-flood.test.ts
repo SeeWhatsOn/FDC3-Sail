@@ -4,7 +4,7 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, afterEach } from "vitest"
+import { describe, it, expect, afterEach } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../core/default-user-channels"
 import { getActiveHeartbeatTimerCount } from "../../core/handlers/dacp/heartbeat-runtime"
@@ -72,7 +72,7 @@ describe("heartbeat connect flood", () => {
     })
     activeAgents.push(agent)
 
-    const heartbeatEvents: BrowserTypes.AppRequestMessage[] = []
+    const heartbeatEvents: BrowserTypes.HeartbeatEvent[] = []
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "heartbeat-disabled-uuid",
       appId: "portfolioApp",
@@ -80,7 +80,7 @@ describe("heartbeat connect flood", () => {
     })
 
     connected.appPort.onmessage = event => {
-      const message = event.data as BrowserTypes.AppRequestMessage
+      const message = event.data as BrowserTypes.AgentEventMessage
       if (message.type === "heartbeatEvent") {
         heartbeatEvents.push(message)
       }

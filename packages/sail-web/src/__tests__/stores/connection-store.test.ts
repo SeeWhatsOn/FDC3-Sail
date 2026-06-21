@@ -1,5 +1,5 @@
 import { enableMapSet } from "immer"
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi } from "vite-plus/test"
 import type { AppConnectionMetadata, SailPlatform } from "@finos/sail-platform-api"
 import channelSelectorSource from "../../components/ChannelSelector.tsx?raw"
 import connectionStoreSource from "../../stores/connection-store.ts?raw"
@@ -56,7 +56,7 @@ function createAppConnectedMetadata(
 describe("ConnectionStore channel membership", () => {
   it("updates connection channelId when connector emits channelChanged", () => {
     const connector = createMockConnector()
-    const platform = { connector } as SailPlatform
+    const platform = { connector } as unknown as SailPlatform
     const store = createConnectionStore(platform)
 
     connector.emit("appConnected", createAppConnectedMetadata())
@@ -86,7 +86,7 @@ describe("ConnectionStore channel membership", () => {
 
   it("clears channelId when connector emits channelChanged with null", () => {
     const connector = createMockConnector()
-    const platform = { connector } as SailPlatform
+    const platform = { connector } as unknown as SailPlatform
     const store = createConnectionStore(platform)
 
     connector.emit("appConnected", createAppConnectedMetadata())

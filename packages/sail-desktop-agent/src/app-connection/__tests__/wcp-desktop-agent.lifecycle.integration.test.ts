@@ -4,7 +4,7 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, afterEach, vi } from "vitest"
+import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { DesktopAgent } from "../../core/desktop-agent"
 import { AppInstanceState } from "../../core/state/types"
 import {

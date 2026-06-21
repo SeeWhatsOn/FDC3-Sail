@@ -4,7 +4,7 @@
  * @vitest-environment jsdom
  */
 
-import { expect, vi } from "vitest"
+import { expect, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 import { WCPConnector } from "../wcp-connector"
 

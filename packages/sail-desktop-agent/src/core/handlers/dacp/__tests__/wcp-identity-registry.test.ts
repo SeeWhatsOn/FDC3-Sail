@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 import { DesktopAgent } from "../../../desktop-agent"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"

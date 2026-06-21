@@ -2,7 +2,7 @@
  * Contract: AppInstance carries no denormalized intent listener names; lifecycle enum is
  * Option A only (PENDING → CONNECTED → removed). Intent listeners live in intents.listeners.
  */
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { createInitialState } from "../initial-state"
 import { connectInstance } from "../mutators/instance"

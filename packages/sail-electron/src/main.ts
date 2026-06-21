@@ -4,7 +4,7 @@ import * as path from "path"
 import * as fs from "fs"
 
 // Log the current directory and the preload path to help debug
-const preloadPath = path.join(__dirname, "preload", "preload.js")
+const preloadPath = path.join(__dirname, "preload", "preload.cjs")
 console.log("Current directory:", __dirname)
 console.log("Preload path:", preloadPath)
 console.log("Preload exists:", fs.existsSync(preloadPath))

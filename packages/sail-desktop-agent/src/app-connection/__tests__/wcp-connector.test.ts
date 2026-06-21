@@ -7,7 +7,7 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach, vi } from "vite-plus/test"
 import { WCPConnector } from "../wcp-connector"
 import { createInMemoryTransportPair } from "../../transports/in-memory-transport"
 import type { Transport } from "../../core/interfaces/transport"

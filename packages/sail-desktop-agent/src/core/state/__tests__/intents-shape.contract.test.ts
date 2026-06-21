@@ -2,14 +2,10 @@
  * Contract: AgentState.intents exposes only FDC3 2.2-required slices (listeners + pending).
  * Intent resolution history is not part of agent state.
  */
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { createInitialState } from "../initial-state"
-import {
-  addPendingIntent,
-  registerIntentListener,
-  resolvePendingIntent,
-} from "../mutators/intent"
+import { addPendingIntent, registerIntentListener, resolvePendingIntent } from "../mutators/intent"
 import * as intentMutators from "../mutators/intent"
 import * as stateMutators from "../mutators/index"
 import * as intentSelectors from "../selectors/intent"
@@ -17,9 +13,8 @@ import * as stateSelectors from "../selectors/index"
 import * as statsSelectors from "../selectors/stats"
 import type { AgentState } from "../types"
 
-type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
-  ? true
-  : false
+type Equals<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false
 type Expect<T extends true> = T
 
 /** Compile-time contract (fails `tsc` if intents shape drifts). */

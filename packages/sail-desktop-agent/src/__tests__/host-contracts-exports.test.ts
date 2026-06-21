@@ -6,7 +6,7 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 
 const packageRoot = fileURLToPath(new URL("../..", import.meta.url))
 const srcRoot = join(packageRoot, "src")
@@ -37,7 +37,7 @@ describe("@finos/sail-desktop-agent host-contracts package boundary", () => {
   describe("host-contracts/ module layout", () => {
     it.each(HOST_CONTRACT_MODULES)(
       "src/host-contracts/%s exists as the canonical host contract module",
-      (moduleFile) => {
+      moduleFile => {
         expect(
           existsSync(join(hostContractsRoot, moduleFile)),
           `packages/sail-desktop-agent/src/host-contracts/${moduleFile} should exist`
@@ -64,21 +64,19 @@ describe("@finos/sail-desktop-agent host-contracts package boundary", () => {
     it("src/index.ts re-exports the host-contracts barrel for platform builders", () => {
       const entry = readSrc("index.ts")
 
-      expect(
-        entry,
-        "top-level entry should export host-contracts alongside core"
-      ).toMatch(/export\s+\*\s+from\s+["']\.\/host-contracts["']/)
+      expect(entry, "top-level entry should export host-contracts alongside core").toMatch(
+        /export\s+\*\s+from\s+["']\.\/host-contracts["']/
+      )
     })
 
     it.each(HOST_CONTRACT_TYPE_EXPORTS)(
       "host-contracts/index.ts exports %s for top-level re-export",
-      (exportName) => {
+      exportName => {
         const barrel = readSrc("host-contracts/index.ts")
 
-        expect(
-          barrel,
-          `host-contracts barrel should export ${exportName}`
-        ).toMatch(new RegExp(`\\b${exportName}\\b`))
+        expect(barrel, `host-contracts barrel should export ${exportName}`).toMatch(
+          new RegExp(`\\b${exportName}\\b`)
+        )
       }
     )
   })

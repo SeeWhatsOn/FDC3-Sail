@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 
 import { MockTransport } from "../../../../../__tests__/utils/mock-transport"

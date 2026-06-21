@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { cleanupDACPHandlers } from "../cleanup"
 import { startHeartbeat } from "../heartbeat-handlers"

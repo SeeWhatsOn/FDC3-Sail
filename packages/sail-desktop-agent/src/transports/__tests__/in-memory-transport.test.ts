@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi } from "vite-plus/test"
 import { InMemoryTransport, createInMemoryTransportPair } from "../in-memory-transport"
 
 /** Planned API for spec B — cast until GREEN wires onDeliveryError on InMemoryTransport */
@@ -110,7 +110,6 @@ describe("InMemoryTransport", () => {
 
       expect(handler).toHaveBeenCalledTimes(1)
     })
-
   })
 
   describe("send delivery guarantees", () => {

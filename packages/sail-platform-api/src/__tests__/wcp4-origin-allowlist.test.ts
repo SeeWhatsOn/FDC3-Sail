@@ -1,9 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
-import type { DesktopAgent } from "@finos/sail-desktop-agent"
+import { describe, it, expect, vi, beforeEach } from "vite-plus/test"
+import type { DesktopAgent, Transport } from "@finos/sail-desktop-agent"
 import { wireWcp4OriginAllowlist } from "../wcp4-origin-allowlist"
 
 const TRUSTED_ORIGIN = "https://trusted.example.com"
 const UNTRUSTED_ORIGIN = "https://evil.example.com"
+
+type DesktopAgentWithHandleMessage = {
+  transport: Transport
+  handleMessage: (message: unknown) => Promise<void>
+}
 
 function createWcp4Message(options: {
   messageOrigin: string
@@ -27,17 +32,17 @@ function createWcp4Message(options: {
 }
 
 function createMockDesktopAgent(): {
-  desktopAgent: DesktopAgent
+  desktopAgent: DesktopAgentWithHandleMessage
   transportSend: ReturnType<typeof vi.fn>
   innerHandleMessage: ReturnType<typeof vi.fn>
 } {
   const transportSend = vi.fn()
-  const innerHandleMessage = vi.fn(async () => undefined)
+  const innerHandleMessage = vi.fn(() => Promise.resolve(undefined))
 
-  const desktopAgent = {
-    transport: { send: transportSend },
+  const desktopAgent: DesktopAgentWithHandleMessage = {
+    transport: { send: transportSend } as unknown as Transport,
     handleMessage: innerHandleMessage,
-  } as unknown as DesktopAgent
+  }
 
   return { desktopAgent, transportSend, innerHandleMessage }
 }
@@ -50,7 +55,7 @@ describe("wireWcp4OriginAllowlist", () => {
   it("sends WCP5ValidateAppIdentityFailedResponse when origin is not on allowlist", async () => {
     const { desktopAgent, transportSend, innerHandleMessage } = createMockDesktopAgent()
 
-    wireWcp4OriginAllowlist(desktopAgent, [TRUSTED_ORIGIN])
+    wireWcp4OriginAllowlist(desktopAgent as unknown as DesktopAgent, [TRUSTED_ORIGIN])
 
     await desktopAgent.handleMessage(
       createWcp4Message({
@@ -64,12 +69,12 @@ describe("wireWcp4OriginAllowlist", () => {
     expect(transportSend).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "WCP5ValidateAppIdentityFailedResponse",
-        payload: { message: expect.stringMatching(/not allowed/i) },
+        payload: { message: expect.stringMatching(/not allowed/i) as unknown as string },
         meta: expect.objectContaining({
           connectionAttemptUuid: "reject-uuid",
           destination: { instanceId: "temp-reject-uuid" },
         }),
-      })
+      } as Record<string, unknown>)
     )
     expect(innerHandleMessage).not.toHaveBeenCalled()
   })
@@ -77,7 +82,7 @@ describe("wireWcp4OriginAllowlist", () => {
   it("forwards WCP4 to the original handler when origin is on allowlist", async () => {
     const { desktopAgent, transportSend, innerHandleMessage } = createMockDesktopAgent()
 
-    wireWcp4OriginAllowlist(desktopAgent, [TRUSTED_ORIGIN])
+    wireWcp4OriginAllowlist(desktopAgent as unknown as DesktopAgent, [TRUSTED_ORIGIN])
 
     const message = createWcp4Message({
       messageOrigin: TRUSTED_ORIGIN,
@@ -95,7 +100,7 @@ describe("wireWcp4OriginAllowlist", () => {
   it("derives connectionAttemptUuid from temp instanceId when meta omits it", async () => {
     const { desktopAgent, transportSend } = createMockDesktopAgent()
 
-    wireWcp4OriginAllowlist(desktopAgent, [TRUSTED_ORIGIN])
+    wireWcp4OriginAllowlist(desktopAgent as unknown as DesktopAgent, [TRUSTED_ORIGIN])
 
     await desktopAgent.handleMessage(
       createWcp4Message({
@@ -107,14 +112,14 @@ describe("wireWcp4OriginAllowlist", () => {
     expect(transportSend).toHaveBeenCalledWith(
       expect.objectContaining({
         meta: expect.objectContaining({ connectionAttemptUuid: "derived-uuid" }),
-      })
+      } as Record<string, unknown>)
     )
   })
 
   it("forwards non-WCP4 messages to the original handler unchanged", async () => {
     const { desktopAgent, transportSend, innerHandleMessage } = createMockDesktopAgent()
 
-    wireWcp4OriginAllowlist(desktopAgent, [TRUSTED_ORIGIN])
+    wireWcp4OriginAllowlist(desktopAgent as unknown as DesktopAgent, [TRUSTED_ORIGIN])
 
     const heartbeat = { type: "heartbeatRequest", payload: {}, meta: {} }
 

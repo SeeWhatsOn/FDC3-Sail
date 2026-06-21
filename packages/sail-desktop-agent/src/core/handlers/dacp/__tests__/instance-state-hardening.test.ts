@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { createInitialState } from "../../../state/initial-state"

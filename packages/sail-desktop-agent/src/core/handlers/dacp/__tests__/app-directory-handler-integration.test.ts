@@ -3,7 +3,7 @@
  * helpers — catalog lives on state.appDirectory only.
  */
 
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 import type { DirectoryApp } from "../../../app-directory/types"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"

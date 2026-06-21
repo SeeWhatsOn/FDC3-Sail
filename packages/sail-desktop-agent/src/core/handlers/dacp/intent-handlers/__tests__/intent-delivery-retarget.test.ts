@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 
 import { MockTransport } from "../../../../../__tests__/utils/mock-transport"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../../default-user-channels"
@@ -100,14 +100,21 @@ describe("deliverPendingIntentsForListener retargeting", () => {
         },
         payload: {
           raiseIntentRequestUuid: requestId,
-          intentResult: { type: "testContextY", id: { value: "1" } },
+          intentEventUuid: "event-1",
+          intentResult: { context: { type: "testContextY", id: { value: "1" } } },
         },
       },
       { ...handlerContext, instanceId: "target-delivered" }
     )
 
     expect(
-      transport.sentMessages.some(message => message.type === "raiseIntentResultResponse")
+      transport.sentMessages.some(
+        (message): message is { type: string } =>
+          typeof message === "object" &&
+          message !== null &&
+          "type" in message &&
+          (message as { type: string }).type === "raiseIntentResultResponse"
+      )
     ).toBe(true)
   })
 })

@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n agent,harness \"npm run dev -w @finos/sail-desktop-agent --prefix ../..\" \"vite\"",
-    "build": "vite build",
+    "build": "vp build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "vp test run",
+    "test:watch": "vp test"
   },
   "dependencies": {
     "@finos/fdc3": "^2.2.3",

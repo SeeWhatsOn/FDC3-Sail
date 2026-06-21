@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 import type { DirectoryApp } from "../../../app-directory/types"
 import { retrieveAppsById } from "../../../app-directory/app-directory-queries"

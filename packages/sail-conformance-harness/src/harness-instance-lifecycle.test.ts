@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 
 import { createHarnessInstanceCleanup } from "./harness-instance-lifecycle"
 import { createPopupCloseWatcher } from "./popup-launcher"

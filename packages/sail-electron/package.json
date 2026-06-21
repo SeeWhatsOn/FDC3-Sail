@@ -3,24 +3,18 @@
   "version": "0.0.0",
   "type": "module",
   "description": "",
-  "main": "dist/main.js",
+  "main": "dist/main.cjs",
   "scripts": {
     "clean": "rimraf dist",
-    "build": "rollup -c rollup.config.mjs",
-    "watch": "rollup -c rollup.config.mjs -w",
+    "build": "vp pack",
+    "watch": "vp pack --watch",
     "dev": "npm run build && electron .",
     "typecheck": "tsc",
-    "lint": "eslint .",
-    "format": "prettier --check .",
+    "lint": "vp lint .",
+    "format": "vp fmt --check .",
     "validate": "npm run typecheck && npm run lint && npm run format"
   },
-  "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.1",
-    "@rollup/plugin-json": "^6.1.0",
-    "@rollup/plugin-node-resolve": "^15.3.1",
-    "@rollup/plugin-typescript": "^12.1.1",
-    "rollup": "^4.32.1"
-  },
+  "devDependencies": {},
   "dependencies": {
     "@finos/fdc3": "^2.2.3",
     "electron": "^42.4.0"

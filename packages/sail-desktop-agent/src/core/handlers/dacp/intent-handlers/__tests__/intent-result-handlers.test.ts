@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 
 import { MockTransport } from "../../../../../__tests__/utils/mock-transport"
@@ -15,7 +15,7 @@ type RaiseIntentResultResponse = BrowserTypes.AgentResponseMessage & {
   type: "raiseIntentResultResponse"
   payload: {
     intentResult?: BrowserTypes.IntentResult
-    metadata?: BrowserTypes.ContextMetadata
+    metadata?: IntentResultContextMetadata
     error?: string
   }
   meta: BrowserTypes.AgentResponseMessageMeta & {
@@ -126,7 +126,7 @@ describe("handleIntentResultRequest", () => {
     expect(response).toBeDefined()
     expect(response?.meta.destination?.instanceId).toBe(BASE.sourceInstanceId)
 
-    const metadata = response!.payload.metadata as IntentResultContextMetadata | undefined
+    const metadata = response!.payload.metadata
     expect(metadata).toBeDefined()
     expect(metadata!.source).toEqual({
       appId: BASE.targetAppId,

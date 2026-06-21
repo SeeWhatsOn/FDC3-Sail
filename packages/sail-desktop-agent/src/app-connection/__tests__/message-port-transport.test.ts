@@ -5,7 +5,7 @@
  * in the Node.js test environment.
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, vi } from "vite-plus/test"
 import { disconnectApp, type WCPConnectionContext } from "../wcp/wcp-connection-management"
 import { MessagePortTransport } from "../message-port-transport"
 import type { AppConnectionMetadata } from "../wcp/wcp-types"

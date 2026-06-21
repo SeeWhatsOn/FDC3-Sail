@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vite-plus/test"
 import { DesktopAgent } from "../../desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { retrieveAllApps, retrieveApps, retrieveAppsById } from "../app-directory-queries"

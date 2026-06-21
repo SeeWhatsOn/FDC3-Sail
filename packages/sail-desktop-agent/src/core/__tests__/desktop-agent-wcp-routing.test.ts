@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 import { DesktopAgent } from "../desktop-agent"
 import { MockTransport } from "../../__tests__/utils/mock-transport"

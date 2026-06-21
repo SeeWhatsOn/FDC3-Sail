@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vite-plus/test"
 import type { DesktopAgent } from "@finos/sail-desktop-agent"
 import { SailPlatform } from "../sail-platform"
 import { createSailBrowserDesktopAgent } from "../sail-browser-desktop-agent"

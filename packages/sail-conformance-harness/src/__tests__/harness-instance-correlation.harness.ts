@@ -1,4 +1,4 @@
-import { expect } from "vitest"
+import { expect } from "vite-plus/test"
 import { DesktopAgent, type Logger } from "@finos/sail-desktop-agent"
 import { MockTransport } from "../../../sail-desktop-agent/test/support/mock-transport"
 import { createHarnessAppLauncher } from "../app-launcher"

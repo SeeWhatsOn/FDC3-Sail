@@ -14,6 +14,8 @@ website/.docusaurus
 FDC3-Sail.pem
 *.tsbuildinfo
 packages/sail-desktop-agent/cucumber-report.html
+packages/sail-desktop-agent/html/
+html/
 packages/sail-desktop-agent/test-results.xml
 
 packages/da-impl/coverage/*

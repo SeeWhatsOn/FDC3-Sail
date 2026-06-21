@@ -2,7 +2,7 @@
  * AgentState mutators for the app directory catalog slice.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vite-plus/test"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { createInitialState } from "../../initial-state"
 import type { AgentState } from "../../types"

@@ -36,11 +36,11 @@
     "./dist/sail-ui.css"
   ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "format": "prettier --check .",
-    "preview": "vite preview",
+    "dev": "vp dev",
+    "build": "vp build",
+    "lint": "vp lint .",
+    "format": "vp fmt --check .",
+    "preview": "vp preview",
     "typecheck": "tsc",
     "validate": "npm run typecheck && npm run lint && npm run format"
   },

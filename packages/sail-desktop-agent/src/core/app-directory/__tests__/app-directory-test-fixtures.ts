@@ -1,4 +1,4 @@
-import { expect } from "vitest"
+import { expect } from "vite-plus/test"
 import type { DirectoryApp } from "../types"
 import type { AgentState } from "../../state/types"
 

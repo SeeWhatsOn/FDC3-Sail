@@ -2,9 +2,13 @@
  * Verifies SailPlatform delegates browser Desktop Agent wiring to the top-level preset.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vite-plus/test"
 import * as sailDesktopAgent from "@finos/sail-desktop-agent"
 import * as sailDesktopAgentPresets from "@finos/sail-desktop-agent/presets"
+import type {
+  BrowserDesktopAgent,
+  BrowserDesktopAgentOptions,
+} from "@finos/sail-desktop-agent/presets"
 import { SailPlatform } from "../sail-platform"
 
 describe("SailPlatform preset wiring", () => {
@@ -13,7 +17,10 @@ describe("SailPlatform preset wiring", () => {
     getUserChannels: vi.fn(() => []),
     getAppUserChannelId: vi.fn(() => null),
     stop: mockStop,
-  }
+    intentResolver: {},
+    channels: {},
+    apps: {},
+  } as unknown as BrowserDesktopAgent
   const mockWcpConnector = {
     on: vi.fn(),
     off: vi.fn(),
@@ -28,7 +35,7 @@ describe("SailPlatform preset wiring", () => {
   beforeEach(() => {
     createBrowserDesktopAgentSpy = vi
       .spyOn(sailDesktopAgent, "createBrowserDesktopAgent")
-      .mockReturnValue(mockDesktopAgent as unknown as sailDesktopAgent.DesktopAgent)
+      .mockReturnValue(mockDesktopAgent)
     getBrowserDesktopAgentSessionSpy = vi
       .spyOn(sailDesktopAgentPresets, "getBrowserDesktopAgentSession")
       .mockReturnValue({
@@ -68,9 +75,10 @@ describe("SailPlatform preset wiring", () => {
     platform.start()
 
     expect(createBrowserDesktopAgentSpy).toHaveBeenCalledOnce()
-    const createOptions = createBrowserDesktopAgentSpy.mock.calls[0]?.[0] as Parameters<
-      typeof sailDesktopAgent.createBrowserDesktopAgent
-    >[0]
+    const createOptions = createBrowserDesktopAgentSpy.mock.calls[0]?.[0] as
+      | BrowserDesktopAgentOptions
+      | undefined
+    expect(createOptions).toBeDefined()
     expect(createOptions).toMatchObject({
       appLauncher,
       apps,
@@ -84,8 +92,8 @@ describe("SailPlatform preset wiring", () => {
         fdc3Version: "2.2",
       },
     })
-    expect(typeof createOptions.wcpOptions?.getIntentResolverUrl).toBe("function")
-    expect(typeof createOptions.wcpOptions?.getChannelSelectorUrl).toBe("function")
+    expect(typeof createOptions?.wcpOptions?.getIntentResolverUrl).toBe("function")
+    expect(typeof createOptions?.wcpOptions?.getChannelSelectorUrl).toBe("function")
     expect(getBrowserDesktopAgentSessionSpy).toHaveBeenCalledWith(mockDesktopAgent)
     expect(platform.isRunning).toBe(true)
     expect(platform.agent).toBe(mockDesktopAgent)

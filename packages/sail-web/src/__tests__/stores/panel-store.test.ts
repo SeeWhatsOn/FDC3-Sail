@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from "vitest"
+import { describe, test, expect, beforeEach } from "vite-plus/test"
 import { createMockAppPanel } from "../utils/test-utils"
 import { createPanelStore } from "../../stores"
 

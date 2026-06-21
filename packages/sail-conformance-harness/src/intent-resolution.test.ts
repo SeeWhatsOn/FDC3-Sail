@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import type { AppIdentifier, Context } from "@finos/fdc3"
 import { selectIntentHandler } from "./intent-resolution"
 import type { IntentHandlerOption, IntentResolutionRequest } from "./types"
@@ -53,10 +53,7 @@ describe("selectIntentHandler", () => {
     },
     {
       name: "selects an explicit target appId when only appId is provided",
-      request: createRequest([
-        handler("ChartApp"),
-        handler("NewsApp", { instanceId: "news-1" }),
-      ]),
+      request: createRequest([handler("ChartApp"), handler("NewsApp", { instanceId: "news-1" })]),
       target: { appId: "NewsApp" },
       expected: { appId: "NewsApp", instanceId: "news-1" },
     },

@@ -4,7 +4,7 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach, vi } from "vite-plus/test"
 import { WCPConnector } from "../wcp-connector"
 import { createInMemoryTransportPair } from "../../transports/in-memory-transport"
 import { getPendingWcpSourceWindowForTesting } from "../../core/handlers/dacp/wcp-pending-source-window"

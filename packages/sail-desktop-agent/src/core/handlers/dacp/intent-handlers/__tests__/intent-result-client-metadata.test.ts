@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 
 import { MockTransport } from "../../../../../__tests__/utils/mock-transport"
@@ -149,7 +149,12 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
       expect(typeof clientMetadata?.timestamp).toBe("string")
       expect(Number.isNaN(Date.parse(clientMetadata!.timestamp))).toBe(false)
       expect(clientMetadata?.traceId).toEqual(expect.any(String))
-      expect((clientMetadata?.traceId as string).length).toBeGreaterThan(0)
+      const traceId = clientMetadata?.traceId
+      expect(typeof traceId).toBe("string")
+      if (typeof traceId !== "string") {
+        throw new Error("expected traceId string")
+      }
+      expect(traceId.length).toBeGreaterThan(0)
 
       expect(resolve).toHaveBeenCalledOnce()
       expect(resolve.mock.calls[0]?.[0]).not.toHaveProperty("metadata")
@@ -179,7 +184,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
               signature: appSignature,
               custom: appCustom,
             },
-          },
+          } as unknown as BrowserTypes.IntentResult,
         },
       },
       context
@@ -195,7 +200,12 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
     expect(clientMetadata?.custom).toEqual(appCustom)
     expect(clientMetadata?.traceId).toEqual(expect.any(String))
     expect(clientMetadata?.traceId).not.toBe("app-trace-should-not-win")
-    expect((clientMetadata?.traceId as string).length).toBeGreaterThan(0)
+    const traceId = clientMetadata?.traceId
+    expect(typeof traceId).toBe("string")
+    if (typeof traceId !== "string") {
+      throw new Error("expected traceId string")
+    }
+    expect(traceId.length).toBeGreaterThan(0)
   })
 
   it("raiseIntentResultResponse clones through InMemoryTransport without circular metadata refs", async () => {

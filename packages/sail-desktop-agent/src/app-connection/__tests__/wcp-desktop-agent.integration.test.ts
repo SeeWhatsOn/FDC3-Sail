@@ -7,7 +7,7 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, afterEach, vi } from "vitest"
+import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import type { DesktopAgent } from "../../core/desktop-agent"
 import type { AppConnectionMetadata } from "../wcp-connector"
@@ -207,7 +207,11 @@ describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
     ])
 
     expect(broadcastEvent.type).toBe("broadcastEvent")
-    const destination = broadcastEvent.meta.destination as { instanceId?: string } | undefined
+    const destination = (
+      broadcastEvent.meta as BrowserTypes.BroadcastEventMeta & {
+        destination?: { instanceId?: string }
+      }
+    ).destination
     expect(destination?.instanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
     expect(broadcastEvent.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
     expect(broadcastEvent.payload.channelId).toBeNull()
@@ -381,7 +385,11 @@ describe("WCP edge contract", () => {
     const broadcastEvent = await broadcastPromise
 
     expect(broadcastEvent.type).toBe("broadcastEvent")
-    const destination = broadcastEvent.meta.destination as { instanceId?: string } | undefined
+    const destination = (
+      broadcastEvent.meta as BrowserTypes.BroadcastEventMeta & {
+        destination?: { instanceId?: string }
+      }
+    ).destination
     expect(destination?.instanceId).toBe(appA.canonicalInstanceId)
     expect(broadcastEvent.payload.context?.type).toBe(INSTRUMENT_CONTEXT.type)
   })
@@ -435,7 +443,11 @@ describe("WCP edge contract", () => {
     const broadcastEvent = await broadcastPromise
 
     expect(broadcastEvent.type).toBe("broadcastEvent")
-    const destination = broadcastEvent.meta.destination as { instanceId?: string } | undefined
+    const destination = (
+      broadcastEvent.meta as BrowserTypes.BroadcastEventMeta & {
+        destination?: { instanceId?: string }
+      }
+    ).destination
     expect(destination?.instanceId).toBe(appA.canonicalInstanceId)
     expect(broadcastEvent.payload.context?.type).toBe(INSTRUMENT_CONTEXT.type)
   })
@@ -545,7 +557,7 @@ describe("browser channels controller (WCP integration)", () => {
 
     await postDacpOnPort(
       app.appPort,
-      createAddEventListenerMessage(app.canonicalInstanceId, app.appId, "channelChanged")
+      createAddEventListenerMessage(app.canonicalInstanceId, app.appId, "USER_CHANNEL_CHANGED")
     )
 
     const channelChangedPromise = waitForChannelChangedEvent(app.appPort, CHANNEL_ID)
@@ -555,9 +567,7 @@ describe("browser channels controller (WCP integration)", () => {
     const channelChangedEvent = await channelChangedPromise
 
     expect(channelChangedEvent.type).toBe("channelChangedEvent")
-    expect(channelChangedEvent.payload.channelId ?? channelChangedEvent.payload.newChannelId).toBe(
-      CHANNEL_ID
-    )
+    expect(channelChangedEvent.payload.newChannelId).toBe(CHANNEL_ID)
     expect(channels.getAppChannelId(app.canonicalInstanceId)).toBe(CHANNEL_ID)
     expect(channels.getAppChannel(app.canonicalInstanceId)).toMatchObject({
       id: CHANNEL_ID,
@@ -579,7 +589,7 @@ describe("browser channels controller (WCP integration)", () => {
 
     await postDacpOnPort(
       app.appPort,
-      createAddEventListenerMessage(app.canonicalInstanceId, app.appId, "channelChanged")
+      createAddEventListenerMessage(app.canonicalInstanceId, app.appId, "USER_CHANNEL_CHANGED")
     )
     await postDacpOnPort(
       app.appPort,
@@ -597,7 +607,7 @@ describe("browser channels controller (WCP integration)", () => {
     const leaveEvent = await leavePromise
 
     expect(leaveEvent.type).toBe("channelChangedEvent")
-    expect(leaveEvent.payload.channelId ?? leaveEvent.payload.newChannelId).toBeNull()
+    expect(leaveEvent.payload.newChannelId).toBeNull()
     expect(channels.getAppChannelId(app.canonicalInstanceId)).toBeNull()
     expect(channels.getAppChannel(app.canonicalInstanceId)).toBeNull()
     expect(agent.getState().instances[app.canonicalInstanceId]?.currentUserChannel).toBeNull()
@@ -841,7 +851,9 @@ describe("browser apps controller (WCP integration)", () => {
     }
     global.MessageChannel = FailingMessageChannel as unknown as typeof MessageChannel
 
-    window.dispatchEvent(createMessageEvent(createWCP1Hello("apps-handshake-fail-uuid")))
+    window.dispatchEvent(
+      createMessageEvent(createWCP1Hello("apps-handshake-fail-uuid", PORTFOLIO_APP.details.url))
+    )
 
     expect(failures).toHaveLength(1)
     expect(failures[0]?.error).toBeInstanceOf(Error)

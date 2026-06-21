@@ -1,7 +1,7 @@
 /**
  * Smoke test: reorganized runtime folders resolve via package entrypoints.
  */
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 
 describe("reorganized import paths", () => {
   it("resolves DACP protocol modules from core/dacp", async () => {

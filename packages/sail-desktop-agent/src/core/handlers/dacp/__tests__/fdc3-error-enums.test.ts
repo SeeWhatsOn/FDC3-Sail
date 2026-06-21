@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import type { Context } from "@finos/fdc3"
 import { ChannelError, OpenError, ResolveError } from "@finos/fdc3"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"

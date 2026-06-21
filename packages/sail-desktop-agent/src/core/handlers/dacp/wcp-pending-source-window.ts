@@ -32,10 +32,7 @@ export function setPendingWcpSourceWindow(
   }
 }
 
-export function takePendingWcpSourceWindow(
-  transport: Transport,
-  tempInstanceId: string
-): unknown | undefined {
+export function takePendingWcpSourceWindow(transport: Transport, tempInstanceId: string): unknown {
   for (const endpoint of forTransportEndpoints(transport)) {
     const map = pendingSourceWindowRegistry.get(endpoint)
     const sourceWindow = map?.get(tempInstanceId)
@@ -59,7 +56,7 @@ export function clearPendingWcpSourceWindow(transport: Transport, tempInstanceId
 export function getPendingWcpSourceWindowForTesting(
   transport: Transport,
   tempInstanceId: string
-): unknown | undefined {
+): unknown {
   for (const endpoint of forTransportEndpoints(transport)) {
     const value = pendingSourceWindowRegistry.get(endpoint)?.get(tempInstanceId)
     if (value !== undefined) {

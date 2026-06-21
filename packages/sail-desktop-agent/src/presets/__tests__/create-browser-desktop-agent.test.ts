@@ -7,7 +7,7 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, afterEach, vi } from "vitest"
+import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 import { createBrowserDesktopAgent } from "../create-browser-desktop-agent"
 import type { DesktopAgent } from "../../core/desktop-agent"

@@ -1,5 +1,5 @@
 import { act } from "@testing-library/react"
-import { vi } from "vitest"
+import { vi } from "vite-plus/test"
 
 const { create: actualCreate, createStore: actualCreateStore } =
   await vi.importActual<typeof import("zustand")>("zustand")

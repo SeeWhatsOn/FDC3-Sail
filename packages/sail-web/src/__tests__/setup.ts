@@ -1,4 +1,4 @@
-import { beforeAll, afterEach, afterAll } from "vitest"
+import { beforeAll, afterEach, afterAll, vi } from "vite-plus/test"
 import { cleanup } from "@testing-library/react"
 import { resetAllStores } from "../__mocks__/zustand"
 

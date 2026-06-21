@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+/* oxlint-disable react-refresh/only-export-components */
 import { createContext, useContext, type ReactNode } from "react"
 import type { SailPlatform } from "@finos/sail-platform-api"
 

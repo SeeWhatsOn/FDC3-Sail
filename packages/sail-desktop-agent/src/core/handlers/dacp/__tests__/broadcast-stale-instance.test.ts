@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
@@ -70,9 +70,12 @@ describe("handleBroadcastRequest stale instance routing", () => {
     expect(response.payload?.error).toBeUndefined()
 
     const broadcastEvent = transport.sentMessages.find(
-      message =>
-        typeof message === "object" && message !== null && message.type === "broadcastEvent"
-    ) as { meta?: { destination?: { instanceId?: string } } } | undefined
+      (message): message is { type: string; meta?: { destination?: { instanceId?: string } } } =>
+        typeof message === "object" &&
+        message !== null &&
+        "type" in message &&
+        (message as { type: string }).type === "broadcastEvent"
+    )
 
     expect(broadcastEvent?.meta?.destination?.instanceId).toBe(listenerInstanceId)
   })
