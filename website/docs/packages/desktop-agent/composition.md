@@ -31,8 +31,8 @@ flowchart TB
     WCP --> MP2
   end
 
-  subgraph wire ["Internal transport (local mode)"]
-    T["InMemoryTransport pair"]
+  subgraph wire ["Internal edge link (in-tab preset)"]
+    T["BrowserDaEdgeLink pair"]
   end
 
   subgraph da ["Desktop Agent — core/"]
@@ -56,36 +56,55 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  subgraph preset ["Preset — 90% of hosts"]
+  subgraph preset ["Preset — default browser hosts"]
     P["createBrowserDesktopAgent()"]
     P --> E1["WCPConnector (hidden)"]
     P --> D1["DesktopAgent"]
-    E1 --- T1["InMemoryTransport pair"]
+    E1 --- T1["BrowserDaEdgeLink pair"]
     D1 --- T1
   end
 
-  subgraph manual ["Manual — framework authors"]
+  subgraph manual ["Manual — framework authors & tests"]
     D2["new DesktopAgent({ transport })"]
     E2["new WCPConnector(transport)"]
-    D2 --- T2["createInMemoryTransportPair()"]
+    D2 --- T2["InMemoryTransport pair"]
     E2 --- T2
   end
-
-  subgraph remote ["Remote DA"]
-    C["createWCPClient({ transport })"]
-    S["new DesktopAgent on server"]
-    C --- NET["Socket / Worker transport"]
-    S --- NET
-  end
 ```
+
+`BrowserDaEdgeLink` appears only in the **preset** path above — it is preset-internal wiring, not a public import. Manual composition and edge tests use **`createInMemoryTransportPair`** from `@finos/sail-desktop-agent/transports` (or preset integration tests via `getBrowserDesktopAgentSession`).
 
 | Pattern | Returns | You manage |
 |---------|---------|------------|
 | `createBrowserDesktopAgent` | `DesktopAgent` + `intentResolver`, `channels`, `apps` | `AppLauncher`; wire host UI via controllers |
 | `createBrowserHostControllers` | `{ intentResolver, channels, apps }` | Manual `DesktopAgent` + `WCPConnector` composition |
-| `getBrowserDesktopAgentSession(da)` | `{ wcpConnector, connectorTransport }` | Advanced edge tests |
-| `createWCPClient` | `{ wcpConnector, start, stop }` | Browser side of remote DA |
-| Manual pair | `DesktopAgent` + `WCPConnector` | Both transports and lifecycle |
+| `getBrowserDesktopAgentSession(da)` | `{ wcpConnector }` | Advanced edge tests on preset instances |
+| Manual pair (`createInMemoryTransportPair`) | `DesktopAgent` + `WCPConnector` | Both transports and lifecycle |
+
+### Deferred deployment paths (not on v3-pre)
+
+```mermaid
+flowchart TB
+  subgraph today ["Supported today"]
+    B["Browser host page"]
+    DA["DesktopAgent in-tab"]
+    WCP["WCPConnector + MessagePort per app"]
+    B --> DA
+    B --> WCP
+    DA <-->|"BrowserDaEdgeLink"| WCP
+  end
+
+  subgraph future ["Future explicit adapters"]
+    NAT["Native app — WebSocket app-connection"]
+    SYNC["Cross-tab / cross-device sync relay"]
+    BR["Bridge between browser DA instances"]
+    NAT -.->|"app-connection only"| WCP
+    SYNC -.->|"on top of browser-first DA"| DA
+    BR -.->|"not remote core DA"| DA
+  end
+```
+
+Remote Desktop Agent (`createWCPClient` + server-hosted engine) was removed from presets. Native desktop apps and multi-device sync are planned as **app-connection** or **sync** adapters — not as a reason to host the core DA on a remote process. See the [integrator guide — deferred paths](./integrator-guide#server-worker-native-and-multi-device-paths-deferred).
 
 ## Source tree responsibilities
 
@@ -106,13 +125,13 @@ packages/sail-desktop-agent/src/
 │   └── channel-control.ts     # ChannelControl — picker contract shape
 │
 ├── app-connection/
+│   ├── browser-da-edge-link.ts  # BrowserDaEdgeLink — in-tab DA↔WCP wire (preset)
 │   ├── wcp/                   # WCP handshake, routing, connection map
 │   ├── wcp-connector.ts       # WCP1–3, postMessage listener, port map
 │   └── message-port-transport.ts
 │
 ├── presets/
-│   ├── create-browser-desktop-agent.ts  # createBrowserDesktopAgent (local DA + edge)
-│   ├── create-wcp-client.ts             # createWCPClient (remote DA mode)
+│   ├── create-browser-desktop-agent.ts  # createBrowserDesktopAgent (browser-first preset)
 │   └── browser-session.ts               # createBrowserHostControllers, getBrowserDesktopAgentSession
 │
 └── transports/
@@ -226,7 +245,7 @@ sequenceDiagram
 
 Browser preset hosts use **`channels.changeAppChannel`** and **`channels.onAppChannelChange`**. `SailPlatform` wraps the same engine path for the reference stack — see [integrator guide](./integrator-guide#channel-selector--host-shell-ui).
 
-Manual composition without the preset factory: build controllers with **`createBrowserHostControllers({ desktopAgent, wcpConnector, connectorTransport })`** from `@finos/sail-desktop-agent/presets`.
+Manual composition without the preset factory: build controllers with **`createBrowserHostControllers({ desktopAgent, wcpConnector })`** from `@finos/sail-desktop-agent/presets`.
 
 ## Testing layers
 
@@ -241,6 +260,6 @@ See [conformance traceability](./conformance) for BDD vs toolbox gaps.
 
 ## Related
 
-- [Integrator guide](./integrator-guide) — host contracts, presets, deployment decision tree
+- [Integrator guide](./integrator-guide) — host contracts, browser-first preset, WCP/DACP detail
 - [Channel selection (Sail stack)](../../architecture/channel-selection) — `SailPlatform` channel APIs
 - [@finos/sail-platform-api](../platform-api/overview) — workspace, layout, `SailPlatform` wrapper

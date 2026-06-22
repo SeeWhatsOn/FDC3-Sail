@@ -9,6 +9,7 @@ loop_limit: 3
 last_agent: ""
 file_manifest:
   - plans/prd-browser-first-desktop-agent-simplification.md
+  - plans/work-items/collapse-browser-app-connection-into-desktop-agent.md
   - plans/work-items/document-browser-first-desktop-agent.md
   - plans/work-items/define-browser-da-observability-hooks.md
 depends_on: []
@@ -24,15 +25,16 @@ tags:
 
 ## Goal
 
-Coordinate the browser-first Desktop Agent simplification so implementation slices preserve WCP app connectivity while removing remote Desktop Agent deployment as a default architecture driver.
+Coordinate the browser-first Desktop Agent simplification so implementation slices preserve WCP app connectivity while making `DesktopAgent` the browser-resident runtime and removing remote/preset/connector composition as a default architecture driver.
 
 ## User or system context
 
-Maintainers need Sail to be easier to explain and reason about: one browser-resident Desktop Agent owns local FDC3 state, web apps connect through WCP `MessagePort`, native apps can later connect through a WebSocket adapter, and distributed sync is deferred to explicit bridging/relay work.
+Maintainers need Sail to be easier to explain and reason about: one browser-resident `DesktopAgent` owns local FDC3 state and app connection lifecycle, web apps connect through WCP and per-app `MessagePort`, native apps can later connect through an explicit adapter, and distributed sync is deferred to explicit bridging/relay work.
 
 ## Reference docs
 
 - `plans/prd-browser-first-desktop-agent-simplification.md`
+- `packages/sail-desktop-agent/src/core/desktop-agent.ts`
 - `packages/sail-desktop-agent/src/presets/create-browser-desktop-agent.ts`
 - `packages/sail-desktop-agent/src/app-connection/browser-da-edge-link.ts`
 - `packages/sail-desktop-agent/src/app-connection/wcp-connector.ts`
@@ -42,7 +44,7 @@ Maintainers need Sail to be easier to explain and reason about: one browser-resi
 
 ## Parent context
 
-Sail should be browser-first: one browser-resident `DesktopAgent` owns local FDC3 state for a host page. Web apps still communicate through WCP and per-app `MessagePort`; that is not the complexity being removed. The complexity to remove is the public/default assumption that the Desktop Agent itself may live in a worker, server, WebSocket runtime, or other remote location.
+Sail should be browser-first: one browser-resident `DesktopAgent` owns local FDC3 state and app connection lifecycle for a host page. Web apps still communicate through WCP and per-app `MessagePort`; that is the app boundary, not a separate connector product. The complexity to remove is the public/default assumption that the Desktop Agent itself may live in a worker, server, WebSocket runtime, or other remote location, plus the remaining internal browser-path `Transport` hop between WCP edge and DA.
 
 ## Child work items
 
@@ -53,13 +55,15 @@ Sail should be browser-first: one browser-resident `DesktopAgent` owns local FDC
 | `simplify-browser-desktop-agent-preset` | task | [`spike-browser-first-transport-simplification`, `preserve-wcp-messageport-connectivity`] | done — work item deleted |
 | `simplify-dacp-handler-response-plumbing` | task | [`spike-browser-first-transport-simplification`, `preserve-wcp-messageport-connectivity`] | done — work item deleted |
 | `unify-browser-host-ui-controllers` | task | [`simplify-browser-desktop-agent-preset`] | done — work item deleted |
-| `document-browser-first-desktop-agent` | task | [`simplify-browser-desktop-agent-preset`] | draft |
-| `define-browser-da-observability-hooks` | task | [`simplify-dacp-handler-response-plumbing`] | draft |
+| `collapse-browser-app-connection-into-desktop-agent` | task | [`simplify-dacp-handler-response-plumbing`, `preserve-wcp-messageport-connectivity`] | approved |
+| `document-browser-first-desktop-agent` | task | [`collapse-browser-app-connection-into-desktop-agent`] | draft |
+| `define-browser-da-observability-hooks` | task | [`collapse-browser-app-connection-into-desktop-agent`] | draft |
 
 ## Out of scope
 
 - Delivering the epic directly.
 - Implementing cross-tab/device sync, distributed state, FDC3 Agent Bridging, Redis/Kafka/database relay, or native WebSocket protocol support.
+- Collapsing all browser/WCP code physically into `desktop-agent.ts`; child work should fold ownership into `DesktopAgent` while preserving internal helper modules where useful.
 
 ## TypeScript interfaces
 
@@ -75,7 +79,7 @@ None.
 
 ## Loop history
 
-BFDA-01 through BFDA-05 delivered 2026-06-21. BFDA-04 host UI controller unification delivered same day. Remaining: BFDA-06 (docs), BFDA-07 (observability hooks).
+BFDA-01 through BFDA-05 delivered 2026-06-21. BFDA-04 host UI controller unification delivered same day. 2026-06-22 direction update: add BFDA-08 before docs/observability to collapse browser app connection ownership into `DesktopAgent` and remove the final browser-path `Transport` / `BrowserDaEdgeLink` composition.
 
 ## Staged for review
 

@@ -37,17 +37,15 @@ Everything else is detail under one of those two boxes.
 | Browser edge | `src/app-connection/` (incl. `wcp/`) | iframe or child-window apps (WCP + MessagePort) |
 | Desktop Agent | `src/core/` (incl. `dacp/`) | Host via `Transport`; apps only via edge |
 
-**InMemoryTransport** (local mode) is only the **short internal wire** between edge and DA in the same JS process. It is **not** how apps connect. Toolbox `AppTimeout` failures usually mean **MessagePort routing or instanceId mismatch** on the edge, not broken InMemoryTransport.
+**BrowserDaEdgeLink** (in-tab preset) is only the **short internal wire** between edge and DA in the same JS process. It is **not** how apps connect. Toolbox `AppTimeout` failures usually mean **MessagePort routing or instanceId mismatch** on the edge, not a broken internal edge link.
 
 ## One Desktop Agent per context
 
-FDC3 assumes **one logical Desktop Agent per user session** — one channel graph, one app instance registry, one intent resolution flow. `@finos/sail-desktop-agent` does not enforce that globally: tests and advanced setups may construct multiple `DesktopAgent` instances. **Host integrators must enforce a singleton** in their deployment context.
+FDC3 assumes **one logical Desktop Agent per user session** — one channel graph, one app instance registry, one intent resolution flow. `@finos/sail-desktop-agent` does not enforce that globally: tests and advanced setups may construct multiple `DesktopAgent` instances. **Browser host integrators must enforce a singleton** on the host page.
 
 | Context | Singleton scope | Typical pattern |
 |---------|-----------------|-----------------|
 | Browser host page | One agent per top-level `window` (tab) | Module-level holder or `window` property |
-| Node / worker server | One agent per process (or worker) | Module-level `let` initialized once |
-| Remote split | One `DesktopAgent` on the server; one `createWCPClient` edge per browser tab | Server module singleton + per-tab client |
 
 Creating two agents in the same browser tab (for example two `createBrowserDesktopAgent()` calls without sharing state) yields **split-brain**: duplicate WCP listeners, conflicting instance registries, and channel UI that reads the wrong agent.
 
@@ -89,48 +87,19 @@ export function destroyBrowserDesktopAgent() {
 
 `SailPlatform` and `createBrowserDesktopAgent` follow the same rule: construct **one** platform or preset handle per host page and reuse it for intent, channel, and app controllers.
 
-### Node / server singleton
+### Server, worker, native, and multi-device paths (deferred)
 
-When the Desktop Agent runs in Node (or a dedicated worker), use a module singleton. The browser tab still runs **`createWCPClient`** — one client edge per tab, one server agent per process:
+On **v3-pre**, the supported product path is **one browser-resident Desktop Agent per host page**. FDC3 web apps connect via WCP and per-app `MessagePort`; `createBrowserDesktopAgent` couples the in-tab engine and browser edge via an internal **`BrowserDaEdgeLink`** (preset-internal wiring — not a public import).
 
-```typescript
-// server/desktop-agent.ts
-import { DesktopAgent } from "@finos/sail-desktop-agent"
-import { createServerTransport } from "./transport" // WebSocket, IPC, etc.
+The following are **not** current adoption paths:
 
-let agent: DesktopAgent | undefined
+| Scenario | Status on v3-pre | Direction |
+|----------|------------------|-----------|
+| Remote DA (Node server, Web Worker hosting the engine) | **Removed** — `createWCPClient` preset deleted (BFDA-02) | Future bridge/relay/sync architecture if multi-device coordination is needed |
+| Cross-tab or cross-device channel sync | **Deferred** | Explicit sync/relay layer on top of browser-first DA — not by remoting the core agent |
+| Native desktop apps (Electron shell, C++ host) | **Future adapter** | WebSocket or platform-specific **app-connection** transport — native apps join the same channel graph; remoting the DA is not required |
 
-export function getServerDesktopAgent(): DesktopAgent {
-  if (!agent) {
-    agent = new DesktopAgent({ transport: createServerTransport() })
-    agent.start()
-  }
-  return agent
-}
-
-export async function stopServerDesktopAgent(): Promise<void> {
-  await agent?.stop()
-  agent = undefined
-}
-```
-
-```typescript
-// browser/host.ts — one WCP client per tab; transport pairs with the server singleton above
-import { createWCPClient } from "@finos/sail-desktop-agent/presets"
-import { createBrowserClientTransport } from "./transport"
-
-let wcpClient: ReturnType<typeof createWCPClient> | undefined
-
-export function getWcpClient() {
-  if (!wcpClient) {
-    wcpClient = createWCPClient({ transport: createBrowserClientTransport() })
-    wcpClient.start()
-  }
-  return wcpClient
-}
-```
-
-See [How to wire (decision tree)](#how-to-wire-decision-tree) for local vs remote entry points.
+Framework authors may still use `new DesktopAgent({ transport })` with `InMemoryTransport`, `MockTransport`, or custom transports for **unit tests** and **manual composition**. That is an advanced integration path, not a documented deployment fork. See [How to wire (decision tree)](#how-to-wire-decision-tree).
 
 ### Host channel UI and `getState()`
 
@@ -405,7 +374,7 @@ const desktopAgent = createBrowserDesktopAgent({
 })
 ```
 
-**Option 3 — connector event listener (advanced):** use only when you already hold `wcpConnector` (`createWCPClient`) or need `getBrowserDesktopAgentSession`:
+**Option 3 — connector event listener (advanced):** use only when you need `getBrowserDesktopAgentSession` for edge-level events (manual `WCPConnector` composition):
 
 ```typescript
 import { getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/presets"
@@ -508,36 +477,6 @@ SailPlatform.start()
 
 See `packages/sail-web/src/contexts/SailDesktopAgentContext.tsx` for provider wiring.
 
-### Remote engine (server or Web Worker)
-
-Host contracts stay the same on the **browser** side; only engine placement changes.
-
-```typescript
-import { createWCPClient } from "@finos/sail-desktop-agent/presets"
-import { DesktopAgent } from "@finos/sail-desktop-agent"
-import type { AppLauncher } from "@finos/sail-desktop-agent"
-
-// Browser host — same appLauncher, same iframe shell, same lifecycle UI
-const { wcpConnector, start, stop } = createWCPClient({
-  transport: mySocketOrWorkerTransport,
-  // same wcpOptions default: host-owned intent/channel UI
-})
-
-wcpConnector.on("appConnected", meta => tabs.markConnected(meta.instanceId, meta.appId))
-wcpConnector.on("appDisconnected", id => tabs.remove(id))
-start()
-
-// Remote process — engine only (no WCP, no iframes)
-const agent = new DesktopAgent({
-  transport: serverTransport,
-  appLauncher: serverSideLauncherOrStub, // if open() originates server-side
-  appDirectories: ["/apps.json"],
-})
-agent.start()
-```
-
-For the full Sail stack (workspace, layout, pre-built launcher/resolver/channel UI), use `SailPlatform` in `@finos/sail-platform-api` — it implements the same host contracts and delegates engine wiring to this package.
-
 ## FDC3 2.2 alignment
 
 This package implements a [Browser-Resident Desktop Agent](https://fdc3.finos.org/docs/api/specs/browserResidentDesktopAgents) with the split prescribed by FDC3 2.2:
@@ -628,7 +567,7 @@ const quietAgent = createBrowserDesktopAgent({
 ```
 
 ```typescript
-// Remote or manual composition — same options on DesktopAgent
+// Manual composition or tests — same options on DesktopAgent
 import { DesktopAgent } from "@finos/sail-desktop-agent"
 
 const agent = new DesktopAgent({
@@ -688,60 +627,34 @@ Use this tree instead of reading four parallel README patterns.
 ```text
 Where does the Desktop Agent run?
 │
-├─ Same browser tab as your host UI
+├─ Same browser tab as your host UI (default — 90% of integrators)
 │    → createBrowserDesktopAgent() from @finos/sail-desktop-agent/presets
 │    → Implement AppLauncher (iframes + instanceId on iframe name)
 │    → Wire host UI via intentResolver, channels, apps controllers
 │
-└─ Remote (Node server, Web Worker, …)
-     → Server/worker: new DesktopAgent({ transport: serverTransport })
-     → Browser host: createWCPClient({ transport: clientTransport })
-     → Same AppLauncher / iframe responsibilities on the browser side
+├─ Manual composition (framework authors, edge tests)
+│    → new DesktopAgent({ transport }) + new WCPConnector(transport)
+│    → Link with createInMemoryTransportPair() from @finos/sail-desktop-agent/transports
+│    → createBrowserHostControllers({ desktopAgent, wcpConnector }) for grouped controllers
+│
+└─ Server / worker / multi-tab / native host (not supported on v3-pre)
+     → Deferred — see Server, worker, native, and multi-device paths (deferred) above
 ```
 
 | Integrator goal | Entry point | Avoid unless advanced |
 |-----------------|-------------|------------------------|
-| Ship a browser desktop | `createBrowserDesktopAgent` | Manual `InMemoryTransport` + `WCPConnector` |
-| Remote DA | `createWCPClient` + server `DesktopAgent` | Duplicating WCP in app code |
+| Ship a browser desktop | `createBrowserDesktopAgent` | Manual `WCPConnector` + transport wiring |
 | Unit-test FDC3 handlers | `MockTransport` + `DesktopAgent` | Expecting this to prove iframe delivery |
+| Edge + DA seam tests | `createInMemoryTransportPair` + `WCPConnector`, or preset integration tests (`getBrowserDesktopAgentSession`) | Duplicating WCP in app code |
+| Remote or multi-device DA | — (not on v3-pre) | `createWCPClient` (removed) |
 
-**Canonical import:** `@finos/sail-desktop-agent/presets` for application code and factories. `@finos/sail-desktop-agent/browser` (app-connection) remains for tree-shaking when you only need `WCPConnector` or `MessagePortTransport`.
+**Canonical import:** `@finos/sail-desktop-agent/presets` for application code and factories. `@finos/sail-desktop-agent/browser` (app-connection) for tree-shaking when you only need `WCPConnector` or `MessagePortTransport`. For manual DA↔edge wiring in tests, use `createInMemoryTransportPair` from `@finos/sail-desktop-agent/transports` — the preset's internal `BrowserDaEdgeLink` is not part of the public API.
 
-## Public API — today vs simplified story
+## Public API — browser-first surface
 
-### Today (four equal-looking patterns in README)
-
-```typescript
-// Pattern 1 — preset
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
-
-// Pattern 2 — same factory, different path
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
-
-// Pattern 3 — remote client
-import { createWCPClient } from "@finos/sail-desktop-agent/presets"
-
-// Pattern 4 — manual
-const [daTransport, wcpTransport] = createInMemoryTransportPair()
-const desktopAgent = new DesktopAgent({ transport: daTransport })
-const wcpConnector = new WCPConnector(wcpTransport)
-```
-
-### Browser edge (internal to the preset)
-
-`createBrowserDesktopAgent` couples a hidden **`WCPConnector`** (the browser edge) to the returned `DesktopAgent`:
-
-- `desktopAgent.start()` also starts the edge (`window` listener for WCP1, MessagePort routing)
-- `desktopAgent.stop()` tears down the edge and the DA transport
-
-You do **not** destructure or manage `wcpConnector` in application code. Host code uses grouped controllers (`intentResolver`, `channels`, `apps`) plus `appLauncher`. Optional `onAppConnected` / `onAppDisconnected` callbacks remain for backward compatibility — prefer `apps.onConnect` / `apps.onDisconnect`.
-
-Advanced access (manual composition, edge-contract tests): `getBrowserDesktopAgentSession(desktopAgent)` or `createBrowserHostControllers({ desktopAgent, wcpConnector, connectorTransport, intentResolverUI })` from `@finos/sail-desktop-agent/presets`.
-
-### Simplified integrator surface
+### Default path — `createBrowserDesktopAgent`
 
 ```typescript
-// 90% of browser hosts — one entry
 import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
 
 const desktopAgent = createBrowserDesktopAgent({ appLauncher: myLauncher })
@@ -758,8 +671,22 @@ apps.onConnect(meta => mountTab(meta))
 
 Teardown: `desktopAgent.stop()`. Pass `autoStart: false` only if you must configure the agent before the edge listens, then call `desktopAgent.start()` yourself.
 
+### Browser edge (internal to the preset)
+
+`createBrowserDesktopAgent` couples a hidden **`WCPConnector`** (the browser edge) to the returned `DesktopAgent` via **`BrowserDaEdgeLink`**:
+
+- `desktopAgent.start()` also starts the edge (`window` listener for WCP1, MessagePort routing)
+- `desktopAgent.stop()` tears down the edge and the DA transport
+
+You do **not** destructure or manage `wcpConnector` in application code. Host code uses grouped controllers (`intentResolver`, `channels`, `apps`) plus `appLauncher`. Optional `onAppConnected` / `onAppDisconnected` callbacks remain for backward compatibility — prefer `apps.onConnect` / `apps.onDisconnect`.
+
+Advanced access (manual composition, edge-contract tests): `getBrowserDesktopAgentSession(desktopAgent)` or `createBrowserHostControllers({ desktopAgent, wcpConnector, intentResolverUI })` from `@finos/sail-desktop-agent/presets`.
+
+### `wcpOptions` — injected UI URLs (uncommon)
+
+Most browser hosts omit `wcpOptions` — both `intentResolverUrl` and `channelSelectorUrl` default to `false` on every WCP3Handshake (host-owned chrome). When you need FINOS reference or custom iframe UIs:
+
 ```typescript
-// Injected FINOS reference UIs (WCP3 payload) — uncommon when the host owns UI
 createBrowserDesktopAgent({
   appLauncher: myLauncher,
   wcpOptions: { intentResolverUrl: true, channelSelectorUrl: true },
@@ -783,18 +710,30 @@ createBrowserDesktopAgent({
 })
 ```
 
-```typescript
-// Remote DA — browser side only
-import { createWCPClient } from "@finos/sail-desktop-agent/presets"
+### Manual composition (advanced)
 
-const { wcpConnector, start } = createWCPClient({
-  transport: myWebSocketClientTransport,
-  // omit wcpOptions — same false/false default as local preset
+For framework authors and edge tests — not the normal adoption path:
+
+```typescript
+import { DesktopAgent } from "@finos/sail-desktop-agent"
+import { WCPConnector } from "@finos/sail-desktop-agent/browser"
+import { createBrowserHostControllers } from "@finos/sail-desktop-agent/presets"
+import { createInMemoryTransportPair } from "@finos/sail-desktop-agent/transports"
+
+const [daEdge, wcpEdge] = createInMemoryTransportPair()
+const desktopAgent = new DesktopAgent({ transport: daEdge, appLauncher: myLauncher })
+const wcpConnector = new WCPConnector(wcpEdge)
+
+const { intentResolver, channels, apps } = createBrowserHostControllers({
+  desktopAgent,
+  wcpConnector,
 })
-start()
+
+desktopAgent.start()
+wcpConnector.start()
 ```
 
-Manual composition stays in an **Advanced** appendix for framework authors, not the main quick start.
+`createInMemoryTransportPair()` links DA and edge in the same JS process — the same role the preset fills internally with **`BrowserDaEdgeLink`** (not exported). For **handler-only** tests (`MockTransport`, Cucumber) where no browser edge is involved, use a single transport on `DesktopAgent` only.
 
 ### `wcpOptions` — do you need to change anything?
 

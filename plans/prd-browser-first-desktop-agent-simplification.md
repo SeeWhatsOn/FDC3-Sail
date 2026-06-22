@@ -10,19 +10,20 @@
 
 Simplify Sail around a **browser-first Desktop Agent**: one browser-resident `DesktopAgent` owns authoritative FDC3 state for a host page, while web apps continue to connect through WCP and per-app `MessagePort` communication. Remove remote/worker/server-hosted Desktop Agent support from the default product architecture unless a concrete user workflow later justifies an explicit bridge, relay, or sync service.
 
-Success means the architecture reads as:
+Success now means the architecture reads as:
 
 ```text
-FDC3 web apps <-> WCP + MessagePort <-> WCPConnector <-> BrowserDaEdgeLink <-> browser DesktopAgent state
+FDC3 web apps <-> WCP + per-app MessagePort <-> DesktopAgent browser runtime <-> DA core handlers/state
 ```
 
-## Delivery status (2026-06-21)
+## Delivery status (updated 2026-06-22)
 
 | ID | Status |
 |----|--------|
 | BFDA-01–BFDA-05 | **Delivered** — see **Work item retention** |
-| BFDA-06 | **Open** — docs still describe remote DA / `createWCPClient` |
+| BFDA-06 | **Open** — docs must follow DA-owned browser runtime direction |
 | BFDA-07 | **Open** — observability hook contract not defined |
+| BFDA-08 | **Open** — browser app connection still composed through `WCPConnector` + `BrowserDaEdgeLink` |
 
 Native app connectivity remains a future adapter concern, not a reason for the core Desktop Agent to pretend it may live anywhere. Cross-tab or cross-device state sharing remains out of core until a real product workflow requires explicit distributed semantics.
 
@@ -31,9 +32,9 @@ Native app connectivity remains a future adapter concern, not a reason for the c
 | Prior plan | Status | This PRD |
 |------------|--------|----------|
 | `plans/prd-toolbox-conformance-v5-follow-up.md` | Active | **No duplicate**; preserve WCP instance routing and conformance behavior while simplifying architecture |
-| `plans/prd-fdc3-3-0-dual-version-support.md` | Active | **No duplicate**; keep the single handler tree and browser preset direction compatible with incremental FDC3 3.0 work |
+| `plans/prd-fdc3-3-0-dual-version-support.md` | Active | **No duplicate**; keep the single handler tree and DA-owned browser runtime compatible with incremental FDC3 3.0 work |
 | Browser preset / desktop-agent state hardening PRDs | Delivered; PRDs deleted | **Extend** the same browser-first direction; do not resurrect removed remote/state-hardening shims |
-| `website/docs/packages/desktop-agent/integrator-guide.md` and `composition.md` | Current docs | **Revise** to make browser-first the default and remote DA a deferred/non-goal path |
+| `website/docs/packages/desktop-agent/integrator-guide.md` and `composition.md` | Current docs | **Revise** to make `DesktopAgent` the browser-resident runtime and remove preset/manual connector composition as the default story |
 
 ## In scope
 
@@ -41,12 +42,13 @@ Native app connectivity remains a future adapter concern, not a reason for the c
 |----|---------|--------|------|--------|----------------|
 | BFDA-00 | Coordinate browser-first simplification work | Must | epic | in progress | `epic-browser-first-desktop-agent-simplification` |
 | BFDA-01 | Spike current transport usages and choose direct adapter vs tiny browser-local dispatcher | Must | spike | **done** | `spike-browser-first-transport-simplification` |
-| BFDA-02 | Simplify the browser preset so `createBrowserDesktopAgent` is the canonical composition and remote DA support is removed or deferred | Must | task | **done** | `simplify-browser-desktop-agent-preset` |
+| BFDA-02 | Interim browser preset simplification: remove remote DA support and replace in-memory pair with edge link | Must | task | **done** | `simplify-browser-desktop-agent-preset` |
 | BFDA-03 | Refactor handler response plumbing away from generic remote-placement assumptions where the spike proves it is safe | Must | task | **done** | `simplify-dacp-handler-response-plumbing` |
 | BFDA-04 | Make channel selector and intent resolver host UI use grouped browser controllers instead of raw connector/transport events | Should | task | **done** | `unify-browser-host-ui-controllers` |
 | BFDA-05 | Preserve WCP `MessagePort` app connectivity and instance routing with focused regression coverage | Must | task | **done** | `preserve-wcp-messageport-connectivity` |
-| BFDA-06 | Update desktop-agent docs to describe browser-first DA, WCP app adapters, future native WebSocket adapter, and deferred bridging | Must | task | open | `document-browser-first-desktop-agent` |
-| BFDA-07 | Define lightweight middleware/logging/OTEL hook points at DA command/event and WCP adapter boundaries | Should | task | open | `define-browser-da-observability-hooks` |
+| BFDA-08 | Collapse browser app connection into `DesktopAgent` runtime; remove browser-path `Transport` / edge-link composition | Must | task | approved | `collapse-browser-app-connection-into-desktop-agent` |
+| BFDA-06 | Update desktop-agent docs to describe `DesktopAgent` as the browser-resident DA runtime with WCP/MessagePort as the app boundary | Must | task | open | `document-browser-first-desktop-agent` |
+| BFDA-07 | Define lightweight middleware/logging/OTEL hook points at DA command/event and DA-owned browser app connection boundaries | Should | task | open | `define-browser-da-observability-hooks` |
 
 ## Out of scope
 
@@ -54,7 +56,7 @@ Native app connectivity remains a future adapter concern, not a reason for the c
 - Implementing FDC3 Agent Bridging, Redis/Kafka/database persistence, or a server-side relay.
 - Implementing the future native WebSocket protocol adapter.
 - Preserving public remote/worker/server Desktop Agent deployment support unless BFDA-01 proves it is still required by current shipped behavior.
-- Flattening WCP into `DesktopAgent`; browser-specific WCP and `MessagePort` logic stays under `app-connection/`.
+- Dumping all browser/WCP code into one large `desktop-agent.ts` file. Ownership folds into `DesktopAgent`; helper modules can remain internal.
 - Adding executable tests for docs-only work items.
 
 ## Success criteria
@@ -63,8 +65,9 @@ Native app connectivity remains a future adapter concern, not a reason for the c
 - [x] Remote/worker/server-hosted Desktop Agent support removed from public presets (`createWCPClient` deleted); docs update deferred to BFDA-06.
 - [x] Host channel UI reads/writes through grouped controllers (`SailPlatform.channels`, sail-web `ChannelSelector`) — BFDA-04.
 - [x] Host intent resolver UI uses grouped controller path (`intentResolver.onRequest/select/cancel`) — BFDA-04.
-- [ ] The primary docs and API examples describe one browser-resident Desktop Agent per host page (BFDA-06).
-- [ ] Middleware, plugin, logging, and OTEL needs represented by domain-level hook points (BFDA-07).
+- [ ] Browser app connection is owned by `DesktopAgent.start()` / `stop()` with no `BrowserDaEdgeLink` or browser-path `Transport` hop (BFDA-08).
+- [ ] The primary docs and API examples describe `DesktopAgent` as the browser-resident DA runtime, not a browser preset plus connector composition (BFDA-06).
+- [ ] Middleware, plugin, logging, and OTEL needs represented by domain-level hook points on DA-owned browser app connection and core operations (BFDA-07).
 - [x] Existing FDC3 behavior and conformance-oriented tests remain the behavioral guardrail (targeted tests green for delivered slices).
 
 ## BDD scenarios (candidates)
@@ -97,19 +100,28 @@ Scenario: Intent resolver UI uses the grouped controller
 Scenario: Remote Desktop Agent support is not part of browser-first adoption
   Given an integrator reads the desktop-agent docs
   When they choose the default browser integration path
-  Then the docs show createBrowserDesktopAgent and grouped controllers
+  Then the docs show DesktopAgent as the browser-resident runtime
   And remote worker/server Desktop Agent deployment is absent or explicitly deferred
+```
+
+```gherkin
+Scenario: Browser app connection is owned by DesktopAgent
+  Given a host creates a browser-resident DesktopAgent
+  When the host starts the DesktopAgent
+  Then WCP1Hello listeners and per-app MessagePort routing are attached as part of the DesktopAgent lifecycle
+  And inbound WCP4 and DACP messages are handled by DA core handlers and state
+  And outbound WCP and DACP responses are delivered to the correct app MessagePort
 ```
 
 ## Architecture / implementation direction
 
-1. **Browser-first mental model** — `DesktopAgent` is the local authoritative state owner for one host page. The default integration path is `createBrowserDesktopAgent`; `DesktopAgent` state includes app directory, connected instances, channels, private/app channels, pending intents, resolver state, and lifecycle.
-2. **Preserve WCP and MessagePort** — web apps still connect through WCP. `MessagePortTransport` and per-app port routing remain necessary because iframe/window apps do not call `DesktopAgent` directly.
-3. **In-tab DA↔WCP edge (delivered BFDA-02)** — browser preset uses `BrowserDaEdgeLink` / `createBrowserDesktopAgentEdgeLink()` for same-process DA↔WCP delivery instead of `createInMemoryTransportPair()`. This is not a remote-DA transport; per-app `MessagePortTransport` remains the app boundary.
+1. **Browser-first mental model** — `DesktopAgent` is the local authoritative browser-resident runtime for one host page. It owns state, handlers, host controllers, app connection lifecycle, and browser app connection resources.
+2. **Preserve WCP and MessagePort** — web apps still connect through WCP. Per-app `MessagePort` routing remains necessary because iframe/window apps do not call `DesktopAgent` directly.
+3. **Fold browser app connection ownership into `DesktopAgent` (BFDA-08)** — `WCPConnector` behavior becomes DA-owned browser app connection plumbing. Helper modules may remain, but product/API shape should no longer be `createBrowserDesktopAgent` + `WCPConnector` + `BrowserDaEdgeLink` + `Transport`.
 4. **Handler response dispatcher (delivered BFDA-03)** — `DACPHandlerContext.responses: DacpResponseDispatcher` replaces `context.transport` for handler response/event delivery. `edgeTransport` on the dispatcher is only for WCP handshake registries (pending source window, instance identity).
-5. **Grouped host controllers (delivered BFDA-04)** — normal host UI uses `desktopAgent.channels`, `desktopAgent.intentResolver`, and `desktopAgent.apps`. `SailPlatform` exposes the same grouped surfaces; sail-web reference stores subscribe through them. `WCPConnector` stays an implementation detail or advanced integrator surface (`platform.connector`).
-6. **Spike outcome (BFDA-01)** — inventory confirmed generic `Transport` mixed remote-placement, test harness, in-tab preset wiring, and per-app WCP routing. Chosen shape: direct internal edge link + narrow dispatcher; defer remote `createWCPClient` removal from docs until BFDA-06.
-7. **Middleware and OTEL stay possible** — instrumentation should attach to domain operations: inbound app request, outbound app event/response, channel change, intent resolver request/selection/cancel, app connect/disconnect, open/close, and handler latency. Do not require generic transport wrapping for observability (BFDA-07).
+5. **Grouped host controllers (delivered BFDA-04)** — normal host UI uses `desktopAgent.channels`, `desktopAgent.intentResolver`, and `desktopAgent.apps`. `SailPlatform` exposes the same grouped surfaces; sail-web reference stores subscribe through them.
+6. **Spike outcome superseded by BFDA-08** — BFDA-01/BFDA-02 delivered an interim edge-link simplification. The next direction is to remove that final browser-path `Transport` hop and make the browser app connection DA-owned.
+7. **Middleware and OTEL stay possible** — instrumentation should attach to domain operations: inbound app request, outbound app event/response, channel change, intent resolver request/selection/cancel, app connect/disconnect, open/close, WCP handshake, app-port delivery, and handler latency. Do not require generic transport wrapping for observability (BFDA-07).
 8. **Native and distributed futures are explicit adapters** — future native WebSocket protocol support belongs under app connection boundaries. Cross-tab/device coordination belongs to a future bridge/relay/sync PRD.
 9. **Docs follow implementation** — BFDA-06 rewrites `website/docs/packages/desktop-agent/` for browser-first adoption (still open).
 10. **No backward-compat shims by default** — on `v3-pre`, delete or replace old remote-placement APIs instead of layering migration facades unless the human explicitly asks for compatibility.
@@ -124,6 +136,8 @@ Scenario: Remote Desktop Agent support is not part of browser-first adoption
 | `createWCPClient` has unseen consumers | Treat `v3-pre` as pre-release; document acceptable removal unless a real consumer appears |
 | Middleware/OTEL hook design becomes another abstraction layer | BFDA-07 defines only named domain events and minimal hook contracts after core simplification |
 | Host UI controller refactor conflicts with platform/web state stores | Keep SailPlatform and sail-web changes in a separate slice after preset APIs are settled |
+| Folding browser app connection into `DesktopAgent` bloats core files | Fold lifecycle ownership, not file bulk; keep WCP/MessagePort mechanics in internal helper modules |
+| Removing `BrowserDaEdgeLink` changes async delivery and source-window registry behavior | Preserve async/message ordering expectations and source-window tracking with focused WCP integration tests |
 
 ## Constraints
 
@@ -131,7 +145,7 @@ Scenario: Remote Desktop Agent support is not part of browser-first adoption
 - Preserve FDC3 2.2 behavior while incremental FDC3 3.0 work remains active.
 - Do not split DACP handlers into v2/v3 trees.
 - Do not add tests for markdown-only documentation work.
-- Keep `host-contracts/`, `presets/`, `app-connection/`, and `core/handlers/` boundaries unless BFDA-01 proves a narrower replacement is safer.
+- Keep handler/state modules focused; change ownership and public API shape without creating a monolithic `desktop-agent.ts`.
 - Avoid backward-compatibility shims on `v3-pre` unless explicitly requested.
 
 ## Suggested vertical slices
@@ -139,12 +153,13 @@ Scenario: Remote Desktop Agent support is not part of browser-first adoption
 | ID | Suggested slice | Priority | Status |
 |----|-----------------|----------|--------|
 | BFDA-01 | Spike all transport usages and decide the smallest browser-local replacement shape | Must | **done** |
-| BFDA-02 | Make browser preset and exports stop presenting remote DA as default architecture | Must | **done** |
+| BFDA-02 | Make browser preset and exports stop presenting remote DA as default architecture (interim step before BFDA-08) | Must | **done** |
 | BFDA-03 | Refactor handler response path to `DacpResponseDispatcher` | Must | **done** |
 | BFDA-04 | Move channel selector and intent resolver consumers to grouped host controllers | Should | **done** |
 | BFDA-05 | Guard WCP MessagePort behavior across the refactor | Must | **done** |
-| BFDA-06 | Rewrite integrator/composition docs for browser-first adoption | Must | open |
-| BFDA-07 | Define observability and middleware hooks after the core API shape is known | Should | open |
+| BFDA-08 | Collapse browser app connection into `DesktopAgent` runtime | Must | open |
+| BFDA-06 | Rewrite integrator/composition docs for DA-owned browser runtime | Must | open |
+| BFDA-07 | Define observability and middleware hooks after the DA-owned browser runtime shape is known | Should | open |
 
 ## Commands
 
@@ -166,12 +181,13 @@ Docs-only slices use human review plus optional docs build; do not add executabl
 | BFDA-03 | **done** (2026-06-21) | `DACPHandlerContext.responses: DacpResponseDispatcher`; handlers use `sendToInstance` / `sendOutbound` | `simplify-dacp-handler-response-plumbing` |
 | BFDA-04 | **done** (2026-06-21) | `SailPlatform.channels` / `intentResolver` / `apps`; sail-web stores use grouped controllers; `BrowserChannelsController.changeAppChannel` waits for confirmation | `unify-browser-host-ui-controllers` |
 | BFDA-05 | **done** (2026-06-21) | WCP MessagePort routing guard integration tests added | `preserve-wcp-messageport-connectivity` |
-| BFDA-06 | verified-gap | `integrator-guide.md` still documents Node/server singleton and `createWCPClient`; `composition.md` lists remote DA pattern | `document-browser-first-desktop-agent` |
-| BFDA-07 | investigate | No domain-level middleware/OTEL hook contract yet | `define-browser-da-observability-hooks` |
+| BFDA-08 | verified-gap | Browser path still composes `createBrowserDesktopAgent` + `WCPConnector` + `BrowserDaEdgeLink` + `Transport` rather than DA-owned browser runtime | `collapse-browser-app-connection-into-desktop-agent` |
+| BFDA-06 | verified-gap | Docs must be revised from browser preset / edge-link composition to DA-owned browser runtime | `document-browser-first-desktop-agent` |
+| BFDA-07 | investigate | No domain-level middleware/OTEL hook contract yet; should follow BFDA-08 surface | `define-browser-da-observability-hooks` |
 
 ## Parent context summary
 
-Sail should be browser-first: one browser-resident `DesktopAgent` owns local FDC3 state for a host page. Web apps still communicate through WCP and per-app `MessagePort`; that is not the complexity being removed. The complexity to remove is the public/default assumption that the Desktop Agent itself may live in a worker, server, WebSocket runtime, or other remote location. Cross-tab/device synchronization is a future bridge/relay/sync problem, not core DA behavior. Native apps can be added later through a WebSocket protocol adapter at the app-connection boundary. The work should proceed as a spike plus vertical slices, preserving FDC3 behavior and WCP routing while simplifying handler plumbing, host UI controllers, docs, and observability hooks.
+Sail should be browser-first: one browser-resident `DesktopAgent` owns local FDC3 state and app connection lifecycle for a host page. Web apps still communicate through WCP and per-app `MessagePort`; that is the app boundary, not a separate connector product. The complexity to remove is the public/default assumption that the Desktop Agent itself may live in a worker, server, WebSocket runtime, or other remote location, plus the remaining internal browser-path `Transport` hop between WCP edge and DA. Cross-tab/device synchronization is a future bridge/relay/sync problem, not core DA behavior. Native apps can be added later through an explicit app-connection adapter. Preserve FDC3 behavior and WCP routing while simplifying handler plumbing, host UI controllers, docs, observability hooks, and DA-owned app connection lifecycle.
 
 ## Work item retention
 
