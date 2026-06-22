@@ -10,7 +10,7 @@
 export class DACPValidationError extends Error {
   constructor(
     message: string,
-    public readonly zodError?: unknown
+    public readonly zodError?: unknown,
   ) {
     super(message)
     this.name = "DACPValidationError"
@@ -27,7 +27,7 @@ export class DACPTimeoutError extends Error {
 export class DACPProcessingError extends Error {
   constructor(
     message: string,
-    public readonly originalError?: Error
+    public readonly originalError?: Error,
   ) {
     super(message)
     this.name = "DACPProcessingError"

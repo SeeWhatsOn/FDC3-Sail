@@ -26,7 +26,7 @@ import type { PendingIntentPromiseEntry } from "../types"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { createDACPTestContext } from "./test-context"
 import { withResponseDispatcher } from "./test-context"
-import { DesktopAgent } from "../../agent/desktop-agent"
+import { createDesktopAgentWithTestConnection } from "../../../test/support/desktop-agent-test-harness"
 import { MockTransport } from "../../__tests__/utils/mock-transport"
 import { MockTransport as CucumberMockTransport } from "../../../test/support/mock-transport"
 
@@ -349,14 +349,11 @@ describe("heartbeat cleanup on disconnect", () => {
   })
 
   it("DesktopAgent.disconnectInstance clears active heartbeat interval and state entry", async () => {
-    const transport = new MockTransport()
-    const agent = new DesktopAgent({
-      transport,
+    const { agent, connection } = createDesktopAgentWithTestConnection({
       apps: [TEST_WCP_DIRECTORY_APP],
       heartbeatIntervalMs: 500,
       heartbeatTimeoutMs: 2000,
     })
-    agent.start()
 
     const wcp4Message = {
       type: "WCP4ValidateAppIdentity",
@@ -371,9 +368,9 @@ describe("heartbeat cleanup on disconnect", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(wcp4Message)
+    await connection.receiveMessage(wcp4Message)
 
-    const wcp5Response = transport.sentMessages.find(
+    const wcp5Response = connection.sentMessages.find(
       message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse",
     ) as { payload?: { instanceId?: string } } | undefined
     const canonicalInstanceId = wcp5Response?.payload?.instanceId
@@ -443,14 +440,11 @@ describe("heartbeat cleanup on disconnect", () => {
   })
 
   it("DesktopAgent.disconnectInstance clears heartbeat when called with WCP4 connectionAttemptUuid", async () => {
-    const transport = new MockTransport()
-    const agent = new DesktopAgent({
-      transport,
+    const { agent, connection } = createDesktopAgentWithTestConnection({
       apps: [TEST_WCP_DIRECTORY_APP],
       heartbeatIntervalMs: 500,
       heartbeatTimeoutMs: 2000,
     })
-    agent.start()
 
     const connectionAttemptUuid = "temp-disconnect-by-attempt-uuid"
     const wcp4Message = {
@@ -466,9 +460,9 @@ describe("heartbeat cleanup on disconnect", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(wcp4Message)
+    await connection.receiveMessage(wcp4Message)
 
-    const wcp5Response = transport.sentMessages.find(
+    const wcp5Response = connection.sentMessages.find(
       message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse",
     ) as { payload?: { instanceId?: string } } | undefined
     const canonicalInstanceId = wcp5Response?.payload?.instanceId
@@ -482,15 +476,12 @@ describe("heartbeat cleanup on disconnect", () => {
     expectHeartbeatFullyCleared(() => agent.getState(), canonicalInstanceId!)
   })
 
-  it("transport disconnect clears all active heartbeat timers and state entries", async () => {
-    const transport = new MockTransport()
-    const agent = new DesktopAgent({
-      transport,
+  it("app connection disconnect clears all active heartbeat timers and state entries", async () => {
+    const { agent, connection } = createDesktopAgentWithTestConnection({
       apps: [TEST_WCP_DIRECTORY_APP],
       heartbeatIntervalMs: 500,
       heartbeatTimeoutMs: 2000,
     })
-    agent.start()
 
     const wcp4Message = {
       type: "WCP4ValidateAppIdentity",
@@ -505,16 +496,16 @@ describe("heartbeat cleanup on disconnect", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(wcp4Message)
+    await connection.receiveMessage(wcp4Message)
 
-    const wcp5Response = transport.sentMessages.find(
+    const wcp5Response = connection.sentMessages.find(
       message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse",
     ) as { payload?: { instanceId?: string } } | undefined
     const canonicalInstanceId = wcp5Response?.payload?.instanceId
     expect(canonicalInstanceId).toBeDefined()
     expect(getActiveHeartbeatTimerCount()).toBe(1)
 
-    transport.disconnect()
+    connection.disconnect()
 
     expectHeartbeatFullyCleared(() => agent.getState(), canonicalInstanceId!)
   })

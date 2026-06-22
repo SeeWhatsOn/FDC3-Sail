@@ -1,8 +1,8 @@
 /**
  * WCP edge-contract integration tests.
  *
- * Proves the browser edge (WCPConnector + MessagePort) wired to DesktopAgent —
- * not MockTransport-only DACP handler tests.
+ * Proves the browser edge (BrowserAppConnection + MessagePort) wired to DesktopAgent —
+ * not headless ingest-only DACP oracle tests.
  *
  * @vitest-environment jsdom
  */

@@ -89,7 +89,7 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
       const popup = openHarnessPopup(panel)
       if (!popup) {
         console.error(
-          `[ConformanceHarness] Failed to open tab for ${panel.appId} (${panel.instanceId}) — popup blocked?`
+          `[ConformanceHarness] Failed to open tab for ${panel.appId} (${panel.instanceId}) — popup blocked?`,
         )
         return
       }
@@ -132,7 +132,7 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
       desktopAgent,
       popupWatcher,
       removePanel,
-    })
+    }),
   )
 
   desktopAgent.registerPendingHostInstance({
@@ -155,7 +155,7 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
 }
 
 export function getConformance1PanelState(
-  bootstrap: HarnessBootstrap
+  bootstrap: HarnessBootstrap,
 ): { instanceId: string; state: AppInstance["state"] } | undefined {
   const panel = bootstrap.initialPanels.find(entry => entry.appId === "Conformance1")
   if (!panel) {

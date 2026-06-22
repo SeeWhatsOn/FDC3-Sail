@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vite-plus/test"
-import { MockTransport } from "./utils/mock-transport"
 import { DesktopAgent } from "../agent/desktop-agent"
 import {
   DEFAULT_SAIL_IMPLEMENTATION_METADATA,
@@ -8,7 +7,7 @@ import {
 } from "../agent/default-config"
 
 const { version: packageVersion } = JSON.parse(
-  readFileSync(new URL("../../package.json", import.meta.url), "utf-8")
+  readFileSync(new URL("../../package.json", import.meta.url), "utf-8"),
 ) as { version: string }
 
 describe("DEFAULT_SAIL_IMPLEMENTATION_METADATA", () => {
@@ -19,7 +18,7 @@ describe("DEFAULT_SAIL_IMPLEMENTATION_METADATA", () => {
 
 describe("resolveDesktopAgentConfig", () => {
   it("applies FDC3-Sail product defaults when overrides omit implementationMetadata", () => {
-    const config = resolveDesktopAgentConfig({ transport: new MockTransport() })
+    const config = resolveDesktopAgentConfig({})
 
     expect(config.implementationMetadata).toEqual(DEFAULT_SAIL_IMPLEMENTATION_METADATA)
     expect(config.implementationMetadata.provider).toBe("FDC3-Sail")
@@ -30,7 +29,6 @@ describe("resolveDesktopAgentConfig", () => {
 
   it("does not let explicit undefined heartbeat options clobber product defaults", () => {
     const config = resolveDesktopAgentConfig({
-      transport: new MockTransport(),
       heartbeatEnabled: undefined,
       heartbeatIntervalMs: undefined,
       heartbeatTimeoutMs: undefined,
@@ -43,7 +41,6 @@ describe("resolveDesktopAgentConfig", () => {
 
   it("allows disabling heartbeat at the Desktop Agent level", () => {
     const config = resolveDesktopAgentConfig({
-      transport: new MockTransport(),
       heartbeatEnabled: false,
     })
 
@@ -52,7 +49,6 @@ describe("resolveDesktopAgentConfig", () => {
 
   it("does not let explicit undefined heartbeat timing clobber defaults", () => {
     const config = resolveDesktopAgentConfig({
-      transport: new MockTransport(),
       heartbeatIntervalMs: undefined,
       heartbeatTimeoutMs: undefined,
     })
@@ -63,7 +59,6 @@ describe("resolveDesktopAgentConfig", () => {
 
   it("deep-merges partial implementationMetadata overrides", () => {
     const config = resolveDesktopAgentConfig({
-      transport: new MockTransport(),
       implementationMetadata: {
         provider: "cucumber-provider",
         providerVersion: "1.0.0",
@@ -74,20 +69,19 @@ describe("resolveDesktopAgentConfig", () => {
     expect(config.implementationMetadata.providerVersion).toBe("1.0.0")
     expect(config.implementationMetadata.fdc3Version).toBe("2.2")
     expect(config.implementationMetadata.optionalFeatures).toEqual(
-      DEFAULT_SAIL_IMPLEMENTATION_METADATA.optionalFeatures
+      DEFAULT_SAIL_IMPLEMENTATION_METADATA.optionalFeatures,
     )
   })
 })
 
 describe("DesktopAgent constructor defaults", () => {
-  it("applies Sail defaults when only transport is provided", () => {
-    const agent = new DesktopAgent({ transport: new MockTransport() })
+  it("applies Sail defaults when constructed without browser connection", () => {
+    const agent = new DesktopAgent()
     expect(agent.getImplementationMetadata()).toEqual(DEFAULT_SAIL_IMPLEMENTATION_METADATA)
   })
 
   it("deep-merges partial implementationMetadata from constructor options", () => {
     const agent = new DesktopAgent({
-      transport: new MockTransport(),
       implementationMetadata: { provider: "Acme" },
     })
     const metadata = agent.getImplementationMetadata()

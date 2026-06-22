@@ -1,6 +1,10 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
-import type { SailPlatform } from "@finos/sail-platform-api"
+import type {
+  IntentHandler as HostIntentHandler,
+  IntentResolutionRequest,
+  SailPlatform,
+} from "@finos/sail-platform-api"
 
 /**
  * Handler option for intent resolution
@@ -61,7 +65,7 @@ export const createIntentResolverStore = (platform: SailPlatform) => {
         }
 
         console.log(
-          `[IntentResolverStore] User selected handler: ${handler.appName || handler.appId}`
+          `[IntentResolverStore] User selected handler: ${handler.appName || handler.appId}`,
         )
 
         platform.intentResolver.select(requestId, {
@@ -101,30 +105,30 @@ export const createIntentResolverStore = (platform: SailPlatform) => {
           state.handlers = []
         })
       },
-    }))
+    })),
   )
 
   const { intentResolver, apps } = platform
 
-  intentResolver.onRequest(request => {
+  intentResolver.onRequest((request: IntentResolutionRequest) => {
     console.log("[IntentResolverStore] Intent resolution needed:", request.intent)
 
     const intentName = request.intent
 
     const validHandlers = request.handlers
-      .filter(handler => {
+      .filter((handler: HostIntentHandler) => {
         if (handler.instanceId) {
           const connection = apps.getConnection(handler.instanceId)
           if (!connection) {
             console.warn(
-              `[IntentResolverStore] Filtering out invalid handler: ${handler.app.appId} (instance ${handler.instanceId} not connected)`
+              `[IntentResolverStore] Filtering out invalid handler: ${handler.app.appId} (instance ${handler.instanceId} not connected)`,
             )
             return false
           }
         }
         return true
       })
-      .map(handler => ({
+      .map((handler: HostIntentHandler) => ({
         instanceId: handler.instanceId,
         appId: handler.app.appId,
         appName: handler.app.name ?? handler.app.title,
@@ -134,7 +138,7 @@ export const createIntentResolverStore = (platform: SailPlatform) => {
 
     if (validHandlers.length !== request.handlers.length) {
       console.warn(
-        `[IntentResolverStore] Filtered ${request.handlers.length - validHandlers.length} invalid handler(s), ${validHandlers.length} valid remaining`
+        `[IntentResolverStore] Filtered ${request.handlers.length - validHandlers.length} invalid handler(s), ${validHandlers.length} valid remaining`,
       )
     }
 
@@ -154,7 +158,7 @@ export const createIntentResolverStore = (platform: SailPlatform) => {
         state.handlers = state.handlers.filter(handler => handler.instanceId !== instanceId)
         if (state.handlers.length !== beforeCount) {
           console.log(
-            `[IntentResolverStore] Removed ${beforeCount - state.handlers.length} handler(s) for disconnected instance ${instanceId}`
+            `[IntentResolverStore] Removed ${beforeCount - state.handlers.length} handler(s) for disconnected instance ${instanceId}`,
           )
         }
       }

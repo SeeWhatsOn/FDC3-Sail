@@ -117,7 +117,7 @@ describe("MessagePortTransport", () => {
       transport.disconnect()
 
       expect(() => transport.send({ type: "test" })).toThrow(
-        "Cannot send message: MessagePort is disconnected"
+        "Cannot send message: MessagePort is disconnected",
       )
     })
 
@@ -373,7 +373,7 @@ describe("MessagePortTransport", () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "[DACP ERROR] [MessagePortTransport] Error in message handler:",
         expect.any(Error),
-        { messageType: "test" }
+        { messageType: "test" },
       )
       consoleErrorSpy.mockRestore()
     })
@@ -418,7 +418,7 @@ describe("MessagePortTransport", () => {
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "[DACP ERROR] Error in disconnect handler:",
-        expect.any(Error)
+        expect.any(Error),
       )
 
       consoleErrorSpy.mockRestore()
@@ -609,7 +609,7 @@ describe("MessagePortTransport", () => {
           // Date should be cloned
           expect(received.nested.deep.date).toBeInstanceOf(Date)
           expect(received.nested.deep.date.getTime()).toBe(
-            complexMessage.nested.deep.date.getTime()
+            complexMessage.nested.deep.date.getTime(),
           )
           resolve()
         })

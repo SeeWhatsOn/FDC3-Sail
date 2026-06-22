@@ -102,6 +102,10 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
     this.onInstanceTeardown = handler
   }
 
+  notifyChannelMembershipChanged(instanceId: string, channelId: string | null): void {
+    this.emit("channelChanged", instanceId, channelId)
+  }
+
   onAppMessage(handler: AppMessageHandler): void {
     this.appMessageHandler = handler
   }

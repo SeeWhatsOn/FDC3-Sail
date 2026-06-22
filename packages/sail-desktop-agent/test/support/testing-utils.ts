@@ -67,7 +67,7 @@ function assertFieldValue(
   actualValue: unknown,
   expectedValue: string | null | undefined,
   fieldName: string,
-  context?: { rowIndex: number; actualRow: unknown }
+  context?: { rowIndex: number; actualRow: unknown },
 ): void {
   // Spec compliance: DACP responses do not require destination appId
   if (fieldName === "to.appId" && actualValue === undefined) {
@@ -93,7 +93,7 @@ function assertFieldValue(
           ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
           : ""
         throw new Error(
-          `Field "${fieldName}" should be truthy but got: ${formatValue(actualValue)}${contextMsg}`
+          `Field "${fieldName}" should be truthy but got: ${formatValue(actualValue)}${contextMsg}`,
         )
       }
       return
@@ -107,7 +107,7 @@ function assertFieldValue(
           ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
           : ""
         throw new Error(
-          `Field "${fieldName}" should be null/undefined but got: ${formatValue(actualValue)}${contextMsg}`
+          `Field "${fieldName}" should be null/undefined but got: ${formatValue(actualValue)}${contextMsg}`,
         )
       }
       return
@@ -120,7 +120,7 @@ function assertFieldValue(
         ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
         : ""
       throw new Error(
-        `Field "${fieldName}" mismatch:\n  Expected: ${formatValue(expectedValue)}\n  Received: ${formatValue(actualValue)}${contextMsg}`
+        `Field "${fieldName}" mismatch:\n  Expected: ${formatValue(expectedValue)}\n  Received: ${formatValue(actualValue)}${contextMsg}`,
       )
     }
     return
@@ -136,7 +136,7 @@ function assertFieldValue(
         ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
         : ""
       throw new Error(
-        `Field "${fieldName}" should be null/undefined but got: ${formatValue(actualValue)}${contextMsg}`
+        `Field "${fieldName}" should be null/undefined but got: ${formatValue(actualValue)}${contextMsg}`,
       )
     }
     return
@@ -154,7 +154,7 @@ function assertFieldValue(
         ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
         : ""
       throw new Error(
-        `Field "${fieldName}" expected ISO-8601 timestamp but got: ${formatValue(actualValue)}${contextMsg}`
+        `Field "${fieldName}" expected ISO-8601 timestamp but got: ${formatValue(actualValue)}${contextMsg}`,
       )
     }
     return
@@ -167,7 +167,7 @@ function assertFieldValue(
         ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
         : ""
       throw new Error(
-        `Field "${fieldName}" expected non-empty string but got: ${formatValue(actualValue)}${contextMsg}`
+        `Field "${fieldName}" expected non-empty string but got: ${formatValue(actualValue)}${contextMsg}`,
       )
     }
     return
@@ -183,7 +183,7 @@ function assertFieldValue(
         ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
         : ""
       throw new Error(
-        `Field "${fieldName}" expected boolean ${booleanValue} but got: ${formatValue(actualValue)}${contextMsg}`
+        `Field "${fieldName}" expected boolean ${booleanValue} but got: ${formatValue(actualValue)}${contextMsg}`,
       )
     }
     return
@@ -199,7 +199,7 @@ function assertFieldValue(
         ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
         : ""
       throw new Error(
-        `Field "${fieldName}" expected number ${numericValue} but got: ${formatValue(actualValue)}${contextMsg}`
+        `Field "${fieldName}" expected number ${numericValue} but got: ${formatValue(actualValue)}${contextMsg}`,
       )
     }
     return
@@ -213,7 +213,7 @@ function assertFieldValue(
       ? `\n  Row ${context.rowIndex}: ${formatValue(context.actualRow)}`
       : ""
     throw new Error(
-      `Field "${fieldName}" mismatch:\n  Expected: ${formatValue(expectedValue)}\n  Received: ${formatValue(actualValue)}${contextMsg}`
+      `Field "${fieldName}" mismatch:\n  Expected: ${formatValue(expectedValue)}\n  Received: ${formatValue(actualValue)}${contextMsg}`,
     )
   }
 }
@@ -222,7 +222,7 @@ function matchesRow(
   world: CustomWorld,
   actualRow: unknown,
   expectedRow: Record<string, string>,
-  rowIndex: number
+  rowIndex: number,
 ): boolean {
   try {
     Object.entries(expectedRow).forEach(([key, expectedValue]) => {
@@ -299,7 +299,7 @@ export function matchData(world: CustomWorld, actual: unknown[], dataTable: Data
 export function matchDataUnordered(
   world: CustomWorld,
   actual: unknown[],
-  dataTable: DataTable
+  dataTable: DataTable,
 ): void {
   const expected = dataTable.hashes()
 
@@ -320,7 +320,7 @@ export function matchDataUnordered(
   const remaining = [...actual]
   expected.forEach((expectedRow, rowIndex) => {
     const matchIndex = remaining.findIndex(actualRow =>
-      matchesRow(world, actualRow, expectedRow, rowIndex)
+      matchesRow(world, actualRow, expectedRow, rowIndex),
     )
 
     if (matchIndex === -1) {
@@ -349,7 +349,7 @@ export function matchDataSubset(world: CustomWorld, actual: unknown[], dataTable
 
   expected.forEach((expectedRow, rowIndex) => {
     const matchIndex = remaining.findIndex(actualRow =>
-      matchesRow(world, actualRow, expectedRow, rowIndex)
+      matchesRow(world, actualRow, expectedRow, rowIndex),
     )
 
     if (matchIndex === -1) {

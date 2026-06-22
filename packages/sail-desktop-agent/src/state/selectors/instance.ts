@@ -17,7 +17,7 @@ export const getInstancesByAppId = (state: AgentState, appId: string): AppInstan
 
 export const instanceContextListenerMatchesBroadcast = (
   listener: InstanceContextListener,
-  broadcastContextType: string
+  broadcastContextType: string,
 ): boolean => listener.contextType === broadcastContextType || listener.contextType === "*"
 
 export const getConnectedInstances = (state: AgentState): AppInstance[] =>
@@ -25,7 +25,7 @@ export const getConnectedInstances = (state: AgentState): AppInstance[] =>
 
 export const getInstancesByState = (
   state: AgentState,
-  instanceState: AppInstanceState | AppInstanceState[]
+  instanceState: AppInstanceState | AppInstanceState[],
 ): AppInstance[] => {
   const states = Array.isArray(instanceState) ? instanceState : [instanceState]
   return Object.values(state.instances).filter(i => states.includes(i.state))
@@ -33,16 +33,16 @@ export const getInstancesByState = (
 
 export const getInstancesWithContextListener = (
   state: AgentState,
-  contextType: string
+  contextType: string,
 ): AppInstance[] =>
   Object.values(state.instances).filter(instance =>
     Object.values(instance.contextListeners).some(listener =>
-      instanceContextListenerMatchesBroadcast(listener, contextType)
-    )
+      instanceContextListenerMatchesBroadcast(listener, contextType),
+    ),
   )
 
 export const getInstancesWithPrivateChannel = (
   state: AgentState,
-  channelId: string
+  channelId: string,
 ): AppInstance[] =>
   Object.values(state.instances).filter(i => i.privateChannels.includes(channelId))

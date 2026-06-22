@@ -21,7 +21,7 @@ export type WcpConnectedApp = {
 
 export function createWCP1Hello(
   connectionAttemptUuid: string,
-  identityUrl: string
+  identityUrl: string,
 ): BrowserTypes.WebConnectionProtocol1Hello {
   return {
     type: "WCP1Hello",
@@ -40,7 +40,7 @@ export function createWCP1Hello(
 export function createMessageEvent(
   data: unknown,
   source: Window = window,
-  origin = TEST_ORIGIN
+  origin = TEST_ORIGIN,
 ): MessageEvent {
   return new MessageEvent("message", { data, source, origin })
 }
@@ -80,7 +80,7 @@ export async function connectWcpApp(
     identityUrl: string
     hostInstanceId?: string
     instanceUuid?: string
-  }
+  },
 ): Promise<WcpConnectedApp> {
   const { connectionAttemptUuid, appId, identityUrl, hostInstanceId, instanceUuid } = options
   const tempInstanceId = `temp-${connectionAttemptUuid}`
@@ -119,8 +119,8 @@ export async function connectWcpApp(
     new Promise<never>((_, reject) =>
       setTimeout(
         () => reject(new Error("Timed out waiting for WCP5ValidateAppIdentityResponse")),
-        5000
-      )
+        5000,
+      ),
     ),
   ])
 
@@ -145,7 +145,7 @@ export async function connectWcpApp(
 
 export async function postDacpOnPort(
   appPort: MessagePort,
-  message: BrowserTypes.AppRequestMessage
+  message: BrowserTypes.AppRequestMessage,
 ): Promise<void> {
   appPort.postMessage(message)
   await flushAsyncDelivery()
@@ -154,12 +154,12 @@ export async function postDacpOnPort(
 export function waitForPortMessage<T>(
   appPort: MessagePort,
   predicate: (data: unknown) => boolean,
-  timeoutMs = 5000
+  timeoutMs = 5000,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(
       () => reject(new Error("Timed out waiting for MessagePort message")),
-      timeoutMs
+      timeoutMs,
     )
     appPort.onmessage = event => {
       if (predicate(event.data)) {
@@ -178,7 +178,7 @@ export const INSTRUMENT_CONTEXT: Context = {
 export function createAddEventListenerMessage(
   instanceId: string,
   appId: string,
-  eventType: BrowserTypes.AddEventListenerRequest["payload"]["type"]
+  eventType: BrowserTypes.AddEventListenerRequest["payload"]["type"],
 ): BrowserTypes.AddEventListenerRequest {
   return {
     type: "addEventListenerRequest",
@@ -194,7 +194,7 @@ export function createAddEventListenerMessage(
 export function createJoinUserChannelMessage(
   instanceId: string,
   appId: string,
-  channelId: string
+  channelId: string,
 ): BrowserTypes.JoinUserChannelRequest {
   return {
     type: "joinUserChannelRequest",
@@ -211,7 +211,7 @@ export function createAddContextListenerMessage(
   instanceId: string,
   appId: string,
   channelId: string | null,
-  contextType: string
+  contextType: string,
 ): BrowserTypes.AddContextListenerRequest {
   return {
     type: "addContextListenerRequest",
@@ -227,7 +227,7 @@ export function createAddContextListenerMessage(
 /** Generic user-channel listener (AOpensBWithContext3 / FINOS open-with-context path). */
 export function createGenericContextListenerMessage(
   instanceId: string,
-  appId: string
+  appId: string,
 ): BrowserTypes.AddContextListenerRequest {
   return createAddContextListenerMessage(instanceId, appId, null, "*")
 }
@@ -236,7 +236,7 @@ export function createBroadcastMessage(
   instanceId: string,
   appId: string,
   channelId: string,
-  context: Context
+  context: Context,
 ): BrowserTypes.BroadcastRequest {
   return {
     type: "broadcastRequest",
@@ -253,7 +253,7 @@ export function createOpenRequestMessage(
   sourceInstanceId: string,
   sourceAppId: string,
   targetAppId: string,
-  context?: Context
+  context?: Context,
 ): BrowserTypes.OpenRequest {
   return {
     type: "openRequest",
@@ -272,7 +272,7 @@ export function createOpenRequestMessage(
 export function createGetOrCreateChannelMessage(
   instanceId: string,
   appId: string,
-  channelId: string
+  channelId: string,
 ): BrowserTypes.GetOrCreateChannelRequest {
   return {
     type: "getOrCreateChannelRequest",

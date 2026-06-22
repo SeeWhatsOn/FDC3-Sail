@@ -9,5 +9,5 @@ const { initialPanels, onPanelsChange } = createHarnessBootstrap()
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App initialPanels={initialPanels} onPanelsChange={onPanelsChange} />
-  </StrictMode>
+  </StrictMode>,
 )

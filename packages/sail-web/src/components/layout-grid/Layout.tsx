@@ -47,7 +47,7 @@ const Layout = (props: DockviewSailProps) => {
   const activeTabId = activeWorkspace?.layout.activeTabId || ""
   const panels = useMemo(
     () => (activeWorkspace ? getPanelsForTab(activeWorkspaceId, activeTabId) : []),
-    [activeWorkspace, activeWorkspaceId, activeTabId, getPanelsForTab]
+    [activeWorkspace, activeWorkspaceId, activeTabId, getPanelsForTab],
   )
 
   const onReady = (event: DockviewReadyEvent) => {
@@ -171,13 +171,13 @@ const Layout = (props: DockviewSailProps) => {
 
         if (connection && connection.instanceId) {
           console.log(
-            `[Layout] Disconnecting instance ${connection.instanceId} for panel ${panelId}`
+            `[Layout] Disconnecting instance ${connection.instanceId} for panel ${panelId}`,
           )
           try {
             // Send WCP6Goodbye and disconnect the instance
             platform.apps.disconnect(connection.instanceId)
             console.log(
-              `[Layout] Successfully initiated disconnect for instance ${connection.instanceId}`
+              `[Layout] Successfully initiated disconnect for instance ${connection.instanceId}`,
             )
           } catch (error) {
             console.error(`[Layout] Error disconnecting instance ${connection.instanceId}:`, error)
@@ -185,19 +185,19 @@ const Layout = (props: DockviewSailProps) => {
         } else {
           console.warn(
             `[Layout] No connection found for panel ${panelId}, skipping disconnect. ` +
-              `This may indicate the panel was closed before the app connected, or the connection was already cleaned up.`
+              `This may indicate the panel was closed before the app connected, or the connection was already cleaned up.`,
           )
         }
 
         // Remove from store
         if (activeWorkspaceId && activeTabId) {
           console.log(
-            `[Layout] Removing panel ${panelId} from store (workspace: ${activeWorkspaceId}, tab: ${activeTabId})`
+            `[Layout] Removing panel ${panelId} from store (workspace: ${activeWorkspaceId}, tab: ${activeTabId})`,
           )
           removePanel(activeWorkspaceId, activeTabId, panelId)
         } else {
           console.warn(
-            `[Layout] Cannot remove panel from store: activeWorkspaceId=${activeWorkspaceId}, activeTabId=${activeTabId}`
+            `[Layout] Cannot remove panel from store: activeWorkspaceId=${activeWorkspaceId}, activeTabId=${activeTabId}`,
           )
         }
         // Save state after removing panel
@@ -289,7 +289,7 @@ const Layout = (props: DockviewSailProps) => {
           setMountedPanels(prev => new Map(prev).set(panel.panelId, fdc3Panel))
         } else {
           console.warn(
-            `Panel ${panel.panelId} already exists in Dockview, updating mounted panels tracking`
+            `Panel ${panel.panelId} already exists in Dockview, updating mounted panels tracking`,
           )
           // If panel exists in Dockview but not in mountedPanels, add it to tracking
           const fdc3Panel: FDC3AppPanel = {

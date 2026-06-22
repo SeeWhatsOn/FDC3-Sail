@@ -42,12 +42,12 @@ const FORBIDDEN_INSTANCE_SELECTOR_EXPORTS = ["getInstancesWithIntentListener"] a
 function assertNoForbiddenExports(
   moduleExports: Record<string, unknown>,
   moduleName: string,
-  forbiddenExports: readonly string[]
+  forbiddenExports: readonly string[],
 ): void {
   for (const exportName of forbiddenExports) {
     expect(
       Object.prototype.hasOwnProperty.call(moduleExports, exportName),
-      `${moduleName} must not export ${exportName}`
+      `${moduleName} must not export ${exportName}`,
     ).toBe(false)
   }
 }
@@ -76,7 +76,7 @@ describe("AppInstance state hardening contract", () => {
     assertNoForbiddenExports(
       instanceMutators,
       "mutators/instance",
-      FORBIDDEN_INSTANCE_MUTATOR_EXPORTS
+      FORBIDDEN_INSTANCE_MUTATOR_EXPORTS,
     )
     assertNoForbiddenExports(stateMutators, "mutators/index", FORBIDDEN_INSTANCE_MUTATOR_EXPORTS)
   })
@@ -85,7 +85,7 @@ describe("AppInstance state hardening contract", () => {
     assertNoForbiddenExports(
       instanceSelectors,
       "selectors/instance",
-      FORBIDDEN_INSTANCE_SELECTOR_EXPORTS
+      FORBIDDEN_INSTANCE_SELECTOR_EXPORTS,
     )
     assertNoForbiddenExports(stateSelectors, "selectors/index", FORBIDDEN_INSTANCE_SELECTOR_EXPORTS)
   })

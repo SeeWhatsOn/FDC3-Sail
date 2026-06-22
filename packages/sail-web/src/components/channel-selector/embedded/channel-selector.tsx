@@ -88,7 +88,7 @@ window.addEventListener("load", () => {
         open={isOpen}
         activate={activate}
         changeSize={() => changeSize(!isOpen)}
-      />
+      />,
     )
   }
 

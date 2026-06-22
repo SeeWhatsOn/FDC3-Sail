@@ -22,7 +22,7 @@ export const getAllAppChannels = (state: AgentState): Channel[] => Object.values
 
 export const getPrivateChannel = (
   state: AgentState,
-  channelId: string
+  channelId: string,
 ): PrivateChannel | undefined => state.channels.private[channelId]
 
 export const getAllPrivateChannels = (state: AgentState): PrivateChannel[] =>
@@ -31,7 +31,7 @@ export const getAllPrivateChannels = (state: AgentState): PrivateChannel[] =>
 export const getChannelContext = (
   state: AgentState,
   channelId: string,
-  contextType?: string
+  contextType?: string,
 ): Context | null => {
   const channelContexts = state.channels.contexts[channelId]
   if (!channelContexts) return null
@@ -54,7 +54,7 @@ export const getChannelContext = (
 export const getStoredContext = (
   state: AgentState,
   channelId: string,
-  contextType: string
+  contextType: string,
 ): StoredContext | null => {
   const channelContexts = state.channels.contexts[channelId]
   if (!channelContexts) return null

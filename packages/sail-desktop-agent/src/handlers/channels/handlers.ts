@@ -83,12 +83,18 @@ export function handleGetCurrentChannelRequest(
   }
 }
 
+type ChannelMembershipNotificationOptions = {
+  /** Host-initiated joins emit channelChanged on the app edge when no listeners are registered. */
+  hostInitiated?: boolean
+}
+
 /**
  * Handles join user channel requests
  */
 export function handleJoinUserChannelRequest(
   message: BrowserTypes.JoinUserChannelRequest,
   context: DACPHandlerContext,
+  options?: ChannelMembershipNotificationOptions,
 ): void {
   const { responses, instanceId, getState, setState } = context
 
@@ -120,7 +126,7 @@ export function handleJoinUserChannelRequest(
 
     if (!wasAlreadyOnChannel) {
       deliverCurrentContextToInstanceListeners(instanceId, channelId, context)
-      notifyChannelChanged(instanceId, channelId, context)
+      notifyChannelChanged(instanceId, channelId, context, options)
     }
   } catch (error) {
     const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
@@ -142,6 +148,7 @@ export function handleJoinUserChannelRequest(
 export function handleLeaveCurrentChannelRequest(
   message: BrowserTypes.LeaveCurrentChannelRequest,
   context: DACPHandlerContext,
+  options?: ChannelMembershipNotificationOptions,
 ): void {
   const { responses, instanceId, setState } = context
 
@@ -151,7 +158,7 @@ export function handleLeaveCurrentChannelRequest(
     const response = createDACPSuccessResponse(message, "leaveCurrentChannelResponse")
     sendDACPResponse({ response, instanceId, responses })
 
-    notifyChannelChanged(instanceId, null, context)
+    notifyChannelChanged(instanceId, null, context, options)
   } catch (error) {
     const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to leave current channel"
@@ -361,6 +368,7 @@ function notifyChannelChanged(
   instanceId: string,
   channelId: string | null,
   context: DACPHandlerContext,
+  options?: ChannelMembershipNotificationOptions,
 ): void {
   const { responses, logger, getState } = context
   const instance = getInstance(getState(), instanceId)
@@ -403,16 +411,21 @@ function notifyChannelChanged(
     responses.sendOutbound(channelChangedEventWithRouting)
   })
 
-  // When no app registered channelChanged listeners, still emit on the edge so
-  // WCP connector can raise channelChanged for host chrome (same path as host-initiated joins).
+  // Host-initiated joins/leaves: when no app registered channelChanged listeners, emit on the
+  // app edge so WCP connector can raise channelChanged for host chrome. App-originated
+  // joinUserChannel / leaveCurrentChannel already get DACP responses on the same edge.
   if (subscriberInstanceIds.size === 0) {
-    responses.sendOutbound({
-      ...channelChangedEvent,
-      meta: {
-        ...channelChangedEvent.meta,
-        destination: { instanceId },
-      },
-    })
+    if (options?.hostInitiated) {
+      responses.sendOutbound({
+        ...channelChangedEvent,
+        meta: {
+          ...channelChangedEvent.meta,
+          destination: { instanceId },
+        },
+      })
+    } else {
+      context.notifyChannelMembershipChanged?.(instanceId, channelId)
+    }
   }
 
   logger.debug("Channel changed event broadcast", {

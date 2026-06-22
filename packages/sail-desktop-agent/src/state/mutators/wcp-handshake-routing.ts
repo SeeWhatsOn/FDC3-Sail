@@ -8,7 +8,7 @@ import type { AgentState } from "../types"
 export function linkHandshakeRoutingId(
   state: AgentState,
   handshakeRoutingId: string,
-  instanceId: string
+  instanceId: string,
 ): AgentState {
   return {
     ...state,
@@ -25,12 +25,12 @@ export function linkHandshakeRoutingId(
 /** Remove all routing entries that point at the given validated instanceId (on disconnect). */
 export function clearHandshakeRoutingIdsForInstance(
   state: AgentState,
-  instanceId: string
+  instanceId: string,
 ): AgentState {
   const nextEntries = Object.fromEntries(
     Object.entries(state.wcpHandshakeRouting.handshakeRoutingIdToInstanceId).filter(
-      ([, linkedInstanceId]) => linkedInstanceId !== instanceId
-    )
+      ([, linkedInstanceId]) => linkedInstanceId !== instanceId,
+    ),
   )
 
   return {

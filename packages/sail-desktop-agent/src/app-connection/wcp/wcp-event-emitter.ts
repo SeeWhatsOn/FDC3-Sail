@@ -12,7 +12,7 @@ export class WCPEventEmitter {
    */
   on<EventName extends keyof AppConnectionEvents>(
     event: EventName,
-    handler: AppConnectionEvents[EventName]
+    handler: AppConnectionEvents[EventName],
   ): void {
     if (!this.handlers[event]) {
       // Type assertion needed: TypeScript can't infer the relationship between
@@ -30,7 +30,7 @@ export class WCPEventEmitter {
    */
   off<EventName extends keyof AppConnectionEvents>(
     event: EventName,
-    handler: AppConnectionEvents[EventName]
+    handler: AppConnectionEvents[EventName],
   ): void {
     this.handlers[event]?.delete(handler)
   }

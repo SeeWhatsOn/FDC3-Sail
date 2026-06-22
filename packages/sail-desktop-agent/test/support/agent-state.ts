@@ -24,7 +24,7 @@ function asInternals(agent: DesktopAgent): DesktopAgentInternals {
  */
 export function applyDesktopAgentStateUpdate(
   agent: DesktopAgent,
-  callback: (state: AgentState) => AgentState
+  callback: (state: AgentState) => AgentState,
 ): void {
   const internal = asInternals(agent)
   internal.state = callback(internal.state)
@@ -34,7 +34,7 @@ export function applyDesktopAgentStateUpdate(
  * Pending-intent promise map owned by the agent (for building handler contexts in steps).
  */
 export function getDesktopAgentPendingIntentPromises(
-  agent: DesktopAgent
+  agent: DesktopAgent,
 ): Map<string, PendingIntentPromiseEntry> {
   return asInternals(agent).pendingIntentPromises
 }

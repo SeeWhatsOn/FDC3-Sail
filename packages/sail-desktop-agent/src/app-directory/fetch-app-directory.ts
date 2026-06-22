@@ -13,7 +13,7 @@ export function parseDirectoryData(data: DirectoryApp[] | DirectoryData): Direct
     return data.applications
   }
   throw new Error(
-    "Invalid data format: expected array of DirectoryApp or DirectoryData with applications array"
+    "Invalid data format: expected array of DirectoryApp or DirectoryData with applications array",
   )
 }
 
@@ -21,7 +21,7 @@ export function validateApplication(app: DirectoryApp, source?: string): void {
   if (!app.appId || !app.title || !app.type || !app.details) {
     const sourceInfo = source ? ` in ${source}` : ""
     throw new Error(
-      `Invalid application${sourceInfo}: missing required fields (appId, title, type, or details)`
+      `Invalid application${sourceInfo}: missing required fields (appId, title, type, or details)`,
     )
   }
 }
@@ -71,7 +71,7 @@ export async function fetchAppDirectory(url: string): Promise<DirectoryApp[]> {
     return applications
   } catch (error) {
     throw new Error(
-      `Failed to fetch from ${url}: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to fetch from ${url}: ${error instanceof Error ? error.message : String(error)}`,
     )
   }
 }
@@ -79,7 +79,7 @@ export async function fetchAppDirectory(url: string): Promise<DirectoryApp[]> {
 /** Merges fetched apps into catalog.apps without duplicate appIds (same policy as addApplications). */
 export function mergeAppsWithoutDuplicates(
   existingApps: DirectoryApp[],
-  incomingApps: DirectoryApp[]
+  incomingApps: DirectoryApp[],
 ): DirectoryApp[] {
   const existingAppIds = new Set(existingApps.map(app => app.appId))
   const newApps: DirectoryApp[] = []

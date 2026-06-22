@@ -62,7 +62,7 @@ describe("wireWcp4OriginAllowlist", () => {
         messageOrigin: UNTRUSTED_ORIGIN,
         instanceId: "temp-reject-uuid",
         connectionAttemptUuid: "reject-uuid",
-      })
+      }),
     )
 
     expect(transportSend).toHaveBeenCalledTimes(1)
@@ -74,7 +74,7 @@ describe("wireWcp4OriginAllowlist", () => {
           connectionAttemptUuid: "reject-uuid",
           destination: { instanceId: "temp-reject-uuid" },
         }),
-      } as Record<string, unknown>)
+      } as Record<string, unknown>),
     )
     expect(innerHandleMessage).not.toHaveBeenCalled()
   })
@@ -106,13 +106,13 @@ describe("wireWcp4OriginAllowlist", () => {
       createWcp4Message({
         messageOrigin: UNTRUSTED_ORIGIN,
         instanceId: "temp-derived-uuid",
-      })
+      }),
     )
 
     expect(transportSend).toHaveBeenCalledWith(
       expect.objectContaining({
         meta: expect.objectContaining({ connectionAttemptUuid: "derived-uuid" }),
-      } as Record<string, unknown>)
+      } as Record<string, unknown>),
     )
   })
 

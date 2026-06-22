@@ -34,8 +34,8 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
           },
         }),
         instanceId,
-        AppInstanceState.CONNECTED
-      )
+        AppInstanceState.CONNECTED,
+      ),
     )
   }
 
@@ -64,7 +64,7 @@ When(
     if (channelId) {
       this.props.lastPrivateChannelId = channelId
     }
-  }
+  },
 )
 
 When(
@@ -82,7 +82,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -108,7 +108,7 @@ When(
     if (listenerUUID) {
       this.props.lastPrivateChannelEventListenerId = listenerUUID
     }
-  }
+  },
 )
 
 When(
@@ -135,7 +135,7 @@ When(
     if (listenerUUID) {
       this.props.lastPrivateChannelEventListenerId = listenerUUID
     }
-  }
+  },
 )
 
 When(
@@ -153,5 +153,5 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )

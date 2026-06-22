@@ -1,8 +1,0 @@
-{
-  "stepDefinitions": [
-    "test/step-definitions/**/*.ts"
-  ],
-  "features": [
-    "test/features/**/*.feature"
-  ]
-}

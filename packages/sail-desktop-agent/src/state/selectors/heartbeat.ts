@@ -8,7 +8,7 @@ import type { AgentState, HeartbeatState } from "../types"
 
 export const getHeartbeatState = (
   state: AgentState,
-  instanceId: string
+  instanceId: string,
 ): HeartbeatState | undefined => state.heartbeats[instanceId]
 
 export const getAllHeartbeatStates = (state: AgentState): HeartbeatState[] =>

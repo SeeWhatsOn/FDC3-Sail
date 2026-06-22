@@ -45,7 +45,7 @@ function seedConnectedInstance(agent: DesktopAgent, instanceId: string = INSTANC
 function setInstanceUserChannel(
   agent: DesktopAgent,
   instanceId: string,
-  channelId: string | null
+  channelId: string | null,
 ): void {
   const instance = agentState(agent).instances[instanceId]
   if (instance) {
@@ -114,7 +114,7 @@ describe("SailPlatform channel APIs", () => {
   describe("changeAppChannel", () => {
     it("throws when platform is not started", async () => {
       await expect(platform.changeAppChannel(INSTANCE_ID, CHANNEL_ID)).rejects.toThrow(
-        /not started/i
+        /not started/i,
       )
     })
 
@@ -123,7 +123,7 @@ describe("SailPlatform channel APIs", () => {
       seedConnectedInstance(platform.agent)
 
       await expect(platform.changeAppChannel(INSTANCE_ID, "nonexistent-channel")).rejects.toThrow(
-        /does not exist/i
+        /does not exist/i,
       )
     })
 

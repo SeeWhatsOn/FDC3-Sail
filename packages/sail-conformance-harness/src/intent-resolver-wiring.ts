@@ -39,7 +39,7 @@ export function createHarnessIntentResolver(debug = false): IntentResolver {
       const selectedHandler = request.handlers.find(
         handler =>
           handler.app.appId === target.appId &&
-          (target.instanceId === undefined || handler.instanceId === target.instanceId)
+          (target.instanceId === undefined || handler.instanceId === target.instanceId),
       )
 
       if (!selectedHandler) {

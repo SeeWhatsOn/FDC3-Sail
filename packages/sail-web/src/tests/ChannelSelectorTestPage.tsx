@@ -63,7 +63,7 @@ export function ChannelSelectorTestPage() {
         displayMetadata: { name: "Blue", color: "#0000FF" },
       },
     ],
-    []
+    [],
   )
 
   const platform = useMemo(
@@ -84,7 +84,7 @@ export function ChannelSelectorTestPage() {
           return Promise.resolve()
         },
       }) as unknown as SailPlatform,
-    [channels, connector]
+    [channels, connector],
   )
 
   useEffect(() => {

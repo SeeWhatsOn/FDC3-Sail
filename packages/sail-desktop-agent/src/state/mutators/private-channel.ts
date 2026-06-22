@@ -12,7 +12,7 @@ export const createPrivateChannel = (
   state: AgentState,
   channelId: string,
   creatorAppId: string,
-  creatorInstanceId: string
+  creatorInstanceId: string,
 ): AgentState => {
   if (state.channels.private[channelId]) return state
 
@@ -44,7 +44,7 @@ export const createPrivateChannel = (
 export const connectInstanceToPrivateChannel = (
   state: AgentState,
   channelId: string,
-  instanceId: string
+  instanceId: string,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state
@@ -65,7 +65,7 @@ export const connectInstanceToPrivateChannel = (
 export const disconnectInstanceFromPrivateChannel = (
   state: AgentState,
   channelId: string,
-  instanceId: string
+  instanceId: string,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state
@@ -75,7 +75,7 @@ export const disconnectInstanceFromPrivateChannel = (
     if (!privateChannel) return
 
     privateChannel.connectedInstances = privateChannel.connectedInstances.filter(
-      id => id !== instanceId
+      id => id !== instanceId,
     )
 
     // Remove listeners for this instance
@@ -112,7 +112,7 @@ export const disconnectInstanceFromPrivateChannel = (
     const disconnectedInstance = draft.instances[instanceId]
     if (disconnectedInstance) {
       disconnectedInstance.privateChannels = disconnectedInstance.privateChannels.filter(
-        id => id !== channelId
+        id => id !== channelId,
       )
     }
 
@@ -134,7 +134,7 @@ export const addPrivateChannelContextListener = (
   channelId: string,
   listenerId: string,
   instanceId: string,
-  contextType: string | null
+  contextType: string | null,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state
@@ -156,7 +156,7 @@ export const addPrivateChannelLifecycleCatchAllListener = (
   state: AgentState,
   channelId: string,
   listenerId: string,
-  instanceId: string
+  instanceId: string,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state
@@ -176,7 +176,7 @@ export const addPrivateChannelLifecycleCatchAllListener = (
 export const removePrivateChannelLifecycleCatchAllListener = (
   state: AgentState,
   channelId: string,
-  listenerId: string
+  listenerId: string,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state
@@ -193,7 +193,7 @@ export const addPrivateChannelAddContextListenerListener = (
   state: AgentState,
   channelId: string,
   listenerId: string,
-  instanceId: string
+  instanceId: string,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state
@@ -213,7 +213,7 @@ export const addPrivateChannelAddContextListenerListener = (
 export const removePrivateChannelAddContextListenerListener = (
   state: AgentState,
   channelId: string,
-  listenerId: string
+  listenerId: string,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state
@@ -230,7 +230,7 @@ export const addPrivateChannelUnsubscribeListener = (
   state: AgentState,
   channelId: string,
   listenerId: string,
-  instanceId: string
+  instanceId: string,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state
@@ -250,7 +250,7 @@ export const addPrivateChannelUnsubscribeListener = (
 export const removePrivateChannelUnsubscribeListener = (
   state: AgentState,
   channelId: string,
-  listenerId: string
+  listenerId: string,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state
@@ -266,7 +266,7 @@ export const removePrivateChannelUnsubscribeListener = (
 export const removePrivateChannelContextListener = (
   state: AgentState,
   channelId: string,
-  listenerId: string
+  listenerId: string,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state
@@ -283,7 +283,7 @@ export const addPrivateChannelDisconnectListener = (
   state: AgentState,
   channelId: string,
   listenerId: string,
-  instanceId: string
+  instanceId: string,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state
@@ -303,7 +303,7 @@ export const addPrivateChannelDisconnectListener = (
 export const removePrivateChannelDisconnectListener = (
   state: AgentState,
   channelId: string,
-  listenerId: string
+  listenerId: string,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state
@@ -320,7 +320,7 @@ export const setPrivateChannelLastContext = (
   state: AgentState,
   channelId: string,
   contextType: string,
-  context: Context
+  context: Context,
 ): AgentState => {
   const channel = state.channels.private[channelId]
   if (!channel) return state

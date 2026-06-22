@@ -1,7 +1,12 @@
 import { enableMapSet } from "immer"
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
-import type { AppConnectionMetadata, SailPlatform } from "@finos/sail-platform-api"
+import type {
+  AppChannelChangeEvent,
+  AppConnectionMetadata,
+  HandshakeFailureEvent,
+  SailPlatform,
+} from "@finos/sail-platform-api"
 
 // Immer draft support for Map/Set in connection state
 enableMapSet()
@@ -81,7 +86,7 @@ export const createConnectionStore = (platform: SailPlatform) => {
               state.panelToConnection.set(panelId, connection.instanceId)
               state.waitingPanels.delete(panelId) // Remove from waiting
               console.log(
-                `[ConnectionStore] Panel ${panelId} linked to connection ${connection.instanceId} (cross-origin match by appId)`
+                `[ConnectionStore] Panel ${panelId} linked to connection ${connection.instanceId} (cross-origin match by appId)`,
               )
               return
             }
@@ -107,7 +112,7 @@ export const createConnectionStore = (platform: SailPlatform) => {
             connection.status = status
           }
         }),
-    }))
+    })),
   )
 
   const { apps, channels } = platform
@@ -128,14 +133,14 @@ export const createConnectionStore = (platform: SailPlatform) => {
         state.waitingPanels.delete(metadata.hostIdentifier)
       } else {
         const waitingPanel = Array.from(state.waitingPanels.values()).find(
-          wp => wp.appId === metadata.appId
+          wp => wp.appId === metadata.appId,
         )
         if (waitingPanel) {
           connection.panelId = waitingPanel.panelId
           state.panelToConnection.set(waitingPanel.panelId, metadata.instanceId)
           state.waitingPanels.delete(waitingPanel.panelId)
           console.log(
-            `[ConnectionStore] Linked connection ${metadata.instanceId} to waiting panel ${waitingPanel.panelId} (cross-origin)`
+            `[ConnectionStore] Linked connection ${metadata.instanceId} to waiting panel ${waitingPanel.panelId} (cross-origin)`,
           )
         }
       }
@@ -157,11 +162,11 @@ export const createConnectionStore = (platform: SailPlatform) => {
     })
   })
 
-  apps.onHandshakeFailure(({ error, connectionAttemptUuid }) => {
+  apps.onHandshakeFailure(({ error, connectionAttemptUuid }: HandshakeFailureEvent) => {
     console.error("[ConnectionStore] Handshake failed:", error, connectionAttemptUuid)
   })
 
-  channels.onAppChannelChange(({ instanceId, channelId }) => {
+  channels.onAppChannelChange(({ instanceId, channelId }: AppChannelChangeEvent) => {
     console.log("[ConnectionStore] Channel changed:", instanceId, channelId)
     store.setState(state => {
       const connection = state.connections.get(instanceId)

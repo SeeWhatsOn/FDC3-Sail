@@ -124,7 +124,7 @@ describe("FDC3Store", () => {
 
       expect(store.getState().isWindowRegistered(panelId)).toBe(false)
       expect(consoleSpy).toHaveBeenCalledWith(
-        "FDC3Store: Invalid panelId or window for registration"
+        "FDC3Store: Invalid panelId or window for registration",
       )
 
       consoleSpy.mockRestore()
@@ -138,7 +138,7 @@ describe("FDC3Store", () => {
 
       expect(store.getState().isWindowRegistered(panelId)).toBe(false)
       expect(consoleSpy).toHaveBeenCalledWith(
-        "FDC3Store: Invalid panelId or window for registration"
+        "FDC3Store: Invalid panelId or window for registration",
       )
 
       consoleSpy.mockRestore()
@@ -151,7 +151,7 @@ describe("FDC3Store", () => {
 
       expect(store.getState().registeredWindows.size).toBe(0)
       expect(consoleSpy).toHaveBeenCalledWith(
-        "FDC3Store: Invalid panelId or window for registration"
+        "FDC3Store: Invalid panelId or window for registration",
       )
 
       consoleSpy.mockRestore()

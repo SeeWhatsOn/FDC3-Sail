@@ -41,12 +41,12 @@ export function createHarnessAppLauncher(
   options?: {
     closePopup?: (instanceId: string) => boolean
     removePanel?: (instanceId: string) => void
-  }
+  },
 ): AppLauncher {
   return {
     launch(
       request: BrowserTypes.OpenRequestPayload,
-      appMetadata: AppMetadata
+      appMetadata: AppMetadata,
     ): Promise<AppIdentifier> {
       // Reuse caller-supplied instance id when opening an existing instance.
       const instanceId = request.app.instanceId ?? crypto.randomUUID()

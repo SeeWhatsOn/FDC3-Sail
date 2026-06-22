@@ -76,7 +76,7 @@ export class LocalStorageBackend implements PlatformApi {
   async getWorkspace(workspaceId: string): Promise<unknown> {
     const workspaces = this.getItem<unknown[]>("workspaces") ?? []
     const workspace = (workspaces as Array<{ id?: string; uuid?: string }>).find(
-      w => w.id === workspaceId || w.uuid === workspaceId
+      w => w.id === workspaceId || w.uuid === workspaceId,
     )
     return Promise.resolve(workspace ?? null)
   }
@@ -110,7 +110,7 @@ export class LocalStorageBackend implements PlatformApi {
   async deleteWorkspace(workspaceId: string): Promise<boolean> {
     const workspaces = this.getItem<unknown[]>("workspaces") ?? []
     const filtered = (workspaces as Array<{ id?: string; uuid?: string }>).filter(
-      w => w.id !== workspaceId && w.uuid !== workspaceId
+      w => w.id !== workspaceId && w.uuid !== workspaceId,
     )
     this.setItem("workspaces", filtered)
     return Promise.resolve(true)
@@ -122,7 +122,7 @@ export class LocalStorageBackend implements PlatformApi {
 
     // Fallback: check if layout is stored in workspace object
     const workspace = this.getItem<Array<{ id?: string; uuid?: string; layout?: unknown }>>(
-      "workspaces"
+      "workspaces",
     )?.find(w => w.id === workspaceId || w.uuid === workspaceId)
     if (workspace && "layout" in workspace) {
       return Promise.resolve(workspace.layout)

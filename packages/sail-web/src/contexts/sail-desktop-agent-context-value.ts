@@ -12,5 +12,5 @@ export interface SailDesktopAgentContextValue {
 }
 
 export const SailDesktopAgentContext = createContext<SailDesktopAgentContextValue>(
-  {} as SailDesktopAgentContextValue
+  {} as SailDesktopAgentContextValue,
 )

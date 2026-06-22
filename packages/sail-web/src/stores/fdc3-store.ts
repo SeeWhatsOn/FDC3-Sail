@@ -58,7 +58,7 @@ export const createFDC3Store = () =>
       getAllRegisteredWindows: () => {
         return new Map(get().registeredWindows)
       },
-    }))
+    })),
   )
 
 export const useFDC3Store = createFDC3Store()

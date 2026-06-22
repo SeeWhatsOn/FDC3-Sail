@@ -54,12 +54,12 @@ export function serializeNonDebugLogs(logger: CapturingLogger): string {
 
 export function assertSensitiveValueAbsentFromNonDebugLogs(
   logger: CapturingLogger,
-  sensitiveValue: string = SENSITIVE_MARKER
+  sensitiveValue: string = SENSITIVE_MARKER,
 ): void {
   const combined = serializeNonDebugLogs(logger)
   if (combined.includes(sensitiveValue)) {
     throw new Error(
-      `Expected ${JSON.stringify(sensitiveValue)} to be absent from info/warn/error logs, but found it in: ${combined}`
+      `Expected ${JSON.stringify(sensitiveValue)} to be absent from info/warn/error logs, but found it in: ${combined}`,
     )
   }
 }

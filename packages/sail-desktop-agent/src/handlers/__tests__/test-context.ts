@@ -2,7 +2,11 @@ import type { BrowserTypes } from "@finos/fdc3"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { DEFAULT_SAIL_IMPLEMENTATION_METADATA } from "../../agent/default-config"
 import { consoleLogger } from "../../interfaces/logger"
-import type { DACPHandlerContext, PendingIntentPromiseEntry } from "../types"
+import type {
+  DACPHandlerContext,
+  DacpResponseDispatcher,
+  PendingIntentPromiseEntry,
+} from "../types"
 import { createInitialState } from "../../state/initial-state"
 import type { AgentState, StateSetter } from "../../state/types"
 import type { Transport } from "../../interfaces/transport"
@@ -62,12 +66,13 @@ export function createDACPTestContext(options: {
   return { context, getState: readState }
 }
 
-/** Wire a mock or edge transport into handler context for isolated DACP tests. */
+/** Wire a delivery recorder into handler context for isolated DACP tests. */
 export function withResponseDispatcher(
   context: DACPHandlerContext,
-  transport: Transport,
+  delivery: DacpResponseDispatcher | Transport,
 ): DACPHandlerContext {
-  return { ...context, responses: createDacpResponseDispatcher(transport) }
+  const responses = "sendToInstance" in delivery ? delivery : createDacpResponseDispatcher(delivery)
+  return { ...context, responses }
 }
 
 export function createDacpRequestMeta(

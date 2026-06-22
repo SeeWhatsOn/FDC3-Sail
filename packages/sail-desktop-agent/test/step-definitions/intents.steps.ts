@@ -36,7 +36,7 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
     const meta = createMeta(world, appStr)
     if (meta.source?.appId) {
       const existingInstances = getInstancesByAppId(state, meta.source.appId).filter(
-        candidate => candidate.state === AppInstanceState.CONNECTED
+        candidate => candidate.state === AppInstanceState.CONNECTED,
       )
       if (existingInstances.length === 1) {
         instanceId = existingInstances[0].instanceId
@@ -59,8 +59,8 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
             },
           }),
           instanceId,
-          AppInstanceState.CONNECTED
-        )
+          AppInstanceState.CONNECTED,
+        ),
       )
     }
   }
@@ -134,7 +134,7 @@ Given(
     currentApps.push(newApp)
 
     this.props[APP_FIELD] = currentApps
-  }
+  },
 )
 
 When(
@@ -144,7 +144,7 @@ When(
     appStr: string,
     intentName: string,
     contextType: string,
-    resultType: string
+    resultType: string,
   ) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -160,7 +160,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -179,7 +179,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 Given(
@@ -209,7 +209,7 @@ Given(
       byInstance[instanceId] = listenerUUID
       this.props.intentListenersByInstance = byInstance
     }
-  }
+  },
 )
 
 Given(
@@ -241,7 +241,7 @@ Given(
       byInstance[instanceId] = listenerUUID
       this.props.intentListenersByInstance = byInstance
     }
-  }
+  },
 )
 
 Given(
@@ -268,7 +268,7 @@ Given(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 function raise(
@@ -276,7 +276,7 @@ function raise(
   intentName: string,
   contextType: string,
   dest: string | null,
-  meta: RaiseIntentRequest["meta"]
+  meta: RaiseIntentRequest["meta"],
 ): RaiseIntentRequest {
   const destMeta = dest != null ? createMeta(cw, dest) : null
   const message = {
@@ -297,7 +297,7 @@ function raiseWithContext(
   cw: CustomWorld,
   contextType: string,
   dest: string | null,
-  meta: RaiseIntentForContextRequest["meta"]
+  meta: RaiseIntentForContextRequest["meta"],
 ): RaiseIntentForContextRequest {
   const destMeta = dest != null ? createMeta(cw, dest) : null
   const message = {
@@ -317,7 +317,7 @@ function raiseWithInvalidTarget(
   cw: CustomWorld,
   intentName: string,
   contextType: string,
-  meta: RaiseIntentRequest["meta"]
+  meta: RaiseIntentRequest["meta"],
 ): RaiseIntentRequest {
   const message = {
     type: "raiseIntentRequest",
@@ -335,7 +335,7 @@ function raiseWithInvalidTarget(
 
 function raiseWithContextAnInvalidTarget(
   contextType: string,
-  meta: RaiseIntentForContextRequest["meta"]
+  meta: RaiseIntentForContextRequest["meta"],
 ): RaiseIntentForContextRequest {
   const message = {
     type: "raiseIntentForContextRequest",
@@ -357,7 +357,7 @@ When(
     const meta = createMeta(this, appStr)
     const message = raiseWithContext(this, contextType, null, meta)
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -367,7 +367,7 @@ When(
     const meta = createMeta(this, appStr)
     const message = raiseWithContext(this, contextType, dest, meta)
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -377,7 +377,7 @@ When(
     const meta = createMeta(this, appStr)
     const message = raise(this, intentName, contextType, null, meta)
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -387,13 +387,13 @@ When(
     appStr: string,
     intentName: string,
     contextType: string,
-    dest: string
+    dest: string,
   ) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
     const message = raise(this, intentName, contextType, dest, meta)
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -403,7 +403,7 @@ When(
     const meta = createMeta(this, appStr)
     const message = raiseWithInvalidTarget(this, intentName, contextType, meta)
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -413,7 +413,7 @@ When(
     const meta = createMeta(this, appStr)
     const message = raiseWithContextAnInvalidTarget(contextType, meta)
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -424,7 +424,7 @@ When(
     intentName: string,
     contextType: string,
     dest: string,
-    requestUuid: string
+    requestUuid: string,
   ) {
     ensureAppInstance(this, appStr)
     const meta = {
@@ -433,7 +433,7 @@ When(
     }
     const message = raise(this, intentName, contextType, dest, meta)
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When("we wait for the intent timeout", function (this: CustomWorld) {
@@ -449,7 +449,7 @@ When(
     appStr: string,
     eventUuid: string,
     contextType: string,
-    raiseIntentUuid: string
+    raiseIntentUuid: string,
   ) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -471,7 +471,7 @@ When(
 
     this.props.lastIntentResultRequestUuid = message.meta?.requestUuid
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -495,7 +495,7 @@ When(
 
     this.props.lastIntentResultRequestUuid = message.meta?.requestUuid
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -505,7 +505,7 @@ When(
     appStr: string,
     eventUuid: string,
     channelId: string,
-    raiseIntentUuid: string
+    raiseIntentUuid: string,
   ) {
     ensureAppInstance(this, appStr)
     const meta = createMeta(this, appStr)
@@ -530,5 +530,5 @@ When(
 
     this.props.lastIntentResultRequestUuid = message.meta?.requestUuid
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )

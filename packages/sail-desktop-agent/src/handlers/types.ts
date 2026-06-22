@@ -201,7 +201,13 @@ export interface DACPHandlerContext {
 
   /**
    * Unified instance teardown (FDC3 state + connection registry).
-   * Injected by {@link DesktopAgent} for browser and MockTransport paths.
+   * Injected by {@link DesktopAgent} for browser and headless ingest paths.
    */
   disconnectInstance?: (instanceId: string) => void
+
+  /**
+   * Host shell notification when user-channel membership changes without a DACP
+   * channelChangedEvent on the app edge (app-originated join/leave, no listeners).
+   */
+  notifyChannelMembershipChanged?: (instanceId: string, channelId: string | null) => void
 }

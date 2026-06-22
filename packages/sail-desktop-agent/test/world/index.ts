@@ -1,6 +1,6 @@
 import { World, setWorldConstructor, type IWorldOptions } from "@cucumber/cucumber"
 import { DesktopAgent } from "../../src/agent/desktop-agent"
-import { MockTransport } from "../support/mock-transport"
+import { DacpTestAppConnection } from "../support/dacp-test-app-connection"
 import { MockAppLauncher } from "../support/mock-app-launcher"
 import { MockIntentResolver } from "../support/mock-intent-resolver"
 import type { BrowserTypes } from "@finos/fdc3"
@@ -44,8 +44,8 @@ export class CustomWorld extends World {
   // The actual DesktopAgent instance being tested
   desktopAgent!: DesktopAgent
 
-  // MOCK external dependencies (to avoid side effects)
-  mockTransport!: MockTransport
+  // DACP oracle app edge (records outbound; receiveMessage drives inbound)
+  mockTransport!: DacpTestAppConnection
   mockAppLauncher!: MockAppLauncher
   mockIntentResolver!: MockIntentResolver
 
@@ -68,7 +68,7 @@ export class CustomWorld extends World {
   initializeDesktopAgent(
     apps: DirectoryApp[],
     channels: BrowserTypes.Channel[],
-    heartbeatConfig?: { intervalMs?: number; timeoutMs?: number }
+    heartbeatConfig?: { intervalMs?: number; timeoutMs?: number },
   ): void {
     // Cucumber defaults: no heartbeat timers unless a scenario opts in via heartbeatConfig
     // (see "A desktop agent with heartbeat checking"). WCP5-on-open would otherwise leave
@@ -81,24 +81,15 @@ export class CustomWorld extends World {
     delete this.props.lastIntentListenerId
     delete this.props.contextListenersByInstance
     delete this.props.intentListenersByInstance
-    // Wire ids (DACP responseUuid, eventUuid, WCP mint) must not advance the test request counter
-    // used by createMeta / hard-coded uuid3 listener tables.
-    let wireUuidCounter = 0
-    const wireRandomUUID = () => `wire-${wireUuidCounter++}`
-    if (!globalThis.crypto) {
-      globalThis.crypto = {
-        randomUUID: wireRandomUUID as unknown as Crypto["randomUUID"],
-      } as Crypto
-    } else {
-      globalThis.crypto.randomUUID = wireRandomUUID as unknown as Crypto["randomUUID"]
-    }
+    // Do not replace globalThis.crypto.randomUUID — Cucumber uses it for test-case ids;
+    // a per-scenario counter caused duplicate ids and only ~15 scenarios actually ran.
 
     // Create MOCK external dependencies - avoid side effects
-    this.mockTransport = new MockTransport()
+    this.mockTransport = new DacpTestAppConnection()
     this.mockAppLauncher = new MockAppLauncher()
     this.mockIntentResolver = new MockIntentResolver()
     const originalCancelNext = this.mockIntentResolver.cancelNextResolution.bind(
-      this.mockIntentResolver
+      this.mockIntentResolver,
     )
     this.mockIntentResolver.cancelNextResolution = () => {
       originalCancelNext()
@@ -107,7 +98,6 @@ export class CustomWorld extends World {
 
     // Create DesktopAgent with catalog seeded via config.apps (state.appDirectory.apps)
     this.desktopAgent = new DesktopAgent({
-      transport: this.mockTransport,
       appLauncher: this.mockAppLauncher,
       apps,
       userChannels: channels,
@@ -120,10 +110,11 @@ export class CustomWorld extends World {
       heartbeatIntervalMs: heartbeatConfig?.intervalMs ?? 30_000,
       heartbeatTimeoutMs: heartbeatConfig?.timeoutMs ?? 60_000,
     })
+    this.desktopAgent.attachAppConnection(this.mockTransport)
 
     this.mockTransport.onHandshakeRoutingLinked = (handshakeRoutingId, instanceId) => {
       applyDesktopAgentStateUpdate(this.desktopAgent, state =>
-        linkHandshakeRoutingId(state, handshakeRoutingId, instanceId)
+        linkHandshakeRoutingId(state, handshakeRoutingId, instanceId),
       )
     }
 
@@ -137,7 +128,7 @@ export class CustomWorld extends World {
           instanceId,
           appId,
           metadata: { appId, name: appId },
-        })
+        }),
       )
     }
 
@@ -172,7 +163,7 @@ export class CustomWorld extends World {
   }
 
   /**
-   * Deterministic request ids for Cucumber steps (createMeta). Wire responses use crypto.randomUUID.
+   * Deterministic request ids for Cucumber steps (createMeta / hard-coded uuid3 tables).
    */
   createUUID(): string {
     return `uuid${this.testUuidCounter++}`

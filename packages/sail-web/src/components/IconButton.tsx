@@ -59,7 +59,7 @@ export const IconButton = () => {
         })
       }
     },
-    [isDragging, dragStart]
+    [isDragging, dragStart],
   )
 
   const handleMouseUp = useCallback(() => {

@@ -11,12 +11,12 @@ import { applyDesktopAgentStateUpdate, getDesktopAgentPendingIntentPromises } fr
 
 export function createHandlerContextForWorld(
   world: CustomWorld,
-  instanceId: string
+  instanceId: string,
 ): DACPHandlerContext {
   const agent = world.desktopAgent
 
   return {
-    responses: createDacpResponseDispatcher(world.mockTransport),
+    responses: createDacpResponseDispatcher(world.mockTransport.outbound),
     instanceId,
     getState: () => world.getState(),
     setState: fn => applyDesktopAgentStateUpdate(agent, fn),

@@ -13,7 +13,7 @@ let contextSequence = 0
 export const createAppChannel = (
   state: AgentState,
   channelId: string,
-  displayName?: string
+  displayName?: string,
 ): AgentState => {
   if (state.channels.app[channelId]) return state
 
@@ -40,7 +40,7 @@ export const storeContext = (
   state: AgentState,
   channelId: string,
   context: Context,
-  sourceInstanceId: string
+  sourceInstanceId: string,
 ): AgentState => {
   const timestampMs = Date.now()
   // Preserve ordering for rapid broadcasts in the same millisecond without

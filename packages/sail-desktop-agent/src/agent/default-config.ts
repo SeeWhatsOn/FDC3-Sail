@@ -50,7 +50,7 @@ export const DEFAULT_SAIL_DESKTOP_AGENT_CONFIG = {
 
 function mergeImplementationMetadata(
   base: SailImplementationMetadata,
-  override?: Partial<SailImplementationMetadata>
+  override?: Partial<SailImplementationMetadata>,
 ): SailImplementationMetadata {
   if (!override) {
     return base
@@ -70,7 +70,7 @@ function mergeImplementationMetadata(
  * Merge FDC3-Sail product defaults with caller options.
  * Used by `DesktopAgent` constructor; exported for tests and pre-built config.
  */
-export function resolveDesktopAgentConfig(options: DesktopAgentOptions): DesktopAgentConfig {
+export function resolveDesktopAgentConfig(options: DesktopAgentOptions = {}): DesktopAgentConfig {
   const { implementationMetadata, ...rest } = options
 
   return {
@@ -88,7 +88,7 @@ export function resolveDesktopAgentConfig(options: DesktopAgentOptions): Desktop
       rest.heartbeatTimeoutMs ?? DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.heartbeatTimeoutMs,
     implementationMetadata: mergeImplementationMetadata(
       DEFAULT_SAIL_IMPLEMENTATION_METADATA,
-      implementationMetadata
+      implementationMetadata,
     ),
   }
 }

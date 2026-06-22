@@ -213,7 +213,7 @@ function renderDiff(target, diffInput) {
       rows.push(
         '<tr class="diff-hunk"><td class="diff-ln"></td><td class="diff-ln"></td><td class="diff-code">' +
           esc(p.text) +
-          "</td></tr>"
+          "</td></tr>",
       )
     } else if (p.type === "add") {
       var ai2 = -1
@@ -234,7 +234,7 @@ function renderDiff(target, diffInput) {
           p.newLine +
           '</td><td class="diff-code">' +
           esc(p.code) +
-          "</td></tr>"
+          "</td></tr>",
       )
     } else if (p.type === "del") {
       var di2 = -1
@@ -255,7 +255,7 @@ function renderDiff(target, diffInput) {
           p.oldLine +
           '</td><td class="diff-ln"></td><td class="diff-code">' +
           esc(p.code) +
-          "</td></tr>"
+          "</td></tr>",
       )
     } else {
       rows.push(
@@ -265,7 +265,7 @@ function renderDiff(target, diffInput) {
           p.newLine +
           '</td><td class="diff-code">' +
           esc(p.code) +
-          "</td></tr>"
+          "</td></tr>",
       )
     }
   }

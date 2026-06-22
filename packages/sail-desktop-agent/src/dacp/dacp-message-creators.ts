@@ -26,7 +26,7 @@ type OriginatingAppPayload = {
  */
 function buildContextMetadataFromOriginatingApp(
   originatingApp: OriginatingAppPayload,
-  timestamp: string
+  timestamp: string,
 ): { source: { appId: string; instanceId?: string }; timestamp: string } {
   return {
     source: {
@@ -39,7 +39,7 @@ function buildContextMetadataFromOriginatingApp(
 
 function attachContextMetadataWhenPresent(
   payload: Record<string, unknown>,
-  timestamp: string
+  timestamp: string,
 ): void {
   const originatingApp = payload.originatingApp as OriginatingAppPayload | undefined
   if (!originatingApp?.appId) {
@@ -58,7 +58,7 @@ export function createDACPErrorResponse(
   originalRequest: DACPRequestLike,
   errorType: BrowserTypes.ResponsePayloadError,
   responseType: DACPResponseType,
-  errorMessage?: string
+  errorMessage?: string,
 ): BrowserTypes.AgentResponseMessage {
   const response = {
     type: responseType,
@@ -85,7 +85,7 @@ export function createDACPErrorResponse(
 export function createDACPSuccessResponse(
   originalRequest: DACPRequestLike,
   responseType: DACPResponseType,
-  payload: Record<string, unknown> = {}
+  payload: Record<string, unknown> = {},
 ): BrowserTypes.AgentResponseMessage {
   const response = {
     type: responseType,
@@ -107,7 +107,7 @@ export function createDACPSuccessResponse(
  */
 export function createDACPEvent(
   eventType: BrowserTypes.EventMessageType,
-  payload: Record<string, unknown> = {}
+  payload: Record<string, unknown> = {},
 ): BrowserTypes.AgentEventMessage {
   const timestamp = new Date().toISOString()
   const eventPayload = { ...payload }
@@ -134,7 +134,7 @@ export function createIntentEvent(
   intent: string,
   context: unknown,
   requestUuid: string,
-  originatingApp: { appId: string; instanceId?: string; desktopAgent?: string }
+  originatingApp: { appId: string; instanceId?: string; desktopAgent?: string },
 ): BrowserTypes.IntentEvent {
   const timestamp = new Date().toISOString()
   const normalizedOriginatingApp = {

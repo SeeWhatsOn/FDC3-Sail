@@ -53,7 +53,7 @@ export function createInitialState(userChannels: Channel[]): AgentState {
  */
 export function createStateWithOverrides(
   overrides: Partial<AgentState>,
-  userChannels: Channel[]
+  userChannels: Channel[],
 ): AgentState {
   return deepMerge(createInitialState(userChannels), overrides)
 }

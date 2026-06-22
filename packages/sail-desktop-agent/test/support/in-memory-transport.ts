@@ -86,7 +86,7 @@ export class InMemoryTransport implements Transport {
     if (!this.connected) {
       if (this.tornDownByPeer) {
         throw new Error(
-          "Cannot send message: InMemoryTransport is disconnected\nCannot send message: Peer transport is disconnected"
+          "Cannot send message: InMemoryTransport is disconnected\nCannot send message: Peer transport is disconnected",
         )
       }
       throw new Error("Cannot send message: InMemoryTransport is disconnected")
@@ -285,7 +285,8 @@ export class InMemoryTransport implements Transport {
  * const [daTransport, connectorTransport] = createInMemoryTransportPair()
  *
  * // Desktop Agent uses daTransport
- * const desktopAgent = new DesktopAgent({ transport: daTransport })
+ * const desktopAgent = new DesktopAgent()
+ * desktopAgent.attachAppConnection(dacpTestAppConnection)
  *
  * // WCP Connector uses connectorTransport
  * const wcpConnector = new WCPConnector(connectorTransport)

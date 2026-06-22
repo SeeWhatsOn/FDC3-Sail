@@ -15,10 +15,5 @@ export default defineConfig({
     isolate: true,
     // Pool configuration for better test isolation
     pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true, // Use single fork for better isolation in socket tests
-      },
-    },
   },
 })

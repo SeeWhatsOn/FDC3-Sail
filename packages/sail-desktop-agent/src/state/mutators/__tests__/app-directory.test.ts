@@ -61,7 +61,7 @@ describe("app-directory mutators", () => {
 
     it("throws for invalid data format", () => {
       expect(() => addApplications(state, { invalid: "data" } as unknown as DirectoryData)).toThrow(
-        "Invalid data format"
+        "Invalid data format",
       )
     })
   })
@@ -124,7 +124,7 @@ describe("app-directory mutators", () => {
       global.fetch = vi.fn().mockRejectedValue(new Error("Network error"))
 
       await expect(loadDirectoryIntoState(state, "https://example.com/v2/apps")).rejects.toThrow(
-        "Failed to load applications"
+        "Failed to load applications",
       )
     })
   })

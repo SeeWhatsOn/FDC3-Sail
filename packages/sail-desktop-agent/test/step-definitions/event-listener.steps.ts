@@ -30,8 +30,8 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
           },
         }),
         instanceId,
-        AppInstanceState.CONNECTED
-      )
+        AppInstanceState.CONNECTED,
+      ),
     )
   }
 
@@ -56,7 +56,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 /**
@@ -77,7 +77,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 /**
@@ -99,5 +99,5 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )

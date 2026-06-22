@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 
-import { MockTransport } from "../../../__tests__/utils/mock-transport"
 import type { DirectoryApp } from "../../../app-directory/types"
 import { DesktopAgent } from "../../../agent/desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
@@ -10,6 +9,7 @@ import { connectInstance, updateInstanceState } from "../../../state/mutators"
 import { createInitialState } from "../../../state/initial-state"
 import { AppInstanceState } from "../../../state/types"
 import { createDacpRequestMeta } from "../../__tests__/test-context"
+import { createDesktopAgentWithTestConnection } from "../../../../test/support/desktop-agent-test-harness"
 
 const CONFORMANCE_APP: DirectoryApp = {
   appId: "intent-a",
@@ -41,7 +41,6 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
   })
 
   it("GetAppMetadata includes desktopAgent on wire JSON for directory lookup", async () => {
-    const transport = new MockTransport()
     const initialState = updateInstanceState(
       connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
         instanceId: "caller-1",
@@ -52,16 +51,14 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
       AppInstanceState.CONNECTED,
     )
 
-    const agent = new DesktopAgent({
-      transport,
+    const { agent, connection } = createDesktopAgentWithTestConnection({
       apps: [CONFORMANCE_APP],
       initialState,
       implementationMetadata: DEFAULT_SAIL_IMPLEMENTATION_METADATA,
     })
     activeAgents.push(agent)
-    agent.start()
 
-    await transport.receiveMessage({
+    await connection.receiveMessage({
       type: "getAppMetadataRequest",
       meta: createDacpRequestMeta("get-app-metadata-harness-directory", {
         appId: "conformance1",
@@ -72,7 +69,7 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
       },
     })
 
-    const response = transport.sentMessages.find(
+    const response = connection.sentMessages.find(
       (message): message is GetAppMetadataResponse =>
         typeof message === "object" &&
         message !== null &&
@@ -87,7 +84,6 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
   })
 
   it("AppInstanceMetadata includes desktopAgent on wire JSON for running instance lookup", async () => {
-    const transport = new MockTransport()
     let initialState = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     initialState = connectInstance(initialState, {
       instanceId: "caller-1",
@@ -106,16 +102,14 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
       AppInstanceState.CONNECTED,
     )
 
-    const agent = new DesktopAgent({
-      transport,
+    const { agent, connection } = createDesktopAgentWithTestConnection({
       apps: [CONFORMANCE_APP],
       initialState,
       implementationMetadata: DEFAULT_SAIL_IMPLEMENTATION_METADATA,
     })
     activeAgents.push(agent)
-    agent.start()
 
-    await transport.receiveMessage({
+    await connection.receiveMessage({
       type: "getAppMetadataRequest",
       meta: createDacpRequestMeta("get-app-metadata-harness-instance", {
         appId: "conformance1",
@@ -126,7 +120,7 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
       },
     })
 
-    const response = transport.sentMessages.find(
+    const response = connection.sentMessages.find(
       (message): message is GetAppMetadataResponse =>
         typeof message === "object" &&
         message !== null &&

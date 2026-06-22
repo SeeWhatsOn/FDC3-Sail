@@ -16,7 +16,7 @@ type DesktopAgentInternals = {
 /** Host-side catalog writes — same internal path as DACP handler setState. */
 async function applyAgentStateUpdateAsync(
   agent: DesktopAgent,
-  callback: (state: AgentState) => Promise<AgentState>
+  callback: (state: AgentState) => Promise<AgentState>,
 ): Promise<void> {
   const internal = agent as unknown as DesktopAgentInternals
   internal.state = await callback(agent.getState())
@@ -145,7 +145,7 @@ export const createAppDirectoryStore = (platform: SailPlatform) =>
           setDirectoryUrls(urls)
 
           await applyAgentStateUpdateAsync(platform.agent, state =>
-            replaceDirectoriesInState(state, urls)
+            replaceDirectoriesInState(state, urls),
           )
 
           loadApps()
@@ -164,5 +164,5 @@ export const createAppDirectoryStore = (platform: SailPlatform) =>
         loadApps()
         return Promise.resolve()
       },
-    }))
+    })),
   )

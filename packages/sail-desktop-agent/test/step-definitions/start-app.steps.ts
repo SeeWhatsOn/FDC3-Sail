@@ -29,7 +29,7 @@ function stripWcpProtocolMessagesFromLog(world: CustomWorld): void {
 async function sendWcp4ValidateForInstance(
   world: CustomWorld,
   uuid: string,
-  options?: { retainWcp5InLog?: boolean }
+  options?: { retainWcp5InLog?: boolean },
 ): Promise<void> {
   const instance = getInstance(world.getState(), uuid)
   if (!instance) {
@@ -88,7 +88,7 @@ async function sendWcp4ValidateForInstance(
 async function connectTestAppInstance(
   world: CustomWorld,
   appId: string,
-  instanceId: string
+  instanceId: string,
 ): Promise<void> {
   const state = world.getState()
   const existing = getInstance(state, instanceId)
@@ -101,7 +101,7 @@ async function connectTestAppInstance(
           appId,
           name: appId,
         },
-      })
+      }),
     )
   }
 
@@ -113,7 +113,7 @@ async function connectTestAppInstance(
   }
 
   world.updateState(currentState =>
-    updateInstanceState(currentState, instanceId, AppInstanceState.CONNECTED)
+    updateInstanceState(currentState, instanceId, AppInstanceState.CONNECTED),
   )
 }
 
@@ -135,7 +135,7 @@ function resolveAppIdFromAppStr(appStr: string): string {
 
 export async function ensureAppInstanceForTesting(
   world: CustomWorld,
-  appStr: string
+  appStr: string,
 ): Promise<string> {
   const instanceId = getAppInstanceId(world, appStr)
   const appId = resolveAppIdFromAppStr(appStr)
@@ -160,7 +160,7 @@ When(
       this.createUUID()
     }
     await connectTestAppInstance(this, appId, uuid)
-  }
+  },
 )
 
 When("{string} is closed", function (this: CustomWorld, app: string) {
@@ -186,7 +186,7 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
           instanceId: uuid,
           appId: fallbackAppId,
           metadata: { appId: fallbackAppId, name: fallbackAppId },
-        })
+        }),
       )
     }
     if (appId) {
@@ -195,7 +195,7 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
           instanceId: uuid,
           appId,
           metadata: { appId, name: appId },
-        })
+        }),
       )
     }
     instance = getInstance(this.getState(), uuid)
@@ -274,7 +274,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -297,7 +297,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -319,7 +319,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -336,7 +336,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -357,5 +357,5 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )

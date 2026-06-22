@@ -29,7 +29,7 @@ export function SailDesktopAgentProvider({ platform, children }: SailDesktopAgen
       useConnectionStore: connectionStore,
       useIntentResolverStore: intentResolverStore,
     }),
-    [platform, appDirectoryStore, connectionStore, intentResolverStore]
+    [platform, appDirectoryStore, connectionStore, intentResolverStore],
   )
 
   return (

@@ -42,7 +42,7 @@ function createMockHostControllers() {
         appListeners.onHandshakeFailure.push(handler)
         return () => {
           appListeners.onHandshakeFailure = appListeners.onHandshakeFailure.filter(
-            h => h !== handler
+            h => h !== handler,
           )
         }
       }),
@@ -58,13 +58,13 @@ function createMockHostControllers() {
         channelListeners.onAppChannelChange.push(handler)
         return () => {
           channelListeners.onAppChannelChange = channelListeners.onAppChannelChange.filter(
-            h => h !== handler
+            h => h !== handler,
           )
         }
       }),
       emitAppChannelChange: (instanceId: string, channelId: string | null) => {
         channelListeners.onAppChannelChange.forEach(handler =>
-          handler({ instanceId, channelId, channel: null })
+          handler({ instanceId, channelId, channel: null }),
         )
       },
     },
@@ -72,7 +72,7 @@ function createMockHostControllers() {
 }
 
 function createAppConnectedMetadata(
-  overrides: Partial<AppConnectionMetadata> = {}
+  overrides: Partial<AppConnectionMetadata> = {},
 ): AppConnectionMetadata {
   return {
     instanceId: INSTANCE_ID,

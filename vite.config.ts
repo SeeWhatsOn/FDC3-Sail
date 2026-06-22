@@ -443,5 +443,6 @@ export default defineConfig({
       },
     ],
   },
+  // @ts-expect-error vite-plus fmt config shape mismatch in monorepo root config
   fmt: fmtConfig,
 })

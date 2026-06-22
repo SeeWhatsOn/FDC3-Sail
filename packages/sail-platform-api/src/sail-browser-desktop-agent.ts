@@ -55,7 +55,7 @@ export interface SailBrowserDesktopAgentConfig extends Omit<
  * ```
  */
 export function createSailBrowserDesktopAgent(
-  config?: SailBrowserDesktopAgentConfig
+  config?: SailBrowserDesktopAgentConfig,
 ): DesktopAgent & {
   /**
    * Add middleware to the message processing pipeline

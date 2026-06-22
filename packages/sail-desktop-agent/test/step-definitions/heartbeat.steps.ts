@@ -47,8 +47,8 @@ function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string
           },
         }),
         instanceId,
-        AppInstanceState.CONNECTED
-      )
+        AppInstanceState.CONNECTED,
+      ),
     )
   }
 
@@ -78,7 +78,7 @@ Given(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 Given("{string} sends a goodbye message", async function (this: CustomWorld, appStr: string) {
@@ -111,7 +111,7 @@ When(
     const instanceId = this.mockTransport.lastWcp5ValidatedInstanceId
     if (!instanceId) {
       throw new Error(
-        "No WCP5 validated instance id recorded; send WCP4 validate before this step."
+        "No WCP5 validated instance id recorded; send WCP4 validate before this step.",
       )
     }
     const desktopAgentName =
@@ -135,7 +135,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 Then("I test the liveness of {string}", function (this: CustomWorld, appStr: string) {
@@ -166,7 +166,7 @@ Then("no DA event listeners remain for {string}", function (this: CustomWorld, a
   const remaining = getEventListenersForInstance(this.getState(), instanceId)
   if (remaining.length > 0) {
     throw new Error(
-      `Expected no DA event listeners for ${instanceId}, but found: ${JSON.stringify(remaining)}`
+      `Expected no DA event listeners for ${instanceId}, but found: ${JSON.stringify(remaining)}`,
     )
   }
 })
@@ -179,7 +179,7 @@ Then("no DA event listeners remain for the WCP-validated instance", function (th
   const remaining = getEventListenersForInstance(this.getState(), instanceId)
   if (remaining.length > 0) {
     throw new Error(
-      `Expected no DA event listeners for WCP-validated instance ${instanceId}, but found: ${JSON.stringify(remaining)}`
+      `Expected no DA event listeners for WCP-validated instance ${instanceId}, but found: ${JSON.stringify(remaining)}`,
     )
   }
 })
@@ -190,7 +190,7 @@ Then(
     const canonicalId = this.mockTransport.lastWcp5ValidatedInstanceId
     if (!canonicalId) {
       throw new Error(
-        "No WCP5 validated instance id recorded; send WCP4 validate before this step."
+        "No WCP5 validated instance id recorded; send WCP4 validate before this step.",
       )
     }
 
@@ -206,5 +206,5 @@ Then(
 
     const allMessages = this.mockTransport.getPostedMessages()
     matchDataSubset(this, allMessages, table)
-  }
+  },
 )

@@ -35,12 +35,12 @@ const FORBIDDEN_SELECTOR_EXPORTS = ["getIntentResolution", "getAllIntentResoluti
 function assertNoForbiddenExports(
   moduleExports: Record<string, unknown>,
   moduleName: string,
-  forbiddenExports: readonly string[]
+  forbiddenExports: readonly string[],
 ): void {
   for (const exportName of forbiddenExports) {
     expect(
       Object.prototype.hasOwnProperty.call(moduleExports, exportName),
-      `${moduleName} must not export ${exportName}`
+      `${moduleName} must not export ${exportName}`,
     ).toBe(false)
   }
 }

@@ -40,22 +40,22 @@ describe("@finos/sail-desktop-agent host-contracts package boundary", () => {
       moduleFile => {
         expect(
           existsSync(join(hostContractsRoot, moduleFile)),
-          `packages/sail-desktop-agent/src/host-contracts/${moduleFile} should exist`
+          `packages/sail-desktop-agent/src/host-contracts/${moduleFile} should exist`,
         ).toBe(true)
-      }
+      },
     )
 
     it("host-contracts/index.ts re-exports all three host contract modules", () => {
       const barrel = readSrc("host-contracts/index.ts")
 
       expect(barrel, "host-contracts barrel should export app launch contract").toMatch(
-        /app-launcher/i
+        /app-launcher/i,
       )
       expect(barrel, "host-contracts barrel should export intent resolver contract").toMatch(
-        /intent-resolver/i
+        /intent-resolver/i,
       )
       expect(barrel, "host-contracts barrel should export channel control contract").toMatch(
-        /channel-control/i
+        /channel-control/i,
       )
     })
   })
@@ -65,7 +65,7 @@ describe("@finos/sail-desktop-agent host-contracts package boundary", () => {
       const entry = readSrc("index.ts")
 
       expect(entry, "top-level entry should export host-contracts for platform builders").toMatch(
-        /export\s+\*\s+from\s+["']\.\/host-contracts/
+        /export\s+\*\s+from\s+["']\.\/host-contracts/,
       )
     })
 
@@ -75,9 +75,9 @@ describe("@finos/sail-desktop-agent host-contracts package boundary", () => {
         const barrel = readSrc("host-contracts/index.ts")
 
         expect(barrel, `host-contracts barrel should export ${exportName}`).toMatch(
-          new RegExp(`\\b${exportName}\\b`)
+          new RegExp(`\\b${exportName}\\b`),
         )
-      }
+      },
     )
   })
 })

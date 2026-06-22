@@ -266,7 +266,7 @@ async function waitForServer(maxAttempts = 30, intervalMs = 1000) {
       }
 
       console.log(
-        `Server not ready (${lastError}), retrying in ${intervalMs}ms... (${attempts}/${maxAttempts})`
+        `Server not ready (${lastError}), retrying in ${intervalMs}ms... (${attempts}/${maxAttempts})`,
       )
       checkTimer = setTimeout(checkServer, intervalMs)
     }

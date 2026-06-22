@@ -41,7 +41,7 @@ export const removeEventListener = (state: AgentState, listenerId: string): Agen
 
 export const removeEventListenersForInstance = (
   state: AgentState,
-  instanceId: string
+  instanceId: string,
 ): AgentState => {
   const toRemove = Object.values(state.events.listeners)
     .filter(l => l.instanceId === instanceId)
@@ -57,7 +57,7 @@ export const removeEventListenersForInstance = (
         const typeListeners = draft.events.byEventType[listener.eventType]
         if (typeListeners) {
           draft.events.byEventType[listener.eventType] = typeListeners.filter(
-            id => id !== listenerId
+            id => id !== listenerId,
           )
           if (draft.events.byEventType[listener.eventType].length === 0) {
             delete draft.events.byEventType[listener.eventType]

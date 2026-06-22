@@ -177,14 +177,14 @@ const mapStorage = {
                           {
                             ...panel,
                           },
-                        ])
+                        ]),
                       ),
                     },
-                  ])
+                  ]),
                 ),
               },
             },
-          ])
+          ]),
         ),
       },
     }
@@ -404,8 +404,8 @@ export const createWorkspaceStore = () =>
       {
         name: "workspace-store",
         storage: mapStorage,
-      }
-    )
+      },
+    ),
   )
 
 export const useWorkspaceStore = createWorkspaceStore()

@@ -95,7 +95,7 @@ export function createDacpResponseDispatcherFromDelivery(
 }
 
 /**
- * DACP response delivery via injectable transport (handler tests).
+ * DACP response delivery via injectable transport (legacy Cucumber / transport tests).
  */
 export function createDacpResponseDispatcher(edgeTransport: Transport): DacpResponseDispatcher {
   return {

@@ -34,7 +34,7 @@ export function validateDACPMessage<T>(message: unknown, schema: z.ZodSchema<T>)
  */
 export function safeParseDACPMessage<T>(
   message: unknown,
-  schema: z.ZodSchema<T>
+  schema: z.ZodSchema<T>,
 ): { success: true; data: T } | { success: false; error: DACPValidationError } {
   try {
     const data = validateDACPMessage(message, schema)

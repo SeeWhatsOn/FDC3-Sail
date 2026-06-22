@@ -634,7 +634,7 @@ export const FindInstancesResponseSchema = z.object({
           tooltip: z.string().optional(),
           description: z.string().optional(),
           icons: z.array(
-            z.object({ src: z.string(), size: z.string().optional(), type: z.string().optional() })
+            z.object({ src: z.string(), size: z.string().optional(), type: z.string().optional() }),
           ),
           screenshots: z.array(
             z.object({
@@ -642,13 +642,13 @@ export const FindInstancesResponseSchema = z.object({
               size: z.string().optional(),
               type: z.string().optional(),
               label: z.string().optional(),
-            })
+            }),
           ),
           resultType: z.unknown().optional(),
           appId: z.string(),
           instanceId: z.string().optional(),
           desktopAgent: z.string().optional(),
-        })
+        }),
       ),
     }),
     z.object({ error: z.string() }),
@@ -692,7 +692,7 @@ export const FindIntentResponseSchema = z.object({
             appId: z.string(),
             instanceId: z.string().optional(),
             desktopAgent: z.string().optional(),
-          })
+          }),
         ),
       }),
     }),
@@ -756,9 +756,9 @@ export const FindIntentsByContextResponseSchema = z.object({
               appId: z.string(),
               instanceId: z.string().optional(),
               desktopAgent: z.string().optional(),
-            })
+            }),
           ),
-        })
+        }),
       ),
     }),
     z.object({
@@ -818,7 +818,7 @@ export const GetAppMetadataResponseSchema = z.object({
         tooltip: z.string().optional(),
         description: z.string().optional(),
         icons: z.array(
-          z.object({ src: z.string(), size: z.string().optional(), type: z.string().optional() })
+          z.object({ src: z.string(), size: z.string().optional(), type: z.string().optional() }),
         ),
         screenshots: z.array(
           z.object({
@@ -826,7 +826,7 @@ export const GetAppMetadataResponseSchema = z.object({
             size: z.string().optional(),
             type: z.string().optional(),
             label: z.string().optional(),
-          })
+          }),
         ),
         resultType: z.unknown().optional(),
         appId: z.string(),
@@ -1448,9 +1448,9 @@ export const RaiseIntentForContextResponseSchema = z.object({
               appId: z.string(),
               instanceId: z.string().optional(),
               desktopAgent: z.string().optional(),
-            })
+            }),
           ),
-        })
+        }),
       ),
     }),
     z.object({
@@ -1535,7 +1535,7 @@ export const RaiseIntentResponseSchema = z.object({
             appId: z.string(),
             instanceId: z.string().optional(),
             desktopAgent: z.string().optional(),
-          })
+          }),
         ),
       }),
     }),

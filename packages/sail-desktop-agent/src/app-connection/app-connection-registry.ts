@@ -20,7 +20,7 @@ export interface AppConnectionRegistryCallbacks {
   updateConnectionMetadata: (
     tempInstanceId: string,
     actualInstanceId: string,
-    appId: string
+    appId: string,
   ) => void
   disconnectApp: (instanceId: string) => void
 }
@@ -71,13 +71,13 @@ export class AppConnectionRegistry {
 
   sendOnPort(
     instanceId: string,
-    message: AgentResponseMessage | AgentEventMessage | WebConnectionProtocolMessage
+    message: AgentResponseMessage | AgentEventMessage | WebConnectionProtocolMessage,
   ): void {
     const appTransport = this.messagePortTransports.get(instanceId)
     if (!appTransport?.isConnected()) {
       this.callbacks.logger.warn(
         `[AppConnectionRegistry] Cannot send to ${instanceId}: port missing or disconnected`,
-        { messageType: message.type }
+        { messageType: message.type },
       )
       return
     }
@@ -95,7 +95,7 @@ export class AppConnectionRegistry {
 
   private deliverWcp5Success(
     message: AgentResponseMessage | WebConnectionProtocolMessage,
-    destinationId: string
+    destinationId: string,
   ): void {
     let actualInstanceId: string | undefined
     let appId: string | undefined
@@ -119,7 +119,7 @@ export class AppConnectionRegistry {
   }
 
   private emitChannelChanged(
-    message: AgentResponseMessage | AgentEventMessage | WebConnectionProtocolMessage
+    message: AgentResponseMessage | AgentEventMessage | WebConnectionProtocolMessage,
   ): void {
     if (!("payload" in message) || !message.payload || typeof message.payload !== "object") {
       return
@@ -149,7 +149,7 @@ export class AppConnectionRegistry {
 }
 
 function extractDestinationInstanceId(
-  message: AgentResponseMessage | AgentEventMessage | WebConnectionProtocolMessage
+  message: AgentResponseMessage | AgentEventMessage | WebConnectionProtocolMessage,
 ): string | undefined {
   if (
     "destination" in message.meta &&

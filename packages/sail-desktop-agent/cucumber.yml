@@ -2,7 +2,7 @@ default:
   format:
     - "@cucumber/pretty-formatter"
   paths:
-    - test/features/**/*.feature
+    - test/features
   require:
     - test/step-definitions/*.steps.ts
     - test/support/*.ts
@@ -18,7 +18,7 @@ ci:
     - "@cucumber/pretty-formatter"
     - junit:test-results.xml
   paths:
-    - test/features/**/*.feature
+    - test/features
   require:
     - test/step-definitions/*.steps.ts
     - test/support/*.ts
@@ -32,7 +32,7 @@ all:
   format:
     - "@cucumber/pretty-formatter"
   paths:
-    - test/features/**/*.feature
+    - test/features
   require:
     - test/step-definitions/*.steps.ts
     - test/support/*.ts
@@ -46,7 +46,7 @@ failing:
   format:
     - "@cucumber/pretty-formatter"
   paths:
-    - test/features/**/*.feature
+    - test/features
   require:
     - test/step-definitions/*.steps.ts
     - test/support/*.ts

@@ -5,10 +5,5 @@
     "rootDir": "src"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"],
-  "references": [
-    {
-      "path": "../../packages/sail-desktop-agent"
-    }
-  ]
+  "exclude": ["node_modules", "dist"]
 }

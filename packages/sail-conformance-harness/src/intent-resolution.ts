@@ -8,7 +8,7 @@ import type { IntentResolutionRequest } from "./types"
  */
 export function selectIntentHandler(
   request: IntentResolutionRequest,
-  target?: AppIdentifier | null
+  target?: AppIdentifier | null,
 ): AppIdentifier | null {
   const { handlers } = request
 
@@ -19,7 +19,7 @@ export function selectIntentHandler(
   if (target?.appId) {
     if (target.instanceId) {
       const match = handlers.find(
-        handler => handler.appId === target.appId && handler.instanceId === target.instanceId
+        handler => handler.appId === target.appId && handler.instanceId === target.instanceId,
       )
       return match ? { appId: match.appId, instanceId: match.instanceId } : null
     }

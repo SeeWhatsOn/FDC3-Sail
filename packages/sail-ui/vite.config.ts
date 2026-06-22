@@ -5,6 +5,7 @@ import { defineConfig, lazyPlugins } from "vite-plus"
 
 // https://vite.dev/config/
 export default defineConfig({
+  // @ts-expect-error vite-plus lazyPlugins triggers TS2321 excessive stack depth
   plugins: lazyPlugins(() => [react(), tailwindcss()]),
   resolve: {
     alias: {

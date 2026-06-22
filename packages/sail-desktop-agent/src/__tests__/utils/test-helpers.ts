@@ -21,7 +21,7 @@ export function validateTestDataFiles(files: string[]): void {
   if (missingFiles.length > 0) {
     throw new Error(
       `Test data files missing:\n${missingFiles.map(f => `  - ${f}`).join("\n")}\n` +
-        "Please ensure all test data files are present before running tests."
+        "Please ensure all test data files are present before running tests.",
     )
   }
 }
@@ -39,7 +39,7 @@ export async function waitForCondition(
     timeout?: number
     interval?: number
     description?: string
-  } = {}
+  } = {},
 ): Promise<void> {
   const startTime = Date.now()
 
@@ -59,7 +59,7 @@ export async function waitForCondition(
  */
 export function createTestPromise<T>(
   description: string,
-  timeoutMs = 10000
+  timeoutMs = 10000,
 ): {
   promise: Promise<T>
   resolve: (value: T) => void

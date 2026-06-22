@@ -31,7 +31,7 @@ export type NextFunction = () => Promise<void>
  */
 export type Middleware<T = unknown> = (
   context: MiddlewareContext<T>,
-  next: NextFunction
+  next: NextFunction,
 ) => Promise<void> | void
 
 /**
@@ -56,7 +56,7 @@ export class MiddlewarePipeline<T = unknown> {
    */
   async execute(
     context: MiddlewareContext<T>,
-    target: (context: MiddlewareContext<T>) => Promise<void>
+    target: (context: MiddlewareContext<T>) => Promise<void>,
   ): Promise<void> {
     let index = -1
 

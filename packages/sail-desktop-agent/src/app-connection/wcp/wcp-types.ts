@@ -44,7 +44,7 @@ export function isDACPMessage(message: unknown): message is DACPMessage {
  * Note: Type guard parameters MUST be 'unknown' per TypeScript type narrowing requirements.
  */
 export function isAppMessage(
-  message: unknown
+  message: unknown,
 ): message is AppRequestMessage | WebConnectionProtocolMessage {
   return (
     isDACPMessage(message) && (message.type.endsWith("Request") || message.type.startsWith("WCP"))
@@ -57,7 +57,7 @@ export function isAppMessage(
  * Note: Type guard parameters MUST be 'unknown' per TypeScript type narrowing requirements.
  */
 export function isAgentMessage(
-  message: unknown
+  message: unknown,
 ): message is AgentResponseMessage | AgentEventMessage | WebConnectionProtocolMessage {
   return (
     isDACPMessage(message) &&

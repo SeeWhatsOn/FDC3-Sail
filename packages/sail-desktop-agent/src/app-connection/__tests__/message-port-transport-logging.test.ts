@@ -20,7 +20,7 @@ type MessagePortTransportLoggingOptions = {
 
 function createTransportWithLogging(
   port: MessagePort,
-  options?: MessagePortTransportLoggingOptions
+  options?: MessagePortTransportLoggingOptions,
 ): MessagePortTransport {
   return new MessagePortTransport(port, options)
 }

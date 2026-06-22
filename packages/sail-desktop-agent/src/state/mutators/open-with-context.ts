@@ -11,7 +11,7 @@ import type { AgentState, PendingOpenWithContext } from "../types"
 export const addPendingOpenWithContext = (
   state: AgentState,
   targetInstanceId: string,
-  pending: PendingOpenWithContext
+  pending: PendingOpenWithContext,
 ): AgentState => {
   return produce(state, draft => {
     const pendingByInstance = draft.open.pendingWithContext
@@ -26,7 +26,7 @@ export const addPendingOpenWithContext = (
 export const setPendingOpenWithContextForInstance = (
   state: AgentState,
   targetInstanceId: string,
-  pendingList: PendingOpenWithContext[]
+  pendingList: PendingOpenWithContext[],
 ): AgentState => {
   return produce(state, draft => {
     if (pendingList.length === 0) {
@@ -41,7 +41,7 @@ export const setPendingOpenWithContextForInstance = (
 export const migratePendingOpenWithContextTarget = (
   state: AgentState,
   fromInstanceId: string,
-  toInstanceId: string
+  toInstanceId: string,
 ): AgentState => {
   const pendingList = state.open.pendingWithContext[fromInstanceId]
   if (!pendingList || pendingList.length === 0) {
@@ -76,7 +76,7 @@ export const migratePendingOpenWithContextTarget = (
 export const removePendingOpenWithContextByRequest = (
   state: AgentState,
   targetInstanceId: string,
-  requestUuid: string
+  requestUuid: string,
 ): AgentState => {
   const pendingList = state.open.pendingWithContext[targetInstanceId]
   if (!pendingList) {

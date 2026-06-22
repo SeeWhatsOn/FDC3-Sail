@@ -21,6 +21,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import type { DesktopAgent } from "../../agent/desktop-agent"
 
 import { BrowserAppConnection } from "../../app-connection/browser-app-connection"
+import type { AgentAppConnection } from "../../app-connection/types"
 
 import { getBrowserDesktopAgentSession } from "../../agent/browser-session"
 
@@ -49,7 +50,8 @@ export type DaOwnedAppConnectionSurface = {
 }
 
 function getBrowserAppConnection(agent: DesktopAgent): BrowserAppConnection | undefined {
-  return (agent as unknown as { browserAppConnection?: BrowserAppConnection }).browserAppConnection
+  const connection = (agent as unknown as { appConnection?: AgentAppConnection }).appConnection
+  return connection instanceof BrowserAppConnection ? connection : undefined
 }
 
 /**
@@ -64,7 +66,7 @@ export function assertCollapsedBrowserArchitecture(agent: DesktopAgent): void {
   expect(browserAppConnection).toBeInstanceOf(BrowserAppConnection)
 
   expect(() => getBrowserDesktopAgentSession(agent)).toThrow(
-    /does not expose a separate WCP connector session/i
+    /does not expose a separate WCP connector session/i,
   )
 }
 
@@ -135,7 +137,7 @@ export async function connectWcpAppViaDaOwnedConnection(
     hostInstanceId?: string
 
     instanceUuid?: string
-  }
+  },
 ): Promise<WcpConnectedApp> {
   const connections = requireDaOwnedAppConnection(agent)
 
@@ -185,8 +187,8 @@ export async function connectWcpAppViaDaOwnedConnection(
       setTimeout(
         () => reject(new Error("Timed out waiting for WCP5ValidateAppIdentityResponse")),
 
-        5000
-      )
+        5000,
+      ),
     ),
   ])
 

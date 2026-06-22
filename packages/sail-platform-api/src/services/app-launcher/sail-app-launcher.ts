@@ -33,7 +33,7 @@ export interface SailAppLauncherConfig {
   onLaunchApp: (
     appMetadata: AppMetadataWithDetails,
     instanceId: string,
-    context?: unknown
+    context?: unknown,
   ) => Promise<void>
 }
 
@@ -48,7 +48,7 @@ export class SailAppLauncher implements AppLauncher {
 
   async launch(
     request: BrowserTypes.OpenRequestPayload,
-    appMetadata: AppMetadata
+    appMetadata: AppMetadata,
   ): Promise<AppIdentifier> {
     // Generate instance ID if not targeting existing instance
     const instanceId = request.app.instanceId || generateUuid()

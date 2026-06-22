@@ -24,7 +24,7 @@ export interface WCPHandshakeContext extends WCPRoutingContext {
  */
 export function handleWCP1Hello(
   event: MessageEvent<WCP1HelloMessage>,
-  context: WCPHandshakeContext
+  context: WCPHandshakeContext,
 ): void {
   // Validate event source exists (required for postMessage)
   if (!event.source) {
@@ -65,7 +65,7 @@ export function handleWCP1Hello(
     // Connection will still work, just without host identifier
     if (error instanceof Error && error.name === "SecurityError") {
       context.logger.debug(
-        `Cannot access window.name for cross-origin iframe from ${event.origin}, hostIdentifier will be undefined`
+        `Cannot access window.name for cross-origin iframe from ${event.origin}, hostIdentifier will be undefined`,
       )
     } else {
       // Re-throw unexpected errors
@@ -112,7 +112,7 @@ export function handleWCP1Hello(
     const connection = context.connectionRegistry.connections.get(instanceId)
     if (connection && connection.appId === "unknown") {
       context.logger.warn(
-        `[BrowserAppConnection] Connection ${instanceId} timed out waiting for WCP4 validation, cleaning up`
+        `[BrowserAppConnection] Connection ${instanceId} timed out waiting for WCP4 validation, cleaning up`,
       )
       context.disconnectApp(instanceId)
       context.emit("handshakeFailed", new Error("WCP4 validation timeout"), connectionAttemptUuid)

@@ -7,11 +7,7 @@
  * - Support for multiple "clients" in test scenarios
  */
 
-import type {
-  Transport,
-  MessageHandler,
-  DisconnectHandler,
-} from "../../src/interfaces/transport"
+import type { Transport, MessageHandler, DisconnectHandler } from "../../src/interfaces/transport"
 
 /**
  * DACP message structure (partial, just what we need for routing/querying)
@@ -185,13 +181,8 @@ export class MockTransport implements Transport {
 
   // ======= Test Helper Methods =======
 
-  /**
-   * Simulate receiving a message from an app
-   */
-  async receiveMessage(message: unknown): Promise<void> {
-    if (!this.messageHandler) {
-      throw new Error("No message handler registered")
-    }
+  /** Record inbound routing metadata used by WCP identity tests (no handler invocation). */
+  trackInboundMessage(message: unknown): void {
     const incoming = message as DACPMessage
     const sourceInstanceId = incoming.meta?.source?.instanceId
     const sourceAppId = incoming.meta?.source?.appId
@@ -206,6 +197,16 @@ export class MockTransport implements Transport {
         this.hostInstanceIdByConnectionAttempt.set(attemptUuid, hostInstanceId)
       }
     }
+  }
+
+  /**
+   * Simulate receiving a message from an app
+   */
+  async receiveMessage(message: unknown): Promise<void> {
+    if (!this.messageHandler) {
+      throw new Error("No message handler registered")
+    }
+    this.trackInboundMessage(message)
     await this.messageHandler(message)
   }
 
@@ -268,7 +269,7 @@ export class MockTransport implements Transport {
   hasMessageMatching(
     typePattern: string | RegExp,
     instanceId?: string,
-    payloadMatch?: (payload: Record<string, unknown>) => boolean
+    payloadMatch?: (payload: Record<string, unknown>) => boolean,
   ): boolean {
     const messages = instanceId ? this.getMessagesForInstance(instanceId) : this.allMessages
 

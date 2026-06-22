@@ -29,7 +29,7 @@ Then("messaging will include outgoing posts", function (this: CustomWorld, dt: D
   const matchSubset = matchDataSubset as (
     world: CustomWorld,
     actual: unknown[],
-    dataTable: DataTable
+    dataTable: DataTable,
   ) => void
   matchSubset(this, allMessages, dt)
 })
@@ -46,7 +46,7 @@ Then(
     responseType: string,
     intentName: string,
     appId: string,
-    instanceId: string
+    instanceId: string,
   ) {
     const resolvedIntentName = handleResolve(intentName, this) as string
     const resolvedAppId = handleResolve(appId, this) as string
@@ -82,15 +82,15 @@ Then(
     }
 
     const hasMatch = apps.some(
-      appEntry => appEntry.appId === resolvedAppId && matchesInstanceId(appEntry.instanceId)
+      appEntry => appEntry.appId === resolvedAppId && matchesInstanceId(appEntry.instanceId),
     )
 
     if (!hasMatch) {
       throw new Error(
-        `No app entry found for appId ${resolvedAppId} with instanceId ${resolvedInstanceId}`
+        `No app entry found for appId ${resolvedAppId} with instanceId ${resolvedInstanceId}`,
       )
     }
-  }
+  },
 )
 
 Then(
@@ -100,7 +100,7 @@ Then(
     responseType: string,
     intentName: string,
     appId: string,
-    instanceId: string
+    instanceId: string,
   ) {
     const resolvedIntentName = handleResolve(intentName, this) as string
     const resolvedAppId = handleResolve(appId, this) as string
@@ -136,13 +136,13 @@ Then(
     }
 
     const hasMatch = apps.some(
-      appEntry => appEntry.appId === resolvedAppId && matchesInstanceId(appEntry.instanceId)
+      appEntry => appEntry.appId === resolvedAppId && matchesInstanceId(appEntry.instanceId),
     )
 
     if (hasMatch) {
       throw new Error(
-        `Unexpected app entry found for appId ${resolvedAppId} with instanceId ${resolvedInstanceId}`
+        `Unexpected app entry found for appId ${resolvedAppId} with instanceId ${resolvedInstanceId}`,
       )
     }
-  }
+  },
 )

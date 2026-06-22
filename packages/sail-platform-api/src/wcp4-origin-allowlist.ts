@@ -39,7 +39,7 @@ function sendWcp5IdentityFailure(
   transport: Transport,
   instanceId: string,
   connectionAttemptUuid: string,
-  errorMessage: string
+  errorMessage: string,
 ): void {
   transport.send({
     type: "WCP5ValidateAppIdentityFailedResponse",
@@ -62,7 +62,7 @@ function sendWcp5IdentityFailure(
 export function wireWcp4OriginAllowlist(
   desktopAgent: DesktopAgent,
   allowedOrigins: readonly string[],
-  debug?: boolean
+  debug?: boolean,
 ): void {
   const agent = desktopAgent as unknown as DesktopAgentInternals
   const originalHandleMessage = agent.handleMessage.bind(desktopAgent)
@@ -89,7 +89,7 @@ export function wireWcp4OriginAllowlist(
             agent.transport,
             instanceId,
             resolvedConnectionAttemptUuid,
-            `Origin "${messageOrigin}" is not allowed`
+            `Origin "${messageOrigin}" is not allowed`,
           )
           return
         }

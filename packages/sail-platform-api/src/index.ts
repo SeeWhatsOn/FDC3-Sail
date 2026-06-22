@@ -16,6 +16,7 @@ export type {
   BrowserChannelsController,
   BrowserIntentResolverController,
   AppChannelChangeEvent,
+  HandshakeFailureEvent,
 } from "@finos/sail-desktop-agent"
 
 // UI Interfaces (for implementing custom UI)

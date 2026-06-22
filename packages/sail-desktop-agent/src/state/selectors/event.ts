@@ -8,7 +8,7 @@ import type { AgentState, EventListener } from "../types"
 
 export const getEventListener = (
   state: AgentState,
-  listenerId: string
+  listenerId: string,
 ): EventListener | undefined => state.events.listeners[listenerId]
 
 export const getAllEventListeners = (state: AgentState): EventListener[] =>
@@ -19,5 +19,5 @@ export const getEventListenersForType = (state: AgentState, eventType: string): 
 
 export const getEventListenersForInstance = (
   state: AgentState,
-  instanceId: string
+  instanceId: string,
 ): EventListener[] => Object.values(state.events.listeners).filter(l => l.instanceId === instanceId)

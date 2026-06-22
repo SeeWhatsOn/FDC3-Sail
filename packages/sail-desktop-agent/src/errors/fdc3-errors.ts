@@ -21,7 +21,7 @@ import { ResolveError, OpenError, ChannelError } from "@finos/fdc3"
 export class FDC3ResolveError extends Error {
   constructor(
     public readonly errorType: ResolveError,
-    message: string
+    message: string,
   ) {
     super(message)
     this.name = "FDC3ResolveError"
@@ -83,7 +83,7 @@ export class UserCancelledError extends FDC3ResolveError {
 export class FDC3OpenError extends Error {
   constructor(
     public readonly errorType: OpenError,
-    message: string
+    message: string,
   ) {
     super(message)
     this.name = "FDC3OpenError"
@@ -120,7 +120,7 @@ export class ErrorOnLaunchError extends FDC3OpenError {
 export class FDC3ChannelError extends Error {
   constructor(
     public readonly errorType: ChannelError,
-    message: string
+    message: string,
   ) {
     super(message)
     this.name = "FDC3ChannelError"
@@ -180,7 +180,7 @@ export enum CloseError {
 export class FDC3CloseError extends Error {
   constructor(
     public readonly errorType: CloseError,
-    message: string
+    message: string,
   ) {
     super(message)
     this.name = "FDC3CloseError"

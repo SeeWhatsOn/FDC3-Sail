@@ -220,7 +220,7 @@ describe("BrowserAppConnection", () => {
       window.dispatchEvent(event)
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("WCP1Hello received from null source, ignoring")
+        expect.stringContaining("WCP1Hello received from null source, ignoring"),
       )
 
       consoleWarnSpy.mockRestore()
@@ -312,7 +312,7 @@ describe("BrowserAppConnection", () => {
 
         "actual-instance-123",
 
-        "app.example.test"
+        "app.example.test",
       )
 
       expect(appConnectedHandler).toHaveBeenCalledWith(
@@ -322,7 +322,7 @@ describe("BrowserAppConnection", () => {
           appId: "app.example.test",
 
           connectionAttemptUuid: "test-uuid",
-        })
+        }),
       )
     })
 
@@ -406,7 +406,7 @@ describe("BrowserAppConnection", () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "[DACP ERROR] Error in appConnected handler:",
 
-        expect.any(Error)
+        expect.any(Error),
       )
 
       consoleErrorSpy.mockRestore()

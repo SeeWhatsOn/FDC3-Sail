@@ -80,7 +80,7 @@ export type BrowserDesktopAgent = DesktopAgent &
   }
 
 function hasIntentResolverUI(
-  resolver: IntentResolver
+  resolver: IntentResolver,
 ): resolver is IntentResolver & IntentResolverUIMethods {
   const candidate = resolver as Partial<IntentResolverUIMethods>
   return (
@@ -112,7 +112,7 @@ function mapChoice(choice: HostIntentResolverChoice): IntentResolutionChoice {
 
 function wireIntentResolver(
   browserAppConnection: BrowserAppConnection,
-  resolver: IntentResolver
+  resolver: IntentResolver,
 ): void {
   browserAppConnection.on("intentResolverNeeded", payload => {
     void (async () => {
@@ -158,7 +158,7 @@ function wireIntentResolver(
  * Create a browser Desktop Agent with DA-owned WCP app connection coupled to {@link DesktopAgent.start}.
  */
 export function createBrowserDesktopAgent(
-  options?: BrowserDesktopAgentOptions
+  options?: BrowserDesktopAgentOptions,
 ): BrowserDesktopAgent {
   const { intentResolver: providedIntentResolver, autoStart, ...localOptions } = options ?? {}
   const logger = localOptions.logger ?? consoleLogger
@@ -200,7 +200,7 @@ export function createBrowserDesktopAgent(
     },
   })
 
-  desktopAgent.attachBrowserAppConnection(browserAppConnection)
+  desktopAgent.attachAppConnection(browserAppConnection)
   markCollapsedBrowserDesktopAgent(desktopAgent, browserAppConnection, intentResolverUI)
 
   if (localOptions.appDirectories && localOptions.appDirectories.length > 0) {

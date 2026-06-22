@@ -18,7 +18,7 @@ function logWithOptions(
   direction: "incoming" | "outgoing",
   message: unknown,
   source: string,
-  options: LogDACPMessageOptions
+  options: LogDACPMessageOptions,
 ): void {
   logDACPMessage(direction, message, source, options)
 }

@@ -19,10 +19,10 @@ Then(
     const pendingList = this.getState().open.pendingWithContext[instanceId]
     if (pendingList && pendingList.length > 0) {
       throw new Error(
-        `Expected no open-with-context pending for ${instanceId}, found ${pendingList.length} entries`
+        `Expected no open-with-context pending for ${instanceId}, found ${pendingList.length} entries`,
       )
     }
-  }
+  },
 )
 
 Then("no open-with-context timeouts are scheduled", function () {

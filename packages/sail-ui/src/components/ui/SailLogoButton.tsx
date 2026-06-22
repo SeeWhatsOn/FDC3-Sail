@@ -63,7 +63,7 @@ const SailLogoButton = React.forwardRef<HTMLButtonElement, SailLogoButtonProps>(
         {logoPosition === "right" && logoElement}
       </Button>
     )
-  }
+  },
 )
 
 SailLogoButton.displayName = "SailLogoButton"

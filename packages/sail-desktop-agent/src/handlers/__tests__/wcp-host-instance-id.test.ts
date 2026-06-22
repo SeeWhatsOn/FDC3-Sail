@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 import type { AppLauncher } from "../../host-contracts/app-launcher"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { OpenError } from "@finos/fdc3"
-import { DesktopAgent } from "../../agent/desktop-agent"
-import { MockTransport } from "../../__tests__/utils/mock-transport"
+import { createDesktopAgentWithTestConnection } from "../../../test/support/desktop-agent-test-harness"
+import type { DacpTestAppConnection } from "../../../test/support/dacp-test-app-connection"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { AppInstanceState } from "../../state/types"
@@ -46,7 +46,6 @@ function createHostInstanceAppLauncher(): AppLauncher {
 }
 
 function createAgentWithSourceInstance(options?: { openContextListenerTimeoutMs?: number }) {
-  const transport = new MockTransport()
   const initialState = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
   const stateWithSource = updateInstanceState(
     connectInstance(initialState, {
@@ -58,8 +57,7 @@ function createAgentWithSourceInstance(options?: { openContextListenerTimeoutMs?
     AppInstanceState.CONNECTED,
   )
 
-  const agent = new DesktopAgent({
-    transport,
+  return createDesktopAgentWithTestConnection({
     apps: [CHART_APP, PORTFOLIO_APP],
     appLauncher: createHostInstanceAppLauncher(),
     initialState: stateWithSource,
@@ -67,8 +65,6 @@ function createAgentWithSourceInstance(options?: { openContextListenerTimeoutMs?
     heartbeatIntervalMs: 5000,
     heartbeatTimeoutMs: 15000,
   })
-  agent.start()
-  return { agent, transport }
 }
 
 function createWcp4FirstConnectMessage(
@@ -149,8 +145,8 @@ function createAddContextListenerMessage(
   }
 }
 
-function getWcp5InstanceId(transport: MockTransport): string {
-  const response = transport.sentMessages.find(
+function getWcp5InstanceId(connection: DacpTestAppConnection): string {
+  const response = connection.sentMessages.find(
     message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse",
   ) as { payload?: { instanceId?: string } } | undefined
   expect(response?.payload?.instanceId).toBeDefined()
@@ -165,9 +161,9 @@ afterEach(() => {
 
 describe("host-assigned instanceId at WCP4", () => {
   it("registers launcher instanceId as pending instance when openRequest launches an app", async () => {
-    const { agent, transport } = createAgentWithSourceInstance()
+    const { agent, connection } = createAgentWithSourceInstance()
 
-    await transport.receiveMessage(createOpenRequestMessage())
+    await connection.receiveMessage(createOpenRequestMessage())
 
     const hostInstance = getInstance(agent.getState(), HOST_INSTANCE_ID)
     expect(hostInstance).toBeDefined()
@@ -176,14 +172,14 @@ describe("host-assigned instanceId at WCP4", () => {
   })
 
   it("includes launcher pre-registered instanceId in findInstances before WCP validation completes", async () => {
-    const { transport } = createAgentWithSourceInstance()
+    const { connection } = createAgentWithSourceInstance()
 
-    await transport.receiveMessage(createOpenRequestMessage())
-    transport.clear()
+    await connection.receiveMessage(createOpenRequestMessage())
+    connection.outbound.clear()
 
-    await transport.receiveMessage(createFindInstancesMessage())
+    await connection.receiveMessage(createFindInstancesMessage())
 
-    const response = transport.getLastMessage() as {
+    const response = connection.getLastMessage()?.msg as {
       type: string
       payload?: { appIdentifiers?: Array<{ appId: string; instanceId?: string }> }
     }
@@ -194,7 +190,6 @@ describe("host-assigned instanceId at WCP4", () => {
   })
 
   it("adopts host-assigned instanceId as canonical WCP5 id on first WCP4 validation", async () => {
-    const transport = new MockTransport()
     const initialState = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     const stateWithInstances = updateInstanceState(
       connectInstance(
@@ -213,21 +208,19 @@ describe("host-assigned instanceId at WCP4", () => {
       AppInstanceState.CONNECTED,
     )
 
-    const agent = new DesktopAgent({
-      transport,
+    const { agent, connection } = createDesktopAgentWithTestConnection({
       apps: [CHART_APP, PORTFOLIO_APP],
       appLauncher: createHostInstanceAppLauncher(),
       initialState: stateWithInstances,
       heartbeatIntervalMs: 5000,
       heartbeatTimeoutMs: 15000,
     })
-    agent.start()
 
-    await transport.receiveMessage(
+    await connection.receiveMessage(
       createWcp4FirstConnectMessage("wcp4-host-bind", HOST_INSTANCE_ID),
     )
 
-    expect(getWcp5InstanceId(transport)).toBe(HOST_INSTANCE_ID)
+    expect(getWcp5InstanceId(connection)).toBe(HOST_INSTANCE_ID)
     expect(getInstance(agent.getState(), HOST_INSTANCE_ID)).toBeDefined()
     expect(
       Object.values(agent.getState().instances).filter(
@@ -238,32 +231,32 @@ describe("host-assigned instanceId at WCP4", () => {
 
   it("delivers open-with-context without AppTimeout when the target adds a listener on the host instanceId", async () => {
     vi.useFakeTimers()
-    const { agent, transport } = createAgentWithSourceInstance({
+    const { agent, connection } = createAgentWithSourceInstance({
       openContextListenerTimeoutMs: 2000,
     })
 
-    await transport.receiveMessage(createOpenRequestMessage(LAUNCH_CONTEXT))
+    await connection.receiveMessage(createOpenRequestMessage(LAUNCH_CONTEXT))
 
     expect(getInstance(agent.getState(), HOST_INSTANCE_ID)).toBeDefined()
     expect(agent.getState().open.pendingWithContext[HOST_INSTANCE_ID]?.length).toBe(1)
 
-    await transport.receiveMessage(
+    await connection.receiveMessage(
       createWcp4FirstConnectMessage("wcp4-open-with-context", HOST_INSTANCE_ID),
     )
-    expect(getWcp5InstanceId(transport)).toBe(HOST_INSTANCE_ID)
+    expect(getWcp5InstanceId(connection)).toBe(HOST_INSTANCE_ID)
 
-    transport.clear()
-    await transport.receiveMessage(
+    connection.outbound.clear()
+    await connection.receiveMessage(
       createAddContextListenerMessage(HOST_INSTANCE_ID, LAUNCH_CONTEXT.type),
     )
 
-    const openResponses = transport.sentMessages.filter(
+    const openResponses = connection.sentMessages.filter(
       message => (message as { type?: string }).type === "openResponse",
     ) as Array<{ payload?: { error?: string; appIdentifier?: { instanceId?: string } } }>
     const appTimeoutResponses = openResponses.filter(
       response => response.payload?.error === OpenError.AppTimeout,
     )
-    const broadcastEvents = transport.sentMessages.filter(
+    const broadcastEvents = connection.sentMessages.filter(
       message => (message as { type?: string }).type === "broadcastEvent",
     ) as Array<{ meta?: { destination?: { instanceId?: string } } }>
 
@@ -273,7 +266,7 @@ describe("host-assigned instanceId at WCP4", () => {
     expect(openResponses.some(response => response.payload?.error === undefined)).toBe(true)
 
     vi.advanceTimersByTime(2500)
-    const timeoutAfterDelivery = transport.sentMessages.filter(message => {
+    const timeoutAfterDelivery = connection.sentMessages.filter(message => {
       const typed = message as { type?: string; payload?: { error?: string } }
       return typed.type === "openResponse" && typed.payload?.error === OpenError.AppTimeout
     })
@@ -281,13 +274,13 @@ describe("host-assigned instanceId at WCP4", () => {
   })
 
   it("adopts sole host-pre-registered pending when WCP4 omits instanceId", async () => {
-    const { agent, transport } = createAgentWithSourceInstance()
+    const { agent, connection } = createAgentWithSourceInstance()
 
-    await transport.receiveMessage(createOpenRequestMessage())
+    await connection.receiveMessage(createOpenRequestMessage())
 
-    await transport.receiveMessage(createWcp4FirstConnectMessage("wcp4-cross-origin-no-name"))
+    await connection.receiveMessage(createWcp4FirstConnectMessage("wcp4-cross-origin-no-name"))
 
-    expect(getWcp5InstanceId(transport)).toBe(HOST_INSTANCE_ID)
+    expect(getWcp5InstanceId(connection)).toBe(HOST_INSTANCE_ID)
     expect(
       Object.values(agent.getState().instances).filter(
         instance => instance.appId === CHART_APP.appId,
@@ -297,22 +290,22 @@ describe("host-assigned instanceId at WCP4", () => {
 
   it("delivers open-with-context for a specific context type when WCP4 omits instanceId", async () => {
     vi.useFakeTimers()
-    const { agent, transport } = createAgentWithSourceInstance({
+    const { agent, connection } = createAgentWithSourceInstance({
       openContextListenerTimeoutMs: 2000,
     })
 
-    await transport.receiveMessage(createOpenRequestMessage(LAUNCH_CONTEXT))
+    await connection.receiveMessage(createOpenRequestMessage(LAUNCH_CONTEXT))
     expect(agent.getState().open.pendingWithContext[HOST_INSTANCE_ID]?.length).toBe(1)
 
-    await transport.receiveMessage(createWcp4FirstConnectMessage("wcp4-specific-context-no-name"))
-    expect(getWcp5InstanceId(transport)).toBe(HOST_INSTANCE_ID)
+    await connection.receiveMessage(createWcp4FirstConnectMessage("wcp4-specific-context-no-name"))
+    expect(getWcp5InstanceId(connection)).toBe(HOST_INSTANCE_ID)
 
-    transport.clear()
-    await transport.receiveMessage(
+    connection.outbound.clear()
+    await connection.receiveMessage(
       createAddContextListenerMessage(HOST_INSTANCE_ID, LAUNCH_CONTEXT.type),
     )
 
-    const appTimeoutResponses = transport.sentMessages.filter(message => {
+    const appTimeoutResponses = connection.sentMessages.filter(message => {
       const typed = message as { type?: string; payload?: { error?: string } }
       return typed.type === "openResponse" && typed.payload?.error === OpenError.AppTimeout
     })

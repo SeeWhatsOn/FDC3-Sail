@@ -18,7 +18,7 @@ if (isChannelSelectorE2e) {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <ChannelSelectorTestPage />
-    </StrictMode>
+    </StrictMode>,
   )
 } else {
   // Initialize the FDC3 Desktop Agent BEFORE React renders
@@ -102,6 +102,6 @@ if (isChannelSelectorE2e) {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <App platform={platform} />
-    </StrictMode>
+    </StrictMode>,
   )
 }

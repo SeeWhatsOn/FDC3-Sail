@@ -20,7 +20,7 @@ describe("@finos/sail-platform-api host contract re-exports", () => {
 
       expect(
         content,
-        "intent-resolver.ts should re-export from desktop-agent, not define parallel types"
+        "intent-resolver.ts should re-export from desktop-agent, not define parallel types",
       ).toMatch(/from\s+["']@finos\/sail-desktop-agent["']/)
       expect(content).not.toMatch(/export\s+interface\s+IntentResolver\b/)
       expect(content).not.toMatch(/export\s+interface\s+IntentResolutionRequest\b/)
@@ -35,7 +35,7 @@ describe("@finos/sail-platform-api host contract re-exports", () => {
 
       expect(
         content,
-        "channel-selector.ts should re-export from desktop-agent, not define parallel types"
+        "channel-selector.ts should re-export from desktop-agent, not define parallel types",
       ).toMatch(/from\s+["']@finos\/sail-desktop-agent["']/)
       expect(content).not.toMatch(/export\s+interface\s+ChannelSelector\b/)
       expect(content).not.toMatch(/export\s+interface\s+ChannelSelectionRequest\b/)
@@ -51,12 +51,12 @@ describe("@finos/sail-platform-api host contract re-exports", () => {
       expect(content).toMatch(/ChannelControl|ChannelSelector/)
 
       const desktopAgentReExports = content.match(
-        /export\s+type\s*\{([^}]+)\}\s*from\s+["']@finos\/sail-desktop-agent["']/g
+        /export\s+type\s*\{([^}]+)\}\s*from\s+["']@finos\/sail-desktop-agent["']/g,
       )
 
       expect(
         desktopAgentReExports?.join("\n"),
-        "interfaces/index.ts should re-export host contracts from desktop-agent, not local duplicates"
+        "interfaces/index.ts should re-export host contracts from desktop-agent, not local duplicates",
       ).toMatch(/IntentResolver/)
       expect(desktopAgentReExports?.join("\n")).toMatch(/ChannelControl|ChannelSelector/)
     })
@@ -66,16 +66,18 @@ describe("@finos/sail-platform-api host contract re-exports", () => {
     it("exports IntentResolver and ChannelControl from its top-level entry", () => {
       const desktopAgentEntry = readFileSync(
         fileURLToPath(new URL("../../../sail-desktop-agent/src/index.ts", import.meta.url)),
-        "utf-8"
+        "utf-8",
       )
       const hostContractsBarrel = readFileSync(
         fileURLToPath(
-          new URL("../../../sail-desktop-agent/src/host-contracts/index.ts", import.meta.url)
+          new URL("../../../sail-desktop-agent/src/host-contracts/index.ts", import.meta.url),
         ),
-        "utf-8"
+        "utf-8",
       )
 
-      expect(desktopAgentEntry).toMatch(/export\s+\*\s+from\s+["']\.\/host-contracts["']/)
+      expect(desktopAgentEntry).toMatch(
+        /export\s+\*\s+from\s+["']\.\/host-contracts(?:\/index\.js)?["']/,
+      )
       expect(hostContractsBarrel).toMatch(/\bIntentResolver\b/)
       expect(hostContractsBarrel).toMatch(/\bChannelControl\b/)
     })

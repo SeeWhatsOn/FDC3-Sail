@@ -28,7 +28,7 @@ function asInternals(agent: DesktopAgent): DesktopAgentInternals {
 
 function applyAgentStateUpdate(
   agent: DesktopAgent,
-  callback: (state: AgentState) => AgentState
+  callback: (state: AgentState) => AgentState,
 ): void {
   const internal = asInternals(agent)
   internal.state = callback(agent.getState())
@@ -36,7 +36,7 @@ function applyAgentStateUpdate(
 
 async function applyAgentStateUpdateAsync(
   agent: DesktopAgent,
-  callback: (state: AgentState) => Promise<AgentState>
+  callback: (state: AgentState) => Promise<AgentState>,
 ): Promise<void> {
   const internal = asInternals(agent)
   internal.state = await callback(agent.getState())
@@ -154,7 +154,7 @@ describe("AgentState.appDirectory ownership contract", () => {
 
     expect(retrieveAllApps(catalog)).toEqual(catalog.apps)
     expect(
-      retrieveApps(catalog, "fdc3.contact", "ViewContact", undefined).map(app => app.appId)
+      retrieveApps(catalog, "fdc3.contact", "ViewContact", undefined).map(app => app.appId),
     ).toEqual(["app-1", "app-3"])
   })
 })

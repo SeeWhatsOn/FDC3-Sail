@@ -11,7 +11,7 @@ type InMemoryTransportWithDeliveryError = InMemoryTransport & {
 
 function registerOnDeliveryError(
   transport: InMemoryTransport,
-  handler: (error: unknown) => void
+  handler: (error: unknown) => void,
 ): void {
   ;(transport as InMemoryTransportWithDeliveryError).onDeliveryError(handler)
 }
@@ -84,7 +84,7 @@ describe("InMemoryTransport", () => {
       transport1.disconnect()
 
       expect(() => transport1.send({ type: "test" })).toThrow(
-        "Cannot send message: InMemoryTransport is disconnected"
+        "Cannot send message: InMemoryTransport is disconnected",
       )
     })
 
@@ -93,7 +93,7 @@ describe("InMemoryTransport", () => {
       transport2.disconnect()
 
       expect(() => transport1.send({ type: "test" })).toThrow(
-        "Cannot send message: Peer transport is disconnected"
+        "Cannot send message: Peer transport is disconnected",
       )
     })
 
@@ -245,7 +245,7 @@ describe("InMemoryTransport", () => {
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "[DACP ERROR] Error in peer message handler:",
-        expect.any(Error)
+        expect.any(Error),
       )
 
       consoleErrorSpy.mockRestore()
@@ -277,7 +277,7 @@ describe("InMemoryTransport", () => {
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "[DACP ERROR] Error in disconnect handler:",
-        expect.any(Error)
+        expect.any(Error),
       )
 
       consoleErrorSpy.mockRestore()
@@ -333,7 +333,7 @@ describe("InMemoryTransport", () => {
       transport2.onMessage(handler)
 
       expect(() => transport2.send({ type: "test" })).toThrow(
-        "Cannot send message: Peer transport is disconnected"
+        "Cannot send message: Peer transport is disconnected",
       )
     })
   })
@@ -361,10 +361,10 @@ describe("InMemoryTransport", () => {
       expect(transportB.isConnected()).toBe(false)
       expect(onDisconnectA).toHaveBeenCalledTimes(1)
       expect(() => transportA.send({ type: "test" })).toThrow(
-        "Cannot send message: InMemoryTransport is disconnected"
+        "Cannot send message: InMemoryTransport is disconnected",
       )
       expect(() => transportB.send({ type: "test" })).toThrow(
-        "Cannot send message: InMemoryTransport is disconnected"
+        "Cannot send message: InMemoryTransport is disconnected",
       )
     })
 
@@ -389,10 +389,10 @@ describe("InMemoryTransport", () => {
       await flushAsyncDelivery()
 
       expect(() => transportA.send({ type: "test" })).toThrow(
-        "Cannot send message: InMemoryTransport is disconnected"
+        "Cannot send message: InMemoryTransport is disconnected",
       )
       expect(() => transportB.send({ type: "test" })).toThrow(
-        "Cannot send message: InMemoryTransport is disconnected"
+        "Cannot send message: InMemoryTransport is disconnected",
       )
     })
 
@@ -468,7 +468,7 @@ describe("InMemoryTransport", () => {
           expect(count1).toBeGreaterThan(0)
           expect(count2).toBeGreaterThan(0)
         },
-        { timeout: 5000 }
+        { timeout: 5000 },
       )
     })
   })

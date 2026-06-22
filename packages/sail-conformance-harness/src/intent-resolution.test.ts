@@ -7,7 +7,7 @@ const sampleContext: Context = { type: "fdc3.instrument", id: { ticker: "AAPL" }
 
 function createRequest(
   handlers: IntentHandlerOption[],
-  overrides: Partial<Omit<IntentResolutionRequest, "handlers">> = {}
+  overrides: Partial<Omit<IntentResolutionRequest, "handlers">> = {},
 ): IntentResolutionRequest {
   return {
     requestId: "req-1",
@@ -20,7 +20,7 @@ function createRequest(
 
 function handler(
   appId: string,
-  options: { instanceId?: string; isRunning?: boolean; name?: string } = {}
+  options: { instanceId?: string; isRunning?: boolean; name?: string } = {},
 ): IntentHandlerOption {
   return {
     appId,

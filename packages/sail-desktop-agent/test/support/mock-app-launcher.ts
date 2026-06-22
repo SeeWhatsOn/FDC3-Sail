@@ -35,7 +35,7 @@ export class MockAppLauncher implements AppLauncher {
    */
   async launch(
     request: BrowserTypes.OpenRequestPayload,
-    appMetadata: AppMetadata
+    appMetadata: AppMetadata,
   ): Promise<AppIdentifier> {
     const appId = request.app.appId
 
@@ -73,11 +73,12 @@ export class MockAppLauncher implements AppLauncher {
   /**
    * Close an app instance (no-op by default). Override to simulate close failures.
    */
-  async close(instanceId: string): Promise<void> {
+  close(instanceId: string): Promise<void> {
     if (this.failCloseInstances.has(instanceId)) {
-      throw new Error("Close failed")
+      return Promise.reject(new Error("Close failed"))
     }
     this.closeHistory.push(instanceId)
+    return Promise.resolve()
   }
 
   private failCloseInstances: Set<string> = new Set()

@@ -212,7 +212,7 @@ Given(
   "the app launcher will fail on launch for {string}",
   function (this: CustomWorld, appId: string) {
     this.mockAppLauncher.setAppToFailOnLaunch(appId)
-  }
+  },
 )
 
 Given("A desktop agent with heartbeat checking", function (this: CustomWorld) {
@@ -302,7 +302,7 @@ Then(
       const actualRow = valueArray[i]
       if (!isRecord(actualRow)) {
         throw new Error(
-          `Expected ${propName}[${i}] to be an object, but got ${JSON.stringify(actualRow)}`
+          `Expected ${propName}[${i}] to be an object, but got ${JSON.stringify(actualRow)}`,
         )
       }
 
@@ -311,11 +311,11 @@ Then(
         if (actualValue !== expectedValue) {
           throw new Error(
             `Expected ${propName}[${i}].${key} to be ${expectedValue}, but got ${String(
-              actualValue
-            )}`
+              actualValue,
+            )}`,
           )
         }
       }
     }
-  }
+  },
 )

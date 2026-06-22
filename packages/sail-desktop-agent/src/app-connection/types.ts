@@ -12,25 +12,36 @@ export type AppMessageHandler = (message: unknown) => void | Promise<void>
  * Routes by `meta.destination.instanceId` on DACP messages.
  */
 export interface AppConnectionDelivery {
-  sendToAppInstance(instanceId: string, message: unknown): void
+  sendToAppInstance(message: unknown): void
+}
+
+/**
+ * App edge wired into {@link DesktopAgent} for inbound DACP/WCP and outbound delivery.
+ * Production: {@link BrowserAppConnection}. Tests: {@link DacpTestAppConnection} in test support.
+ */
+export interface AgentAppConnection {
+  start(): void
+  stop(): void
+  onAppMessage(handler: AppMessageHandler): void
+  setOnInstanceTeardown(handler: (instanceId: string) => void): void
+  readonly connectionRegistry: AppConnectionDelivery
+  getConnection(instanceId: string): AppConnectionMetadata | undefined
+  getConnections(): AppConnectionMetadata[]
+  pruneAppConnection(instanceId: string): void
+  /** Notify host shell when an instance joins or leaves a user channel (browser path). */
+  notifyChannelMembershipChanged?(instanceId: string, channelId: string | null): void
 }
 
 /**
  * Browser-resident FDC3 app connection (WCP listener + MessagePort registry).
  * Owned by {@link DesktopAgent} — hosts configure policy, not plumbing.
  */
-export interface BrowserAppConnectionSurface extends AppConnectionDelivery {
-  start(): void
-  stop(): void
-  onAppMessage(handler: AppMessageHandler): void
+export interface BrowserAppConnectionSurface extends AgentAppConnection {
   bindAgentState(access: { getAgentState: () => AgentState; setAgentState: StateSetter }): void
-  getConnection(instanceId: string): AppConnectionMetadata | undefined
-  getConnections(): AppConnectionMetadata[]
   disconnectAppByInstanceId(instanceId: string): void
-  pruneAppConnection(instanceId: string): void
   requestIntentResolution(
     payload: HostIntentResolverPayload,
-    timeoutMs?: number
+    timeoutMs?: number,
   ): Promise<HostIntentResolverResponse>
   resolveIntentSelection(response: HostIntentResolverResponse): void
 }

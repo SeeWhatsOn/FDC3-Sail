@@ -6,7 +6,7 @@ import { createHarnessIntentResolver } from "./intent-resolver-wiring"
 const sampleContext: Context = { type: "fdc3.instrument", id: { ticker: "AAPL" } }
 
 function createHostRequest(
-  handlers: Array<{ appId: string; instanceId?: string; isRunning: boolean }>
+  handlers: Array<{ appId: string; instanceId?: string; isRunning: boolean }>,
 ): IntentResolutionRequest {
   return {
     requestId: "req-1",
@@ -25,7 +25,7 @@ describe("createHarnessIntentResolver", () => {
   it("auto-selects the sole handler when exactly one valid handler exists", async () => {
     const resolver = createHarnessIntentResolver()
     const response = await resolver.resolve(
-      createHostRequest([{ appId: "ChartApp", isRunning: false }])
+      createHostRequest([{ appId: "ChartApp", isRunning: false }]),
     )
 
     expect(response?.target).toEqual({ appId: "ChartApp" })
@@ -38,7 +38,7 @@ describe("createHarnessIntentResolver", () => {
       createHostRequest([
         { appId: "ChartApp", isRunning: false },
         { appId: "NewsApp", instanceId: "news-running", isRunning: true },
-      ])
+      ]),
     )
 
     expect(response?.target).toEqual({ appId: "NewsApp", instanceId: "news-running" })

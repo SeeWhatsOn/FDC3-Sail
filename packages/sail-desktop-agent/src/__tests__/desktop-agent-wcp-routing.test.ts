@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import { DesktopAgent } from "../agent/desktop-agent"
-import { MockTransport } from "./utils/mock-transport"
+import { createDesktopAgentWithTestConnection } from "../../test/support/desktop-agent-test-harness"
 
 describe("DesktopAgent WCP routing", () => {
   function createAgentWithApps(
@@ -10,19 +9,13 @@ describe("DesktopAgent WCP routing", () => {
       title: string
       type: "web"
       details: { url: string }
-    }>
+    }>,
   ) {
-    const transport = new MockTransport()
-    const agent = new DesktopAgent({
-      transport,
-      apps,
-    })
-    agent.start()
-    return { agent, transport }
+    return createDesktopAgentWithTestConnection({ apps })
   }
 
   it("routes WCP4 without meta.source and uses temp instanceId", async () => {
-    const { transport } = createAgentWithApps([
+    const { connection } = createAgentWithApps([
       {
         appId: "test-app",
         title: "Test App",
@@ -46,10 +39,10 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(message)
+    await connection.receiveMessage(message)
 
-    expect(transport.sentMessages).toHaveLength(1)
-    const response = transport.getLastMessage() as {
+    expect(connection.sentMessages).toHaveLength(1)
+    const response = connection.sentMessages.at(-1) as {
       type: string
       meta?: {
         destination?: { instanceId?: string }
@@ -65,7 +58,7 @@ describe("DesktopAgent WCP routing", () => {
   })
 
   it("rejects WCP4 when MessageEvent.origin does not match identityUrl origin", async () => {
-    const { transport } = createAgentWithApps([
+    const { connection } = createAgentWithApps([
       {
         appId: "test-app",
         title: "Test App",
@@ -89,17 +82,20 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(message)
+    await connection.receiveMessage(message)
 
-    expect(transport.sentMessages).toHaveLength(1)
-    const response = transport.getLastMessage() as { type: string; payload?: { message?: string } }
+    expect(connection.sentMessages).toHaveLength(1)
+    const response = connection.sentMessages.at(-1) as {
+      type: string
+      payload?: { message?: string }
+    }
 
     expect(response.type).toBe("WCP5ValidateAppIdentityFailedResponse")
     expect(response.payload?.message).toContain("Origin mismatch")
   })
 
   it("issues a new instance identity instead of failing when reconnect instance is unknown", async () => {
-    const { transport } = createAgentWithApps([
+    const { connection } = createAgentWithApps([
       {
         appId: "test-app",
         title: "Test App",
@@ -125,9 +121,9 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(message)
+    await connection.receiveMessage(message)
 
-    const response = transport.getLastMessage() as {
+    const response = connection.sentMessages.at(-1) as {
       type: string
       payload?: { appId?: string; instanceId?: string; instanceUuid?: string }
     }
@@ -139,7 +135,7 @@ describe("DesktopAgent WCP routing", () => {
   })
 
   it("does not match app identity via actualUrl when identityUrl does not match app directory", async () => {
-    const { transport } = createAgentWithApps([
+    const { connection } = createAgentWithApps([
       {
         appId: "test-app",
         title: "Test App",
@@ -163,15 +159,18 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(message)
+    await connection.receiveMessage(message)
 
-    const response = transport.getLastMessage() as { type: string; payload?: { message?: string } }
+    const response = connection.sentMessages.at(-1) as {
+      type: string
+      payload?: { message?: string }
+    }
     expect(response.type).toBe("WCP5ValidateAppIdentityFailedResponse")
     expect(response.payload?.message).toContain("App not found in app directory")
   })
 
   it("supports component-based identityUrl matching against app directory URL", async () => {
-    const { transport } = createAgentWithApps([
+    const { connection } = createAgentWithApps([
       {
         appId: "test-app",
         title: "Test App",
@@ -195,15 +194,18 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(message)
+    await connection.receiveMessage(message)
 
-    const response = transport.getLastMessage() as { type: string; payload?: { appId?: string } }
+    const response = connection.sentMessages.at(-1) as {
+      type: string
+      payload?: { appId?: string }
+    }
     expect(response.type).toBe("WCP5ValidateAppIdentityResponse")
     expect(response.payload?.appId).toBe("test-app")
   })
 
   it("does not reuse instance identity when appId differs from existing instance", async () => {
-    const { transport } = createAgentWithApps([
+    const { connection } = createAgentWithApps([
       {
         appId: "app-a",
         title: "App A",
@@ -235,9 +237,9 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(firstMessage)
+    await connection.receiveMessage(firstMessage)
 
-    const firstResponse = transport.getLastMessage() as {
+    const firstResponse = connection.sentMessages.at(-1) as {
       type: string
       payload?: { instanceId?: string; instanceUuid?: string }
     }
@@ -262,9 +264,9 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(reconnectWithDifferentAppMessage)
+    await connection.receiveMessage(reconnectWithDifferentAppMessage)
 
-    const secondResponse = transport.getLastMessage() as {
+    const secondResponse = connection.sentMessages.at(-1) as {
       type: string
       payload?: { appId?: string; instanceId?: string; instanceUuid?: string }
     }
@@ -275,7 +277,7 @@ describe("DesktopAgent WCP routing", () => {
   })
 
   it("does not reuse instance identity when instanceUuid mismatches existing record", async () => {
-    const { transport } = createAgentWithApps([
+    const { connection } = createAgentWithApps([
       {
         appId: "test-app",
         title: "Test App",
@@ -299,9 +301,9 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(firstMessage)
+    await connection.receiveMessage(firstMessage)
 
-    const firstResponse = transport.getLastMessage() as {
+    const firstResponse = connection.sentMessages.at(-1) as {
       type: string
       payload?: { instanceId?: string }
     }
@@ -324,9 +326,9 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(badReconnectMessage)
+    await connection.receiveMessage(badReconnectMessage)
 
-    const secondResponse = transport.getLastMessage() as {
+    const secondResponse = connection.sentMessages.at(-1) as {
       type: string
       payload?: { instanceId?: string; instanceUuid?: string }
     }
@@ -336,7 +338,7 @@ describe("DesktopAgent WCP routing", () => {
   })
 
   it("generates distinct values for instanceId and instanceUuid for new instances", async () => {
-    const { transport } = createAgentWithApps([
+    const { connection } = createAgentWithApps([
       {
         appId: "test-app",
         title: "Test App",
@@ -360,9 +362,9 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(message)
+    await connection.receiveMessage(message)
 
-    const response = transport.getLastMessage() as {
+    const response = connection.sentMessages.at(-1) as {
       type: string
       payload?: { instanceId?: string; instanceUuid?: string }
     }
@@ -373,7 +375,7 @@ describe("DesktopAgent WCP routing", () => {
   })
 
   it("reuses instance identity only when reconnecting from the same source window", async () => {
-    const { transport } = createAgentWithApps([
+    const { connection } = createAgentWithApps([
       {
         appId: "test-app",
         title: "Test App",
@@ -400,9 +402,9 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(firstMessage)
+    await connection.receiveMessage(firstMessage)
 
-    const firstResponse = transport.getLastMessage() as {
+    const firstResponse = connection.sentMessages.at(-1) as {
       type: string
       payload?: { instanceId?: string; instanceUuid?: string }
     }
@@ -429,9 +431,9 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(reconnectMessage)
+    await connection.receiveMessage(reconnectMessage)
 
-    const secondResponse = transport.getLastMessage() as {
+    const secondResponse = connection.sentMessages.at(-1) as {
       type: string
       payload?: { instanceId?: string; instanceUuid?: string }
     }
@@ -441,7 +443,7 @@ describe("DesktopAgent WCP routing", () => {
   })
 
   it("issues a new identity when reconnect request comes from a different source window", async () => {
-    const { transport } = createAgentWithApps([
+    const { connection } = createAgentWithApps([
       {
         appId: "test-app",
         title: "Test App",
@@ -469,9 +471,9 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(firstMessage)
+    await connection.receiveMessage(firstMessage)
 
-    const firstResponse = transport.getLastMessage() as {
+    const firstResponse = connection.sentMessages.at(-1) as {
       type: string
       payload?: { instanceId?: string; instanceUuid?: string }
     }
@@ -496,9 +498,9 @@ describe("DesktopAgent WCP routing", () => {
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await transport.receiveMessage(reconnectMessage)
+    await connection.receiveMessage(reconnectMessage)
 
-    const secondResponse = transport.getLastMessage() as {
+    const secondResponse = connection.sentMessages.at(-1) as {
       type: string
       payload?: { instanceId?: string; instanceUuid?: string }
     }

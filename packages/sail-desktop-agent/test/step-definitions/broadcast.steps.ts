@@ -34,8 +34,8 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
           },
         }),
         instanceId,
-        AppInstanceState.CONNECTED
-      )
+        AppInstanceState.CONNECTED,
+      ),
     )
   }
 
@@ -70,7 +70,7 @@ When(
       byInstance[instanceId] = listenerUUID
       this.props.contextListenersByInstance = byInstance
     }
-  }
+  },
 )
 
 When(
@@ -89,7 +89,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -116,7 +116,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -135,7 +135,7 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 When(
@@ -154,5 +154,5 @@ When(
     } as BroadcastRequest
 
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )

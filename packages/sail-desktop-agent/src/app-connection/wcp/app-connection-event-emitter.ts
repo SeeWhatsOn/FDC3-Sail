@@ -6,7 +6,7 @@ export class AppConnectionEventEmitter {
 
   on<EventName extends keyof AppConnectionEvents>(
     event: EventName,
-    handler: AppConnectionEvents[EventName]
+    handler: AppConnectionEvents[EventName],
   ): void {
     if (!this.handlers[event]) {
       ;(this.handlers as Record<EventName, Set<AppConnectionEvents[EventName]>>)[event] = new Set()
@@ -16,7 +16,7 @@ export class AppConnectionEventEmitter {
 
   off<EventName extends keyof AppConnectionEvents>(
     event: EventName,
-    handler: AppConnectionEvents[EventName]
+    handler: AppConnectionEvents[EventName],
   ): void {
     this.handlers[event]?.delete(handler)
   }

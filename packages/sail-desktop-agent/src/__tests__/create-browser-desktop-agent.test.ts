@@ -95,7 +95,7 @@ describe("createBrowserDesktopAgent lifecycle", () => {
 
     await expectWCP3Handshake("reuse-after-stop-uuid")
     expect(
-      getBrowserDesktopAgentSession(secondAgent).browserAppConnection.getConnections()
+      getBrowserDesktopAgentSession(secondAgent).browserAppConnection.getConnections(),
     ).toHaveLength(1)
   })
 
@@ -112,11 +112,11 @@ describe("createBrowserDesktopAgent lifecycle", () => {
     await expectWCP3Handshake("fresh-pair-uuid")
 
     expect(getBrowserDesktopAgentSession(sessionOne).browserAppConnection.getIsStarted()).toBe(
-      false
+      false,
     )
     expect(getBrowserDesktopAgentSession(sessionTwo).browserAppConnection.getIsStarted()).toBe(true)
     expect(
-      getBrowserDesktopAgentSession(sessionTwo).browserAppConnection.getConnections()
+      getBrowserDesktopAgentSession(sessionTwo).browserAppConnection.getConnections(),
     ).toHaveLength(1)
   })
 })

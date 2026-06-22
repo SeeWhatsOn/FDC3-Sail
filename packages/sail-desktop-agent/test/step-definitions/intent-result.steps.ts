@@ -38,7 +38,7 @@ When(
     } as unknown as IntentResultRequest
     this.props.lastIntentResultRequestUuid = message.meta?.requestUuid
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )
 
 /**
@@ -61,5 +61,5 @@ When(
     } as unknown as IntentResultRequest
     this.props.lastIntentResultRequestUuid = message.meta?.requestUuid
     await this.mockTransport.receiveMessage(message)
-  }
+  },
 )

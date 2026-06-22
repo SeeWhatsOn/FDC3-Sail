@@ -43,5 +43,5 @@ Then(
   function (this: CustomWorld, appStr: string) {
     const instanceId = getAppInstanceId(this, appStr)
     expect(getInstance(this.getState(), instanceId)).toBeDefined()
-  }
+  },
 )

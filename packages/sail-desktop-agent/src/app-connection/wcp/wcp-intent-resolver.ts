@@ -11,7 +11,7 @@ export function requestIntentResolution(
   pendingIntentResolutions: Map<string, PendingIntentResolution>,
   emitIntentResolverNeeded: (payload: HostIntentResolverPayload) => void,
   payload: HostIntentResolverPayload,
-  timeoutMs: number
+  timeoutMs: number,
 ): Promise<HostIntentResolverResponse> {
   return new Promise((resolve, reject) => {
     // Set up timeout to reject if UI doesn't respond
@@ -34,7 +34,7 @@ export function requestIntentResolution(
 
 export function resolveIntentSelection(
   pendingIntentResolutions: Map<string, PendingIntentResolution>,
-  response: HostIntentResolverResponse
+  response: HostIntentResolverResponse,
 ): void {
   const pending = pendingIntentResolutions.get(response.requestId)
   if (!pending) {

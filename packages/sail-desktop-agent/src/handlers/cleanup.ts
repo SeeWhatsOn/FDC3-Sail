@@ -133,7 +133,7 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
 }
 
 /**
- * Unified instance teardown when available; DACP-only cleanup for MockTransport tests.
+ * Unified instance teardown when available; DACP-only cleanup for headless ingest tests.
  */
 export function teardownInstance(context: DACPHandlerContext, instanceId: string): void {
   if (context.disconnectInstance) {

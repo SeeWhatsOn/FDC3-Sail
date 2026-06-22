@@ -9,7 +9,7 @@ import type { AgentState, IntentListener, PendingIntent } from "../types"
 
 export const registerIntentListener = (
   state: AgentState,
-  listener: Omit<IntentListener, "registeredAt" | "lastActivity" | "active">
+  listener: Omit<IntentListener, "registeredAt" | "lastActivity" | "active">,
 ): AgentState => {
   if (state.intents.listeners[listener.listenerId]) {
     throw new Error(`Listener ${listener.listenerId} already exists`)
@@ -57,7 +57,7 @@ export const updateIntentListenerActivity = (state: AgentState, listenerId: stri
 export const setIntentListenerActive = (
   state: AgentState,
   listenerId: string,
-  active: boolean
+  active: boolean,
 ): AgentState => {
   if (!state.intents.listeners[listenerId]) return state
 
@@ -69,7 +69,7 @@ export const setIntentListenerActive = (
 
 export const addPendingIntent = (
   state: AgentState,
-  pending: Omit<PendingIntent, "raisedAt">
+  pending: Omit<PendingIntent, "raisedAt">,
 ): AgentState => {
   return produce(state, draft => {
     draft.intents.pending[pending.requestId] = {
@@ -83,7 +83,7 @@ export const updatePendingIntentTarget = (
   state: AgentState,
   requestId: string,
   targetInstanceId: string,
-  targetAppId: string
+  targetAppId: string,
 ): AgentState => {
   if (!state.intents.pending[requestId]) return state
 

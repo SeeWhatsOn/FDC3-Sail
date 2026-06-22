@@ -16,7 +16,7 @@ export const connectInstance = (
     appId: string
     metadata: AppMetadata
     instanceMetadata?: AppInstance["instanceMetadata"]
-  }
+  },
 ): AgentState => {
   if (state.instances[params.instanceId]) {
     throw new Error(`Instance ${params.instanceId} already exists`)
@@ -42,7 +42,7 @@ export const connectInstance = (
 export const updateInstanceState = (
   state: AgentState,
   instanceId: string,
-  instanceState: AppInstanceState
+  instanceState: AppInstanceState,
 ): AgentState => {
   if (!state.instances[instanceId]) return state
 
@@ -71,7 +71,7 @@ export const removeInstance = (state: AgentState, instanceId: string): AgentStat
 export const joinUserChannel = (
   state: AgentState,
   instanceId: string,
-  channelId: string | null
+  channelId: string | null,
 ): AgentState => {
   if (!state.instances[instanceId]) return state
 
@@ -86,7 +86,7 @@ export const addContextListener = (
   instanceId: string,
   listenerId: string,
   contextType: string,
-  channelId?: string | null
+  channelId?: string | null,
 ): AgentState => {
   if (!state.instances[instanceId]) return state
 
@@ -102,7 +102,7 @@ export const addContextListener = (
 export const removeContextListener = (
   state: AgentState,
   instanceId: string,
-  listenerId: string
+  listenerId: string,
 ): AgentState => {
   if (!state.instances[instanceId]) return state
 
@@ -116,7 +116,7 @@ export const removeContextListener = (
 export const addPrivateChannel = (
   state: AgentState,
   instanceId: string,
-  channelId: string
+  channelId: string,
 ): AgentState => {
   if (!state.instances[instanceId]) return state
 
@@ -132,7 +132,7 @@ export const addPrivateChannel = (
 export const removePrivateChannel = (
   state: AgentState,
   instanceId: string,
-  channelId: string
+  channelId: string,
 ): AgentState => {
   if (!state.instances[instanceId]) return state
 

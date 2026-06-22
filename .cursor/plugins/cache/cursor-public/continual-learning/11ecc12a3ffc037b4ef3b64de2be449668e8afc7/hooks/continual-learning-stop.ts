@@ -151,7 +151,7 @@ async function main(): Promise<number> {
     const now = Date.now()
 
     const trialEnabled = parseBoolean(
-      readEnvValue("CONTINUAL_LEARNING_TRIAL_MODE", "CONTINUOUS_LEARNING_TRIAL_MODE")
+      readEnvValue("CONTINUAL_LEARNING_TRIAL_MODE", "CONTINUOUS_LEARNING_TRIAL_MODE"),
     )
     if (trialEnabled && countedTurn && state.trialStartedAtMs === null) {
       state.trialStartedAtMs = now
@@ -160,17 +160,17 @@ async function main(): Promise<number> {
     const trialDurationMinutes = parsePositiveInt(
       readEnvValue(
         "CONTINUAL_LEARNING_TRIAL_DURATION_MINUTES",
-        "CONTINUOUS_LEARNING_TRIAL_DURATION_MINUTES"
+        "CONTINUOUS_LEARNING_TRIAL_DURATION_MINUTES",
       ),
-      TRIAL_DEFAULT_DURATION_MINUTES
+      TRIAL_DEFAULT_DURATION_MINUTES,
     )
     const trialMinTurns = parsePositiveInt(
       readEnvValue("CONTINUAL_LEARNING_TRIAL_MIN_TURNS", "CONTINUOUS_LEARNING_TRIAL_MIN_TURNS"),
-      TRIAL_DEFAULT_MIN_TURNS
+      TRIAL_DEFAULT_MIN_TURNS,
     )
     const trialMinMinutes = parsePositiveInt(
       readEnvValue("CONTINUAL_LEARNING_TRIAL_MIN_MINUTES", "CONTINUOUS_LEARNING_TRIAL_MIN_MINUTES"),
-      TRIAL_DEFAULT_MIN_MINUTES
+      TRIAL_DEFAULT_MIN_MINUTES,
     )
     const inTrialWindow =
       trialEnabled &&
@@ -179,11 +179,11 @@ async function main(): Promise<number> {
 
     const minTurns = parsePositiveInt(
       readEnvValue("CONTINUAL_LEARNING_MIN_TURNS", "CONTINUOUS_LEARNING_MIN_TURNS"),
-      DEFAULT_MIN_TURNS
+      DEFAULT_MIN_TURNS,
     )
     const minMinutes = parsePositiveInt(
       readEnvValue("CONTINUAL_LEARNING_MIN_MINUTES", "CONTINUOUS_LEARNING_MIN_MINUTES"),
-      DEFAULT_MIN_MINUTES
+      DEFAULT_MIN_MINUTES,
     )
 
     const effectiveMinTurns = inTrialWindow ? trialMinTurns : minTurns
@@ -212,7 +212,7 @@ async function main(): Promise<number> {
       console.log(
         JSON.stringify({
           followup_message: FOLLOWUP_MESSAGE,
-        })
+        }),
       )
       return 0
     }

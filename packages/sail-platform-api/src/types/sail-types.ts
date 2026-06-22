@@ -82,7 +82,7 @@ export interface ServerContext<X extends AppRegistration = AppRegistration> {
   narrowIntents(
     raiser: AppIdentifier,
     appIntents: AppIntent[],
-    context: Context
+    context: Context,
   ): Promise<AppIntent[]>
 
   // Server metadata

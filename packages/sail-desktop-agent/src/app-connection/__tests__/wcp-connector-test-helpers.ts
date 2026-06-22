@@ -9,7 +9,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import type { BrowserAppConnection } from "../../app-connection/browser-app-connection"
 
 export function createWCP1Hello(
-  connectionAttemptUuid: string = "test-uuid"
+  connectionAttemptUuid: string = "test-uuid",
 ): BrowserTypes.WebConnectionProtocol1Hello {
   const message = {
     type: "WCP1Hello",
@@ -38,7 +38,7 @@ export function createMessageEvent(data: unknown, source: Window = window): Mess
 /** Establish a WCP connection and return the temporary instanceId. */
 export async function establishTempConnection(
   connector: BrowserAppConnection,
-  connectionAttemptUuid = "test-uuid"
+  connectionAttemptUuid = "test-uuid",
 ): Promise<string> {
   window.dispatchEvent(createMessageEvent(createWCP1Hello(connectionAttemptUuid)))
   await new Promise(resolve => setTimeout(resolve, 50))

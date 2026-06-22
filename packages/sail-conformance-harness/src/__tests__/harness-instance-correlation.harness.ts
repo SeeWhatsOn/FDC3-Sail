@@ -1,6 +1,7 @@
 import { expect } from "vite-plus/test"
-import { DesktopAgent, type Logger } from "@finos/sail-desktop-agent"
-import { MockTransport } from "../../../sail-desktop-agent/test/support/mock-transport"
+import { type Logger } from "@finos/sail-desktop-agent"
+import { createDesktopAgentWithTestConnection } from "../../../sail-desktop-agent/test/support/desktop-agent-test-harness"
+import type { DacpTestAppConnection } from "../../../sail-desktop-agent/test/support/dacp-test-app-connection"
 import { createHarnessAppLauncher } from "../app-launcher"
 import type { HarnessPanel } from "../types"
 
@@ -24,7 +25,7 @@ export type HarnessCorrelationRunOptions = {
  * Uses public DesktopAgent APIs and the same DACP message shapes as Cucumber steps.
  */
 export async function runHarnessOpenAndWcpHandshake(
-  options: HarnessCorrelationRunOptions = {}
+  options: HarnessCorrelationRunOptions = {},
 ): Promise<InstanceIdentityCorrelationSnapshot> {
   const appId = "ChartApp"
   const appUrl = "https://example.com/chart-app"
@@ -35,9 +36,7 @@ export async function runHarnessOpenAndWcpHandshake(
     panels.push(panel)
   })
 
-  const transport = new MockTransport()
-  const agent = new DesktopAgent({
-    transport,
+  const { connection } = createDesktopAgentWithTestConnection({
     apps: [
       {
         appId,
@@ -56,9 +55,9 @@ export async function runHarnessOpenAndWcpHandshake(
     logger: options.logger,
     logPayloadDetail: options.logPayloadDetail ?? "full",
   })
-  agent.start()
+  const transport = connection.outbound
 
-  const callerCanonicalId = await completeWcp4Handshake(transport, {
+  const callerCanonicalId = await completeWcp4Handshake(connection, {
     connectionAttemptUuid: "caller-connect",
     appUrl: "https://example.com/conformance1",
     claimedInstanceId: callerConnectionId,
@@ -66,7 +65,7 @@ export async function runHarnessOpenAndWcpHandshake(
 
   transport.clear()
 
-  await transport.receiveMessage({
+  await connection.receiveMessage({
     type: "openRequest",
     meta: {
       requestUuid: crypto.randomUUID(),
@@ -101,7 +100,7 @@ export async function runHarnessOpenAndWcpHandshake(
   const iframeName = launchedPanel!.instanceId
   expect(iframeName).toBe(launcherInstanceId)
 
-  const wcp5InstanceId = await completeWcp4Handshake(transport, {
+  const wcp5InstanceId = await completeWcp4Handshake(connection, {
     connectionAttemptUuid: "launched-app-connect",
     appUrl,
     claimedInstanceId: launcherInstanceId!,
@@ -109,7 +108,7 @@ export async function runHarnessOpenAndWcpHandshake(
 
   transport.clear()
 
-  await transport.receiveMessage({
+  await connection.receiveMessage({
     type: "findInstancesRequest",
     meta: {
       requestUuid: crypto.randomUUID(),
@@ -156,7 +155,8 @@ export async function runHarnessOpenAndWcpHandshake(
   return snapshot
 }
 
-function readWcp5InstanceId(transport: MockTransport): string {
+function readWcp5InstanceId(connection: DacpTestAppConnection): string {
+  const transport = connection.outbound
   const wcp5 = transport.allMessages
     .map(record => record.msg)
     .find(message => message.type === "WCP5ValidateAppIdentityResponse") as
@@ -173,14 +173,14 @@ function readWcp5InstanceId(transport: MockTransport): string {
 }
 
 async function completeWcp4Handshake(
-  transport: MockTransport,
+  connection: DacpTestAppConnection,
   params: {
     connectionAttemptUuid: string
     appUrl: string
     claimedInstanceId: string
-  }
+  },
 ): Promise<string> {
-  await transport.receiveMessage({
+  await connection.receiveMessage({
     type: "WCP4ValidateAppIdentity",
     meta: {
       connectionAttemptUuid: params.connectionAttemptUuid,
@@ -195,7 +195,7 @@ async function completeWcp4Handshake(
     },
   })
 
-  return readWcp5InstanceId(transport)
+  return readWcp5InstanceId(connection)
 }
 
 /**
@@ -203,7 +203,7 @@ async function completeWcp4Handshake(
  * when openRequest pre-registers the host-assigned instance before WCP4 completes.
  */
 export function assertInstanceIdentityCorrelated(
-  snapshot: InstanceIdentityCorrelationSnapshot
+  snapshot: InstanceIdentityCorrelationSnapshot,
 ): void {
   const { launcherInstanceId, iframeName, wcp5InstanceId, findInstancesInstanceIds } = snapshot
 
@@ -222,7 +222,7 @@ export function assertInstanceIdentityCorrelated(
 }
 
 export function findHarnessCorrelationLog(
-  lines: string[]
+  lines: string[],
 ): InstanceIdentityCorrelationSnapshot | undefined {
   const line = lines.find(entry => entry.includes(HARNESS_CORRELATION_LOG_TAG))
   if (!line) {

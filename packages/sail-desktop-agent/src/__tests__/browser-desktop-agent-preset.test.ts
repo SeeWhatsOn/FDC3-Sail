@@ -58,7 +58,7 @@ type BrowserHostControllerSurface = {
         instanceId: string
         channelId: string | null
         channel: BrowserTypes.Channel | null
-      }) => void
+      }) => void,
     ) => () => void
   }
   apps: BrowserAppsControllerSurface
@@ -90,7 +90,7 @@ type BrowserAppsControllerSurface = {
   getById: (appId: string) => DirectoryApp | undefined
   open: (
     app: string | BrowserTypes.AppIdentifier,
-    options?: BrowserAppOpenOptions
+    options?: BrowserAppOpenOptions,
   ) => Promise<BrowserTypes.AppIdentifier>
   getInstances: () => BrowserAppInstance[]
   getInstance: (instanceId: string) => BrowserAppInstance | undefined
@@ -200,7 +200,7 @@ describe("createBrowserDesktopAgent top-level preset", () => {
         expect.objectContaining({ appId: "preset-app-one" }),
 
         expect.objectContaining({ appId: "preset-app-two" }),
-      ])
+      ]),
     )
 
     expect(registeredApps).toHaveLength(2)
@@ -216,7 +216,7 @@ describe("createBrowserDesktopAgent top-level preset", () => {
           appId: request.handlers[0].app.appId,
           instanceId: request.handlers[0].instanceId,
         },
-      })
+      }),
     )
 
     const intentResolver: IntentResolver = {
@@ -228,7 +228,7 @@ describe("createBrowserDesktopAgent top-level preset", () => {
     activeAgents.push(desktopAgent)
 
     const resolutionPromise = getBrowserDesktopAgentSession(
-      desktopAgent
+      desktopAgent,
     ).browserAppConnection.requestIntentResolution({
       requestId: "preset-intent-req-1",
 
@@ -559,7 +559,7 @@ describe("desktopAgent.intentResolver canonical host controller", () => {
 
     await vi.waitFor(() => {
       expect(intentResolver.getPendingRequests()).toEqual(
-        expect.arrayContaining([expect.objectContaining({ requestId: "canonical-unsub-2" })])
+        expect.arrayContaining([expect.objectContaining({ requestId: "canonical-unsub-2" })]),
       )
     })
 
@@ -718,7 +718,7 @@ describe("browser host controller composition", () => {
     })
 
     expect(intentResolver.getPendingRequests()).toEqual(
-      expect.arrayContaining([expect.objectContaining({ requestId: "destructure-intent-req-1" })])
+      expect.arrayContaining([expect.objectContaining({ requestId: "destructure-intent-req-1" })]),
     )
 
     intentResolver.select("destructure-intent-req-1", requestFromDestructuredResolver!.handlers[0])
@@ -760,7 +760,7 @@ describe("browser host controller composition", () => {
         internal.state = callback(internal.state)
       },
     })
-    desktopAgent.attachBrowserAppConnection(browserAppConnection)
+    desktopAgent.attachAppConnection(browserAppConnection)
     activeAgents.push(desktopAgent)
 
     const controllers = createBrowserHostControllers({
@@ -829,7 +829,7 @@ describe("desktopAgent.apps canonical host controller", () => {
     desktopAgent.apps.add(mockApp1)
 
     expect(desktopAgent.apps.getAll()).toEqual(
-      expect.arrayContaining([expect.objectContaining({ appId: "app-1" })])
+      expect.arrayContaining([expect.objectContaining({ appId: "app-1" })]),
     )
     expect(desktopAgent.apps.getById("app-1")).toMatchObject({
       appId: "app-1",
@@ -855,7 +855,7 @@ describe("desktopAgent.apps canonical host controller", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         json: vi.fn().mockResolvedValue([mockApp2, mockApp3]),
-      })
+      }),
     )
 
     const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
@@ -868,7 +868,7 @@ describe("desktopAgent.apps canonical host controller", () => {
       expect.arrayContaining([
         expect.objectContaining({ appId: "app-2" }),
         expect.objectContaining({ appId: "app-3" }),
-      ])
+      ]),
     )
     expect(desktopAgent.apps.getById("app-3")).toMatchObject({ appId: "app-3" })
   })
@@ -890,7 +890,7 @@ describe("desktopAgent.apps canonical host controller", () => {
       Promise.resolve({
         appId: request.app.appId,
         instanceId: "host-open-instance-1",
-      })
+      }),
     )
 
     const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
@@ -916,7 +916,7 @@ describe("desktopAgent.apps canonical host controller", () => {
       Promise.resolve({
         appId: request.app.appId,
         instanceId: request.app.instanceId ?? "fallback-instance",
-      })
+      }),
     )
     const launchContext = { type: "fdc3.contact", name: "Open Contact" } satisfies Context
 
@@ -929,7 +929,7 @@ describe("desktopAgent.apps canonical host controller", () => {
 
     await desktopAgent.apps.open(
       { appId: "app-1", instanceId: "preset-open-instance" },
-      { context: launchContext }
+      { context: launchContext },
     )
 
     expect(launchMock).toHaveBeenCalledWith(
@@ -937,7 +937,7 @@ describe("desktopAgent.apps canonical host controller", () => {
         app: { appId: "app-1", instanceId: "preset-open-instance" },
         context: launchContext,
       }),
-      expect.objectContaining({ appId: "app-1" })
+      expect.objectContaining({ appId: "app-1" }),
     )
   })
 
@@ -971,7 +971,7 @@ describe("desktopAgent.apps canonical host controller", () => {
       expect.arrayContaining([
         expect.objectContaining({ appId: "app-1", instanceId: "pending-app-1", status: "pending" }),
         expect.objectContaining({ appId: "app-2", instanceId: "pending-app-2", status: "pending" }),
-      ])
+      ]),
     )
   })
 
@@ -980,7 +980,7 @@ describe("desktopAgent.apps canonical host controller", () => {
       Promise.resolve({
         appId: request.app.appId,
         instanceId: "destructured-open-instance",
-      })
+      }),
     )
 
     const createBrowserDesktopAgent = requireBrowserDesktopAgentFactory()
@@ -997,7 +997,7 @@ describe("desktopAgent.apps canonical host controller", () => {
       expect.arrayContaining([
         expect.objectContaining({ appId: "app-1" }),
         expect.objectContaining({ appId: "app-2" }),
-      ])
+      ]),
     )
     expect(getById("app-2")).toMatchObject({ appId: "app-2" })
 

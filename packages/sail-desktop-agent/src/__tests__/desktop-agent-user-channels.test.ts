@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import { MockTransport } from "./utils/mock-transport"
 import { DesktopAgent } from "../agent/desktop-agent"
 import { connectInstance, updateInstanceState } from "../state/mutators"
 import { getAllUserChannels } from "../state/selectors"
 import type { AgentState } from "../state/types"
 import { AppInstanceState } from "../state/types"
 import { createDacpRequestMeta } from "../handlers/__tests__/test-context"
+import { createDesktopAgentWithTestConnection } from "../../test/support/desktop-agent-test-harness"
 
 type Channel = BrowserTypes.Channel
 
@@ -100,12 +100,9 @@ describe("DesktopAgent user channel state", () => {
   })
 
   it("host getUserChannels stays aligned with DACP getUserChannelsResponse", async () => {
-    const transport = new MockTransport()
-    const agent = new DesktopAgent({
-      transport,
+    const { agent, connection } = createDesktopAgentWithTestConnection({
       userChannels: CONFIGURED_USER_CHANNELS,
     })
-    agent.start()
 
     applyAgentStateUpdate(agent, state =>
       seedConnectedInstance(
@@ -121,7 +118,7 @@ describe("DesktopAgent user channel state", () => {
       ),
     )
 
-    await transport.receiveMessage({
+    await connection.receiveMessage({
       type: "getUserChannelsRequest",
       payload: {},
       meta: createDacpRequestMeta("get-user-channels-state-source", {
@@ -130,7 +127,7 @@ describe("DesktopAgent user channel state", () => {
       }),
     })
 
-    const response = transport.getLastMessage() as {
+    const response = connection.sentMessages.at(-1) as {
       type: string
       payload: { userChannels: Channel[] }
     }

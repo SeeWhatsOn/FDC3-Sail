@@ -36,7 +36,7 @@ function intentMatches(
   intent: DirectoryIntent,
   contextType: string | undefined,
   intentName: string | undefined,
-  resultType: string | undefined
+  resultType: string | undefined,
 ): boolean {
   if (intentName !== undefined && intent.intentName !== intentName) {
     return false
@@ -72,7 +72,7 @@ export function retrieveIntents(
   catalog: AppDirectoryState,
   contextType: string | undefined,
   intentName: string | undefined,
-  resultType: string | undefined
+  resultType: string | undefined,
 ): DirectoryIntent[] {
   if (contextType === undefined && intentName === undefined && resultType === undefined) {
     return retrieveAllIntents(catalog)
@@ -88,7 +88,7 @@ export function retrieveApps(
   catalog: AppDirectoryState,
   contextType: string | undefined,
   intentName?: string,
-  resultType?: string
+  resultType?: string,
 ): DirectoryApp[] {
   if (contextType === undefined && intentName === undefined && resultType === undefined) {
     return [...catalog.apps]
@@ -96,8 +96,8 @@ export function retrieveApps(
 
   const appIds = new Set(
     retrieveIntents(catalog, contextType, intentName ?? undefined, resultType ?? undefined).map(
-      intent => intent.appId
-    )
+      intent => intent.appId,
+    ),
   )
 
   return catalog.apps.filter(app => appIds.has(app.appId))
@@ -109,6 +109,6 @@ export function retrieveAppsByUrl(catalog: AppDirectoryState, url: string): Dire
   }
 
   return retrieveAllApps(catalog).filter(
-    app => app.type === "web" && (app.details as WebAppDetails)?.url === url
+    app => app.type === "web" && (app.details as WebAppDetails)?.url === url,
   )
 }
