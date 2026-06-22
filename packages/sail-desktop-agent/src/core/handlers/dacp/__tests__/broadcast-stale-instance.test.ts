@@ -13,6 +13,7 @@ import {
 } from "../../../state/mutators"
 import { AppInstanceState } from "../../../state/types"
 import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
+import { withResponseDispatcher } from "./test-context"
 import { handleBroadcastRequest } from "../context-handlers"
 
 describe("handleBroadcastRequest stale instance routing", () => {
@@ -62,7 +63,7 @@ describe("handleBroadcastRequest stale instance routing", () => {
           context: { type: "closeWindow", testId: "close-1" },
         },
       },
-      { ...context, transport }
+      withResponseDispatcher(context, transport)
     )
 
     const response = transport.getLastMessage() as { type: string; payload?: { error?: string } }
@@ -138,7 +139,7 @@ describe("handleBroadcastRequest stale instance routing", () => {
           context: { type: "windowClosed", testId: "teardown-1" },
         },
       },
-      { ...context, transport }
+      withResponseDispatcher(context, transport)
     )
 
     const response = transport.getLastMessage() as {

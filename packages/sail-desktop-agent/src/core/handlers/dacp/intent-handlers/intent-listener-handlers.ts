@@ -19,7 +19,7 @@ export function handleAddIntentListener(
   message: BrowserTypes.AddIntentListenerRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const payload = message.payload
@@ -47,7 +47,7 @@ export function handleAddIntentListener(
       listenerUUID: listenerId,
     })
 
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
 
     deliverPendingIntentsForListener(context, payload.intent)
   } catch (error) {
@@ -62,7 +62,7 @@ export function handleAddIntentListener(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -71,7 +71,7 @@ export function handleIntentListenerUnsubscribe(
   message: BrowserTypes.IntentListenerUnsubscribeRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const { listenerUUID } = message.payload
@@ -86,7 +86,7 @@ export function handleIntentListenerUnsubscribe(
     setState(state => unregisterIntentListener(state, listenerUUID))
 
     const response = createDACPSuccessResponse(message, "intentListenerUnsubscribeResponse")
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
   } catch (error) {
     logger.error("DACP: Intent listener unsubscribe failed", error)
 
@@ -100,7 +100,7 @@ export function handleIntentListenerUnsubscribe(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }

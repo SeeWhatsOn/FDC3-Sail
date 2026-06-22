@@ -22,7 +22,7 @@ export function handleAddEventListenerRequest(
   message: BrowserTypes.AddEventListenerRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const instance = getInstance(getState(), instanceId)
@@ -66,7 +66,7 @@ export function handleAddEventListenerRequest(
       listenerUUID: listenerId,
     })
 
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
 
     logger.info("DACP: Event listener added", {
       instanceId,
@@ -85,7 +85,7 @@ export function handleAddEventListenerRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -97,7 +97,7 @@ export function handleEventListenerUnsubscribeRequest(
   message: BrowserTypes.EventListenerUnsubscribeRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const { listenerUUID } = message.payload
@@ -115,7 +115,7 @@ export function handleEventListenerUnsubscribeRequest(
 
     const response = createDACPSuccessResponse(message, "eventListenerUnsubscribeResponse")
 
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
 
     logger.info("DACP: Event listener unsubscribed", { instanceId, listenerUUID })
   } catch (error) {
@@ -131,7 +131,7 @@ export function handleEventListenerUnsubscribeRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }

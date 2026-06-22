@@ -7,7 +7,11 @@ import { DEFAULT_FDC3_USER_CHANNELS } from "../../../../default-user-channels"
 import { createInitialState } from "../../../../state/initial-state"
 import { addPendingIntent, connectInstance, updateInstanceState } from "../../../../state/mutators"
 import { AppInstanceState } from "../../../../state/types"
-import { createDACPTestContext, createDacpRequestMeta } from "../../__tests__/test-context"
+import {
+  createDACPTestContext,
+  createDacpRequestMeta,
+  withResponseDispatcher,
+} from "../../__tests__/test-context"
 import type { PendingIntentPromiseEntry } from "../../../types"
 import { handleIntentResultRequest } from "../intent-result-handlers"
 import type { IntentResultContextMetadata } from "../intent-result-metadata"
@@ -74,7 +78,7 @@ function setupPendingIntentContext() {
 
   const transport = new MockTransport()
   return {
-    context: { ...context, transport },
+    context: withResponseDispatcher(context, transport),
     transport,
     resolve,
   }
@@ -229,7 +233,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
           intentResult: { context: { type: "testContextY", id: { value: "1" } } },
         },
       },
-      { ...context, transport: daTransport }
+      withResponseDispatcher(context, daTransport)
     )
 
     await vi.waitFor(() => {

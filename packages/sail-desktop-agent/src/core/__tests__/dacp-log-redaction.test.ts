@@ -18,7 +18,10 @@ import type { DACPHandlerContext } from "../handlers/types"
 import { handleRaiseIntentRequest } from "../handlers/dacp/intent-handlers/intent-raise-intent"
 import { routeDACPMessage } from "../handlers/dacp"
 import { MockTransport } from "../../__tests__/utils/mock-transport"
-import { createDACPTestContext } from "../handlers/dacp/__tests__/test-context"
+import {
+  createDACPTestContext,
+  withResponseDispatcher,
+} from "../handlers/dacp/__tests__/test-context"
 import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../handlers/dacp/utils/open-with-context"
 import { clearAllHeartbeatTimersForTesting } from "../handlers/dacp/heartbeat-runtime"
 
@@ -66,10 +69,10 @@ function createConnectedRaiseIntentContext(options: {
   })
   state = updateInstanceState(state, instanceId, AppInstanceState.CONNECTED)
 
+  const transport = new MockTransport()
   const { context } = createDACPTestContext({ instanceId, initialState: state })
   return {
-    ...context,
-    transport: new MockTransport(),
+    ...withResponseDispatcher(context, transport),
     logger: options.logger,
     logPayloadDetail: options.logPayloadDetail,
   }

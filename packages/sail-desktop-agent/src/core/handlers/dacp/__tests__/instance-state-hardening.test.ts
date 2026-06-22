@@ -12,6 +12,7 @@ import { AppInstanceState } from "../../../state/types"
 import { cleanupDACPHandlers } from "../cleanup"
 import { handleAddIntentListener } from "../intent-handlers/intent-listener-handlers"
 import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
+import { withResponseDispatcher } from "./test-context"
 
 const INTENT_NAME = "ViewPortfolio"
 
@@ -38,7 +39,7 @@ function registerIntentViaDacp(
       meta: createDacpRequestMeta("add-intent-listener-hardening"),
       payload: { intent: INTENT_NAME },
     },
-    { ...context, transport }
+    withResponseDispatcher(context, transport)
   )
 
   return { getState, transport }

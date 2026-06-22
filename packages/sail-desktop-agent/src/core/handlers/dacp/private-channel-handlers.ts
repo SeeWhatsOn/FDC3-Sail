@@ -1,6 +1,6 @@
 import { createDACPSuccessResponse, createDACPEvent } from "../../dacp/dacp-message-creators"
 import { generateEventUuid } from "../../dacp/dacp-utils"
-import { type DACPHandlerContext } from "../types"
+import type { DACPHandlerContext, DacpResponseDispatcher } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
@@ -34,7 +34,7 @@ export function handleCreatePrivateChannelRequest(
   message: BrowserTypes.CreatePrivateChannelRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const instance = getInstance(getState(), instanceId)
@@ -65,7 +65,7 @@ export function handleCreatePrivateChannelRequest(
       },
     })
 
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
   } catch (error) {
     logger.error("DACP: Create private channel failed", error)
 
@@ -78,7 +78,7 @@ export function handleCreatePrivateChannelRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -91,7 +91,7 @@ export function handlePrivateChannelDisconnectRequest(
   message: BrowserTypes.PrivateChannelDisconnectRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const { channelId } = message.payload
@@ -117,10 +117,10 @@ export function handlePrivateChannelDisconnectRequest(
       channel,
       contextListenersToRemove,
       instanceId,
-      transport
+      responses
     )
 
-    notifyPrivateChannelDisconnectInternal(channel, instanceId, transport)
+    notifyPrivateChannelDisconnectInternal(channel, instanceId, responses)
 
     // Disconnect the instance using state transform
     setState(state => disconnectInstanceFromPrivateChannel(state, channelId, instanceId))
@@ -133,7 +133,7 @@ export function handlePrivateChannelDisconnectRequest(
 
     // Send success response
     const response = createDACPSuccessResponse(message, "privateChannelDisconnectResponse")
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
   } catch (error) {
     logger.error("DACP: Private channel disconnect failed", error)
 
@@ -146,7 +146,7 @@ export function handlePrivateChannelDisconnectRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -158,7 +158,7 @@ export function handlePrivateChannelAddContextListenerRequest(
   message: BrowserTypes.PrivateChannelAddEventListenerRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const { privateChannelId, listenerType } = message.payload
@@ -217,7 +217,7 @@ export function handlePrivateChannelAddContextListenerRequest(
       listenerUUID: listenerId,
     })
 
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
   } catch (error) {
     logger.error("DACP: Private channel add context listener failed", error)
 
@@ -230,7 +230,7 @@ export function handlePrivateChannelAddContextListenerRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -239,7 +239,7 @@ export function handlePrivateChannelUnsubscribeEventListenerRequest(
   message: BrowserTypes.PrivateChannelUnsubscribeEventListenerRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const { listenerUUID } = message.payload
@@ -288,7 +288,7 @@ export function handlePrivateChannelUnsubscribeEventListenerRequest(
       "privateChannelUnsubscribeEventListenerResponse"
     )
 
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
   } catch (error) {
     logger.error("DACP: Private channel unsubscribe event listener failed", error)
     const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
@@ -299,7 +299,7 @@ export function handlePrivateChannelUnsubscribeEventListenerRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -308,7 +308,7 @@ export function handlePrivateChannelUnsubscribeEventListenerRequest(
  * Remove all private channels for an instance (called on disconnect)
  */
 export function removeInstancePrivateChannels(context: DACPHandlerContext): number {
-  const { instanceId, getState, setState, transport } = context
+  const { instanceId, getState, setState, responses } = context
   const state = getState()
   const privateChannels = Object.values(state.channels.private)
   const channelsToRemove = privateChannels.filter(channel =>
@@ -324,10 +324,10 @@ export function removeInstancePrivateChannels(context: DACPHandlerContext): numb
       channel,
       contextListenersToRemove,
       instanceId,
-      transport
+      responses
     )
 
-    notifyPrivateChannelDisconnectInternal(channel, instanceId, transport)
+    notifyPrivateChannelDisconnectInternal(channel, instanceId, responses)
     setState(state => disconnectInstanceFromPrivateChannel(state, channel.id, instanceId))
   })
 
@@ -340,7 +340,7 @@ export function notifyPrivateChannelAddContextListener(
   contextType: string | null,
   context: DACPHandlerContext
 ): void {
-  const { getState, transport } = context
+  const { getState, responses } = context
   const channel = getPrivateChannel(getState(), channelId)
   if (!channel) {
     return
@@ -364,7 +364,7 @@ export function notifyPrivateChannelAddContextListener(
       },
     }
 
-    transport.send(addListenerEventWithRouting)
+    responses.sendOutbound(addListenerEventWithRouting)
   })
 
   Object.values(channel.lifecycleCatchAllListeners).forEach(listener => {
@@ -380,7 +380,7 @@ export function notifyPrivateChannelAddContextListener(
       },
     }
 
-    transport.send(addListenerEventWithRouting)
+    responses.sendOutbound(addListenerEventWithRouting)
   })
 }
 
@@ -391,7 +391,7 @@ export function notifyPrivateChannelUnsubscribe(
   sourceInstanceId: string,
   context: DACPHandlerContext
 ): void {
-  const { getState, transport } = context
+  const { getState, responses } = context
   const channel = getPrivateChannel(getState(), channelId)
   if (!channel) {
     return
@@ -407,7 +407,7 @@ export function notifyPrivateChannelUnsubscribe(
       },
     ],
     sourceInstanceId,
-    transport
+    responses
   )
 }
 
@@ -419,7 +419,7 @@ function notifyPrivateChannelUnsubscribeInternal(
     contextType: string | null
   }>,
   sourceInstanceId: string,
-  transport: DACPHandlerContext["transport"]
+  responses: DacpResponseDispatcher
 ): void {
   if (contextListenersToRemove.length === 0) {
     return
@@ -449,7 +449,7 @@ function notifyPrivateChannelUnsubscribeInternal(
         },
       }
 
-      transport.send(unsubscribeEventWithRouting)
+      responses.sendOutbound(unsubscribeEventWithRouting)
     })
   })
 }
@@ -457,7 +457,7 @@ function notifyPrivateChannelUnsubscribeInternal(
 function notifyPrivateChannelDisconnectInternal(
   channel: NonNullable<ReturnType<typeof getPrivateChannel>>,
   sourceInstanceId: string,
-  transport: DACPHandlerContext["transport"]
+  responses: DacpResponseDispatcher
 ): void {
   const disconnectListeners = [
     ...Object.values(channel.disconnectListeners),
@@ -483,6 +483,6 @@ function notifyPrivateChannelDisconnectInternal(
       },
     }
 
-    transport.send(disconnectEventWithRouting)
+    responses.sendOutbound(disconnectEventWithRouting)
   })
 }

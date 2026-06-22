@@ -10,6 +10,7 @@
 import type { Transport } from "./interfaces/transport"
 import type { AppLauncher } from "../host-contracts/app-launcher"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
+import { createDacpResponseDispatcher } from "./handlers/dacp/utils/dacp-response-utils"
 import type {
   DACPHandlerContext,
   MessageValidator,
@@ -299,7 +300,7 @@ export class DesktopAgent {
     const allInstances = Object.values(this.state.instances)
     for (const instance of allInstances) {
       // createHandlerContext is needed because cleanupDACPHandlers requires
-      // a DACPHandlerContext with transport, instanceId, getState, setState, logger, etc.
+      // a DACPHandlerContext with responses, instanceId, getState, setState, logger, etc.
       const context = this.createHandlerContext(instance.instanceId)
       cleanupDACPHandlers(context)
     }
@@ -313,7 +314,7 @@ export class DesktopAgent {
       this.state = callback(this.state)
     }
     return {
-      transport: this.transport,
+      responses: createDacpResponseDispatcher(this.transport),
       instanceId,
       getState: () => this.getState(),
       setState,

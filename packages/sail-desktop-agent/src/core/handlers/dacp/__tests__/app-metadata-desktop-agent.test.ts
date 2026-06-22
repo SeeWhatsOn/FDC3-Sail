@@ -9,7 +9,11 @@ import { connectInstance, updateInstanceState } from "../../../state/mutators"
 import { createInitialState } from "../../../state/initial-state"
 import { AppInstanceState, type AgentState } from "../../../state/types"
 import { handleFindInstancesRequest, handleGetAppMetadataRequest } from "../app-handlers"
-import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
+import {
+  createDACPTestContext,
+  createDacpRequestMeta,
+  withResponseDispatcher,
+} from "./test-context"
 
 const TEST_PROVIDER = "test-provider"
 
@@ -71,8 +75,7 @@ describe("getAppMetadata desktopAgent field", () => {
         },
       },
       {
-        ...context,
-        transport,
+        ...withResponseDispatcher(context, transport),
         implementationMetadata: {
           ...context.implementationMetadata,
           provider: TEST_PROVIDER,
@@ -111,8 +114,7 @@ describe("getAppMetadata desktopAgent field", () => {
         },
       },
       {
-        ...context,
-        transport,
+        ...withResponseDispatcher(context, transport),
         implementationMetadata: {
           ...context.implementationMetadata,
           provider: TEST_PROVIDER,
@@ -157,7 +159,7 @@ describe("app directory vs runtime instance separation", () => {
           app: { appId: "chartApp" },
         },
       },
-      { ...context, transport }
+      withResponseDispatcher(context, transport)
     )
 
     const response = transport.getLastMessage() as {
@@ -191,8 +193,7 @@ describe("app directory vs runtime instance separation", () => {
         },
       },
       {
-        ...context,
-        transport,
+        ...withResponseDispatcher(context, transport),
         implementationMetadata: {
           ...context.implementationMetadata,
           provider: TEST_PROVIDER,
@@ -234,7 +235,7 @@ describe("app directory vs runtime instance separation", () => {
           app: { appId: "chartApp" },
         },
       },
-      { ...context, transport }
+      withResponseDispatcher(context, transport)
     )
 
     const findResponse = transport.getLastMessage() as {

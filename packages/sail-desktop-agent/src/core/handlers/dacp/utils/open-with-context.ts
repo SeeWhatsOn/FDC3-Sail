@@ -60,7 +60,7 @@ export function registerOpenWithContext(
       errorType: OpenError.AppTimeout,
       errorMessage: "Timed out waiting for context listener",
       instanceId: sourceInstanceId,
-      transport: context.transport,
+      responses: context.responses,
     })
   }, openContextListenerTimeoutMs)
 
@@ -243,7 +243,7 @@ function deliverOpenWithContext(
     },
   }
 
-  context.transport.send(broadcastEventWithRouting)
+  context.responses.sendOutbound(broadcastEventWithRouting)
 
   const response = createDACPSuccessResponse(message, "openResponse", {
     appIdentifier,
@@ -252,6 +252,6 @@ function deliverOpenWithContext(
   sendDACPResponse({
     response,
     instanceId: sourceInstanceId,
-    transport: context.transport,
+    responses: context.responses,
   })
 }

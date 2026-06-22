@@ -2,6 +2,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import type { Transport } from "../../../interfaces/transport"
 import { createDACPErrorResponse, type DACPRequestLike } from "../../../dacp/dacp-message-creators"
 import type { DACPResponseType } from "../../../dacp/dacp-messages"
+import type { DacpOutboundMessage, DacpResponseDispatcher } from "../../types"
 
 /**
  * Options for sending a DACP response
@@ -11,24 +12,15 @@ export interface SendDACPResponseOptions {
   response: BrowserTypes.AgentResponseMessage | BrowserTypes.WebConnectionProtocolMessage
   /** The target instance ID for routing */
   instanceId: string
-  /** The transport to send the message through */
-  transport: Transport
+  /** Response delivery for the connected app edge */
+  responses: DacpResponseDispatcher
 }
 
 /**
- * Adds routing metadata to a DACP response and sends it via transport.
- * This eliminates the repeated pattern of adding destination metadata.
+ * Adds routing metadata to a DACP response and sends it via the dispatcher.
  */
 export function sendDACPResponse(options: SendDACPResponseOptions): void {
-  const { response, instanceId, transport } = options
-  const responseWithRouting = {
-    ...response,
-    meta: {
-      ...response.meta,
-      destination: { instanceId },
-    },
-  }
-  transport.send(responseWithRouting)
+  options.responses.sendToInstance(options.instanceId, options.response)
 }
 
 /**
@@ -43,8 +35,8 @@ export interface SendDACPErrorResponseOptions {
   errorMessage: string
   /** The target instance ID for routing */
   instanceId: string
-  /** The transport to send the message through */
-  transport: Transport
+  /** Response delivery for the connected app edge */
+  responses: DacpResponseDispatcher
 }
 
 /**
@@ -55,17 +47,47 @@ function deriveResponseType(requestType: string): string {
   if (requestType.endsWith("Request")) {
     return requestType.replace("Request", "Response")
   }
-  // Fallback: if it doesn't end with "Request", assume it's already a response type
   return requestType
 }
 
 /**
  * Creates and sends a DACP error response with routing metadata.
- * Automatically derives the response type from the request message type.
  */
 export function sendDACPErrorResponse(options: SendDACPErrorResponseOptions): void {
-  const { message, errorType, errorMessage, instanceId, transport } = options
+  const { message, errorType, errorMessage, instanceId, responses } = options
   const responseType = deriveResponseType(message.type) as DACPResponseType
   const errorResponse = createDACPErrorResponse(message, errorType, responseType, errorMessage)
-  sendDACPResponse({ response: errorResponse, instanceId, transport })
+  sendDACPResponse({ response: errorResponse, instanceId, responses })
+}
+
+function withDestinationRouting(instanceId: string, message: DacpOutboundMessage): unknown {
+  return {
+    ...message,
+    meta: {
+      ...message.meta,
+      destination: { instanceId },
+    },
+  }
+}
+
+/**
+ * Browser-local DACP response delivery — routes to app instances without exposing
+ * generic remote Desktop Agent transport placement to handlers.
+ */
+export function createDacpResponseDispatcher(edgeTransport: Transport): DacpResponseDispatcher {
+  return {
+    edgeTransport,
+
+    sendToInstance(instanceId, message) {
+      edgeTransport.send(withDestinationRouting(instanceId, message))
+    },
+
+    sendOutbound(message) {
+      edgeTransport.send(message)
+    },
+
+    getInboundInstanceId() {
+      return edgeTransport.getInstanceId()
+    },
+  }
 }

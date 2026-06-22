@@ -47,7 +47,7 @@ export function handleBroadcastRequest(
   message: BrowserTypes.BroadcastRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, getState, setState, logger } = context
+  const { responses, getState, setState, logger } = context
   const instanceId = resolveDacpHandlerInstanceId(message, context)
   const handlerContext = { ...context, instanceId }
 
@@ -60,7 +60,7 @@ export function handleBroadcastRequest(
         errorType: ChannelError.MalformedContext,
         errorMessage: "Invalid context: context must be an object with a string type property",
         instanceId,
-        transport,
+        responses,
       })
       return
     }
@@ -76,7 +76,7 @@ export function handleBroadcastRequest(
     if (!channelId) {
       // No channel specified and app not joined - no-op per spec
       const response = createDACPSuccessResponse(message, "broadcastResponse")
-      sendDACPResponse({ response, instanceId, transport })
+      sendDACPResponse({ response, instanceId, responses })
       return
     }
 
@@ -90,7 +90,7 @@ export function handleBroadcastRequest(
     if (userChannel && instance.currentUserChannel !== channelId && !payloadChannelId) {
       // No-op for DesktopAgent.broadcast when not joined to a user channel.
       const response = createDACPSuccessResponse(message, "broadcastResponse")
-      sendDACPResponse({ response, instanceId, transport })
+      sendDACPResponse({ response, instanceId, responses })
       return
     }
 
@@ -122,7 +122,7 @@ export function handleBroadcastRequest(
 
     const response = createDACPSuccessResponse(message, "broadcastResponse")
 
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
 
     logger.debug("DACP: Broadcast request completed successfully", {
       requestUuid: message.meta.requestUuid,
@@ -140,7 +140,7 @@ export function handleBroadcastRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -153,7 +153,7 @@ export function handleAddContextListener(
   message: BrowserTypes.AddContextListenerRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, getState, setState, logger } = context
+  const { responses, getState, setState, logger } = context
   const instanceId = resolveDacpHandlerInstanceId(message, context)
 
   try {
@@ -199,7 +199,7 @@ export function handleAddContextListener(
           listenerUUID: listenerId,
         })
 
-        sendDACPResponse({ response, instanceId, transport })
+        sendDACPResponse({ response, instanceId, responses })
         return
       }
     }
@@ -231,7 +231,7 @@ export function handleAddContextListener(
       listenerUUID: listenerId,
     })
 
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
 
     logger.debug("DACP: Context listener added successfully", {
       listenerUUID: listenerId,
@@ -261,7 +261,7 @@ export function handleAddContextListener(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -274,7 +274,7 @@ export function handleContextListenerUnsubscribe(
   message: BrowserTypes.ContextListenerUnsubscribeRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, getState, setState, logger } = context
+  const { responses, getState, setState, logger } = context
   const instanceId = resolveDacpHandlerInstanceId(message, context)
 
   try {
@@ -325,7 +325,7 @@ export function handleContextListenerUnsubscribe(
 
     const response = createDACPSuccessResponse(message, "contextListenerUnsubscribeResponse")
 
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
 
     logger.debug("DACP: Context listener unsubscribed successfully", {
       listenerUUID,
@@ -344,7 +344,7 @@ export function handleContextListenerUnsubscribe(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -433,7 +433,7 @@ function notifyContextListeners(
         })
       }
 
-      handlerContext.transport.send(broadcastEventWithRouting)
+      handlerContext.responses.sendOutbound(broadcastEventWithRouting)
 
       const broadcastPayload = (broadcastEvent as BrowserTypes.BroadcastEvent).payload
       logger.debug("DACP: Broadcast event message structure", {
@@ -504,7 +504,7 @@ function deliverCurrentContextToListener(
     },
   }
 
-  handlerContext.transport.send(broadcastEventWithRouting)
+  handlerContext.responses.sendOutbound(broadcastEventWithRouting)
 }
 
 function notifyPrivateChannelContextListeners(
@@ -554,6 +554,6 @@ function notifyPrivateChannelContextListeners(
         contextType: context.type,
       })
 
-      handlerContext.transport.send(broadcastEventWithRouting)
+      handlerContext.responses.sendOutbound(broadcastEventWithRouting)
     })
 }

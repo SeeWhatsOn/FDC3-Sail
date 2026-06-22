@@ -26,7 +26,7 @@ export function handleGetInfoRequest(
   message: BrowserTypes.GetInfoRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, implementationMetadata, logger, getState } = context
+  const { responses, instanceId, implementationMetadata, logger, getState } = context
 
   try {
     const callerInstance = getInstance(getState(), instanceId)
@@ -64,7 +64,7 @@ export function handleGetInfoRequest(
       implementationMetadata: resolvedImplementationMetadata,
     })
 
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
   } catch (error) {
     logger.error("DACP: getInfoRequest failed", error)
     sendDACPErrorResponse({
@@ -72,7 +72,7 @@ export function handleGetInfoRequest(
       errorType: OpenError.ApiTimeout,
       errorMessage: error instanceof Error ? error.message : "Failed to get implementation info",
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -84,7 +84,7 @@ export async function handleOpenRequest(
   message: BrowserTypes.OpenRequest,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, appLauncher, logger, getState } = context
+  const { responses, instanceId, appLauncher, logger, getState } = context
 
   try {
     const payload = message.payload
@@ -104,7 +104,7 @@ export async function handleOpenRequest(
         errorType: OpenError.MalformedContext,
         errorMessage: "Invalid context: context must be an object with a string type property",
         instanceId,
-        transport,
+        responses,
       })
       return
     }
@@ -169,7 +169,7 @@ export async function handleOpenRequest(
       appIdentifier,
     })
 
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
   } catch (error) {
     logger.error("DACP: openRequest failed", error)
 
@@ -181,7 +181,7 @@ export async function handleOpenRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -193,7 +193,7 @@ export function handleFindInstancesRequest(
   message: BrowserTypes.FindInstancesRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, logger } = context
+  const { responses, instanceId, getState, logger } = context
 
   try {
     const { app: appIdentifier } = message.payload
@@ -206,7 +206,7 @@ export function handleFindInstancesRequest(
         errorType: ResolveError.NoAppsFound,
         errorMessage: `App not found in directory: ${appIdentifier.appId}`,
         instanceId,
-        transport,
+        responses,
       })
       return
     }
@@ -224,7 +224,7 @@ export function handleFindInstancesRequest(
       appIdentifiers,
     })
 
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
   } catch (error) {
     logger.error("DACP: findInstancesRequest failed", error)
     sendDACPErrorResponse({
@@ -232,7 +232,7 @@ export function handleFindInstancesRequest(
       errorType: OpenError.AppNotFound,
       errorMessage: error instanceof Error ? error.message : "Failed to find app instances",
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -272,7 +272,7 @@ export function handleGetAppMetadataRequest(
   message: BrowserTypes.GetAppMetadataRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, logger, implementationMetadata } = context
+  const { responses, instanceId, getState, logger, implementationMetadata } = context
   const provider = implementationMetadata.provider
 
   try {
@@ -308,7 +308,7 @@ export function handleGetAppMetadataRequest(
           appMetadata,
         })
 
-        sendDACPResponse({ response, instanceId, transport })
+        sendDACPResponse({ response, instanceId, responses })
         return
       }
 
@@ -325,7 +325,7 @@ export function handleGetAppMetadataRequest(
         appMetadata,
       })
 
-      sendDACPResponse({ response, instanceId, transport })
+      sendDACPResponse({ response, instanceId, responses })
       return
     }
 
@@ -338,7 +338,7 @@ export function handleGetAppMetadataRequest(
         appMetadata,
       })
 
-      sendDACPResponse({ response, instanceId, transport })
+      sendDACPResponse({ response, instanceId, responses })
       return
     }
 
@@ -351,7 +351,7 @@ export function handleGetAppMetadataRequest(
       errorType: ResolveError.TargetAppUnavailable,
       errorMessage: error instanceof Error ? error.message : "Failed to get app metadata",
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -378,7 +378,7 @@ export async function handleCloseRequest(
   message: CloseRequestMessage,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, appLauncher, logger, getState } = context
+  const { responses, appLauncher, logger, getState } = context
   const targetInstanceId = resolveDacpHandlerInstanceId(message, context)
 
   try {
@@ -403,7 +403,7 @@ export async function handleCloseRequest(
       errorType: CloseError.ErrorOnClose as BrowserTypes.ResponsePayloadError,
       errorMessage: error instanceof Error ? error.message : "Failed to close app instance",
       instanceId: targetInstanceId,
-      transport,
+      responses,
     })
   }
 }

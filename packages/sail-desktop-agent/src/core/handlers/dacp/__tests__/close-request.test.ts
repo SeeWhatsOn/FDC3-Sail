@@ -7,6 +7,7 @@ import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { CloseError } from "../../../errors/fdc3-errors"
 import { MockAppLauncher } from "../../../../../test/support/mock-app-launcher"
 import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
+import { withResponseDispatcher } from "./test-context"
 import { handleCloseRequest } from "../app-handlers"
 
 function createConnectedCloseContext(instanceId: string) {
@@ -23,7 +24,7 @@ function createConnectedCloseContext(instanceId: string) {
   const { context, getState } = createDACPTestContext({ instanceId, initialState: state })
 
   return {
-    context: { ...context, transport, appLauncher },
+    context: { ...withResponseDispatcher(context, transport), appLauncher },
     transport,
     appLauncher,
     getState,
@@ -117,7 +118,7 @@ describe("handleCloseRequest", () => {
         }),
         payload: {},
       },
-      { ...context, transport, appLauncher }
+      { ...withResponseDispatcher(context, transport), appLauncher }
     )
 
     const last = transport.getLastMessage() as {

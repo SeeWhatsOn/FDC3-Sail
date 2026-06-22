@@ -10,7 +10,7 @@ import {
   updateInstanceState,
 } from "../../../../state/mutators"
 import { AppInstanceState } from "../../../../state/types"
-import { createDACPTestContext } from "../../__tests__/test-context"
+import { createDACPTestContext, withResponseDispatcher } from "../../__tests__/test-context"
 import { registerPendingIntentPromise } from "../intent-raise-shared"
 import { attemptIntentDelivery, deliverPendingIntentsForListener } from "../intent-delivery-helpers"
 import { handleIntentResultRequest } from "../intent-result-handlers"
@@ -70,7 +70,7 @@ describe("deliverPendingIntentsForListener retargeting", () => {
       initialState: state,
       pendingIntentPromises,
     })
-    const handlerContext = { ...context, transport }
+    const handlerContext = withResponseDispatcher(context, transport)
 
     registerPendingIntentPromise(handlerContext, requestId, "raiseIntentRequest")
     expect(attemptIntentDelivery(handlerContext, requestId, false)).toBe(true)

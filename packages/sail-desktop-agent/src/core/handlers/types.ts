@@ -98,16 +98,46 @@ export interface PendingIntentPromiseEntry {
 }
 
 // ============================================================================
+// DACP RESPONSE DISPATCHER
+// ============================================================================
+
+export type DacpOutboundMessage =
+  | BrowserTypes.AgentResponseMessage
+  | BrowserTypes.AgentEventMessage
+  | BrowserTypes.WebConnectionProtocolMessage
+
+/**
+ * Delivers DACP responses and events to connected app instances.
+ * Handlers use this instead of a generic {@link Transport}.
+ */
+export interface DacpResponseDispatcher {
+  /**
+   * Inbound app-edge transport for WCP handshake registries only
+   * (pending source window, instance identity). Normal handlers should use
+   * {@link sendToInstance} / {@link sendOutbound}.
+   */
+  readonly edgeTransport: Transport
+
+  /** Send a response or event to a specific connected app instance. */
+  sendToInstance(instanceId: string, message: DacpOutboundMessage): void
+
+  /** Send on the app edge when routing metadata is already on the message. */
+  sendOutbound(message: unknown): void
+
+  /** Instance id from the inbound message path, when the edge provides one. */
+  getInboundInstanceId(): string | null
+}
+
+// ============================================================================
 // DACP HANDLER CONTEXT
 // ============================================================================
 
 /**
- * Context passed to all DACP message handlers
- * Contains state access functions and the message transport for sending responses
+ * Context passed to all DACP message handlers.
  */
 export interface DACPHandlerContext {
-  /** Message transport for sending responses to this specific app instance */
-  transport: Transport
+  /** DACP response and event delivery for connected app instances */
+  responses: DacpResponseDispatcher
 
   /** Unique identifier for this app instance */
   instanceId: string

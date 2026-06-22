@@ -6,7 +6,7 @@ import { DEFAULT_FDC3_USER_CHANNELS } from "../../../../default-user-channels"
 import { createInitialState } from "../../../../state/initial-state"
 import { addPendingIntent, connectInstance, updateInstanceState } from "../../../../state/mutators"
 import { AppInstanceState } from "../../../../state/types"
-import { createDACPTestContext } from "../../__tests__/test-context"
+import { createDACPTestContext, withResponseDispatcher } from "../../__tests__/test-context"
 import type { AppProvidedIntentContextMetadata } from "../intent-result-metadata"
 import { registerPendingIntentPromise } from "../intent-raise-shared"
 import { attemptIntentDelivery } from "../intent-delivery-helpers"
@@ -80,7 +80,7 @@ describe("IntentContextMetadataWithAppMetadata on raise", () => {
       instanceId: "a1",
       initialState: state,
     })
-    const handlerContext = { ...context, transport }
+    const handlerContext = withResponseDispatcher(context, transport)
 
     registerPendingIntentPromise(handlerContext, requestId, "raiseIntentRequest")
     attemptIntentDelivery(handlerContext, requestId, false)

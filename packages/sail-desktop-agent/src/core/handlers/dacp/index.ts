@@ -127,7 +127,7 @@ function sendErrorResponseIfRequestLike(
       errorType,
       errorMessage,
       instanceId: context.instanceId,
-      transport: context.transport,
+      responses: context.responses,
     })
   }
 }

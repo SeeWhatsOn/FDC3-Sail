@@ -47,7 +47,7 @@ type WCP5ValidateAppIdentityFailedResponse = WebConnectionProtocol5ValidateAppId
  */
 export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHandlerContext): void {
   const wcp4Message = message as Wcp4ValidateAppIdentity
-  const { transport, getState, logger } = context
+  const { responses, getState, logger } = context
 
   logger.info("[WCP4] Received app identity validation request", wcp4Message.payload)
 
@@ -69,7 +69,8 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     ).meta
     const messageOrigin = messageMeta?.messageOrigin
     const sourceWindow =
-      takePendingWcpSourceWindow(transport, context.instanceId) ?? messageMeta?.wcpSourceWindow
+      takePendingWcpSourceWindow(responses.edgeTransport, context.instanceId) ??
+      messageMeta?.wcpSourceWindow
 
     // 2. Validate origins match (per FDC3 spec requirement)
     if (identityOrigin !== actualOrigin) {
@@ -125,7 +126,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     // 4. Check if reconnecting to existing instance
     let instanceId: string
     let instanceUuid: string
-    const identityMap = getInstanceIdentityMap(transport)
+    const identityMap = getInstanceIdentityMap(responses.edgeTransport)
 
     const existingInstance = reconnectInstanceId
       ? getInstance(getState(), reconnectInstanceId)
@@ -262,7 +263,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
       },
     }
 
-    transport.send(responseWithRouting)
+    responses.sendOutbound(responseWithRouting)
 
     if (sourceInstanceId !== instanceId) {
       context.setState(state => linkHandshakeRoutingId(state, sourceInstanceId, instanceId))
@@ -330,7 +331,7 @@ function createAppInstance(
  * - Desktop Agent should clean up all resources for that instance
  *
  * This handler is called when WCPConnector forwards the goodbye message
- * through the transport, allowing cleanup to happen regardless of where
+ * through the responses, allowing cleanup to happen regardless of where
  * the Desktop Agent is running (same process, worker, or server).
  *
  * @param message - WCP6Goodbye message
@@ -381,13 +382,13 @@ function sendFailureResponse(
   context.logger.info("[WCP4] Validation failed, sending WCP5 failure response", error)
 
   // Try to get the instance ID from the transport (e.g. socket ID)
-  const instanceId = context.transport.getInstanceId()
+  const instanceId = context.responses.getInboundInstanceId()
 
   if (instanceId) {
     sendDACPResponse({
       response,
       instanceId,
-      transport: context.transport,
+      responses: context.responses,
     })
     return
   }
@@ -401,7 +402,7 @@ function sendFailureResponse(
     },
   }
 
-  context.transport.send(fallbackResponse)
+  context.responses.sendOutbound(fallbackResponse)
 }
 
 function canReuseInstanceIdentity(params: {

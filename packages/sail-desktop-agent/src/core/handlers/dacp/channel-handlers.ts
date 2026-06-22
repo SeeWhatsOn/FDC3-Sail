@@ -28,7 +28,7 @@ export function handleGetCurrentChannelRequest(
   message: BrowserTypes.GetCurrentChannelRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, logger } = context
+  const { responses, instanceId, getState, logger } = context
 
   try {
     const instance = getInstance(getState(), instanceId)
@@ -39,7 +39,7 @@ export function handleGetCurrentChannelRequest(
       const response = createDACPSuccessResponse(message, "getCurrentChannelResponse", {
         channel: null,
       })
-      sendDACPResponse({ response, instanceId, transport })
+      sendDACPResponse({ response, instanceId, responses })
       return
     }
 
@@ -61,14 +61,14 @@ export function handleGetCurrentChannelRequest(
       const response = createDACPSuccessResponse(message, "getCurrentChannelResponse", {
         channel: fallback,
       })
-      sendDACPResponse({ response, instanceId, transport })
+      sendDACPResponse({ response, instanceId, responses })
       return
     }
 
     const response = createDACPSuccessResponse(message, "getCurrentChannelResponse", {
       channel,
     })
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
   } catch (error) {
     const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get current channel"
@@ -78,7 +78,7 @@ export function handleGetCurrentChannelRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -90,7 +90,7 @@ export function handleJoinUserChannelRequest(
   message: BrowserTypes.JoinUserChannelRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState } = context
+  const { responses, instanceId, getState, setState } = context
 
   try {
     const { channelId } = message.payload
@@ -116,7 +116,7 @@ export function handleJoinUserChannelRequest(
         timestamp: new Date().toISOString(),
       },
     } as unknown as BrowserTypes.AgentResponseMessage
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
 
     if (!wasAlreadyOnChannel) {
       deliverCurrentContextToInstanceListeners(instanceId, channelId, context)
@@ -131,7 +131,7 @@ export function handleJoinUserChannelRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -143,13 +143,13 @@ export function handleLeaveCurrentChannelRequest(
   message: BrowserTypes.LeaveCurrentChannelRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, setState } = context
+  const { responses, instanceId, setState } = context
 
   try {
     setState(state => joinUserChannel(state, instanceId, null))
 
     const response = createDACPSuccessResponse(message, "leaveCurrentChannelResponse")
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
 
     notifyChannelChanged(instanceId, null, context)
   } catch (error) {
@@ -161,7 +161,7 @@ export function handleLeaveCurrentChannelRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -173,7 +173,7 @@ export function handleGetUserChannelsRequest(
   message: BrowserTypes.GetUserChannelsRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState } = context
+  const { responses, instanceId, getState } = context
 
   try {
     const userChannels = getAllUserChannels(getState())
@@ -181,7 +181,7 @@ export function handleGetUserChannelsRequest(
     const response = createDACPSuccessResponse(message, "getUserChannelsResponse", {
       userChannels,
     })
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
   } catch (error) {
     const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get user channels"
@@ -191,7 +191,7 @@ export function handleGetUserChannelsRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -203,7 +203,7 @@ export function handleGetCurrentContextRequest(
   message: BrowserTypes.GetCurrentContextRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, logger } = context
+  const { responses, instanceId, getState, logger } = context
 
   try {
     const payload = message.payload
@@ -227,7 +227,7 @@ export function handleGetCurrentContextRequest(
     const response = createDACPSuccessResponse(message, "getCurrentContextResponse", {
       context: storedContext,
     })
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
   } catch (error) {
     const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to get current context"
@@ -237,7 +237,7 @@ export function handleGetCurrentContextRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -251,7 +251,7 @@ export function handleGetOrCreateChannelRequest(
   message: BrowserTypes.GetOrCreateChannelRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const { channelId } = message.payload
@@ -277,7 +277,7 @@ export function handleGetOrCreateChannelRequest(
       const response = createDACPSuccessResponse(message, "getOrCreateChannelResponse", {
         channel: appChannel,
       })
-      sendDACPResponse({ response, instanceId, transport })
+      sendDACPResponse({ response, instanceId, responses })
       logger.debug("DACP: getOrCreateChannel", { channelId, existed: true })
       return
     }
@@ -289,7 +289,7 @@ export function handleGetOrCreateChannelRequest(
     const response = createDACPSuccessResponse(message, "getOrCreateChannelResponse", {
       channel: newAppChannel,
     })
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
     logger.debug("DACP: getOrCreateChannel", { channelId, existed: false })
   } catch (error) {
     const errorType =
@@ -301,7 +301,7 @@ export function handleGetOrCreateChannelRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }
@@ -353,7 +353,7 @@ function deliverCurrentContextToInstanceListeners(
       },
     }
 
-    context.transport.send(broadcastEventWithRouting)
+    context.responses.sendOutbound(broadcastEventWithRouting)
   })
 }
 
@@ -362,7 +362,7 @@ function notifyChannelChanged(
   channelId: string | null,
   context: DACPHandlerContext
 ): void {
-  const { transport, logger, getState } = context
+  const { responses, logger, getState } = context
   const instance = getInstance(getState(), instanceId)
   if (!instance) {
     logger.warn("No instance found for channel change notification", { instanceId })
@@ -400,13 +400,13 @@ function notifyChannelChanged(
       },
     }
 
-    transport.send(channelChangedEventWithRouting)
+    responses.sendOutbound(channelChangedEventWithRouting)
   })
 
-  // When no app registered channelChanged listeners, still emit on the transport so
+  // When no app registered channelChanged listeners, still emit on the edge so
   // WCP connector can raise channelChanged for host chrome (same path as host-initiated joins).
   if (subscriberInstanceIds.size === 0) {
-    transport.send({
+    responses.sendOutbound({
       ...channelChangedEvent,
       meta: {
         ...channelChangedEvent.meta,

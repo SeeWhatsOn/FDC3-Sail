@@ -18,6 +18,7 @@ import { AppInstanceState } from "../../../state/types"
 import { createInitialState } from "../../../state/initial-state"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { createDACPTestContext } from "./test-context"
+import { withResponseDispatcher } from "./test-context"
 
 const TEST_APP = {
   appId: "test-app",
@@ -190,7 +191,7 @@ describe("instance identity registry lifecycle", () => {
       instanceId: "temp-prune-attempt",
       initialState: state,
     })
-    const contextWithTransport = { ...context, transport }
+    const contextWithTransport = withResponseDispatcher(context, transport)
 
     getInstanceIdentityMap(transport).set(canonicalInstanceId, {
       appId: TEST_APP.appId,

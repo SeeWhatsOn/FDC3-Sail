@@ -3,15 +3,17 @@ title: "Simplify DACP handler response plumbing"
 slug: simplify-dacp-handler-response-plumbing
 kind: task
 type: chore
-status: draft
-loop_count: 0
+status: staged
+loop_count: 1
 loop_limit: 3
-last_agent: ""
+last_agent: cursor
 file_manifest:
   - packages/sail-desktop-agent/src/core/handlers/types.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp/utils/dacp-response-utils.ts
   - packages/sail-desktop-agent/src/core/handlers/dacp
   - packages/sail-desktop-agent/src/core/desktop-agent.ts
+  - packages/sail-desktop-agent/src/core/index.ts
+  - packages/sail-desktop-agent/test/support/dacp-handler-context.ts
 depends_on:
   - spike-browser-first-transport-simplification
   - preserve-wcp-messageport-connectivity
@@ -68,21 +70,20 @@ Start with the smallest vertical slice approved by BFDA-01, such as WCP connect 
 
 ## Blocked decisions
 
-Depends on `spike-browser-first-transport-simplification` for the replacement response shape.
+None — handlers use `DacpResponseDispatcher`; WCP registries keep `responses.edgeTransport`.
 
 ## Loop history
 
-Not started.
+- Loop 1: Replaced `DACPHandlerContext.transport` with `responses: DacpResponseDispatcher` (`sendToInstance`, `sendOutbound`, `getInboundInstanceId`, `edgeTransport` for WCP identity/pending-window keys). Updated all DACP handlers, router, cleanup, DesktopAgent context builder, Cucumber `dacp-handler-context`, and Vitest harness (`withResponseDispatcher`). Vitest: 122 passed across DACP handler + WCP integration suites.
 
 ## Staged for review
 
-Not staged.
-
-## Escalation notes
-
-None.
+- `DacpResponseDispatcher` on handler context replaces generic `Transport`.
+- `createDacpResponseDispatcher(edgeTransport)` factory in `dacp-response-utils.ts`.
+- Handler events with pre-built routing use `responses.sendOutbound`.
+- WCP4/WCP identity paths use `responses.edgeTransport` only where WeakMap keys require it.
 
 ## Learnings extracted
 
-None yet.
+- `edgeTransport` is intentionally narrow — handlers should not call it for normal DACP responses.
 

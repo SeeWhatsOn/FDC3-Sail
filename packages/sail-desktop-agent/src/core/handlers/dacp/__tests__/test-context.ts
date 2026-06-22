@@ -5,7 +5,10 @@ import { consoleLogger } from "../../../interfaces/logger"
 import type { DACPHandlerContext, PendingIntentPromiseEntry } from "../../types"
 import { createInitialState } from "../../../state/initial-state"
 import type { AgentState, StateSetter } from "../../../state/types"
+import type { Transport } from "../../../interfaces/transport"
 import { InMemoryTransport } from "../../../../transports/in-memory-transport"
+import { createDacpResponseDispatcher } from "../utils/dacp-response-utils"
+export { createDacpResponseDispatcher } from "../utils/dacp-response-utils"
 
 /** Shared agent state for contexts created with the same initialState reference (multi-connection tests). */
 const sharedStateByInitialSnapshot = new WeakMap<AgentState, AgentState>()
@@ -36,8 +39,9 @@ export function createDACPTestContext(options: {
     }
   }
 
+  const edgeTransport = new InMemoryTransport()
   const context: DACPHandlerContext = {
-    transport: new InMemoryTransport(),
+    responses: createDacpResponseDispatcher(edgeTransport),
     instanceId: options.instanceId,
     getState: readState,
     setState,
@@ -56,6 +60,14 @@ export function createDACPTestContext(options: {
   }
 
   return { context, getState: readState }
+}
+
+/** Wire a mock or edge transport into handler context for isolated DACP tests. */
+export function withResponseDispatcher(
+  context: DACPHandlerContext,
+  transport: Transport
+): DACPHandlerContext {
+  return { ...context, responses: createDacpResponseDispatcher(transport) }
 }
 
 export function createDacpRequestMeta(

@@ -38,7 +38,7 @@ export function attemptIntentDelivery(
   requestId: string,
   requireListener: boolean
 ): boolean {
-  const { getState, transport, logger } = context
+  const { getState, responses, logger } = context
   const pendingIntent = getPendingIntent(getState(), requestId)
   if (!pendingIntent) {
     return true
@@ -97,7 +97,7 @@ export function attemptIntentDelivery(
     metadata: mergeIntentEventContextMetadata(intentEventPayload.metadata, appContextMetadata),
   }
 
-  transport.send({
+  responses.sendOutbound({
     ...intentEvent,
     payload: payloadWithMergedMetadata,
     meta: {
@@ -121,7 +121,7 @@ export function attemptIntentDelivery(
     }
   )
 
-  sendDACPResponse({ response, instanceId: pendingIntent.sourceInstanceId, transport })
+  sendDACPResponse({ response, instanceId: pendingIntent.sourceInstanceId, responses })
 
   if (deliveryEntry?.deliveryTimeoutHandle) {
     clearTimeout(deliveryEntry.deliveryTimeoutHandle)
@@ -165,7 +165,7 @@ export function queueIntentDelivery(
       sendDACPResponse({
         response,
         instanceId: pendingIntent.sourceInstanceId,
-        transport: context.transport,
+        responses: context.responses,
       })
       context.setState(state => resolvePendingIntent(state, requestId))
     }

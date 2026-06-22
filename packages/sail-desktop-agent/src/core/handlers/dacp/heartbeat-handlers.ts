@@ -20,7 +20,7 @@ export { stopHeartbeat } from "./heartbeat-runtime"
  * Called when an instance connects
  */
 export function startHeartbeat(instanceId: string, context: DACPHandlerContext): void {
-  const { transport, getState, setState, logger } = context
+  const { responses, getState, setState, logger } = context
   const heartbeatIntervalMs = context.heartbeatIntervalMs
   const heartbeatTimeoutMs = context.heartbeatTimeoutMs
 
@@ -48,7 +48,7 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
       },
     }
 
-    transport.send(heartbeatEventWithRouting)
+    responses.sendOutbound(heartbeatEventWithRouting)
 
     // Update heartbeat sent timestamp
     setState(state => updateHeartbeatSent(state, instanceId))

@@ -34,7 +34,7 @@ export async function handleRaiseIntentRequest(
   message: BrowserTypes.RaiseIntentRequest,
   context: DACPHandlerContext
 ): Promise<void> {
-  const { transport, instanceId, getState, logger, logPayloadDetail } = context
+  const { responses, instanceId, getState, logger, logPayloadDetail } = context
   const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
 
   try {
@@ -46,7 +46,7 @@ export async function handleRaiseIntentRequest(
         errorType: ResolveError.MalformedContext,
         errorMessage: "Invalid context: context must be an object with a string type property",
         instanceId,
-        transport,
+        responses,
       })
       return
     }
@@ -184,7 +184,7 @@ export async function handleRaiseIntentRequest(
         const response = createDACPSuccessResponse(message, "raiseIntentResponse", {
           appIntent: appIntentForWireResponse(appIntent),
         })
-        sendDACPResponse({ response, instanceId, transport })
+        sendDACPResponse({ response, instanceId, responses })
         return
       }
     } else if (handlers.runningListeners.length > 0) {
@@ -250,7 +250,7 @@ export async function handleRaiseIntentRequest(
       errorType,
       errorMessage,
       instanceId,
-      transport,
+      responses,
     })
   }
 }

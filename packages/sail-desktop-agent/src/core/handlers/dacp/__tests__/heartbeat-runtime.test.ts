@@ -12,6 +12,7 @@ import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { createInitialState } from "../../../state/initial-state"
 import type { AgentState } from "../../../state/types"
 import { createDACPTestContext } from "./test-context"
+import { withResponseDispatcher } from "./test-context"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 
 afterEach(() => {
@@ -88,7 +89,7 @@ describe("startHeartbeat disconnect alignment", () => {
       instanceId: tempInstanceId,
       initialState: state,
     })
-    const heartbeatContext = { ...context, transport: new MockTransport() }
+    const heartbeatContext = withResponseDispatcher(context, new MockTransport())
 
     startHeartbeat(canonicalInstanceId, heartbeatContext)
 

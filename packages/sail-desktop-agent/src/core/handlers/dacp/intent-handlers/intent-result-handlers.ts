@@ -36,7 +36,7 @@ export function handleIntentResultRequest(
   message: BrowserTypes.IntentResultRequest,
   context: DACPHandlerContext
 ): void {
-  const { transport, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const payload = message.payload
@@ -96,7 +96,7 @@ export function handleIntentResultRequest(
     setState(state => resolvePendingIntent(state, originalRequestId))
 
     const response = createDACPSuccessResponse(message, "intentResultResponse")
-    sendDACPResponse({ response, instanceId, transport })
+    sendDACPResponse({ response, instanceId, responses })
 
     const sourceInstance = getInstance(getState(), sourceInstanceId)
     if (!sourceInstance) {
@@ -121,7 +121,7 @@ export function handleIntentResultRequest(
       sendDACPResponse({
         response: resultErrorResponse,
         instanceId: sourceInstanceId,
-        transport,
+        responses,
       })
     } else if (isHandlerRejection(intentResult)) {
       const resultErrorResponse = createDACPErrorResponse(
@@ -132,7 +132,7 @@ export function handleIntentResultRequest(
       sendDACPResponse({
         response: resultErrorResponse,
         instanceId: sourceInstanceId,
-        transport,
+        responses,
       })
     } else {
       let metadata = resultMetadata
@@ -168,7 +168,7 @@ export function handleIntentResultRequest(
       sendDACPResponse({
         response: resultResponse,
         instanceId: sourceInstanceId,
-        transport,
+        responses,
       })
     }
 
@@ -183,7 +183,7 @@ export function handleIntentResultRequest(
       errorType: ResolveError.IntentDeliveryFailed,
       errorMessage: error instanceof Error ? error.message : "Failed to process intent result",
       instanceId,
-      transport,
+      responses,
     })
   }
 }

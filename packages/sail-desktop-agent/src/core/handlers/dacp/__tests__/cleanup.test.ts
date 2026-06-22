@@ -26,6 +26,7 @@ import { createInitialState } from "../../../state/initial-state"
 import type { PendingIntentPromiseEntry } from "../../types"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
 import { createDACPTestContext } from "./test-context"
+import { withResponseDispatcher } from "./test-context"
 import { DesktopAgent } from "../../../desktop-agent"
 import { MockTransport } from "../../../../__tests__/utils/mock-transport"
 import { MockTransport as CucumberMockTransport } from "../../../../../test/support/mock-transport"
@@ -96,7 +97,7 @@ function connectTestInstance(instanceId: string): AgentState {
 function createHeartbeatTestContext(options: Parameters<typeof createDACPTestContext>[0]) {
   const { context, getState } = createDACPTestContext(options)
   return {
-    context: { ...context, transport: new MockTransport() },
+    context: withResponseDispatcher(context, new MockTransport()),
     getState,
   }
 }
@@ -262,7 +263,7 @@ describe("cleanupDACPHandlers", () => {
       instanceId: "a1",
       initialState: state,
     })
-    const contextWithTransport = { ...context, transport }
+    const contextWithTransport = withResponseDispatcher(context, transport)
 
     const launchContext: Context = {
       type: "fdc3.instrument",

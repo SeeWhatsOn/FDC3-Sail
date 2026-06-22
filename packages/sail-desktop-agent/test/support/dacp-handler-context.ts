@@ -3,6 +3,7 @@
  * For BDD steps that must call handlers directly (e.g. legacy "is closed" teardown).
  */
 
+import { createDacpResponseDispatcher } from "../../src/core/handlers/dacp/utils/dacp-response-utils"
 import type { DACPHandlerContext } from "../../src/core/handlers/types"
 import { consoleLogger } from "../../src/core/interfaces/logger"
 import type { CustomWorld } from "../world/index.ts"
@@ -15,7 +16,7 @@ export function createHandlerContextForWorld(
   const agent = world.desktopAgent
 
   return {
-    transport: world.mockTransport,
+    responses: createDacpResponseDispatcher(world.mockTransport),
     instanceId,
     getState: () => world.getState(),
     setState: fn => applyDesktopAgentStateUpdate(agent, fn),

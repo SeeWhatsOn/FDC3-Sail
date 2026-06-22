@@ -68,6 +68,8 @@ export * from "./dacp"
 // Handler types
 export type {
   DACPHandlerContext,
+  DacpResponseDispatcher,
+  DacpOutboundMessage,
   DACPMessage,
   MessageValidator,
   ValidationResult,

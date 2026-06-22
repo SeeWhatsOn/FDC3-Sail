@@ -12,7 +12,11 @@ import { connectInstance, updateInstanceState } from "../../../state/mutators"
 import { createInitialState } from "../../../state/initial-state"
 import { AppInstanceState } from "../../../state/types"
 import { handleGetAppMetadataRequest } from "../app-handlers"
-import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
+import {
+  createDACPTestContext,
+  createDacpRequestMeta,
+  withResponseDispatcher,
+} from "./test-context"
 
 const TEST_PROVIDER = "test-provider"
 
@@ -60,8 +64,7 @@ describe("DACP handlers without context.appDirectory", () => {
         },
       },
       {
-        ...context,
-        transport,
+        ...withResponseDispatcher(context, transport),
         implementationMetadata: {
           ...context.implementationMetadata,
           provider: TEST_PROVIDER,

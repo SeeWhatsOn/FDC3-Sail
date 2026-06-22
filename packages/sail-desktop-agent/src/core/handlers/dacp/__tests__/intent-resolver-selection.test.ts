@@ -13,6 +13,7 @@ import type {
 } from "../intent-resolution-callback"
 import type { DirectoryApp } from "../../../app-directory/types"
 import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
+import { withResponseDispatcher } from "./test-context"
 import { handleRaiseIntentRequest } from "../intent-handlers/intent-raise-intent"
 import { handleRaiseIntentForContextRequest } from "../intent-handlers/intent-raise-intent-for-context"
 
@@ -74,7 +75,7 @@ describe("intent resolver selection delivery", () => {
 
     const transport = new MockTransport()
     const { context } = createDACPTestContext({ instanceId: "source-1", initialState: state })
-    context.transport = transport
+    Object.assign(context, withResponseDispatcher(context, transport))
     seedCatalogApp(context, {
       appId: "chart-app",
       title: "Chart App",
@@ -175,7 +176,7 @@ describe("intent resolver selection delivery", () => {
 
     const transport = new MockTransport()
     const { context } = createDACPTestContext({ instanceId: "source-1", initialState: state })
-    context.transport = transport
+    Object.assign(context, withResponseDispatcher(context, transport))
     seedCatalogApp(context, {
       appId: "chart-app",
       title: "Chart App",
@@ -218,7 +219,7 @@ describe("intent resolver selection delivery", () => {
 
     const transport = new MockTransport()
     const { context } = createDACPTestContext({ instanceId: "source-1", initialState: state })
-    context.transport = transport
+    Object.assign(context, withResponseDispatcher(context, transport))
     seedCatalogApp(context, {
       appId: "chart-app",
       title: "Chart App",
@@ -284,7 +285,7 @@ describe("intent resolver selection delivery", () => {
 
     const transport = new MockTransport()
     const { context } = createDACPTestContext({ instanceId: "source-1", initialState: state })
-    context.transport = transport
+    Object.assign(context, withResponseDispatcher(context, transport))
     seedCatalogApp(context, {
       appId: "portfolio-app",
       title: "Portfolio App",

@@ -6,7 +6,11 @@ import { connectInstance, updateInstanceState } from "../../../state/mutators"
 import { AppInstanceState } from "../../../state/types"
 import { createInitialState } from "../../../state/initial-state"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
-import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
+import {
+  createDACPTestContext,
+  createDacpRequestMeta,
+  withResponseDispatcher,
+} from "./test-context"
 import { handleBroadcastRequest } from "../context-handlers"
 import { handleContextListenerUnsubscribe } from "../context-handlers"
 import { handleJoinUserChannelRequest } from "../channel-handlers"
@@ -30,7 +34,7 @@ function createConnectedHandlerContext(instanceId: string) {
 
   const transport = new MockTransport()
   const { context } = createDACPTestContext({ instanceId, initialState: state })
-  return { context: { ...context, transport }, transport }
+  return { context: withResponseDispatcher(context, transport), transport }
 }
 
 function getLastErrorPayload(transport: MockTransport): ErrorResponseMessage["payload"] {
@@ -126,7 +130,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
             meta: createDacpRequestMeta("create-private-no-instance"),
             payload: {},
           },
-          { ...context, transport }
+          withResponseDispatcher(context, transport)
         )
         expect(getLastErrorPayload(transport).error).toBe(ChannelError.CreationFailed)
       },
@@ -159,7 +163,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
             meta: createDacpRequestMeta("intent-listener-missing-instance"),
             payload: { intent: "ViewChart" },
           },
-          { ...context, transport }
+          withResponseDispatcher(context, transport)
         )
         expect(getLastErrorPayload(transport).error).toBe(ResolveError.TargetInstanceUnavailable)
       },
