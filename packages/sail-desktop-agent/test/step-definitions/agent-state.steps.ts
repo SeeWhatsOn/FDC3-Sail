@@ -8,9 +8,7 @@ Then("the agent has no pending intents", function (this: CustomWorld) {
   const pending = this.getState().intents.pending
   const keys = Object.keys(pending)
   if (keys.length > 0) {
-    throw new Error(
-      `Expected no pending intents, but found: ${JSON.stringify(pending, null, 2)}`
-    )
+    throw new Error(`Expected no pending intents, but found: ${JSON.stringify(pending, null, 2)}`)
   }
 })
 

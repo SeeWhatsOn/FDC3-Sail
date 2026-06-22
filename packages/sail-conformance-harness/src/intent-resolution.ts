@@ -19,12 +19,9 @@ export function selectIntentHandler(
   if (target?.appId) {
     if (target.instanceId) {
       const match = handlers.find(
-        handler =>
-          handler.appId === target.appId && handler.instanceId === target.instanceId
+        handler => handler.appId === target.appId && handler.instanceId === target.instanceId
       )
-      return match
-        ? { appId: match.appId, instanceId: match.instanceId }
-        : null
+      return match ? { appId: match.appId, instanceId: match.instanceId } : null
     }
 
     const match = handlers.find(handler => handler.appId === target.appId)

@@ -146,15 +146,15 @@ describe("SailPlatform channel APIs", () => {
       expect(platform.getAppUserChannel(INSTANCE_ID)).toBeNull()
     })
 
-    it("emits channelChanged on connector when changeAppChannel joins a channel", async () => {
+    it("delegates changeAppChannel to the grouped channels controller", async () => {
       platform.start()
       seedConnectedInstance(platform.agent)
-      const onChannelChanged = vi.fn()
-      platform.connector.on("channelChanged", onChannelChanged)
+      const changeSpy = vi.spyOn(platform.channels, "changeAppChannel")
 
       await platform.changeAppChannel(INSTANCE_ID, CHANNEL_ID)
 
-      expect(onChannelChanged).toHaveBeenCalledWith(INSTANCE_ID, CHANNEL_ID)
+      expect(changeSpy).toHaveBeenCalledWith(INSTANCE_ID, CHANNEL_ID)
+      changeSpy.mockRestore()
     })
   })
 })

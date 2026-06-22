@@ -204,8 +204,43 @@ export function createBrowserHostControllers(
       return resolveUserChannelById(desktopAgent, channelId)
     },
     changeAppChannel: (instanceId, channelId) => {
-      desktopAgent.changeAppUserChannel(instanceId, channelId)
-      return Promise.resolve()
+      if (channelId !== null) {
+        const userChannels = desktopAgent.getUserChannels()
+        if (!userChannels.find(channel => channel.id === channelId)) {
+          return Promise.reject(new Error(`Channel "${channelId}" does not exist`))
+        }
+      }
+
+      return new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          cleanup()
+          reject(new Error(`Channel change timeout for instance ${instanceId}`))
+        }, 10000)
+
+        const handleChannelChanged = (
+          changedInstanceId: string,
+          changedChannelId: string | null
+        ) => {
+          if (changedInstanceId === instanceId && changedChannelId === channelId) {
+            cleanup()
+            resolve()
+          }
+        }
+
+        const cleanup = () => {
+          clearTimeout(timeout)
+          wcpConnector.off("channelChanged", handleChannelChanged)
+        }
+
+        wcpConnector.on("channelChanged", handleChannelChanged)
+
+        try {
+          desktopAgent.changeAppUserChannel(instanceId, channelId)
+        } catch (error) {
+          cleanup()
+          reject(error instanceof Error ? error : new Error(String(error)))
+        }
+      })
     },
     onAppChannelChange: listener => {
       const handler = (instanceId: string, channelId: string | null) => {

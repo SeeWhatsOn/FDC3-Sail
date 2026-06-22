@@ -1,5 +1,4 @@
 import { LogoSail } from "@finos/sail-ui"
-import React from "react"
 
 const GITHUB_REPO = "https://github.com/finos/fdc3-sail"
 
@@ -40,7 +39,9 @@ export function SailV3JoinBanner() {
             height={72}
             className="bg-background rounded-sm shadow-sm"
           />
-          <span className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">GitHub</span>
+          <span className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            GitHub
+          </span>
         </a>
         <div className="flex flex-col items-center gap-1 rounded-md p-1">
           <img
@@ -50,7 +51,9 @@ export function SailV3JoinBanner() {
             height={72}
             className="bg-background rounded-sm shadow-sm"
           />
-          <span className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">Meetings</span>
+          <span className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            Meetings
+          </span>
         </div>
       </div>
     </aside>

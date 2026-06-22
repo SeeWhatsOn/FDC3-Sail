@@ -15,7 +15,14 @@ import {
   type SailImplementationMetadata,
   type IntentResolver,
 } from "@finos/sail-desktop-agent"
-import { getBrowserDesktopAgentSession, type WCPConnector } from "@finos/sail-desktop-agent/presets"
+import {
+  getBrowserDesktopAgentSession,
+  type BrowserDesktopAgent,
+  type BrowserAppsController,
+  type BrowserChannelsController,
+  type BrowserIntentResolverController,
+  type WCPConnector,
+} from "@finos/sail-desktop-agent/presets"
 import type { AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
 import type { BrowserTypes } from "@finos/fdc3"
 
@@ -193,7 +200,7 @@ export class SailPlatform {
   private started = false
 
   // Browser Desktop Agent session (created on start via preset)
-  private _desktopAgent: DesktopAgent | null = null
+  private _desktopAgent: BrowserDesktopAgent | null = null
   private _wcpConnector: WCPConnector | null = null
   private _stopBrowserSession: (() => void) | null = null
 
@@ -287,7 +294,33 @@ export class SailPlatform {
   }
 
   /**
+   * Grouped host channel chrome over the browser Desktop Agent preset.
+   * Prefer this over raw {@link connector} `channelChanged` for host UI.
+   */
+  get channels(): BrowserChannelsController {
+    this.ensureStarted()
+    return this._desktopAgent!.channels
+  }
+
+  /**
+   * Grouped host intent resolver chrome over the browser Desktop Agent preset.
+   */
+  get intentResolver(): BrowserIntentResolverController {
+    this.ensureStarted()
+    return this._desktopAgent!.intentResolver
+  }
+
+  /**
+   * Grouped app catalog and instance lifecycle chrome over the browser preset.
+   */
+  get apps(): BrowserAppsController {
+    this.ensureStarted()
+    return this._desktopAgent!.apps
+  }
+
+  /**
    * Get the WCP Connector for managing app connections.
+   * Advanced integrators only — host UI should use {@link channels}, {@link intentResolver}, and {@link apps}.
    * @throws Error if platform not started
    */
   get connector(): WCPConnector {
@@ -317,42 +350,7 @@ export class SailPlatform {
    */
   async changeAppChannel(instanceId: string, channelId: string | null): Promise<void> {
     this.ensureStarted()
-
-    // Validate channel exists before mutating agent state
-    if (channelId !== null) {
-      const channels = this.getUserChannels()
-      if (!channels.find(c => c.id === channelId)) {
-        throw new Error(`Channel "${channelId}" does not exist`)
-      }
-    }
-
-    return new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        cleanup()
-        reject(new Error(`Channel change timeout for instance ${instanceId}`))
-      }, 10000)
-
-      const handleChannelChanged = (changedInstanceId: string, newChannelId: string | null) => {
-        if (changedInstanceId === instanceId && newChannelId === channelId) {
-          cleanup()
-          resolve()
-        }
-      }
-
-      const cleanup = () => {
-        clearTimeout(timeout)
-        this._wcpConnector?.off("channelChanged", handleChannelChanged)
-      }
-
-      this._wcpConnector!.on("channelChanged", handleChannelChanged)
-
-      try {
-        this._desktopAgent!.changeAppUserChannel(instanceId, channelId)
-      } catch (error) {
-        cleanup()
-        reject(error instanceof Error ? error : new Error(String(error)))
-      }
-    })
+    return this.channels.changeAppChannel(instanceId, channelId)
   }
 
   /**
@@ -360,59 +358,59 @@ export class SailPlatform {
    */
   getUserChannels(): BrowserTypes.Channel[] {
     this.ensureStarted()
-    return this._desktopAgent!.getUserChannels()
+    return this.channels.getUserChannels()
   }
 
   /**
    * Read an app's current user channel from Desktop Agent state.
    *
    * Does not send DACP on behalf of the app — use for host chrome that needs
-   * an authoritative read without waiting for `onChannelChanged`.
+   * an authoritative read without waiting for channel push events.
    *
    * @param instanceId - Connected app instance id
    * @returns Channel id when joined; `null` when not on a channel or instance unknown
    */
   getAppUserChannel(instanceId: string): string | null {
     this.ensureStarted()
-    return this._desktopAgent!.getAppUserChannelId(instanceId)
+    return this.channels.getAppChannelId(instanceId)
   }
 
   // ===== Private Methods =====
 
   private ensureStarted(): void {
-    if (!this.started || !this._desktopAgent || !this._wcpConnector) {
+    if (!this.started || !this._desktopAgent) {
       throw new Error("SailPlatform not started. Call start() first.")
     }
   }
 
   /**
-   * Wire up WCP Connector events to config callbacks.
+   * Wire grouped host controllers to config callbacks.
    *
    * SailPlatform is stateless - it forwards events to consumers who manage their own state.
-   * This follows the "stateless coordinator" pattern where:
-   * - Desktop Agent is the source of truth
-   * - SailPlatform forwards events (no internal state caching)
-   * - Consumers (e.g., sail-web Zustand stores) own UI state
    */
   private wireEvents(): void {
-    if (!this._wcpConnector) return
+    if (!this._desktopAgent) return
 
-    const connector = this._wcpConnector
+    const { apps, channels } = this._desktopAgent
 
     if (this.config.onAppConnected) {
-      connector.on("appConnected", this.config.onAppConnected)
+      apps.onConnect(this.config.onAppConnected)
     }
 
     if (this.config.onAppDisconnected) {
-      connector.on("appDisconnected", this.config.onAppDisconnected)
+      apps.onDisconnect(this.config.onAppDisconnected)
     }
 
     if (this.config.onChannelChanged) {
-      connector.on("channelChanged", this.config.onChannelChanged)
+      channels.onAppChannelChange(event => {
+        this.config.onChannelChanged!(event.instanceId, event.channelId)
+      })
     }
 
     if (this.config.onHandshakeFailed) {
-      connector.on("handshakeFailed", this.config.onHandshakeFailed)
+      apps.onHandshakeFailure(event => {
+        this.config.onHandshakeFailed!(event.error, event.connectionAttemptUuid)
+      })
     }
   }
 

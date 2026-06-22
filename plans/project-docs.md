@@ -58,7 +58,7 @@ Slugs only — implementation is on `v3-pre`; details were in deleted PRDs/work 
 
 **Toolbox v4 wave:** see `plans/prd-toolbox-conformance-v5-follow-up.md` **Work item retention**
 
-**Browser-first DA simplification (BFDA):** `preserve-wcp-messageport-connectivity` — WCP MessagePort routing guard integration tests (2026-06-21); see `plans/prd-browser-first-desktop-agent-simplification.md` **Work item retention**
+**Browser-first DA simplification (BFDA):** see `plans/prd-browser-first-desktop-agent-simplification.md` **Work item retention** — delivered 2026-06-21: transport spike (`BrowserDaEdgeLink` + `DacpResponseDispatcher` decision), WCP routing guard tests, browser preset edge link + `createWCPClient` removal, handler `DacpResponseDispatcher`, SailPlatform/sail-web grouped host controllers. **Open:** docs (BFDA-06), observability hooks (BFDA-07).
 
 **Toolbox v5 partial (TV5-01 hygiene slice):** `harness-instance-lifecycle` — `prepareLaunchedHostInstance` + `disconnectHarnessInstance` merged on `v3-pre` (2026-06); close-context handshake still open under `fix-harness-finOs-session-teardown`
 
@@ -70,9 +70,9 @@ Slugs only — implementation is on `v3-pre`; details were in deleted PRDs/work 
 
 ## Architecture
 
-- **In-memory transport pair** (`createInMemoryTransportPair`) bridges Desktop Agent ↔ platform in the browser; used by `createBrowserDesktopAgent()`.
-- **MessagePort transport** connects iframe apps via WCP; `WCPConnector` owns routing, `disconnectApp()` tears down instance ↔ transport maps.
-- **Platform API** (`@finos/sail-platform-api`) wraps `DesktopAgent` for Sail UI; channel changes use typed platform APIs, not raw DACP impersonation.
+- **Browser DA edge link** (`BrowserDaEdgeLink` / `createBrowserDesktopAgentEdgeLink`) wires in-tab Desktop Agent ↔ WCP connector in `createBrowserDesktopAgent()`; per-app **MessagePort** remains the app boundary.
+- **Grouped host controllers** (`channels`, `intentResolver`, `apps`) on the browser preset and `SailPlatform`; sail-web subscribes through them — not raw `WCPConnector` for normal host UI.
+- **Platform API** (`@finos/sail-platform-api`) wraps the browser preset; channel changes use `channels.changeAppChannel` or platform delegates.
 - **DACP messages** live in `packages/sail-desktop-agent/src/core/dacp/`.
 
 ## Conventions

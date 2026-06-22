@@ -26,7 +26,7 @@ export function ChannelSelector({ instanceId }: ChannelSelectorProps) {
 
   const channels = useMemo<BrowserTypes.Channel[]>(() => {
     try {
-      return platformRef.current.getUserChannels()
+      return platformRef.current.channels.getUserChannels()
     } catch (err) {
       console.error("[ChannelSelector] Failed to get user channels:", err)
       return []
@@ -48,8 +48,8 @@ export function ChannelSelector({ instanceId }: ChannelSelectorProps) {
     setError(null)
 
     try {
-      // changeAppChannel resolves after connector channelChanged; store updates via push.
-      await platformRef.current.changeAppChannel(instanceId, channelId)
+      // channels.changeAppChannel resolves after onAppChannelChange push; store updates via apps/channels subscriptions.
+      await platformRef.current.channels.changeAppChannel(instanceId, channelId)
       setIsOpen(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to change channel")

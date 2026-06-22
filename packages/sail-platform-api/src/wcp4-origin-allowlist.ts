@@ -29,12 +29,9 @@ function extractWcp4AllowlistContext(message: unknown): {
 
   return {
     instanceId: source?.instanceId,
-    messageOrigin:
-      typeof meta?.messageOrigin === "string" ? meta.messageOrigin : undefined,
+    messageOrigin: typeof meta?.messageOrigin === "string" ? meta.messageOrigin : undefined,
     connectionAttemptUuid:
-      typeof meta?.connectionAttemptUuid === "string"
-        ? meta.connectionAttemptUuid
-        : undefined,
+      typeof meta?.connectionAttemptUuid === "string" ? meta.connectionAttemptUuid : undefined,
   }
 }
 

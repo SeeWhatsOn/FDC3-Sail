@@ -175,7 +175,7 @@ const Layout = (props: DockviewSailProps) => {
           )
           try {
             // Send WCP6Goodbye and disconnect the instance
-            platform.connector.disconnectAppByInstanceId(connection.instanceId)
+            platform.apps.disconnect(connection.instanceId)
             console.log(
               `[Layout] Successfully initiated disconnect for instance ${connection.instanceId}`
             )

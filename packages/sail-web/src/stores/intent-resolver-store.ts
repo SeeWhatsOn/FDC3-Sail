@@ -42,30 +42,20 @@ interface IntentResolverActions {
 export interface IntentResolverStore extends IntentResolverState, IntentResolverActions {}
 
 /**
- * Create the intent resolver store with WCPConnector integration.
- *
- * This store:
- * 1. Listens for "intentResolverNeeded" events from WCPConnector
- * 2. Opens a dialog showing available handlers
- * 3. Sends user selection back via wcpConnector.resolveIntentSelection()
- *
- * @param platform - The Sail Platform instance
- * @returns Zustand store for intent resolution
+ * Create the intent resolver store wired through grouped host controllers.
  */
 export const createIntentResolverStore = (platform: SailPlatform) => {
   const store = create<IntentResolverStore>()(
     immer((set, get) => ({
-      // Initial state
       isOpen: false,
       requestId: null,
       intentName: null,
       context: null,
       handlers: [],
 
-      // Actions
       selectHandler: (handler: IntentHandler) => {
-        const { requestId } = get()
-        if (!requestId) {
+        const { requestId, intentName } = get()
+        if (!requestId || !intentName) {
           console.warn("[IntentResolverStore] Cannot select handler: no active request")
           return
         }
@@ -74,16 +64,16 @@ export const createIntentResolverStore = (platform: SailPlatform) => {
           `[IntentResolverStore] User selected handler: ${handler.appName || handler.appId}`
         )
 
-        // Send response back to Desktop Agent via WCPConnector
-        platform.connector.resolveIntentSelection({
-          requestId,
-          selectedHandler: {
-            instanceId: handler.instanceId,
+        platform.intentResolver.select(requestId, {
+          app: {
             appId: handler.appId,
+            name: handler.appName ?? handler.appId,
           },
+          intent: { name: intentName, displayName: intentName },
+          instanceId: handler.instanceId,
+          isRunning: handler.isRunning,
         })
 
-        // Close dialog
         set(state => {
           state.isOpen = false
           state.requestId = null
@@ -101,14 +91,8 @@ export const createIntentResolverStore = (platform: SailPlatform) => {
         }
 
         console.log("[IntentResolverStore] User cancelled intent resolution")
+        platform.intentResolver.cancel(requestId)
 
-        // Send cancellation response to Desktop Agent
-        platform.connector.resolveIntentSelection({
-          requestId,
-          selectedHandler: null, // null indicates cancellation
-        })
-
-        // Close dialog
         set(state => {
           state.isOpen = false
           state.requestId = null
@@ -120,59 +104,53 @@ export const createIntentResolverStore = (platform: SailPlatform) => {
     }))
   )
 
-  // Wire up WCP connector event listener
-  const connector = platform.connector
+  const { intentResolver, apps } = platform
 
-  // Handle intent resolution needed event
-  // The payload type matches IntentResolverPayload from wcp-connector
-  connector.on(
-    "intentResolverNeeded",
-    (payload: {
-      requestId: string
-      intent: string
-      context: unknown
-      handlers: IntentHandler[]
-    }) => {
-      console.log("[IntentResolverStore] Intent resolution needed:", payload.intent)
+  intentResolver.onRequest(request => {
+    console.log("[IntentResolverStore] Intent resolution needed:", request.intent)
 
-      // Validate handlers against active WCP connections to filter out zombies
-      // This ensures we don't show disconnected instances even if they were in the original list
-      const validHandlers = payload.handlers.filter(handler => {
+    const intentName = request.intent
+
+    const validHandlers = request.handlers
+      .filter(handler => {
         if (handler.instanceId) {
-          const connection = platform.connector.getConnection(handler.instanceId)
+          const connection = apps.getConnection(handler.instanceId)
           if (!connection) {
             console.warn(
-              `[IntentResolverStore] Filtering out invalid handler: ${handler.appId} (instance ${handler.instanceId} not connected)`
+              `[IntentResolverStore] Filtering out invalid handler: ${handler.app.appId} (instance ${handler.instanceId} not connected)`
             )
             return false
           }
         }
         return true
       })
+      .map(handler => ({
+        instanceId: handler.instanceId,
+        appId: handler.app.appId,
+        appName: handler.app.name ?? handler.app.title,
+        appIcon: handler.app.icons?.[0]?.src,
+        isRunning: handler.isRunning,
+      }))
 
-      if (validHandlers.length !== payload.handlers.length) {
-        console.warn(
-          `[IntentResolverStore] Filtered ${payload.handlers.length - validHandlers.length} invalid handler(s), ${validHandlers.length} valid remaining`
-        )
-      }
-
-      store.setState(state => {
-        state.isOpen = true
-        state.requestId = payload.requestId
-        state.intentName = payload.intent
-        state.context = payload.context
-        state.handlers = validHandlers
-      })
+    if (validHandlers.length !== request.handlers.length) {
+      console.warn(
+        `[IntentResolverStore] Filtered ${request.handlers.length - validHandlers.length} invalid handler(s), ${validHandlers.length} valid remaining`
+      )
     }
-  )
 
-  // Listen for app disconnections to remove handlers from open dialog
-  connector.on("appDisconnected", (instanceId: string) => {
     store.setState(state => {
-      // Only update if dialog is open and has handlers
+      state.isOpen = true
+      state.requestId = request.requestId
+      state.intentName = intentName
+      state.context = request.context
+      state.handlers = validHandlers
+    })
+  })
+
+  apps.onDisconnect((instanceId: string) => {
+    store.setState(state => {
       if (state.isOpen && state.handlers.length > 0) {
         const beforeCount = state.handlers.length
-        // Remove handlers whose instanceId matches the disconnected instance
         state.handlers = state.handlers.filter(handler => handler.instanceId !== instanceId)
         if (state.handlers.length !== beforeCount) {
           console.log(

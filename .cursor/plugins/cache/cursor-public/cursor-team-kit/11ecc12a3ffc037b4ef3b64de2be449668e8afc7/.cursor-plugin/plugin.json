@@ -21,13 +21,7 @@
     "local-automation"
   ],
   "category": "developer-tools",
-  "tags": [
-    "internal-workflows",
-    "quality",
-    "delivery",
-    "review",
-    "automation"
-  ],
+  "tags": ["internal-workflows", "quality", "delivery", "review", "automation"],
   "skills": "./skills/",
   "agents": "./agents/",
   "rules": "./rules/"

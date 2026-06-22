@@ -1,6 +1,6 @@
-import { themes as prismThemes } from "prism-react-renderer";
-import type { Config } from "@docusaurus/types";
-import type * as Preset from "@docusaurus/preset-classic";
+import { themes as prismThemes } from "prism-react-renderer"
+import type { Config } from "@docusaurus/types"
+import type * as Preset from "@docusaurus/preset-classic"
 
 const config: Config = {
   title: "FDC3 Sail",
@@ -123,6 +123,6 @@ const config: Config = {
       additionalLanguages: ["bash", "typescript", "json"],
     },
   } satisfies Preset.ThemeConfig,
-};
+}
 
-export default config;
+export default config

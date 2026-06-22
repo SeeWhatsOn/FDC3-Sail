@@ -1,65 +1,57 @@
 /// <reference types="bun-types-no-globals/lib/index.d.ts" />
 
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { stdin } from "bun";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
+import { dirname, resolve } from "node:path"
+import { stdin } from "bun"
 
-const STATE_PATH = resolve(".cursor/hooks/state/continual-learning.json");
-const INCREMENTAL_INDEX_PATH = resolve(
-  ".cursor/hooks/state/continual-learning-index.json"
-);
-const DEFAULT_MIN_TURNS = 10;
-const DEFAULT_MIN_MINUTES = 120;
-const TRIAL_DEFAULT_MIN_TURNS = 3;
-const TRIAL_DEFAULT_MIN_MINUTES = 15;
-const TRIAL_DEFAULT_DURATION_MINUTES = 24 * 60;
+const STATE_PATH = resolve(".cursor/hooks/state/continual-learning.json")
+const INCREMENTAL_INDEX_PATH = resolve(".cursor/hooks/state/continual-learning-index.json")
+const DEFAULT_MIN_TURNS = 10
+const DEFAULT_MIN_MINUTES = 120
+const TRIAL_DEFAULT_MIN_TURNS = 3
+const TRIAL_DEFAULT_MIN_MINUTES = 15
+const TRIAL_DEFAULT_DURATION_MINUTES = 24 * 60
 
-const FOLLOWUP_MESSAGE =
-  `Run the \`continual-learning\` skill now. Use the \`agents-memory-updater\` subagent for the full memory update flow. Use incremental transcript processing with index file \`${INCREMENTAL_INDEX_PATH}\`: only consider transcripts not in the index or transcripts whose mtime is newer than indexed mtime. Have the subagent refresh index mtimes, remove entries for deleted transcripts, and update \`AGENTS.md\` only for high-signal recurring user corrections and durable workspace facts. Exclude one-off/transient details and secrets. If no meaningful updates exist, respond exactly: No high-signal memory updates.`;
+const FOLLOWUP_MESSAGE = `Run the \`continual-learning\` skill now. Use the \`agents-memory-updater\` subagent for the full memory update flow. Use incremental transcript processing with index file \`${INCREMENTAL_INDEX_PATH}\`: only consider transcripts not in the index or transcripts whose mtime is newer than indexed mtime. Have the subagent refresh index mtimes, remove entries for deleted transcripts, and update \`AGENTS.md\` only for high-signal recurring user corrections and durable workspace facts. Exclude one-off/transient details and secrets. If no meaningful updates exist, respond exactly: No high-signal memory updates.`
 
 interface StopHookInput {
-  conversation_id: string;
-  generation_id?: string;
-  status: "completed" | "aborted" | "error" | string;
-  loop_count: number;
-  transcript_path?: string | null;
+  conversation_id: string
+  generation_id?: string
+  status: "completed" | "aborted" | "error" | string
+  loop_count: number
+  transcript_path?: string | null
 }
 
 interface ContinuousLearningState {
-  version: 1;
-  lastRunAtMs: number;
-  turnsSinceLastRun: number;
-  lastTranscriptMtimeMs: number | null;
-  lastProcessedGenerationId: string | null;
-  trialStartedAtMs: number | null;
+  version: 1
+  lastRunAtMs: number
+  turnsSinceLastRun: number
+  lastTranscriptMtimeMs: number | null
+  lastProcessedGenerationId: string | null
+  trialStartedAtMs: number | null
 }
 
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   if (!value) {
-    return fallback;
+    return fallback
   }
-  const parsed = Number.parseInt(value, 10);
+  const parsed = Number.parseInt(value, 10)
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    return fallback;
+    return fallback
   }
-  return parsed;
+  return parsed
 }
 
 function parseBoolean(value: string | undefined): boolean {
   if (!value) {
-    return false;
+    return false
   }
-  const normalized = value.trim().toLowerCase();
-  return (
-    normalized === "1" ||
-    normalized === "true" ||
-    normalized === "yes" ||
-    normalized === "on"
-  );
+  const normalized = value.trim().toLowerCase()
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on"
 }
 
 function readEnvValue(primary: string, legacy: string): string | undefined {
-  return process.env[primary] ?? process.env[legacy];
+  return process.env[primary] ?? process.env[legacy]
 }
 
 function loadState(): ContinuousLearningState {
@@ -70,17 +62,17 @@ function loadState(): ContinuousLearningState {
     lastTranscriptMtimeMs: null,
     lastProcessedGenerationId: null,
     trialStartedAtMs: null,
-  };
+  }
 
   if (!existsSync(STATE_PATH)) {
-    return fallback;
+    return fallback
   }
 
   try {
-    const raw = readFileSync(STATE_PATH, "utf-8");
-    const parsed = JSON.parse(raw) as Partial<ContinuousLearningState>;
+    const raw = readFileSync(STATE_PATH, "utf-8")
+    const parsed = JSON.parse(raw) as Partial<ContinuousLearningState>
     if (parsed.version !== 1) {
-      return fallback;
+      return fallback
     }
     return {
       version: 1,
@@ -104,66 +96,65 @@ function loadState(): ContinuousLearningState {
           ? parsed.lastProcessedGenerationId
           : null,
       trialStartedAtMs:
-        typeof parsed.trialStartedAtMs === "number" &&
-        Number.isFinite(parsed.trialStartedAtMs)
+        typeof parsed.trialStartedAtMs === "number" && Number.isFinite(parsed.trialStartedAtMs)
           ? parsed.trialStartedAtMs
           : null,
-    };
+    }
   } catch {
-    return fallback;
+    return fallback
   }
 }
 
 function saveState(state: ContinuousLearningState): void {
-  const directory = dirname(STATE_PATH);
+  const directory = dirname(STATE_PATH)
   if (!existsSync(directory)) {
-    mkdirSync(directory, { recursive: true });
+    mkdirSync(directory, { recursive: true })
   }
-  writeFileSync(STATE_PATH, `${JSON.stringify(state, null, 2)}\n`, "utf-8");
+  writeFileSync(STATE_PATH, `${JSON.stringify(state, null, 2)}\n`, "utf-8")
 }
 
 function getTranscriptMtimeMs(transcriptPath: string | null | undefined): number | null {
   if (!transcriptPath) {
-    return null;
+    return null
   }
 
   try {
-    return statSync(transcriptPath).mtimeMs;
+    return statSync(transcriptPath).mtimeMs
   } catch {
-    return null;
+    return null
   }
 }
 
 function shouldCountTurn(input: StopHookInput): boolean {
-  return input.status === "completed" && input.loop_count === 0;
+  return input.status === "completed" && input.loop_count === 0
 }
 
 async function parseHookInput<T>(): Promise<T> {
-  const text = await stdin.text();
-  return JSON.parse(text) as T;
+  const text = await stdin.text()
+  return JSON.parse(text) as T
 }
 
 async function main(): Promise<number> {
   try {
-    const input = await parseHookInput<StopHookInput>();
-    const state = loadState();
+    const input = await parseHookInput<StopHookInput>()
+    const state = loadState()
 
     if (input.generation_id && input.generation_id === state.lastProcessedGenerationId) {
-      console.log(JSON.stringify({}));
-      return 0;
+      console.log(JSON.stringify({}))
+      return 0
     }
-    state.lastProcessedGenerationId = input.generation_id ?? null;
+    state.lastProcessedGenerationId = input.generation_id ?? null
 
-    const countedTurn = shouldCountTurn(input);
-    const turnIncrement = countedTurn ? 1 : 0;
-    const turnsSinceLastRun = state.turnsSinceLastRun + turnIncrement;
-    const now = Date.now();
+    const countedTurn = shouldCountTurn(input)
+    const turnIncrement = countedTurn ? 1 : 0
+    const turnsSinceLastRun = state.turnsSinceLastRun + turnIncrement
+    const now = Date.now()
 
     const trialEnabled = parseBoolean(
       readEnvValue("CONTINUAL_LEARNING_TRIAL_MODE", "CONTINUOUS_LEARNING_TRIAL_MODE")
-    );
+    )
     if (trialEnabled && countedTurn && state.trialStartedAtMs === null) {
-      state.trialStartedAtMs = now;
+      state.trialStartedAtMs = now
     }
 
     const trialDurationMinutes = parsePositiveInt(
@@ -172,76 +163,70 @@ async function main(): Promise<number> {
         "CONTINUOUS_LEARNING_TRIAL_DURATION_MINUTES"
       ),
       TRIAL_DEFAULT_DURATION_MINUTES
-    );
+    )
     const trialMinTurns = parsePositiveInt(
-      readEnvValue(
-        "CONTINUAL_LEARNING_TRIAL_MIN_TURNS",
-        "CONTINUOUS_LEARNING_TRIAL_MIN_TURNS"
-      ),
+      readEnvValue("CONTINUAL_LEARNING_TRIAL_MIN_TURNS", "CONTINUOUS_LEARNING_TRIAL_MIN_TURNS"),
       TRIAL_DEFAULT_MIN_TURNS
-    );
+    )
     const trialMinMinutes = parsePositiveInt(
-      readEnvValue(
-        "CONTINUAL_LEARNING_TRIAL_MIN_MINUTES",
-        "CONTINUOUS_LEARNING_TRIAL_MIN_MINUTES"
-      ),
+      readEnvValue("CONTINUAL_LEARNING_TRIAL_MIN_MINUTES", "CONTINUOUS_LEARNING_TRIAL_MIN_MINUTES"),
       TRIAL_DEFAULT_MIN_MINUTES
-    );
+    )
     const inTrialWindow =
       trialEnabled &&
       state.trialStartedAtMs !== null &&
-      now - state.trialStartedAtMs < trialDurationMinutes * 60_000;
+      now - state.trialStartedAtMs < trialDurationMinutes * 60_000
 
     const minTurns = parsePositiveInt(
       readEnvValue("CONTINUAL_LEARNING_MIN_TURNS", "CONTINUOUS_LEARNING_MIN_TURNS"),
       DEFAULT_MIN_TURNS
-    );
+    )
     const minMinutes = parsePositiveInt(
       readEnvValue("CONTINUAL_LEARNING_MIN_MINUTES", "CONTINUOUS_LEARNING_MIN_MINUTES"),
       DEFAULT_MIN_MINUTES
-    );
+    )
 
-    const effectiveMinTurns = inTrialWindow ? trialMinTurns : minTurns;
-    const effectiveMinMinutes = inTrialWindow ? trialMinMinutes : minMinutes;
+    const effectiveMinTurns = inTrialWindow ? trialMinTurns : minTurns
+    const effectiveMinMinutes = inTrialWindow ? trialMinMinutes : minMinutes
     const minutesSinceLastRun =
       state.lastRunAtMs > 0
         ? Math.floor((now - state.lastRunAtMs) / 60000)
-        : Number.POSITIVE_INFINITY;
-    const transcriptMtimeMs = getTranscriptMtimeMs(input.transcript_path);
+        : Number.POSITIVE_INFINITY
+    const transcriptMtimeMs = getTranscriptMtimeMs(input.transcript_path)
     const hasTranscriptAdvanced =
       transcriptMtimeMs !== null &&
-      (state.lastTranscriptMtimeMs === null || transcriptMtimeMs > state.lastTranscriptMtimeMs);
+      (state.lastTranscriptMtimeMs === null || transcriptMtimeMs > state.lastTranscriptMtimeMs)
 
     const shouldTrigger =
       countedTurn &&
       turnsSinceLastRun >= effectiveMinTurns &&
       minutesSinceLastRun >= effectiveMinMinutes &&
-      hasTranscriptAdvanced;
+      hasTranscriptAdvanced
 
     if (shouldTrigger) {
-      state.lastRunAtMs = now;
-      state.turnsSinceLastRun = 0;
-      state.lastTranscriptMtimeMs = transcriptMtimeMs;
-      saveState(state);
+      state.lastRunAtMs = now
+      state.turnsSinceLastRun = 0
+      state.lastTranscriptMtimeMs = transcriptMtimeMs
+      saveState(state)
 
       console.log(
         JSON.stringify({
           followup_message: FOLLOWUP_MESSAGE,
         })
-      );
-      return 0;
+      )
+      return 0
     }
 
-    state.turnsSinceLastRun = turnsSinceLastRun;
-    saveState(state);
-    console.log(JSON.stringify({}));
-    return 0;
+    state.turnsSinceLastRun = turnsSinceLastRun
+    saveState(state)
+    console.log(JSON.stringify({}))
+    return 0
   } catch (error) {
-    console.error("[continual-learning-stop] failed", error);
-    console.log(JSON.stringify({}));
-    return 0;
+    console.error("[continual-learning-stop] failed", error)
+    console.log(JSON.stringify({}))
+    return 0
   }
 }
 
-const exitCode = await main();
-process.exit(exitCode);
+const exitCode = await main()
+process.exit(exitCode)

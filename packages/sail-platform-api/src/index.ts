@@ -11,6 +11,13 @@ export {
   type ConfigApi,
 } from "./sail-platform"
 
+export type {
+  BrowserAppsController,
+  BrowserChannelsController,
+  BrowserIntentResolverController,
+  AppChannelChangeEvent,
+} from "@finos/sail-desktop-agent/presets"
+
 // UI Interfaces (for implementing custom UI)
 export type {
   IntentResolver,

@@ -110,13 +110,10 @@ export const createConnectionStore = (platform: SailPlatform) => {
     }))
   )
 
-  // Wire up WCP connector event listeners
-  const connector = platform.connector
+  const { apps, channels } = platform
 
-  // Handle app connected event
-  connector.on("appConnected", (metadata: AppConnectionMetadata) => {
+  apps.onConnect((metadata: AppConnectionMetadata) => {
     store.setState(state => {
-      // Create connection entry with panelId from metadata (extracted from iframe name)
       const connection: Connection = {
         instanceId: metadata.instanceId,
         appId: metadata.appId,
@@ -126,19 +123,14 @@ export const createConnectionStore = (platform: SailPlatform) => {
       }
       state.connections.set(metadata.instanceId, connection)
 
-      // If panelId is available, set up the reverse mapping
       if (metadata.hostIdentifier) {
         state.panelToConnection.set(metadata.hostIdentifier, metadata.instanceId)
-        // Remove from waiting panels if it was there
         state.waitingPanels.delete(metadata.hostIdentifier)
       } else {
-        // For cross-origin iframes, panelId may be undefined
-        // Try to find a waiting panel that matches by appId
         const waitingPanel = Array.from(state.waitingPanels.values()).find(
           wp => wp.appId === metadata.appId
         )
         if (waitingPanel) {
-          // Link this connection to the waiting panel
           connection.panelId = waitingPanel.panelId
           state.panelToConnection.set(waitingPanel.panelId, metadata.instanceId)
           state.waitingPanels.delete(waitingPanel.panelId)
@@ -150,34 +142,26 @@ export const createConnectionStore = (platform: SailPlatform) => {
     })
   })
 
-  // Handle app disconnected event
-  connector.on("appDisconnected", (instanceId: string) => {
+  apps.onDisconnect((instanceId: string) => {
     console.log("[ConnectionStore] App disconnected:", instanceId)
     store.setState(state => {
       const connection = state.connections.get(instanceId)
       if (connection) {
-        // Remove from panelToConnection mapping if panelId exists
         if (connection.panelId) {
           state.panelToConnection.delete(connection.panelId)
           console.log(`[ConnectionStore] Removed panel mapping for ${connection.panelId}`)
         }
-        // Remove the connection entirely (not just mark as disconnected)
-        // This ensures ghost instances are fully cleaned up
         state.connections.delete(instanceId)
         console.log(`[ConnectionStore] Removed connection for instance ${instanceId}`)
       }
     })
   })
 
-  // Handle handshake failed event
-  connector.on("handshakeFailed", (error: Error, connectionAttemptUuid: string) => {
+  apps.onHandshakeFailure(({ error, connectionAttemptUuid }) => {
     console.error("[ConnectionStore] Handshake failed:", error, connectionAttemptUuid)
-    // Could add temporary "failed" connection entries here if needed
   })
 
-  // Handle channel changed event — host UI uses push updates from WCP connector,
-  // not agent state snapshot polling (see getAppUserChannel for one-off reads).
-  connector.on("channelChanged", (instanceId: string, channelId: string | null) => {
+  channels.onAppChannelChange(({ instanceId, channelId }) => {
     console.log("[ConnectionStore] Channel changed:", instanceId, channelId)
     store.setState(state => {
       const connection = state.connections.get(instanceId)

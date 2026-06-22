@@ -1,16 +1,16 @@
-import type { ReactNode } from "react";
-import clsx from "clsx";
-import Link from "@docusaurus/Link";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
-import Layout from "@theme/Layout";
-import Heading from "@theme/Heading";
+import type { ReactNode } from "react"
+import clsx from "clsx"
+import Link from "@docusaurus/Link"
+import useBaseUrl from "@docusaurus/useBaseUrl"
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext"
+import Layout from "@theme/Layout"
+import Heading from "@theme/Heading"
 
-import styles from "./index.module.css";
+import styles from "./index.module.css"
 
 function HomepageHeader() {
-  const { siteConfig } = useDocusaurusContext();
-  const sailIconUrl = useBaseUrl("/img/sail-icon.svg");
+  const { siteConfig } = useDocusaurusContext()
+  const sailIconUrl = useBaseUrl("/img/sail-icon.svg")
 
   return (
     <header className={clsx("hero", styles.heroBanner)}>
@@ -33,16 +33,10 @@ function HomepageHeader() {
         </div>
       </div>
     </header>
-  );
+  )
 }
 
-function Feature({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+function Feature({ title, description }: { title: string; description: string }) {
   return (
     <div className={clsx("col col--4")}>
       <div className="text--center padding-horiz--md">
@@ -50,7 +44,7 @@ function Feature({
         <p>{description}</p>
       </div>
     </div>
-  );
+  )
 }
 
 function HomepageFeatures(): ReactNode {
@@ -73,7 +67,7 @@ function HomepageFeatures(): ReactNode {
         </div>
       </div>
     </section>
-  );
+  )
 }
 
 export default function Home(): ReactNode {
@@ -87,5 +81,5 @@ export default function Home(): ReactNode {
         <HomepageFeatures />
       </main>
     </Layout>
-  );
+  )
 }

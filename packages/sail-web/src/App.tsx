@@ -7,7 +7,6 @@ import { Workspace } from "./components/workspace/Workspace"
 import Layout from "./components/layout-grid/Layout"
 import { QuickAccessPanel } from "./components/quick-access-panel"
 import { IntentResolverDialog } from "./components/intent-resolver"
-import { SailV3JoinBanner } from "./components/promo/SailV3JoinBanner"
 import { SailDesktopAgentProvider, SailPlatformProvider } from "./contexts"
 
 interface AppProps {
