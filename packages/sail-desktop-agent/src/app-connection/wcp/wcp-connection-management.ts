@@ -20,7 +20,7 @@ function resolveRoutingInstanceId(context: AppConnectionContext, instanceId: str
 function linkHandshakeRouting(
   context: AppConnectionContext,
   handshakeRoutingId: string,
-  instanceId: string
+  instanceId: string,
 ): void {
   if (handshakeRoutingId === instanceId || !context.setAgentState) {
     return
@@ -49,6 +49,8 @@ export interface AppConnectionContext {
   logger: Logger
   getAgentState?: () => AgentState
   setAgentState?: StateSetter
+  /** Full instance teardown — FDC3 state cleanup plus connection registry prune. */
+  onInstanceTeardown?: (instanceId: string) => void
 }
 
 /**
@@ -89,8 +91,12 @@ export function handleWCP6Goodbye(context: AppConnectionContext, instanceId: str
       })
     }
 
-    // App is gracefully disconnecting - clean up
-    disconnectApp(context, instanceId)
+    const resolvedInstanceId = resolveRoutingInstanceId(context, instanceId)
+    if (context.onInstanceTeardown) {
+      context.onInstanceTeardown(resolvedInstanceId)
+      return
+    }
+    disconnectApp(context, resolvedInstanceId)
   }, context.options.disconnectGracePeriod)
 
   context.pendingDisconnects.set(instanceId, timeoutId)
@@ -117,6 +123,13 @@ export function cleanupStaleDisconnects(context: AppConnectionContext): void {
  */
 export function disconnectAppByInstanceId(context: AppConnectionContext, instanceId: string): void {
   const resolvedInstanceId = resolveRoutingInstanceId(context, instanceId)
+
+  const pendingDisconnect = context.pendingDisconnects.get(resolvedInstanceId)
+  if (pendingDisconnect) {
+    clearTimeout(pendingDisconnect)
+    context.pendingDisconnects.delete(resolvedInstanceId)
+  }
+
   const appTransport = context.connectionRegistry.messagePortTransports.get(resolvedInstanceId)
   if (appTransport && appTransport.isConnected()) {
     // Send WCP6Goodbye message to the app before disconnecting
@@ -133,13 +146,16 @@ export function disconnectAppByInstanceId(context: AppConnectionContext, instanc
     } catch (error) {
       context.logger.warn(
         `[WCPConnector] Failed to send WCP6Goodbye to instance ${resolvedInstanceId}:`,
-        error
+        error,
       )
       // Continue with disconnection even if goodbye fails
     }
   }
 
-  // Disconnect the app (this will clean up resources and emit appDisconnected event)
+  if (context.onInstanceTeardown) {
+    context.onInstanceTeardown(resolvedInstanceId)
+    return
+  }
   disconnectApp(context, resolvedInstanceId)
 }
 
@@ -174,12 +190,12 @@ export function updateConnectionMetadata(
   context: AppConnectionContext,
   tempInstanceId: string,
   actualInstanceId: string,
-  appId: string
+  appId: string,
 ): void {
   const metadata = context.connectionRegistry.connections.get(tempInstanceId)
   if (!metadata) {
     context.logger.warn(
-      `Cannot update connection metadata: temp instanceId ${tempInstanceId} not found`
+      `Cannot update connection metadata: temp instanceId ${tempInstanceId} not found`,
     )
     return
   }
@@ -190,7 +206,7 @@ export function updateConnectionMetadata(
     clearTimeout(pendingDisconnect)
     context.pendingDisconnects.delete(actualInstanceId)
     context.logger.debug(
-      `Cancelled pending disconnect for instance ${actualInstanceId} - reconnection detected`
+      `Cancelled pending disconnect for instance ${actualInstanceId} - reconnection detected`,
     )
   }
 
@@ -198,7 +214,7 @@ export function updateConnectionMetadata(
   const recentlyDisconnectedEntry = context.recentlyDisconnected.get(actualInstanceId)
   if (recentlyDisconnectedEntry) {
     context.logger.debug(
-      `Restoring recently disconnected instance ${actualInstanceId} - reconnection within grace period`
+      `Restoring recently disconnected instance ${actualInstanceId} - reconnection within grace period`,
     )
     // Restore the original metadata
     Object.assign(metadata, recentlyDisconnectedEntry.metadata)
@@ -223,7 +239,7 @@ export function updateConnectionMetadata(
     context.connectionRegistry.transportToInstanceId.set(appTransport, actualInstanceId)
   } else {
     context.logger.warn(
-      `Transport not found for temp instanceId ${tempInstanceId} during metadata update`
+      `Transport not found for temp instanceId ${tempInstanceId} during metadata update`,
     )
   }
 
@@ -245,7 +261,7 @@ export function getConnections(context: AppConnectionContext): AppConnectionMeta
  */
 export function getConnection(
   context: AppConnectionContext,
-  instanceId: string
+  instanceId: string,
 ): AppConnectionMetadata | undefined {
   return context.connectionRegistry.connections.get(instanceId)
 }

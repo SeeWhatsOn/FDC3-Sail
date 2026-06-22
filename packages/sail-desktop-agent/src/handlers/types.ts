@@ -4,7 +4,7 @@ import type { AgentState, StateSetter } from "../state/types"
 import type { Logger, LogPayloadDetail } from "../interfaces/logger"
 import type { DesktopAgentConfig } from "../agent/desktop-agent"
 import type { DACPMessageType } from "../dacp/dacp-messages"
-import type { IntentResolutionCallback } from "./dacp/intent-resolution-callback"
+import type { IntentResolutionCallback } from "./intent-resolution-callback"
 
 // ============================================================================
 // MESSAGE VALIDATOR
@@ -198,4 +198,10 @@ export interface DACPHandlerContext {
    * Key: requestId, Value: promise handlers and timeout state
    */
   pendingIntentPromises: Map<string, PendingIntentPromiseEntry>
+
+  /**
+   * Unified instance teardown (FDC3 state + connection registry).
+   * Injected by {@link DesktopAgent} for browser and MockTransport paths.
+   */
+  disconnectInstance?: (instanceId: string) => void
 }

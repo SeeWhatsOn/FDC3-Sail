@@ -10,7 +10,7 @@ import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import {
   getActiveHeartbeatTimerCount,
   clearAllHeartbeatTimersForTesting,
-} from "../../handlers/dacp/heartbeat-runtime"
+} from "../../handlers/heartbeat/runtime"
 import { createBrowserDesktopAgent } from "../../agent/create-browser-desktop-agent"
 import type { DesktopAgent } from "../../agent/desktop-agent"
 import { connectWcpApp, flushAsyncDelivery } from "./wcp-edge-test-helpers"

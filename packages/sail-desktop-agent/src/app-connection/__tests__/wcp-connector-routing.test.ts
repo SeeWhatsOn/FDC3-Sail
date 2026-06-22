@@ -12,7 +12,7 @@ import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 
 import { BrowserAppConnection } from "../../app-connection/browser-app-connection"
 
-import { getPendingWcpSourceWindowForTesting } from "../../handlers/dacp/wcp-pending-source-window"
+import { getPendingWcpSourceWindowForTesting } from "../wcp/pending-source-window"
 
 import type { BrowserTypes } from "@finos/fdc3"
 
@@ -138,7 +138,7 @@ describe("BrowserAppConnection routing and lifecycle", () => {
         enrichMessageWithSource: (
           message: BrowserTypes.AppRequestMessage | BrowserTypes.WebConnectionProtocolMessage,
 
-          instanceId: string
+          instanceId: string,
         ) => BrowserTypes.AppRequestMessage | BrowserTypes.WebConnectionProtocolMessage
       }
 
@@ -161,7 +161,7 @@ describe("BrowserAppConnection routing and lifecycle", () => {
           },
         } as unknown as BrowserTypes.WebConnectionProtocolMessage,
 
-        "temp-origin-check-uuid"
+        "temp-origin-check-uuid",
       ) as { meta?: { messageOrigin?: string } }
 
       expect(enriched.meta?.messageOrigin).toBe("https://example.com")
@@ -184,7 +184,7 @@ describe("BrowserAppConnection routing and lifecycle", () => {
         enrichMessageWithSource: (
           message: BrowserTypes.AppRequestMessage | BrowserTypes.WebConnectionProtocolMessage,
 
-          instanceId: string
+          instanceId: string,
         ) => BrowserTypes.AppRequestMessage | BrowserTypes.WebConnectionProtocolMessage
       }
 
@@ -205,13 +205,13 @@ describe("BrowserAppConnection routing and lifecycle", () => {
           },
         } as unknown as BrowserTypes.WebConnectionProtocolMessage,
 
-        "temp-source-window-uuid"
+        "temp-source-window-uuid",
       )
 
       expect(enriched.meta).not.toHaveProperty("wcpSourceWindow")
 
       expect(getPendingWcpSourceWindowForTesting(connector, "temp-source-window-uuid")).toBe(
-        handshakeSource
+        handshakeSource,
       )
     })
 
@@ -277,7 +277,7 @@ describe("BrowserAppConnection routing and lifecycle", () => {
 
         "actual-instance-123",
 
-        "app.example.test"
+        "app.example.test",
       )
 
       expect(connector.getConnection("temp-test-uuid")).toBeUndefined()
@@ -302,8 +302,8 @@ describe("BrowserAppConnection routing and lifecycle", () => {
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining(
-          "Cannot update connection metadata: temp instanceId nonexistent-id not found"
-        )
+          "Cannot update connection metadata: temp instanceId nonexistent-id not found",
+        ),
       )
 
       consoleWarnSpy.mockRestore()

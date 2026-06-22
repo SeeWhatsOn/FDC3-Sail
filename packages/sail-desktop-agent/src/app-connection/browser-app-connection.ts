@@ -32,10 +32,7 @@ import {
   type AppConnectionContext,
 } from "./wcp/wcp-connection-management"
 import { AppConnectionEventEmitter } from "./wcp/app-connection-event-emitter"
-import {
-  clearPendingWcpSourceWindow,
-  setPendingWcpSourceWindow,
-} from "../handlers/dacp/wcp-pending-source-window"
+import { clearPendingWcpSourceWindow, setPendingWcpSourceWindow } from "./wcp/pending-source-window"
 import { resolveInstanceId } from "../state/selectors/wcp-handshake-routing"
 import type { AgentState, StateSetter } from "../state/types"
 import type { HostIntentResolverPayload, HostIntentResolverResponse } from "../host-contracts"
@@ -62,6 +59,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
   private cleanupInterval?: ReturnType<typeof setInterval>
   private getAgentState?: () => AgentState
   private setAgentState?: StateSetter
+  private onInstanceTeardown?: (instanceId: string) => void
 
   constructor(options?: AppConnectionOptions) {
     super()
@@ -97,6 +95,11 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
   bindAgentState(access: { getAgentState: () => AgentState; setAgentState: StateSetter }): void {
     this.getAgentState = access.getAgentState
     this.setAgentState = access.setAgentState
+  }
+
+  /** Wire unified instance teardown from {@link DesktopAgent.disconnectInstance}. */
+  setOnInstanceTeardown(handler: (instanceId: string) => void): void {
+    this.onInstanceTeardown = handler
   }
 
   onAppMessage(handler: AppMessageHandler): void {
@@ -159,7 +162,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
 
   private enrichMessageWithSource(
     message: AppRequestMessage | WebConnectionProtocolMessage,
-    instanceId: string
+    instanceId: string,
   ): AppRequestMessage | WebConnectionProtocolMessage {
     const currentMeta =
       "meta" in message && message.meta && typeof message.meta === "object"
@@ -246,14 +249,14 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
 
   requestIntentResolution(
     payload: HostIntentResolverPayload,
-    timeoutMs?: number
+    timeoutMs?: number,
   ): Promise<HostIntentResolverResponse> {
     const timeout = timeoutMs ?? this.options.intentResolutionTimeout
     return requestIntentResolution(
       this.pendingIntentResolutions,
       intentPayload => this.emit("intentResolverNeeded", intentPayload),
       payload,
-      timeout
+      timeout,
     )
   }
 
@@ -264,7 +267,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
   private forwardAppMessage(message: unknown): void {
     if (!this.appMessageHandler) {
       this.options.logger.warn(
-        "BrowserAppConnection received app message before onAppMessage handler was set"
+        "BrowserAppConnection received app message before onAppMessage handler was set",
       )
       return
     }
@@ -272,6 +275,13 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
   }
 
   private getRoutingContext(): WCPRoutingContext {
+    const onInstanceTeardown = (instanceId: string) => {
+      if (this.onInstanceTeardown) {
+        this.onInstanceTeardown(instanceId)
+        return
+      }
+      this.disconnectApp(instanceId)
+    }
     return {
       connectionRegistry: this.connectionRegistry,
       onAppMessage: message => this.forwardAppMessage(message),
@@ -279,6 +289,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
       logger: this.options.logger,
       enrichMessageWithSource: this.enrichMessageWithSource.bind(this),
       handleWCP6Goodbye: this.handleWCP6Goodbye.bind(this),
+      onInstanceTeardown,
       disconnectApp: this.disconnectApp.bind(this),
     }
   }
@@ -293,6 +304,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
       logger: this.options.logger,
       getAgentState: this.getAgentState,
       setAgentState: this.setAgentState,
+      onInstanceTeardown: this.onInstanceTeardown,
     }
   }
 

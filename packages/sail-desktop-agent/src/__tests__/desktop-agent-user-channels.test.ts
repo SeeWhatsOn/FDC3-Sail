@@ -6,7 +6,7 @@ import { connectInstance, updateInstanceState } from "../state/mutators"
 import { getAllUserChannels } from "../state/selectors"
 import type { AgentState } from "../state/types"
 import { AppInstanceState } from "../state/types"
-import { createDacpRequestMeta } from "../handlers/dacp/__tests__/test-context"
+import { createDacpRequestMeta } from "../handlers/__tests__/test-context"
 
 type Channel = BrowserTypes.Channel
 
@@ -55,7 +55,7 @@ function asInternals(agent: DesktopAgent): DesktopAgentInternals {
 /** Same pattern as Cucumber `applyDesktopAgentStateUpdate` — mutates agent state like DACP setState. */
 function applyAgentStateUpdate(
   agent: DesktopAgent,
-  callback: (state: AgentState) => AgentState
+  callback: (state: AgentState) => AgentState,
 ): void {
   const internal = asInternals(agent)
   internal.state = callback(agent.getState())
@@ -117,8 +117,8 @@ describe("DesktopAgent user channel state", () => {
           },
         },
         "a1",
-        "App1"
-      )
+        "App1",
+      ),
     )
 
     await transport.receiveMessage({
@@ -137,7 +137,7 @@ describe("DesktopAgent user channel state", () => {
 
     expect(response.type).toBe("getUserChannelsResponse")
     expect(sortChannelsById(agent.getUserChannels())).toEqual(
-      sortChannelsById(response.payload.userChannels)
+      sortChannelsById(response.payload.userChannels),
     )
   })
 })

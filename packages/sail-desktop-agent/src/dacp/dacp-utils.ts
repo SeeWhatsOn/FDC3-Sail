@@ -14,16 +14,21 @@ import { consoleLogger, type Logger, type LogPayloadDetail } from "../interfaces
 export function withDACPTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number = DACP_TIMEOUTS.DEFAULT,
-  operation: string = "DACP operation"
+  operation: string = "DACP operation",
 ): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new DACPTimeoutError(`${operation} timed out after ${timeoutMs}ms`))
-      }, timeoutMs)
-    }),
-  ])
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(new DACPTimeoutError(`${operation} timed out after ${timeoutMs}ms`))
+    }, timeoutMs)
+  })
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutHandle !== undefined) {
+      clearTimeout(timeoutHandle)
+    }
+  })
 }
 
 /**
@@ -77,7 +82,7 @@ export function logDACPMessage(
   direction: "incoming" | "outgoing",
   message: unknown,
   source?: string,
-  options?: DACPLoggingOptions
+  options?: DACPLoggingOptions,
 ): void {
   const logger = options?.logger ?? consoleLogger
   const logPayloadDetail = options?.logPayloadDetail ?? "metadata"

@@ -79,7 +79,7 @@ export interface BrowserAppsController {
   getById: (appId: string) => DirectoryApp | undefined
   open: (
     app: string | BrowserTypes.AppIdentifier,
-    options?: BrowserAppOpenOptions
+    options?: BrowserAppOpenOptions,
   ) => Promise<BrowserTypes.AppIdentifier>
   getInstances: () => BrowserAppInstance[]
   getInstance: (instanceId: string) => BrowserAppInstance | undefined
@@ -111,7 +111,7 @@ const collapsedBrowserAgentIntentResolverUi = new WeakMap<DesktopAgent, IntentRe
 export function markCollapsedBrowserDesktopAgent(
   desktopAgent: DesktopAgent,
   browserAppConnection?: BrowserAppConnection,
-  intentResolverUI?: IntentResolverUIMethods
+  intentResolverUI?: IntentResolverUIMethods,
 ): void {
   collapsedBrowserDesktopAgents.add(desktopAgent)
   if (browserAppConnection) {
@@ -147,7 +147,7 @@ function getDesktopAgentInternals(desktopAgent: DesktopAgent): DesktopAgentInter
 
 function resolveOpenAppIdentifier(
   app: string | BrowserTypes.AppIdentifier,
-  options?: BrowserAppOpenOptions
+  options?: BrowserAppOpenOptions,
 ): BrowserTypes.AppIdentifier {
   if (typeof app === "string") {
     return options?.instanceId ? { appId: app, instanceId: options.instanceId } : { appId: app }
@@ -166,7 +166,7 @@ function mapToBrowserAppInstance(instance: AppInstance): BrowserAppInstance {
 
 export function registerBrowserDesktopAgentSession(
   desktopAgent: DesktopAgent,
-  session: BrowserDesktopAgentSession
+  session: BrowserDesktopAgentSession,
 ): void {
   browserDesktopAgentSessions.set(desktopAgent, session)
 }
@@ -182,7 +182,7 @@ export function isBrowserDesktopAgent(desktopAgent: DesktopAgent): boolean {
  * Integrators normally do not need this — use {@link SailPlatform} or host contracts instead.
  */
 export function getBrowserDesktopAgentSession(
-  desktopAgent: DesktopAgent
+  desktopAgent: DesktopAgent,
 ): BrowserDesktopAgentSession {
   if (isCollapsedBrowserDesktopAgent(desktopAgent)) {
     // Public integrator surface: collapsed agents do not expose a separate WCP session.
@@ -190,14 +190,14 @@ export function getBrowserDesktopAgentSession(
     // DesktopAgent.getAppConnection() — but architecture assertions must observe the throw.
     if (shouldThrowCollapsedSessionAccess()) {
       throw new Error(
-        "This browser Desktop Agent does not expose a separate WCP connector session. Use grouped host controllers and DesktopAgent.getAppConnection() instead."
+        "This browser Desktop Agent does not expose a separate WCP connector session. Use grouped host controllers and DesktopAgent.getAppConnection() instead.",
       )
     }
 
     const browserAppConnection = collapsedBrowserAgentConnections.get(desktopAgent)
     if (!browserAppConnection) {
       throw new Error(
-        "This browser Desktop Agent does not expose a separate WCP connector session. Use grouped host controllers and DesktopAgent.getAppConnection() instead."
+        "This browser Desktop Agent does not expose a separate WCP connector session. Use grouped host controllers and DesktopAgent.getAppConnection() instead.",
       )
     }
 
@@ -210,7 +210,7 @@ export function getBrowserDesktopAgentSession(
   const session = browserDesktopAgentSessions.get(desktopAgent)
   if (!session) {
     throw new Error(
-      "Not a browser Desktop Agent from createBrowserDesktopAgent(). Use getBrowserDesktopAgentSession only on preset instances."
+      "Not a browser Desktop Agent from createBrowserDesktopAgent(). Use getBrowserDesktopAgentSession only on preset instances.",
     )
   }
   return session
@@ -226,7 +226,7 @@ export function clearBrowserDesktopAgentSession(desktopAgent: DesktopAgent): voi
  */
 function resolveUserChannelById(
   desktopAgent: DesktopAgent,
-  channelId: string | null
+  channelId: string | null,
 ): BrowserTypes.Channel | null {
   if (channelId === null) {
     return null
@@ -235,7 +235,7 @@ function resolveUserChannelById(
 }
 
 export function createBrowserHostControllers(
-  options: BrowserHostControllerOptions
+  options: BrowserHostControllerOptions,
 ): BrowserHostControllers {
   const { desktopAgent, browserAppConnection, intentResolverUI } = options
   const agentInternals = getDesktopAgentInternals(desktopAgent)
@@ -275,7 +275,7 @@ export function createBrowserHostControllers(
 
         const handleChannelChanged = (
           changedInstanceId: string,
-          changedChannelId: string | null
+          changedChannelId: string | null,
         ) => {
           if (changedInstanceId === instanceId && changedChannelId === channelId) {
             cleanup()
@@ -337,7 +337,7 @@ export function createBrowserHostControllers(
       const appIdentifier = resolveOpenAppIdentifier(app, openOptions)
       const catalogApps = retrieveAppsById(
         desktopAgent.getState().appDirectory,
-        appIdentifier.appId
+        appIdentifier.appId,
       )
       if (catalogApps.length === 0) {
         throw new Error(`App not found in directory: ${appIdentifier.appId}`)
@@ -368,7 +368,6 @@ export function createBrowserHostControllers(
     getConnection: instanceId => desktopAgent.getAppConnection(instanceId),
     disconnect: instanceId => {
       browserAppConnection.disconnectAppByInstanceId(instanceId)
-      desktopAgent.disconnectInstance(instanceId)
     },
     onConnect: listener => {
       browserAppConnection.on("appConnected", listener)

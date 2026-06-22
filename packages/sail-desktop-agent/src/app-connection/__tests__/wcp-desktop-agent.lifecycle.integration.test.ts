@@ -10,7 +10,7 @@ import { AppInstanceState } from "../../state/types"
 import {
   clearAllHeartbeatTimersForTesting,
   getActiveHeartbeatTimerCount,
-} from "../../handlers/dacp/heartbeat-runtime"
+} from "../../handlers/heartbeat/runtime"
 import {
   connectWcpApp,
   createOpenRequestMessage,
@@ -47,7 +47,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
 
     expect(agent.getState().instances[connected.canonicalInstanceId]?.appId).toBe("portfolioApp")
     expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
-      AppInstanceState.CONNECTED
+      AppInstanceState.CONNECTED,
     )
   })
 
@@ -63,7 +63,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
 
     await postDacpOnPort(
       source.appPort,
-      createOpenRequestMessage(source.canonicalInstanceId, source.appId, CHART_APP.appId)
+      createOpenRequestMessage(source.canonicalInstanceId, source.appId, CHART_APP.appId),
     )
     await flushAsyncDelivery()
 
@@ -83,7 +83,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
 
     expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
     expect(agent.getState().instances[HOST_LAUNCHER_INSTANCE_ID]?.state).toBe(
-      AppInstanceState.CONNECTED
+      AppInstanceState.CONNECTED,
     )
   })
 
@@ -98,7 +98,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
     })
 
     expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
-      AppInstanceState.CONNECTED
+      AppInstanceState.CONNECTED,
     )
 
     connected.appPort.postMessage({
@@ -126,7 +126,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
     })
 
     expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
-      AppInstanceState.CONNECTED
+      AppInstanceState.CONNECTED,
     )
     expect(getActiveHeartbeatTimerCount()).toBe(0)
     expect(agent.getState().heartbeats[connected.canonicalInstanceId]).toBeUndefined()
@@ -151,7 +151,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
     })
 
     expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
-      AppInstanceState.CONNECTED
+      AppInstanceState.CONNECTED,
     )
 
     agent.disconnectInstance(connected.tempInstanceId)
@@ -175,7 +175,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
     })
 
     expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
-      AppInstanceState.CONNECTED
+      AppInstanceState.CONNECTED,
     )
     expect(getActiveHeartbeatTimerCount()).toBeGreaterThan(0)
 
@@ -183,7 +183,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
       () => {
         expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
       },
-      { timeout: 2000 }
+      { timeout: 2000 },
     )
     expect(getActiveHeartbeatTimerCount()).toBe(0)
   })

@@ -1,4 +1,5 @@
 import { defineConfig } from "vite-plus"
+import fmtConfig from "./.oxfmtrc.json"
 
 export default defineConfig({
   staged: {
@@ -33,6 +34,7 @@ export default defineConfig({
       "**/pnpm-lock.yaml",
       "**/assets/",
       "packages/sail-ui/src/index.css",
+      ".cursor/**",
     ],
     rules: {
       "vite-plus/prefer-vite-plus-imports": "error",
@@ -441,32 +443,5 @@ export default defineConfig({
       },
     ],
   },
-  fmt: {
-    singleQuote: false,
-    trailingComma: "es5",
-    arrowParens: "avoid",
-    tabWidth: 2,
-    useTabs: false,
-    printWidth: 100,
-    bracketSpacing: true,
-    jsxSingleQuote: false,
-    semi: false,
-    endOfLine: "lf",
-    sortPackageJson: false,
-    ignorePatterns: [
-      "website/.docusaurus/**/*",
-      "**/dist/**/*",
-      "**/node_modules/**/*",
-      "**/build/**/*",
-      "**/.git/**/*",
-      "**/coverage/**/*",
-      "**/*.md",
-      "package-lock.json",
-      "yarn.lock",
-      "pnpm-lock.yaml",
-      "*.tsbuildinfo",
-      "**/cucumber-report.html",
-      "**/test-results.xml",
-    ],
-  },
+  fmt: fmtConfig,
 })

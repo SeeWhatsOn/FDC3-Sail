@@ -15,15 +15,12 @@ import { DEFAULT_FDC3_USER_CHANNELS } from "../default-user-channels"
 import { resolveDesktopAgentConfig } from "../agent/default-config"
 import type { DesktopAgentOptions } from "../agent/desktop-agent"
 import type { DACPHandlerContext } from "../handlers/types"
-import { handleRaiseIntentRequest } from "../handlers/dacp/intent-handlers/intent-raise-intent"
-import { routeDACPMessage } from "../handlers/dacp"
+import { handleRaiseIntentRequest } from "../handlers/intents/intent-raise-intent"
+import { routeDACPMessage } from "../handlers"
 import { MockTransport } from "./utils/mock-transport"
-import {
-  createDACPTestContext,
-  withResponseDispatcher,
-} from "../handlers/dacp/__tests__/test-context"
-import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../handlers/dacp/utils/open-with-context"
-import { clearAllHeartbeatTimersForTesting } from "../handlers/dacp/heartbeat-runtime"
+import { createDACPTestContext, withResponseDispatcher } from "../handlers/__tests__/test-context"
+import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../handlers/utils/open-with-context"
+import { clearAllHeartbeatTimersForTesting } from "../handlers/heartbeat/runtime"
 
 type LogPayloadDetail = "metadata" | "full"
 
@@ -145,7 +142,7 @@ describe("DACP/WCP metadata-only log redaction", () => {
       await handleRaiseIntentRequest(message, context)
 
       const raiseIntentInfoCall = logger.infoCalls.find(call =>
-        call.message.includes("Processing raise intent request")
+        call.message.includes("Processing raise intent request"),
       )
       expect(raiseIntentInfoCall).toBeDefined()
       const infoArgs = JSON.stringify(raiseIntentInfoCall?.args ?? [])
@@ -174,7 +171,7 @@ describe("DACP/WCP metadata-only log redaction", () => {
       await routeDACPMessage(message, context)
 
       const dacpIncomingDebug = logger.debugCalls.some(call =>
-        call.message.includes("DACP INCOMING")
+        call.message.includes("DACP INCOMING"),
       )
       expect(dacpIncomingDebug).toBe(true)
     })

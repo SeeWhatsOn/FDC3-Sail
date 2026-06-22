@@ -9,17 +9,18 @@
 
 import type { Transport } from "../interfaces/transport"
 import type { AppLauncher } from "../host-contracts/app-launcher"
-import { routeDACPMessage, cleanupDACPHandlers } from "../handlers/dacp"
+import { routeDACPMessage, cleanupDACPHandlers } from "../handlers"
+import { handleWcp4ValidateAppIdentity } from "../app-connection/wcp/wcp-identity-validation"
 import {
   createDacpResponseDispatcher,
   createDacpResponseDispatcherFromDelivery,
-} from "../handlers/dacp/utils/dacp-response-utils"
+} from "../handlers/utils/dacp-response-utils"
 import type {
   DACPHandlerContext,
   MessageValidator,
   PendingIntentPromiseEntry,
 } from "../handlers/types"
-import type { IntentResolutionCallback } from "../handlers/dacp/intent-resolution-callback"
+import type { IntentResolutionCallback } from "../handlers/intent-resolution-callback"
 import type { DirectoryApp } from "../app-directory/types"
 import { addApp } from "../state/mutators/app-directory"
 import type { BrowserTypes } from "@finos/fdc3"
@@ -31,7 +32,7 @@ import { InMemoryTransport } from "../../test/support/in-memory-transport"
 import {
   handleJoinUserChannelRequest,
   handleLeaveCurrentChannelRequest,
-} from "../handlers/dacp/channel-handlers"
+} from "../handlers/channels/handlers"
 import { NoChannelFoundError } from "../errors/fdc3-errors"
 import { getAllUserChannels, getInstance, getUserChannel } from "../state/selectors"
 import { connectInstance } from "../state/mutators"
@@ -292,7 +293,7 @@ export class DesktopAgent {
 
       const tempInstanceId = `temp-${connectionAttemptUuid}`
       const wcpContext = this.createHandlerContext(tempInstanceId)
-      await routeDACPMessage(message, wcpContext)
+      handleWcp4ValidateAppIdentity(message, wcpContext)
       return
     }
 
@@ -331,7 +332,7 @@ export class DesktopAgent {
     }
     const responses = this.browserAppConnection
       ? createDacpResponseDispatcherFromDelivery(this.browserAppConnection, message =>
-          this.browserAppConnection!.connectionRegistry.sendToAppInstance(message)
+          this.browserAppConnection!.connectionRegistry.sendToAppInstance(message),
         )
       : createDacpResponseDispatcher(this.transport)
 
@@ -351,6 +352,7 @@ export class DesktopAgent {
       heartbeatIntervalMs: this.heartbeatIntervalMs,
       heartbeatTimeoutMs: this.heartbeatTimeoutMs,
       pendingIntentPromises: this.pendingIntentPromises,
+      disconnectInstance: instanceId => this.disconnectInstance(instanceId),
     }
   }
   /**
@@ -390,6 +392,9 @@ export class DesktopAgent {
    */
   attachBrowserAppConnection(browserAppConnection: BrowserAppConnection): void {
     this.browserAppConnection = browserAppConnection
+    browserAppConnection.setOnInstanceTeardown(instanceId => {
+      this.disconnectInstance(instanceId)
+    })
   }
 
   /**
@@ -480,7 +485,7 @@ export class DesktopAgent {
           payload: { channelId },
           meta,
         },
-        context
+        context,
       )
     } else {
       handleLeaveCurrentChannelRequest(
@@ -489,7 +494,7 @@ export class DesktopAgent {
           payload: {},
           meta,
         },
-        context
+        context,
       )
     }
   }

@@ -1,15 +1,20 @@
 import { After } from "@cucumber/cucumber"
-import { clearAllHeartbeatTimersForTesting } from "../../src/handlers/dacp/heartbeat-runtime"
-import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../src/handlers/dacp/utils/open-with-context"
+import { clearAllPendingIntentTimeoutsForTesting } from "../../src/handlers/intents/intent-pending-timeout-registry"
+import { clearAllHeartbeatTimersForTesting } from "../../src/handlers/heartbeat/runtime"
+import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../src/handlers/utils/open-with-context"
+import type { CustomWorld } from "../world/index"
 
 /**
  * Reset module-level timers after every scenario so the Cucumber process can exit
- * cleanly (heartbeat and open-with-context scenarios schedule real timeouts).
+ * cleanly (heartbeat, open-with-context, and pending-intent scenarios schedule
+ * real timeouts).
  *
  * Assertions that cleanup worked belong in feature steps (e.g. "no heartbeat timers
  * are active"), not on scenario tags — see AGENTS.md (Cucumber tags).
  */
-After(function () {
+After(function (this: CustomWorld) {
   clearAllHeartbeatTimersForTesting()
   clearAllPendingOpenWithContextTimeoutsForTesting()
+  clearAllPendingIntentTimeoutsForTesting()
+  this.desktopAgent?.stop()
 })

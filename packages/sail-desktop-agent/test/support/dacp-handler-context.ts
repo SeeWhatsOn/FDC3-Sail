@@ -3,7 +3,7 @@
  * For BDD steps that must call handlers directly (e.g. legacy "is closed" teardown).
  */
 
-import { createDacpResponseDispatcher } from "../../src/handlers/dacp/utils/dacp-response-utils"
+import { createDacpResponseDispatcher } from "../../src/handlers/utils/dacp-response-utils"
 import type { DACPHandlerContext } from "../../src/handlers/types"
 import { consoleLogger } from "../../src/interfaces/logger"
 import type { CustomWorld } from "../world/index.ts"

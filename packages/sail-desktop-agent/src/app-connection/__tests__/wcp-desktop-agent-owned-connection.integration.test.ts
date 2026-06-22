@@ -11,7 +11,7 @@ import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 import type { DesktopAgent } from "../../agent/desktop-agent"
 import { AppInstanceState } from "../../state/types"
-import { clearAllHeartbeatTimersForTesting } from "../../handlers/dacp/heartbeat-runtime"
+import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import {
   assertCollapsedBrowserArchitecture,
   connectWcpAppViaDaOwnedConnection,
@@ -61,7 +61,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
 
     const postMessageSpy = vi.spyOn(window, "postMessage")
     window.dispatchEvent(
-      createMessageEvent(createWCP1Hello("da-owned-wcp1-uuid", PORTFOLIO_APP.details.url))
+      createMessageEvent(createWCP1Hello("da-owned-wcp1-uuid", PORTFOLIO_APP.details.url)),
     )
 
     const calls = postMessageSpy.mock.calls as unknown as Array<
@@ -90,7 +90,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
 
     expect(agent.getState().instances[connected.canonicalInstanceId]?.appId).toBe("portfolioApp")
     expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
-      AppInstanceState.CONNECTED
+      AppInstanceState.CONNECTED,
     )
     expect(connections.getAppConnection(connected.canonicalInstanceId)).toMatchObject({
       instanceId: connected.canonicalInstanceId,
@@ -117,12 +117,12 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
 
     const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
       appA.appPort,
-      data => (data as { type?: string }).type === "broadcastEvent"
+      data => (data as { type?: string }).type === "broadcastEvent",
     )
 
     await postDacpOnPort(
       appA.appPort,
-      createJoinUserChannelMessage(appA.canonicalInstanceId, appA.appId, CHANNEL_ID)
+      createJoinUserChannelMessage(appA.canonicalInstanceId, appA.appId, CHANNEL_ID),
     )
     await postDacpOnPort(
       appA.appPort,
@@ -130,16 +130,16 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
         appA.canonicalInstanceId,
         appA.appId,
         CHANNEL_ID,
-        INSTRUMENT_CONTEXT.type
-      )
+        INSTRUMENT_CONTEXT.type,
+      ),
     )
     await postDacpOnPort(
       appB.appPort,
-      createJoinUserChannelMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID)
+      createJoinUserChannelMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID),
     )
     await postDacpOnPort(
       appB.appPort,
-      createBroadcastMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID, INSTRUMENT_CONTEXT)
+      createBroadcastMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID, INSTRUMENT_CONTEXT),
     )
 
     const broadcastEvent = await broadcastPromise
@@ -211,7 +211,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
 
     const postMessageSpy = vi.spyOn(window, "postMessage")
     window.dispatchEvent(
-      createMessageEvent(createWCP1Hello(connectionAttemptUuid, unknownIdentityUrl))
+      createMessageEvent(createWCP1Hello(connectionAttemptUuid, unknownIdentityUrl)),
     )
     const calls = postMessageSpy.mock.calls as unknown as Array<
       [BrowserTypes.WebConnectionProtocol3Handshake, string, MessagePort[]]
@@ -225,7 +225,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     const wcp5FailurePromise =
       waitForPortMessage<BrowserTypes.WebConnectionProtocol5ValidateAppIdentityFailedResponse>(
         appPort,
-        data => (data as { type?: string }).type === "WCP5ValidateAppIdentityFailedResponse"
+        data => (data as { type?: string }).type === "WCP5ValidateAppIdentityFailedResponse",
       )
 
     appPort.postMessage({
@@ -268,12 +268,12 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
 
     const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
       listener.appPort,
-      data => (data as { type?: string }).type === "broadcastEvent"
+      data => (data as { type?: string }).type === "broadcastEvent",
     )
 
     await postDacpOnPort(
       listener.appPort,
-      createJoinUserChannelMessage(listener.canonicalInstanceId, listener.appId, CHANNEL_ID)
+      createJoinUserChannelMessage(listener.canonicalInstanceId, listener.appId, CHANNEL_ID),
     )
     await postDacpOnPort(
       listener.appPort,
@@ -281,12 +281,12 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
         listener.canonicalInstanceId,
         listener.appId,
         CHANNEL_ID,
-        INSTRUMENT_CONTEXT.type
-      )
+        INSTRUMENT_CONTEXT.type,
+      ),
     )
     await postDacpOnPort(
       broadcaster.appPort,
-      createJoinUserChannelMessage(broadcaster.canonicalInstanceId, broadcaster.appId, CHANNEL_ID)
+      createJoinUserChannelMessage(broadcaster.canonicalInstanceId, broadcaster.appId, CHANNEL_ID),
     )
     await postDacpOnPort(
       broadcaster.appPort,
@@ -294,8 +294,8 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
         broadcaster.canonicalInstanceId,
         broadcaster.appId,
         CHANNEL_ID,
-        INSTRUMENT_CONTEXT
-      )
+        INSTRUMENT_CONTEXT,
+      ),
     )
 
     const broadcastEvent = await broadcastPromise
@@ -307,7 +307,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
         broadcastEvent.meta as BrowserTypes.BroadcastEventMeta & {
           destination?: { instanceId?: string }
         }
-      ).destination?.instanceId
+      ).destination?.instanceId,
     ).toBe(listener.canonicalInstanceId)
   })
 })

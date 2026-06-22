@@ -19,9 +19,11 @@ export interface WCPRoutingContext {
   ) => void
   enrichMessageWithSource: (
     message: AppRequestMessage | WebConnectionProtocolMessage,
-    instanceId: string
+    instanceId: string,
   ) => AppRequestMessage | WebConnectionProtocolMessage
   handleWCP6Goodbye: (instanceId: string) => void
+  onInstanceTeardown: (instanceId: string) => void
+  /** Connection-only prune (pre-WCP5 handshake timeout). */
   disconnectApp: (instanceId: string) => void
 }
 
@@ -31,7 +33,7 @@ export interface WCPRoutingContext {
  */
 export function bridgeAppPort(
   appTransport: MessagePortTransport,
-  context: WCPRoutingContext
+  context: WCPRoutingContext,
 ): void {
   const { connectionRegistry } = context
 
@@ -48,10 +50,6 @@ export function bridgeAppPort(
     }
 
     if (message.type === "WCP6Goodbye") {
-      const enrichedGoodbye = context.enrichMessageWithSource(message, currentInstanceId)
-      void Promise.resolve(context.onAppMessage(enrichedGoodbye)).catch(error => {
-        context.logger.error("Error ingesting WCP6Goodbye:", error)
-      })
       context.handleWCP6Goodbye(currentInstanceId)
       return
     }
@@ -65,7 +63,7 @@ export function bridgeAppPort(
   appTransport.onDisconnect(() => {
     const currentInstanceId = connectionRegistry.transportToInstanceId.get(appTransport)
     if (currentInstanceId) {
-      context.disconnectApp(currentInstanceId)
+      context.onInstanceTeardown(currentInstanceId)
     }
     connectionRegistry.transportToInstanceId.delete(appTransport)
   })
@@ -82,7 +80,7 @@ export function handleDesktopAgentMessage(message: unknown, context: WCPRoutingC
 /** @deprecated Use {@link AppConnectionRegistry.sendToAppInstance} */
 export function deliverAgentMessage(
   message: unknown,
-  connectionRegistry: AppConnectionRegistry
+  connectionRegistry: AppConnectionRegistry,
 ): void {
   connectionRegistry.sendToAppInstance(message)
 }
