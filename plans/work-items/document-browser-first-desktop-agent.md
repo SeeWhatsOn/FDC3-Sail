@@ -3,7 +3,7 @@ title: "Document browser-first Desktop Agent"
 slug: document-browser-first-desktop-agent
 kind: task
 type: chore
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
