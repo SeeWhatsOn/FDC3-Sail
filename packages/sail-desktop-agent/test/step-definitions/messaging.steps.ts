@@ -62,7 +62,8 @@ Then(
     }
 
     const appIntents: AppIntentRecord[] =
-      responseType === "raiseIntentForContextResponse"
+      responseType === "raiseIntentForContextResponse" ||
+      responseType === "findIntentsByContextResponse"
         ? ((message.payload?.appIntents ?? []) as AppIntentRecord[])
         : ([message.payload?.appIntent].filter(Boolean) as AppIntentRecord[])
 
@@ -116,7 +117,8 @@ Then(
     }
 
     const appIntents: AppIntentRecord[] =
-      responseType === "raiseIntentForContextResponse"
+      responseType === "raiseIntentForContextResponse" ||
+      responseType === "findIntentsByContextResponse"
         ? ((message.payload?.appIntents ?? []) as AppIntentRecord[])
         : ([message.payload?.appIntent].filter(Boolean) as AppIntentRecord[])
 

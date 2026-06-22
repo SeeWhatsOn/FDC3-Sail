@@ -1,3 +1,4 @@
+@fdc3_3.0
 Feature: App self-close (fdc3.close)
 
   FDC3 v3.0: an app requests that the Desktop Agent close its own window or frame.
@@ -8,14 +9,12 @@ Feature: App self-close (fdc3.close)
     Given A desktop agent
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
 
-  @conformance3.0
   Scenario: App requests self-close successfully
     When "appId: App1, instanceId: a1" requests close [fdc3.close]
     Then messaging will have no closeResponse
     And "appId: App1, instanceId: a1" was closed via AppLauncher
     And "appId: App1, instanceId: a1" instance is removed from agent state
 
-  @conformance3.0
   Scenario: Desktop Agent returns ErrorOnClose when host cannot close the app
     Given "appId: App1, instanceId: a1" is configured to fail on close
     When "appId: App1, instanceId: a1" requests close [fdc3.close]

@@ -1,8 +1,9 @@
+@fdc3_2.2 @fdc3_3.0
 Feature: App Disconnection and Cleanup
 
   Background:
 
-  @conformance2.2
+  @fdc3_2.0
   Scenario: Apps that disconnect and reconnect to the DA should receive one copy of a broadcast message from an app channel as state was cleaned up
     Given A desktop agent
     When "appId: App1, instanceId: a1" is opened with connection id "a1"
@@ -26,7 +27,7 @@ Feature: App Disconnection and Cleanup
       | broadcastEvent             | App2     | a2            | fdc3.channel.1        | fdc3.instrument          | AAPL                          |
       | broadcastResponse          | App1     | a1            | {null}                | {null}                   | {null}                        |
 
-  @conformance2.2
+  @fdc3_2.0
   Scenario: Apps that disconnect and reconnect to the DA should NOT receive intent results from the previous connection as state was cleaned up
     Given "portfolioApp" is an app with the following intents
       | Intent Name   | Context Type   | Result Type |
@@ -49,14 +50,13 @@ Feature: App Disconnection and Cleanup
       | raiseIntentResponse  | {null}             | ABC123               | App1         | a1            | {null}                             | l1                                             | {null}                                |
       | intentResultResponse | {null}             | {empty}              | PortfolioApp | l1            | {null}                             | {null}                                         | {null}                                |
 
-  @conformance2.2
+  @fdc3_2.0
   Scenario: Disconnecting from the DA when subscribed to a private channel channel sends unsubscribe and disconnect messages
     And A desktop agent
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
     And "appId: App2, instanceId: a1" creates a private channel [fdc3.createPrivateChannel]
-    #TODO: have a2 retrieve the private channel by raising an intent - its currently using a1 reference to the channel
-    And I refer to "uuid3" as "channel1Id"
+    And I alias the last private channel as "channel1Id"
     When "appId: App2, instanceId: a2" adds an "disconnect" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
     And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App2, instanceId: a2" adds an "unsubscribe" event listener on "{channel1Id}" [PrivateChannel.addEventListener]

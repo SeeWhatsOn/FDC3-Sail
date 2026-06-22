@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
+import type { BrowserTypes } from "@finos/fdc3"
 import type { DesktopAgent } from "../../agent/desktop-agent"
 import { AppInstanceState } from "../../state/types"
 import {
@@ -13,9 +14,12 @@ import {
 } from "../../handlers/heartbeat/runtime"
 import {
   connectWcpApp,
+  createMessageEvent,
   createOpenRequestMessage,
+  createWCP1Hello,
   flushAsyncDelivery,
   postDacpOnPort,
+  waitForPortMessage,
 } from "./wcp-edge-test-helpers"
 import {
   CHART_APP,
@@ -186,5 +190,69 @@ describe("Option A instance lifecycle (WCP path)", () => {
       { timeout: 2000 },
     )
     expect(getActiveHeartbeatTimerCount()).toBe(0)
+  })
+
+  it("reconnects with the same instance identity when WCP4 revalidates from the same app", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+
+    const firstChart = await connectWcpApp(agent, {
+      connectionAttemptUuid: "lifecycle-reconnect-chart-first",
+      appId: CHART_APP.appId,
+      identityUrl: CHART_APP.details.url,
+    })
+
+    const secondChart = await connectWcpApp(agent, {
+      connectionAttemptUuid: "lifecycle-reconnect-chart-second",
+      appId: CHART_APP.appId,
+      identityUrl: CHART_APP.details.url,
+      hostInstanceId: firstChart.canonicalInstanceId,
+      instanceUuid: firstChart.instanceUuid,
+    })
+
+    expect(secondChart.canonicalInstanceId).toBe(firstChart.canonicalInstanceId)
+    expect(agent.getState().instances[firstChart.canonicalInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED,
+    )
+  })
+
+  it("rejects WCP4 revalidation when the app is not in the app directory", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+
+    const connectionAttemptUuid = "lifecycle-unknown-reconnect-uuid"
+    const unknownUrl = "https://example.com/unknown"
+    const postMessageSpy = vi.spyOn(window, "postMessage")
+    window.dispatchEvent(createMessageEvent(createWCP1Hello(connectionAttemptUuid, unknownUrl)))
+
+    const calls = postMessageSpy.mock.calls as unknown as Array<
+      [BrowserTypes.WebConnectionProtocol3Handshake, string, MessagePort[]]
+    >
+    postMessageSpy.mockRestore()
+
+    const appPort = calls[0][2][0]
+    appPort.start()
+
+    const wcp4Failed = waitForPortMessage<{ type: string; payload?: { message?: string } }>(
+      appPort,
+      data => (data as { type?: string }).type === "WCP5ValidateAppIdentityFailedResponse",
+    )
+
+    appPort.postMessage({
+      type: "WCP4ValidateAppIdentity",
+      meta: {
+        connectionAttemptUuid,
+        timestamp: new Date(),
+      },
+      payload: {
+        identityUrl: unknownUrl,
+        actualUrl: unknownUrl,
+      },
+    })
+    await flushAsyncDelivery()
+
+    const failed = await wcp4Failed
+    expect(failed.type).toBe("WCP5ValidateAppIdentityFailedResponse")
+    expect(failed.payload?.message).toContain("App not found in app directory")
   })
 })

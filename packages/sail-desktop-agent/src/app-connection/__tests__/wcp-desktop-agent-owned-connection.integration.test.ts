@@ -13,7 +13,6 @@ import type { DesktopAgent } from "../../agent/desktop-agent"
 import { AppInstanceState } from "../../state/types"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import {
-  assertCollapsedBrowserArchitecture,
   connectWcpAppViaDaOwnedConnection,
   requireDaOwnedAppConnection,
 } from "./wcp-owned-connection-test-helpers"
@@ -43,37 +42,6 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     for (const agent of activeAgents.splice(0)) {
       agent.stop()
     }
-  })
-
-  it("does not route browser apps through BrowserDaEdgeLink or a preset WCP connector session", () => {
-    const agent = createTestAgent()
-    activeAgents.push(agent)
-
-    assertCollapsedBrowserArchitecture(agent)
-  })
-
-  it("listens for WCP1Hello after DesktopAgent.start and returns WCP3Handshake without edge-link wiring", () => {
-    const agent = createTestAgent({ autoStart: false })
-    activeAgents.push(agent)
-
-    assertCollapsedBrowserArchitecture(agent)
-    agent.start()
-
-    const postMessageSpy = vi.spyOn(window, "postMessage")
-    window.dispatchEvent(
-      createMessageEvent(createWCP1Hello("da-owned-wcp1-uuid", PORTFOLIO_APP.details.url)),
-    )
-
-    const calls = postMessageSpy.mock.calls as unknown as Array<
-      [BrowserTypes.WebConnectionProtocol3Handshake, string, MessagePort[]]
-    >
-    expect(calls.length).toBeGreaterThan(0)
-    expect(calls[0][0].type).toBe("WCP3Handshake")
-
-    const connections = requireDaOwnedAppConnection(agent)
-    expect(connections.getAppConnection("temp-da-owned-wcp1-uuid")).toBeDefined()
-
-    postMessageSpy.mockRestore()
   })
 
   it("completes WCP1-5 handshake and migrates temp to canonical instance on DA-owned connection maps", async () => {

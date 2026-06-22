@@ -19,7 +19,7 @@ import { applyDesktopAgentStateUpdate } from "../support/agent-state"
  * - `result`: Test results stored for later assertions
  *
  * Additional arbitrary properties can be stored for variable substitution
- * (e.g., from "I refer to {string} as {string}" step).
+ * (e.g. `{lastContextListenerId}`, `{channel1Id}` from alias steps).
  */
 export interface TestProps {
   /** Maps app identifier strings (e.g., "App1", "appId: App1, instanceId: a1") to instance IDs */
@@ -79,7 +79,8 @@ export class CustomWorld extends World {
     delete this.props.instances
     delete this.props.lastContextListenerId
     delete this.props.lastIntentListenerId
-    delete this.props.contextListenersByInstance
+    delete this.props.lastEventListenerId
+    delete this.props.lastPrivateChannelId
     delete this.props.intentListenersByInstance
     // Do not replace globalThis.crypto.randomUUID — Cucumber uses it for test-case ids;
     // a per-scenario counter caused duplicate ids and only ~15 scenarios actually ran.
@@ -163,7 +164,7 @@ export class CustomWorld extends World {
   }
 
   /**
-   * Deterministic request ids for Cucumber steps (createMeta / hard-coded uuid3 tables).
+   * Deterministic request ids for Cucumber steps (createMeta).
    */
   createUUID(): string {
     return `uuid${this.testUuidCounter++}`

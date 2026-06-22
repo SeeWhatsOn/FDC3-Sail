@@ -1,3 +1,4 @@
+@fdc3_2.2 @fdc3_3.0
 Feature: Desktop Agent Event Listeners
   Desktop Agent events allow apps to subscribe to DA-level events such as
   user channel changes. This is separate from context listeners and intent listeners.
@@ -6,13 +7,6 @@ Feature: Desktop Agent Event Listeners
     Given "appId: App1, instanceId: a1" is opened with connection id "a1"
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
 
-  Scenario: Adding an event listener for channel changes
-    When "appId: App1, instanceId: a1" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
-    Then messaging will have outgoing posts
-      | msg.matches_type         | msg.payload.listenerUUID | to.instanceId |
-      | addEventListenerResponse | uuid3                    | a1            |
-
-  @conformance2.2
   Scenario: Receiving channelChanged event when another app joins a channel
     When "appId: App1, instanceId: a1" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
     And "appId: App2, instanceId: a2" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
@@ -45,7 +39,7 @@ Feature: Desktop Agent Event Listeners
 
   Scenario: Unsubscribing from event listener
     When "appId: App1, instanceId: a1" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
-    And "appId: App1, instanceId: a1" removes DA event listener "uuid3" [fdc3.removeEventListener]
+    And "appId: App1, instanceId: a1" removes DA event listener "{lastEventListenerId}" [fdc3.removeEventListener]
     And "appId: App2, instanceId: a2" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
       | msg.matches_type                 | to.instanceId |
@@ -65,16 +59,6 @@ Feature: Desktop Agent Event Listeners
       | channelChangedEvent      | a2            | fdc3.channel.1           |
       | joinUserChannelResponse  | a1            | {null}                   |
 
-  Scenario: Adding event listener with userChannelChanged type (FDC3 2.2 standard)
-    When "appId: App1, instanceId: a1" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
-    And "appId: App2, instanceId: a2" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
-    Then messaging will have outgoing posts
-      | msg.matches_type         | to.instanceId | msg.payload.newChannelId |
-      | addEventListenerResponse | a1            | {null}                   |
-      | channelChangedEvent      | a1            | fdc3.channel.1           |
-      | joinUserChannelResponse  | a2            | {null}                   |
-
-  @conformance2.2
   Scenario: addEventListener with null type subscribes to all event types
     When "appId: App1, instanceId: a1" adds an event listener for all event types [fdc3.addEventListener]
     And "appId: App2, instanceId: a2" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]

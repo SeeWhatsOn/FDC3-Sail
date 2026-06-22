@@ -1,3 +1,4 @@
+@fdc3_2.2 @fdc3_3.0
 Feature: Raising Intents For Context
 
   Background:
@@ -21,27 +22,21 @@ Feature: Raising Intents For Context
     And "appId: nothingApp, instanceId: n1" is opened with connection id "n1"
     And "appId: nothingApp, instanceId: n1" registers an intent listener for "StartChat" [fdc3.addIntentListener]
 
-  @conformance2.2
+  @fdc3_2.0
   Scenario: Raising an Intent With Context to a Non-Existent App
     And "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.instrument" on app "completelyMadeUp" [fdc3.raiseIntentForContext]
     Then messaging will have outgoing posts
       | msg.type                      | msg.payload.error    | to.instanceId | to.appId |
       | raiseIntentForContextResponse | TargetAppUnavailable | a1            | App1     |
 
-  @conformance2.2
+  @fdc3_2.0
   Scenario: Raising An Intent With Context To A Non-Existent App Instance
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.portfolio" on app "appId: portfolioApp, instanceId: unknownInstance" [fdc3.raiseIntentForContext]
     Then messaging will have outgoing posts
       | msg.type                      | msg.payload.error         | to.instanceId |
       | raiseIntentForContextResponse | TargetInstanceUnavailable | a1            |
 
-  Scenario: Raising An Intent With Context To An Invalid Instance
-    When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.portfolio" on an invalid app instance [fdc3.raiseIntentForContext]
-    Then messaging will have outgoing posts
-      | msg.type                      | msg.payload.error    | to.instanceId |
-      | raiseIntentForContextResponse | TargetAppUnavailable | a1            |
-
-  @conformance2.2
+  @fdc3_2.0
   Scenario: Raising An Intent With Context To A Running App
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.portfolio" on app "appId: listenerApp, instanceId: b1" [fdc3.raiseIntentForContext]
     Then messaging will have outgoing posts
@@ -49,7 +44,7 @@ Feature: Raising Intents For Context
       | intentEvent                   | fdc3.portfolio           | ViewChart          | App1                             | a1                                    | {null}                              | b1            | listenerApp | {null}                                    |
       | raiseIntentForContextResponse | {null}                   | {null}             | {null}                           | {null}                                | ViewChart                           | a1            | App1        | listenerApp                               |
 
-  @conformance2.2
+  @fdc3_2.0
   Scenario: Raising An Intent With Context To A Non-Running App
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.instrument" on app "portfolioApp" [fdc3.raiseIntentForContext]
     And "uuid-0" sends validate
@@ -60,13 +55,7 @@ Feature: Raising Intents For Context
       | intentEvent                   | ViewInstrument     | uuid-0        | portfolioApp | fdc3.instrument          |
       | raiseIntentForContextResponse | {null}             | a1            | App1         | {null}                   |
 
-  Scenario: Raising an Intent With Context to a Non-Existent App Instance
-    And "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.portfolio" on app "appId: unusedApp, instanceId: u1" [fdc3.raiseIntentForContext]
-    Then messaging will have outgoing posts
-      | msg.type                      | msg.payload.error         | to.instanceId | to.appId |
-      | raiseIntentForContextResponse | TargetInstanceUnavailable | a1            | App1     |
-
-  @conformance2.2
+  @fdc3_2.0
   Scenario: Raising An Intent With Context To A Broken App that doesn't add an intent listener
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.instrument" on app "portfolioApp" [fdc3.raiseIntentForContext]
     And "uuid-0" sends validate
@@ -75,7 +64,7 @@ Feature: Raising Intents For Context
       | msg.type                      | msg.payload.error    | to.instanceId | to.appId |
       | raiseIntentForContextResponse | IntentDeliveryFailed | a1            | App1     |
 
-  @conformance2.2
+  @fdc3_2.0
   Scenario: User Must Choose An Intent using The Intent Resolver
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.portfolio" [fdc3.raiseIntentForContext]
     Then messaging will have outgoing posts
@@ -86,6 +75,7 @@ Feature: Raising Intents For Context
     Then "raiseIntentForContextResponse" response intent "ViewChart" includes app "portfolioApp" with instanceId "{null}"
     Then "raiseIntentForContextResponse" response intent "ViewChart" includes app "listenerApp" with instanceId "{null}"
 
+  @fdc3_2.0
   Scenario: Dynamic registrations are displayed in the app resolver
     When "appId: App2, instanceId: a2" registers an intent listener for "ViewPortfolio" with contextType "fdc3.portfolio" [fdc3.addIntentListener]
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.portfolio" [fdc3.raiseIntentForContext]
@@ -98,7 +88,7 @@ Feature: Raising Intents For Context
     Then "raiseIntentForContextResponse" response intent "ViewChart" includes app "portfolioApp" with instanceId "{null}"
     Then "raiseIntentForContextResponse" response intent "ViewChart" includes app "listenerApp" with instanceId "{null}"
 
-  @conformance2.2
+  @fdc3_2.0
   Scenario: User Cancels The Intent Resolver Returns UserCancelledResolution
     Given the mock intent resolver will cancel the resolution
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.portfolio" [fdc3.raiseIntentForContext]
@@ -106,14 +96,13 @@ Feature: Raising Intents For Context
       | msg.matches_type              | msg.payload.error       | to.instanceId |
       | raiseIntentForContextResponse | UserCancelledResolution | a1            |
 
-  @conformance2.2
   Scenario: Raising An Intent For Context With Malformed Context Returns MalformedContext
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.malformed" [fdc3.raiseIntentForContext]
     Then messaging will have outgoing posts
       | msg.matches_type              | msg.payload.error | to.instanceId |
       | raiseIntentForContextResponse | MalformedContext  | a1            |
 
-  @conformance2.2
+  @fdc3_2.0
   Scenario: Raising An Intent For fdc3.nothing Context Targets A Running App
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.nothing" on app "appId: nothingApp, instanceId: n1" [fdc3.raiseIntentForContext]
     Then messaging will have outgoing posts

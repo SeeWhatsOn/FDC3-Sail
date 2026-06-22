@@ -253,10 +253,9 @@ Given(
     const resolvedId = handleResolve(id, this) as string
     const instanceId = getAppInstanceId(this, appStr)
     const byInstance = this.props.intentListenersByInstance as Record<string, string> | undefined
-    const instanceListenerId = byInstance?.[instanceId]
     const listenerUUID =
-      instanceListenerId && resolvedId.startsWith("uuid") && resolvedId !== instanceListenerId
-        ? instanceListenerId
+      id === "{lastIntentListenerId}" && byInstance?.[instanceId]
+        ? byInstance[instanceId]
         : resolvedId
 
     const message: IntentListenerUnsubscribeRequest = {

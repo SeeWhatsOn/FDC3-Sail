@@ -194,6 +194,9 @@ export async function connectWcpAppViaDaOwnedConnection(
 
   expect(resolvedWcp5.payload.appId).toBe(appId)
 
+  const validatedInstanceUuid = resolvedWcp5.payload.instanceUuid
+  expect(validatedInstanceUuid).toBeTruthy()
+
   await vi.waitFor(() => {
     expect(connections.getAppConnection(canonicalInstanceId)).toBeDefined()
 
@@ -210,5 +213,7 @@ export async function connectWcpAppViaDaOwnedConnection(
     appPort,
 
     appId,
+
+    instanceUuid: validatedInstanceUuid,
   }
 }

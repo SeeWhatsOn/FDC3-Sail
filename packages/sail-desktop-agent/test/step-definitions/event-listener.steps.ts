@@ -1,5 +1,6 @@
 import { When } from "@cucumber/cucumber"
 import { CustomWorld } from "../world/index.ts"
+import { handleResolve } from "../support/testing-utils"
 import { createMeta, getAppInstanceId } from "./generic.steps"
 import { BrowserTypes } from "@finos/fdc3-schema"
 import { AppInstanceState } from "../../src/state/types"
@@ -56,6 +57,13 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
+
+    const lastMessage = this.mockTransport.getLastMessage()
+    const listenerUUID = (lastMessage?.msg?.payload as { listenerUUID?: string } | undefined)
+      ?.listenerUUID
+    if (listenerUUID) {
+      this.props.lastEventListenerId = listenerUUID
+    }
   },
 )
 
@@ -77,6 +85,13 @@ When(
     }
 
     await this.mockTransport.receiveMessage(message)
+
+    const lastMessage = this.mockTransport.getLastMessage()
+    const listenerUUID = (lastMessage?.msg?.payload as { listenerUUID?: string } | undefined)
+      ?.listenerUUID
+    if (listenerUUID) {
+      this.props.lastEventListenerId = listenerUUID
+    }
   },
 )
 
@@ -93,7 +108,7 @@ When(
     const message: EventListenerUnsubscribeRequest = {
       meta,
       payload: {
-        listenerUUID,
+        listenerUUID: handleResolve(listenerUUID, this) ?? listenerUUID,
       },
       type: "eventListenerUnsubscribeRequest",
     }

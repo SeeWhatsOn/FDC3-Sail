@@ -55,6 +55,46 @@ failing:
     - tsx/cjs
   tags: "@failing"
 
+# FDC3 version filters (scenarios inherit feature-level tags; multi-tag supported)
+fdc3-2.0:
+  format:
+    - "@cucumber/pretty-formatter"
+  paths:
+    - test/features
+  require:
+    - test/step-definitions/*.steps.ts
+    - test/support/*.ts
+    - test/world/index.ts
+  requireModule:
+    - tsx/cjs
+  tags: "@fdc3_2.0 and not @failing"
+
+fdc3-2.2:
+  format:
+    - "@cucumber/pretty-formatter"
+  paths:
+    - test/features
+  require:
+    - test/step-definitions/*.steps.ts
+    - test/support/*.ts
+    - test/world/index.ts
+  requireModule:
+    - tsx/cjs
+  tags: "@fdc3_2.2 and not @failing"
+
+fdc3-3.0:
+  format:
+    - "@cucumber/pretty-formatter"
+  paths:
+    - test/features
+  require:
+    - test/step-definitions/*.steps.ts
+    - test/support/*.ts
+    - test/world/index.ts
+  requireModule:
+    - tsx/cjs
+  tags: "@fdc3_3.0 and not @failing"
+
 # Profile for running a single feature (no default paths)
 single:
   format:

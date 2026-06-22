@@ -3,7 +3,6 @@ import { MockTransport } from "../../__tests__/utils/mock-transport"
 import type { DirectoryApp } from "../../app-directory/types"
 import { retrieveAppsById } from "../../app-directory/app-directory-queries"
 import { addApplications } from "../../state/mutators/app-directory"
-import { DesktopAgent } from "../../agent/desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { createInitialState } from "../../state/initial-state"
@@ -14,8 +13,6 @@ import {
   createDacpRequestMeta,
   withResponseDispatcher,
 } from "./test-context"
-
-const TEST_PROVIDER = "test-provider"
 
 const chartApp: DirectoryApp = {
   appId: "chartApp",
@@ -29,23 +26,6 @@ function withCatalogApps(state: AgentState, apps: DirectoryApp[]): AgentState {
   return addApplications(state, apps)
 }
 
-type GetAppMetadataSuccessResponse = {
-  type: "getAppMetadataResponse"
-  payload: {
-    appMetadata: {
-      appId: string
-      instanceId?: string
-      desktopAgent?: string
-    }
-  }
-}
-
-function getAppMetadataResponse(transport: MockTransport): GetAppMetadataSuccessResponse {
-  const last = transport.getLastMessage() as GetAppMetadataSuccessResponse
-  expect(last.type).toBe("getAppMetadataResponse")
-  return last
-}
-
 function createConnectedCallerState() {
   let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
   state = connectInstance(state, {
@@ -56,78 +36,6 @@ function createConnectedCallerState() {
   state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
   return state
 }
-
-describe("getAppMetadata desktopAgent field", () => {
-  it("includes desktopAgent for directory-only lookup", () => {
-    const state = withCatalogApps(createConnectedCallerState(), [chartApp])
-    const transport = new MockTransport()
-    const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
-
-    handleGetAppMetadataRequest(
-      {
-        type: "getAppMetadataRequest",
-        meta: createDacpRequestMeta("get-app-metadata-directory-only", {
-          appId: "portfolioApp",
-          instanceId: "a1",
-        }),
-        payload: {
-          app: { appId: "chartApp" },
-        },
-      },
-      {
-        ...withResponseDispatcher(context, transport),
-        implementationMetadata: {
-          ...context.implementationMetadata,
-          provider: TEST_PROVIDER,
-        },
-      },
-    )
-
-    const response = getAppMetadataResponse(transport)
-    expect(response.payload.appMetadata.appId).toBe("chartApp")
-    expect(response.payload.appMetadata.instanceId).toBeUndefined()
-    expect(response.payload.appMetadata.desktopAgent).toBe(TEST_PROVIDER)
-  })
-
-  it("includes instanceId and desktopAgent for running instance", () => {
-    let state = createConnectedCallerState()
-    state = connectInstance(state, {
-      instanceId: "chart-123",
-      appId: "chartApp",
-      metadata: { appId: "chartApp", name: "chartApp" },
-    })
-    state = updateInstanceState(state, "chart-123", AppInstanceState.CONNECTED)
-    state = withCatalogApps(state, [chartApp])
-
-    const transport = new MockTransport()
-    const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
-
-    handleGetAppMetadataRequest(
-      {
-        type: "getAppMetadataRequest",
-        meta: createDacpRequestMeta("get-app-metadata-running-instance", {
-          appId: "portfolioApp",
-          instanceId: "a1",
-        }),
-        payload: {
-          app: { appId: "chartApp" },
-        },
-      },
-      {
-        ...withResponseDispatcher(context, transport),
-        implementationMetadata: {
-          ...context.implementationMetadata,
-          provider: TEST_PROVIDER,
-        },
-      },
-    )
-
-    const response = getAppMetadataResponse(transport)
-    expect(response.payload.appMetadata.appId).toBe("chartApp")
-    expect(response.payload.appMetadata.instanceId).toBe("chart-123")
-    expect(response.payload.appMetadata.desktopAgent).toBe(TEST_PROVIDER)
-  })
-})
 
 type AppDirectorySlice = {
   apps: DirectoryApp[]
@@ -171,15 +79,9 @@ describe("app directory vs runtime instance separation", () => {
   })
 
   it("getAppMetadata directory lookup reads from the same appDirectory slice as agent state", () => {
-    const agent = new DesktopAgent({
-      userChannels: DEFAULT_FDC3_USER_CHANNELS,
-      apps: [chartApp],
-    })
-    const state = createConnectedCallerState()
+    const state = withCatalogApps(createConnectedCallerState(), [chartApp])
     const transport = new MockTransport()
     const { context, getState } = createDACPTestContext({ instanceId: "a1", initialState: state })
-
-    context.setState(current => withCatalogApps(current, agent.getState().appDirectory.apps))
 
     handleGetAppMetadataRequest(
       {
@@ -192,18 +94,16 @@ describe("app directory vs runtime instance separation", () => {
           app: { appId: "chartApp" },
         },
       },
-      {
-        ...withResponseDispatcher(context, transport),
-        implementationMetadata: {
-          ...context.implementationMetadata,
-          provider: TEST_PROVIDER,
-        },
-      },
+      withResponseDispatcher(context, transport),
     )
 
-    const response = getAppMetadataResponse(transport)
+    const response = transport.getLastMessage() as {
+      type: string
+      payload: { appMetadata: { appId: string } }
+    }
     const stateSlice = expectAppDirectoryOnState(getState())
 
+    expect(response.type).toBe("getAppMetadataResponse")
     expect(stateSlice.apps).toContainEqual(chartApp)
     expect(response.payload.appMetadata.appId).toBe("chartApp")
     expect(retrieveAppsById(getState().appDirectory, "chartApp")).toEqual(

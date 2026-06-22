@@ -152,9 +152,8 @@ When(
     this.props.instances = this.props.instances || {}
     this.props.instances[app] = uuid
 
-    // Align FINOS hard-coded listener ids (uuid3 after two background opens): one tick per
-    // open, plus one extra on the first open so a single open still yields uuid2 for the next
-    // DACP request (e.g. getAppMetadata).
+    // Deterministic DACP request ids (createMeta) — one tick per open; extra tick on first open
+    // so the first app message after a lone open does not reuse the open connection id.
     this.createUUID()
     if (isFirstOpen) {
       this.createUUID()

@@ -51,7 +51,7 @@ packages/sail-desktop-agent/src/
 | [Getting started](../../getting-started) | Adoption paths — browser-ready agent, host contracts, `@finos/fdc3` |
 | [Integrator guide](./integrator-guide) | **Deep reference** — host contracts, browser-first agent, WCP/DACP detail, [heartbeat config](./integrator-guide#heartbeat-and-liveness-configuration) |
 | [Composition & internals](./composition) | Diagrams — how edge, DA, and host contracts interact |
-| [Conformance traceability](./conformance) | BDD `@conformance2.2` coverage vs FINOS toolbox oracle |
+| [Conformance traceability](./conformance) | BDD `@fdc3_2.2` coverage vs FINOS toolbox oracle |
 
 ## Quick start
 

@@ -19,6 +19,7 @@ export type WcpConnectedApp = {
   connectionAttemptUuid: string
   tempInstanceId: string
   canonicalInstanceId: string
+  instanceUuid: string
   appPort: MessagePort
   appId: string
 }
@@ -86,7 +87,13 @@ export async function connectWcpApp(
     instanceUuid?: string
   },
 ): Promise<WcpConnectedApp> {
-  const { connectionAttemptUuid, appId, identityUrl, hostInstanceId, instanceUuid } = options
+  const {
+    connectionAttemptUuid,
+    appId,
+    identityUrl,
+    hostInstanceId,
+    instanceUuid: reconnectInstanceUuid,
+  } = options
   const tempInstanceId = `temp-${connectionAttemptUuid}`
   const browserAppConnection = getTestConnector(agent)
 
@@ -111,7 +118,7 @@ export async function connectWcpApp(
       identityUrl,
       actualUrl: identityUrl,
       ...(hostInstanceId ? { instanceId: hostInstanceId } : {}),
-      ...(instanceUuid ? { instanceUuid } : {}),
+      ...(reconnectInstanceUuid ? { instanceUuid: reconnectInstanceUuid } : {}),
     },
   }
 
@@ -130,7 +137,9 @@ export async function connectWcpApp(
 
   expect(resolvedWcp5.type).toBe("WCP5ValidateAppIdentityResponse")
   const canonicalInstanceId = resolvedWcp5.payload.instanceId
+  const validatedInstanceUuid = resolvedWcp5.payload.instanceUuid
   expect(canonicalInstanceId).toBeTruthy()
+  expect(validatedInstanceUuid).toBeTruthy()
   expect(resolvedWcp5.payload.appId).toBe(appId)
 
   await vi.waitFor(() => {
@@ -142,6 +151,7 @@ export async function connectWcpApp(
     connectionAttemptUuid,
     tempInstanceId,
     canonicalInstanceId,
+    instanceUuid: validatedInstanceUuid,
     appPort,
     appId,
   }

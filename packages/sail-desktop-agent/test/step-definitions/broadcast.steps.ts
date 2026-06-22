@@ -99,18 +99,11 @@ When(
     const meta = createMeta(this, app)
 
     const resolvedId = handleResolve(id, this) ?? id
-    const instanceId = getAppInstanceId(this, app)
-    const byInstance = this.props.contextListenersByInstance as Record<string, string> | undefined
-    const instanceListenerId = byInstance?.[instanceId]
-    const listenerUUID =
-      instanceListenerId && resolvedId.startsWith("uuid") && resolvedId !== instanceListenerId
-        ? instanceListenerId
-        : resolvedId
 
     const message: ContextListenerUnsubscribeRequest = {
       meta,
       payload: {
-        listenerUUID,
+        listenerUUID: resolvedId,
       },
       type: "contextListenerUnsubscribeRequest",
     }

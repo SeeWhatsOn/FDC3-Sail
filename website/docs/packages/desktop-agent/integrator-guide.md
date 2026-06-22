@@ -843,7 +843,7 @@ flowchart TB
 
 | Suite | Proves | Does not prove |
 |-------|--------|----------------|
-| Cucumber + `MockTransport` (~103 `@conformance2.2`) | DA / DACP handler behaviour | iframe MessagePort delivery |
+| Cucumber + `MockTransport` (~135 `@fdc3_2.2`) | DA / DACP handler behaviour | iframe MessagePort delivery |
 | Vitest handler tests | Individual DACP paths | WCP handshake |
 | **Edge contract** (`wcp-desktop-agent.integration.test.ts`) | Edge + DA + MessagePort seam | Full FINOS toolbox oracle |
 

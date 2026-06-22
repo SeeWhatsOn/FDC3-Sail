@@ -3,6 +3,7 @@ import { CustomWorld } from "../world/index.ts"
 import type { Context, AppIdentifier } from "@finos/fdc3"
 import type { BrowserTypes } from "@finos/fdc3"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../src/default-user-channels"
+import { handleResolve } from "../support/testing-utils"
 
 /** FINOS conformance BDD uses short user-channel ids (e.g. app-channels.feature "one"). */
 const CUCUMBER_CONFORMANCE_USER_CHANNELS: BrowserTypes.Channel[] = [
@@ -12,7 +13,6 @@ const CUCUMBER_CONFORMANCE_USER_CHANNELS: BrowserTypes.Channel[] = [
     displayMetadata: { name: "One" },
   },
 ]
-import { handleResolve } from "../support/testing-utils"
 
 export const APP_FIELD = "apps"
 
@@ -231,13 +231,11 @@ When("I shutdown the server", function (this: CustomWorld) {
   this.mockTransport.disconnect()
 })
 
-Given("I refer to {string} as {string}", function (this: CustomWorld, value: string, name: string) {
-  // Store a value with a name so it can be referenced later as {name}
-  if (name.toLowerCase().includes("channel") && this.props.lastPrivateChannelId) {
-    this.props[name] = this.props.lastPrivateChannelId
-    return
+Given("I alias the last private channel as {string}", function (this: CustomWorld, name: string) {
+  if (!this.props.lastPrivateChannelId) {
+    throw new Error("No private channel created yet; create one before aliasing")
   }
-  this.props[name] = value
+  this.props[name] = this.props.lastPrivateChannelId
 })
 
 When("we wait for a period of {string} ms", async function (this: CustomWorld, ms: string) {
