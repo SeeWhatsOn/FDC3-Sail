@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from "vite-plus/test"
-import { InMemoryTransport, createInMemoryTransportPair } from "../in-memory-transport"
+import {
+  InMemoryTransport,
+  createInMemoryTransportPair,
+} from "../../test/support/in-memory-transport"
 
 /** Planned API for spec B — cast until GREEN wires onDeliveryError on InMemoryTransport */
 type InMemoryTransportWithDeliveryError = InMemoryTransport & {

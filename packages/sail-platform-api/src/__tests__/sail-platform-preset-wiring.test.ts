@@ -4,11 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vite-plus/test"
 import * as sailDesktopAgent from "@finos/sail-desktop-agent"
-import * as sailDesktopAgentPresets from "@finos/sail-desktop-agent/presets"
-import type {
-  BrowserDesktopAgent,
-  BrowserDesktopAgentOptions,
-} from "@finos/sail-desktop-agent/presets"
+import type { BrowserDesktopAgent, BrowserDesktopAgentOptions } from "@finos/sail-desktop-agent"
 import { SailPlatform } from "../sail-platform"
 
 describe("SailPlatform preset wiring", () => {
@@ -34,10 +30,10 @@ describe("SailPlatform preset wiring", () => {
       .spyOn(sailDesktopAgent, "createBrowserDesktopAgent")
       .mockReturnValue(mockDesktopAgent)
     getBrowserDesktopAgentSessionSpy = vi
-      .spyOn(sailDesktopAgentPresets, "getBrowserDesktopAgentSession")
+      .spyOn(sailDesktopAgent, "getBrowserDesktopAgentSession")
       .mockReturnValue({
         wcpConnector:
-          mockWcpConnector as unknown as import("@finos/sail-desktop-agent/presets").WCPConnector,
+          mockWcpConnector as unknown as import("@finos/sail-desktop-agent/browser").WCPConnector,
       })
   })
 

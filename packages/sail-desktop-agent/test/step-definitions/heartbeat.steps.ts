@@ -35,7 +35,6 @@ function ensureAppInstanceForTesting(world: CustomWorld, appStr: string): string
   const instance = getInstance(state, instanceId)
   if (!instance) {
     const meta = createMeta(world, appStr)
-    meta.source.instanceId = instanceId
     // Test fixture setup: Create connected instance directly
     world.updateState(currentState =>
       updateInstanceState(
@@ -61,8 +60,13 @@ Given(
   async function (this: CustomWorld, appStr: string, eventUuid: string) {
     // Test fixture setup: Ensure app instance exists
     ensureAppInstanceForTesting(this, appStr)
-    const meta = createMeta(this, appStr)
-    meta.source.instanceId = resolveCanonicalInstanceId(this, appStr)
+    const meta = {
+      ...createMeta(this, appStr),
+      source: {
+        ...createMeta(this, appStr).source,
+        instanceId: resolveCanonicalInstanceId(this, appStr),
+      },
+    }
 
     // Send DACP heartbeatAcknowledgementRequest message (this is what we're testing)
     const message: HeartbeatAcknowledgementRequest = {
@@ -80,8 +84,13 @@ Given(
 Given("{string} sends a goodbye message", async function (this: CustomWorld, appStr: string) {
   // Test fixture setup: Ensure app instance exists
   ensureAppInstanceForTesting(this, appStr)
-  const meta = createMeta(this, appStr)
-  meta.source.instanceId = resolveCanonicalInstanceId(this, appStr)
+  const meta = {
+    ...createMeta(this, appStr),
+    source: {
+      ...createMeta(this, appStr).source,
+      instanceId: resolveCanonicalInstanceId(this, appStr),
+    },
+  }
 
   // Send DACP WCP6Goodbye message (this is what we're testing)
   const message: WebConnectionProtocol6Goodbye = {

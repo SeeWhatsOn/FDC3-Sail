@@ -71,12 +71,35 @@ function withDestinationRouting(instanceId: string, message: DacpOutboundMessage
 }
 
 /**
- * Browser-local DACP response delivery — routes to app instances without exposing
- * generic remote Desktop Agent transport placement to handlers.
+ * DACP response delivery via browser app connection (instanceId → MessagePort).
+ */
+export function createDacpResponseDispatcherFromDelivery(
+  connectionOwner: object,
+  deliverToApp: (message: unknown) => void
+): DacpResponseDispatcher {
+  return {
+    connectionOwner,
+
+    sendToInstance(instanceId, message) {
+      deliverToApp(withDestinationRouting(instanceId, message))
+    },
+
+    sendOutbound(message) {
+      deliverToApp(message)
+    },
+
+    getInboundInstanceId() {
+      return null
+    },
+  }
+}
+
+/**
+ * DACP response delivery via injectable transport (handler tests).
  */
 export function createDacpResponseDispatcher(edgeTransport: Transport): DacpResponseDispatcher {
   return {
-    edgeTransport,
+    connectionOwner: edgeTransport,
 
     sendToInstance(instanceId, message) {
       edgeTransport.send(withDestinationRouting(instanceId, message))

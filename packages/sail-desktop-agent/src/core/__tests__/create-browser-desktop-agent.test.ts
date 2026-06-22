@@ -10,7 +10,7 @@
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 import { createBrowserDesktopAgent } from "../create-browser-desktop-agent"
-import type { DesktopAgent } from "../../core/desktop-agent"
+import type { DesktopAgent } from "../desktop-agent"
 import { getBrowserDesktopAgentSession } from "../browser-session"
 
 function createWCP1Hello(connectionAttemptUuid: string): BrowserTypes.WebConnectionProtocol1Hello {

@@ -10,9 +10,9 @@
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import type { DesktopAgent } from "../../core/desktop-agent"
-import type { AppConnectionMetadata } from "../wcp-connector"
+import type { AppConnectionMetadata } from "../../connections/browser/browser-connection-backend"
 import { AppInstanceState } from "../../core/state/types"
-import { getBrowserDesktopAgentSession } from "../../presets/browser-session"
+import { getBrowserDesktopAgentSession } from "../../core/browser-session"
 import { clearAllHeartbeatTimersForTesting } from "../../core/handlers/dacp/heartbeat-runtime"
 import {
   INSTRUMENT_CONTEXT,

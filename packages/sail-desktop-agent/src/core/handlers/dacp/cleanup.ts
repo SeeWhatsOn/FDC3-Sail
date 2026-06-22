@@ -134,7 +134,7 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
   // Remove instance from state
   setState(state => removeInstance(state, instanceId))
 
-  pruneInstanceIdentity(resolvedContext.responses.edgeTransport, instanceId)
+  pruneInstanceIdentity(resolvedContext.responses.connectionOwner, instanceId)
 
   logger.info("DACP handlers cleanup completed", { instanceId })
 }

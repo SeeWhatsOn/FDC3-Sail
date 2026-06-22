@@ -1,7 +1,7 @@
 import type { AppLauncher } from "../../host-contracts/app-launcher"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../core/default-user-channels"
-import { createBrowserDesktopAgent } from "../../presets/create-browser-desktop-agent"
-import type { BrowserDesktopAgentOptions } from "../../presets/create-browser-desktop-agent"
+import { createBrowserDesktopAgent } from "../../core/create-browser-desktop-agent"
+import type { BrowserDesktopAgentOptions } from "../../core/create-browser-desktop-agent"
 import type { DesktopAgent } from "../../core/desktop-agent"
 
 export const CHANNEL_ID = "fdc3.channel.1"
@@ -28,6 +28,7 @@ export type TestAgentOptions = Pick<
   | "heartbeatIntervalMs"
   | "heartbeatTimeoutMs"
   | "openContextListenerTimeoutMs"
+  | "autoStart"
 > & {
   disconnectGracePeriod?: number
 }
@@ -41,6 +42,7 @@ export function createTestAgent(options?: TestAgentOptions): DesktopAgent {
     heartbeatIntervalMs: options?.heartbeatIntervalMs,
     heartbeatTimeoutMs: options?.heartbeatTimeoutMs,
     openContextListenerTimeoutMs: options?.openContextListenerTimeoutMs,
+    autoStart: options?.autoStart,
     wcpOptions: {
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,

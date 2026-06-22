@@ -10,7 +10,6 @@ import type {
 
 export interface WCPHandshakeContext extends WCPRoutingContext {
   options: Required<WCPConnectorOptions>
-  connections: Map<string, AppConnectionMetadata>
 }
 
 /**
@@ -85,9 +84,9 @@ export function handleWCP1Hello(
     connectedAt: new Date(),
     hostIdentifier,
   }
-  context.connections.set(instanceId, metadata)
-  context.messagePortTransports.set(instanceId, appTransport)
-  context.transportToInstanceId.set(appTransport, instanceId)
+  context.connectionManager.connections.set(instanceId, metadata)
+  context.connectionManager.messagePortTransports.set(instanceId, appTransport)
+  context.connectionManager.transportToInstanceId.set(appTransport, instanceId)
 
   // Create WCP3Handshake response
   const handshake: WCP3HandshakeMessage = {
@@ -110,7 +109,7 @@ export function handleWCP1Hello(
   // Set timeout to clean up stale connections that don't complete WCP4 validation
   // If appId is still "unknown" after timeout, the handshake failed
   setTimeout(() => {
-    const connection = context.connections.get(instanceId)
+    const connection = context.connectionManager.connections.get(instanceId)
     if (connection && connection.appId === "unknown") {
       context.logger.warn(
         `[WCPConnector] Connection ${instanceId} timed out waiting for WCP4 validation, cleaning up`

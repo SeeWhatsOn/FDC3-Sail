@@ -1,32 +1,33 @@
 /**
- * Browser Desktop Agent preset — local DA + WCP edge + host intent resolver wiring.
+ * Browser Desktop Agent preset — local DA + DA-owned WCP app connection + host intent resolver wiring.
  */
 
 import type { Context } from "@finos/fdc3"
-import { DesktopAgent } from "../core/desktop-agent"
-import type { DesktopAgentOptions } from "../core/desktop-agent"
-import type { AgentState } from "../core/state/types"
-import { loadDirectoryIntoState } from "../core/state/mutators/app-directory"
-import type { SailImplementationMetadata } from "../core/sail-default-config"
-import { consoleLogger } from "../core/interfaces/logger"
-import type { Logger, LogPayloadDetail } from "../core/interfaces/logger"
-import { WCPConnector } from "../app-connection/wcp-connector"
-import type { AppConnectionMetadata, WCPConnectorOptions } from "../app-connection/wcp-connector"
-import { createBrowserDesktopAgentEdgeLink } from "../app-connection/browser-da-edge-link"
+import { DesktopAgent } from "./desktop-agent"
+import type { DesktopAgentOptions } from "./desktop-agent"
+import type { AgentState } from "./state/types"
+import { loadDirectoryIntoState } from "./state/mutators/app-directory"
+import type { SailImplementationMetadata } from "./sail-default-config"
+import { consoleLogger } from "./interfaces/logger"
+import type { Logger, LogPayloadDetail } from "./interfaces/logger"
+import { BrowserConnectionBackend } from "../connections/browser/browser-connection-backend"
+import type {
+  AppConnectionMetadata,
+  BrowserConnectionOptions,
+} from "../connections/browser/browser-connection-backend"
 import {
   createHostIntentResolver,
   type HostIntentResolverChoice,
   type HostIntentResolverHandler,
   type IntentHandler,
-  type IntentResolutionChoice,
   type IntentResolver,
   type IntentResolverUIMethods,
+  type IntentResolutionChoice,
   type IntentResolutionRequest,
 } from "../host-contracts"
 import {
   createBrowserHostControllers,
-  getBrowserDesktopAgentSession,
-  registerBrowserDesktopAgentSession,
+  markCollapsedBrowserDesktopAgent,
   type BrowserHostControllers,
 } from "./browser-session.js"
 
@@ -57,7 +58,7 @@ export interface BrowserDesktopAgentOptions extends Pick<
   | "heartbeatTimeoutMs"
 > {
   implementationMetadata?: Partial<SailImplementationMetadata>
-  wcpOptions?: WCPConnectorOptions
+  wcpOptions?: BrowserConnectionOptions
   appDirectories?: string[]
   logger?: Logger
   logPayloadDetail?: LogPayloadDetail
@@ -77,26 +78,6 @@ export type BrowserDesktopAgent = DesktopAgent &
   BrowserHostControllers & {
     readonly intentResolverUI?: IntentResolverUIMethods
   }
-
-function wireBrowserDesktopAgentLifecycle(
-  desktopAgent: DesktopAgent,
-  wcpConnector: WCPConnector
-): void {
-  const originalStart = desktopAgent.start.bind(desktopAgent)
-  const originalStop = desktopAgent.stop.bind(desktopAgent)
-
-  desktopAgent.start = () => {
-    if (!wcpConnector.getIsStarted()) {
-      wcpConnector.start()
-    }
-    originalStart()
-  }
-
-  desktopAgent.stop = () => {
-    wcpConnector.stop()
-    originalStop()
-  }
-}
 
 function hasIntentResolverUI(
   resolver: IntentResolver
@@ -129,8 +110,11 @@ function mapChoice(choice: HostIntentResolverChoice): IntentResolutionChoice {
   }
 }
 
-function wireIntentResolver(wcpConnector: WCPConnector, resolver: IntentResolver): void {
-  wcpConnector.on("intentResolverNeeded", payload => {
+function wireIntentResolver(
+  browserConnection: BrowserConnectionBackend,
+  resolver: IntentResolver
+): void {
+  browserConnection.on("intentResolverNeeded", payload => {
     void (async () => {
       try {
         const request: IntentResolutionRequest = {
@@ -150,7 +134,7 @@ function wireIntentResolver(wcpConnector: WCPConnector, resolver: IntentResolver
 
         const response = await resolver.resolve(request)
 
-        wcpConnector.resolveIntentSelection({
+        browserConnection.resolveIntentSelection({
           requestId: payload.requestId,
           selectedHandler: response
             ? {
@@ -161,7 +145,7 @@ function wireIntentResolver(wcpConnector: WCPConnector, resolver: IntentResolver
           ...(response?.intent ? { intent: response.intent } : {}),
         })
       } catch {
-        wcpConnector.resolveIntentSelection({
+        browserConnection.resolveIntentSelection({
           requestId: payload.requestId,
           selectedHandler: null,
         })
@@ -171,7 +155,7 @@ function wireIntentResolver(wcpConnector: WCPConnector, resolver: IntentResolver
 }
 
 /**
- * Create a browser Desktop Agent with WCP edge coupled to {@link DesktopAgent.start}.
+ * Create a browser Desktop Agent with DA-owned WCP app connection coupled to {@link DesktopAgent.start}.
  */
 export function createBrowserDesktopAgent(
   options?: BrowserDesktopAgentOptions
@@ -188,14 +172,12 @@ export function createBrowserDesktopAgent(
     })
   const intentResolverUI = hasIntentResolverUI(hostIntentResolver) ? hostIntentResolver : undefined
 
-  const [daEdge, wcpEdge] = createBrowserDesktopAgentEdgeLink()
-  const wcpConnector = new WCPConnector(wcpEdge, {
+  const browserConnection = new BrowserConnectionBackend({
     ...localOptions.wcpOptions,
     logger,
   })
 
   const desktopAgent = new DesktopAgent({
-    transport: daEdge,
     appLauncher: localOptions.appLauncher,
     apps: localOptions.apps,
     userChannels: localOptions.userChannels,
@@ -206,38 +188,40 @@ export function createBrowserDesktopAgent(
     heartbeatTimeoutMs: localOptions.heartbeatTimeoutMs,
     logger,
     logPayloadDetail: localOptions.logPayloadDetail,
-    requestIntentResolution: request => wcpConnector.requestIntentResolution(request),
+    requestIntentResolution: request => browserConnection.requestIntentResolution(request),
   }) as BrowserDesktopAgent
 
   const agentWithState = desktopAgent as unknown as DesktopAgentMutableState
-  wcpConnector.bindAgentState({
+  browserConnection.bindAgentState({
     getAgentState: () => desktopAgent.getState(),
     setAgentState: callback => {
       agentWithState.state = callback(agentWithState.state)
     },
   })
 
+  desktopAgent.attachBrowserConnection(browserConnection)
+  markCollapsedBrowserDesktopAgent(desktopAgent, browserConnection, intentResolverUI)
+
   if (localOptions.appDirectories && localOptions.appDirectories.length > 0) {
     void loadAppDirectoriesFromUrls(desktopAgent, localOptions.appDirectories)
   }
 
-  wcpConnector.on("appConnected", metadata => {
+  browserConnection.on("appConnected", metadata => {
     logger.info(`[BrowserDA] App connected: ${metadata.appId} (${metadata.instanceId})`)
     localOptions.onAppConnected?.(metadata)
   })
 
-  wcpConnector.on("appDisconnected", instanceId => {
+  browserConnection.on("appDisconnected", instanceId => {
     logger.info(`[BrowserDA] App disconnected: ${instanceId}`)
     localOptions.onAppDisconnected?.(instanceId)
   })
 
-  wcpConnector.on("handshakeFailed", (error, connectionAttemptUuid) => {
+  browserConnection.on("handshakeFailed", (error, connectionAttemptUuid) => {
     logger.error(`[BrowserDA] WCP handshake failed for ${connectionAttemptUuid}:`, error)
     localOptions.onHandshakeFailed?.(error, connectionAttemptUuid)
   })
 
-  registerBrowserDesktopAgentSession(desktopAgent, { wcpConnector })
-  wireBrowserDesktopAgentLifecycle(desktopAgent, wcpConnector)
+  wireIntentResolver(browserConnection, hostIntentResolver)
 
   if (intentResolverUI) {
     Object.defineProperty(desktopAgent, "intentResolverUI", {
@@ -249,7 +233,7 @@ export function createBrowserDesktopAgent(
 
   const controllers = createBrowserHostControllers({
     desktopAgent,
-    wcpConnector,
+    wcpConnector: browserConnection,
     intentResolverUI,
   })
 
@@ -262,10 +246,6 @@ export function createBrowserDesktopAgent(
       configurable: false,
     })
   }
-
-  const session = getBrowserDesktopAgentSession(desktopAgent)
-  session.intentResolverUI = intentResolverUI
-  wireIntentResolver(session.wcpConnector, hostIntentResolver)
 
   if (autoStart !== false) {
     desktopAgent.start()

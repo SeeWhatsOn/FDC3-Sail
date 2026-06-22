@@ -1,5 +1,4 @@
 import type { BrowserTypes } from "@finos/fdc3"
-import type { Transport } from "../interfaces/transport"
 import type { AppLauncher } from "../../host-contracts/app-launcher"
 import type { AgentState, StateSetter } from "../state/types"
 import type { Logger, LogPayloadDetail } from "../interfaces/logger"
@@ -112,11 +111,11 @@ export type DacpOutboundMessage =
  */
 export interface DacpResponseDispatcher {
   /**
-   * Inbound app-edge transport for WCP handshake registries only
+   * Connection owner for WCP handshake registries only
    * (pending source window, instance identity). Normal handlers should use
    * {@link sendToInstance} / {@link sendOutbound}.
    */
-  readonly edgeTransport: Transport
+  readonly connectionOwner: object
 
   /** Send a response or event to a specific connected app instance. */
   sendToInstance(instanceId: string, message: DacpOutboundMessage): void

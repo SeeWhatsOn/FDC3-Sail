@@ -8,8 +8,8 @@
 import { describe, it, expect, beforeEach, vi } from "vite-plus/test"
 import { disconnectApp, type WCPConnectionContext } from "../wcp/wcp-connection-management"
 import { MessagePortTransport } from "../message-port-transport"
-import type { AppConnectionMetadata } from "../wcp/wcp-types"
 import { consoleLogger } from "../../core/interfaces/logger"
+import { AppConnectionManager } from "../../connections/app-connection-manager"
 
 function createListenerTracker(port: MessagePort) {
   const activeListeners = new Map<string, Set<EventListenerOrEventListenerObject>>()
@@ -44,7 +44,15 @@ function createListenerTracker(port: MessagePort) {
 }
 
 function createMinimalWCPContext(): WCPConnectionContext {
+  const emit = vi.fn()
+  const connectionManager = new AppConnectionManager({
+    emit,
+    logger: consoleLogger,
+    updateConnectionMetadata: vi.fn(),
+    disconnectApp: vi.fn(),
+  })
   return {
+    connectionManager,
     options: {
       intentResolverUrl: false,
       channelSelectorUrl: false,
@@ -57,12 +65,9 @@ function createMinimalWCPContext(): WCPConnectionContext {
       debug: false,
       logger: consoleLogger,
     },
-    connections: new Map<string, AppConnectionMetadata>(),
-    messagePortTransports: new Map<string, MessagePortTransport>(),
-    transportToInstanceId: new Map<MessagePortTransport, string>(),
     pendingDisconnects: new Map(),
     recentlyDisconnected: new Map(),
-    emit: vi.fn(),
+    emit,
     logger: consoleLogger,
   }
 }
@@ -228,8 +233,8 @@ describe("MessagePortTransport", () => {
       const transport = new MessagePortTransport(port1)
       const closeSpy = vi.spyOn(port1, "close")
 
-      context.messagePortTransports.set(instanceId, transport)
-      context.transportToInstanceId.set(transport, instanceId)
+      context.connectionManager.messagePortTransports.set(instanceId, transport)
+      context.connectionManager.transportToInstanceId.set(transport, instanceId)
       transport.onDisconnect(() => disconnectApp(context, instanceId))
 
       vi.spyOn(port1, "postMessage").mockImplementation(() => {
@@ -247,9 +252,9 @@ describe("MessagePortTransport", () => {
       const context = createMinimalWCPContext()
       const transport = new MessagePortTransport(port1)
 
-      context.messagePortTransports.set(instanceId, transport)
-      context.transportToInstanceId.set(transport, instanceId)
-      context.connections.set(instanceId, {
+      context.connectionManager.messagePortTransports.set(instanceId, transport)
+      context.connectionManager.transportToInstanceId.set(transport, instanceId)
+      context.connectionManager.connections.set(instanceId, {
         instanceId,
         appId: "test-app",
         connectionAttemptUuid: "wcp-map-cleanup-uuid",
@@ -266,9 +271,9 @@ describe("MessagePortTransport", () => {
 
       expect(() => transport.send({ type: "test" })).toThrow("postMessage failed")
 
-      expect(context.messagePortTransports.has(instanceId)).toBe(false)
-      expect(context.transportToInstanceId.has(transport)).toBe(false)
-      expect(context.connections.has(instanceId)).toBe(false)
+      expect(context.connectionManager.messagePortTransports.has(instanceId)).toBe(false)
+      expect(context.connectionManager.transportToInstanceId.has(transport)).toBe(false)
+      expect(context.connectionManager.connections.has(instanceId)).toBe(false)
       expect(context.emit).toHaveBeenCalledWith("appDisconnected", instanceId)
     })
   })

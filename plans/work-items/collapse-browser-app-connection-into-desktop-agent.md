@@ -79,6 +79,8 @@ Given existing handler-only tests use `MockTransport` or similar seams, when thi
 
 Expected shape: remove browser-path `Transport` usage between DA core and app connection routing. If an internal boundary remains, make it narrow and DA-owned, for example an app edge callback/dispatcher that can receive inbound app messages and send outbound messages by `instanceId`. Do not expose this as normal product composition.
 
+Implementation should be deletion-led on `v3-pre`: remove the public `src/presets/` and `src/transports/` package folders and their exports first, then fix forward from the resulting typecheck/test failures. Move only still-needed handler/test seams into package-local test support; do not keep public preset/transport facades for compatibility.
+
 ## Test guidance
 
 Start with focused WCP integration coverage around the existing fragile paths before removing the edge link: WCP1-5 connection, temp-to-canonical instance migration, outbound routing by destination instance id, pending source window / instance identity reuse, WCP6 cleanup, failed WCP4 cleanup, and at least one channel or broadcast DACP round trip over `MessagePort`.

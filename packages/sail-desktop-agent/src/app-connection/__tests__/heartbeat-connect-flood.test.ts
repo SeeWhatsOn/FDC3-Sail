@@ -7,8 +7,11 @@
 import { describe, it, expect, afterEach } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../core/default-user-channels"
-import { getActiveHeartbeatTimerCount } from "../../core/handlers/dacp/heartbeat-runtime"
-import { createBrowserDesktopAgent } from "../../presets/create-browser-desktop-agent"
+import {
+  getActiveHeartbeatTimerCount,
+  clearAllHeartbeatTimersForTesting,
+} from "../../core/handlers/dacp/heartbeat-runtime"
+import { createBrowserDesktopAgent } from "../../core/create-browser-desktop-agent"
 import type { DesktopAgent } from "../../core/desktop-agent"
 import { connectWcpApp, flushAsyncDelivery } from "./wcp-edge-test-helpers"
 
@@ -26,6 +29,7 @@ describe("heartbeat connect flood", () => {
     for (const agent of activeAgents.splice(0)) {
       agent.stop()
     }
+    clearAllHeartbeatTimersForTesting()
   })
 
   it("does not flood heartbeatEvent to the app immediately after WCP5", async () => {

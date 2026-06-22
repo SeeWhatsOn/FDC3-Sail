@@ -24,7 +24,7 @@ npm install @finos/sail-desktop-agent
 ## Minimal example
 
 ```typescript
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
+import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent"
 import type { AppLauncher } from "@finos/sail-desktop-agent"
 
 const desktopAgent = createBrowserDesktopAgent({

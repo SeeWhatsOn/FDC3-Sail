@@ -9,8 +9,8 @@
  * runtimes without it cannot use this transport.
  */
 
-import type { Transport, MessageHandler, DisconnectHandler } from "../core/interfaces/transport"
-import { consoleLogger } from "../core/interfaces/logger"
+import type { Transport, MessageHandler, DisconnectHandler } from "../../src/core/interfaces/transport"
+import { consoleLogger } from "../../src/core/interfaces/logger"
 
 /**
  * In-memory transport for same-process communication.

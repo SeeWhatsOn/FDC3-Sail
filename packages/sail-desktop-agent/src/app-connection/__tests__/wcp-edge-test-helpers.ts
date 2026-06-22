@@ -7,7 +7,7 @@
 import { expect, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import type { DesktopAgent } from "../../core/desktop-agent"
-import { getBrowserDesktopAgentSession } from "../../presets/browser-session"
+import { getBrowserDesktopAgentSession } from "../../core/browser-session"
 
 export const TEST_ORIGIN = "https://example.com"
 

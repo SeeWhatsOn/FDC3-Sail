@@ -19,8 +19,12 @@ describe("reorganized import paths", () => {
 
   it("resolves app-connection mechanisms from app-connection", async () => {
     const appConnection = await import("../app-connection/index.js")
-    expect(appConnection.WCPConnector).toBeTypeOf("function")
-    expect(appConnection.MessagePortTransport).toBeTypeOf("function")
+    expect(appConnection.BrowserConnectionBackend).toBeTypeOf("function")
+  })
+
+  it("resolves MessagePortTransport from app-connection module", async () => {
+    const transport = await import("../app-connection/message-port-transport.js")
+    expect(transport.MessagePortTransport).toBeTypeOf("function")
   })
 
   it("re-exports DACP protocol from core entry", async () => {
@@ -29,9 +33,9 @@ describe("reorganized import paths", () => {
     expect(core.createDACPSuccessResponse).toBeTypeOf("function")
   })
 
-  it("resolves preset factories from presets", async () => {
-    const presets = await import("../presets/index.js")
-    expect(presets.createBrowserDesktopAgent).toBeTypeOf("function")
-    expect(presets.getBrowserDesktopAgentSession).toBeTypeOf("function")
+  it("resolves browser factory from main entry", async () => {
+    const main = await import("../index.js")
+    expect(main.createBrowserDesktopAgent).toBeTypeOf("function")
+    expect(main.getBrowserDesktopAgentSession).toBeTypeOf("function")
   })
 })

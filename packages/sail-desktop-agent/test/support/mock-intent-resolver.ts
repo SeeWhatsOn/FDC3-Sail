@@ -9,7 +9,7 @@ import type {
   IntentResolutionCallback,
   IntentResolutionRequest,
   IntentResolutionResponse,
-} from "../../src/core/handlers/types"
+} from "../../src/core/handlers/dacp/intent-resolution-callback"
 
 /**
  * Mock implementation of intent resolver for testing.

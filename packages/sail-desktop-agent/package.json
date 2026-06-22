@@ -16,16 +16,6 @@
       "import": "./dist/app-connection/index.mjs",
       "types": "./dist/app-connection/index.d.mts",
       "default": "./dist/app-connection/index.mjs"
-    },
-    "./presets": {
-      "import": "./dist/presets/index.mjs",
-      "types": "./dist/presets/index.d.mts",
-      "default": "./dist/presets/index.mjs"
-    },
-    "./transports": {
-      "import": "./dist/transports/index.mjs",
-      "types": "./dist/transports/index.d.mts",
-      "default": "./dist/transports/index.mjs"
     }
   },
   "sideEffects": false,

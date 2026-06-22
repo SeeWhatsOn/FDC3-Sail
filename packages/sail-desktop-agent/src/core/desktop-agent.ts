@@ -10,7 +10,10 @@
 import type { Transport } from "./interfaces/transport"
 import type { AppLauncher } from "../host-contracts/app-launcher"
 import { routeDACPMessage, cleanupDACPHandlers } from "./handlers/dacp"
-import { createDacpResponseDispatcher } from "./handlers/dacp/utils/dacp-response-utils"
+import {
+  createDacpResponseDispatcher,
+  createDacpResponseDispatcherFromDelivery,
+} from "./handlers/dacp/utils/dacp-response-utils"
 import type {
   DACPHandlerContext,
   MessageValidator,
@@ -24,7 +27,7 @@ import type { AgentState, StateSetter } from "./state/types"
 import { createInitialState, createStateWithOverrides } from "./state/initial-state"
 import { consoleLogger, type Logger, type LogPayloadDetail } from "./interfaces/logger"
 import { resolveDesktopAgentConfig, type SailImplementationMetadata } from "./sail-default-config"
-import { InMemoryTransport } from "../transports/in-memory-transport"
+import { InMemoryTransport } from "../../test/support/in-memory-transport"
 import {
   handleJoinUserChannelRequest,
   handleLeaveCurrentChannelRequest,
@@ -32,6 +35,8 @@ import {
 import { NoChannelFoundError } from "./errors/fdc3-errors"
 import { getAllUserChannels, getInstance, getUserChannel } from "./state/selectors"
 import { connectInstance } from "./state/mutators"
+import type { BrowserConnectionBackend } from "../connections/browser/browser-connection-backend"
+import type { AppConnectionMetadata } from "../connections/browser/browser-connection-backend"
 
 /**
  * Structure of DACP message metadata for routing
@@ -131,11 +136,11 @@ export interface DesktopAgentConfig {
  * When no `transport` is provided, the constructor defaults to an unpaired
  * `new InMemoryTransport()`. That default is not suitable for production
  * browser bridge use — browser deployments must use `createInMemoryTransportPair()`
- * (see `createBrowserDesktopAgent()` in `@finos/sail-desktop-agent/browser`).
+ * (see `createBrowserDesktopAgent()` on the main package entry).
  *
  * @example
  * ```typescript
- * import { createInMemoryTransportPair } from "../transports/in-memory-transport"
+ * import { createInMemoryTransportPair } from "../../test/support/in-memory-transport"
  *
  * // Browser: prefer createBrowserDesktopAgent() or a transport pair
  * const [daTransport] = createInMemoryTransportPair()
@@ -161,6 +166,8 @@ export class DesktopAgent {
   private heartbeatIntervalMs: number
   private heartbeatTimeoutMs: number
   private pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
+  /** DA-owned browser connection (WCP + MessagePort map). */
+  private browserConnection?: BrowserConnectionBackend
 
   constructor(options: DesktopAgentOptions) {
     const config = resolveDesktopAgentConfig(options)
@@ -198,15 +205,21 @@ export class DesktopAgent {
       throw new Error("DesktopAgent is already started")
     }
 
-    // Set up message handler
-    this.transport.onMessage(async message => {
-      await this.handleMessage(message)
-    })
+    this.browserConnection?.start()
 
-    // Set up disconnect handler
-    this.transport.onDisconnect(() => {
-      this.handleDisconnect()
-    })
+    if (this.browserConnection) {
+      this.browserConnection.setInboundHandler(message => {
+        void this.handleMessage(message)
+      })
+    } else {
+      this.transport.onMessage(async message => {
+        await this.handleMessage(message)
+      })
+
+      this.transport.onDisconnect(() => {
+        this.handleDisconnect()
+      })
+    }
 
     this.isStarted = true
   }
@@ -219,7 +232,10 @@ export class DesktopAgent {
       return
     }
 
-    this.transport.disconnect()
+    this.browserConnection?.stop()
+    if (!this.browserConnection) {
+      this.transport.disconnect()
+    }
     this.isStarted = false
   }
   /**
@@ -313,8 +329,14 @@ export class DesktopAgent {
     const setState: StateSetter = callback => {
       this.state = callback(this.state)
     }
+    const responses = this.browserConnection
+      ? createDacpResponseDispatcherFromDelivery(this.browserConnection, message =>
+          this.browserConnection!.connectionManager.deliverToApp(message)
+        )
+      : createDacpResponseDispatcher(this.transport)
+
     return {
-      responses: createDacpResponseDispatcher(this.transport),
+      responses,
       instanceId,
       getState: () => this.getState(),
       setState,
@@ -363,11 +385,34 @@ export class DesktopAgent {
   }
 
   /**
+   * Wire DA-owned browser connection (WCP listener + MessagePort delivery).
+   * Called by {@link createBrowserDesktopAgent} — not required for MockTransport tests.
+   */
+  attachBrowserConnection(browserConnection: BrowserConnectionBackend): void {
+    this.browserConnection = browserConnection
+  }
+
+  /**
+   * Browser app connection metadata for a connected or pending (temp) instance.
+   */
+  getAppConnection(instanceId: string): AppConnectionMetadata | undefined {
+    return this.browserConnection?.getConnection(instanceId)
+  }
+
+  /**
+   * All active browser app connections tracked by the DA-owned WCP layer.
+   */
+  getAppConnections(): AppConnectionMetadata[] {
+    return this.browserConnection?.getConnections() ?? []
+  }
+
+  /**
    * Tear down DACP state for an app instance (pending intents, listeners, heartbeat, registry).
    * Same path as WCP6 goodbye and heartbeat timeout cleanup.
    */
   disconnectInstance(instanceId: string): void {
     cleanupDACPHandlers(this.createHandlerContext(instanceId))
+    this.browserConnection?.pruneAppConnection(instanceId)
   }
 
   /** Export state as JSON string (for debugging/persistence) */

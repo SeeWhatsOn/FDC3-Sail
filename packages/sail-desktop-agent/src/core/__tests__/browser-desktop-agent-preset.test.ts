@@ -21,10 +21,8 @@ import type { BrowserTypes, Context } from "@finos/fdc3"
 import * as sailDesktopAgent from "../../index"
 
 import { DesktopAgent } from "../../core/desktop-agent"
-import { createBrowserDesktopAgentEdgeLink } from "../../app-connection/browser-da-edge-link"
 import { getBrowserDesktopAgentSession, isBrowserDesktopAgent } from "../browser-session"
-import * as sailPresets from "../index"
-import { WCPConnector } from "../index"
+import { BrowserConnectionBackend } from "../../connections/browser/browser-connection-backend"
 
 import {
   mockApp1,
@@ -33,7 +31,7 @@ import {
 } from "../../core/app-directory/__tests__/app-directory-test-fixtures"
 import type { DirectoryApp } from "../../core/app-directory/types"
 import { retrieveAllApps } from "../../core/app-directory/app-directory-queries"
-import type { AppConnectionMetadata } from "../../app-connection/wcp-connector"
+import type { AppConnectionMetadata } from "../../connections/browser/browser-connection-backend"
 
 import type {
   IntentHandler,
@@ -733,8 +731,8 @@ describe("browser host controller composition", () => {
     unsubscribe()
   })
 
-  it("exports createBrowserHostControllers for manual DesktopAgent + WCPConnector composition", () => {
-    const createBrowserHostControllers = (sailPresets as Record<string, unknown>)
+  it("exports createBrowserHostControllers for manual DesktopAgent + BrowserConnectionBackend composition", () => {
+    const createBrowserHostControllers = (sailDesktopAgent as Record<string, unknown>)
       .createBrowserHostControllers
 
     expect(createBrowserHostControllers).toBeDefined()
@@ -742,21 +740,32 @@ describe("browser host controller composition", () => {
   })
 
   it("constructs the same controller shape via createBrowserHostControllers without the preset factory", () => {
-    const createBrowserHostControllers = (sailPresets as Record<string, unknown>)
+    const createBrowserHostControllers = (sailDesktopAgent as Record<string, unknown>)
       .createBrowserHostControllers as (options: {
       desktopAgent: DesktopAgent
-      wcpConnector: WCPConnector
+      wcpConnector: BrowserConnectionBackend
       intentResolverUI?: IntentResolverUIMethods
     }) => BrowserHostControllerSurface
 
-    const [daEdge, wcpEdge] = createBrowserDesktopAgentEdgeLink()
-    const wcpConnector = new WCPConnector(wcpEdge)
-    const desktopAgent = new DesktopAgent({ transport: daEdge })
+    const browserConnection = new BrowserConnectionBackend()
+    const desktopAgent = new DesktopAgent({
+      requestIntentResolution: request => browserConnection.requestIntentResolution(request),
+    })
+    browserConnection.bindAgentState({
+      getAgentState: () => desktopAgent.getState(),
+      setAgentState: callback => {
+        const internal = desktopAgent as unknown as {
+          state: ReturnType<DesktopAgent["getState"]>
+        }
+        internal.state = callback(internal.state)
+      },
+    })
+    desktopAgent.attachBrowserConnection(browserConnection)
     activeAgents.push(desktopAgent)
 
     const controllers = createBrowserHostControllers({
       desktopAgent,
-      wcpConnector,
+      wcpConnector: browserConnection,
     })
 
     expect(controllers.intentResolver).toBeDefined()

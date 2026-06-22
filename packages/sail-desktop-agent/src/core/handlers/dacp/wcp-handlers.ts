@@ -69,7 +69,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     ).meta
     const messageOrigin = messageMeta?.messageOrigin
     const sourceWindow =
-      takePendingWcpSourceWindow(responses.edgeTransport, context.instanceId) ??
+      takePendingWcpSourceWindow(responses.connectionOwner, context.instanceId) ??
       messageMeta?.wcpSourceWindow
 
     // 2. Validate origins match (per FDC3 spec requirement)
@@ -126,7 +126,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     // 4. Check if reconnecting to existing instance
     let instanceId: string
     let instanceUuid: string
-    const identityMap = getInstanceIdentityMap(responses.edgeTransport)
+    const identityMap = getInstanceIdentityMap(responses.connectionOwner)
 
     const existingInstance = reconnectInstanceId
       ? getInstance(getState(), reconnectInstanceId)

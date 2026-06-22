@@ -9,20 +9,18 @@
 
 import {
   createBrowserDesktopAgent,
+  getBrowserDesktopAgentSession,
   DesktopAgent,
   type AppLauncher,
   type DirectoryApp,
   type SailImplementationMetadata,
   type IntentResolver,
-} from "@finos/sail-desktop-agent"
-import {
-  getBrowserDesktopAgentSession,
   type BrowserDesktopAgent,
   type BrowserAppsController,
   type BrowserChannelsController,
   type BrowserIntentResolverController,
-  type WCPConnector,
-} from "@finos/sail-desktop-agent/presets"
+} from "@finos/sail-desktop-agent"
+import type { WCPConnector } from "@finos/sail-desktop-agent/browser"
 import type { AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
 import type { BrowserTypes } from "@finos/fdc3"
 

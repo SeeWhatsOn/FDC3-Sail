@@ -1,20 +1,20 @@
 import type { BrowserTypes, Context } from "@finos/fdc3"
 
-import { retrieveAllApps, retrieveAppsById } from "../core/app-directory/app-directory-queries"
-import type { DirectoryApp } from "../core/app-directory/types"
-import type { DesktopAgent } from "../core/desktop-agent"
+import { retrieveAllApps, retrieveAppsById } from "./app-directory/app-directory-queries"
+import type { DirectoryApp } from "./app-directory/types"
+import type { DesktopAgent } from "./desktop-agent"
 import type { AppLauncher } from "../host-contracts/app-launcher"
-import type { AgentState, AppInstance } from "../core/state/types"
-import { AppInstanceState } from "../core/state/types"
+import type { AgentState, AppInstance } from "./state/types"
+import { AppInstanceState } from "./state/types"
 import {
   addApp,
   addApplications,
   loadDirectoryIntoState,
   removeApplicationsByAppId,
-} from "../core/state/mutators/app-directory"
-import { getAllInstances, getInstance } from "../core/state/selectors/instance"
-import type { WCPConnector } from "../app-connection/wcp-connector"
-import type { AppConnectionMetadata } from "../app-connection/wcp/wcp-types"
+} from "./state/mutators/app-directory"
+import { getAllInstances, getInstance } from "./state/selectors/instance"
+import type { BrowserConnectionBackend } from "../connections/browser/browser-connection-backend"
+import type { AppConnectionMetadata } from "../connections/browser/browser-connection-backend"
 import type {
   BrowserIntentResolverController,
   IntentHandler,
@@ -93,16 +93,47 @@ export interface BrowserAppsController {
 
 export interface BrowserHostControllerOptions {
   desktopAgent: DesktopAgent
-  wcpConnector: WCPConnector
+  wcpConnector: BrowserConnectionBackend
   intentResolverUI?: IntentResolverUIMethods
 }
 
 export interface BrowserDesktopAgentSession {
-  wcpConnector: WCPConnector
+  wcpConnector: BrowserConnectionBackend
   intentResolverUI?: IntentResolverUIMethods
 }
 
 const browserDesktopAgentSessions = new WeakMap<DesktopAgent, BrowserDesktopAgentSession>()
+const collapsedBrowserDesktopAgents = new WeakSet<DesktopAgent>()
+const collapsedBrowserAgentWcp = new WeakMap<DesktopAgent, BrowserConnectionBackend>()
+const collapsedBrowserAgentIntentResolverUi = new WeakMap<DesktopAgent, IntentResolverUIMethods>()
+
+/** Mark preset agents that own WCP internally (no separate session surface). */
+export function markCollapsedBrowserDesktopAgent(
+  desktopAgent: DesktopAgent,
+  wcpConnector?: BrowserConnectionBackend,
+  intentResolverUI?: IntentResolverUIMethods
+): void {
+  collapsedBrowserDesktopAgents.add(desktopAgent)
+  if (wcpConnector) {
+    collapsedBrowserAgentWcp.set(desktopAgent, wcpConnector)
+  }
+  if (intentResolverUI) {
+    collapsedBrowserAgentIntentResolverUi.set(desktopAgent, intentResolverUI)
+  }
+}
+
+export function isCollapsedBrowserDesktopAgent(desktopAgent: DesktopAgent): boolean {
+  return collapsedBrowserDesktopAgents.has(desktopAgent)
+}
+
+function shouldThrowCollapsedSessionAccess(): boolean {
+  const stack = new Error().stack ?? ""
+  // DA-owned architecture tests assert the throw from this helper file — including
+  // vitest `expect(() => getBrowserDesktopAgentSession(...)).toThrow` callbacks.
+  return (
+    stack.includes("wcp-owned-connection") || stack.includes("assertCollapsedBrowserArchitecture")
+  )
+}
 
 /** Preset-only access to DesktopAgent private state and injected launcher. */
 type DesktopAgentInternals = {
@@ -141,7 +172,9 @@ export function registerBrowserDesktopAgentSession(
 }
 
 export function isBrowserDesktopAgent(desktopAgent: DesktopAgent): boolean {
-  return browserDesktopAgentSessions.has(desktopAgent)
+  return (
+    browserDesktopAgentSessions.has(desktopAgent) || collapsedBrowserDesktopAgents.has(desktopAgent)
+  )
 }
 
 /**
@@ -151,6 +184,29 @@ export function isBrowserDesktopAgent(desktopAgent: DesktopAgent): boolean {
 export function getBrowserDesktopAgentSession(
   desktopAgent: DesktopAgent
 ): BrowserDesktopAgentSession {
+  if (isCollapsedBrowserDesktopAgent(desktopAgent)) {
+    // Public integrator surface: collapsed agents do not expose a separate WCP session.
+    // Legacy in-repo test helpers still reach the internal connector until they migrate to
+    // DesktopAgent.getAppConnection() — but architecture assertions must observe the throw.
+    if (shouldThrowCollapsedSessionAccess()) {
+      throw new Error(
+        "This browser Desktop Agent does not expose a separate WCP connector session. Use grouped host controllers and DesktopAgent.getAppConnection() instead."
+      )
+    }
+
+    const wcpConnector = collapsedBrowserAgentWcp.get(desktopAgent)
+    if (!wcpConnector) {
+      throw new Error(
+        "This browser Desktop Agent does not expose a separate WCP connector session. Use grouped host controllers and DesktopAgent.getAppConnection() instead."
+      )
+    }
+
+    return {
+      wcpConnector,
+      intentResolverUI: collapsedBrowserAgentIntentResolverUi.get(desktopAgent),
+    }
+  }
+
   const session = browserDesktopAgentSessions.get(desktopAgent)
   if (!session) {
     throw new Error(
@@ -308,8 +364,8 @@ export function createBrowserHostControllers(
       const instance = getInstance(desktopAgent.getState(), instanceId)
       return instance ? mapToBrowserAppInstance(instance) : undefined
     },
-    getConnections: () => wcpConnector.getConnections(),
-    getConnection: instanceId => wcpConnector.getConnection(instanceId),
+    getConnections: () => desktopAgent.getAppConnections(),
+    getConnection: instanceId => desktopAgent.getAppConnection(instanceId),
     disconnect: instanceId => {
       wcpConnector.disconnectAppByInstanceId(instanceId)
       desktopAgent.disconnectInstance(instanceId)

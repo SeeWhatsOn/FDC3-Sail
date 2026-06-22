@@ -6,7 +6,7 @@ import type { DACPHandlerContext, PendingIntentPromiseEntry } from "../../types"
 import { createInitialState } from "../../../state/initial-state"
 import type { AgentState, StateSetter } from "../../../state/types"
 import type { Transport } from "../../../interfaces/transport"
-import { InMemoryTransport } from "../../../../transports/in-memory-transport"
+import { InMemoryTransport } from "../../../../../test/support/in-memory-transport"
 import { createDacpResponseDispatcher } from "../utils/dacp-response-utils"
 export { createDacpResponseDispatcher } from "../utils/dacp-response-utils"
 

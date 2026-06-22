@@ -1,9 +1,9 @@
-import type { MessagePortTransport } from "../message-port-transport"
-import type { WCPConnectorEvents } from "../wcp-connector-events"
-import type { WebConnectionProtocolMessage } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type { AppConnectionMetadata, WCPConnectorOptions } from "./wcp-types"
 import type { Logger } from "../../core/interfaces/logger"
 import type { AgentState, StateSetter } from "../../core/state/types"
+import type { AppConnectionManager } from "../../connections/app-connection-manager"
+import type { WCPConnectorEvents } from "../wcp-connector-events"
+import type { WebConnectionProtocolMessage } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import {
   linkHandshakeRoutingId,
   clearHandshakeRoutingIdsForInstance,
@@ -41,10 +41,8 @@ type EmitFunction = <EventName extends keyof WCPConnectorEvents>(
 ) => void
 
 export interface WCPConnectionContext {
+  connectionManager: AppConnectionManager
   options: Required<WCPConnectorOptions>
-  connections: Map<string, AppConnectionMetadata>
-  messagePortTransports: Map<string, MessagePortTransport>
-  transportToInstanceId: Map<MessagePortTransport, string>
   pendingDisconnects: Map<string, ReturnType<typeof setTimeout>>
   recentlyDisconnected: Map<string, { metadata: AppConnectionMetadata; disconnectedAt: number }>
   emit: EmitFunction
@@ -79,7 +77,7 @@ export function handleWCP6Goodbye(context: WCPConnectionContext, instanceId: str
     clearTimeout(existingTimeout)
   }
 
-  const connection = context.connections.get(instanceId)
+  const connection = context.connectionManager.connections.get(instanceId)
   const timeoutId = setTimeout(() => {
     context.pendingDisconnects.delete(instanceId)
 
@@ -119,7 +117,7 @@ export function cleanupStaleDisconnects(context: WCPConnectionContext): void {
  */
 export function disconnectAppByInstanceId(context: WCPConnectionContext, instanceId: string): void {
   const resolvedInstanceId = resolveRoutingInstanceId(context, instanceId)
-  const appTransport = context.messagePortTransports.get(resolvedInstanceId)
+  const appTransport = context.connectionManager.messagePortTransports.get(resolvedInstanceId)
   if (appTransport && appTransport.isConnected()) {
     // Send WCP6Goodbye message to the app before disconnecting
     try {
@@ -150,15 +148,15 @@ export function disconnectAppByInstanceId(context: WCPConnectionContext, instanc
  * This is the internal method that performs the actual cleanup
  */
 export function disconnectApp(context: WCPConnectionContext, instanceId: string): void {
-  const appTransport = context.messagePortTransports.get(instanceId)
+  const appTransport = context.connectionManager.messagePortTransports.get(instanceId)
   if (appTransport) {
     // Unregister before disconnect() so onDisconnect does not re-enter disconnectApp
-    context.messagePortTransports.delete(instanceId)
-    context.transportToInstanceId.delete(appTransport)
+    context.connectionManager.messagePortTransports.delete(instanceId)
+    context.connectionManager.transportToInstanceId.delete(appTransport)
     appTransport.disconnect()
   }
 
-  context.connections.delete(instanceId)
+  context.connectionManager.connections.delete(instanceId)
   clearHandshakeRoutingForInstance(context, instanceId)
   context.emit("appDisconnected", instanceId)
 }
@@ -178,7 +176,7 @@ export function updateConnectionMetadata(
   actualInstanceId: string,
   appId: string
 ): void {
-  const metadata = context.connections.get(tempInstanceId)
+  const metadata = context.connectionManager.connections.get(tempInstanceId)
   if (!metadata) {
     context.logger.warn(
       `Cannot update connection metadata: temp instanceId ${tempInstanceId} not found`
@@ -213,16 +211,16 @@ export function updateConnectionMetadata(
 
   // Migrate connection to actual instanceId key
   // This ensures future lookups use the validated instanceId
-  context.connections.delete(tempInstanceId)
-  context.connections.set(actualInstanceId, metadata)
+  context.connectionManager.connections.delete(tempInstanceId)
+  context.connectionManager.connections.set(actualInstanceId, metadata)
 
   // Migrate transport reference to actual instanceId key
-  const appTransport = context.messagePortTransports.get(tempInstanceId)
+  const appTransport = context.connectionManager.messagePortTransports.get(tempInstanceId)
   if (appTransport) {
-    context.messagePortTransports.delete(tempInstanceId)
-    context.messagePortTransports.set(actualInstanceId, appTransport)
-    // Update reverse lookup so bridgeTransports uses the actual instanceId
-    context.transportToInstanceId.set(appTransport, actualInstanceId)
+    context.connectionManager.messagePortTransports.delete(tempInstanceId)
+    context.connectionManager.messagePortTransports.set(actualInstanceId, appTransport)
+    // Update reverse lookup so bridgeAppPort uses the actual instanceId
+    context.connectionManager.transportToInstanceId.set(appTransport, actualInstanceId)
   } else {
     context.logger.warn(
       `Transport not found for temp instanceId ${tempInstanceId} during metadata update`
@@ -239,7 +237,7 @@ export function updateConnectionMetadata(
  * Get all active connections
  */
 export function getConnections(context: WCPConnectionContext): AppConnectionMetadata[] {
-  return Array.from(context.connections.values())
+  return Array.from(context.connectionManager.connections.values())
 }
 
 /**
@@ -249,5 +247,5 @@ export function getConnection(
   context: WCPConnectionContext,
   instanceId: string
 ): AppConnectionMetadata | undefined {
-  return context.connections.get(instanceId)
+  return context.connectionManager.connections.get(instanceId)
 }

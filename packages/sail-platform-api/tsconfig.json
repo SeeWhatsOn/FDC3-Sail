@@ -7,8 +7,7 @@
       "@finos/sail-desktop-agent": ["../sail-desktop-agent/dist/index.d.mts"],
       "@finos/sail-desktop-agent/browser": [
         "../sail-desktop-agent/dist/app-connection/index.d.mts"
-      ],
-      "@finos/sail-desktop-agent/transports": ["../sail-desktop-agent/src/transports/index.ts"]
+      ]
     }
   },
   "include": ["src/**/*"],
