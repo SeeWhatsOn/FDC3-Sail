@@ -3,7 +3,7 @@ title: "Define browser DA observability hooks"
 slug: define-browser-da-observability-hooks
 kind: task
 type: feature
-status: draft
+status: approved
 loop_count: 0
 loop_limit: 3
 last_agent: ""
