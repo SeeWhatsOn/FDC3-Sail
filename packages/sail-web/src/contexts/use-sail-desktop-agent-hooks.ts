@@ -1,5 +1,5 @@
 import { useContext } from "react"
-import type { SailPlatform } from "@finos/sail-platform-api"
+import type { SailDesktopAgent } from "@finos/sail-platform-api"
 
 import type { AppDirectoryStore } from "../stores/app-directory-store"
 import type { ConnectionStore } from "../stores/connection-store"
@@ -7,12 +7,12 @@ import type { IntentResolverStore } from "../stores/intent-resolver-store"
 
 import { SailDesktopAgentContext } from "./sail-desktop-agent-context-value"
 
-export function useSailDesktopAgent(): SailPlatform["agent"] {
+export function useSailDesktopAgent(): SailDesktopAgent {
   const context = useContext(SailDesktopAgentContext)
   if (!context) {
     throw new Error("useSailDesktopAgent must be used within SailDesktopAgentProvider")
   }
-  return context.platform.agent
+  return context.agent
 }
 
 export function useAppDirectoryStore(): AppDirectoryStore {

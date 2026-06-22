@@ -2,7 +2,7 @@ import { useState, useMemo } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@finos/sail-ui"
 import { Check, Circle, X } from "lucide-react"
 
-import { useSailPlatform } from "../../contexts"
+import { useSailDesktopAgent } from "../../contexts"
 
 interface Channel {
   id: string
@@ -22,17 +22,17 @@ interface ChannelMenuProps {
 
 export const ChannelMenu = ({ trigger, selectedChannelId, onChannelSelect }: ChannelMenuProps) => {
   const [isOpen, setIsOpen] = useState(false)
-  const platform = useSailPlatform()
+  const agent = useSailDesktopAgent()
 
   // Get user channels from the Desktop Agent
   const channels = useMemo<Channel[]>(() => {
     try {
-      return platform.getUserChannels()
+      return agent.channels.getUserChannels()
     } catch (error) {
       console.error("[ChannelMenu] Failed to get user channels:", error)
       return []
     }
-  }, [platform])
+  }, [agent])
 
   const handleChannelClick = (channelId: string) => {
     if (selectedChannelId === channelId) {

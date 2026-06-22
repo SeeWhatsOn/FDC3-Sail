@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from "react"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { SailPlatform } from "@finos/sail-platform-api"
+import type { SailDesktopAgent } from "@finos/sail-platform-api"
 
 import { ChannelSelector } from "../components/ChannelSelector"
-import { SailDesktopAgentProvider, SailPlatformProvider } from "../contexts"
+import { SailDesktopAgentProvider } from "../contexts"
 
 type Listener = (...args: unknown[]) => void
 
@@ -29,14 +29,6 @@ class TestConnector {
       handler(...args)
     }
   }
-
-  getConnection(): null {
-    return null
-  }
-
-  resolveIntentSelection(): void {}
-
-  disconnectAppByInstanceId(): void {}
 }
 
 const TEST_INSTANCE_ID = "playwright-instance"
@@ -66,47 +58,83 @@ export function ChannelSelectorTestPage() {
     [],
   )
 
-  const platform = useMemo(
-    () =>
-      ({
-        connector,
-        agent: {
-          getUserChannels: () => channels,
-          getAppDirectory: () => ({
-            retrieveAllApps: () => [],
-            replace: async () => Promise.resolve(),
-            add: () => undefined,
-          }),
-        },
+  const agent = useMemo(() => {
+    const appListeners = {
+      onConnect: [] as Listener[],
+      onDisconnect: [] as Listener[],
+    }
+    const channelListeners = {
+      onAppChannelChange: [] as Listener[],
+    }
+
+    return {
+      channels: {
         getUserChannels: () => channels,
-        changeAppChannel: async (instanceId: string, channelId: string | null) => {
-          connector.emit("channelChanged", instanceId, channelId)
+        changeAppChannel: (instanceId: string, channelId: string | null) => {
+          channelListeners.onAppChannelChange.forEach(handler =>
+            handler({ instanceId, channelId, channel: null }),
+          )
           return Promise.resolve()
         },
-      }) as unknown as SailPlatform,
-    [channels, connector],
-  )
+        onAppChannelChange: (handler: Listener) => {
+          channelListeners.onAppChannelChange.push(handler)
+          return () => {
+            channelListeners.onAppChannelChange = channelListeners.onAppChannelChange.filter(
+              h => h !== handler,
+            )
+          }
+        },
+      },
+      apps: {
+        onConnect: (handler: Listener) => {
+          appListeners.onConnect.push(handler)
+          return () => {
+            appListeners.onConnect = appListeners.onConnect.filter(h => h !== handler)
+          }
+        },
+        onDisconnect: (handler: Listener) => {
+          appListeners.onDisconnect.push(handler)
+          return () => {
+            appListeners.onDisconnect = appListeners.onDisconnect.filter(h => h !== handler)
+          }
+        },
+        onHandshakeFailure: () => () => {},
+        getConnection: () => null,
+        emitConnect: (metadata: unknown) => {
+          appListeners.onConnect.forEach(handler => handler(metadata))
+        },
+      },
+      intentResolver: {
+        onRequest: () => () => {},
+        select: () => {},
+        cancel: () => {},
+        getPendingRequests: () => [],
+      },
+      connector,
+    } as unknown as SailDesktopAgent
+  }, [channels, connector])
 
   useEffect(() => {
-    connector.emit("appConnected", {
+    const mockAgent = agent as unknown as {
+      apps: { emitConnect: (metadata: unknown) => void }
+    }
+    mockAgent.apps.emitConnect({
       instanceId: TEST_INSTANCE_ID,
       appId: TEST_APP_ID,
       connectedAt: new Date(),
       hostIdentifier: "playwright-panel",
     })
-    connector.emit("channelChanged", TEST_INSTANCE_ID, "fdc3.channel.1")
-  }, [connector])
+    void agent.channels.changeAppChannel(TEST_INSTANCE_ID, "fdc3.channel.1")
+  }, [agent])
 
   return (
-    <SailPlatformProvider platform={platform}>
-      <SailDesktopAgentProvider platform={platform}>
-        <div className="flex min-h-screen items-center justify-center gap-4 bg-gray-50">
-          <div className="rounded-md border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="mb-3 text-sm font-medium text-gray-700">Channel Selector Test</div>
-            <ChannelSelector instanceId={TEST_INSTANCE_ID} />
-          </div>
+    <SailDesktopAgentProvider agent={agent}>
+      <div className="flex min-h-screen items-center justify-center gap-4 bg-gray-50">
+        <div className="rounded-md border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-3 text-sm font-medium text-gray-700">Channel Selector Test</div>
+          <ChannelSelector instanceId={TEST_INSTANCE_ID} />
         </div>
-      </SailDesktopAgentProvider>
-    </SailPlatformProvider>
+      </div>
+    </SailDesktopAgentProvider>
   )
 }

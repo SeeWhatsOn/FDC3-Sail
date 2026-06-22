@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo } from "react"
 
 import "./styles.css"
 import { useWorkspaceStore } from "../../stores/workspace-store"
-import { useConnectionStore, useSailPlatform } from "../../contexts"
+import { useConnectionStore, useSailDesktopAgent } from "../../contexts"
 
 import type { FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
 import { LeftControls, PrefixToolbarControls, RightControls } from "./toolbar/controls/index"
@@ -40,7 +40,7 @@ const Layout = (props: DockviewSailProps) => {
   } = useWorkspaceStore()
 
   // Get desktop agent and connection store for instance cleanup
-  const platform = useSailPlatform()
+  const agent = useSailDesktopAgent()
   const connectionStore = useConnectionStore()
 
   const activeWorkspace = workspaces.get(activeWorkspaceId)
@@ -175,7 +175,7 @@ const Layout = (props: DockviewSailProps) => {
           )
           try {
             // Send WCP6Goodbye and disconnect the instance
-            platform.apps.disconnect(connection.instanceId)
+            agent.apps.disconnect(connection.instanceId)
             console.log(
               `[Layout] Successfully initiated disconnect for instance ${connection.instanceId}`,
             )
@@ -218,7 +218,7 @@ const Layout = (props: DockviewSailProps) => {
     setDockviewLayout,
     activeWorkspaceId,
     connectionStore,
-    platform,
+    agent,
   ])
 
   // Sync with store panels when they change

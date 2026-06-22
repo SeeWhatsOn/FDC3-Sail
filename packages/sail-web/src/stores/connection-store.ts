@@ -5,7 +5,7 @@ import type {
   AppChannelChangeEvent,
   AppConnectionMetadata,
   HandshakeFailureEvent,
-  SailPlatform,
+  SailDesktopAgent,
 } from "@finos/sail-platform-api"
 
 // Immer draft support for Map/Set in connection state
@@ -41,7 +41,7 @@ interface ConnectionActions {
 
 export interface ConnectionStore extends ConnectionState, ConnectionActions {}
 
-export const createConnectionStore = (platform: SailPlatform) => {
+export const createConnectionStore = (agent: SailDesktopAgent) => {
   const store = create<ConnectionStore>()(
     immer((set, get) => ({
       // Initial state
@@ -115,7 +115,7 @@ export const createConnectionStore = (platform: SailPlatform) => {
     })),
   )
 
-  const { apps, channels } = platform
+  const { apps, channels } = agent
 
   apps.onConnect((metadata: AppConnectionMetadata) => {
     store.setState(state => {

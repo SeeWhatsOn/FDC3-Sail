@@ -1,6 +1,6 @@
 import { enableMapSet } from "immer"
 import { describe, it, expect, vi } from "vite-plus/test"
-import type { AppConnectionMetadata, SailPlatform } from "@finos/sail-platform-api"
+import type { AppConnectionMetadata, SailDesktopAgent } from "@finos/sail-platform-api"
 import channelSelectorSource from "../../components/ChannelSelector.tsx?raw"
 import connectionStoreSource from "../../stores/connection-store.ts?raw"
 import { createConnectionStore } from "../../stores/connection-store"
@@ -90,11 +90,11 @@ function createAppConnectedMetadata(
 describe("ConnectionStore channel membership", () => {
   it("updates connection channelId when channels controller emits onAppChannelChange", () => {
     const host = createMockHostControllers()
-    const platform = {
+    const agent = {
       apps: host.apps,
       channels: host.channels,
-    } as unknown as SailPlatform
-    const store = createConnectionStore(platform)
+    } as unknown as SailDesktopAgent
+    const store = createConnectionStore(agent)
 
     host.apps.emitConnect(createAppConnectedMetadata())
 
@@ -108,12 +108,12 @@ describe("ConnectionStore channel membership", () => {
   it("does not call DesktopAgent getState when onAppChannelChange fires", () => {
     const host = createMockHostControllers()
     const getState = vi.fn()
-    const platform = {
+    const agent = {
       apps: host.apps,
       channels: host.channels,
-      agent: { getState },
-    } as unknown as SailPlatform
-    const store = createConnectionStore(platform)
+      getState,
+    } as unknown as SailDesktopAgent
+    const store = createConnectionStore(agent)
 
     host.apps.emitConnect(createAppConnectedMetadata())
     host.channels.emitAppChannelChange(INSTANCE_ID, CHANNEL_ID)
@@ -124,11 +124,11 @@ describe("ConnectionStore channel membership", () => {
 
   it("clears channelId when onAppChannelChange fires with null", () => {
     const host = createMockHostControllers()
-    const platform = {
+    const agent = {
       apps: host.apps,
       channels: host.channels,
-    } as unknown as SailPlatform
-    const store = createConnectionStore(platform)
+    } as unknown as SailDesktopAgent
+    const store = createConnectionStore(agent)
 
     host.apps.emitConnect(createAppConnectedMetadata())
     host.channels.emitAppChannelChange(INSTANCE_ID, CHANNEL_ID)
@@ -144,6 +144,6 @@ describe("Channel UI source audit", () => {
     expect(channelSelectorSource).not.toMatch(/getState\s*\(/)
     expect(channelSelectorSource).toMatch(/getConnection/)
     expect(channelSelectorSource).toMatch(/channels\.changeAppChannel/)
-    expect(connectionStoreSource).not.toMatch(/platform\.connector/)
+    expect(connectionStoreSource).not.toMatch(/agent\.connector/)
   })
 })

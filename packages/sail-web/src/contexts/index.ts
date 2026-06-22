@@ -1,5 +1,4 @@
 export { SailDesktopAgentProvider } from "./SailDesktopAgentContext"
-export { SailPlatformProvider, useSailPlatform } from "./SailPlatformContext"
 export {
   useSailDesktopAgent,
   useAppDirectoryStore,

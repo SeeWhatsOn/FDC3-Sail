@@ -1,6 +1,10 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { SailAppLauncher, SailPlatform, type DirectoryApp } from "@finos/sail-platform-api"
+import {
+  SailAppLauncher,
+  createSailBrowserDesktopAgent,
+  type DirectoryApp,
+} from "@finos/sail-platform-api"
 import type { AppMetadata } from "@finos/fdc3"
 
 import conformanceAppDirectory from "../../sail-conformance-harness/conformance-appd.json"
@@ -25,7 +29,6 @@ if (isChannelSelectorE2e) {
   // This ensures the agent is listening for WCP1Hello messages when getAgent() is called
   console.log("[Sail] Initializing FDC3 Desktop Agent")
 
-  // Create app launcher that integrates with Sail UI workspace store
   const appLauncher = new SailAppLauncher({
     onLaunchApp: (appMetadata: AppMetadata, instanceId: string, context?: unknown) => {
       void context
@@ -36,7 +39,6 @@ if (isChannelSelectorE2e) {
         throw new Error("No active workspace available")
       }
 
-      // Get active tab for the workspace
       const workspace = workspaceStore.getWorkspace(activeWorkspaceId)
       if (!workspace) {
         throw new Error(`Workspace ${activeWorkspaceId} not found`)
@@ -47,7 +49,6 @@ if (isChannelSelectorE2e) {
         throw new Error(`No active tab in workspace ${activeWorkspaceId}`)
       }
 
-      // Extract app details from metadata
       const details =
         "details" in appMetadata ? (appMetadata as { details?: unknown }).details : undefined
       const detailsUrl =
@@ -59,12 +60,6 @@ if (isChannelSelectorE2e) {
         throw new Error(`App ${appMetadata.appId} has no URL in metadata`)
       }
 
-      // Pre-register the instance in the Desktop Agent's AppInstanceRegistry
-      // This allows the app to reconnect to this instanceId via WCP4
-      // We'll need to access the desktop agent after it's created, so we'll do this
-      // in a callback after the platform is created
-
-      // Create panel for the app
       const panel = {
         panelId: instanceId,
         appId: appMetadata.appId,
@@ -73,7 +68,6 @@ if (isChannelSelectorE2e) {
         icon: appMetadata.icons?.[0]?.src || null,
       }
 
-      // Add panel to the active workspace and tab
       workspaceStore.addPanel(activeWorkspaceId, activeTabId, panel)
 
       console.log(`[Sail] Launched app ${appMetadata.appId} as panel ${instanceId}`, {
@@ -85,7 +79,7 @@ if (isChannelSelectorE2e) {
     },
   })
 
-  const platform = new SailPlatform({
+  const agent = createSailBrowserDesktopAgent({
     debug: true,
     appLauncher,
     apps: [
@@ -94,14 +88,11 @@ if (isChannelSelectorE2e) {
     ] as unknown as DirectoryApp[],
   })
 
-  // Start the agent - this begins listening for WCP1Hello messages
-  platform.start()
-
   console.log("[Sail] FDC3 Browser Desktop Agent started and listening for connections")
 
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
-      <App platform={platform} />
+      <App agent={agent} />
     </StrictMode>,
   )
 }

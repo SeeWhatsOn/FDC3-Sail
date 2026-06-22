@@ -3,7 +3,7 @@ import { immer } from "zustand/middleware/immer"
 import type {
   IntentHandler as HostIntentHandler,
   IntentResolutionRequest,
-  SailPlatform,
+  SailDesktopAgent,
 } from "@finos/sail-platform-api"
 
 /**
@@ -48,7 +48,7 @@ export interface IntentResolverStore extends IntentResolverState, IntentResolver
 /**
  * Create the intent resolver store wired through grouped host controllers.
  */
-export const createIntentResolverStore = (platform: SailPlatform) => {
+export const createIntentResolverStore = (agent: SailDesktopAgent) => {
   const store = create<IntentResolverStore>()(
     immer((set, get) => ({
       isOpen: false,
@@ -68,7 +68,7 @@ export const createIntentResolverStore = (platform: SailPlatform) => {
           `[IntentResolverStore] User selected handler: ${handler.appName || handler.appId}`,
         )
 
-        platform.intentResolver.select(requestId, {
+        agent.intentResolver.select(requestId, {
           app: {
             appId: handler.appId,
             name: handler.appName ?? handler.appId,
@@ -95,7 +95,7 @@ export const createIntentResolverStore = (platform: SailPlatform) => {
         }
 
         console.log("[IntentResolverStore] User cancelled intent resolution")
-        platform.intentResolver.cancel(requestId)
+        agent.intentResolver.cancel(requestId)
 
         set(state => {
           state.isOpen = false
@@ -108,7 +108,7 @@ export const createIntentResolverStore = (platform: SailPlatform) => {
     })),
   )
 
-  const { intentResolver, apps } = platform
+  const { intentResolver, apps } = agent
 
   intentResolver.onRequest((request: IntentResolutionRequest) => {
     console.log("[IntentResolverStore] Intent resolution needed:", request.intent)

@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react"
-import type { SailPlatform } from "@finos/sail-platform-api"
+import type { SailDesktopAgent } from "@finos/sail-platform-api"
 
 import { createAppDirectoryStore } from "../stores/app-directory-store"
 import { createConnectionStore } from "../stores/connection-store"
@@ -8,28 +8,23 @@ import { createIntentResolverStore } from "../stores/intent-resolver-store"
 import { SailDesktopAgentContext } from "./sail-desktop-agent-context-value"
 
 interface SailDesktopAgentProviderProps {
-  platform: SailPlatform
+  agent: SailDesktopAgent
   children: ReactNode
 }
 
-export function SailDesktopAgentProvider({ platform, children }: SailDesktopAgentProviderProps) {
-  // Create the app directory store once with the platform injected
-  const appDirectoryStore = useMemo(() => createAppDirectoryStore(platform), [platform])
-
-  // Create the connection store once with the platform injected
-  const connectionStore = useMemo(() => createConnectionStore(platform), [platform])
-
-  // Create the intent resolver store once with the platform injected
-  const intentResolverStore = useMemo(() => createIntentResolverStore(platform), [platform])
+export function SailDesktopAgentProvider({ agent, children }: SailDesktopAgentProviderProps) {
+  const appDirectoryStore = useMemo(() => createAppDirectoryStore(agent), [agent])
+  const connectionStore = useMemo(() => createConnectionStore(agent), [agent])
+  const intentResolverStore = useMemo(() => createIntentResolverStore(agent), [agent])
 
   const value = useMemo(
     () => ({
-      platform,
+      agent,
       useAppDirectoryStore: appDirectoryStore,
       useConnectionStore: connectionStore,
       useIntentResolverStore: intentResolverStore,
     }),
-    [platform, appDirectoryStore, connectionStore, intentResolverStore],
+    [agent, appDirectoryStore, connectionStore, intentResolverStore],
   )
 
   return (

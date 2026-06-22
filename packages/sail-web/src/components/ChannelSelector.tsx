@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import type { BrowserTypes } from "@finos/fdc3"
 import { useStore, type StoreApi } from "zustand"
 
-import { useSailPlatform, useConnectionStore } from "../contexts"
+import { useSailDesktopAgent, useConnectionStore } from "../contexts"
 import type { ConnectionStore } from "../stores/connection-store"
 
 interface ChannelSelectorProps {
@@ -14,9 +14,9 @@ export function ChannelSelector({ instanceId }: ChannelSelectorProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const platform = useSailPlatform()
-  const platformRef = useRef(platform)
-  platformRef.current = platform
+  const agent = useSailDesktopAgent()
+  const agentRef = useRef(agent)
+  agentRef.current = agent
 
   const connectionStore = useConnectionStore()
   const storeApi = connectionStore as unknown as StoreApi<ConnectionStore>
@@ -26,7 +26,7 @@ export function ChannelSelector({ instanceId }: ChannelSelectorProps) {
 
   const channels = useMemo<BrowserTypes.Channel[]>(() => {
     try {
-      return platformRef.current.channels.getUserChannels()
+      return agentRef.current.channels.getUserChannels()
     } catch (err) {
       console.error("[ChannelSelector] Failed to get user channels:", err)
       return []
@@ -49,7 +49,7 @@ export function ChannelSelector({ instanceId }: ChannelSelectorProps) {
 
     try {
       // channels.changeAppChannel resolves after onAppChannelChange push; store updates via apps/channels subscriptions.
-      await platformRef.current.channels.changeAppChannel(instanceId, channelId)
+      await agentRef.current.channels.changeAppChannel(instanceId, channelId)
       setIsOpen(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to change channel")

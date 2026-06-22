@@ -1,26 +1,8 @@
-import {
-  retrieveAllApps,
-  replaceDirectoriesInState,
-  type AgentState,
-  type DesktopAgent,
-} from "@finos/sail-desktop-agent"
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
+import type { SailDesktopAgent } from "@finos/sail-platform-api"
+
 import type { DirectoryApp } from "../types/common"
-import type { SailPlatform } from "@finos/sail-platform-api"
-
-type DesktopAgentInternals = {
-  state: AgentState
-}
-
-/** Host-side catalog writes — same internal path as DACP handler setState. */
-async function applyAgentStateUpdateAsync(
-  agent: DesktopAgent,
-  callback: (state: AgentState) => Promise<AgentState>,
-): Promise<void> {
-  const internal = agent as unknown as DesktopAgentInternals
-  internal.state = await callback(agent.getState())
-}
 
 interface AppDirectoryState {
   apps: DirectoryApp[]
@@ -46,17 +28,15 @@ interface AppDirectoryActions {
 
 export interface AppDirectoryStore extends AppDirectoryState, AppDirectoryActions {}
 
-export const createAppDirectoryStore = (platform: SailPlatform) =>
+export const createAppDirectoryStore = (agent: SailDesktopAgent) =>
   create<AppDirectoryStore>()(
     immer((set, get) => ({
-      // Initial state
       apps: [] as DirectoryApp[],
       isLoading: false,
       error: null as string | null,
       lastUpdated: null as Date | null,
       directoryUrls: [] as string[],
 
-      // Actions
       setApps: (apps: DirectoryApp[]) =>
         set(state => {
           state.apps = apps
@@ -115,17 +95,13 @@ export const createAppDirectoryStore = (platform: SailPlatform) =>
           state.directoryUrls = urls
         }),
 
-      // Load apps from the browser desktop agent's app directory
       loadApps: () => {
         const { setLoading, setError, setApps } = get()
 
         try {
           setLoading(true)
           setError(null)
-
-          const apps = retrieveAllApps(platform.agent.getState().appDirectory)
-
-          setApps(apps)
+          setApps(agent.apps.getAll())
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : "Failed to load apps"
           setError(errorMessage)
@@ -135,7 +111,6 @@ export const createAppDirectoryStore = (platform: SailPlatform) =>
         }
       },
 
-      // Load directories from URLs into the desktop agent
       loadDirectoriesFromUrls: async (urls: string[]) => {
         const { setLoading, setError, loadApps, setDirectoryUrls } = get()
 
@@ -144,9 +119,9 @@ export const createAppDirectoryStore = (platform: SailPlatform) =>
           setError(null)
           setDirectoryUrls(urls)
 
-          await applyAgentStateUpdateAsync(platform.agent, state =>
-            replaceDirectoriesInState(state, urls),
-          )
+          for (const url of urls) {
+            await agent.apps.addDirectory(url)
+          }
 
           loadApps()
         } catch (error) {
