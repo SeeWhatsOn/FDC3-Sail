@@ -81,13 +81,13 @@ flowchart TD
   Run --> Web["Browser / PWA — @finos/sail-web"]
   Run --> Desktop["Desktop app — @finos/sail-electron"]
 
-  Build --> Preset["Preset — createBrowserDesktopAgent"]
-  Build --> Manual["Manual — DesktopAgent + WCP connector"]
+  Build --> BrowserAgent["Browser-ready — SailDesktopAgent"]
+  Build --> Manual["Advanced — DesktopAgent + app connection"]
 
-  Preset --> Package["@finos/sail-desktop-agent"]
+  BrowserAgent --> Package["@finos/sail-desktop-agent"]
   Manual --> Package
 
-  Preset --> HostUI[You provide: app launcher, intent UI, channel UI]
+  BrowserAgent --> HostUI[You provide: app launcher, intent UI, channel UI]
   Manual --> HostUI
 
   Web --> Apps
@@ -101,7 +101,7 @@ flowchart TD
 |------------|--------|
 | **Add an existing web app to Sail or another FDC3 Desktop Agent** | [Add your app to Sail](./add-your-app) |
 | **Run or host the full FDC3 Sail platform** (browser or desktop, minimal custom code) | [Run Sail](./run-sail) |
-| **Build my own FDC3 Desktop Agent** inside my web app (preset or manual wiring) | [Getting Started](./getting-started) |
+| **Build my own FDC3 Desktop Agent** inside my web app (`SailDesktopAgent` first, manual wiring for advanced cases) | [Getting Started](./getting-started) |
 | **Contribute to or build Sail from source** | [Development Guide](./development) |
 
 ## Features

@@ -13,7 +13,7 @@ For **one agent per browsing context** and why host chrome must not poll `getSta
 | Layer | Responsibility |
 |-------|----------------|
 | **`@finos/sail-desktop-agent`** | FDC3 engine: DACP handlers, agent state, WCP routing, events to apps. Stays **protocol-pure** — no Sail UI, no “chrome” concepts. |
-| **`@finos/sail-platform-api`** | Host integration: `SailPlatform`, lifecycle, **channel APIs for parent UI**, WCP connector events, optional `ChannelSelector` callback. |
+| **`@finos/sail-platform-api`** | Host integration: `SailPlatform`, lifecycle, **channel APIs for parent UI**, browser app connection events, optional `ChannelSelector` callback. |
 | **`@finos/sail-web`** (example host) | React chrome (`ChannelSelector`), connection store, tiles around iframes. |
 
 **Principle:** Parent chrome does not mutate Desktop Agent state directly. It calls **platform APIs**; the agent updates state through the same DACP handlers apps use.

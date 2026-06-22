@@ -4,13 +4,13 @@ sidebar_position: 1
 
 # @finos/sail-desktop-agent
 
-Pure, transport-agnostic FDC3 2.2 Desktop Agent — DACP handlers, channel and intent state, app directory, and browser WCP support.
+Browser-ready FDC3 2.2 Desktop Agent — `SailDesktopAgent`, DACP handlers, channel and intent state, app directory, and WCP `BrowserAppConnection`.
 
 **Location:** `packages/sail-desktop-agent/`
 
 ## What it does
 
-- Implements all mandatory FDC3 2.2 Desktop Agent APIs via DACP
+- Implements mandatory FDC3 2.2 Desktop Agent APIs via DACP
 - **Browser-first:** one `DesktopAgent` per host page, with FDC3 web apps connecting via WCP and per-app `MessagePort`
 - Keeps platform concerns (layout, workspace, storage, config) **out** of the core — those belong in [`@finos/sail-platform-api`](../platform-api/overview)
 

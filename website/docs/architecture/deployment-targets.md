@@ -2,21 +2,21 @@
 sidebar_position: 4
 ---
 
-# Deployment Targets: DPWA vs Electron
+# Deployment Targets: Browser vs Electron
 
-FDC3 Sail supports two deployment targets for the Desktop Agent: a **Desktop Progressive Web App (DPWA)** via `sail-web`, and a native desktop application via **Electron** (`sail-electron`). Both share the same `@finos/sail-desktop-agent` core.
+FDC3 Sail's supported v3-pre runtime is the browser host: `sail-web` runs a browser-resident `SailDesktopAgent`, and FDC3 web apps connect through WCP and `MessagePort`. `sail-electron` is an optional wrapper around the same web stack, but native multi-window and deep OS integration remain integration work.
 
 ## Overview
 
-| Capability | DPWA (`sail-web`) | Electron (`sail-electron`) |
+| Capability | Browser / PWA (`sail-web`) | Electron wrapper (`sail-electron`) |
 |---|---|---|
 | **Runtime** | Modern browser (Chrome, Edge) | Chromium bundled in Electron |
 | **Installation** | Installable PWA or opened in browser | Native installer / binary |
 | **OS integration** | Limited (web sandbox) | Full (file system, tray, notifications) |
 | **Updates** | Automatic via browser cache | Requires update mechanism |
 | **Distribution** | URL / CDN | Installer package |
-| **FDC3 compliance** | Full FDC3 2.2 support | Full FDC3 2.2 support |
-| **App isolation** | Browser cross-origin sandboxing | Electron renderer process isolation |
+| **FDC3 path** | Browser-resident WCP + MessagePort | Same browser-resident path inside Electron |
+| **App isolation** | Browser cross-origin sandboxing | Electron renderer isolation where the wrapper provides it |
 
 ## How Shared Architecture Works
 
@@ -29,22 +29,22 @@ Both targets use the same layered architecture:
                         ↓ uses
 ┌──────────────────────────────────────────┐
 │  @finos/sail-platform-api                 │  ← Layer 2: Platform SDK
-│  (transports, WCP gateway, validation)    │
+│  (SailPlatform, workspace/layout/config)  │
 └──────────────────────────────────────────┘
                         ↓ uses
 ┌──────────────────────────────────────────┐
-│  @finos/sail-desktop-agent               │  ← Layer 1: Pure FDC3 core
-│  (DACP handlers, state, WCP protocol)    │
+│  @finos/sail-desktop-agent               │  ← Layer 1: FDC3 engine
+│  (SailDesktopAgent, DACP, WCP app connection) │
 └──────────────────────────────────────────┘
 ```
 
-The `sail-desktop-agent` package is **environment-agnostic** — it has zero browser or Node.js dependencies. The transport layer is injected, so the same FDC3 logic runs identically in both deployment targets.
+The `sail-desktop-agent` package keeps FDC3 state and handlers headless, but the browser-ready path intentionally owns a `BrowserAppConnection`. Use `SailDesktopAgent` for shipping browser hosts; manual `DesktopAgent` composition is for package internals and focused tests.
 
-## DPWA (`sail-web`)
+## Browser / PWA (`sail-web`)
 
 ### What It Is
 
-`sail-web` is an installable Progressive Web App that runs in a modern browser. It hosts the Desktop Agent in a browser tab/window and exposes it to FDC3 apps running in iframes via the Web Connection Protocol (WCP).
+`sail-web` is a browser application that can also be installed as a Progressive Web App. It hosts the Desktop Agent in a browser tab/window and exposes it to FDC3 apps running in iframes via the Web Connection Protocol (WCP).
 
 ### How It Works
 
@@ -76,24 +76,23 @@ The `sail-desktop-agent` package is **environment-agnostic** — it has zero bro
 - You prioritise ease of update and maintenance.
 - You're building a SaaS or cloud-hosted desktop agent.
 
-## Electron (`sail-electron`)
+## Electron wrapper (`sail-electron`)
 
 ### What It Is
 
-`sail-electron` packages the Desktop Agent as a native desktop application using Electron. It runs a Chromium-based browser internally but presents itself as a native `.app` / `.exe` to the operating system.
+`sail-electron` packages the browser host in Electron. It can provide native packaging and selected OS integration, but the v3-pre FDC3 path is still the browser-resident agent and WCP app connection.
 
 ### How It Works
 
 1. User installs and launches the Electron application.
-2. The main process hosts the Desktop Agent logic.
-3. FDC3 apps open as Electron `BrowserWindow` instances (rather than iframes).
-4. Apps connect to the Desktop Agent via Electron's IPC bridge (the preload script exposes the WCP interface to renderer processes).
-5. After connection, apps use `MessagePort` for efficient communication.
+2. The renderer hosts the Sail web shell and `SailDesktopAgent`.
+3. FDC3 apps connect through the same browser WCP path used by `sail-web`.
+4. Any native windowing, IPC, and packaging policy is supplied by the Electron wrapper.
 
 ### Advantages
 
 - **Native OS integration**: System tray, notifications, file system access, and native menus.
-- **Independent windows**: FDC3 apps run as separate OS windows, not iframes — enabling a true multi-window desktop layout.
+- **Native shell options**: Electron can add menus, notifications, deep links, and managed packaging around the web host.
 - **Packaging**: Distributable as a signed native installer for corporate IT deployment.
 - **No browser tab management**: The DA doesn't compete with the user's browser tabs.
 - **Offline-capable**: Can be bundled with all dependencies for air-gapped environments.
@@ -108,16 +107,16 @@ The `sail-desktop-agent` package is **environment-agnostic** — it has zero bro
 
 ### When to Choose Electron
 
-- Your users need OS-level features (system tray icon, native notifications, deep links).
-- You need independent window management per FDC3 app.
+- Your users need OS-level features such as native notifications, deep links, or managed installers.
+- You are prepared to own Electron-specific windowing, update, and security policy.
 - Your organisation requires a packaged, IT-managed desktop application.
 - You need to operate in an air-gapped or restricted network environment.
 
-## The Decision: Support Both
+## The Decision: Browser First
 
-FDC3 Sail supports both targets because different organisations have different requirements. The shared `sail-desktop-agent` core ensures FDC3 conformance is identical regardless of deployment target. New FDC3 features and bug fixes flow to both targets simultaneously.
+FDC3 Sail keeps `sail-web` as the primary runtime because it matches the current `SailDesktopAgent` architecture and the FDC3 For-The-Web connection model. Electron remains valuable for packaging the same browser host when an organisation needs a native shell.
 
-The `sail-platform-api` package abstracts the transport layer, making it straightforward to add additional deployment targets (e.g., a Node.js server-side Desktop Agent for testing, or a WebSocket-based cloud bridge).
+Remote Desktop Agent, cross-device sync, and native app connection adapters are deferred. They should be explicit future adapters, not documentation promises about the current v3-pre package surface.
 
 ## Related Documentation
 

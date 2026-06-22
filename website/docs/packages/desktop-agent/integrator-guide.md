@@ -5,27 +5,27 @@ title: Integrator guide
 
 # Browser edge and Desktop Agent
 
-This document is the **primary integrator guide** for FDC3 in the browser. The package implements two cooperating roles:
+This document is the **primary integrator guide** for embedding the Sail Desktop Agent in a browser host. The package implements two cooperating roles:
 
-1. **Browser edge** — everything that talks to child app browsing contexts (WCP, MessagePort, per-app routing).
+1. **Browser app connection** — everything that talks to child app browsing contexts (WCP, MessagePort, per-app routing).
 2. **Desktop Agent (DA)** — headless FDC3 logic (DACP handlers, channel state, intents, instance registry).
 
-Everything else is detail under one of those two boxes.
+Most hosts should use `SailDesktopAgent` from the package root. It owns both roles and exposes host controllers for the shell UI.
 
 ## Two-box model
 
 ```text
-┌────────────────────────── BROWSER EDGE ──────────────────────────┐
+┌──────────────────── BROWSER APP CONNECTION ──────────────────────┐
 │  Host shell: iframes, AppLauncher, optional IntentResolver UI    │
-│  WCPConnector (app-connection/)                                  │
+│  BrowserAppConnection (app-connection/)                          │
 │    • WCP1–3 handshake (postMessage + MessageChannel)             │
 │    • MessagePort per connected app                               │
 │    • Routes DACP by meta.destination.instanceId                  │
 └────────────────────────────┬─────────────────────────────────────┘
-                             │ Transport — ONE pipe (not per app)
+                             │ attached app connection
                              ▼
 ┌────────────────────────── DESKTOP AGENT ─────────────────────────┐
-│  DesktopAgent (core/)                                            │
+│  DesktopAgent (agent/)                                           │
 │    • All fdc3.* behaviour via DACP handlers                      │
 │    • WCP4–5 identity validation → canonical instanceId           │
 │    • Channel membership, intents, open-with-context, heartbeat   │
@@ -35,9 +35,9 @@ Everything else is detail under one of those two boxes.
 | Role | Package path | Speaks to |
 |------|--------------|-----------|
 | Browser edge | `src/app-connection/` (incl. `wcp/`) | iframe or child-window apps (WCP + MessagePort) |
-| Desktop Agent | `src/core/` (incl. `dacp/`) | Host via `Transport`; apps only via edge |
+| Desktop Agent | `src/agent/`, `src/handlers/`, `src/state/` | Host controllers and attached app connections |
 
-**BrowserDaEdgeLink** (in-tab preset) is only the **short internal wire** between edge and DA in the same JS process. It is **not** how apps connect. Toolbox `AppTimeout` failures usually mean **MessagePort routing or instanceId mismatch** on the edge, not a broken internal edge link.
+Apps never talk to `DesktopAgent` directly. In browser hosts, app traffic flows **MessagePort → BrowserAppConnection → DesktopAgent → AppConnectionRegistry → MessagePort**.
 
 ## One Desktop Agent per context
 
@@ -47,24 +47,24 @@ FDC3 assumes **one logical Desktop Agent per user session** — one channel grap
 |---------|-----------------|-----------------|
 | Browser host page | One agent per top-level `window` (tab) | Module-level holder or `window` property |
 
-Creating two agents in the same browser tab (for example two `createBrowserDesktopAgent()` calls without sharing state) yields **split-brain**: duplicate WCP listeners, conflicting instance registries, and channel UI that reads the wrong agent.
+Creating two agents in the same browser tab yields **split-brain**: duplicate WCP listeners, conflicting instance registries, and channel UI that reads the wrong agent.
 
 ### Browser tab singleton
 
-Hold the preset handle once for the lifetime of the host page. HMR and strict-mode double mount in dev may call your factory twice — guard with a module-level or `window` holder:
+Hold the `SailDesktopAgent` once for the lifetime of the host page. HMR and strict-mode double mount in dev may call your factory twice — guard with a module-level or `window` holder:
 
 ```typescript
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
+import { SailDesktopAgent } from "@finos/sail-desktop-agent"
 import type { AppLauncher } from "@finos/sail-desktop-agent"
 
 declare global {
   interface Window {
-    __sailDesktopAgent?: ReturnType<typeof createBrowserDesktopAgent>
+    __sailDesktopAgent?: SailDesktopAgent
   }
 }
 
 function createAgent(appLauncher: AppLauncher) {
-  return createBrowserDesktopAgent({ appLauncher })
+  return new SailDesktopAgent({ appLauncher })
 }
 
 export function getBrowserDesktopAgent(appLauncher: AppLauncher) {
@@ -85,11 +85,11 @@ export function destroyBrowserDesktopAgent() {
 }
 ```
 
-`SailPlatform` and `createBrowserDesktopAgent` follow the same rule: construct **one** platform or preset handle per host page and reuse it for intent, channel, and app controllers.
+`SailPlatform` follows the same rule: construct **one** platform or agent handle per host page and reuse it for intent, channel, and app controllers.
 
 ### Server, worker, native, and multi-device paths (deferred)
 
-On **v3-pre**, the supported product path is **one browser-resident Desktop Agent per host page**. FDC3 web apps connect via WCP and per-app `MessagePort`; `createBrowserDesktopAgent` couples the in-tab engine and browser edge via an internal **`BrowserDaEdgeLink`** (preset-internal wiring — not a public import).
+On **v3-pre**, the supported product path is **one browser-resident Desktop Agent per host page**. FDC3 web apps connect via WCP and per-app `MessagePort`; `SailDesktopAgent` couples the in-tab engine and browser app connection.
 
 The following are **not** current adoption paths:
 
@@ -99,11 +99,11 @@ The following are **not** current adoption paths:
 | Cross-tab or cross-device channel sync | **Deferred** | Explicit sync/relay layer on top of browser-first DA — not by remoting the core agent |
 | Native desktop apps (Electron shell, C++ host) | **Future adapter** | WebSocket or platform-specific **app-connection** transport — native apps join the same channel graph; remoting the DA is not required |
 
-Framework authors may still use `new DesktopAgent({ transport })` with `InMemoryTransport`, `MockTransport`, or custom transports for **unit tests** and **manual composition**. That is an advanced integration path, not a documented deployment fork. See [How to wire (decision tree)](#how-to-wire-decision-tree).
+Framework authors may still use `new DesktopAgent()` plus `attachAppConnection()` for **unit tests** and **manual composition**. That is an advanced integration path, not a deployment fork. See [How to wire](#how-to-wire).
 
 ### Host channel UI and `getState()`
 
-Channel chrome must use **push events plus granular getters**, not full state snapshots. Prefer `channels.onAppChannelChange` / `channels.getAppChannelId` on the browser preset, or `SailPlatform.changeAppChannel` / `getAppUserChannel` on the reference stack. Do **not** poll or mutate `desktopAgent.getState()` for UI — that API is for tests and debugging only.
+Channel chrome must use **push events plus granular getters**, not full state snapshots. Prefer `channels.onAppChannelChange` / `channels.getAppChannelId` on `SailDesktopAgent`, or `SailPlatform.changeAppChannel` / `getAppUserChannel` on the reference stack. Do **not** poll or mutate `desktopAgent.getState()` for UI — that API is for tests and debugging only.
 
 Details and platform vs preset APIs: [Channel selector — host shell UI](#channel-selector--host-shell-ui) and [Channel selection architecture](../../architecture/channel-selection.md).
 
@@ -113,17 +113,17 @@ FDC3 in the browser is three runtime parts. Only the bottom two come from this p
 
 ```text
   FDC3 Apps          Your host (contracts + controllers)   FDC3 engine
-  @finos/fdc3    →   launcher · intentResolver · channels  →   createBrowserDesktopAgent()
-  getAgent()         apps · channel UI · lifecycle              (edge + DA, in-process)
+  @finos/fdc3    →   launcher · intentResolver · channels  →   new SailDesktopAgent()
+  getAgent()         apps · channel UI · lifecycle              (app connection + DA)
                      open/close · catalog
 ```
 
-Iframe apps call `fdc3.getAgent()` via `@finos/fdc3` — you do not implement that layer. You **do** implement the host contracts below, then pass them to `createBrowserDesktopAgent`. Host shell UI (intent picker, channel toolbar, app catalog, tab lifecycle) uses the **grouped host controllers** on the preset handle — Sail preset APIs, not FDC3 wire messages.
+Iframe apps call `fdc3.getAgent()` via `@finos/fdc3` — you do not implement that layer. You **do** implement the host contracts below, then pass them to `SailDesktopAgent`. Host shell UI (intent picker, channel toolbar, app catalog, tab lifecycle) uses the **grouped host controllers** on the agent handle — Sail APIs, not FDC3 wire messages.
 
 ### Browser mode (engine in same tab)
 
 ```typescript
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
+import { SailDesktopAgent } from "@finos/sail-desktop-agent"
 import type { AppLauncher } from "@finos/sail-desktop-agent"
 
 const appShell = document.getElementById("app-shell")!
@@ -146,12 +146,12 @@ const appLauncher: AppLauncher = {
   },
 }
 
-const desktopAgent = createBrowserDesktopAgent({
+const desktopAgent = new SailDesktopAgent({
   appLauncher,
-  // wcpOptions omitted → intentResolverUrl/channelSelectorUrl false (host-owned UI)
+  // appConnectionOptions omitted → intentResolverUrl/channelSelectorUrl false (host-owned UI)
 })
 
-// Grouped host controllers — primary setup pattern for browser preset hosts
+// Grouped host controllers — primary setup pattern for browser hosts
 const { intentResolver, channels, apps } = desktopAgent
 
 // Runtime app catalog (primary — not only constructor appDirectories)
@@ -174,7 +174,7 @@ channels.onAppChannelChange(({ instanceId, channelId }) => {
   updateTabChrome(instanceId, channelId)
 })
 
-// Instance lifecycle — replaces direct wcpConnector.on(...) in application code
+// Instance lifecycle — prefer controller subscriptions over lower-level connector hooks
 apps.onConnect(meta => tabs.markConnected(meta.instanceId, meta.appId))
 apps.onDisconnect(instanceId => {
   tabs.remove(instanceId)
@@ -198,32 +198,32 @@ await apps.open("portfolio-app", { context: instrumentContext })
 
 | Host concern | Required? | Primary API |
 |--------------|-----------|-------------|
-| `appLauncher` | **Yes** — FDC3 `open()` creates iframes/windows | `createBrowserDesktopAgent({ appLauncher })` |
+| `appLauncher` | **Yes** — FDC3 `open()` creates iframes/windows | `new SailDesktopAgent({ appLauncher })` |
 | App catalog | **Yes** — metadata for open/intent resolution | `apps.addDirectory`, `apps.add` / `apps.addAll` (or constructor `appDirectories` / `apps`) |
 | Intent resolver UI | When multiple handlers match | `intentResolver.*` (`intentResolverUI` alias — prefer `intentResolver`) |
 | Channel chrome | Recommended when `channelSelectorUrl` is false (default) | `channels.getUserChannels`, `channels.changeAppChannel`, `channels.onAppChannelChange` |
 | Instance lifecycle | Recommended — tabs, cleanup | `apps.onConnect` / `onDisconnect` / `onHandshakeFailure`; host tab close via `apps.disconnect` |
 | App self-close | When supporting FDC3 v3.0 `fdc3.close()` | `AppLauncher.close` on the launcher you pass to the preset |
 
-`createBrowserDesktopAgent` returns a single `DesktopAgent` handle with grouped controllers attached; the browser edge starts and stops with `desktopAgent.start()` / `desktopAgent.stop()`. You do not manage `WCPConnector` in application code.
+`SailDesktopAgent` starts the browser app connection by default. Use `autoStart: false` only when you need to finish setup before the WCP listener is installed. Stop the agent with `desktopAgent.stop()` when the host shell tears down.
 
 ### FDC3 boundary
 
 | Who | API |
 |-----|-----|
 | **Apps** (iframe / child window) | `@finos/fdc3` — `getAgent()`, `joinUserChannel`, `broadcast`, `raiseIntent`, `fdc3.close()`, … |
-| **Host shell** (your page) | Sail preset controllers — `intentResolver`, `channels`, `apps` on the `createBrowserDesktopAgent` handle |
+| **Host shell** (your page) | Sail host controllers — `intentResolver`, `channels`, `apps` on the `SailDesktopAgent` handle |
 
 Apps must not import `@finos/sail-desktop-agent`. Host code must not call `fdc3.close()` on behalf of an app — use `apps.disconnect` for host-initiated teardown and implement `AppLauncher.close` for app-initiated `fdc3.close()`.
 
 ### Host controllers reference
 
-Grouped controllers are attached to every `createBrowserDesktopAgent` handle. Destructure once and pass slices to your UI layer.
+Grouped controllers are attached to every `SailDesktopAgent` handle. Destructure once and pass slices to your UI layer.
 
 | Controller | Key methods | Notes |
 |------------|-------------|-------|
 | **`intentResolver`** | `onRequest`, `select`, `cancel`, `getPendingRequests` | Canonical; `intentResolverUI` is the same surface |
-| **`channels`** | `getUserChannels`, `getAppChannelId`, `getAppChannel`, `changeAppChannel`, `onAppChannelChange` | Host channel chrome — not raw `connectorTransport` |
+| **`channels`** | `getUserChannels`, `getAppChannelId`, `getAppChannel`, `changeAppChannel`, `onAppChannelChange` | Host channel chrome — not raw DACP impersonation |
 | **`apps`** | `addDirectory`, `add`, `addAll`, `remove`, `getAll`, `getById`, `open`, `getInstances`, `getInstance`, `getConnections`, `getConnection`, `disconnect`, `onConnect`, `onDisconnect`, `onHandshakeFailure` | Runtime catalog + instance lifecycle; no `apps.close` |
 
 Constructor `appDirectories` / `apps` still work for static seeding; **`apps.addDirectory` and `apps.add` are the primary runtime pattern** when the catalog loads after host init or changes over time.
@@ -265,7 +265,7 @@ FDC3 `getAgent()` supports more than one web mechanism. Sail's browser host impl
 |----------|---------------------------------------|------------|
 | App in an iframe owned by the Sail host | Yes. This is the primary and tested browser path. | Set the iframe `name` to the host instance id and list the app URL in the app directory. |
 | App opened with `window.open` by the Sail host | Can work if the child keeps `window.opener` and the app directory identity matches. | Implement a window-based `AppLauncher`; this is not the default `sail-web` launcher. |
-| App in a traditional preload-style container | `getAgent()` can return `window.fdc3` when the container injects it. | This is a different FDC3 web interface. Sail's browser preset does not currently install `window.fdc3` into the host page. |
+| App in a traditional preload-style container | `getAgent()` can return `window.fdc3` when the container injects it. | This is a different FDC3 web interface. `SailDesktopAgent` does not currently install `window.fdc3` into the host page. |
 | React component rendered in the same top-level page as the Sail host | No, not as a separate standard FDC3 app. There is no parent/opener for proxy discovery, and no Sail preload object is installed. | Treat it as host UI and use `SailPlatform` / `DesktopAgent` host APIs, or put it in an iframe/window. |
 
 This is the key difference for teams coming from preload-style desktop agents: in the browser-resident model, independent apps usually need independent browsing contexts. Same-page components can still participate in the product UI, but they are not separate FDC3 app instances through `@finos/fdc3` unless Sail later provides a dedicated top-level adapter.
@@ -295,7 +295,7 @@ Host code supplies the app directory and launches the app. App code should not i
 
 ### Same-page components
 
-If your "app" is a React component rendered inside the same page that created `SailPlatform` or `createBrowserDesktopAgent`, it is part of the host shell. Use the host APIs already available in that process:
+If your "app" is a React component rendered inside the same page that created `SailPlatform` or `SailDesktopAgent`, it is part of the host shell. Use the host APIs already available in that process:
 
 ```typescript
 const platform = new SailPlatform({ appLauncher, intentResolver })
@@ -316,19 +316,19 @@ FDC3 defines **two different mechanisms** for each UI. Sail and this package def
 
 | UI | Mechanism A — host shell (recommended) | Mechanism B — WCP3 iframe injection |
 |----|----------------------------------------|-------------------------------------|
-| Intent resolver | `desktopAgent.intentResolver` (canonical; `intentResolverUI` transitional alias) or low-level `IntentResolver` contract | `wcpOptions.intentResolverUrl` — `@finos/fdc3` loads a page **inside the app window** |
-| Channel selector | Host toolbar + `channels.changeAppChannel` | `wcpOptions.channelSelectorUrl` — `@finos/fdc3` loads a page **inside the app window** |
+| Intent resolver | `desktopAgent.intentResolver` (canonical; `intentResolverUI` transitional alias) or low-level `IntentResolver` contract | `appConnectionOptions.intentResolverUrl` — `@finos/fdc3` loads a page **inside the app window** |
+| Channel selector | Host toolbar + `channels.changeAppChannel` | `appConnectionOptions.channelSelectorUrl` — `@finos/fdc3` loads a page **inside the app window** |
 
-**Default (omit `wcpOptions`):** both URLs are `false` — your host shell owns both UIs. This matches FDC3 when the [browser-resident host](https://fdc3.finos.org/docs/api/specs/browserResidentDesktopAgents) renders chrome outside the app iframe.
+**Default (omit `appConnectionOptions`):** both URLs are `false` — your host shell owns both UIs. This matches FDC3 when the [browser-resident host](https://fdc3.finos.org/docs/api/specs/browserResidentDesktopAgents) renders chrome outside the app iframe.
 
 #### Intent resolver — host shell UI
 
 When `raiseIntent` or `raiseIntentForContext` is ambiguous, the engine pauses and asks the host to pick one choice. Explicit `AppIdentifier` targets and unambiguous matches bypass this UI.
 
-**Option 1 — grouped controller (recommended):** use `intentResolver` on the browser preset handle:
+**Option 1 — grouped controller (recommended):** use `intentResolver` on the `SailDesktopAgent` handle:
 
 ```typescript
-const desktopAgent = createBrowserDesktopAgent({ appLauncher })
+const desktopAgent = new SailDesktopAgent({ appLauncher })
 const { intentResolver } = desktopAgent
 
 const offRequest = intentResolver.onRequest(request => {
@@ -355,7 +355,7 @@ The `intentResolver` request/response shapes are Sail host UI adapter types, not
 **Option 2 — low-level host contract:** provide your own `IntentResolver` if you want to own promise correlation yourself:
 
 ```typescript
-const desktopAgent = createBrowserDesktopAgent({
+const desktopAgent = new SailDesktopAgent({
   appLauncher,
   intentResolver: {
     async resolve(request) {
@@ -374,33 +374,12 @@ const desktopAgent = createBrowserDesktopAgent({
 })
 ```
 
-**Option 3 — connector event listener (advanced):** use only when you need `getBrowserDesktopAgentSession` for edge-level events (manual `WCPConnector` composition):
+**Option 3 — injected iframe (uncommon for custom hosts):**
 
 ```typescript
-import { getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/presets"
-
-const { wcpConnector } = getBrowserDesktopAgentSession(desktopAgent)
-
-wcpConnector.on("intentResolverNeeded", payload => {
-  void myIntentModal.open(payload).then(selection => {
-    wcpConnector.resolveIntentSelection({
-      requestId: payload.requestId,
-      selectedHandler: selection
-        ? { appId: selection.appId, instanceId: selection.instanceId }
-        : null,
-    })
-  })
-})
-```
-
-`intentResolverNeeded` is a Sail browser connector event, not an official FDC3 WCP wire message. Prefer **`intentResolver`** unless you are doing manual connector composition.
-
-**Option 4 — injected iframe (uncommon for custom hosts):**
-
-```typescript
-createBrowserDesktopAgent({
+new SailDesktopAgent({
   appLauncher,
-  wcpOptions: { intentResolverUrl: true }, // FINOS reference UI, or a URL string
+  appConnectionOptions: { intentResolverUrl: true }, // FINOS reference UI, or a URL string
 })
 ```
 
@@ -410,7 +389,7 @@ No `intentResolver` contract needed — `@finos/fdc3` hosts the picker inside ea
 
 When `channelSelectorUrl` is `false` (default), the **host** renders channel chrome (toolbar button, per-app dropdown). The app does not get an injected channel iframe.
 
-Use the **`channels`** controller on the browser preset handle:
+Use the **`channels`** controller on the `SailDesktopAgent` handle:
 
 1. **List** channels: `channels.getUserChannels()`
 2. **Read** current channel: `channels.getAppChannelId(instanceId)` or `channels.getAppChannel(instanceId)` (includes channel object)
@@ -419,7 +398,7 @@ Use the **`channels`** controller on the browser preset handle:
 
 Do **not** read or mutate `desktopAgent.getState()` for channel chrome. `getState()` is for tests and debugging only.
 
-With **`createBrowserDesktopAgent`** (preset — no platform-api):
+With **`SailDesktopAgent`** (no platform-api):
 
 ```typescript
 const { channels } = desktopAgent
@@ -459,9 +438,9 @@ platform.connector.on("channelChanged", (id, channelId) => {
 **Injected channel iframe (uncommon):**
 
 ```typescript
-createBrowserDesktopAgent({
+new SailDesktopAgent({
   appLauncher,
-  wcpOptions: { channelSelectorUrl: "/host/channel-selector.html" }, // or true for FINOS reference
+  appConnectionOptions: { channelSelectorUrl: "/host/channel-selector.html" }, // or true for FINOS reference
 })
 ```
 
@@ -469,7 +448,7 @@ createBrowserDesktopAgent({
 
 ```text
 SailPlatform.start()
-  → createBrowserDesktopAgent({ wcpOptions: false/false })
+  → new SailDesktopAgent({ appConnectionOptions: { intentResolverUrl: false, channelSelectorUrl: false } })
   → SailDesktopAgentProvider wires stores to platform.connector events
   → <IntentResolverDialog /> listens via intent-resolver-store
   → <ChannelSelector instanceId={...} /> calls platform.changeAppChannel
@@ -483,11 +462,11 @@ This package implements a [Browser-Resident Desktop Agent](https://fdc3.finos.or
 
 | FDC3 2.2 concept | This package |
 |------------------|--------------|
-| `getAgent()` / WCP connection | **Edge** (`WCPConnector`) — WCP1–3, per-app `MessagePort` |
+| `getAgent()` / WCP connection | **BrowserAppConnection** — WCP1–3, per-app `MessagePort` |
 | DACP over `MessagePort` | **DA** (`DesktopAgent`) — all `fdc3.*` API behaviour |
-| WCP4 `ValidateAppIdentity` | **DA** — `core/handlers/dacp/wcp-handlers.ts` |
-| WCP5 success / failure | **DA** responds; **edge** migrates port map to canonical `instanceId` |
-| WCP6 `Goodbye` | **Edge** tears down port; **DA** cleans registry |
+| WCP4 `ValidateAppIdentity` | **DA** — `app-connection/wcp/wcp-identity-validation.ts` plus handlers |
+| WCP5 success / failure | **DA** responds; **BrowserAppConnection** migrates port map to canonical `instanceId` |
+| WCP6 `Goodbye` | **BrowserAppConnection** drops port; **DA** cleans registry |
 
 Spec references (v2.2):
 
@@ -500,7 +479,7 @@ Spec references (v2.2):
 | Step | FDC3 2.2 requirement | Owner in this package |
 |------|------------------------|------------|
 | WCP1 `Hello` | App posts to parent; includes `connectionAttemptUuid` | App (`@finos/fdc3`); edge listens |
-| WCP3 `Handshake` | DA returns `MessagePort` + `intentResolverUrl` + `channelSelectorUrl` | Edge sends; values from `wcpOptions` |
+| WCP3 `Handshake` | DA returns `MessagePort` + `intentResolverUrl` + `channelSelectorUrl` | BrowserAppConnection sends; values from `appConnectionOptions` |
 | WCP4 | First message on port; `identityUrl` / `actualUrl` origins MUST match `WCP1` origin | DA validates |
 | WCP4 reconnect | Optional `instanceId` + `instanceUuid`; DA MUST verify `instanceUuid` secret and `WindowProxy` | DA (`instance-identity-registry`) |
 | WCP5 | DA assigns or reuses `appId`, `instanceId`, `instanceUuid` | DA; edge updates routing |
@@ -514,16 +493,16 @@ FDC3 names these fields **`intentResolverUrl`** and **`channelSelectorUrl`** on 
 - **`false`** — the app does not need an injected iframe (host or DA provides UI another way);
 - **`true`** — use the FINOS reference UI.
 
-This package defaults both to **`false`** when `wcpOptions` is omitted. That is spec-compliant when the host renders channel chrome and intent resolution outside injected iframes (see [Channel Selector and Intent Resolver](https://fdc3.finos.org/docs/api/specs/browserResidentDesktopAgents#channel-selector-and-intent-resolver-user-interfaces)).
+This package defaults both to **`false`** when `appConnectionOptions` is omitted. That is spec-compliant when the host renders channel chrome and intent resolution outside injected iframes (see [Channel Selector and Intent Resolver](https://fdc3.finos.org/docs/api/specs/browserResidentDesktopAgents#channel-selector-and-intent-resolver-user-interfaces)).
 
 **Two different “intent resolver” mechanisms:**
 
 | Mechanism | Purpose |
 |-----------|---------|
 | WCP3 `intentResolverUrl` | iframe URL injected **into the app window** by `@finos/fdc3` |
-| `intentResolver` on the browser preset handle | Host UI methods when DA needs disambiguation; not an official DACP/WCP message |
-| `intentResolverUI` on the browser preset handle | Transitional alias — same methods as `intentResolver` |
-| `intentResolver` option on `createBrowserDesktopAgent` | Low-level host callback for custom composition |
+| `intentResolver` on the `SailDesktopAgent` handle | Host UI methods when DA needs disambiguation; not an official DACP/WCP message |
+| `intentResolverUI` on the `SailDesktopAgent` handle | Transitional alias — same methods as `intentResolver` |
+| `intentResolver` option on `SailDesktopAgent` | Low-level host callback for custom composition |
 
 Most browser hosts use **`false`** for WCP3 URLs and implement resolver/channel UI in the host shell via [host contracts](https://github.com/finos/FDC3-Sail/tree/main/packages/sail-desktop-agent/src/host-contracts).
 
@@ -539,7 +518,7 @@ These behaviours stay within FDC3 MUSTs but are host conventions supported by th
 
 FDC3 2.2 defines [`heartbeatEvent`](https://fdc3.finos.org/docs/api/specs/desktopAgentCommunicationProtocol#checking-apps-are-alive) / [`heartbeatAcknowledgment`](https://fdc3.finos.org/docs/api/specs/desktopAgentCommunicationProtocol#checking-apps-are-alive) as an optional **Desktop Agent** liveness mechanism — “periodically or on demand,” depending on how the app is connected. Apps respond when the DA sends a heartbeat; there is **no** `getAgent()` parameter to disable it from the app side.
 
-Sail exposes heartbeat as **host-level configuration** on `DesktopAgent` / `createBrowserDesktopAgent` / `SailPlatform`. Settings apply to **every** connected instance for that agent — not per app or per entry in the app directory.
+Sail exposes heartbeat as **host-level configuration** on `DesktopAgent` / `SailDesktopAgent` / `SailPlatform`. Settings apply to **every** connected instance for that agent — not per app or per entry in the app directory.
 
 | Option | Default | Purpose |
 |--------|---------|---------|
@@ -547,12 +526,12 @@ Sail exposes heartbeat as **host-level configuration** on `DesktopAgent` / `crea
 | `heartbeatIntervalMs` | `30_000` | Milliseconds between heartbeat sends (only when enabled). |
 | `heartbeatTimeoutMs` | `60_000` | Milliseconds without an ack before the instance is torn down (only when enabled). |
 
-Product defaults live in `packages/sail-desktop-agent/src/core/sail-default-config.ts` and merge in the `DesktopAgent` constructor via `resolveDesktopAgentConfig()`.
+Product defaults live in `packages/sail-desktop-agent/src/agent/default-config.ts` and merge in the `DesktopAgent` constructor via `resolveDesktopAgentConfig()`.
 
 ```typescript
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
+import { SailDesktopAgent } from "@finos/sail-desktop-agent"
 
-const desktopAgent = createBrowserDesktopAgent({
+const desktopAgent = new SailDesktopAgent({
   appLauncher,
   heartbeatEnabled: true, // default — omit to keep enabled
   heartbeatIntervalMs: 30_000,
@@ -560,7 +539,7 @@ const desktopAgent = createBrowserDesktopAgent({
 })
 
 // Disable heartbeat when the host relies on WCP6 / MessagePort teardown only
-const quietAgent = createBrowserDesktopAgent({
+const quietAgent = new SailDesktopAgent({
   appLauncher,
   heartbeatEnabled: false,
 })
@@ -571,7 +550,6 @@ const quietAgent = createBrowserDesktopAgent({
 import { DesktopAgent } from "@finos/sail-desktop-agent"
 
 const agent = new DesktopAgent({
-  transport: daTransport,
   appLauncher,
   heartbeatEnabled: false,
 })
@@ -588,7 +566,7 @@ const agent = new DesktopAgent({
 ```mermaid
 sequenceDiagram
   participant Host as Host shell
-  participant Edge as WCPConnector
+  participant Edge as BrowserAppConnection
   participant DA as DesktopAgent
   participant App as App iframe
 
@@ -612,30 +590,30 @@ sequenceDiagram
 
 | Phase | Owner | Location |
 |-------|--------|----------|
-| WCP1–3 (Hello, Handshake, MessageChannel) | **Edge** | `app-connection/wcp-connector.ts`, `app-connection/wcp/wcp1-3-handshake.ts` |
-| Per-app MessagePort bridge | **Edge** | `app-connection/message-port-transport.ts`, `app-connection/wcp/wcp-message-routing.ts` |
-| WCP4–5 (validate identity, canonical id) | **DA** | `core/handlers/dacp/wcp-handlers.ts` |
-| WCP6 (Goodbye) | **Both** | Edge disconnects port; DA cleans registry |
-| DACP (open, channels, intents, …) | **DA** | `core/handlers/dacp/*` |
+| WCP1–3 (Hello, Handshake, MessageChannel) | **BrowserAppConnection** | `app-connection/browser-app-connection.ts`, `app-connection/wcp/wcp1-3-handshake.ts` |
+| Per-app MessagePort bridge | **BrowserAppConnection** | `app-connection/message-port-transport.ts`, `app-connection/wcp/wcp-message-routing.ts` |
+| WCP4–5 (validate identity, canonical id) | **DA** | `app-connection/wcp/wcp-identity-validation.ts`, `handlers/open/handlers.ts` |
+| WCP6 (Goodbye) | **Both** | BrowserAppConnection disconnects port; DA cleans registry |
+| DACP (open, channels, intents, …) | **DA** | `handlers/*` |
 
-Integrators normally touch **presets/factories** and **host contracts** (`AppLauncher`, `IntentResolver`), not WCP internals.
+Integrators normally touch **`SailDesktopAgent`** and **host contracts** (`AppLauncher`, `IntentResolver`), not WCP internals.
 
-## How to wire (decision tree)
+## How to wire
 
-Use this tree instead of reading four parallel README patterns.
+Use this tree instead of reading old README patterns.
 
 ```text
 Where does the Desktop Agent run?
 │
 ├─ Same browser tab as your host UI (default — 90% of integrators)
-│    → createBrowserDesktopAgent() from @finos/sail-desktop-agent/presets
+│    → new SailDesktopAgent() from @finos/sail-desktop-agent
 │    → Implement AppLauncher (iframes + instanceId on iframe name)
 │    → Wire host UI via intentResolver, channels, apps controllers
 │
 ├─ Manual composition (framework authors, edge tests)
-│    → new DesktopAgent({ transport }) + new WCPConnector(transport)
-│    → Link with createInMemoryTransportPair() from @finos/sail-desktop-agent/transports
-│    → createBrowserHostControllers({ desktopAgent, wcpConnector }) for grouped controllers
+│    → new DesktopAgent()
+│    → attachAppConnection(customConnection)
+│    → Own lifecycle and state binding explicitly
 │
 └─ Server / worker / multi-tab / native host (not supported on v3-pre)
      → Deferred — see Server, worker, native, and multi-device paths (deferred) above
@@ -643,21 +621,21 @@ Where does the Desktop Agent run?
 
 | Integrator goal | Entry point | Avoid unless advanced |
 |-----------------|-------------|------------------------|
-| Ship a browser desktop | `createBrowserDesktopAgent` | Manual `WCPConnector` + transport wiring |
+| Ship a browser desktop | `SailDesktopAgent` | Manual `DesktopAgent` + app connection wiring |
 | Unit-test FDC3 handlers | `MockTransport` + `DesktopAgent` | Expecting this to prove iframe delivery |
-| Edge + DA seam tests | `createInMemoryTransportPair` + `WCPConnector`, or preset integration tests (`getBrowserDesktopAgentSession`) | Duplicating WCP in app code |
+| App connection + DA seam tests | `SailDesktopAgent` integration tests or a custom app connection | Duplicating WCP in app code |
 | Remote or multi-device DA | — (not on v3-pre) | `createWCPClient` (removed) |
 
-**Canonical import:** `@finos/sail-desktop-agent/presets` for application code and factories. `@finos/sail-desktop-agent/browser` (app-connection) for tree-shaking when you only need `WCPConnector` or `MessagePortTransport`. For manual DA↔edge wiring in tests, use `createInMemoryTransportPair` from `@finos/sail-desktop-agent/transports` — the preset's internal `BrowserDaEdgeLink` is not part of the public API.
+**Canonical import:** `@finos/sail-desktop-agent` for browser hosts. Use `@finos/sail-desktop-agent/browser` only when you need lower-level `BrowserAppConnection` or `MessagePortTransport` primitives.
 
 ## Public API — browser-first surface
 
-### Default path — `createBrowserDesktopAgent`
+### Default path — `SailDesktopAgent`
 
 ```typescript
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
+import { SailDesktopAgent } from "@finos/sail-desktop-agent"
 
-const desktopAgent = createBrowserDesktopAgent({ appLauncher: myLauncher })
+const desktopAgent = new SailDesktopAgent({ appLauncher: myLauncher })
 const { intentResolver, channels, apps } = desktopAgent
 
 await apps.addDirectory("/apps.json")
@@ -669,42 +647,42 @@ apps.onConnect(meta => mountTab(meta))
 // Auto-started by default — iframe apps connect via fdc3.getAgent()
 ```
 
-Teardown: `desktopAgent.stop()`. Pass `autoStart: false` only if you must configure the agent before the edge listens, then call `desktopAgent.start()` yourself.
+Teardown: `desktopAgent.stop()`. Pass `autoStart: false` only if you must configure the agent before the app connection listens, then call `desktopAgent.start()` yourself.
 
-### Browser edge (internal to the preset)
+### Browser app connection
 
-`createBrowserDesktopAgent` couples a hidden **`WCPConnector`** (the browser edge) to the returned `DesktopAgent` via **`BrowserDaEdgeLink`**:
+`SailDesktopAgent` owns a `BrowserAppConnection` exposed as `desktopAgent.connector`:
 
-- `desktopAgent.start()` also starts the edge (`window` listener for WCP1, MessagePort routing)
-- `desktopAgent.stop()` tears down the edge and the DA transport
+- `desktopAgent.start()` also starts the browser app connection (`window` listener for WCP1, MessagePort routing)
+- `desktopAgent.stop()` tears down the app connection and disconnects app instances
 
-You do **not** destructure or manage `wcpConnector` in application code. Host code uses grouped controllers (`intentResolver`, `channels`, `apps`) plus `appLauncher`. Optional `onAppConnected` / `onAppDisconnected` callbacks remain for backward compatibility — prefer `apps.onConnect` / `apps.onDisconnect`.
+Most application code should not call lower-level connector methods directly. Host code uses grouped controllers (`intentResolver`, `channels`, `apps`) plus `appLauncher`. Optional `onAppConnected` / `onAppDisconnected` callbacks remain for compatibility — prefer `apps.onConnect` / `apps.onDisconnect`.
 
-Advanced access (manual composition, edge-contract tests): `getBrowserDesktopAgentSession(desktopAgent)` or `createBrowserHostControllers({ desktopAgent, wcpConnector, intentResolverUI })` from `@finos/sail-desktop-agent/presets`.
+Advanced tests can import `BrowserAppConnection` from `@finos/sail-desktop-agent/browser` and attach it to `DesktopAgent` manually.
 
-### `wcpOptions` — injected UI URLs (uncommon)
+### `appConnectionOptions` — injected UI URLs (uncommon)
 
-Most browser hosts omit `wcpOptions` — both `intentResolverUrl` and `channelSelectorUrl` default to `false` on every WCP3Handshake (host-owned chrome). When you need FINOS reference or custom iframe UIs:
+Most browser hosts omit `appConnectionOptions` — both `intentResolverUrl` and `channelSelectorUrl` default to `false` on every WCP3Handshake (host-owned chrome). When you need FINOS reference or custom iframe UIs:
 
 ```typescript
-createBrowserDesktopAgent({
+new SailDesktopAgent({
   appLauncher: myLauncher,
-  wcpOptions: { intentResolverUrl: true, channelSelectorUrl: true },
+  appConnectionOptions: { intentResolverUrl: true, channelSelectorUrl: true },
 })
 
 // Custom iframe URLs (same names as FDC3 WCP3 payload fields)
-createBrowserDesktopAgent({
+new SailDesktopAgent({
   appLauncher: myLauncher,
-  wcpOptions: {
+  appConnectionOptions: {
     intentResolverUrl: "/host/intent-resolver.html",
     channelSelectorUrl: "/host/channel-selector.html",
   },
 })
 
 // Per-instance URLs — keep getters when URL depends on instanceId
-createBrowserDesktopAgent({
+new SailDesktopAgent({
   appLauncher: myLauncher,
-  wcpOptions: {
+  appConnectionOptions: {
     getChannelSelectorUrl: id => `/channels?instance=${id}`,
   },
 })
@@ -715,32 +693,30 @@ createBrowserDesktopAgent({
 For framework authors and edge tests — not the normal adoption path:
 
 ```typescript
+import { BrowserAppConnection } from "@finos/sail-desktop-agent/browser"
 import { DesktopAgent } from "@finos/sail-desktop-agent"
-import { WCPConnector } from "@finos/sail-desktop-agent/browser"
-import { createBrowserHostControllers } from "@finos/sail-desktop-agent/presets"
-import { createInMemoryTransportPair } from "@finos/sail-desktop-agent/transports"
 
-const [daEdge, wcpEdge] = createInMemoryTransportPair()
-const desktopAgent = new DesktopAgent({ transport: daEdge, appLauncher: myLauncher })
-const wcpConnector = new WCPConnector(wcpEdge)
+const desktopAgent = new DesktopAgent({ appLauncher: myLauncher })
+const appConnection = new BrowserAppConnection()
 
-const { intentResolver, channels, apps } = createBrowserHostControllers({
-  desktopAgent,
-  wcpConnector,
+appConnection.bindAgentState({
+  getAgentState: () => desktopAgent.getState(),
+  setAgentState: update => desktopAgent.updateState(update),
 })
 
+desktopAgent.attachAppConnection(appConnection)
 desktopAgent.start()
-wcpConnector.start()
+appConnection.start()
 ```
 
-`createInMemoryTransportPair()` links DA and edge in the same JS process — the same role the preset fills internally with **`BrowserDaEdgeLink`** (not exported). For **handler-only** tests (`MockTransport`, Cucumber) where no browser edge is involved, use a single transport on `DesktopAgent` only.
+Use `SailDesktopAgent` unless you are writing package internals or focused tests. Manual composition must own state binding, lifecycle, and any host controllers you need.
 
-### `wcpOptions` — do you need to change anything?
+### `appConnectionOptions` — do you need to change anything?
 
-**No.** Omitting `wcpOptions` already produces `intentResolverUrl: false` and `channelSelectorUrl: false` on every WCP3Handshake (see `WCPConnector` constructor). You do **not** need:
+**No.** Omitting `appConnectionOptions` already produces `intentResolverUrl: false` and `channelSelectorUrl: false` on every WCP3Handshake. You do **not** need:
 
 ```typescript
-wcpOptions: {
+appConnectionOptions: {
   getIntentResolverUrl: () => false,
   getChannelSelectorUrl: () => false,
 }
@@ -752,20 +728,20 @@ unless you prefer the explicit form. Static fields (`intentResolverUrl`, `channe
 
 ### Today (logic spread across modules)
 
-Identity is correct when several conditions align, but the story is implicit:
+Identity is correct when these conditions align:
 
 ```text
 AppLauncher.launch() → instanceId
        ↓
 iframe name={instanceId}
        ↓
-WCP1Hello → temp-{connectionAttemptUuid} on edge connection map
+WCP1Hello → temp-{connectionAttemptUuid} on app connection map
        ↓
 WCP4 payload.instanceId + instanceUuid + sourceWindow
        ↓
-wcp-handlers: canReuse | canAdoptPendingHost | else createAppInstance (new UUID)
+identity validation: canReuse | canAdoptPendingHost | else createAppInstance
        ↓
-WCP5 canonical instanceId → edge migrates MessagePort map temp → canonical
+WCP5 canonical instanceId → app connection migrates MessagePort map temp → canonical
        ↓
 open-with-context / broadcast / raiseIntent use meta.destination.instanceId
 ```
@@ -773,10 +749,10 @@ open-with-context / broadcast / raiseIntent use meta.destination.instanceId
 Relevant code today:
 
 - Launcher contract: `src/host-contracts/app-launcher.ts`
-- Open registers **PENDING**: `src/core/handlers/dacp/app-handlers.ts`
-- WCP4 adopt vs mint: `src/core/handlers/dacp/wcp-handlers.ts` (`canAdoptPendingHostInstance`, `createAppInstance`)
+- Open registers **PENDING**: `src/handlers/open/handlers.ts`
+- WCP4 adopt vs mint: `src/app-connection/wcp/wcp-identity-validation.ts`
 - Port map migration: `src/app-connection/wcp/wcp-connection-management.ts`, `wcp-message-routing.ts`
-- Open-with-context waits on target id: `src/core/handlers/dacp/utils/open-with-context.ts`
+- Open-with-context waits on target id: `src/handlers/utils/open-with-context.ts`
 
 ```mermaid
 flowchart TB
@@ -790,54 +766,6 @@ flowchart TB
     L1 --> I1 --> T1 --> W4 --> C1 --> R1
   end
 ```
-
-### Proposed (same split, explicit binding) — not in FDC3 2.2
-
-Keep edge + DA split. Add a **single host-facing contract** and one log line per transition (illustrative future API):
-
-```typescript
-// host-contracts/instance-binding.ts (proposed — illustrative)
-
-/** One correlation record per launched iframe; edge + DA share this view. */
-export interface HostInstanceBinding {
-  /** From AppLauncher / iframe name — host authority */
-  launcherInstanceId: string
-  /** WCP1Hello correlation */
-  connectionAttemptUuid: string
-  /** After WCP5 — used in all DACP meta.destination */
-  canonicalInstanceId: string
-}
-
-/** Host calls when mounting iframe (proposed API) */
-export function registerHostInstanceBinding(
-  wcpConnector: WCPConnector,
-  binding: Pick<HostInstanceBinding, "launcherInstanceId" | "connectionAttemptUuid">
-): void {
-  // Edge: ensure PENDING instance exists under launcherInstanceId
-  // Edge: log [instance-binding] registered launcher=… attempt=…
-}
-
-/** Edge calls after WCP5 (proposed) */
-export function finalizeHostInstanceBinding(
-  binding: HostInstanceBinding
-): void {
-  // Assert canonical === launcher when adopt path taken
-  // log [instance-binding] canonical=… launcher=… match=true|false
-}
-```
-
-```mermaid
-flowchart TB
-  subgraph proposed ["Proposed — explicit binding"]
-    L2[registerHostInstanceBinding]
-    WCP[WCP handshake]
-    F2[finalizeHostInstanceBinding]
-    R2[routing uses binding.canonicalInstanceId only]
-    L2 --> WCP --> F2 --> R2
-  end
-```
-
-**No merge of edge and DA** — only a named object and structured logs so toolbox debugging is “follow `HostInstanceBinding`,” not grep three folders.
 
 ## Testing model
 

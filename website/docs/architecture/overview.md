@@ -18,7 +18,7 @@ This page is the system map. Package APIs, source-tree diagrams, and integration
 
 ### 2. Clear package ownership
 
-- **`@finos/sail-desktop-agent`** owns FDC3 behavior: `DesktopAgent`, DACP handlers, WCP protocol helpers, browser connectors, transports, host contracts, and presets.
+- **`@finos/sail-desktop-agent`** owns FDC3 behavior: `SailDesktopAgent`, `DesktopAgent`, DACP handlers, WCP browser app connection, host contracts, and app directory logic.
 - **`@finos/sail-platform-api`** owns Sail platform features: `SailPlatform`, workspace/layout/config APIs, product middleware, and host integration helpers.
 - **`@finos/sail-web`** and **`@finos/sail-electron`** are deployment hosts that provide UI, app launch surfaces, and packaging.
 
@@ -26,9 +26,9 @@ This page is the system map. Package APIs, source-tree diagrams, and integration
 
 Sail does not rely on a host-page `window.fdc3` preload. FDC3 apps run in iframe or window browsing contexts and discover the Desktop Agent through WCP. Host UI talks to `SailPlatform` or `DesktopAgent` APIs directly.
 
-### 4. Deployment target independence
+### 4. Browser-first Desktop Agent
 
-The same Desktop Agent core can be used in browser, worker, server, and Electron-style deployments. Runtime-specific pieces are connected through transports and host contracts.
+The supported v3-pre product path is a browser-resident Desktop Agent: one `SailDesktopAgent` per host page, with FDC3 apps connecting through WCP and per-app `MessagePort`s. Worker, server, native, and cross-device paths are future adapters rather than current adoption paths.
 
 ## Layered Architecture
 
@@ -51,22 +51,22 @@ The same Desktop Agent core can be used in browser, worker, server, and Electron
 ┌─────────────────────────────────────────────────────────────┐
 │  FDC3 Desktop Agent engine                                  │
 │  @finos/sail-desktop-agent                                  │
-│  - DesktopAgent, DACP handlers, AgentState                  │
-│  - WCP protocol helpers and browser connectors              │
-│  - transports, host contracts, presets                      │
+│  - SailDesktopAgent, DesktopAgent, DACP handlers, AgentState│
+│  - BrowserAppConnection, WCP protocol helpers               │
+│  - host contracts and app directory logic                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## App Connection Model
 
-FDC3 apps connect through WCP and then exchange DACP messages over a per-app transport:
+FDC3 apps connect through WCP and then exchange DACP messages over a per-app `MessagePort`:
 
 ```text
 FDC3 app iframe/window
         │  WCP discovery + MessagePort
         ▼
 Browser edge connector
-        │  Transport
+        │  attached app connection
         ▼
 DesktopAgent
 ```

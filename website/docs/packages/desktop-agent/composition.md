@@ -202,7 +202,7 @@ sequenceDiagram
 Two mechanisms exist for intent UI — see [integrator guide — intent resolver](./integrator-guide#intent-resolver--host-shell-ui):
 
 - **Host shell (default):** `intentResolver` controller (canonical; `intentResolverUI` transitional alias) or low-level `IntentResolver` contract
-- **WCP3 injection:** `wcpOptions.intentResolverUrl` — `@finos/fdc3` loads iframe in app window
+- **WCP3 injection:** `appConnectionOptions.intentResolverUrl` — `@finos/fdc3` loads iframe in app window
 
 ## Channel change flow (host chrome)
 

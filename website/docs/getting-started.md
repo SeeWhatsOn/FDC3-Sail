@@ -79,7 +79,7 @@ The desktop agent package exposes several entry points:
 
 ## Path 1 — Browser-ready (`SailDesktopAgent`)
 
-The preset couples the **browser edge** (WCP, MessagePort per app) and **Desktop Agent** (FDC3 logic) in one process. You implement **`AppLauncher`** (iframe/window creation) and wire host shell UI through the grouped controllers on the preset handle.
+`SailDesktopAgent` couples the **browser app connection** (WCP, MessagePort per app) and **Desktop Agent** (FDC3 logic) in one process. You implement **`AppLauncher`** (iframe/window creation) and wire host shell UI through the grouped controllers on the agent handle.
 
 ```typescript
 import { SailDesktopAgent } from "@finos/sail-desktop-agent"

@@ -12,7 +12,7 @@ Platform SDK for FDC3 Sail. Wraps `@finos/sail-desktop-agent` with Sail-specific
 
 | Concern | Owner |
 |---------|--------|
-| FDC3 engine, WCP, DACP, presets | [`@finos/sail-desktop-agent`](../desktop-agent/overview) |
+| FDC3 engine, WCP, DACP, browser host controllers | [`@finos/sail-desktop-agent`](../desktop-agent/overview) |
 | **Layout**, **workspace**, **storage**, **config** | `@finos/sail-platform-api` |
 | React workspace UI | [`@finos/sail-web`](../sail-web/overview) |
 
@@ -29,9 +29,10 @@ sail-web (React UI)
   - MiddlewarePipeline
         │
         ▼
-@finos/sail-desktop-agent         ← pure FDC3 core
+@finos/sail-desktop-agent         ← FDC3 engine
   - DesktopAgent
-  - createBrowserDesktopAgent
+  - SailDesktopAgent
+  - BrowserAppConnection
 ```
 
 ## SailPlatform (recommended)
@@ -61,13 +62,13 @@ await platform.layouts.save(workspaceId, layout)
 platform.stop()
 ```
 
-`SailPlatform` delegates engine wiring to `createBrowserDesktopAgent` from sail-desktop-agent. Access the edge via `platform.connector` when needed.
+`SailPlatform` owns a `SailDesktopAgent` from `@finos/sail-desktop-agent`. Access the lower-level browser app connection through `platform.connector` only for platform integration work; ordinary host UI should use the typed platform methods.
 
 See [Channel selection](../../architecture/channel-selection) for host chrome vs app-hosted selector URLs.
 
 ## createSailBrowserDesktopAgent (advanced)
 
-Lower-level browser wrapper with Sail WCP defaults and optional origin allowlist:
+Lower-level browser wrapper with Sail WCP defaults and optional origin allowlist. It returns a `SailDesktopAgent` without workspace/layout APIs:
 
 ```typescript
 import { createSailBrowserDesktopAgent } from "@finos/sail-platform-api"
@@ -79,7 +80,7 @@ const desktopAgent = createSailBrowserDesktopAgent({
   debug: true,
 })
 
-// Returns DesktopAgent — edge starts with desktopAgent.start()
+// Returns SailDesktopAgent — browser app connection starts with the agent
 desktopAgent.start()
 ```
 
@@ -97,8 +98,8 @@ For convenience, commonly used sail-desktop-agent symbols are re-exported:
 ```typescript
 import {
   DesktopAgent,
-  createBrowserDesktopAgent,
-  WCPConnector,
+  SailDesktopAgent,
+  createSailBrowserDesktopAgent,
 } from "@finos/sail-platform-api"
 ```
 
