@@ -92,6 +92,15 @@ None. Direction confirmed 2026-06-22: `DesktopAgent` is the full browser-residen
 ## Loop history
 
 - 2026-06-22: Delivery started (`status: in-progress`).
+- 2026-06-22: Phase A RED — 8 failing tests in `wcp-desktop-agent-owned-connection.integration.test.ts`; architecture invariant fails because `BrowserDaEdgeLink` still wired.
+
+## RED evidence
+
+- **Test files changed:** `wcp-desktop-agent-owned-connection.integration.test.ts`, `wcp-owned-connection-test-helpers.ts`, `wcp-desktop-agent.integration.fixtures.ts`
+- **Command:** `npm test -w @finos/sail-desktop-agent -- src/app-connection/__tests__/wcp-desktop-agent-owned-connection.integration.test.ts`
+- **Failure summary:** All 8/8 fail at `assertCollapsedBrowserArchitecture()` — `createBrowserDesktopAgent()` still uses `BrowserDaEdgeLink` + `WCPConnector` transport hop.
+- **Expected reason:** Correct RED; target is DA-owned WCP/MessagePort without edge link.
+- **Unrelated tests:** Healthy (352 passed in same run).
 
 ## Staged for review
 
