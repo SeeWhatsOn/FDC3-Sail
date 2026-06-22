@@ -281,17 +281,14 @@ export class InMemoryTransport implements Transport {
  *
  * @example
  * ```typescript
- * // Create linked transports for Desktop Agent and WCP Connector
- * const [daTransport, connectorTransport] = createInMemoryTransportPair()
+ * // Create linked transports for isolated handler or protocol tests
+ * const [leftTransport, rightTransport] = createInMemoryTransportPair()
  *
- * // Desktop Agent uses daTransport
- * const desktopAgent = new DesktopAgent()
- * desktopAgent.attachAppConnection(dacpTestAppConnection)
+ * leftTransport.onMessage(message => {
+ *   console.log("received from right", message)
+ * })
  *
- * // WCP Connector uses connectorTransport
- * const wcpConnector = new WCPConnector(connectorTransport)
- *
- * // Messages flow bidirectionally between them
+ * rightTransport.send({ type: "test" })
  * ```
  */
 /** Resolve the other endpoint of an in-memory transport pair, if any. */

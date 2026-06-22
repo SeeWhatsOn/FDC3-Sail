@@ -60,7 +60,7 @@ function instanceHasCleanupWork(state: AgentState, instanceId: string): boolean 
 
 /**
  * Cleanup when a DACP connection is closed, heartbeat times out, or the app sends WCP6Goodbye.
- * Kept in a leaf module so callers (heartbeat-handlers, wcp-handlers, desktop-agent) do not
+ * Kept in a leaf module so callers (heartbeat handlers, app connection teardown, desktop-agent) do not
  * import the DACP router `index.ts`, avoiding circular module graphs.
  */
 export function cleanupDACPHandlers(context: DACPHandlerContext): void {

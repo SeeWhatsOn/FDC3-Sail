@@ -18,7 +18,7 @@ export interface WCPHandshakeContext extends WCPRoutingContext {
  * Steps:
  * 1. Create MessageChannel
  * 2. Wrap port2 as MessagePortTransport
- * 3. Bridge app transport to Desktop Agent transport
+ * 3. Bridge app port messages into BrowserAppConnection routing
  * 4. Send WCP3Handshake with port1 to app
  * 5. Store connection metadata
  */
@@ -44,10 +44,10 @@ export function handleWCP1Hello(
   // before the Desktop Agent has validated the app identity.
   const instanceId = `temp-${connectionAttemptUuid}`
 
-  // Wrap port2 as Transport for this app
+  // Wrap port2 as the app-side MessagePort adapter.
   const appTransport = new MessagePortTransport(channel.port2)
 
-  // Bridge app transport <-> Desktop Agent transport
+  // Bridge app port messages into BrowserAppConnection routing.
   bridgeTransports(appTransport, context)
 
   // Extract host identifier from iframe's name attribute (AppLauncher.instanceId).

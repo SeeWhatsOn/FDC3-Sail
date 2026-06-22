@@ -145,7 +145,7 @@ export function disconnectAppByInstanceId(context: AppConnectionContext, instanc
       context.logger.debug(`Sent WCP6Goodbye to instance ${resolvedInstanceId}`)
     } catch (error) {
       context.logger.warn(
-        `[WCPConnector] Failed to send WCP6Goodbye to instance ${resolvedInstanceId}:`,
+        `[BrowserAppConnection] Failed to send WCP6Goodbye to instance ${resolvedInstanceId}:`,
         error,
       )
       // Continue with disconnection even if goodbye fails

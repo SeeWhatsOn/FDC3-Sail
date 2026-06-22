@@ -366,7 +366,7 @@ export type CloseRequestMessage = {
 /**
  * Handles closeRequest when an app calls fdc3.close() on itself.
  *
- * Self-close only: WCPConnector overwrites `meta.source.instanceId` from the MessagePort
+ * Self-close only: BrowserAppConnection overwrites `meta.source.instanceId` from the MessagePort
  * connection in production; the handler always closes the resolved caller instance.
  *
  * Per FDC3 v3.0 DACP spec: on success the app container is torn down before a success

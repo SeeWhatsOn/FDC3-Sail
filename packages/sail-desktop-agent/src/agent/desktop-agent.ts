@@ -60,7 +60,7 @@ interface DACPMessageMeta {
 
 /**
  * Options for creating a Desktop Agent. Omitted fields use FDC3-Sail product
- * defaults from `sail-default-config.ts` (merged in the constructor).
+ * defaults from `default-config.ts` (merged in the constructor).
  */
 export interface DesktopAgentOptions {
   appLauncher?: AppLauncher

@@ -1,7 +1,7 @@
 /**
  * WCP protocol types and browser-side protocol handling helpers.
  *
- * Connector wiring (WCPConnector, MessagePortTransport) lives under `app-connection/`.
+ * Browser app connection wiring (BrowserAppConnection, MessagePortTransport) lives under `app-connection/`.
  */
 export * from "./wcp-types"
 export * from "./wcp1-3-handshake"

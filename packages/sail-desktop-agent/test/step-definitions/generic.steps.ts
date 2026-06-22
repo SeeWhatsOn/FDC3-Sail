@@ -218,8 +218,7 @@ Given(
 Given("A desktop agent with heartbeat checking", function (this: CustomWorld) {
   const apps = this.props[APP_FIELD] ?? []
 
-  // Initialize DesktopAgent
-  // TODO: Implement heartbeat checking in new architecture
+  // Initialize DesktopAgent with heartbeat timers enabled for this scenario.
   this.initializeDesktopAgent(apps, cucumberUserChannels(), {
     intervalMs: 500,
     timeoutMs: 2000,
