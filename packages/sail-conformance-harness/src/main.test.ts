@@ -4,6 +4,8 @@
 
 import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 
+import { SailDesktopAgent } from "@finos/sail-desktop-agent"
+
 import { createHarnessBootstrap, getConformance1PanelState } from "./harness-bootstrap"
 import { createPopupCloseWatcher } from "./popup-launcher"
 
@@ -12,16 +14,21 @@ describe("createHarnessBootstrap", () => {
     vi.restoreAllMocks()
   })
 
-  it("pre-registers Conformance1 host instance id as PENDING before WCP connects", () => {
+  it("bootstraps a started SailDesktopAgent with Conformance1 pre-registered as pending", () => {
     const bootstrap = createHarnessBootstrap({ debug: false })
     try {
+      expect(bootstrap.desktopAgent).toBeInstanceOf(SailDesktopAgent)
+      expect(bootstrap.desktopAgent.connector.getIsStarted()).toBe(true)
+      expect(bootstrap.desktopAgent.apps.getById("Conformance1")).toBeDefined()
+
       const panelState = getConformance1PanelState(bootstrap)
 
       expect(panelState).toBeDefined()
       expect(panelState?.state).toBe("pending")
 
-      const instance = bootstrap.desktopAgent.getState().instances[panelState!.instanceId]
+      const instance = bootstrap.desktopAgent.apps.getInstance(panelState!.instanceId)
       expect(instance?.appId).toBe("Conformance1")
+      expect(instance?.status).toBe("pending")
     } finally {
       bootstrap.desktopAgent.stop()
     }

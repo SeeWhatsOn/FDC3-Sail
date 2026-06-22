@@ -16,7 +16,7 @@ describe("createHarnessInstanceCleanup", () => {
     const registerPendingHostInstance = vi.fn()
     const desktopAgent = {
       registerPendingHostInstance,
-      getState: () => ({ instances: {} }),
+      apps: { getInstance: vi.fn(() => undefined) },
       disconnectInstance: vi.fn(),
     }
 
@@ -46,11 +46,13 @@ describe("createHarnessInstanceCleanup", () => {
     const cleanup = createHarnessInstanceCleanup({
       desktopAgent: {
         registerPendingHostInstance: vi.fn(),
-        getState: () => ({
-          instances: {
-            "mock-instance-2": { appId: "MockAppId", state: "connected" },
-          },
-        }),
+        apps: {
+          getInstance: vi.fn((instanceId: string) =>
+            instanceId === "mock-instance-2"
+              ? { appId: "MockAppId", instanceId, status: "connected" as const }
+              : undefined,
+          ),
+        },
         disconnectInstance,
       } as never,
       popupWatcher,

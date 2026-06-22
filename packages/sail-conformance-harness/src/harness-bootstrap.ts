@@ -1,11 +1,10 @@
 import type { Dispatch, SetStateAction } from "react"
+import type { AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
 import {
   DEFAULT_FDC3_USER_CHANNELS,
   SailDesktopAgent,
   type DirectoryApp,
 } from "@finos/sail-desktop-agent"
-import type { AppIdentifier } from "@finos/fdc3"
-import type { AppInstance } from "@finos/sail-desktop-agent"
 
 import conformanceAppDirectory from "../conformance-appd.json"
 
@@ -109,17 +108,16 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     intentResolver: createHarnessIntentResolver(debug),
     userChannels: DEFAULT_FDC3_USER_CHANNELS,
     appConnectionOptions: {
+      // Sail host UI is wired externally (no injected resolver/selector iframes).
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,
+      fdc3Version: "2.2",
     },
     logPayloadDetail: debug ? "full" : "metadata",
-    onAppConnected: (metadata: {
-      appId: AppIdentifier["appId"]
-      instanceId: AppInstance["instanceId"]
-    }) => {
+    onAppConnected: (metadata: AppConnectionMetadata) => {
       console.log(`[ConformanceHarness] WCP connected: ${metadata.appId} (${metadata.instanceId})`)
     },
-    onAppDisconnected: (instanceId: AppInstance["instanceId"]) => {
+    onAppDisconnected: instanceId => {
       console.log(`[ConformanceHarness] WCP disconnected: ${instanceId}`)
       instanceCleanup.disconnectHarnessInstance(instanceId)
     },
@@ -155,16 +153,16 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
 
 export function getConformance1PanelState(
   bootstrap: HarnessBootstrap,
-): { instanceId: string; state: AppInstance["state"] } | undefined {
+): { instanceId: string; state: "pending" | "connected" } | undefined {
   const panel = bootstrap.initialPanels.find(entry => entry.appId === "Conformance1")
   if (!panel) {
     return undefined
   }
 
-  const instance = bootstrap.desktopAgent.getState().instances[panel.instanceId]
+  const instance = bootstrap.desktopAgent.apps.getInstance(panel.instanceId)
   if (!instance) {
     return undefined
   }
 
-  return { instanceId: panel.instanceId, state: instance.state }
+  return { instanceId: panel.instanceId, state: instance.status }
 }
