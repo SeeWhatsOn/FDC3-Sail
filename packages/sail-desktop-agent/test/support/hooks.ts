@@ -1,6 +1,6 @@
 import { After } from "@cucumber/cucumber"
-import { clearAllHeartbeatTimersForTesting } from "../../src/core/handlers/dacp/heartbeat-runtime"
-import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../src/core/handlers/dacp/utils/open-with-context"
+import { clearAllHeartbeatTimersForTesting } from "../../src/handlers/dacp/heartbeat-runtime"
+import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../src/handlers/dacp/utils/open-with-context"
 
 /**
  * Reset module-level timers after every scenario so the Cucumber process can exit

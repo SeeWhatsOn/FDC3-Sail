@@ -1,13 +1,13 @@
 import { World, setWorldConstructor, type IWorldOptions } from "@cucumber/cucumber"
-import { DesktopAgent } from "../../src/core/desktop-agent"
+import { DesktopAgent } from "../../src/agent/desktop-agent"
 import { MockTransport } from "../support/mock-transport"
 import { MockAppLauncher } from "../support/mock-app-launcher"
 import { MockIntentResolver } from "../support/mock-intent-resolver"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { DirectoryApp } from "../../src/core/app-directory/types"
-import type { AgentState } from "../../src/core/state/types"
-import { connectInstance } from "../../src/core/state/mutators"
-import { linkHandshakeRoutingId } from "../../src/core/state/mutators/wcp-handshake-routing"
+import type { DirectoryApp } from "../../src/app-directory/types"
+import type { AgentState } from "../../src/state/types"
+import { connectInstance } from "../../src/state/mutators"
+import { linkHandshakeRoutingId } from "../../src/state/mutators/wcp-handshake-routing"
 import { applyDesktopAgentStateUpdate } from "../support/agent-state"
 
 /**

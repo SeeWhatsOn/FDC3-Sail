@@ -6,13 +6,13 @@
 
 import { describe, it, expect, afterEach } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../core/default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import {
   getActiveHeartbeatTimerCount,
   clearAllHeartbeatTimersForTesting,
-} from "../../core/handlers/dacp/heartbeat-runtime"
-import { createBrowserDesktopAgent } from "../../core/create-browser-desktop-agent"
-import type { DesktopAgent } from "../../core/desktop-agent"
+} from "../../handlers/dacp/heartbeat-runtime"
+import { createBrowserDesktopAgent } from "../../agent/create-browser-desktop-agent"
+import type { DesktopAgent } from "../../agent/desktop-agent"
 import { connectWcpApp, flushAsyncDelivery } from "./wcp-edge-test-helpers"
 
 const PORTFOLIO_APP = {
@@ -36,7 +36,7 @@ describe("heartbeat connect flood", () => {
     const agent = createBrowserDesktopAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       apps: [PORTFOLIO_APP],
-      wcpOptions: {
+      appConnectionOptions: {
         getIntentResolverUrl: () => false,
         getChannelSelectorUrl: () => false,
       },
@@ -69,7 +69,7 @@ describe("heartbeat connect flood", () => {
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       apps: [PORTFOLIO_APP],
       heartbeatEnabled: false,
-      wcpOptions: {
+      appConnectionOptions: {
         getIntentResolverUrl: () => false,
         getChannelSelectorUrl: () => false,
       },

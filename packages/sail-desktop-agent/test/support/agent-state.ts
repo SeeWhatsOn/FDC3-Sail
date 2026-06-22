@@ -5,9 +5,9 @@
  * need to seed state (before DACP messages) use these helpers instead.
  */
 
-import type { DesktopAgent } from "../../src/core/desktop-agent"
-import type { PendingIntentPromiseEntry } from "../../src/core/handlers/types"
-import type { AgentState } from "../../src/core/state/types"
+import type { DesktopAgent } from "../../src/agent/desktop-agent"
+import type { PendingIntentPromiseEntry } from "../../src/handlers/types"
+import type { AgentState } from "../../src/state/types"
 
 /** Runtime shape of DesktopAgent private fields used only in tests. */
 type DesktopAgentInternals = {

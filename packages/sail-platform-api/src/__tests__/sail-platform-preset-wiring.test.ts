@@ -17,7 +17,7 @@ describe("SailPlatform preset wiring", () => {
     channels: {},
     apps: {},
   } as unknown as BrowserDesktopAgent
-  const mockWcpConnector = {
+  const mockBrowserAppConnection = {
     on: vi.fn(),
     off: vi.fn(),
   }
@@ -32,8 +32,8 @@ describe("SailPlatform preset wiring", () => {
     getBrowserDesktopAgentSessionSpy = vi
       .spyOn(sailDesktopAgent, "getBrowserDesktopAgentSession")
       .mockReturnValue({
-        wcpConnector:
-          mockWcpConnector as unknown as import("@finos/sail-desktop-agent/browser").WCPConnector,
+        browserAppConnection:
+          mockBrowserAppConnection as unknown as import("@finos/sail-desktop-agent/browser").BrowserAppConnection,
       })
   })
 
@@ -80,16 +80,16 @@ describe("SailPlatform preset wiring", () => {
       heartbeatIntervalMs: 15000,
       heartbeatTimeoutMs: 45000,
       intentResolver,
-      wcpOptions: {
+      appConnectionOptions: {
         fdc3Version: "2.2",
       },
     })
-    expect(typeof createOptions?.wcpOptions?.getIntentResolverUrl).toBe("function")
-    expect(typeof createOptions?.wcpOptions?.getChannelSelectorUrl).toBe("function")
+    expect(typeof createOptions?.appConnectionOptions?.getIntentResolverUrl).toBe("function")
+    expect(typeof createOptions?.appConnectionOptions?.getChannelSelectorUrl).toBe("function")
     expect(getBrowserDesktopAgentSessionSpy).toHaveBeenCalledWith(mockDesktopAgent)
     expect(platform.isRunning).toBe(true)
     expect(platform.agent).toBe(mockDesktopAgent)
-    expect(platform.connector).toBe(mockWcpConnector)
+    expect(platform.connector).toBe(mockBrowserAppConnection)
   })
 
   it("stop() delegates to the preset agent stop()", () => {

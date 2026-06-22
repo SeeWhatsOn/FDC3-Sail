@@ -5,8 +5,8 @@ import {
   getActiveListenersForIntent,
   getInstance,
   getInstancesWithIntentListener,
-} from "../../src/core/state/selectors"
-import { AppInstanceState } from "../../src/core/state/types"
+} from "../../src/state/selectors"
+import { AppInstanceState } from "../../src/state/types"
 
 Then(
   "instance {string} does not expose a denormalized intent listener name list",

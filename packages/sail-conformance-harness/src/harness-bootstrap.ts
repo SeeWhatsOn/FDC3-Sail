@@ -109,7 +109,7 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     appLauncher,
     intentResolver: createHarnessIntentResolver(debug),
     userChannels: DEFAULT_FDC3_USER_CHANNELS,
-    wcpOptions: {
+    appConnectionOptions: {
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,
     },

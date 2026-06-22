@@ -64,8 +64,8 @@ describe("@finos/sail-desktop-agent host-contracts package boundary", () => {
     it("src/index.ts re-exports the host-contracts barrel for platform builders", () => {
       const entry = readSrc("index.ts")
 
-      expect(entry, "top-level entry should export host-contracts alongside core").toMatch(
-        /export\s+\*\s+from\s+["']\.\/host-contracts["']/
+      expect(entry, "top-level entry should export host-contracts for platform builders").toMatch(
+        /export\s+\*\s+from\s+["']\.\/host-contracts/
       )
     })
 

@@ -4,7 +4,7 @@
  * Simple, synchronous transport for testing Desktop Agent without Socket.IO
  */
 
-import type { Transport, MessageHandler, DisconnectHandler } from "../../core/interfaces/transport"
+import type { Transport, MessageHandler, DisconnectHandler } from "../../interfaces/transport"
 
 /**
  * Mock transport - fully synchronous, no Socket.IO needed

@@ -3,9 +3,9 @@
  * For BDD steps that must call handlers directly (e.g. legacy "is closed" teardown).
  */
 
-import { createDacpResponseDispatcher } from "../../src/core/handlers/dacp/utils/dacp-response-utils"
-import type { DACPHandlerContext } from "../../src/core/handlers/types"
-import { consoleLogger } from "../../src/core/interfaces/logger"
+import { createDacpResponseDispatcher } from "../../src/handlers/dacp/utils/dacp-response-utils"
+import type { DACPHandlerContext } from "../../src/handlers/types"
+import { consoleLogger } from "../../src/interfaces/logger"
 import type { CustomWorld } from "../world/index.ts"
 import { applyDesktopAgentStateUpdate, getDesktopAgentPendingIntentPromises } from "./agent-state"
 

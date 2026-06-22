@@ -66,12 +66,12 @@ export {
   type BrowserDesktopAgentOptions,
 } from "@finos/sail-desktop-agent"
 
-// Lower-level browser connector APIs (WCPConnector, MessagePortTransport)
+// Lower-level browser app connection APIs (BrowserAppConnection, MessagePortTransport)
 export {
-  WCPConnector,
+  BrowserAppConnection,
   MessagePortTransport,
-  type WCPConnectorOptions,
-  type WCPConnectorEvents,
+  type AppConnectionOptions,
+  type AppConnectionEvents,
   type AppConnectionMetadata,
 } from "@finos/sail-desktop-agent/browser"
 

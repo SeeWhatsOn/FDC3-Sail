@@ -11,7 +11,7 @@ import type {
   Transport,
   MessageHandler,
   DisconnectHandler,
-} from "../../src/core/interfaces/transport"
+} from "../../src/interfaces/transport"
 
 /**
  * DACP message structure (partial, just what we need for routing/querying)

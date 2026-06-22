@@ -6,7 +6,7 @@
 
  * These helpers assert the collapsed model where DesktopAgent owns WCP listener
 
- * lifecycle and per-app MessagePort routing via BrowserConnectionBackend.
+ * lifecycle and per-app MessagePort routing via BrowserAppConnection.
 
  *
 
@@ -18,11 +18,11 @@ import { expect, vi } from "vite-plus/test"
 
 import type { BrowserTypes } from "@finos/fdc3"
 
-import type { DesktopAgent } from "../../core/desktop-agent"
+import type { DesktopAgent } from "../../agent/desktop-agent"
 
-import { BrowserConnectionBackend } from "../../connections/browser/browser-connection-backend"
+import { BrowserAppConnection } from "../../app-connection/browser-app-connection"
 
-import { getBrowserDesktopAgentSession } from "../../core/browser-session"
+import { getBrowserDesktopAgentSession } from "../../agent/browser-session"
 
 import {
   createMessageEvent,
@@ -48,8 +48,8 @@ export type DaOwnedAppConnectionSurface = {
   getAppConnections: () => DaOwnedAppConnectionMetadata[]
 }
 
-function getBrowserConnection(agent: DesktopAgent): BrowserConnectionBackend | undefined {
-  return (agent as unknown as { browserConnection?: BrowserConnectionBackend }).browserConnection
+function getBrowserAppConnection(agent: DesktopAgent): BrowserAppConnection | undefined {
+  return (agent as unknown as { browserAppConnection?: BrowserAppConnection }).browserAppConnection
 }
 
 /**
@@ -59,9 +59,9 @@ function getBrowserConnection(agent: DesktopAgent): BrowserConnectionBackend | u
  */
 
 export function assertCollapsedBrowserArchitecture(agent: DesktopAgent): void {
-  const browserConnection = getBrowserConnection(agent)
+  const browserAppConnection = getBrowserAppConnection(agent)
 
-  expect(browserConnection).toBeInstanceOf(BrowserConnectionBackend)
+  expect(browserAppConnection).toBeInstanceOf(BrowserAppConnection)
 
   expect(() => getBrowserDesktopAgentSession(agent)).toThrow(
     /does not expose a separate WCP connector session/i

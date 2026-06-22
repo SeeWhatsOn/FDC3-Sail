@@ -1,12 +1,12 @@
 /**
- * Shared helpers for BrowserConnectionBackend unit tests.
+ * Shared helpers for BrowserAppConnection unit tests.
  *
  * @vitest-environment jsdom
  */
 
 import { expect, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { BrowserConnectionBackend } from "../../connections/browser/browser-connection-backend"
+import type { BrowserAppConnection } from "../../app-connection/browser-app-connection"
 
 export function createWCP1Hello(
   connectionAttemptUuid: string = "test-uuid"
@@ -37,7 +37,7 @@ export function createMessageEvent(data: unknown, source: Window = window): Mess
 
 /** Establish a WCP connection and return the temporary instanceId. */
 export async function establishTempConnection(
-  connector: BrowserConnectionBackend,
+  connector: BrowserAppConnection,
   connectionAttemptUuid = "test-uuid"
 ): Promise<string> {
   window.dispatchEvent(createMessageEvent(createWCP1Hello(connectionAttemptUuid)))

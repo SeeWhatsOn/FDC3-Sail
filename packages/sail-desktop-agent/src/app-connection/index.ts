@@ -2,9 +2,9 @@
  * @deprecated Import from `@finos/sail-desktop-agent` — browser connection is internal to DesktopAgent.
  */
 export {
-  BrowserConnectionBackend,
+  BrowserAppConnection,
   type AppConnectionMetadata,
-  type BrowserConnectionOptions,
-  type WCPConnectorOptions,
-} from "../connections/browser/browser-connection-backend"
-export type { WCPConnectorEvents } from "./wcp-connector-events"
+  type AppConnectionOptions,
+} from "./browser-app-connection"
+export type { AppConnectionEvents } from "./app-connection-events"
+export { MessagePortTransport, type MessagePortTransportOptions } from "./message-port"

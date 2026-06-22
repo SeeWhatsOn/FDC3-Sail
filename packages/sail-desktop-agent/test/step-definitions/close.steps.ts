@@ -1,7 +1,7 @@
 import { Given, Then, When } from "@cucumber/cucumber"
 import expect from "expect"
 
-import { getInstance } from "../../src/core/state/selectors"
+import { getInstance } from "../../src/state/selectors"
 import { CustomWorld } from "../world/index.ts"
 import { createMeta, getAppInstanceId } from "./generic.steps"
 import { ensureAppInstanceForTesting } from "./start-app.steps"

@@ -1,5 +1,5 @@
 import type { HostIntentResolverPayload, HostIntentResolverResponse } from "../../host-contracts"
-import { consoleLogger } from "../../core/interfaces/logger"
+import { consoleLogger } from "../../interfaces/logger"
 
 export interface PendingIntentResolution {
   resolve: (response: HostIntentResolverResponse) => void

@@ -3,9 +3,9 @@ import { CustomWorld } from "../world/index.ts"
 import { createMeta, getAppInstanceId } from "./generic.steps"
 import { BrowserTypes } from "@finos/fdc3-schema"
 import { handleResolve } from "../support/testing-utils"
-import { AppInstanceState } from "../../src/core/state/types"
-import { getInstance } from "../../src/core/state/selectors"
-import { connectInstance, updateInstanceState } from "../../src/core/state/mutators"
+import { AppInstanceState } from "../../src/state/types"
+import { getInstance } from "../../src/state/selectors"
+import { connectInstance, updateInstanceState } from "../../src/state/mutators"
 
 type CreatePrivateChannelRequest = BrowserTypes.CreatePrivateChannelRequest
 type PrivateChannelAddEventListenerRequest = BrowserTypes.PrivateChannelAddEventListenerRequest

@@ -9,11 +9,11 @@
 
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
-import type { DesktopAgent } from "../../core/desktop-agent"
-import type { AppConnectionMetadata } from "../../connections/browser/browser-connection-backend"
-import { AppInstanceState } from "../../core/state/types"
-import { getBrowserDesktopAgentSession } from "../../core/browser-session"
-import { clearAllHeartbeatTimersForTesting } from "../../core/handlers/dacp/heartbeat-runtime"
+import type { DesktopAgent } from "../../agent/desktop-agent"
+import type { AppConnectionMetadata } from "../../app-connection/browser-app-connection"
+import { AppInstanceState } from "../../state/types"
+import { getBrowserDesktopAgentSession } from "../../agent/browser-session"
+import { clearAllHeartbeatTimersForTesting } from "../../handlers/dacp/heartbeat-runtime"
 import {
   INSTRUMENT_CONTEXT,
   connectWcpApp,
@@ -319,7 +319,7 @@ describe("WCP edge contract", () => {
     activeAgents.push(agent)
 
     const appConnected = vi.fn()
-    getBrowserDesktopAgentSession(agent).wcpConnector.on("appConnected", appConnected)
+    getBrowserDesktopAgentSession(agent).browserAppConnection.on("appConnected", appConnected)
 
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "integration-wcp-path-uuid",
@@ -484,7 +484,9 @@ describe("WCP edge contract", () => {
 
     expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
     expect(
-      getBrowserDesktopAgentSession(agent).wcpConnector.getConnection(HOST_LAUNCHER_INSTANCE_ID)
+      getBrowserDesktopAgentSession(agent).browserAppConnection.getConnection(
+        HOST_LAUNCHER_INSTANCE_ID
+      )
     ).toBeDefined()
   })
 

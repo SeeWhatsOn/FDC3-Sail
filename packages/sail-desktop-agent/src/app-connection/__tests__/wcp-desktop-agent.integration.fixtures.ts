@@ -1,8 +1,8 @@
 import type { AppLauncher } from "../../host-contracts/app-launcher"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../core/default-user-channels"
-import { createBrowserDesktopAgent } from "../../core/create-browser-desktop-agent"
-import type { BrowserDesktopAgentOptions } from "../../core/create-browser-desktop-agent"
-import type { DesktopAgent } from "../../core/desktop-agent"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { createBrowserDesktopAgent } from "../../agent/create-browser-desktop-agent"
+import type { BrowserDesktopAgentOptions } from "../../agent/create-browser-desktop-agent"
+import type { DesktopAgent } from "../../agent/desktop-agent"
 
 export const CHANNEL_ID = "fdc3.channel.1"
 export const HOST_LAUNCHER_INSTANCE_ID = "uuid-host-0"
@@ -43,7 +43,7 @@ export function createTestAgent(options?: TestAgentOptions): DesktopAgent {
     heartbeatTimeoutMs: options?.heartbeatTimeoutMs,
     openContextListenerTimeoutMs: options?.openContextListenerTimeoutMs,
     autoStart: options?.autoStart,
-    wcpOptions: {
+    appConnectionOptions: {
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,
       fdc3Version: "2.2",

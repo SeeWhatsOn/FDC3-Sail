@@ -2,20 +2,20 @@ import type {
   AppRequestMessage,
   WebConnectionProtocolMessage,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import type { MessagePortTransport } from "../message-port-transport"
-import type { InboundAppMessageHandler } from "../../connections/types"
-import type { AppConnectionManager } from "../../connections/app-connection-manager"
+import type { MessagePortTransport } from "../message-port"
+import type { AppMessageHandler } from "../types"
+import type { AppConnectionRegistry } from "../app-connection-registry"
 import { isAppMessage } from "./wcp-types"
-import type { Logger } from "../../core/interfaces/logger"
-import type { WCPConnectorEvents } from "../wcp-connector-events"
+import type { Logger } from "../../interfaces/logger"
+import type { AppConnectionEvents } from "../app-connection-events"
 
 export interface WCPRoutingContext {
-  connectionManager: AppConnectionManager
-  ingestFromApp: InboundAppMessageHandler
+  connectionRegistry: AppConnectionRegistry
+  onAppMessage: AppMessageHandler
   logger: Logger
-  emit: <EventName extends keyof WCPConnectorEvents>(
+  emit: <EventName extends keyof AppConnectionEvents>(
     event: EventName,
-    ...args: Parameters<WCPConnectorEvents[EventName]>
+    ...args: Parameters<AppConnectionEvents[EventName]>
   ) => void
   enrichMessageWithSource: (
     message: AppRequestMessage | WebConnectionProtocolMessage,
@@ -26,14 +26,14 @@ export interface WCPRoutingContext {
 }
 
 /**
- * Bridge app MessagePort → Desktop Agent ingest.
- * Outbound delivery uses {@link AppConnectionManager.deliverToApp}.
+ * Bridge app MessagePort → Desktop Agent DACP ingest.
+ * Outbound uses {@link AppConnectionRegistry.sendToAppInstance}.
  */
 export function bridgeAppPort(
   appTransport: MessagePortTransport,
   context: WCPRoutingContext
 ): void {
-  const { connectionManager } = context
+  const { connectionRegistry } = context
 
   appTransport.onMessage((message: unknown) => {
     if (!isAppMessage(message)) {
@@ -41,7 +41,7 @@ export function bridgeAppPort(
       return
     }
 
-    const currentInstanceId = connectionManager.transportToInstanceId.get(appTransport)
+    const currentInstanceId = connectionRegistry.transportToInstanceId.get(appTransport)
     if (!currentInstanceId) {
       context.logger.warn("Cannot route message: transport not found in reverse lookup")
       return
@@ -49,7 +49,7 @@ export function bridgeAppPort(
 
     if (message.type === "WCP6Goodbye") {
       const enrichedGoodbye = context.enrichMessageWithSource(message, currentInstanceId)
-      void Promise.resolve(context.ingestFromApp(enrichedGoodbye)).catch(error => {
+      void Promise.resolve(context.onAppMessage(enrichedGoodbye)).catch(error => {
         context.logger.error("Error ingesting WCP6Goodbye:", error)
       })
       context.handleWCP6Goodbye(currentInstanceId)
@@ -57,32 +57,32 @@ export function bridgeAppPort(
     }
 
     const enrichedMessage = context.enrichMessageWithSource(message, currentInstanceId)
-    void Promise.resolve(context.ingestFromApp(enrichedMessage)).catch(error => {
+    void Promise.resolve(context.onAppMessage(enrichedMessage)).catch(error => {
       context.logger.error("Error ingesting app message:", error)
     })
   })
 
   appTransport.onDisconnect(() => {
-    const currentInstanceId = connectionManager.transportToInstanceId.get(appTransport)
+    const currentInstanceId = connectionRegistry.transportToInstanceId.get(appTransport)
     if (currentInstanceId) {
       context.disconnectApp(currentInstanceId)
     }
-    connectionManager.transportToInstanceId.delete(appTransport)
+    connectionRegistry.transportToInstanceId.delete(appTransport)
   })
-}
-
-/** Deliver an outbound agent message to the correct app port. */
-export function deliverAgentMessage(
-  message: unknown,
-  connectionManager: AppConnectionManager
-): void {
-  connectionManager.deliverToApp(message)
 }
 
 /** @deprecated Use {@link bridgeAppPort} */
 export const bridgeTransports = bridgeAppPort
 
-/** @deprecated Use {@link deliverAgentMessage} */
+/** @deprecated Use {@link AppConnectionRegistry.sendToAppInstance} */
 export function handleDesktopAgentMessage(message: unknown, context: WCPRoutingContext): void {
-  deliverAgentMessage(message, context.connectionManager)
+  context.connectionRegistry.sendToAppInstance(message)
+}
+
+/** @deprecated Use {@link AppConnectionRegistry.sendToAppInstance} */
+export function deliverAgentMessage(
+  message: unknown,
+  connectionRegistry: AppConnectionRegistry
+): void {
+  connectionRegistry.sendToAppInstance(message)
 }

@@ -6,10 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vite-plus/test"
-import { disconnectApp, type WCPConnectionContext } from "../wcp/wcp-connection-management"
-import { MessagePortTransport } from "../message-port-transport"
-import { consoleLogger } from "../../core/interfaces/logger"
-import { AppConnectionManager } from "../../connections/app-connection-manager"
+import { disconnectApp, type AppConnectionContext } from "../wcp/wcp-connection-management"
+import { MessagePortTransport } from "../message-port"
+import { consoleLogger } from "../../interfaces/logger"
+import { AppConnectionRegistry } from "../../app-connection/app-connection-registry"
 
 function createListenerTracker(port: MessagePort) {
   const activeListeners = new Map<string, Set<EventListenerOrEventListenerObject>>()
@@ -43,16 +43,16 @@ function createListenerTracker(port: MessagePort) {
   }
 }
 
-function createMinimalWCPContext(): WCPConnectionContext {
+function createMinimalWCPContext(): AppConnectionContext {
   const emit = vi.fn()
-  const connectionManager = new AppConnectionManager({
+  const connectionRegistry = new AppConnectionRegistry({
     emit,
     logger: consoleLogger,
     updateConnectionMetadata: vi.fn(),
     disconnectApp: vi.fn(),
   })
   return {
-    connectionManager,
+    connectionRegistry,
     options: {
       intentResolverUrl: false,
       channelSelectorUrl: false,
@@ -233,8 +233,8 @@ describe("MessagePortTransport", () => {
       const transport = new MessagePortTransport(port1)
       const closeSpy = vi.spyOn(port1, "close")
 
-      context.connectionManager.messagePortTransports.set(instanceId, transport)
-      context.connectionManager.transportToInstanceId.set(transport, instanceId)
+      context.connectionRegistry.messagePortTransports.set(instanceId, transport)
+      context.connectionRegistry.transportToInstanceId.set(transport, instanceId)
       transport.onDisconnect(() => disconnectApp(context, instanceId))
 
       vi.spyOn(port1, "postMessage").mockImplementation(() => {
@@ -252,9 +252,9 @@ describe("MessagePortTransport", () => {
       const context = createMinimalWCPContext()
       const transport = new MessagePortTransport(port1)
 
-      context.connectionManager.messagePortTransports.set(instanceId, transport)
-      context.connectionManager.transportToInstanceId.set(transport, instanceId)
-      context.connectionManager.connections.set(instanceId, {
+      context.connectionRegistry.messagePortTransports.set(instanceId, transport)
+      context.connectionRegistry.transportToInstanceId.set(transport, instanceId)
+      context.connectionRegistry.connections.set(instanceId, {
         instanceId,
         appId: "test-app",
         connectionAttemptUuid: "wcp-map-cleanup-uuid",
@@ -271,9 +271,9 @@ describe("MessagePortTransport", () => {
 
       expect(() => transport.send({ type: "test" })).toThrow("postMessage failed")
 
-      expect(context.connectionManager.messagePortTransports.has(instanceId)).toBe(false)
-      expect(context.connectionManager.transportToInstanceId.has(transport)).toBe(false)
-      expect(context.connectionManager.connections.has(instanceId)).toBe(false)
+      expect(context.connectionRegistry.messagePortTransports.has(instanceId)).toBe(false)
+      expect(context.connectionRegistry.transportToInstanceId.has(transport)).toBe(false)
+      expect(context.connectionRegistry.connections.has(instanceId)).toBe(false)
       expect(context.emit).toHaveBeenCalledWith("appDisconnected", instanceId)
     })
   })

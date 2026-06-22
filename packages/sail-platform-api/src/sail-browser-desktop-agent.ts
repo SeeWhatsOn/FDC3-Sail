@@ -12,12 +12,12 @@ export type { Middleware }
  */
 export interface SailBrowserDesktopAgentConfig extends Omit<
   BrowserDesktopAgentOptions,
-  "wcpOptions"
+  "appConnectionOptions"
 > {
   /**
-   * WCP options with Sail-specific defaults.
+   * App connection options with Sail-specific defaults.
    */
-  wcpOptions?: BrowserDesktopAgentOptions["wcpOptions"]
+  appConnectionOptions?: BrowserDesktopAgentOptions["appConnectionOptions"]
 
   /**
    * Optional Sail deployment policy: origins permitted to complete WCP4 identity
@@ -63,18 +63,18 @@ export function createSailBrowserDesktopAgent(
   use: (middleware: Middleware<unknown>) => void
 } {
   // Merge Sail-specific defaults with user config
-  const wcpOptions: BrowserDesktopAgentOptions["wcpOptions"] = {
+  const appConnectionOptions: BrowserDesktopAgentOptions["appConnectionOptions"] = {
     // Sail-specific defaults: UI is provided by Sail parent window
     getIntentResolverUrl: () => false,
     getChannelSelectorUrl: () => false,
     fdc3Version: "2.2",
     handshakeTimeout: 5000,
-    ...config?.wcpOptions,
+    ...config?.appConnectionOptions,
   }
 
   const desktopAgent = createBrowserDesktopAgent({
     ...config,
-    wcpOptions,
+    appConnectionOptions,
   })
 
   if (config?.allowedOrigins !== undefined) {

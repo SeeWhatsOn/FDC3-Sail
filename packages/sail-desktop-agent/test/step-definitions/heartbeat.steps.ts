@@ -7,9 +7,9 @@ import type {
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { createMeta, getAppInstanceId } from "./generic.steps"
 import { matchDataSubset } from "../support/testing-utils"
-import { AppInstanceState } from "../../src/core/state/types"
-import { getInstance, getEventListenersForInstance } from "../../src/core/state/selectors"
-import { connectInstance, updateInstanceState } from "../../src/core/state/mutators"
+import { AppInstanceState } from "../../src/state/types"
+import { getInstance, getEventListenersForInstance } from "../../src/state/selectors"
+import { connectInstance, updateInstanceState } from "../../src/state/mutators"
 
 /** WCP5 may replace the connection id; assertions and DACP meta must use the canonical id. */
 function resolveCanonicalInstanceId(world: CustomWorld, appStr: string): string {

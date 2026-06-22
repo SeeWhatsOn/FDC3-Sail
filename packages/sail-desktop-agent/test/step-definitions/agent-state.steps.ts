@@ -1,8 +1,8 @@
 import { Then } from "@cucumber/cucumber"
 import { CustomWorld } from "../world/index.ts"
 import { getAppInstanceId } from "./generic.steps"
-import { getActiveHeartbeatTimerCount } from "../../src/core/handlers/dacp/heartbeat-runtime"
-import { getPendingOpenWithContextTimeoutCount } from "../../src/core/handlers/dacp/utils/open-with-context"
+import { getActiveHeartbeatTimerCount } from "../../src/handlers/dacp/heartbeat-runtime"
+import { getPendingOpenWithContextTimeoutCount } from "../../src/handlers/dacp/utils/open-with-context"
 
 Then("the agent has no pending intents", function (this: CustomWorld) {
   const pending = this.getState().intents.pending

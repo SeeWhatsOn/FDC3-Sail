@@ -1,15 +1,15 @@
-import { MessagePortTransport } from "../message-port-transport"
+import { MessagePortTransport } from "../message-port"
 import { bridgeTransports } from "./wcp-message-routing"
 import type { WCPRoutingContext } from "./wcp-message-routing"
 import type {
   AppConnectionMetadata,
   WCP1HelloMessage,
   WCP3HandshakeMessage,
-  WCPConnectorOptions,
+  AppConnectionOptions,
 } from "./wcp-types"
 
 export interface WCPHandshakeContext extends WCPRoutingContext {
-  options: Required<WCPConnectorOptions>
+  options: Required<AppConnectionOptions>
 }
 
 /**
@@ -84,9 +84,9 @@ export function handleWCP1Hello(
     connectedAt: new Date(),
     hostIdentifier,
   }
-  context.connectionManager.connections.set(instanceId, metadata)
-  context.connectionManager.messagePortTransports.set(instanceId, appTransport)
-  context.connectionManager.transportToInstanceId.set(appTransport, instanceId)
+  context.connectionRegistry.connections.set(instanceId, metadata)
+  context.connectionRegistry.messagePortTransports.set(instanceId, appTransport)
+  context.connectionRegistry.transportToInstanceId.set(appTransport, instanceId)
 
   // Create WCP3Handshake response
   const handshake: WCP3HandshakeMessage = {
@@ -109,10 +109,10 @@ export function handleWCP1Hello(
   // Set timeout to clean up stale connections that don't complete WCP4 validation
   // If appId is still "unknown" after timeout, the handshake failed
   setTimeout(() => {
-    const connection = context.connectionManager.connections.get(instanceId)
+    const connection = context.connectionRegistry.connections.get(instanceId)
     if (connection && connection.appId === "unknown") {
       context.logger.warn(
-        `[WCPConnector] Connection ${instanceId} timed out waiting for WCP4 validation, cleaning up`
+        `[BrowserAppConnection] Connection ${instanceId} timed out waiting for WCP4 validation, cleaning up`
       )
       context.disconnectApp(instanceId)
       context.emit("handshakeFailed", new Error("WCP4 validation timeout"), connectionAttemptUuid)

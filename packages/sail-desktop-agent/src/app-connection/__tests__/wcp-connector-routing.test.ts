@@ -1,6 +1,6 @@
 /**
 
- * BrowserConnectionBackend routing, lifecycle, and cleanup tests.
+ * BrowserAppConnection routing, lifecycle, and cleanup tests.
 
  *
 
@@ -10,9 +10,9 @@
 
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 
-import { BrowserConnectionBackend } from "../../connections/browser/browser-connection-backend"
+import { BrowserAppConnection } from "../../app-connection/browser-app-connection"
 
-import { getPendingWcpSourceWindowForTesting } from "../../core/handlers/dacp/wcp-pending-source-window"
+import { getPendingWcpSourceWindowForTesting } from "../../handlers/dacp/wcp-pending-source-window"
 
 import type { BrowserTypes } from "@finos/fdc3"
 
@@ -23,8 +23,8 @@ import {
   establishTempConnection,
 } from "./wcp-connector-test-helpers"
 
-describe("BrowserConnectionBackend routing and lifecycle", () => {
-  let connector: BrowserConnectionBackend
+describe("BrowserAppConnection routing and lifecycle", () => {
+  let connector: BrowserAppConnection
 
   afterEach(() => {
     if (connector?.getIsStarted()) {
@@ -34,13 +34,13 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
 
   describe("message routing", () => {
     it("should route app messages to Desktop Agent with source metadata", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
       const receivedMessages: unknown[] = []
 
-      connector.setInboundHandler(msg => {
+      connector.onAppMessage(msg => {
         receivedMessages.push(msg)
       })
 
@@ -58,7 +58,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
 
       connector.updateConnectionMetadata("temp-test-uuid", "actual-123", "app.test")
 
-      connector.connectionManager.deliverToApp({
+      connector.connectionRegistry.sendToAppInstance({
         type: "responseMessage",
 
         meta: {
@@ -74,7 +74,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("should ignore messages without destination", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
@@ -88,7 +88,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
 
       connector.updateConnectionMetadata("temp-test-uuid", "actual-123", "app.test")
 
-      connector.connectionManager.deliverToApp({
+      connector.connectionRegistry.sendToAppInstance({
         type: "broadcastMessage",
 
         meta: {},
@@ -100,12 +100,12 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("should not throw when routing to unknown app instance", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
       expect(() => {
-        connector.connectionManager.deliverToApp({
+        connector.connectionRegistry.sendToAppInstance({
           type: "testMessage",
 
           meta: {
@@ -122,7 +122,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("should override spoofed WCP4 messageOrigin with handshake origin", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
@@ -168,7 +168,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("should register handshake source window for enriched WCP4 (not on message meta)", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
@@ -216,7 +216,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("should disconnect temp connection after WCP5 identity validation failure", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const appDisconnectedHandler = vi.fn()
 
@@ -232,7 +232,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
 
       expect(connector.getConnection("temp-failure-disconnect-uuid")).toBeDefined()
 
-      connector.connectionManager.deliverToApp({
+      connector.connectionRegistry.sendToAppInstance({
         type: "WCP5ValidateAppIdentityFailedResponse",
 
         payload: { message: "Origin mismatch" },
@@ -258,7 +258,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
 
   describe("updateConnectionMetadata", () => {
     it("should update connection with validated info", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
@@ -294,7 +294,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("should warn if temp instanceId not found", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
@@ -310,7 +310,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("should migrate transport reference to new instanceId", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
@@ -324,7 +324,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
 
       connector.updateConnectionMetadata("temp-test-uuid", "actual-123", "app.test")
 
-      connector.connectionManager.deliverToApp({
+      connector.connectionRegistry.sendToAppInstance({
         type: "testMessage",
 
         meta: {
@@ -340,7 +340,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
 
   describe("getters", () => {
     it("should return all connections", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
@@ -366,7 +366,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("should return specific connection by instanceId", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
@@ -386,7 +386,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("should return started status", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       expect(connector.getIsStarted()).toBe(false)
 
@@ -406,7 +406,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("emits appDisconnected exactly once when connector.stop() cleans up one connection", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const appDisconnectedHandler = vi.fn()
 
@@ -424,7 +424,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("emits appDisconnected exactly once per instance when connector.stop() cleans up multiple connections", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const appDisconnectedHandler = vi.fn()
 
@@ -448,7 +448,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("emits appDisconnected exactly once when disconnectAppByInstanceId is called", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const appDisconnectedHandler = vi.fn()
 
@@ -469,7 +469,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
       vi.useFakeTimers()
 
       try {
-        connector = new BrowserConnectionBackend({ handshakeTimeout: 1000 })
+        connector = new BrowserAppConnection({ handshakeTimeout: 1000 })
 
         const appDisconnectedHandler = vi.fn()
 
@@ -497,7 +497,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
       vi.useFakeTimers()
 
       try {
-        connector = new BrowserConnectionBackend({
+        connector = new BrowserAppConnection({
           handshakeTimeout: 60_000,
 
           disconnectGracePeriod: 500,
@@ -536,7 +536,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
 
   describe("cleanup", () => {
     it("should disconnect all apps when stopping", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
@@ -554,7 +554,7 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
     })
 
     it("should handle disconnection gracefully", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
@@ -574,20 +574,20 @@ describe("BrowserConnectionBackend routing and lifecycle", () => {
 
   describe("invalid messages", () => {
     it("should not throw when receiving invalid messages", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
       expect(() => {
-        connector.connectionManager.deliverToApp("invalid")
+        connector.connectionRegistry.sendToAppInstance("invalid")
       }).not.toThrow()
 
       expect(() => {
-        connector.connectionManager.deliverToApp(null)
+        connector.connectionRegistry.sendToAppInstance(null)
       }).not.toThrow()
 
       expect(() => {
-        connector.connectionManager.deliverToApp(undefined)
+        connector.connectionRegistry.sendToAppInstance(undefined)
       }).not.toThrow()
 
       await new Promise(resolve => setTimeout(resolve, 50))

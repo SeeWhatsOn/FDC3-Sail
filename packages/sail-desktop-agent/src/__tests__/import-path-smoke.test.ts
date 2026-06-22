@@ -4,8 +4,8 @@
 import { describe, expect, it } from "vite-plus/test"
 
 describe("reorganized import paths", () => {
-  it("resolves DACP protocol modules from core/dacp", async () => {
-    const dacp = await import("../core/dacp/index.js")
+  it("resolves DACP protocol modules from dacp/", async () => {
+    const dacp = await import("../dacp/index.js")
     expect(dacp.DACP_TIMEOUTS).toBeDefined()
     expect(dacp.createDACPSuccessResponse).toBeTypeOf("function")
     expect(dacp.logDACPMessage).toBeTypeOf("function")
@@ -19,18 +19,18 @@ describe("reorganized import paths", () => {
 
   it("resolves app-connection mechanisms from app-connection", async () => {
     const appConnection = await import("../app-connection/index.js")
-    expect(appConnection.BrowserConnectionBackend).toBeTypeOf("function")
+    expect(appConnection.BrowserAppConnection).toBeTypeOf("function")
   })
 
   it("resolves MessagePortTransport from app-connection module", async () => {
-    const transport = await import("../app-connection/message-port-transport.js")
+    const transport = await import("../app-connection/message-port.js")
     expect(transport.MessagePortTransport).toBeTypeOf("function")
   })
 
-  it("re-exports DACP protocol from core entry", async () => {
-    const core = await import("../core/index.js")
-    expect(core.DACP_TIMEOUTS).toBeDefined()
-    expect(core.createDACPSuccessResponse).toBeTypeOf("function")
+  it("re-exports DACP protocol from main entry", async () => {
+    const main = await import("../index.js")
+    expect(main.DACP_TIMEOUTS).toBeDefined()
+    expect(main.createDACPSuccessResponse).toBeTypeOf("function")
   })
 
   it("resolves browser factory from main entry", async () => {

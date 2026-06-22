@@ -6,8 +6,8 @@
 
 import { expect, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
-import type { DesktopAgent } from "../../core/desktop-agent"
-import { getBrowserDesktopAgentSession } from "../../core/browser-session"
+import type { DesktopAgent } from "../../agent/desktop-agent"
+import { getBrowserDesktopAgentSession } from "../../agent/browser-session"
 
 export const TEST_ORIGIN = "https://example.com"
 
@@ -84,11 +84,11 @@ export async function connectWcpApp(
 ): Promise<WcpConnectedApp> {
   const { connectionAttemptUuid, appId, identityUrl, hostInstanceId, instanceUuid } = options
   const tempInstanceId = `temp-${connectionAttemptUuid}`
-  const { wcpConnector } = getBrowserDesktopAgentSession(agent)
+  const { browserAppConnection } = getBrowserDesktopAgentSession(agent)
 
   const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl)
 
-  expect(wcpConnector.getConnection(tempInstanceId)).toBeDefined()
+  expect(browserAppConnection.getConnection(tempInstanceId)).toBeDefined()
 
   const wcp5Response =
     new Promise<BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse>(resolve => {
@@ -130,8 +130,8 @@ export async function connectWcpApp(
   expect(resolvedWcp5.payload.appId).toBe(appId)
 
   await vi.waitFor(() => {
-    expect(wcpConnector.getConnection(canonicalInstanceId)).toBeDefined()
-    expect(wcpConnector.getConnection(tempInstanceId)).toBeUndefined()
+    expect(browserAppConnection.getConnection(canonicalInstanceId)).toBeDefined()
+    expect(browserAppConnection.getConnection(tempInstanceId)).toBeUndefined()
   })
 
   return {

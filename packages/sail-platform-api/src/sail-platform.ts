@@ -20,7 +20,7 @@ import {
   type BrowserChannelsController,
   type BrowserIntentResolverController,
 } from "@finos/sail-desktop-agent"
-import type { WCPConnector } from "@finos/sail-desktop-agent/browser"
+import type { BrowserAppConnection } from "@finos/sail-desktop-agent/browser"
 import type { AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
 import type { BrowserTypes } from "@finos/fdc3"
 
@@ -199,7 +199,7 @@ export class SailPlatform {
 
   // Browser Desktop Agent session (created on start via preset)
   private _desktopAgent: BrowserDesktopAgent | null = null
-  private _wcpConnector: WCPConnector | null = null
+  private _browserAppConnection: BrowserAppConnection | null = null
   private _stopBrowserSession: (() => void) | null = null
 
   // Namespaced APIs (initialized in constructor)
@@ -237,7 +237,7 @@ export class SailPlatform {
       heartbeatIntervalMs: this.config.heartbeatIntervalMs,
       heartbeatTimeoutMs: this.config.heartbeatTimeoutMs,
       intentResolver: this.config.intentResolver,
-      wcpOptions: {
+      appConnectionOptions: {
         // Sail controls UI externally (no injected iframes)
         getIntentResolverUrl: () => false,
         getChannelSelectorUrl: () => false,
@@ -245,10 +245,10 @@ export class SailPlatform {
       },
     })
 
-    const { wcpConnector } = getBrowserDesktopAgentSession(desktopAgent)
+    const { browserAppConnection } = getBrowserDesktopAgentSession(desktopAgent)
 
     this._desktopAgent = desktopAgent
-    this._wcpConnector = wcpConnector
+    this._browserAppConnection = browserAppConnection
     this._stopBrowserSession = () => desktopAgent.stop()
 
     this.wireEvents()
@@ -270,7 +270,7 @@ export class SailPlatform {
 
     this._stopBrowserSession?.()
 
-    this._wcpConnector = null
+    this._browserAppConnection = null
     this._desktopAgent = null
     this._stopBrowserSession = null
     this.started = false
@@ -317,13 +317,13 @@ export class SailPlatform {
   }
 
   /**
-   * Get the WCP Connector for managing app connections.
+   * Get the browser app connection for managing app connections.
    * Advanced integrators only — host UI should use {@link channels}, {@link intentResolver}, and {@link apps}.
    * @throws Error if platform not started
    */
-  get connector(): WCPConnector {
+  get connector(): BrowserAppConnection {
     this.ensureStarted()
-    return this._wcpConnector!
+    return this._browserAppConnection!
   }
 
   /**

@@ -5,12 +5,12 @@
  */
 
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
-import type { DesktopAgent } from "../../core/desktop-agent"
-import { AppInstanceState } from "../../core/state/types"
+import type { DesktopAgent } from "../../agent/desktop-agent"
+import { AppInstanceState } from "../../state/types"
 import {
   clearAllHeartbeatTimersForTesting,
   getActiveHeartbeatTimerCount,
-} from "../../core/handlers/dacp/heartbeat-runtime"
+} from "../../handlers/dacp/heartbeat-runtime"
 import {
   connectWcpApp,
   createOpenRequestMessage,

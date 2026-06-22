@@ -9,9 +9,9 @@
 
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { DesktopAgent } from "../../core/desktop-agent"
-import { AppInstanceState } from "../../core/state/types"
-import { clearAllHeartbeatTimersForTesting } from "../../core/handlers/dacp/heartbeat-runtime"
+import type { DesktopAgent } from "../../agent/desktop-agent"
+import { AppInstanceState } from "../../state/types"
+import { clearAllHeartbeatTimersForTesting } from "../../handlers/dacp/heartbeat-runtime"
 import {
   assertCollapsedBrowserArchitecture,
   connectWcpAppViaDaOwnedConnection,

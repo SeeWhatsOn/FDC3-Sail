@@ -1,6 +1,6 @@
 /**
 
- * BrowserConnectionBackend Tests
+ * BrowserAppConnection Tests
 
  *
 
@@ -16,14 +16,14 @@
 
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 
-import { BrowserConnectionBackend } from "../../connections/browser/browser-connection-backend"
+import { BrowserAppConnection } from "../../app-connection/browser-app-connection"
 
 import type { BrowserTypes } from "@finos/fdc3"
 
 import { createMessageEvent, createWCP1Hello } from "./wcp-connector-test-helpers"
 
-describe("BrowserConnectionBackend", () => {
-  let connector: BrowserConnectionBackend
+describe("BrowserAppConnection", () => {
+  let connector: BrowserAppConnection
 
   afterEach(() => {
     if (connector?.getIsStarted()) {
@@ -33,9 +33,9 @@ describe("BrowserConnectionBackend", () => {
 
   describe("constructor", () => {
     it("should create connector with default options", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
-      expect(connector).toBeInstanceOf(BrowserConnectionBackend)
+      expect(connector).toBeInstanceOf(BrowserAppConnection)
 
       expect(connector.getIsStarted()).toBe(false)
 
@@ -53,21 +53,21 @@ describe("BrowserConnectionBackend", () => {
         handshakeTimeout: 10000,
       }
 
-      connector = new BrowserConnectionBackend(options)
+      connector = new BrowserAppConnection(options)
 
-      expect(connector).toBeInstanceOf(BrowserConnectionBackend)
+      expect(connector).toBeInstanceOf(BrowserAppConnection)
     })
 
     it("should use false for UI URLs by default", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
-      expect(connector).toBeInstanceOf(BrowserConnectionBackend)
+      expect(connector).toBeInstanceOf(BrowserAppConnection)
     })
   })
 
   describe("start/stop", () => {
     it("should start listening for window messages", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const addEventListenerSpy = vi.spyOn(window, "addEventListener")
 
@@ -81,11 +81,11 @@ describe("BrowserConnectionBackend", () => {
     })
 
     it("should throw if started twice", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
-      expect(() => connector.start()).toThrow("BrowserConnectionBackend is already started")
+      expect(() => connector.start()).toThrow("BrowserAppConnection is already started")
     })
 
     it("should throw if window is not available", () => {
@@ -95,17 +95,15 @@ describe("BrowserConnectionBackend", () => {
 
       delete global.window
 
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
-      expect(() => connector.start()).toThrow(
-        "BrowserConnectionBackend requires a browser environment"
-      )
+      expect(() => connector.start()).toThrow("BrowserAppConnection requires a browser environment")
 
       global.window = originalWindow
     })
 
     it("should stop and clean up connections", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const removeEventListenerSpy = vi.spyOn(window, "removeEventListener")
 
@@ -123,7 +121,7 @@ describe("BrowserConnectionBackend", () => {
     })
 
     it("should be idempotent when stopping", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       connector.start()
 
@@ -138,7 +136,7 @@ describe("BrowserConnectionBackend", () => {
   describe("WCP1Hello handling", () => {
     it("should handle WCP1Hello and send WCP3Handshake", () => {
       return new Promise<void>(resolve => {
-        connector = new BrowserConnectionBackend({
+        connector = new BrowserAppConnection({
           getIntentResolverUrl: instanceId => `/resolver?id=${instanceId}`,
 
           getChannelSelectorUrl: instanceId => `/selector?id=${instanceId}`,
@@ -187,7 +185,7 @@ describe("BrowserConnectionBackend", () => {
     })
 
     it("should ignore non-WCP1Hello messages", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const postMessageSpy = vi.spyOn(window, "postMessage")
 
@@ -203,7 +201,7 @@ describe("BrowserConnectionBackend", () => {
     })
 
     it("should ignore WCP1Hello with null source", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
@@ -230,7 +228,7 @@ describe("BrowserConnectionBackend", () => {
 
     it("should create temporary instanceId for new connections", () => {
       return new Promise<void>(resolve => {
-        connector = new BrowserConnectionBackend()
+        connector = new BrowserAppConnection()
 
         connector.start()
 
@@ -258,7 +256,7 @@ describe("BrowserConnectionBackend", () => {
 
     it("should use false for UI URLs when not provided", () => {
       return new Promise<void>(resolve => {
-        connector = new BrowserConnectionBackend()
+        connector = new BrowserAppConnection()
 
         const postMessageSpy = vi.spyOn(window, "postMessage")
 
@@ -295,7 +293,7 @@ describe("BrowserConnectionBackend", () => {
 
   describe("event handlers", () => {
     it("should emit appConnected event after validation", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const appConnectedHandler = vi.fn()
 
@@ -329,7 +327,7 @@ describe("BrowserConnectionBackend", () => {
     })
 
     it("should emit appDisconnected event when app disconnects", async () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const appDisconnectedHandler = vi.fn()
 
@@ -357,7 +355,7 @@ describe("BrowserConnectionBackend", () => {
     })
 
     it("should emit handshakeFailed event on error", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const handshakeFailedHandler = vi.fn()
 
@@ -387,7 +385,7 @@ describe("BrowserConnectionBackend", () => {
     })
 
     it("should handle errors in event handlers gracefully", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 
@@ -415,7 +413,7 @@ describe("BrowserConnectionBackend", () => {
     })
 
     it("should support removing event handlers", () => {
-      connector = new BrowserConnectionBackend()
+      connector = new BrowserAppConnection()
 
       const handler = vi.fn()
 

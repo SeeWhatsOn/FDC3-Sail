@@ -4,10 +4,10 @@ import { contextMap, createMeta, getAppInstanceId } from "./generic.steps"
 import { matchDataSubset } from "../support/testing-utils"
 import { BrowserTypes } from "@finos/fdc3-schema"
 import type { GetInfoRequest } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import { AppInstanceState } from "../../src/core/state/types"
-import { getInstance, getInstancesByState } from "../../src/core/state/selectors"
-import { connectInstance, removeInstance, updateInstanceState } from "../../src/core/state/mutators"
-import { retrieveAppsById } from "../../src/core/app-directory/app-directory-queries"
+import { AppInstanceState } from "../../src/state/types"
+import { getInstance, getInstancesByState } from "../../src/state/selectors"
+import { connectInstance, removeInstance, updateInstanceState } from "../../src/state/mutators"
+import { retrieveAppsById } from "../../src/app-directory/app-directory-queries"
 
 type OpenRequest = BrowserTypes.OpenRequest
 type GetAppMetadataRequest = BrowserTypes.GetAppMetadataRequest

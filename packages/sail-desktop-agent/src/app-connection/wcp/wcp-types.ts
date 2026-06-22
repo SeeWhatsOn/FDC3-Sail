@@ -1,5 +1,5 @@
 import type { BrowserTypes } from "@finos/fdc3"
-import type { Logger } from "../../core/interfaces/logger"
+import type { Logger } from "../../interfaces/logger"
 import type {
   AppRequestMessage,
   AgentEventMessage,
@@ -71,9 +71,9 @@ export function isAgentMessage(
 export type WcpInjectedUiUrl = string | boolean
 
 /**
- * Configuration options for WCPConnector
+ * Configuration options for {@link BrowserAppConnection} (WCP listener + handshake).
  */
-export interface WCPConnectorOptions {
+export interface AppConnectionOptions {
   /**
    * Static URL for the intent-resolver iframe in WCP3Handshake.
    * Matches FDC3 `payload.intentResolverUrl`: URL string, `false` (host/DA provides UI
