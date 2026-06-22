@@ -24,18 +24,14 @@ flowchart TB
   end
 
   subgraph edge ["App connection — app-connection/"]
-    WCP["WCPConnector"]
+    WCP["BrowserAppConnection"]
     MP1["MessagePortTransport"]
     MP2["MessagePortTransport"]
     WCP --> MP1
     WCP --> MP2
   end
 
-  subgraph wire ["Internal edge link (in-tab preset)"]
-    T["BrowserDaEdgeLink pair"]
-  end
-
-  subgraph da ["Desktop Agent — core/"]
+  subgraph da ["Desktop Agent — agent/handlers/state"]
     DAG["DesktopAgent"]
     H["DACP handlers"]
     S["AgentState"]
@@ -46,40 +42,36 @@ flowchart TB
   A2 <-->|"WCP + MessagePort"| MP2
   host -->|"host contracts"| edge
   HL -.->|"iframe name = instanceId"| A1
-  edge <-->|"one Transport pipe"| T
-  T <--> da
+  edge --> da
 ```
 
-**Key rule:** apps never talk to `DesktopAgent` directly. All app traffic flows **edge → Transport → DA → Transport → edge → MessagePort**.
+**Key rule:** apps never talk to `DesktopAgent` directly. In browser hosts, app traffic flows **MessagePort → BrowserAppConnection → DesktopAgent → AppConnectionRegistry → MessagePort**.
 
 ## Preset vs manual composition
 
 ```mermaid
 flowchart LR
-  subgraph preset ["Preset — default browser hosts"]
-    P["createBrowserDesktopAgent()"]
-    P --> E1["WCPConnector (hidden)"]
+  subgraph browserReady ["Browser-ready — default browser hosts"]
+    P["new SailDesktopAgent()"]
+    P --> E1["BrowserAppConnection"]
     P --> D1["DesktopAgent"]
-    E1 --- T1["BrowserDaEdgeLink pair"]
-    D1 --- T1
+    E1 --> D1
   end
 
   subgraph manual ["Manual — framework authors & tests"]
-    D2["new DesktopAgent({ transport })"]
-    E2["new WCPConnector(transport)"]
-    D2 --- T2["InMemoryTransport pair"]
-    E2 --- T2
+    D2["new DesktopAgent()"]
+    E2["app connection"]
+    D2 --> E2
   end
 ```
 
-`BrowserDaEdgeLink` appears only in the **preset** path above — it is preset-internal wiring, not a public import. Manual composition and edge tests use **`createInMemoryTransportPair`** from `@finos/sail-desktop-agent/transports` (or preset integration tests via `getBrowserDesktopAgentSession`).
+`SailDesktopAgent` owns the browser edge and required state binding. Most hosts should not compose `DesktopAgent` and `BrowserAppConnection` manually.
 
 | Pattern | Returns | You manage |
 |---------|---------|------------|
-| `createBrowserDesktopAgent` | `DesktopAgent` + `intentResolver`, `channels`, `apps` | `AppLauncher`; wire host UI via controllers |
-| `createBrowserHostControllers` | `{ intentResolver, channels, apps }` | Manual `DesktopAgent` + `WCPConnector` composition |
-| `getBrowserDesktopAgentSession(da)` | `{ wcpConnector }` | Advanced edge tests on preset instances |
-| Manual pair (`createInMemoryTransportPair`) | `DesktopAgent` + `WCPConnector` | Both transports and lifecycle |
+| `new SailDesktopAgent()` | `SailDesktopAgent` + `intentResolver`, `channels`, `apps`, `connector` | `AppLauncher`; wire host UI via controllers |
+| `new DesktopAgent()` | Core FDC3 runtime | App connection, state binding, lifecycle |
+| `@finos/sail-desktop-agent/browser` | `BrowserAppConnection`, `MessagePortTransport` | Lower-level browser mechanics |
 
 ### Deferred deployment paths (not on v3-pre)
 
@@ -88,10 +80,10 @@ flowchart TB
   subgraph today ["Supported today"]
     B["Browser host page"]
     DA["DesktopAgent in-tab"]
-    WCP["WCPConnector + MessagePort per app"]
+    WCP["BrowserAppConnection + MessagePort per app"]
     B --> DA
     B --> WCP
-    DA <-->|"BrowserDaEdgeLink"| WCP
+    WCP --> DA
   end
 
   subgraph future ["Future explicit adapters"]
@@ -111,13 +103,10 @@ Remote Desktop Agent (`createWCPClient` + server-hosted engine) was removed from
 ```text
 packages/sail-desktop-agent/src/
 │
-├── core/
+├── agent/
 │   ├── desktop-agent.ts       # DesktopAgent class — start/stop, handler dispatch
-│   ├── dacp/                  # DACP message types and helpers
-│   ├── handlers/dacp/         # All FDC3 operations (open, channels, intents, …)
-│   ├── handlers/dacp/wcp-handlers.ts  # WCP4–5 identity validation
-│   ├── state/                 # Immutable AgentState (selectors + mutators)
-│   └── app-directory/         # DirectoryApp metadata
+│   ├── sail-desktop-agent.ts  # Browser-ready constructor + host controllers
+│   └── default-config.ts
 │
 ├── host-contracts/
 │   ├── app-launcher.ts        # AppLauncher — host opens iframes/windows
@@ -125,17 +114,13 @@ packages/sail-desktop-agent/src/
 │   └── channel-control.ts     # ChannelControl — picker contract shape
 │
 ├── app-connection/
-│   ├── browser-da-edge-link.ts  # BrowserDaEdgeLink — in-tab DA↔WCP wire (preset)
+│   ├── browser-app-connection.ts # WCP listener + MessagePort registry
 │   ├── wcp/                   # WCP handshake, routing, connection map
-│   ├── wcp-connector.ts       # WCP1–3, postMessage listener, port map
-│   └── message-port-transport.ts
+│   └── message-port.ts
 │
-├── presets/
-│   ├── create-browser-desktop-agent.ts  # createBrowserDesktopAgent (browser-first preset)
-│   └── browser-session.ts               # createBrowserHostControllers, getBrowserDesktopAgentSession
-│
-└── transports/
-    └── in-memory-transport.ts # Same-process linked endpoints
+├── handlers/
+├── state/
+└── app-directory/
 ```
 
 ## WCP and DACP ownership
@@ -143,8 +128,7 @@ packages/sail-desktop-agent/src/
 ```mermaid
 sequenceDiagram
   participant App as App iframe
-  participant Edge as WCPConnector
-  participant Tr as Transport
+  participant Edge as BrowserAppConnection
   participant DA as DesktopAgent
 
   Note over App,Edge: WCP1–3 — edge only
@@ -153,29 +137,25 @@ sequenceDiagram
 
   Note over App,DA: WCP4–5 — DA validates, edge migrates port map
   App->>Edge: WCP4 on MessagePort
-  Edge->>Tr: forward WCP4
-  Tr->>DA: WCP4ValidateAppIdentity
-  DA->>Tr: WCP5 response
-  Tr->>Edge: WCP5
+  Edge->>DA: WCP4ValidateAppIdentity
+  DA->>Edge: WCP5 response
   Edge->>App: WCP5 on MessagePort
   Edge->>Edge: temp id → canonical id
 
   Note over App,DA: DACP — DA handlers, edge routes by instanceId
   App->>Edge: joinUserChannelRequest
-  Edge->>Tr: DACP + meta.source
-  Tr->>DA: handler updates state
-  DA->>Tr: channelChangedEvent + meta.destination
-  Tr->>Edge: route to port
+  Edge->>DA: DACP + meta.source
+  DA->>Edge: channelChangedEvent + meta.destination
   Edge->>App: deliver on MessagePort
 ```
 
 | Phase | Owner | Code location |
 |-------|--------|---------------|
-| WCP1–3 | Edge | `app-connection/wcp-connector.ts`, `app-connection/wcp/wcp1-3-handshake.ts` |
-| MessagePort bridge | Edge | `app-connection/message-port-transport.ts`, `app-connection/wcp/wcp-message-routing.ts` |
-| WCP4–5 | DA (+ edge port migration) | `core/handlers/dacp/wcp-handlers.ts` |
+| WCP1–3 | Edge | `app-connection/browser-app-connection.ts`, `app-connection/wcp/wcp1-3-handshake.ts` |
+| MessagePort bridge | Edge | `app-connection/message-port.ts`, `app-connection/wcp/wcp-message-routing.ts` |
+| WCP4–5 | DA (+ edge port migration) | `app-connection/wcp/wcp-identity-validation.ts`, `handlers/open/handlers.ts` |
 | WCP6 Goodbye | Both | Edge drops port; DA removes instance |
-| DACP (all `fdc3.*`) | DA | `core/handlers/dacp/*` |
+| DACP (all `fdc3.*`) | DA | `handlers/*` |
 
 ## Instance identity pipeline
 
@@ -196,8 +176,8 @@ flowchart LR
 | Step | Module |
 |------|--------|
 | Launcher returns id | `host-contracts/app-launcher.ts` |
-| Open registers PENDING | `core/handlers/dacp/app-handlers.ts` |
-| WCP4 adopt vs mint | `core/handlers/dacp/wcp-handlers.ts` |
+| Open registers PENDING | `handlers/open/handlers.ts` |
+| WCP4 adopt vs mint | `app-connection/wcp/wcp-identity-validation.ts` |
 | Port map migration | `app-connection/wcp/wcp-connection-management.ts` |
 
 ## Intent resolution flow
@@ -206,7 +186,7 @@ flowchart LR
 sequenceDiagram
   participant App as Raising app
   participant DA as DesktopAgent
-  participant Edge as WCPConnector
+  participant Edge as BrowserAppConnection
   participant Host as Host IntentResolver
 
   App->>DA: raiseIntentRequest
@@ -230,7 +210,7 @@ Two mechanisms exist for intent UI — see [integrator guide — intent resolver
 sequenceDiagram
   participant Chrome as Host channel toolbar
   participant Ctrl as channels controller
-  participant Edge as WCPConnector
+  participant Edge as BrowserAppConnection
   participant DA as DesktopAgent
   participant App as App iframe
 
@@ -243,9 +223,9 @@ sequenceDiagram
   Ctrl->>Chrome: onAppChannelChange callback
 ```
 
-Browser preset hosts use **`channels.changeAppChannel`** and **`channels.onAppChannelChange`**. `SailPlatform` wraps the same engine path for the reference stack — see [integrator guide](./integrator-guide#channel-selector--host-shell-ui).
+Browser hosts use **`channels.changeAppChannel`** and **`channels.onAppChannelChange`**. `SailPlatform` wraps the same engine path for the reference stack — see [integrator guide](./integrator-guide#channel-selector--host-shell-ui).
 
-Manual composition without the preset factory: build controllers with **`createBrowserHostControllers({ desktopAgent, wcpConnector })`** from `@finos/sail-desktop-agent/presets`.
+`SailDesktopAgent` exposes these controllers directly. Manual `DesktopAgent` composition does not add host controllers automatically.
 
 ## Testing layers
 
@@ -260,6 +240,6 @@ See [conformance traceability](./conformance) for BDD vs toolbox gaps.
 
 ## Related
 
-- [Integrator guide](./integrator-guide) — host contracts, browser-first preset, WCP/DACP detail
+- [Integrator guide](./integrator-guide) — host contracts, browser-first agent, WCP/DACP detail
 - [Channel selection (Sail stack)](../../architecture/channel-selection) — `SailPlatform` channel APIs
 - [@finos/sail-platform-api](../platform-api/overview) — workspace, layout, `SailPlatform` wrapper

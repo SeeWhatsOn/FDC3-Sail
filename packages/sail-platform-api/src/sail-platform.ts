@@ -8,18 +8,16 @@
  */
 
 import {
-  createBrowserDesktopAgent,
-  getBrowserDesktopAgentSession,
+  SailDesktopAgent,
   DesktopAgent,
   type AppLauncher,
   type DirectoryApp,
   type SailImplementationMetadata,
   type IntentResolver,
-  type BrowserDesktopAgent,
-  type BrowserAppsController,
-  type BrowserChannelsController,
-  type BrowserIntentResolverController,
+  type SailDesktopAgentApps,
+  type SailDesktopAgentChannels,
 } from "@finos/sail-desktop-agent"
+import type { BrowserIntentResolverController } from "@finos/sail-desktop-agent"
 import type { BrowserAppConnection } from "@finos/sail-desktop-agent/browser"
 import type { AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
 import type { BrowserTypes } from "@finos/fdc3"
@@ -197,8 +195,8 @@ export class SailPlatform {
   private platformClient: SailPlatformClient
   private started = false
 
-  // Browser Desktop Agent session (created on start via preset)
-  private _desktopAgent: BrowserDesktopAgent | null = null
+  // Browser Desktop Agent session (created on start)
+  private _desktopAgent: SailDesktopAgent | null = null
   private _browserAppConnection: BrowserAppConnection | null = null
   private _stopBrowserSession: (() => void) | null = null
 
@@ -227,7 +225,7 @@ export class SailPlatform {
       throw new Error("SailPlatform already started")
     }
 
-    const desktopAgent = createBrowserDesktopAgent({
+    const desktopAgent = new SailDesktopAgent({
       appLauncher: this.config.appLauncher,
       apps: this.config.apps,
       userChannels: this.config.userChannels,
@@ -245,10 +243,8 @@ export class SailPlatform {
       },
     })
 
-    const { browserAppConnection } = getBrowserDesktopAgentSession(desktopAgent)
-
     this._desktopAgent = desktopAgent
-    this._browserAppConnection = browserAppConnection
+    this._browserAppConnection = desktopAgent.connector
     this._stopBrowserSession = () => desktopAgent.stop()
 
     this.wireEvents()
@@ -295,7 +291,7 @@ export class SailPlatform {
    * Grouped host channel chrome over the browser Desktop Agent preset.
    * Prefer this over raw {@link connector} `channelChanged` for host UI.
    */
-  get channels(): BrowserChannelsController {
+  get channels(): SailDesktopAgentChannels {
     this.ensureStarted()
     return this._desktopAgent!.channels
   }
@@ -311,7 +307,7 @@ export class SailPlatform {
   /**
    * Grouped app catalog and instance lifecycle chrome over the browser preset.
    */
-  get apps(): BrowserAppsController {
+  get apps(): SailDesktopAgentApps {
     this.ensureStarted()
     return this._desktopAgent!.apps
   }

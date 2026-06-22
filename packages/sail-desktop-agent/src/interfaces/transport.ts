@@ -2,7 +2,7 @@
  * Transport Interface
  *
  * Legacy test-only abstraction for handler-level DACP delivery recording.
- * Production browser hosts use {@link createBrowserDesktopAgent} with
+ * Production browser hosts use {@link SailDesktopAgent} with
  * {@link BrowserAppConnection} — not `Transport`.
  *
  * Vitest/Cucumber DACP oracle tests should attach {@link DacpTestAppConnection}

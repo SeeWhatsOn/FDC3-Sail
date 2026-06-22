@@ -1,8 +1,4 @@
-import {
-  createBrowserDesktopAgent,
-  type BrowserDesktopAgentOptions,
-  type DesktopAgent,
-} from "@finos/sail-desktop-agent"
+import { SailDesktopAgent, type SailDesktopAgentOptions } from "@finos/sail-desktop-agent"
 import { MiddlewarePipeline, type Middleware } from "./middleware/middleware"
 import { wireWcp4OriginAllowlist } from "./wcp4-origin-allowlist"
 export type { Middleware }
@@ -11,13 +7,13 @@ export type { Middleware }
  * Configuration for Sail Browser Desktop Agent
  */
 export interface SailBrowserDesktopAgentConfig extends Omit<
-  BrowserDesktopAgentOptions,
+  SailDesktopAgentOptions,
   "appConnectionOptions"
 > {
   /**
    * App connection options with Sail-specific defaults.
    */
-  appConnectionOptions?: BrowserDesktopAgentOptions["appConnectionOptions"]
+  appConnectionOptions?: SailDesktopAgentOptions["appConnectionOptions"]
 
   /**
    * Optional Sail deployment policy: origins permitted to complete WCP4 identity
@@ -56,14 +52,14 @@ export interface SailBrowserDesktopAgentConfig extends Omit<
  */
 export function createSailBrowserDesktopAgent(
   config?: SailBrowserDesktopAgentConfig,
-): DesktopAgent & {
+): SailDesktopAgent & {
   /**
    * Add middleware to the message processing pipeline
    */
   use: (middleware: Middleware<unknown>) => void
 } {
   // Merge Sail-specific defaults with user config
-  const appConnectionOptions: BrowserDesktopAgentOptions["appConnectionOptions"] = {
+  const appConnectionOptions: SailDesktopAgentOptions["appConnectionOptions"] = {
     // Sail-specific defaults: UI is provided by Sail parent window
     getIntentResolverUrl: () => false,
     getChannelSelectorUrl: () => false,
@@ -72,7 +68,7 @@ export function createSailBrowserDesktopAgent(
     ...config?.appConnectionOptions,
   }
 
-  const desktopAgent = createBrowserDesktopAgent({
+  const desktopAgent = new SailDesktopAgent({
     ...config,
     appConnectionOptions,
   })

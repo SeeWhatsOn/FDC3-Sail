@@ -2,7 +2,7 @@
  * FDC3 Desktop Agent
  *
  * Pure FDC3 runtime: agent state, host APIs, and DACP routing when an app connection
- * edge is attached. Browser hosts use {@link createBrowserDesktopAgent}; DACP oracle
+ * edge is attached. Browser hosts use {@link SailDesktopAgent}; DACP oracle
  * tests attach {@link DacpTestAppConnection} from test support.
  */
 
@@ -18,9 +18,16 @@ import type {
 } from "../handlers/types"
 import type { IntentResolutionCallback } from "../handlers/intent-resolution-callback"
 import type { DirectoryApp } from "../app-directory/types"
-import { addApp } from "../state/mutators/app-directory"
-import type { BrowserTypes } from "@finos/fdc3"
-import type { AgentState, StateSetter } from "../state/types"
+import {
+  addApp as addDirectoryApp,
+  addApplications,
+  loadDirectoryIntoState,
+  removeApplicationsByAppId,
+} from "../state/mutators/app-directory"
+import { retrieveAllApps, retrieveAppsById } from "../app-directory/app-directory-queries"
+import type { BrowserTypes, Context } from "@finos/fdc3"
+import type { AgentState, AppInstance, StateSetter } from "../state/types"
+import { AppInstanceState } from "../state/types"
 import { createInitialState, createStateWithOverrides } from "../state/initial-state"
 import { consoleLogger, type Logger, type LogPayloadDetail } from "../interfaces/logger"
 import { resolveDesktopAgentConfig, type SailImplementationMetadata } from "./default-config"
@@ -29,7 +36,12 @@ import {
   handleLeaveCurrentChannelRequest,
 } from "../handlers/channels/handlers"
 import { NoChannelFoundError } from "../errors/fdc3-errors"
-import { getAllUserChannels, getInstance, getUserChannel } from "../state/selectors"
+import {
+  getAllInstances,
+  getAllUserChannels,
+  getInstance,
+  getUserChannel,
+} from "../state/selectors"
 import { connectInstance } from "../state/mutators"
 import type { AgentAppConnection } from "../app-connection/types"
 import type { AppConnectionMetadata } from "../app-connection/browser-app-connection"
@@ -115,11 +127,42 @@ export interface DesktopAgentConfig {
   heartbeatTimeoutMs: number
 }
 
+export interface DesktopAgentOpenOptions {
+  context?: Context
+  instanceId?: string
+}
+
+export interface DesktopAgentAppInstance {
+  appId: string
+  instanceId: string
+  status: "pending" | "connected"
+  currentUserChannel?: string | null
+}
+
+function resolveOpenAppIdentifier(
+  app: string | BrowserTypes.AppIdentifier,
+  options?: DesktopAgentOpenOptions,
+): BrowserTypes.AppIdentifier {
+  if (typeof app === "string") {
+    return options?.instanceId ? { appId: app, instanceId: options.instanceId } : { appId: app }
+  }
+  return options?.instanceId ? { ...app, instanceId: options.instanceId } : app
+}
+
+function mapToDesktopAgentAppInstance(instance: AppInstance): DesktopAgentAppInstance {
+  return {
+    appId: instance.appId,
+    instanceId: instance.instanceId,
+    status: instance.state === AppInstanceState.CONNECTED ? "connected" : "pending",
+    currentUserChannel: instance.currentUserChannel,
+  }
+}
+
 /**
  * Pure FDC3 Desktop Agent implementation.
  *
  * DACP/WCP messages are routed only when an app connection edge is attached
- * ({@link attachAppConnection}). Browser hosts use {@link createBrowserDesktopAgent}.
+ * ({@link attachAppConnection}). Browser hosts use {@link SailDesktopAgent}.
  */
 export class DesktopAgent {
   private state: AgentState
@@ -152,7 +195,7 @@ export class DesktopAgent {
 
     if (config.apps) {
       for (const app of config.apps) {
-        this.state = addApp(this.state, app)
+        this.state = addDirectoryApp(this.state, app)
       }
     }
 
@@ -311,6 +354,73 @@ export class DesktopAgent {
 
   getState(): AgentState {
     return this.state
+  }
+
+  protected updateState(callback: Parameters<StateSetter>[0]): void {
+    this.state = callback(this.state)
+  }
+
+  addApp(app: DirectoryApp): void {
+    this.state = addDirectoryApp(this.state, app)
+  }
+
+  addApps(apps: DirectoryApp[]): void {
+    this.state = addApplications(this.state, apps)
+  }
+
+  async addAppDirectory(url: string): Promise<void> {
+    this.state = await loadDirectoryIntoState(this.state, url)
+  }
+
+  removeApp(appId: string): void {
+    this.state = removeApplicationsByAppId(this.state, appId)
+  }
+
+  getApps(): DirectoryApp[] {
+    return retrieveAllApps(this.state.appDirectory)
+  }
+
+  getApp(appId: string): DirectoryApp | undefined {
+    return retrieveAppsById(this.state.appDirectory, appId)[0]
+  }
+
+  async openApp(
+    app: string | BrowserTypes.AppIdentifier,
+    options?: DesktopAgentOpenOptions,
+  ): Promise<BrowserTypes.AppIdentifier> {
+    if (!this.appLauncher) {
+      throw new Error("App launching not available - no AppLauncher configured")
+    }
+
+    const appIdentifier = resolveOpenAppIdentifier(app, options)
+    const catalogApps = retrieveAppsById(this.state.appDirectory, appIdentifier.appId)
+    if (catalogApps.length === 0) {
+      throw new Error(`App not found in directory: ${appIdentifier.appId}`)
+    }
+
+    const payload: BrowserTypes.OpenRequestPayload = {
+      app: appIdentifier,
+      ...(options?.context !== undefined ? { context: options.context } : {}),
+    }
+
+    const launched = await this.appLauncher.launch(payload, catalogApps[0])
+    if (launched.instanceId) {
+      this.registerPendingHostInstance({
+        appId: launched.appId,
+        instanceId: launched.instanceId,
+      })
+    }
+
+    return launched
+  }
+
+  getAppInstances(): DesktopAgentAppInstance[] {
+    return getAllInstances(this.state).map(mapToDesktopAgentAppInstance)
+  }
+
+  getAppInstance(instanceId: string): DesktopAgentAppInstance | undefined {
+    const instance = getInstance(this.state, instanceId)
+    return instance ? mapToDesktopAgentAppInstance(instance) : undefined
   }
 
   registerPendingHostInstance(params: { appId: string; instanceId: string }): void {

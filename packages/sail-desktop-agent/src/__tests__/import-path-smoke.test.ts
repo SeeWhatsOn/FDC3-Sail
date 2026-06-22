@@ -33,9 +33,8 @@ describe("reorganized import paths", () => {
     expect(main.createDACPSuccessResponse).toBeTypeOf("function")
   })
 
-  it("resolves browser factory from main entry", async () => {
+  it("resolves SailDesktopAgent from main entry", async () => {
     const main = await import("../index.js")
-    expect(main.createBrowserDesktopAgent).toBeTypeOf("function")
-    expect(main.getBrowserDesktopAgentSession).toBeTypeOf("function")
+    expect(main.SailDesktopAgent).toBeTypeOf("function")
   })
 })

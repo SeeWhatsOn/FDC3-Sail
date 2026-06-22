@@ -1,7 +1,7 @@
 /**
  * FDC3 Desktop Agent - Core Package
  *
- * Browser-resident hosts use {@link createBrowserDesktopAgent} from this entry point.
+ * Browser-resident hosts use {@link SailDesktopAgent} from this entry point.
  * Lower-level WCP primitives: `@finos/sail-desktop-agent/browser`.
  */
 
@@ -71,29 +71,18 @@ export type {
 // UI-free host contracts for platform builders (launch, intent resolver, channel control)
 export * from "./host-contracts/index.js"
 
-// Browser Desktop Agent factory (DA-owned WCP app connection)
+// Browser-ready Sail Desktop Agent (DA-owned WCP app connection)
 export {
-  createBrowserDesktopAgent,
-  type BrowserDesktopAgent,
-  type BrowserDesktopAgentOptions,
-} from "./agent/create-browser-desktop-agent.js"
-
-export {
-  getBrowserDesktopAgentSession,
-  isBrowserDesktopAgent,
-  clearBrowserDesktopAgentSession,
-  createBrowserHostControllers,
-  type BrowserDesktopAgentSession,
-  type BrowserHostControllers,
-  type BrowserHostControllerOptions,
-  type BrowserIntentResolverController,
-  type BrowserChannelsController,
+  SailDesktopAgent,
+  type SailDesktopAgentOptions,
+  type SailDesktopAgentHostControllers,
+  type SailDesktopAgentChannels,
+  type SailDesktopAgentApps,
   type AppChannelChangeEvent,
-  type BrowserAppsController,
-  type BrowserAppOpenOptions,
-  type BrowserAppInstance,
   type HandshakeFailureEvent,
-} from "./agent/browser-session.js"
+} from "./agent/sail-desktop-agent.js"
+
+export type { DesktopAgentAppInstance, DesktopAgentOpenOptions } from "./agent/desktop-agent.js"
 
 // NOTE: Lower-level browser app connection APIs are NOT exported here
 // Import from @finos/sail-desktop-agent/browser for:

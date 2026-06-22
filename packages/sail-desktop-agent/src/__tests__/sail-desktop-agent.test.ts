@@ -1,0 +1,111 @@
+/**
+ * SailDesktopAgent public API tests.
+ *
+ * @vitest-environment jsdom
+ */
+
+import { describe, expect, it, vi } from "vite-plus/test"
+import * as sailDesktopAgentPackage from "../index"
+import { SailDesktopAgent } from "../agent/sail-desktop-agent"
+import type { DirectoryApp } from "../app-directory/types"
+import type { AppLauncher } from "../host-contracts"
+
+const mockApp: DirectoryApp = {
+  appId: "mock-app",
+  title: "Mock App",
+  type: "web",
+  details: { url: "https://example.com/mock" },
+}
+
+const otherApp: DirectoryApp = {
+  appId: "other-app",
+  title: "Other App",
+  type: "web",
+  details: { url: "https://example.com/other" },
+}
+
+describe("SailDesktopAgent", () => {
+  it("is exported from the package entrypoint", () => {
+    expect(sailDesktopAgentPackage.SailDesktopAgent).toBe(SailDesktopAgent)
+  })
+
+  it("owns a browser connector and grouped host controllers", () => {
+    const agent = new SailDesktopAgent({ autoStart: false })
+
+    expect(agent.connector).toBeDefined()
+    expect(agent.apps.getConnections()).toEqual([])
+    expect(agent.channels.getUserChannels().length).toBeGreaterThan(0)
+    expect(agent.intentResolver.getPendingRequests()).toEqual([])
+  })
+
+  it("manages app catalog and host-open lifecycle through DesktopAgent methods", async () => {
+    const appLauncher: AppLauncher = {
+      launch: vi.fn(request =>
+        Promise.resolve({
+          appId: request.app.appId,
+          instanceId: request.app.instanceId ?? "opened-instance",
+        }),
+      ),
+    }
+    const agent = new SailDesktopAgent({
+      autoStart: false,
+      apps: [mockApp],
+      appLauncher,
+    })
+
+    agent.apps.add(otherApp)
+
+    expect(agent.apps.getById("mock-app")).toEqual(mockApp)
+    expect(agent.apps.getAll().map(app => app.appId)).toEqual(["mock-app", "other-app"])
+
+    const launched = await agent.apps.open("mock-app")
+
+    expect(launched).toEqual({ appId: "mock-app", instanceId: "opened-instance" })
+    expect(agent.apps.getInstance("opened-instance")).toEqual({
+      appId: "mock-app",
+      instanceId: "opened-instance",
+      status: "pending",
+      currentUserChannel: null,
+    })
+  })
+
+  it("exposes default intent resolver UI methods over the browser connector", async () => {
+    const agent = new SailDesktopAgent({ autoStart: false })
+    const requests: unknown[] = []
+
+    const unsubscribe = agent.intentResolver.onRequest(request => {
+      requests.push(request)
+      agent.intentResolver.select(request.requestId, request.handlers[0])
+    })
+
+    const response = await agent.connector.requestIntentResolution(
+      {
+        requestId: "intent-request",
+        intent: "ViewChart",
+        context: { type: "fdc3.instrument", id: { ticker: "AAPL" } },
+        handlers: [
+          {
+            appId: "mock-app",
+            name: "Mock App",
+            title: "Mock App",
+            instanceId: "mock-instance",
+            isRunning: true,
+          },
+        ],
+      },
+      1000,
+    )
+
+    unsubscribe()
+
+    expect(requests).toHaveLength(1)
+    expect(response).toEqual({
+      requestId: "intent-request",
+      selectedHandler: {
+        appId: "mock-app",
+        instanceId: "mock-instance",
+      },
+      intent: "ViewChart",
+    })
+  })
+})

@@ -7,9 +7,13 @@
 import { expect, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import type { DesktopAgent } from "../../agent/desktop-agent"
-import { getBrowserDesktopAgentSession } from "../../agent/browser-session"
+import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 
 export const TEST_ORIGIN = "https://example.com"
+
+function getTestConnector(agent: DesktopAgent): SailDesktopAgent["connector"] {
+  return (agent as SailDesktopAgent).connector
+}
 
 export type WcpConnectedApp = {
   connectionAttemptUuid: string
@@ -84,7 +88,7 @@ export async function connectWcpApp(
 ): Promise<WcpConnectedApp> {
   const { connectionAttemptUuid, appId, identityUrl, hostInstanceId, instanceUuid } = options
   const tempInstanceId = `temp-${connectionAttemptUuid}`
-  const { browserAppConnection } = getBrowserDesktopAgentSession(agent)
+  const browserAppConnection = getTestConnector(agent)
 
   const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl)
 

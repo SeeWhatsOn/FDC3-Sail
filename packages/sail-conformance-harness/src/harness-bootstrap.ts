@@ -1,8 +1,7 @@
 import type { Dispatch, SetStateAction } from "react"
 import {
-  createBrowserDesktopAgent,
   DEFAULT_FDC3_USER_CHANNELS,
-  type BrowserDesktopAgent,
+  SailDesktopAgent,
   type DirectoryApp,
 } from "@finos/sail-desktop-agent"
 import type { AppIdentifier } from "@finos/fdc3"
@@ -39,7 +38,7 @@ export function extractConformance1Url(apps: DirectoryApp[]): string {
 }
 
 export type HarnessBootstrap = {
-  desktopAgent: BrowserDesktopAgent
+  desktopAgent: SailDesktopAgent
   initialPanels: HarnessPanel[]
   onPanelsChange: (setter: Dispatch<SetStateAction<HarnessPanel[]>>) => void
   popupWatcher: ReturnType<typeof createPopupCloseWatcher>
@@ -104,7 +103,7 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     removePanel,
   })
 
-  const desktopAgent = createBrowserDesktopAgent({
+  const desktopAgent = new SailDesktopAgent({
     apps: conformanceApps,
     appLauncher,
     intentResolver: createHarnessIntentResolver(debug),

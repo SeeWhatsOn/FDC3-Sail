@@ -10,9 +10,9 @@
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import type { DesktopAgent } from "../../agent/desktop-agent"
+import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import type { AppConnectionMetadata } from "../../app-connection/browser-app-connection"
 import { AppInstanceState } from "../../state/types"
-import { getBrowserDesktopAgentSession } from "../../agent/browser-session"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import {
   INSTRUMENT_CONTEXT,
@@ -52,7 +52,7 @@ type AppChannelChangeEvent = {
   channel: BrowserTypes.Channel | null
 }
 
-type BrowserChannelsController = {
+type SailDesktopAgentChannelsController = {
   getUserChannels: () => BrowserTypes.Channel[]
   getAppChannel: (instanceId: string) => BrowserTypes.Channel | null
   getAppChannelId: (instanceId: string) => string | null
@@ -72,7 +72,7 @@ type HandshakeFailureEvent = {
   connectionAttemptUuid: string
 }
 
-type BrowserAppsController = {
+type SailDesktopAgentAppsController = {
   add: (app: typeof PORTFOLIO_APP) => void
   addAll: (apps: (typeof PORTFOLIO_APP)[]) => void
   addDirectory: (url: string) => Promise<void>
@@ -94,11 +94,15 @@ type BrowserAppsController = {
 }
 
 type TestBrowserAgent = DesktopAgent & {
-  channels: BrowserChannelsController
-  apps: BrowserAppsController
+  channels: SailDesktopAgentChannelsController
+  apps: SailDesktopAgentAppsController
 }
 
-function requireChannelsController(agent: DesktopAgent): BrowserChannelsController {
+function getTestConnector(agent: DesktopAgent): SailDesktopAgent["connector"] {
+  return (agent as SailDesktopAgent).connector
+}
+
+function requireChannelsController(agent: DesktopAgent): SailDesktopAgentChannelsController {
   const { channels } = agent as TestBrowserAgent
   expect(channels).toBeDefined()
   expect(typeof channels.getAppChannelId).toBe("function")
@@ -108,7 +112,7 @@ function requireChannelsController(agent: DesktopAgent): BrowserChannelsControll
   return channels
 }
 
-function requireAppsController(agent: DesktopAgent): BrowserAppsController {
+function requireAppsController(agent: DesktopAgent): SailDesktopAgentAppsController {
   const { apps } = agent as TestBrowserAgent
   expect(apps).toBeDefined()
   expect(typeof apps.onConnect).toBe("function")
@@ -319,7 +323,7 @@ describe("WCP edge contract", () => {
     activeAgents.push(agent)
 
     const appConnected = vi.fn()
-    getBrowserDesktopAgentSession(agent).browserAppConnection.on("appConnected", appConnected)
+    getTestConnector(agent).on("appConnected", appConnected)
 
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "integration-wcp-path-uuid",
@@ -488,11 +492,7 @@ describe("WCP edge contract", () => {
     })
 
     expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
-    expect(
-      getBrowserDesktopAgentSession(agent).browserAppConnection.getConnection(
-        HOST_LAUNCHER_INSTANCE_ID,
-      ),
-    ).toBeDefined()
+    expect(getTestConnector(agent).getConnection(HOST_LAUNCHER_INSTANCE_ID)).toBeDefined()
   })
 
   it("adopts sole pending launcher id when WCP4 omits host instanceId", async () => {

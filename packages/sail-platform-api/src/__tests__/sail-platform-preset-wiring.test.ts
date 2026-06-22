@@ -1,49 +1,15 @@
 /**
- * Verifies SailPlatform delegates browser Desktop Agent wiring to the top-level preset.
+ * Verifies SailPlatform owns a SailDesktopAgent browser instance.
+ *
+ * @vitest-environment jsdom
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vite-plus/test"
-import * as sailDesktopAgent from "@finos/sail-desktop-agent"
-import type { BrowserDesktopAgent, BrowserDesktopAgentOptions } from "@finos/sail-desktop-agent"
+import { describe, it, expect, vi } from "vite-plus/test"
+import { SailDesktopAgent } from "@finos/sail-desktop-agent"
 import { SailPlatform } from "../sail-platform"
 
-describe("SailPlatform preset wiring", () => {
-  const mockStop = vi.fn()
-  const mockDesktopAgent = {
-    getUserChannels: vi.fn(() => []),
-    getAppUserChannelId: vi.fn(() => null),
-    stop: mockStop,
-    intentResolver: {},
-    channels: {},
-    apps: {},
-  } as unknown as BrowserDesktopAgent
-  const mockBrowserAppConnection = {
-    on: vi.fn(),
-    off: vi.fn(),
-  }
-
-  let createBrowserDesktopAgentSpy: MockInstance
-  let getBrowserDesktopAgentSessionSpy: MockInstance
-
-  beforeEach(() => {
-    createBrowserDesktopAgentSpy = vi
-      .spyOn(sailDesktopAgent, "createBrowserDesktopAgent")
-      .mockReturnValue(mockDesktopAgent)
-    getBrowserDesktopAgentSessionSpy = vi
-      .spyOn(sailDesktopAgent, "getBrowserDesktopAgentSession")
-      .mockReturnValue({
-        browserAppConnection:
-          mockBrowserAppConnection as unknown as import("@finos/sail-desktop-agent/browser").BrowserAppConnection,
-      })
-  })
-
-  afterEach(() => {
-    createBrowserDesktopAgentSpy.mockRestore()
-    getBrowserDesktopAgentSessionSpy.mockRestore()
-    vi.clearAllMocks()
-  })
-
-  it("delegates start() to createBrowserDesktopAgent with Sail host options", () => {
+describe("SailPlatform desktop agent wiring", () => {
+  it("starts a SailDesktopAgent with Sail host options", () => {
     const appLauncher = { launch: vi.fn() }
     const intentResolver = { resolve: vi.fn() }
     const apps = [
@@ -66,41 +32,26 @@ describe("SailPlatform preset wiring", () => {
 
     platform.start()
 
-    expect(createBrowserDesktopAgentSpy).toHaveBeenCalledOnce()
-    const createOptions = createBrowserDesktopAgentSpy.mock.calls[0]?.[0] as
-      | BrowserDesktopAgentOptions
-      | undefined
-    expect(createOptions).toBeDefined()
-    expect(createOptions).toMatchObject({
-      appLauncher,
-      apps,
-      userChannels: undefined,
-      implementationMetadata: undefined,
-      openContextListenerTimeoutMs: 4000,
-      heartbeatIntervalMs: 15000,
-      heartbeatTimeoutMs: 45000,
-      intentResolver,
-      appConnectionOptions: {
-        fdc3Version: "2.2",
-      },
-    })
-    expect(typeof createOptions?.appConnectionOptions?.getIntentResolverUrl).toBe("function")
-    expect(typeof createOptions?.appConnectionOptions?.getChannelSelectorUrl).toBe("function")
-    expect(getBrowserDesktopAgentSessionSpy).toHaveBeenCalledWith(mockDesktopAgent)
     expect(platform.isRunning).toBe(true)
-    expect(platform.agent).toBe(mockDesktopAgent)
-    expect(platform.connector).toBe(mockBrowserAppConnection)
+    expect(platform.agent).toBeInstanceOf(SailDesktopAgent)
+    expect(platform.connector).toBe((platform.agent as SailDesktopAgent).connector)
+    expect(platform.apps.getById("platform-app")).toEqual(apps[0])
+
+    platform.stop()
   })
 
-  it("stop() delegates to the preset agent stop()", () => {
+  it("stop() delegates to the agent lifecycle", () => {
     const platform = new SailPlatform({
       appLauncher: { launch: vi.fn() },
     })
 
     platform.start()
+    const agent = platform.agent
+    const stopSpy = vi.spyOn(agent, "stop")
+
     platform.stop()
 
-    expect(mockStop).toHaveBeenCalledOnce()
+    expect(stopSpy).toHaveBeenCalledOnce()
     expect(platform.isRunning).toBe(false)
   })
 })

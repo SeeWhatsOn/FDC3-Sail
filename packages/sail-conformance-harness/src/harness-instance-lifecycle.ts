@@ -1,4 +1,4 @@
-import type { BrowserDesktopAgent } from "@finos/sail-desktop-agent"
+import type { SailDesktopAgent } from "@finos/sail-desktop-agent"
 
 import type { PopupCloseWatcher } from "./popup-launcher"
 import type { HarnessPanel } from "./types"
@@ -14,7 +14,7 @@ export type HarnessInstanceCleanup = {
  * down agent state when popups close or WCP disconnects.
  */
 export function createHarnessInstanceCleanup(options: {
-  desktopAgent: BrowserDesktopAgent
+  desktopAgent: SailDesktopAgent
   popupWatcher: PopupCloseWatcher
   removePanel: (instanceId: string) => void
 }): HarnessInstanceCleanup {

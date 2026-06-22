@@ -12,8 +12,8 @@ export {
 } from "./sail-platform"
 
 export type {
-  BrowserAppsController,
-  BrowserChannelsController,
+  SailDesktopAgentApps,
+  SailDesktopAgentChannels,
   BrowserIntentResolverController,
   AppChannelChangeEvent,
   HandshakeFailureEvent,
@@ -61,11 +61,8 @@ export {
 // Middleware pipeline (kept for future usage)
 export { MiddlewarePipeline, type Middleware } from "./middleware/middleware"
 
-// Browser Desktop Agent preset (re-export from @finos/sail-desktop-agent)
-export {
-  createBrowserDesktopAgent,
-  type BrowserDesktopAgentOptions,
-} from "@finos/sail-desktop-agent"
+// Browser-ready Desktop Agent (re-export from @finos/sail-desktop-agent)
+export { SailDesktopAgent, type SailDesktopAgentOptions } from "@finos/sail-desktop-agent"
 
 // Lower-level browser app connection APIs (BrowserAppConnection, MessagePortTransport)
 export {

@@ -20,13 +20,13 @@ Both paths below use **`@finos/sail-desktop-agent`** from npm. The difference is
 flowchart TD
   Start([Build your own FDC3 Desktop Agent in your web app])
 
-  Start --> Preset["Preset — createBrowserDesktopAgent"]
-  Start --> Manual["Manual — DesktopAgent + WCP connector"]
+  Start --> BrowserReady["Browser-ready — SailDesktopAgent"]
+  Start --> Manual["Manual — DesktopAgent + app connection"]
 
-  Preset --> Package["@finos/sail-desktop-agent"]
+  BrowserReady --> Package["@finos/sail-desktop-agent"]
   Manual --> Package
 
-  Preset --> HostUI[AppLauncher + intentResolver, channels, apps]
+  BrowserReady --> HostUI[AppLauncher + intentResolver, channels, apps]
   Manual --> HostUI
 
   HostUI --> Apps["Your FDC3 apps use @finos/fdc3 — getAgent()"]
@@ -34,8 +34,8 @@ flowchart TD
 
 | Path | When to use | npm entry |
 |------|-------------|-----------|
-| **Preset** | Most custom hosts — browser edge and Desktop Agent wired for you | `createBrowserDesktopAgent` from `@finos/sail-desktop-agent/presets` |
-| **Manual** | Custom transports, remote Desktop Agent, or full control of lifecycle | `DesktopAgent`, `WCPConnector` from `@finos/sail-desktop-agent` |
+| **Browser-ready** | Most custom hosts — browser edge and Desktop Agent wired for you | `SailDesktopAgent` from `@finos/sail-desktop-agent` |
+| **Manual** | Handler-level tests or custom app-connection experiments | `DesktopAgent` plus an app connection |
 
 For composition diagrams, WCP handshake detail, and sequence flows, see the [integrator guide](./packages/desktop-agent/integrator-guide) and [composition reference](./packages/desktop-agent/composition).
 
@@ -74,17 +74,15 @@ The desktop agent package exposes several entry points:
 
 | Import | Purpose |
 |--------|---------|
-| `@finos/sail-desktop-agent` | Core types, `DesktopAgent`, host contracts |
-| `@finos/sail-desktop-agent/presets` | `createBrowserDesktopAgent` and other presets |
-| `@finos/sail-desktop-agent/browser` | `WCPConnector` and browser edge |
-| `@finos/sail-desktop-agent/transports` | `InMemoryTransport`, transport helpers |
+| `@finos/sail-desktop-agent` | `SailDesktopAgent`, `DesktopAgent`, host contracts, app directory types |
+| `@finos/sail-desktop-agent/browser` | Lower-level `BrowserAppConnection` and `MessagePortTransport` |
 
-## Path 1 — Preset (`createBrowserDesktopAgent`)
+## Path 1 — Browser-ready (`SailDesktopAgent`)
 
 The preset couples the **browser edge** (WCP, MessagePort per app) and **Desktop Agent** (FDC3 logic) in one process. You implement **`AppLauncher`** (iframe/window creation) and wire host shell UI through the grouped controllers on the preset handle.
 
 ```typescript
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
+import { SailDesktopAgent } from "@finos/sail-desktop-agent"
 import type { AppLauncher } from "@finos/sail-desktop-agent"
 
 const appShell = document.getElementById("app-shell")!
@@ -103,7 +101,7 @@ const appLauncher: AppLauncher = {
   },
 }
 
-const desktopAgent = createBrowserDesktopAgent({ appLauncher })
+const desktopAgent = new SailDesktopAgent({ appLauncher })
 const { intentResolver, channels, apps } = desktopAgent
 
 await apps.addDirectory("/apps.json")
@@ -126,37 +124,27 @@ apps.onDisconnect(instanceId => {
 // Edge starts with the agent — apps can await fdc3.getAgent()
 ```
 
-**FDC3 boundary:** apps use `@finos/fdc3` `getAgent()` inside iframes; host shell code uses Sail preset controllers (`intentResolver`, `channels`, `apps`).
+**FDC3 boundary:** apps use `@finos/fdc3` `getAgent()` inside iframes; host shell code uses Sail controllers (`intentResolver`, `channels`, `apps`).
 
 Copy-paste examples, unsubscribe patterns, and lifecycle teardown are in the [integrator guide](./packages/desktop-agent/integrator-guide).
 
-## Path 2 — Manual (`DesktopAgent` + connectors)
+## Path 2 — Manual (`DesktopAgent` + app connection)
 
-Use manual composition when you need a **non-default transport** (remote Desktop Agent on a server or worker), custom edge lifecycle, or you are authoring a framework on top of Sail.
+Use manual composition for handler-level tests or internal framework work. Browser hosts should use `SailDesktopAgent`; it owns the browser app connection and the required state wiring.
 
 ```typescript
 import { DesktopAgent } from "@finos/sail-desktop-agent"
-import { WCPConnector } from "@finos/sail-desktop-agent/browser"
-import { createInMemoryTransportPair } from "@finos/sail-desktop-agent/transports"
-
-const [agentTransport, edgeTransport] = createInMemoryTransportPair()
 
 const desktopAgent = new DesktopAgent({
-  transport: agentTransport,
-  appDirectories: ["/apps.json"],
+  apps: myApps,
   appLauncher: myAppLauncher,
 })
 
-const wcpConnector = new WCPConnector({
-  transport: edgeTransport,
-  appLauncher: myAppLauncher,
-})
-
-await desktopAgent.start()
-wcpConnector.start()
+desktopAgent.attachAppConnection(myAppConnection)
+desktopAgent.start()
 ```
 
-See [composition & internals](./packages/desktop-agent/composition) for the layered model and remote-DA pattern (`createWCPClient`).
+See [composition & internals](./packages/desktop-agent/composition) for the layered model.
 
 ## Host contracts — what you must provide
 
@@ -166,11 +154,11 @@ When you embed a Desktop Agent, **your web application** owns the shell UI. Sail
 |----------|-----------|---------------------|
 | **`AppLauncher`** | **Yes** | Create the iframe (or window) when FDC3 `open()` runs; set `iframe.name` to the instance id; optional `close` for FDC3 v3.0 `fdc3.close()` |
 | **App catalog** | **Yes** | `apps.addDirectory` / `apps.add` at runtime (or constructor `appDirectories` / `apps`) |
-| **Intent resolver UI** | When multiple handlers match | `intentResolver.onRequest` / `select` / `cancel` on the preset handle |
+| **Intent resolver UI** | When multiple handlers match | `intentResolver.onRequest` / `select` / `cancel` on the agent handle |
 | **Channel UI** | Recommended | `channels.getUserChannels`, `channels.changeAppChannel`, `channels.onAppChannelChange` |
 | **Instance lifecycle** | Recommended | `apps.onConnect` / `onDisconnect` / `onHandshakeFailure`; host tab close via `apps.disconnect` |
 
-FDC3 also allows **WCP3 iframe injection** for intent resolver and channel selector pages inside the app window (`wcpOptions.intentResolverUrl` / `channelSelectorUrl`). Sail and the browser preset default to host-owned UI instead. See [integrator guide — wiring intent and channel UI](./packages/desktop-agent/integrator-guide#wiring-intent-resolver-and-channel-selector-ui).
+FDC3 also allows **WCP3 iframe injection** for intent resolver and channel selector pages inside the app window (`appConnectionOptions.intentResolverUrl` / `channelSelectorUrl`). Sail defaults to host-owned UI instead. See [integrator guide — wiring intent and channel UI](./packages/desktop-agent/integrator-guide#wiring-intent-resolver-and-channel-selector-ui).
 
 ### Composition at a glance
 

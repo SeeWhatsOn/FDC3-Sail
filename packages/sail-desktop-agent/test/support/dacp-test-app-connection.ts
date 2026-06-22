@@ -11,7 +11,6 @@ import { MockTransport, type MessageRecord } from "./mock-transport"
 
 export class DacpTestAppConnection {
   private appMessageHandler?: AppMessageHandler
-  private onInstanceTeardown?: (instanceId: string) => void
   private onAgentDisconnect?: () => void
 
   /** Outbound DACP/WCP recorder (same query API as legacy Cucumber MockTransport). */
@@ -35,8 +34,8 @@ export class DacpTestAppConnection {
     this.appMessageHandler = handler
   }
 
-  setOnInstanceTeardown(handler: (instanceId: string) => void): void {
-    this.onInstanceTeardown = handler
+  setOnInstanceTeardown(_handler: (instanceId: string) => void): void {
+    // Test connections do not own instance lifecycle; tests drive cleanup explicitly.
   }
 
   /** Cucumber shutdown step — mirrors legacy transport disconnect cleanup. */

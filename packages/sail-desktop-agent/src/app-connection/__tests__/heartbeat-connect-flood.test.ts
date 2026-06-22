@@ -11,7 +11,7 @@ import {
   getActiveHeartbeatTimerCount,
   clearAllHeartbeatTimersForTesting,
 } from "../../handlers/heartbeat/runtime"
-import { createBrowserDesktopAgent } from "../../agent/create-browser-desktop-agent"
+import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import type { DesktopAgent } from "../../agent/desktop-agent"
 import { connectWcpApp, flushAsyncDelivery } from "./wcp-edge-test-helpers"
 
@@ -33,7 +33,7 @@ describe("heartbeat connect flood", () => {
   })
 
   it("does not flood heartbeatEvent to the app immediately after WCP5", async () => {
-    const agent = createBrowserDesktopAgent({
+    const agent = new SailDesktopAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       apps: [PORTFOLIO_APP],
       appConnectionOptions: {
@@ -65,7 +65,7 @@ describe("heartbeat connect flood", () => {
   })
 
   it("does not start heartbeat when heartbeatEnabled is false", async () => {
-    const agent = createBrowserDesktopAgent({
+    const agent = new SailDesktopAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       apps: [PORTFOLIO_APP],
       heartbeatEnabled: false,

@@ -20,13 +20,13 @@ The package also runs in Node.js or test harnesses for handler-level work (`Mock
 
 | Mode | When to use | Entry |
 |------|-------------|-------|
-| **Browser preset** | Default — host page runs DA + WCP edge in-tab | `createBrowserDesktopAgent` from `@finos/sail-desktop-agent/presets` |
-| **Manual composition** | Custom wiring, edge tests, framework authors | `DesktopAgent`, `WCPConnector`, `createInMemoryTransportPair` from subpath exports |
+| **Browser-ready** | Default — host page runs DA + WCP edge in-tab | `SailDesktopAgent` from `@finos/sail-desktop-agent` |
+| **Manual composition** | Handler tests or framework internals | `DesktopAgent` plus an app connection |
 
 ```text
   FDC3 Apps          Your host                 FDC3 engine (in-tab)
-  (external)    →   contracts + controllers →   createBrowserDesktopAgent()
-  fdc3.getAgent()    launcher · intentResolver     (WCP edge + DA via BrowserDaEdgeLink)
+  (external)    →   contracts + controllers →   new SailDesktopAgent()
+  fdc3.getAgent()    launcher · intentResolver     (BrowserAppConnection + DA)
                      channels · apps
 ```
 
@@ -36,11 +36,11 @@ Remote or server-hosted Desktop Agent (`createWCPClient`) is **not** a supported
 
 ```text
 packages/sail-desktop-agent/src/
-├── core/              # DesktopAgent, DACP handlers, state, app directory
+├── agent/             # DesktopAgent, SailDesktopAgent, config
 ├── host-contracts/    # AppLauncher, IntentResolver, ChannelControl, …
-├── app-connection/    # WCPConnector, MessagePortTransport, BrowserDaEdgeLink, WCP protocol
-├── transports/        # InMemoryTransport, MockTransport (tests)
-└── presets/           # createBrowserDesktopAgent and related factories
+├── app-connection/    # BrowserAppConnection, MessagePortTransport, WCP protocol
+├── handlers/          # DACP dispatch and request handlers
+└── state/             # AgentState selectors and mutators
 ```
 
 ## Documentation map
@@ -48,15 +48,15 @@ packages/sail-desktop-agent/src/
 | Doc | Purpose |
 |-----|---------|
 | [Add your app to Sail](../../add-your-app) | App developer onboarding — `@finos/fdc3`, app directory metadata, contexts and intents |
-| [Getting started](../../getting-started) | Adoption paths — browser preset, host contracts, `@finos/fdc3` |
-| [Integrator guide](./integrator-guide) | **Deep reference** — host contracts, browser-first preset, WCP/DACP detail, [heartbeat config](./integrator-guide#heartbeat-and-liveness-configuration) |
-| [Composition & internals](./composition) | Diagrams — how edge, DA, transports, and host contracts interact |
+| [Getting started](../../getting-started) | Adoption paths — browser-ready agent, host contracts, `@finos/fdc3` |
+| [Integrator guide](./integrator-guide) | **Deep reference** — host contracts, browser-first agent, WCP/DACP detail, [heartbeat config](./integrator-guide#heartbeat-and-liveness-configuration) |
+| [Composition & internals](./composition) | Diagrams — how edge, DA, and host contracts interact |
 | [Conformance traceability](./conformance) | BDD `@conformance2.2` coverage vs FINOS toolbox oracle |
 
 ## Quick start
 
 ```typescript
-import { createBrowserDesktopAgent } from "@finos/sail-desktop-agent/presets"
+import { SailDesktopAgent } from "@finos/sail-desktop-agent"
 import type { AppLauncher } from "@finos/sail-desktop-agent"
 
 const appLauncher: AppLauncher = {
@@ -67,7 +67,7 @@ const appLauncher: AppLauncher = {
   },
 }
 
-const desktopAgent = createBrowserDesktopAgent({ appLauncher })
+const desktopAgent = new SailDesktopAgent({ appLauncher })
 
 const { intentResolver, channels, apps } = desktopAgent
 await apps.addDirectory("/apps.json")
@@ -79,16 +79,15 @@ apps.onConnect(/* tab / tile lifecycle */)
 // Auto-started by default — iframe apps can await fdc3.getAgent()
 ```
 
-Returns a single `DesktopAgent` with grouped host controllers (`intentResolver`, `channels`, `apps`); the browser edge starts and stops with `desktopAgent.start()` / `desktopAgent.stop()`. Prefer `intentResolver` over the transitional `intentResolverUI` alias.
+Returns a single `SailDesktopAgent` with grouped host controllers (`intentResolver`, `channels`, `apps`); the browser edge starts and stops with `desktopAgent.start()` / `desktopAgent.stop()`.
 
 See the [integrator guide](./integrator-guide) for intent resolution, channel chrome, runtime catalog registration, and lifecycle.
 
 ## Subpath exports
 
 ```typescript
-import { DesktopAgent } from "@finos/sail-desktop-agent"
-import { createBrowserDesktopAgent, createBrowserHostControllers, getBrowserDesktopAgentSession } from "@finos/sail-desktop-agent/presets"
-import { createInMemoryTransportPair } from "@finos/sail-desktop-agent/transports"
+import { DesktopAgent, SailDesktopAgent } from "@finos/sail-desktop-agent"
+import { BrowserAppConnection, MessagePortTransport } from "@finos/sail-desktop-agent/browser"
 ```
 
-Application code should prefer `@finos/sail-desktop-agent/presets` for factories. Use `createBrowserHostControllers` when composing `DesktopAgent` + `WCPConnector` manually. Use `/browser` for tree-shaking when you only need `WCPConnector` or `MessagePortTransport`; link DA and edge with `createInMemoryTransportPair` from `/transports`. The preset couples DA and edge internally via `BrowserDaEdgeLink` — that module is not a public export.
+Application code should prefer `SailDesktopAgent`. Use `/browser` only when you need lower-level browser app-connection primitives such as `BrowserAppConnection` or `MessagePortTransport`.

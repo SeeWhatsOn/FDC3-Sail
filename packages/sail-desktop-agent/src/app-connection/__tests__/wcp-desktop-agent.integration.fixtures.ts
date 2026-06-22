@@ -1,7 +1,7 @@
 import type { AppLauncher } from "../../host-contracts/app-launcher"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
-import { createBrowserDesktopAgent } from "../../agent/create-browser-desktop-agent"
-import type { BrowserDesktopAgentOptions } from "../../agent/create-browser-desktop-agent"
+import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
+import type { SailDesktopAgentOptions } from "../../agent/sail-desktop-agent"
 import type { DesktopAgent } from "../../agent/desktop-agent"
 
 export const CHANNEL_ID = "fdc3.channel.1"
@@ -22,7 +22,7 @@ export const CHART_APP = {
 }
 
 export type TestAgentOptions = Pick<
-  BrowserDesktopAgentOptions,
+  SailDesktopAgentOptions,
   | "appLauncher"
   | "heartbeatEnabled"
   | "heartbeatIntervalMs"
@@ -34,7 +34,7 @@ export type TestAgentOptions = Pick<
 }
 
 export function createTestAgent(options?: TestAgentOptions): DesktopAgent {
-  const agent = createBrowserDesktopAgent({
+  const agent = new SailDesktopAgent({
     userChannels: DEFAULT_FDC3_USER_CHANNELS,
     apps: [PORTFOLIO_APP, CHART_APP],
     appLauncher: options?.appLauncher,

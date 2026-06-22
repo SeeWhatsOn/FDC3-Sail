@@ -1,17 +1,15 @@
 /**
- * Browser Desktop Agent factory lifecycle tests.
+ * SailDesktopAgent lifecycle tests.
  *
- * Verifies in-memory transport teardown on stop and that a fresh factory
- * instance can complete WCP handshake without stale transport state.
+ * Verifies browser WCP teardown on stop and that a fresh instance can complete
+ * handshake without stale connection state.
  *
  * @vitest-environment jsdom
  */
 
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import { createBrowserDesktopAgent } from "../agent/create-browser-desktop-agent"
-import type { DesktopAgent } from "../agent/desktop-agent"
-import { getBrowserDesktopAgentSession } from "../agent/browser-session"
+import { SailDesktopAgent } from "../agent/sail-desktop-agent"
 
 function createWCP1Hello(connectionAttemptUuid: string): BrowserTypes.WebConnectionProtocol1Hello {
   const message = {
@@ -58,8 +56,8 @@ async function expectWCP3Handshake(connectionAttemptUuid: string): Promise<void>
   postMessageSpy.mockRestore()
 }
 
-describe("createBrowserDesktopAgent lifecycle", () => {
-  const activeAgents: DesktopAgent[] = []
+describe("SailDesktopAgent lifecycle", () => {
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     for (const agent of activeAgents.splice(0)) {
@@ -68,7 +66,7 @@ describe("createBrowserDesktopAgent lifecycle", () => {
   })
 
   it("completes WCP handshake after a previous agent was started and stopped", async () => {
-    const firstAgent = createBrowserDesktopAgent({
+    const firstAgent = new SailDesktopAgent({
       autoStart: false,
       appConnectionOptions: {
         getIntentResolverUrl: () => false,
@@ -81,7 +79,7 @@ describe("createBrowserDesktopAgent lifecycle", () => {
     firstAgent.start()
     firstAgent.stop()
 
-    const secondAgent = createBrowserDesktopAgent({
+    const secondAgent = new SailDesktopAgent({
       autoStart: false,
       appConnectionOptions: {
         getIntentResolverUrl: () => false,
@@ -94,29 +92,23 @@ describe("createBrowserDesktopAgent lifecycle", () => {
     secondAgent.start()
 
     await expectWCP3Handshake("reuse-after-stop-uuid")
-    expect(
-      getBrowserDesktopAgentSession(secondAgent).browserAppConnection.getConnections(),
-    ).toHaveLength(1)
+    expect(secondAgent.connector.getConnections()).toHaveLength(1)
   })
 
-  it("allows stop then start on a new factory instance without stale in-memory transport", async () => {
-    const sessionOne = createBrowserDesktopAgent({ autoStart: false })
+  it("allows stop then start on a new instance without stale in-memory transport", async () => {
+    const sessionOne = new SailDesktopAgent({ autoStart: false })
     activeAgents.push(sessionOne)
     sessionOne.start()
     sessionOne.stop()
 
-    const sessionTwo = createBrowserDesktopAgent({ autoStart: false })
+    const sessionTwo = new SailDesktopAgent({ autoStart: false })
     activeAgents.push(sessionTwo)
     sessionTwo.start()
 
     await expectWCP3Handshake("fresh-pair-uuid")
 
-    expect(getBrowserDesktopAgentSession(sessionOne).browserAppConnection.getIsStarted()).toBe(
-      false,
-    )
-    expect(getBrowserDesktopAgentSession(sessionTwo).browserAppConnection.getIsStarted()).toBe(true)
-    expect(
-      getBrowserDesktopAgentSession(sessionTwo).browserAppConnection.getConnections(),
-    ).toHaveLength(1)
+    expect(sessionOne.connector.getIsStarted()).toBe(false)
+    expect(sessionTwo.connector.getIsStarted()).toBe(true)
+    expect(sessionTwo.connector.getConnections()).toHaveLength(1)
   })
 })

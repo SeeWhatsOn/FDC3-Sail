@@ -1,10 +1,11 @@
-import type { Transport } from "@finos/sail-desktop-agent"
 import type { DesktopAgent } from "@finos/sail-desktop-agent"
+import type { SailDesktopAgent } from "@finos/sail-desktop-agent"
 
 type DesktopAgentInternals = {
   handleMessage: (message: unknown) => Promise<void>
-  transport: Transport
 }
+
+type BrowserDesktopAgentWithConnector = DesktopAgent & Pick<SailDesktopAgent, "connector">
 
 function isWcp4ValidateAppIdentity(message: unknown): boolean {
   return (
@@ -36,12 +37,12 @@ function extractWcp4AllowlistContext(message: unknown): {
 }
 
 function sendWcp5IdentityFailure(
-  transport: Transport,
+  desktopAgent: BrowserDesktopAgentWithConnector,
   instanceId: string,
   connectionAttemptUuid: string,
   errorMessage: string,
 ): void {
-  transport.send({
+  desktopAgent.connector.connectionRegistry.sendToAppInstance({
     type: "WCP5ValidateAppIdentityFailedResponse",
     payload: { message: errorMessage },
     meta: {
@@ -60,7 +61,7 @@ function sendWcp5IdentityFailure(
  * When `allowedOrigins` is undefined, no additional check is applied.
  */
 export function wireWcp4OriginAllowlist(
-  desktopAgent: DesktopAgent,
+  desktopAgent: BrowserDesktopAgentWithConnector,
   allowedOrigins: readonly string[],
   debug?: boolean,
 ): void {
@@ -86,7 +87,7 @@ export function wireWcp4OriginAllowlist(
           }
 
           sendWcp5IdentityFailure(
-            agent.transport,
+            desktopAgent,
             instanceId,
             resolvedConnectionAttemptUuid,
             `Origin "${messageOrigin}" is not allowed`,

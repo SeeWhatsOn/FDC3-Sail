@@ -21,9 +21,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import type { DesktopAgent } from "../../agent/desktop-agent"
 
 import { BrowserAppConnection } from "../../app-connection/browser-app-connection"
-import type { AgentAppConnection } from "../../app-connection/types"
-
-import { getBrowserDesktopAgentSession } from "../../agent/browser-session"
+import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 
 import {
   createMessageEvent,
@@ -50,7 +48,7 @@ export type DaOwnedAppConnectionSurface = {
 }
 
 function getBrowserAppConnection(agent: DesktopAgent): BrowserAppConnection | undefined {
-  const connection = (agent as unknown as { appConnection?: AgentAppConnection }).appConnection
+  const connection = (agent as Partial<SailDesktopAgent>).connector
   return connection instanceof BrowserAppConnection ? connection : undefined
 }
 
@@ -64,10 +62,6 @@ export function assertCollapsedBrowserArchitecture(agent: DesktopAgent): void {
   const browserAppConnection = getBrowserAppConnection(agent)
 
   expect(browserAppConnection).toBeInstanceOf(BrowserAppConnection)
-
-  expect(() => getBrowserDesktopAgentSession(agent)).toThrow(
-    /does not expose a separate WCP connector session/i,
-  )
 }
 
 /**
