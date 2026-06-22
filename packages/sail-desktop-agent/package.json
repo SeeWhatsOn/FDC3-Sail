@@ -21,7 +21,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "vp pack",
-    "dev": "vp pack --watch",
+    "dev": "vp pack --watch --no-clean",
     "typecheck": "tsc",
     "lint": "vp lint .",
     "lint:fix": "vp lint . --fix",
