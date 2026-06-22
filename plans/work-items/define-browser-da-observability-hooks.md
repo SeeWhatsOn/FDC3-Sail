@@ -22,8 +22,7 @@ pr_url: ""
 merged_pr: ""
 external_tracker: ""
 tags:
-  - desktop-agent
-  - observability
+  - api
 ---
 
 ## Goal
@@ -69,7 +68,7 @@ Use focused unit tests for hook invocation if runtime hooks are implemented. Do 
 
 ## Blocked decisions
 
-- Depends on `simplify-dacp-handler-response-plumbing` so hooks attach to the final command/event shape rather than obsolete transport plumbing.
+None — `DacpResponseDispatcher` delivered (BFDA-03, 2026-06-21).
 
 ## Loop history
 

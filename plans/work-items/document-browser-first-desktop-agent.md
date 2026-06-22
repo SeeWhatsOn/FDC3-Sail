@@ -19,9 +19,7 @@ branch: cursor/document-browser-first-desktop-agent
 pr_url: ""
 merged_pr: ""
 external_tracker: ""
-tags:
-  - docs
-  - desktop-agent
+tags: []
 ---
 
 ## Goal
@@ -67,7 +65,7 @@ Docs-only: no executable RED phase. Use human review and, if useful, `npm run do
 
 ## Blocked decisions
 
-- Depends on `simplify-browser-desktop-agent-preset` for whether `createWCPClient` is deleted, moved, or described as deferred.
+None — `createWCPClient` removed from presets (BFDA-02 delivered 2026-06-21).
 
 ## Loop history
 
