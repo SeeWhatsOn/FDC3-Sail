@@ -11,10 +11,6 @@ export const Panels = {
         style={{
           height: "100%",
           overflow: "auto",
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
         }}
       >
         <AppDirectory panelProps={props} />

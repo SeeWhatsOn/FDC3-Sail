@@ -6,13 +6,12 @@ import "./controls.css"
 
 const AddPanelButton = (props: IDockviewHeaderActionsProps) => {
   const handleAddPanel = () => {
-    const uniqueId = window.crypto.randomUUID()
     const timestamp = Date.now().toString()
 
     props.containerApi.addPanel({
       id: `id_${timestamp}`,
       component: "default",
-      title: `Tab ${uniqueId}`,
+      title: "New Tab",
       position: {
         referenceGroup: props.group,
       },

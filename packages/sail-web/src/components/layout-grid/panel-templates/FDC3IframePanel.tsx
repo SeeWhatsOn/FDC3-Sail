@@ -1,7 +1,8 @@
 import { useEffect } from "react"
 import type { IDockviewPanelProps } from "dockview"
 
-import { useConnectionStore } from "../../../contexts"
+import { useSailDesktopAgent, useConnectionStore } from "../../../contexts"
+import { FDC3_PANEL_RENDERER } from "../dockview-options"
 
 /**
  * FDC3 Iframe Panel Component
@@ -43,14 +44,17 @@ interface FDC3PanelProps extends IDockviewPanelProps {
 }
 
 export const FDC3Panel = ({ api, panel }: FDC3PanelProps) => {
+  const agent = useSailDesktopAgent()
   const { registerPanel } = useConnectionStore()
 
   console.log(`[FDC3Panel] Rendering panel: ${panel.panelId} with URL: ${panel.url}`)
 
-  // Register this panel with the connection store on mount
+  // Pre-register host instance id and panel mapping before WCP4 / iframe load.
   useEffect(() => {
+    api.setRenderer(FDC3_PANEL_RENDERER)
+    agent.registerPendingHostInstance({ appId: panel.appId, instanceId: panel.panelId })
     registerPanel(panel.panelId, panel.appId)
-  }, [registerPanel, panel.panelId, panel.appId])
+  }, [agent, api, registerPanel, panel.panelId, panel.appId])
 
   // Update panel title (channel indicator removed from title for now)
   useEffect(() => {

@@ -26,8 +26,73 @@ interface ConnectionState {
   connections: Map<string, Connection>
   // Map from panelId to instanceId for quick lookup
   panelToConnection: Map<string, string>
-  // Track panels waiting for connections (for cross-origin iframes where panelId is undefined)
   waitingPanels: Map<string, { panelId: string; appId: string }>
+}
+
+/**
+ * Window references must not enter Immer/Zustand drafts — Immer traverses objects and
+ * triggers cross-origin SecurityError on iframe Window proxies.
+ */
+const instanceIdBySourceWindow = new WeakMap<Window, string>()
+
+function rememberConnectionSource(source: Window, instanceId: string): void {
+  instanceIdBySourceWindow.set(source, instanceId)
+}
+
+function getPanelIframeWindow(panelId: string): Window | null {
+  if (typeof document === "undefined") {
+    return null
+  }
+  const iframe = document.querySelector(`iframe[name="${CSS.escape(panelId)}"]`)
+  return iframe instanceof HTMLIFrameElement ? iframe.contentWindow : null
+}
+
+function findWaitingPanelForSource(
+  waitingPanels: Map<string, { panelId: string; appId: string }>,
+  source: Window,
+  appId: string,
+): { panelId: string; appId: string } | undefined {
+  for (const waiting of waitingPanels.values()) {
+    if (waiting.appId !== appId) {
+      continue
+    }
+    if (getPanelIframeWindow(waiting.panelId) === source) {
+      return waiting
+    }
+  }
+  return undefined
+}
+
+function findUnlinkedConnectionForPanel(
+  connections: Map<string, Connection>,
+  panelId: string,
+): Connection | undefined {
+  const iframeWindow = getPanelIframeWindow(panelId)
+  if (!iframeWindow) {
+    return undefined
+  }
+
+  const instanceId = instanceIdBySourceWindow.get(iframeWindow)
+  if (!instanceId) {
+    return undefined
+  }
+
+  const connection = connections.get(instanceId)
+  if (!connection || connection.panelId) {
+    return undefined
+  }
+
+  return connection
+}
+
+function linkConnectionToPanel(
+  state: ConnectionState,
+  connection: Connection,
+  panelId: string,
+): void {
+  connection.panelId = panelId
+  state.panelToConnection.set(panelId, connection.instanceId)
+  state.waitingPanels.delete(panelId)
 }
 
 interface ConnectionActions {
@@ -67,32 +132,23 @@ export const createConnectionStore = (agent: SailDesktopAgent) => {
 
       registerPanel: (panelId: string, appId: string) =>
         set(state => {
-          // When a panel is registered, check if there's already a connection with this panelId
-          // The panelId is extracted from the iframe's name attribute during WCP handshake
-          // However, for cross-origin iframes, panelId may be undefined, so we also check by appId
           for (const connection of state.connections.values()) {
             if (connection.panelId === panelId) {
-              // Connection already linked to this panel - update the reverse mapping
               state.panelToConnection.set(panelId, connection.instanceId)
-              state.waitingPanels.delete(panelId) // Remove from waiting if it was there
-              return
-            }
-            // For cross-origin iframes, panelId may be undefined in the connection
-            // Try to match by appId if the connection doesn't have a panelId yet
-            // WARNING: This could match the wrong connection if multiple instances of the same app exist
-            if (!connection.panelId && connection.appId === appId) {
-              // Link this connection to the panel
-              connection.panelId = panelId
-              state.panelToConnection.set(panelId, connection.instanceId)
-              state.waitingPanels.delete(panelId) // Remove from waiting
-              console.log(
-                `[ConnectionStore] Panel ${panelId} linked to connection ${connection.instanceId} (cross-origin match by appId)`,
-              )
+              state.waitingPanels.delete(panelId)
               return
             }
           }
-          // Connection not yet established - store as waiting panel
-          // It will be linked when appConnected fires (for cross-origin iframes)
+
+          const connectionByWindow = findUnlinkedConnectionForPanel(state.connections, panelId)
+          if (connectionByWindow) {
+            linkConnectionToPanel(state, connectionByWindow, panelId)
+            console.log(
+              `[ConnectionStore] Panel ${panelId} linked to connection ${connectionByWindow.instanceId} (iframe window match)`,
+            )
+            return
+          }
+
           state.waitingPanels.set(panelId, { panelId, appId })
         }),
 
@@ -118,6 +174,8 @@ export const createConnectionStore = (agent: SailDesktopAgent) => {
   const { apps, channels } = agent
 
   apps.onConnect((metadata: AppConnectionMetadata) => {
+    rememberConnectionSource(metadata.source, metadata.instanceId)
+
     store.setState(state => {
       const connection: Connection = {
         instanceId: metadata.instanceId,
@@ -131,18 +189,26 @@ export const createConnectionStore = (agent: SailDesktopAgent) => {
       if (metadata.hostIdentifier) {
         state.panelToConnection.set(metadata.hostIdentifier, metadata.instanceId)
         state.waitingPanels.delete(metadata.hostIdentifier)
-      } else {
-        const waitingPanel = Array.from(state.waitingPanels.values()).find(
-          wp => wp.appId === metadata.appId,
+        return
+      }
+
+      if (state.waitingPanels.has(metadata.instanceId)) {
+        linkConnectionToPanel(state, connection, metadata.instanceId)
+        console.log(
+          `[ConnectionStore] Linked connection ${metadata.instanceId} to pre-registered panel`,
         )
-        if (waitingPanel) {
-          connection.panelId = waitingPanel.panelId
-          state.panelToConnection.set(waitingPanel.panelId, metadata.instanceId)
-          state.waitingPanels.delete(waitingPanel.panelId)
-          console.log(
-            `[ConnectionStore] Linked connection ${metadata.instanceId} to waiting panel ${waitingPanel.panelId} (cross-origin)`,
-          )
-        }
+        return
+      }
+
+      const waitingPanel =
+        findWaitingPanelForSource(state.waitingPanels, metadata.source, metadata.appId) ??
+        Array.from(state.waitingPanels.values()).find(wp => wp.appId === metadata.appId)
+
+      if (waitingPanel) {
+        linkConnectionToPanel(state, connection, waitingPanel.panelId)
+        console.log(
+          `[ConnectionStore] Linked connection ${metadata.instanceId} to waiting panel ${waitingPanel.panelId}`,
+        )
       }
     })
   })

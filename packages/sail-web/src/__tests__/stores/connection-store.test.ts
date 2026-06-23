@@ -87,6 +87,55 @@ function createAppConnectedMetadata(
   }
 }
 
+describe("ConnectionStore panel linking", () => {
+  it("links waiting panels by iframe source window when multiple tabs share the same appId", () => {
+    const host = createMockHostControllers()
+    const agent = {
+      apps: host.apps,
+      channels: host.channels,
+    } as unknown as SailDesktopAgent
+    const store = createConnectionStore(agent)
+
+    const panelOne = "pms-1"
+    const panelTwo = "pms-2"
+    const sourceOne = { id: "source-one" } as unknown as Window
+    const sourceTwo = { id: "source-two" } as unknown as Window
+
+    const querySpy = vi.spyOn(document, "querySelector").mockImplementation(selector => {
+      if (selector === `iframe[name="${panelOne}"]`) {
+        return { contentWindow: sourceOne } as HTMLIFrameElement
+      }
+      if (selector === `iframe[name="${panelTwo}"]`) {
+        return { contentWindow: sourceTwo } as HTMLIFrameElement
+      }
+      return null
+    })
+
+    store.getState().registerPanel(panelOne, APP_ID)
+    store.getState().registerPanel(panelTwo, APP_ID)
+
+    host.apps.emitConnect(
+      createAppConnectedMetadata({
+        instanceId: "instance-two",
+        hostIdentifier: undefined,
+        source: sourceTwo,
+      }),
+    )
+    host.apps.emitConnect(
+      createAppConnectedMetadata({
+        instanceId: "instance-one",
+        hostIdentifier: undefined,
+        source: sourceOne,
+      }),
+    )
+
+    expect(store.getState().getConnectionByPanelId(panelTwo)?.instanceId).toBe("instance-two")
+    expect(store.getState().getConnectionByPanelId(panelOne)?.instanceId).toBe("instance-one")
+
+    querySpy.mockRestore()
+  })
+})
+
 describe("ConnectionStore channel membership", () => {
   it("updates connection channelId when channels controller emits onAppChannelChange", () => {
     const host = createMockHostControllers()
@@ -142,7 +191,7 @@ describe("Channel UI source audit", () => {
   it("connection-store and ChannelSelector do not read DesktopAgent getState for channels", () => {
     expect(connectionStoreSource).not.toMatch(/getState\s*\(/)
     expect(channelSelectorSource).not.toMatch(/getState\s*\(/)
-    expect(channelSelectorSource).toMatch(/getConnection/)
+    expect(channelSelectorSource).toMatch(/connections\.get/)
     expect(channelSelectorSource).toMatch(/channels\.changeAppChannel/)
     expect(connectionStoreSource).not.toMatch(/agent\.connector/)
   })

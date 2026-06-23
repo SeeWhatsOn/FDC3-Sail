@@ -10,6 +10,7 @@ import { useWorkspaceStore } from "../../stores/workspace-store"
 import type { DirectoryApp, WebAppDetails } from "../../types/common"
 
 import { ChooseAppIcon } from "./ChooseAppIcon"
+import { FDC3_PANEL_RENDERER } from "../layout-grid/dockview-options"
 
 interface AppCardProps {
   app: DirectoryApp
@@ -165,6 +166,7 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
         tabComponent: "fdc3Tab",
         title: instanceTitle,
         params: { panel: fdc3Panel },
+        renderer: FDC3_PANEL_RENDERER,
         position: {
           referenceGroup: currentGroup,
         },

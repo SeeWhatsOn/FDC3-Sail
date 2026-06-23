@@ -6,6 +6,7 @@ import { useWorkspaceStore } from "../../stores/workspace-store"
 import { useConnectionStore, useSailDesktopAgent } from "../../contexts"
 
 import type { FDC3AppPanel } from "./panel-templates/FDC3IframePanel"
+import { FDC3_PANEL_RENDERER, isFdc3PanelParams } from "./dockview-options"
 import { LeftControls, PrefixToolbarControls, RightControls } from "./toolbar/controls/index"
 import { Panels } from "./Panels"
 import type { DockviewSailProps } from "./types"
@@ -96,6 +97,12 @@ const Layout = (props: DockviewSailProps) => {
       // The layout state comes from Dockview's toJSON() which returns SerializedDockview
       // We store it as any in the store, so we need to cast it back
       api.current.fromJSON(savedLayoutState as Parameters<typeof api.current.fromJSON>[0])
+
+      api.current.panels.forEach(panel => {
+        if (isFdc3PanelParams(panel.params)) {
+          panel.api.setRenderer(FDC3_PANEL_RENDERER)
+        }
+      })
 
       // Use setTimeout to allow layout change events to settle before re-enabling saves
       setTimeout(() => {
@@ -277,13 +284,7 @@ const Layout = (props: DockviewSailProps) => {
             tabComponent: "fdc3Tab",
             title: panel.title,
             params: { panel: fdc3Panel },
-            // Use 'always' renderer to prevent iframe reload when panel is moved in DOM.
-            // According to dockview docs: "Re-parenting an iFrame will reload the contents
-            // of the iFrame or the rephrase this, moving an iFrame within the DOM will
-            // cause a reload of its contents." This prevents zombie instances caused by
-            // iframe reloads triggering disconnects/reconnects.
-            // See: https://dockview.dev/docs/advanced/iframe/
-            renderer: "always",
+            renderer: FDC3_PANEL_RENDERER,
           })
 
           setMountedPanels(prev => new Map(prev).set(panel.panelId, fdc3Panel))
@@ -321,6 +322,7 @@ const Layout = (props: DockviewSailProps) => {
         rightHeaderActionsComponent={RightControls}
         leftHeaderActionsComponent={LeftControls}
         prefixHeaderActionsComponent={PrefixToolbarControls}
+        defaultRenderer={FDC3_PANEL_RENDERER}
         onReady={onReady}
         className={props.theme || "dockview-theme-abyss"}
         watermarkComponent={WatermarkPanel}

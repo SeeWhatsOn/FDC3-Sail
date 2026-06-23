@@ -20,7 +20,7 @@ export function ChannelSelector({ instanceId }: ChannelSelectorProps) {
   agentRef.current = agent
 
   // Subscribe to connection-store push updates (channelChanged) — not agent state snapshots.
-  const connection = useConnectionStore(state => state.getConnection(instanceId))
+  const connection = useConnectionStore(state => state.connections.get(instanceId))
   const currentChannelId = connection?.channelId ?? null
 
   const channels = useMemo<BrowserTypes.Channel[]>(() => {
@@ -41,6 +41,11 @@ export function ChannelSelector({ instanceId }: ChannelSelectorProps) {
       setIsOpen(false)
     }
   }, [connection])
+
+  useEffect(() => {
+    setIsOpen(false)
+    setError(null)
+  }, [instanceId])
 
   const handleSelectChannel = (channelId: string | null) => {
     void (async () => {
