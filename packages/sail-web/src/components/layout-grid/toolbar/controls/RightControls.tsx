@@ -93,7 +93,7 @@ const ChannelSelectorButton = ({ activePanelId }: { activePanelId?: string }) =>
   const connection = connectionStore.getConnectionByPanelId(activePanelId)
 
   if (!connection) {
-    return <div className="w-4 h-4 rounded-full bg-gray-200 animate-pulse" />
+    return <div className="size-3 rounded-full bg-muted animate-pulse" />
   }
 
   return <ChannelSelector instanceId={connection.instanceId} />

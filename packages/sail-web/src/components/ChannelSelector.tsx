@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { BrowserTypes } from "@finos/fdc3"
-import { useStore, type StoreApi } from "zustand"
 
 import { useSailDesktopAgent, useConnectionStore } from "../contexts"
-import type { ConnectionStore } from "../stores/connection-store"
+import { ChannelMenu } from "./channel-selector/ChannelMenu"
+
+import "./layout-grid/toolbar/controls/controls.css"
 
 interface ChannelSelectorProps {
   instanceId: string
@@ -18,10 +19,8 @@ export function ChannelSelector({ instanceId }: ChannelSelectorProps) {
   const agentRef = useRef(agent)
   agentRef.current = agent
 
-  const connectionStore = useConnectionStore()
-  const storeApi = connectionStore as unknown as StoreApi<ConnectionStore>
   // Subscribe to connection-store push updates (channelChanged) — not agent state snapshots.
-  const connection = useStore(storeApi, state => state.getConnection(instanceId))
+  const connection = useConnectionStore(state => state.getConnection(instanceId))
   const currentChannelId = connection?.channelId ?? null
 
   const channels = useMemo<BrowserTypes.Channel[]>(() => {
@@ -35,7 +34,7 @@ export function ChannelSelector({ instanceId }: ChannelSelectorProps) {
   }, [])
 
   const currentChannel = channels.find(channel => channel.id === currentChannelId)
-  const currentColor = currentChannel?.displayMetadata?.color ?? "#808080"
+  const currentColor = currentChannel?.displayMetadata?.color ?? "var(--muted-foreground)"
 
   useEffect(() => {
     if (!connection) {
@@ -43,91 +42,56 @@ export function ChannelSelector({ instanceId }: ChannelSelectorProps) {
     }
   }, [connection])
 
-  const handleSelectChannel = async (channelId: string | null) => {
-    setIsLoading(true)
-    setError(null)
+  const handleSelectChannel = (channelId: string | null) => {
+    void (async () => {
+      setIsLoading(true)
+      setError(null)
 
-    try {
-      // channels.changeAppChannel resolves after onAppChannelChange push; store updates via apps/channels subscriptions.
-      await agentRef.current.channels.changeAppChannel(instanceId, channelId)
-      setIsOpen(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to change channel")
-    } finally {
-      setIsLoading(false)
-    }
+      try {
+        // channels.changeAppChannel resolves after onAppChannelChange push; store updates via apps/channels subscriptions.
+        await agentRef.current.channels.changeAppChannel(instanceId, channelId)
+        setIsOpen(false)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to change channel")
+      } finally {
+        setIsLoading(false)
+      }
+    })()
   }
 
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Escape") {
-      setIsOpen(false)
-    }
-  }
+  const channelLabel = currentChannel?.displayMetadata?.name ?? "No channel"
+
+  const trigger = (
+    <button
+      type="button"
+      className="icon-button relative flex items-center justify-center disabled:opacity-50"
+      disabled={isLoading}
+      title={channelLabel}
+      aria-label={channelLabel}
+      aria-haspopup="menu"
+    >
+      <span
+        className="size-3 rounded-full border border-border"
+        style={{ backgroundColor: currentColor }}
+      />
+      {isLoading && (
+        <span className="absolute inset-0 flex items-center justify-center">
+          <span className="size-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </span>
+      )}
+    </button>
+  )
 
   return (
-    <div className="relative" onKeyDown={handleKeyDown}>
-      <button
-        onClick={() => setIsOpen(prev => !prev)}
-        disabled={isLoading}
-        className="relative w-4 h-4 rounded-full border-2 border-white shadow-sm"
-        style={{ backgroundColor: currentColor }}
-        title={currentChannel?.displayMetadata?.name ?? "No channel"}
-        aria-label={currentChannel?.displayMetadata?.name ?? "No channel"}
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-      >
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-      </button>
-
-      {isOpen && (
-        <div
-          className="absolute top-6 right-0 bg-white rounded-lg shadow-lg p-2 z-50 min-w-[140px]"
-          role="menu"
-        >
-          <button
-            onClick={() => void handleSelectChannel(null)}
-            className={`flex items-center gap-2 w-full px-2 py-1 rounded hover:bg-gray-100 ${
-              currentChannelId === null ? "bg-gray-100" : ""
-            }`}
-            role="menuitem"
-          >
-            <div className="w-3 h-3 rounded-full bg-gray-400 border border-gray-300" />
-            <span className="text-sm">No channel</span>
-          </button>
-
-          {channels.map(channel => (
-            <button
-              key={channel.id}
-              onClick={() => void handleSelectChannel(channel.id)}
-              className={`flex items-center gap-2 w-full px-2 py-1 rounded hover:bg-gray-100 ${
-                currentChannelId === channel.id ? "bg-gray-100" : ""
-              }`}
-              role="menuitem"
-            >
-              <div
-                className="w-3 h-3 rounded-full border border-gray-300"
-                style={{ backgroundColor: channel.displayMetadata?.color ?? "#808080" }}
-              />
-              <span className="text-sm">{channel.displayMetadata?.name ?? channel.id}</span>
-            </button>
-          ))}
-
-          {error && (
-            <div className="text-red-500 text-xs mt-2 px-2">
-              {error}
-              <button onClick={() => setError(null)} className="ml-2 underline">
-                Dismiss
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {isOpen && <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />}
-    </div>
+    <ChannelMenu
+      trigger={trigger}
+      channels={channels}
+      selectedChannelId={currentChannelId}
+      onChannelSelect={handleSelectChannel}
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      error={error}
+      onDismissError={() => setError(null)}
+    />
   )
 }

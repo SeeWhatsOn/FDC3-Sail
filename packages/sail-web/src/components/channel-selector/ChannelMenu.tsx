@@ -1,56 +1,45 @@
-import { useState, useMemo } from "react"
+import type { ReactNode } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@finos/sail-ui"
 import { Check, Circle, X } from "lucide-react"
+import type { BrowserTypes } from "@finos/fdc3"
 
-import { useSailDesktopAgent } from "../../contexts"
-
-interface Channel {
-  id: string
-  type: string
-  displayMetadata?: {
-    name?: string
-    color?: string
-    glyph?: string
-  }
-}
-
-interface ChannelMenuProps {
-  trigger: React.ReactNode
+export interface ChannelMenuProps {
+  trigger: ReactNode
+  channels: BrowserTypes.Channel[]
   selectedChannelId?: string | null
   onChannelSelect?: (channelId: string | null) => void
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  error?: string | null
+  onDismissError?: () => void
 }
 
-export const ChannelMenu = ({ trigger, selectedChannelId, onChannelSelect }: ChannelMenuProps) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const agent = useSailDesktopAgent()
-
-  // Get user channels from the Desktop Agent
-  const channels = useMemo<Channel[]>(() => {
-    try {
-      return agent.channels.getUserChannels()
-    } catch (error) {
-      console.error("[ChannelMenu] Failed to get user channels:", error)
-      return []
-    }
-  }, [agent])
-
+export function ChannelMenu({
+  trigger,
+  channels,
+  selectedChannelId,
+  onChannelSelect,
+  open,
+  onOpenChange,
+  error,
+  onDismissError,
+}: ChannelMenuProps) {
   const handleChannelClick = (channelId: string) => {
     if (selectedChannelId === channelId) {
-      // Clicking selected channel deselects it (leave channel)
       onChannelSelect?.(null)
     } else {
       onChannelSelect?.(channelId)
     }
-    setIsOpen(false)
+    onOpenChange?.(false)
   }
 
   const handleLeaveChannel = () => {
     onChannelSelect?.(null)
-    setIsOpen(false)
+    onOpenChange?.(false)
   }
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-48 p-2" align="end">
         <div className="flex flex-col gap-1">
@@ -63,11 +52,17 @@ export const ChannelMenu = ({ trigger, selectedChannelId, onChannelSelect }: Cha
             return (
               <button
                 key={channel.id}
+                type="button"
                 onClick={() => handleChannelClick(channel.id)}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors
-                  ${isSelected ? "bg-accent" : "hover:bg-accent/50"}`}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
+                  isSelected ? "bg-accent" : "hover:bg-accent/50"
+                }`}
               >
-                {color && <Circle className="size-3" style={{ fill: color, stroke: color }} />}
+                {color ? (
+                  <Circle className="size-3" style={{ fill: color, stroke: color }} />
+                ) : (
+                  <Circle className="size-3 text-muted-foreground" />
+                )}
                 <span className="flex-1 text-left">{name}</span>
                 {isSelected && <Check className="size-4 text-primary" />}
               </button>
@@ -78,6 +73,7 @@ export const ChannelMenu = ({ trigger, selectedChannelId, onChannelSelect }: Cha
             <>
               <hr className="my-1 border-border" />
               <button
+                type="button"
                 onClick={handleLeaveChannel}
                 className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-accent/50"
               >
@@ -89,6 +85,17 @@ export const ChannelMenu = ({ trigger, selectedChannelId, onChannelSelect }: Cha
 
           {channels.length === 0 && (
             <div className="px-2 py-1 text-sm text-muted-foreground">No channels available</div>
+          )}
+
+          {error && (
+            <div className="mt-1 px-2 text-xs text-destructive">
+              {error}
+              {onDismissError && (
+                <button type="button" onClick={onDismissError} className="ml-2 underline">
+                  Dismiss
+                </button>
+              )}
+            </div>
           )}
         </div>
       </PopoverContent>

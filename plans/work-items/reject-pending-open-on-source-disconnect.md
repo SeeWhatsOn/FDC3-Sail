@@ -3,7 +3,7 @@ title: "Reject pending open-with-context when source disconnects"
 slug: reject-pending-open-on-source-disconnect
 kind: task
 type: bug
-status: in-progress
+status: staged
 loop_count: 0
 loop_limit: 3
 last_agent: top-level-delivery-workflow
@@ -86,10 +86,15 @@ _(empty — default to `OpenError.AppTimeout` unless spec review prefers a disti
 ## Loop history
 
 - 2026-06-22: approved by human
+- 2026-06-23: delivered — RED/GREEN/verify/review PASS; staged for batch commit
 
 ## Staged for review
 
-_(empty)_
+- Phase A test-engineer: RED — cleanup.test.ts flipped + guard case
+- Phase B implement-agent: `sendOpenWithContextAppTimeout` + source disconnect rejection
+- Phase C verifier-agent: VERIFICATION PASS
+- Phase D code-reviewer: VERDICT PASS
+- Registered subagent: yes (all phases)
 
 ## Escalation notes
 
