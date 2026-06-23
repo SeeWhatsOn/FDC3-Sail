@@ -38,6 +38,8 @@ Close the gap between v5 export and a v6 re-run by fixing **harness FINOS sessio
 | TV5-02 | WCP Vitest: two connected apps — user/app channel broadcast delivery | task | `extend-wcp-channel-delivery-integration-tests` |
 | TV5-03–05 | findIntent apps[] oracle, NoAppsFound, raiseIntent throws matrix | task | `fix-findintent-raise-intent-oracle` |
 
+**Regression test net (v6 gap):** see `plans/prd-conformance-regression-test-net.md` and epic `epic-conformance-regression-test-net` (RT-01–07). Complements TV5-01/02; does not replace blocked findIntent work.
+
 ## Out of scope
 
 - sail-web full-stack (:3000)

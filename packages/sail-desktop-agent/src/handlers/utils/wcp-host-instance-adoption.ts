@@ -8,39 +8,49 @@ import type { InstanceIdentityRecord } from "../../app-connection/wcp/instance-i
 export function tryAdoptHostPreRegisteredInstance(params: {
   reconnectInstanceId?: string
   reconnectInstanceUuid?: string
+  /** Host-assigned browsing context name from WCP1 (`window.name` / iframe `name`). */
+  hostIdentifier?: string
   sourceWindow: unknown
   appId: string
   getState: () => AgentState
   identityMap: Map<string, InstanceIdentityRecord>
 }): { instanceId: string; instanceUuid: string } | undefined {
-  const { reconnectInstanceId, reconnectInstanceUuid, sourceWindow, appId, getState, identityMap } =
-    params
+  const {
+    reconnectInstanceId,
+    reconnectInstanceUuid,
+    hostIdentifier,
+    sourceWindow,
+    appId,
+    getState,
+    identityMap,
+  } = params
 
-  if (!reconnectInstanceUuid) {
-    return undefined
-  }
+  const adoptParams = { sourceWindow, appId, getState, identityMap }
 
   const explicitHostInstanceId =
-    reconnectInstanceId &&
-    canAdoptPendingHostInstance({
-      reconnectInstanceId,
-      reconnectInstanceUuid,
-      sourceWindow,
-      appId,
-      getState,
-      identityMap,
-    })
+    reconnectInstanceId && canAdoptPendingHostInstance({ reconnectInstanceId, ...adoptParams })
       ? reconnectInstanceId
+      : undefined
+
+  const hostIdentifierInstanceId =
+    hostIdentifier &&
+    hostIdentifier !== reconnectInstanceId &&
+    canAdoptPendingHostInstance({ reconnectInstanceId: hostIdentifier, ...adoptParams })
+      ? hostIdentifier
       : undefined
 
   const solePendingHostInstanceId = findSolePendingHostInstanceId(getState(), appId, identityMap)
 
-  const hostInstanceId = explicitHostInstanceId ?? solePendingHostInstanceId
+  const hostInstanceId =
+    explicitHostInstanceId ?? hostIdentifierInstanceId ?? solePendingHostInstanceId
   if (!hostInstanceId) {
     return undefined
   }
 
-  return { instanceId: hostInstanceId, instanceUuid: reconnectInstanceUuid }
+  return {
+    instanceId: hostInstanceId,
+    instanceUuid: reconnectInstanceUuid ?? crypto.randomUUID(),
+  }
 }
 
 export function reconcileOrphanPendingHostInstances(
@@ -77,16 +87,14 @@ export function reconcileOrphanPendingHostInstances(
 
 function canAdoptPendingHostInstance(params: {
   reconnectInstanceId: string
-  reconnectInstanceUuid: string
-  sourceWindow: unknown
+  sourceWindow?: unknown
   appId: string
   getState: () => AgentState
   identityMap: Map<string, InstanceIdentityRecord>
 }): boolean {
-  const { reconnectInstanceId, reconnectInstanceUuid, sourceWindow, appId, getState, identityMap } =
-    params
+  const { reconnectInstanceId, appId, getState, identityMap } = params
 
-  if (!reconnectInstanceUuid || !sourceWindow || identityMap.has(reconnectInstanceId)) {
+  if (identityMap.has(reconnectInstanceId)) {
     return false
   }
 

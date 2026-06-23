@@ -72,10 +72,8 @@ export function createHarnessAppLauncher(
     },
 
     close(instanceId: string): Promise<void> {
-      const closedPopup = options?.closePopup?.(instanceId) ?? false
-      if (!closedPopup) {
-        options?.removePanel?.(instanceId)
-      }
+      options?.closePopup?.(instanceId)
+      options?.removePanel?.(instanceId)
       return Promise.resolve()
     },
   }

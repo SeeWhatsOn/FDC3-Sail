@@ -34,13 +34,22 @@ describe("createHarnessInstanceCleanup", () => {
     })
   })
 
-  it("disconnectHarnessInstance removes panel, unregisters popup, and disconnects agent state", () => {
+  it("disconnectHarnessInstance closes popup, removes panel, unregisters watcher, and disconnects agent state", () => {
     const removePanel = vi.fn()
     const disconnectInstance = vi.fn()
     const onPopupClosed = vi.fn()
 
     const popupWatcher = createPopupCloseWatcher({ onPopupClosed })
-    const popup = { closed: false } as Window
+    let closed = false
+    const close = vi.fn(() => {
+      closed = true
+    })
+    const popup = {
+      get closed() {
+        return closed
+      },
+      close,
+    } as unknown as Window
     popupWatcher.registerPopup("mock-instance-2", popup)
 
     const cleanup = createHarnessInstanceCleanup({
@@ -52,6 +61,9 @@ describe("createHarnessInstanceCleanup", () => {
               ? { appId: "MockAppId", instanceId, status: "connected" as const }
               : undefined,
           ),
+          getConnections: () => [],
+          getInstances: () => [],
+          getConnection: () => undefined,
         },
         disconnectInstance,
       } as never,
@@ -61,6 +73,7 @@ describe("createHarnessInstanceCleanup", () => {
 
     cleanup.disconnectHarnessInstance("mock-instance-2")
 
+    expect(close).toHaveBeenCalledOnce()
     expect(removePanel).toHaveBeenCalledWith("mock-instance-2")
     expect(popupWatcher.hasPopup("mock-instance-2")).toBe(false)
     expect(disconnectInstance).toHaveBeenCalledWith("mock-instance-2")

@@ -5,6 +5,7 @@
 | Track | PRD | Status on `v3-pre` |
 |-------|-----|-------------------|
 | **Active** | `plans/prd-toolbox-conformance-v5-follow-up.md` | v5 follow-up; teardown + WCP + blocked findIntent |
+| **Active** | `plans/prd-conformance-regression-test-net.md` | v6 gap regression tests (RT-01–07) |
 | **Active** | `plans/prd-fdc3-3-0-dual-version-support.md` | Epic + 9 child work items (`epic-fdc3-3-0-dual-version`) |
 | **Remediation** | `FDC3_2_2_REMEDIATION_PLAN.MD` | Tasks 1–2 done; Task 3 partial; platform Task 6 open |
 | **Delivered** | Browser preset host API | See **Delivered work index** — BHA slugs; PRD deleted 2026-06-21 |
@@ -24,6 +25,14 @@
 | `fix-harness-finOs-session-teardown` | waiting_on_user | TV5-01 — lifecycle merged; close-context + manual v6 |
 | `extend-wcp-channel-delivery-integration-tests` | waiting_on_user | TV5-02 — implementation complete |
 | `fix-findintent-raise-intent-oracle` | blocked | TV5-03–05 merged |
+| `epic-conformance-regression-test-net` | approved | RT-00 — v6 WCP4 / open-with-context regression net |
+| `reject-pending-open-on-source-disconnect` | approved | RT-01 |
+| `wcp-first-connect-open-with-context-integration` | approved | RT-02 |
+| `wcp-multi-pending-host-identifier-adoption` | approved | RT-03 |
+| `harness-open-with-context-regression-tests` | approved | RT-04 |
+| `harness-popup-remap-close-lifecycle-tests` | approved | RT-05 |
+| `wcp-session-soak-stale-instance-regression` | approved | RT-06 |
+| `disable-harness-heartbeat-for-toolbox` | approved | RT-07 |
 | `epic-fdc3-3-0-dual-version` | draft | F30 |
 | `audit-fdc3-3-0-handler-delta` | draft | F30-01 spike |
 | `add-fdc3-3-0-local-types-and-dep-upgrade` | draft | F30-07 |
@@ -36,7 +45,7 @@
 | `record-fdc3-3-0-toolbox-baseline` | blocked | F30-10 — FINOS npm 3.x |
 | `reorganize-core-handlers-colocate-state` | draft | optional state-hardening hygiene |
 
-**Count:** 15 work items (2 epics, 12 tasks, 1 spike).
+**Count:** 23 work items (3 epics, 19 tasks, 1 spike).
 
 ## Delivered work index
 
@@ -64,7 +73,7 @@ Slugs only — implementation is on `v3-pre`; details were in deleted PRDs/work 
 
 ## PRD source
 
-- Active PRDs: `plans/prd-toolbox-conformance-v5-follow-up.md`, `plans/prd-fdc3-3-0-dual-version-support.md`, `plans/prd-browser-first-desktop-agent-simplification.md`
+- Active PRDs: `plans/prd-toolbox-conformance-v5-follow-up.md`, `plans/prd-conformance-regression-test-net.md`, `plans/prd-fdc3-3-0-dual-version-support.md`, `plans/prd-browser-first-desktop-agent-simplification.md`
 - Attribution: `conformance-test-failure-review.md`, `conformance-report-v*.txt`
 - FDC3 review / remediation: `FDC3_2_2_COMPLIANCE_REVIEW.MD`, `FDC3_2_2_REMEDIATION_PLAN.MD`
 

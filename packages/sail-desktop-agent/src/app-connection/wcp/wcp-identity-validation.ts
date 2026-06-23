@@ -70,6 +70,10 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     const sourceWindow =
       takePendingWcpSourceWindow(responses.connectionOwner, context.instanceId) ??
       messageMeta?.wcpSourceWindow
+    const hostIdentifier = resolveWcpHandshakeHostIdentifier(
+      responses.connectionOwner,
+      context.instanceId,
+    )
 
     // 2. Validate origins match (per FDC3 spec requirement)
     if (identityOrigin !== actualOrigin) {
@@ -147,6 +151,7 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     const adoptedHostInstance = tryAdoptHostPreRegisteredInstance({
       reconnectInstanceId,
       reconnectInstanceUuid,
+      hostIdentifier,
       sourceWindow,
       appId: appMetadata.appId,
       getState,
@@ -376,6 +381,26 @@ function sendFailureResponse(
   }
 
   context.responses.sendOutbound(fallbackResponse)
+}
+
+function resolveWcpHandshakeHostIdentifier(
+  connectionOwner: object,
+  tempInstanceId: string,
+): string | undefined {
+  if (
+    !("getConnection" in connectionOwner) ||
+    typeof (connectionOwner as { getConnection?: unknown }).getConnection !== "function"
+  ) {
+    return undefined
+  }
+
+  const connection = (
+    connectionOwner as {
+      getConnection: (instanceId: string) => { hostIdentifier?: string } | undefined
+    }
+  ).getConnection(tempInstanceId)
+
+  return connection?.hostIdentifier
 }
 
 function canReuseInstanceIdentity(params: {

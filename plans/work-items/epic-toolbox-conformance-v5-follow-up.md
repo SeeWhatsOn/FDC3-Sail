@@ -42,10 +42,11 @@ Single active conformance coordinator (v4 PRD and epic **deleted**). See PRD **W
 | `fix-harness-finOs-session-teardown` | task | waiting_on_user | TV5-01 — lifecycle merged; close-context + manual v6 |
 | `extend-wcp-channel-delivery-integration-tests` | task | waiting_on_user | TV5-02 — implementation complete |
 | `fix-findintent-raise-intent-oracle` | task | blocked | TV5-03–05 merged |
+| `epic-conformance-regression-test-net` | epic | approved | RT-00 — v6 open-with-context / WCP4 regression net (7 children) |
 
 **Delivered (work items deleted):** `fix-toolbox-metadata-client-and-dacp-paths`, `populate-intent-result-metadata-toolbox`, `pre-register-conformance1-pending-instance`, `harness-popup-wcp-disconnect-cleanup`, `record-toolbox-v4-measured-baseline`, `verify-v4-agent-fixes-on-current-branch`, `diagnose-harness-user-cancelled-resolution`, epic `toolbox-conformance-v4-follow-up`.
 
-**Suggested order:** TV5-01 manual v6 → approve TV5-02 → manual v6 export → unblock TV5-03–05 if FINOS policy clear.
+**Suggested order:** TV5-01 manual v6 → approve TV5-02 → RT-01–07 regression net (`epic-conformance-regression-test-net`) → manual v7 export → unblock TV5-03–05 if FINOS policy clear.
 
 ## Out of scope
 

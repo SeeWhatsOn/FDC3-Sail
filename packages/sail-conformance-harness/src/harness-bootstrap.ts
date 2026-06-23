@@ -71,6 +71,9 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
 
   const instanceCleanup: HarnessInstanceCleanup = {
     prepareLaunchedHostInstance() {},
+    closeHarnessBrowsingContext() {
+      return false
+    },
     disconnectHarnessInstance() {},
   }
 
@@ -98,7 +101,7 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
   }
 
   const appLauncher = createHarnessAppLauncher(mountLaunchedPanel, {
-    closePopup: instanceId => popupWatcher.closePopup(instanceId),
+    closePopup: instanceId => instanceCleanup.closeHarnessBrowsingContext(instanceId),
     removePanel,
   })
 
@@ -115,6 +118,9 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     },
     logPayloadDetail: debug ? "full" : "metadata",
     onAppConnected: (metadata: AppConnectionMetadata) => {
+      if (metadata.source) {
+        popupWatcher.remapPopupByWindow(metadata.source, metadata.instanceId)
+      }
       console.log(`[ConformanceHarness] WCP connected: ${metadata.appId} (${metadata.instanceId})`)
     },
     onAppDisconnected: instanceId => {

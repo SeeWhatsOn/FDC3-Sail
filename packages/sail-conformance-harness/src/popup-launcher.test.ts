@@ -73,4 +73,41 @@ describe("createPopupCloseWatcher", () => {
 
     watcher.stop()
   })
+
+  it("closePopup returns true when window.close succeeds", () => {
+    const popup = createMockPopup(false)
+    const close = vi.fn(() => {
+      Object.defineProperty(popup, "closed", { value: true, configurable: true })
+    })
+    Object.assign(popup, { close })
+
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    watcher.registerPopup("instance-d", popup)
+
+    expect(watcher.closePopup("instance-d")).toBe(true)
+    expect(close).toHaveBeenCalledOnce()
+  })
+
+  it("closePopup returns false and warns when window.close has no effect", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const popup = createMockPopup(false)
+    Object.assign(popup, { close: vi.fn() })
+
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    watcher.registerPopup("instance-e", popup)
+
+    expect(watcher.closePopup("instance-e")).toBe(false)
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[ConformanceHarness] Browsing context still open after close() for instance-e",
+    )
+
+    warnSpy.mockRestore()
+    watcher.stop()
+  })
+
+  it("closePopup returns false when instance is not registered", () => {
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    expect(watcher.closePopup("missing-instance")).toBe(false)
+    watcher.stop()
+  })
 })

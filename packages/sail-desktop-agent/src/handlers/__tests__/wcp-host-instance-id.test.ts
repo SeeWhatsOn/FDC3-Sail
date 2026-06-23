@@ -70,7 +70,7 @@ function createAgentWithSourceInstance(options?: { openContextListenerTimeoutMs?
 function createWcp4FirstConnectMessage(
   connectionAttemptUuid: string,
   hostInstanceId?: string,
-  hostInstanceUuid = "host-instance-uuid",
+  hostInstanceUuid?: string,
 ) {
   return {
     type: "WCP4ValidateAppIdentity",
@@ -78,7 +78,7 @@ function createWcp4FirstConnectMessage(
       identityUrl: APP_URL,
       actualUrl: APP_URL,
       ...(hostInstanceId ? { instanceId: hostInstanceId } : {}),
-      instanceUuid: hostInstanceUuid,
+      ...(hostInstanceUuid !== undefined ? { instanceUuid: hostInstanceUuid } : {}),
     },
     meta: {
       connectionAttemptUuid,
@@ -217,7 +217,7 @@ describe("host-assigned instanceId at WCP4", () => {
     })
 
     await connection.receiveMessage(
-      createWcp4FirstConnectMessage("wcp4-host-bind", HOST_INSTANCE_ID),
+      createWcp4FirstConnectMessage("wcp4-host-bind", HOST_INSTANCE_ID, "host-instance-uuid"),
     )
 
     expect(getWcp5InstanceId(connection)).toBe(HOST_INSTANCE_ID)
@@ -229,7 +229,35 @@ describe("host-assigned instanceId at WCP4", () => {
     ).toHaveLength(1)
   })
 
-  it("delivers open-with-context without AppTimeout when the target adds a listener on the host instanceId", async () => {
+  it("adopts host-assigned instanceId when WCP4 omits instanceUuid on first connect", async () => {
+    const initialState = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    const stateWithInstances = connectInstance(initialState, {
+      instanceId: HOST_INSTANCE_ID,
+      appId: CHART_APP.appId,
+      metadata: { appId: CHART_APP.appId, name: CHART_APP.appId },
+    })
+
+    const { agent, connection } = createDesktopAgentWithTestConnection({
+      apps: [CHART_APP],
+      initialState: stateWithInstances,
+      heartbeatIntervalMs: 5000,
+      heartbeatTimeoutMs: 15000,
+    })
+
+    await connection.receiveMessage(
+      createWcp4FirstConnectMessage("wcp4-host-first-connect", HOST_INSTANCE_ID),
+    )
+
+    const wcp5 = connection.sentMessages.find(
+      message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse",
+    ) as { payload?: { instanceId?: string; instanceUuid?: string } } | undefined
+
+    expect(wcp5?.payload?.instanceId).toBe(HOST_INSTANCE_ID)
+    expect(wcp5?.payload?.instanceUuid).toBeTruthy()
+    expect(getInstance(agent.getState(), HOST_INSTANCE_ID)?.state).toBe(AppInstanceState.CONNECTED)
+  })
+
+  it("delivers open-with-context when target adopts host instanceId at WCP4", async () => {
     vi.useFakeTimers()
     const { agent, connection } = createAgentWithSourceInstance({
       openContextListenerTimeoutMs: 2000,

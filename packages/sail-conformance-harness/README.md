@@ -27,7 +27,7 @@ Dev server: **http://localhost:3001**
 
 ## Session teardown
 
-Launched mock apps (popups) are **pre-registered** with the desktop agent before `window.open` so WCP4 adopts the host `instanceId`. When a popup closes or sends WCP6 goodbye, the harness calls `disconnectInstance` and removes the panel entry so later toolbox scenarios (channels, `findIntent`) do not accumulate stale instances. Popup `window.closed` is polled every **100ms** (no `window.close` override on child windows).
+Launched mock apps (`forceNewWindow`) open in **script-closable popup windows**: the host opens `about:blank` with window features, then navigates to the FINOS mock URL so `AppLauncher.close` can destroy the container when mocks call `fdc3.close()` (FINOS mocks do not call `window.close()`). Instances are **pre-registered** before `window.open` so WCP4 adopts the host `instanceId`. On `fdc3.close()` or agent disconnect, the harness closes the browsing context (popup registry or WCP `source` window), removes the panel entry, and calls `disconnectInstance`.
 
 ```bash
 npm test -w @finos/sail-conformance-harness
