@@ -55,9 +55,27 @@ export async function flushAsyncDelivery(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 0))
 }
 
-function captureAppMessagePort(connectionAttemptUuid: string, identityUrl: string): MessagePort {
+function createNamedSourceWindow(hostIdentifier: string): Window {
+  const namedSource = Object.create(window) as Window
+  Object.defineProperty(namedSource, "name", {
+    value: hostIdentifier,
+    writable: true,
+    configurable: true,
+  })
+  namedSource.postMessage = window.postMessage.bind(window)
+  return namedSource
+}
+
+function captureAppMessagePort(
+  connectionAttemptUuid: string,
+  identityUrl: string,
+  hostIdentifier?: string,
+): MessagePort {
   const postMessageSpy = vi.spyOn(window, "postMessage")
-  window.dispatchEvent(createMessageEvent(createWCP1Hello(connectionAttemptUuid, identityUrl)))
+  const sourceWindow = hostIdentifier ? createNamedSourceWindow(hostIdentifier) : window
+  window.dispatchEvent(
+    createMessageEvent(createWCP1Hello(connectionAttemptUuid, identityUrl), sourceWindow),
+  )
 
   const calls = postMessageSpy.mock.calls as unknown as Array<
     [BrowserTypes.WebConnectionProtocol3Handshake, string, MessagePort[]]
@@ -84,6 +102,8 @@ export async function connectWcpApp(
     appId: string
     identityUrl: string
     hostInstanceId?: string
+    /** WCP1 browsing-context name (`window.name`) — disambiguates multi-pending adoption. */
+    hostIdentifier?: string
     instanceUuid?: string
   },
 ): Promise<WcpConnectedApp> {
@@ -92,12 +112,13 @@ export async function connectWcpApp(
     appId,
     identityUrl,
     hostInstanceId,
+    hostIdentifier,
     instanceUuid: reconnectInstanceUuid,
   } = options
   const tempInstanceId = `temp-${connectionAttemptUuid}`
   const browserAppConnection = getTestConnector(agent)
 
-  const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl)
+  const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl, hostIdentifier)
 
   expect(browserAppConnection.getConnection(tempInstanceId)).toBeDefined()
 
@@ -157,6 +178,127 @@ export async function connectWcpApp(
   }
 }
 
+/**
+ * FINOS-realistic first WCP4 connect: `identityUrl` only — omits `instanceUuid` and
+ * `hostInstanceId` unless the test opts into `hostInstanceId`.
+ */
+export async function connectWcpAppFirstConnect(
+  agent: DesktopAgent,
+  options: {
+    connectionAttemptUuid: string
+    appId: string
+    identityUrl: string
+    hostInstanceId?: string
+    hostIdentifier?: string
+  },
+): Promise<WcpConnectedApp> {
+  const { hostInstanceId, hostIdentifier, ...rest } = options
+  return connectWcpApp(agent, {
+    ...rest,
+    ...(hostInstanceId !== undefined ? { hostInstanceId } : {}),
+    ...(hostIdentifier !== undefined ? { hostIdentifier } : {}),
+  })
+}
+
+export type WcpFirstConnectSession = {
+  connectionAttemptUuid: string
+  tempInstanceId: string
+  appPort: MessagePort
+  postFirstConnectWcp4: () => Promise<void>
+  completeFirstConnect: () => Promise<WcpConnectedApp>
+}
+
+/**
+ * Starts a FINOS first-connect handshake through WCP3, leaving WCP4/WCP5 for the test
+ * to interleave with early DACP (e.g. addContextListener on the temp routing id).
+ */
+export function beginWcpAppFirstConnect(
+  agent: DesktopAgent,
+  options: {
+    connectionAttemptUuid: string
+    appId: string
+    identityUrl: string
+  },
+): WcpFirstConnectSession {
+  const { connectionAttemptUuid, appId, identityUrl } = options
+  const tempInstanceId = `temp-${connectionAttemptUuid}`
+  const browserAppConnection = getTestConnector(agent)
+
+  const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl)
+  expect(browserAppConnection.getConnection(tempInstanceId)).toBeDefined()
+
+  let resolveWcp5:
+    | ((value: BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse) => void)
+    | undefined
+  const wcp5Response =
+    new Promise<BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse>(resolve => {
+      resolveWcp5 = resolve
+    })
+
+  appPort.onmessage = event => {
+    const data = event.data as { type?: string }
+    if (data.type === "WCP5ValidateAppIdentityResponse") {
+      resolveWcp5?.(
+        event.data as BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse,
+      )
+    }
+  }
+
+  const wcp4Message: BrowserTypes.WebConnectionProtocol4ValidateAppIdentity = {
+    type: "WCP4ValidateAppIdentity",
+    meta: {
+      connectionAttemptUuid,
+      timestamp: new Date(),
+    },
+    payload: {
+      identityUrl,
+      actualUrl: identityUrl,
+    },
+  }
+
+  return {
+    connectionAttemptUuid,
+    tempInstanceId,
+    appPort,
+    postFirstConnectWcp4: async () => {
+      appPort.postMessage(wcp4Message)
+      await flushAsyncDelivery()
+    },
+    completeFirstConnect: async () => {
+      const resolvedWcp5 = await Promise.race([
+        wcp5Response,
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Timed out waiting for WCP5ValidateAppIdentityResponse")),
+            5000,
+          ),
+        ),
+      ])
+
+      expect(resolvedWcp5.type).toBe("WCP5ValidateAppIdentityResponse")
+      const canonicalInstanceId = resolvedWcp5.payload.instanceId
+      const validatedInstanceUuid = resolvedWcp5.payload.instanceUuid
+      expect(canonicalInstanceId).toBeTruthy()
+      expect(validatedInstanceUuid).toBeTruthy()
+      expect(resolvedWcp5.payload.appId).toBe(appId)
+
+      await vi.waitFor(() => {
+        expect(browserAppConnection.getConnection(canonicalInstanceId)).toBeDefined()
+        expect(browserAppConnection.getConnection(tempInstanceId)).toBeUndefined()
+      })
+
+      return {
+        connectionAttemptUuid,
+        tempInstanceId,
+        canonicalInstanceId,
+        instanceUuid: validatedInstanceUuid,
+        appPort,
+        appId,
+      }
+    },
+  }
+}
+
 export async function postDacpOnPort(
   appPort: MessagePort,
   message: BrowserTypes.AppRequestMessage,
@@ -175,11 +317,15 @@ export function waitForPortMessage<T>(
       () => reject(new Error("Timed out waiting for MessagePort message")),
       timeoutMs,
     )
+    const priorHandler = appPort.onmessage
     appPort.onmessage = event => {
       if (predicate(event.data)) {
         clearTimeout(timer)
+        appPort.onmessage = priorHandler
         resolve(event.data as T)
+        return
       }
+      priorHandler?.call(appPort, event)
     }
   })
 }
@@ -187,6 +333,28 @@ export function waitForPortMessage<T>(
 export const INSTRUMENT_CONTEXT: Context = {
   type: "fdc3.instrument",
   id: { ticker: "AAPL" },
+}
+
+export const COUNTRY_CONTEXT: Context = {
+  type: "fdc3.country",
+  id: { ISOCountryCode: "SE" },
+}
+
+export function collectPortMessages<T>(
+  appPort: MessagePort,
+  predicate: (data: unknown) => boolean,
+): { messages: T[]; stop: () => void } {
+  const messages: T[] = []
+  const handler = (event: MessageEvent) => {
+    if (predicate(event.data)) {
+      messages.push(event.data as T)
+    }
+  }
+  appPort.addEventListener("message", handler)
+  return {
+    messages,
+    stop: () => appPort.removeEventListener("message", handler),
+  }
 }
 
 export function createAddEventListenerMessage(

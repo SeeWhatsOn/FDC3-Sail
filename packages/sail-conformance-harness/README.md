@@ -1,6 +1,6 @@
 # @finos/sail-conformance-harness
 
-Minimal React host for the [FINOS FDC3 conformance toolbox](https://fdc3.finos.org/toolbox/fdc3-conformance/) — wires only `@finos/sail-desktop-agent` (no full Sail stack).
+Minimal React host for the [FINOS FDC3 conformance toolbox](https://fdc3.finos.org/toolbox/fdc3-conformance/) — wires only `@finos/sail-desktop-agent` (no full Sail stack). Toolbox runs assume `heartbeatEnabled: false` (matching Cucumber default); enable heartbeat only for dedicated heartbeat scenarios.
 
 ## Documentation
 

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
+import { OpenError } from "@finos/fdc3"
 import { cleanupDACPHandlers } from "../cleanup"
 import { startHeartbeat } from "../heartbeat/handlers"
 import {
@@ -242,7 +243,7 @@ describe("cleanupDACPHandlers", () => {
     expect(getPendingOpenWithContextTimeoutCount()).toBe(0)
   })
 
-  it("clears open-with-context pending state and timeouts when the source instance disconnects without sending an error", () => {
+  it("sends AppTimeout openResponse to source when source disconnects during pending open", () => {
     let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     state = connectInstance(state, {
       instanceId: "a1",
@@ -269,10 +270,11 @@ describe("cleanupDACPHandlers", () => {
       id: { ticker: "AAPL" },
     }
 
+    const requestUuid = "open-req-source-disconnect"
     const message = {
       type: "openRequest",
       meta: {
-        requestUuid: "open-req-source-disconnect",
+        requestUuid,
         timestamp: new Date(),
       },
       payload: {
@@ -297,10 +299,44 @@ describe("cleanupDACPHandlers", () => {
     expect(getPendingOpenWithContextTimeoutCount()).toBe(0)
 
     const openErrorResponses = transport.sentMessages.filter(message => {
-      const typed = message as { type?: string; payload?: { error?: string } }
+      const typed = message as {
+        type?: string
+        meta?: { requestUuid?: string }
+        payload?: { error?: string }
+      }
       return typed.type === "openResponse" && typed.payload?.error !== undefined
     })
-    expect(openErrorResponses).toHaveLength(0)
+    expect(openErrorResponses).toHaveLength(1)
+    expect(openErrorResponses[0]).toMatchObject({
+      type: "openResponse",
+      meta: { requestUuid },
+      payload: { error: OpenError.AppTimeout },
+    })
+  })
+
+  it("does not send openResponse when source disconnects with no pending open-with-context", () => {
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    state = connectInstance(state, {
+      instanceId: "a1",
+      appId: "launcherApp",
+      metadata: { appId: "launcherApp", name: "launcherApp" },
+    })
+    state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
+
+    const transport = new MockTransport()
+    const { context } = createDACPTestContext({
+      instanceId: "a1",
+      initialState: state,
+    })
+    const contextWithTransport = withResponseDispatcher(context, transport)
+
+    cleanupDACPHandlers(contextWithTransport)
+
+    const openResponses = transport.sentMessages.filter(message => {
+      const typed = message as { type?: string }
+      return typed.type === "openResponse"
+    })
+    expect(openResponses).toHaveLength(0)
   })
 })
 

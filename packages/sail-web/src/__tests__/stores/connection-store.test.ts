@@ -101,15 +101,19 @@ describe("ConnectionStore panel linking", () => {
     const sourceOne = { id: "source-one" } as unknown as Window
     const sourceTwo = { id: "source-two" } as unknown as Window
 
-    const querySpy = vi.spyOn(document, "querySelector").mockImplementation(selector => {
-      if (selector === `iframe[name="${panelOne}"]`) {
-        return { contentWindow: sourceOne } as HTMLIFrameElement
-      }
-      if (selector === `iframe[name="${panelTwo}"]`) {
-        return { contentWindow: sourceTwo } as HTMLIFrameElement
-      }
-      return null
-    })
+    function mountPanelIframe(panelId: string, contentWindow: Window): HTMLIFrameElement {
+      const iframe = document.createElement("iframe")
+      iframe.name = panelId
+      Object.defineProperty(iframe, "contentWindow", {
+        value: contentWindow,
+        configurable: true,
+      })
+      document.body.appendChild(iframe)
+      return iframe
+    }
+
+    const iframeOne = mountPanelIframe(panelOne, sourceOne)
+    const iframeTwo = mountPanelIframe(panelTwo, sourceTwo)
 
     store.getState().registerPanel(panelOne, APP_ID)
     store.getState().registerPanel(panelTwo, APP_ID)
@@ -132,7 +136,8 @@ describe("ConnectionStore panel linking", () => {
     expect(store.getState().getConnectionByPanelId(panelTwo)?.instanceId).toBe("instance-two")
     expect(store.getState().getConnectionByPanelId(panelOne)?.instanceId).toBe("instance-one")
 
-    querySpy.mockRestore()
+    iframeOne.remove()
+    iframeTwo.remove()
   })
 })
 

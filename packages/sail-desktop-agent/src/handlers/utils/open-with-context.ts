@@ -161,7 +161,8 @@ export function clearPendingOpenWithContextForInstance(
 
 /**
  * Clears open-with-context pending entries whose source disconnected.
- * Scans all target buckets; does not send an error response to the gone source.
+ * Scans all target buckets and sends AppTimeout openResponse to the source for each
+ * removed pending entry so fdc3.open() promises settle before state is cleared.
  */
 export function clearPendingOpenWithContextForSourceInstance(
   sourceInstanceId: string,
@@ -179,6 +180,13 @@ export function clearPendingOpenWithContextForSourceInstance(
 
     toRemove.forEach(pending => {
       clearPendingTimeout(pending.message.meta.requestUuid)
+      sendDACPErrorResponse({
+        message: pending.message,
+        errorType: OpenError.AppTimeout,
+        errorMessage: "Timed out waiting for context listener",
+        instanceId: sourceInstanceId,
+        responses: context.responses,
+      })
     })
     bucketsToUpdate.push({
       targetInstanceId,

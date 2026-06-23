@@ -39,11 +39,18 @@ function rememberConnectionSource(source: Window, instanceId: string): void {
   instanceIdBySourceWindow.set(source, instanceId)
 }
 
+function escapePanelIdForSelector(panelId: string): string {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(panelId)
+  }
+  return panelId.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+}
+
 function getPanelIframeWindow(panelId: string): Window | null {
   if (typeof document === "undefined") {
     return null
   }
-  const iframe = document.querySelector(`iframe[name="${CSS.escape(panelId)}"]`)
+  const iframe = document.querySelector(`iframe[name="${escapePanelIdForSelector(panelId)}"]`)
   return iframe instanceof HTMLIFrameElement ? iframe.contentWindow : null
 }
 

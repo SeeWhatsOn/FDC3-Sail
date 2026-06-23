@@ -111,3 +111,48 @@ describe("createPopupCloseWatcher", () => {
     watcher.stop()
   })
 })
+
+describe("remapPopupByWindow", () => {
+  it("re-keys popup so closePopup on canonical id closes the same browsing context", () => {
+    let closed = false
+    const close = vi.fn(() => {
+      closed = true
+    })
+    const popup = {
+      get closed() {
+        return closed
+      },
+      close,
+    } as unknown as Window
+
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    watcher.registerPopup("launcher-L", popup)
+
+    expect(watcher.remapPopupByWindow(popup, "canonical-C")).toBe(true)
+    expect(watcher.hasPopup("launcher-L")).toBe(false)
+    expect(watcher.hasPopup("canonical-C")).toBe(true)
+
+    expect(watcher.closePopup("canonical-C")).toBe(true)
+    expect(close).toHaveBeenCalledOnce()
+
+    watcher.stop()
+  })
+
+  it("leaves launcher id without a stale orphan after re-key", () => {
+    const popup = createMockPopup(false)
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    watcher.registerPopup("launcher-L", popup)
+
+    expect(watcher.remapPopupByWindow(popup, "canonical-C")).toBe(true)
+    expect(watcher.closePopup("launcher-L")).toBe(false)
+    expect(watcher.hasPopup("launcher-L")).toBe(false)
+
+    watcher.stop()
+  })
+
+  it("returns false when source window is not registered", () => {
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    expect(watcher.remapPopupByWindow({ closed: false } as Window, "canonical-C")).toBe(false)
+    watcher.stop()
+  })
+})

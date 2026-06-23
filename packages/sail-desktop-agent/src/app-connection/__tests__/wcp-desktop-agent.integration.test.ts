@@ -8,15 +8,20 @@
  */
 
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
-import type { BrowserTypes, Context } from "@finos/fdc3"
+import { OpenError, type BrowserTypes, type Context } from "@finos/fdc3"
+import type { AppLauncher } from "../../host-contracts/app-launcher"
 import type { DesktopAgent } from "../../agent/desktop-agent"
 import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import type { AppConnectionMetadata } from "../../app-connection/browser-app-connection"
 import { AppInstanceState } from "../../state/types"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import {
+  COUNTRY_CONTEXT,
   INSTRUMENT_CONTEXT,
+  collectPortMessages,
   connectWcpApp,
+  connectWcpAppFirstConnect,
+  beginWcpAppFirstConnect,
   createAddContextListenerMessage,
   createAddEventListenerMessage,
   createBroadcastMessage,
@@ -141,6 +146,337 @@ function waitForChannelChangedEvent(
     return channelId === expectedChannelId
   })
 }
+
+describe("session carry-over", () => {
+  const activeAgents: DesktopAgent[] = []
+  const STALE_LAUNCHER_INSTANCE_ID = "L-stale"
+  const SECOND_LAUNCHER_INSTANCE_ID = "L2"
+
+  afterEach(() => {
+    clearAllHeartbeatTimersForTesting()
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+  })
+
+  function createSessionSoakAppLauncher(): AppLauncher {
+    let launchCount = 0
+    return {
+      launch(request) {
+        const launcherIds = [STALE_LAUNCHER_INSTANCE_ID, SECOND_LAUNCHER_INSTANCE_ID]
+        const instanceId = request.app.instanceId ?? launcherIds[launchCount++]
+        return Promise.resolve({ appId: request.app.appId, instanceId })
+      },
+    }
+  }
+
+  function createFindInstancesMessage(
+    sourceInstanceId: string,
+    sourceAppId: string,
+    targetAppId: string,
+  ): BrowserTypes.FindInstancesRequest {
+    return {
+      type: "findInstancesRequest",
+      meta: {
+        requestUuid: crypto.randomUUID(),
+        timestamp: new Date(),
+        source: { appId: sourceAppId, instanceId: sourceInstanceId },
+      },
+      payload: {
+        app: { appId: targetAppId },
+      },
+    }
+  }
+
+  it("delivers second open-with-context to L2 when L-stale remains CONNECTED from earlier session", async () => {
+    const agent = createTestAgent({
+      appLauncher: createSessionSoakAppLauncher(),
+      openContextListenerTimeoutMs: 5000,
+    })
+    activeAgents.push(agent)
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "session-soak-open-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const firstOpenResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHART_APP.appId,
+        OPEN_WITH_CONTEXT_LAUNCH,
+      ),
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().open.pendingWithContext[STALE_LAUNCHER_INSTANCE_ID]?.length).toBe(1)
+      expect(agent.getState().instances[STALE_LAUNCHER_INSTANCE_ID]?.appId).toBe(CHART_APP.appId)
+    })
+
+    const staleChart = await connectWcpAppFirstConnect(agent, {
+      connectionAttemptUuid: "session-soak-stale-chart-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+      hostInstanceId: STALE_LAUNCHER_INSTANCE_ID,
+    })
+
+    const firstBroadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      staleChart.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+    )
+
+    await postDacpOnPort(
+      staleChart.appPort,
+      createGenericContextListenerMessage(staleChart.canonicalInstanceId, staleChart.appId),
+    )
+
+    const [firstBroadcast, firstOpenResponse] = await Promise.all([
+      firstBroadcastPromise,
+      firstOpenResponsePromise,
+    ])
+
+    expect(staleChart.canonicalInstanceId).toBe(STALE_LAUNCHER_INSTANCE_ID)
+    expect(firstBroadcast.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
+    expect(firstOpenResponse.payload.error).toBeUndefined()
+    expect(firstOpenResponse.payload.appIdentifier?.instanceId).toBe(STALE_LAUNCHER_INSTANCE_ID)
+    expect(agent.getState().instances[STALE_LAUNCHER_INSTANCE_ID]?.state).toBe(
+      AppInstanceState.CONNECTED,
+    )
+
+    const secondOpenResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+    )
+
+    const staleBroadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      staleChart.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+      500,
+    ).catch(() => null)
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHART_APP.appId,
+        OPEN_WITH_CONTEXT_LAUNCH,
+      ),
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().open.pendingWithContext[SECOND_LAUNCHER_INSTANCE_ID]?.length).toBe(1)
+      expect(agent.getState().instances[SECOND_LAUNCHER_INSTANCE_ID]?.appId).toBe(CHART_APP.appId)
+    })
+
+    const findInstancesResponsePromise = waitForPortMessage<BrowserTypes.FindInstancesResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "findInstancesResponse",
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createFindInstancesMessage(appA.canonicalInstanceId, appA.appId, CHART_APP.appId),
+    )
+
+    const findInstancesResponse = await findInstancesResponsePromise
+    const findInstancesIds =
+      findInstancesResponse.payload.appIdentifiers?.map(identifier => identifier.instanceId) ?? []
+
+    expect(findInstancesIds).toContain(SECOND_LAUNCHER_INSTANCE_ID)
+    expect(findInstancesIds).not.toEqual([STALE_LAUNCHER_INSTANCE_ID])
+
+    const appB = await connectWcpAppFirstConnect(agent, {
+      connectionAttemptUuid: "session-soak-first-connect-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+      hostInstanceId: SECOND_LAUNCHER_INSTANCE_ID,
+    })
+
+    expect(appB.canonicalInstanceId).toBe(SECOND_LAUNCHER_INSTANCE_ID)
+
+    const newBroadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      appB.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+    )
+
+    await postDacpOnPort(
+      appB.appPort,
+      createGenericContextListenerMessage(appB.canonicalInstanceId, appB.appId),
+    )
+
+    const [staleBroadcast, newBroadcast, openResponse] = await Promise.all([
+      staleBroadcastPromise,
+      newBroadcastPromise,
+      secondOpenResponsePromise,
+    ])
+
+    expect(staleBroadcast).toBeNull()
+    expect(newBroadcast.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
+    expect(openResponse.type).toBe("openResponse")
+    expect(openResponse.payload.error).toBeUndefined()
+    expect(openResponse.payload.appIdentifier?.instanceId).toBe(SECOND_LAUNCHER_INSTANCE_ID)
+    expect(agent.getState().open.pendingWithContext[SECOND_LAUNCHER_INSTANCE_ID]?.length ?? 0).toBe(
+      0,
+    )
+
+    const connectedChartInstances = Object.values(agent.getState().instances).filter(
+      instance =>
+        instance.appId === CHART_APP.appId && instance.state === AppInstanceState.CONNECTED,
+    )
+    // Session soak: stale L-stale may remain CONNECTED alongside L2 — see findIntent oracle / RT-06.
+    expect(connectedChartInstances.length).toBeGreaterThanOrEqual(2)
+    expect(connectedChartInstances.map(instance => instance.instanceId)).toEqual(
+      expect.arrayContaining([STALE_LAUNCHER_INSTANCE_ID, SECOND_LAUNCHER_INSTANCE_ID]),
+    )
+  })
+})
+
+describe("multi-pending hostIdentifier adoption", () => {
+  const activeAgents: DesktopAgent[] = []
+  const STALE_PENDING_ID = "L1"
+  const NEW_PENDING_ID = "L2"
+
+  afterEach(() => {
+    clearAllHeartbeatTimersForTesting()
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+  })
+
+  function createMultiPendingAppLauncher(): AppLauncher {
+    let launchCount = 0
+    return {
+      launch(request) {
+        const launcherIds = [STALE_PENDING_ID, NEW_PENDING_ID]
+        const instanceId = request.app.instanceId ?? launcherIds[launchCount++]
+        return Promise.resolve({ appId: request.app.appId, instanceId })
+      },
+    }
+  }
+
+  function createFindInstancesMessage(
+    sourceInstanceId: string,
+    sourceAppId: string,
+    targetAppId: string,
+  ): BrowserTypes.FindInstancesRequest {
+    return {
+      type: "findInstancesRequest",
+      meta: {
+        requestUuid: crypto.randomUUID(),
+        timestamp: new Date(),
+        source: { appId: sourceAppId, instanceId: sourceInstanceId },
+      },
+      payload: {
+        app: { appId: targetAppId },
+      },
+    }
+  }
+
+  it("delivers open-with-context to L2 when WCP4 omits instanceId and hostIdentifier names L2 among two stale PENDING rows", async () => {
+    const agent = createTestAgent({
+      appLauncher: createMultiPendingAppLauncher(),
+      openContextListenerTimeoutMs: 5000,
+    })
+    activeAgents.push(agent)
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "multi-pending-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(appA.canonicalInstanceId, appA.appId, CHART_APP.appId),
+    )
+
+    await waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().instances[STALE_PENDING_ID]?.state).toBe(AppInstanceState.PENDING)
+    })
+
+    const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHART_APP.appId,
+        OPEN_WITH_CONTEXT_LAUNCH,
+      ),
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().instances[STALE_PENDING_ID]?.state).toBe(AppInstanceState.PENDING)
+      expect(agent.getState().instances[NEW_PENDING_ID]?.state).toBe(AppInstanceState.PENDING)
+      expect(agent.getState().open.pendingWithContext[NEW_PENDING_ID]?.length).toBe(1)
+    })
+
+    const appB = await connectWcpAppFirstConnect(agent, {
+      connectionAttemptUuid: "multi-pending-host-id-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+      hostIdentifier: NEW_PENDING_ID,
+    })
+
+    expect(appB.canonicalInstanceId).toBe(NEW_PENDING_ID)
+
+    const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      appB.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+    )
+
+    await postDacpOnPort(
+      appB.appPort,
+      createGenericContextListenerMessage(appB.canonicalInstanceId, appB.appId),
+    )
+
+    const [broadcastEvent, openResponse] = await Promise.all([
+      broadcastPromise,
+      openResponsePromise,
+    ])
+
+    expect(broadcastEvent.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
+    expect(openResponse.type).toBe("openResponse")
+    expect(openResponse.payload.error).toBeUndefined()
+    expect(openResponse.payload.appIdentifier?.instanceId).toBe(NEW_PENDING_ID)
+    expect(agent.getState().open.pendingWithContext[NEW_PENDING_ID]?.length ?? 0).toBe(0)
+
+    const findInstancesResponsePromise = waitForPortMessage<BrowserTypes.FindInstancesResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "findInstancesResponse",
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createFindInstancesMessage(appA.canonicalInstanceId, appA.appId, CHART_APP.appId),
+    )
+
+    const findInstancesResponse = await findInstancesResponsePromise
+    const findInstancesIds =
+      findInstancesResponse.payload.appIdentifiers?.map(identifier => identifier.instanceId) ?? []
+
+    expect(findInstancesIds).toContain(NEW_PENDING_ID)
+    expect(findInstancesIds).not.toContain(STALE_PENDING_ID)
+  })
+})
 
 describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
   const activeAgents: DesktopAgent[] = []
@@ -305,6 +641,414 @@ describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
     expect(staleBroadcast).toBeNull()
     expect(newBroadcast.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
     expect(openResponse.payload.error).toBeUndefined()
+  })
+})
+
+describe("open-with-context (first-connect WCP4)", () => {
+  const activeAgents: DesktopAgent[] = []
+
+  afterEach(() => {
+    clearAllHeartbeatTimersForTesting()
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+  })
+
+  it("delivers launch context when B first-connects without instanceUuid and adopts sole pending launcher id", async () => {
+    const agent = createTestAgent({
+      appLauncher: createHostInstanceAppLauncher(),
+      openContextListenerTimeoutMs: 5000,
+    })
+    activeAgents.push(agent)
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "first-connect-open-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHART_APP.appId,
+        OPEN_WITH_CONTEXT_LAUNCH,
+      ),
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length).toBe(1)
+      expect(agent.getState().instances[HOST_LAUNCHER_INSTANCE_ID]?.appId).toBe(CHART_APP.appId)
+    })
+
+    const appB = await connectWcpAppFirstConnect(agent, {
+      connectionAttemptUuid: "first-connect-open-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+    })
+
+    expect(appB.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+
+    const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      appB.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+    )
+
+    await postDacpOnPort(
+      appB.appPort,
+      createGenericContextListenerMessage(appB.canonicalInstanceId, appB.appId),
+    )
+
+    const [broadcastEvent, openResponse] = await Promise.all([
+      broadcastPromise,
+      openResponsePromise,
+    ])
+
+    expect(broadcastEvent.type).toBe("broadcastEvent")
+    expect(broadcastEvent.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
+    expect(openResponse.type).toBe("openResponse")
+    expect(openResponse.payload.error).toBeUndefined()
+    expect(openResponse.payload.appIdentifier?.instanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length ?? 0).toBe(0)
+  })
+
+  it("delivers open-with-context when B listens only for fdc3.instrument", async () => {
+    const agent = createTestAgent({
+      appLauncher: createHostInstanceAppLauncher(),
+      openContextListenerTimeoutMs: 5000,
+    })
+    activeAgents.push(agent)
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "first-connect-specific-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHART_APP.appId,
+        INSTRUMENT_CONTEXT,
+      ),
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length).toBe(1)
+    })
+
+    const appB = await connectWcpAppFirstConnect(agent, {
+      connectionAttemptUuid: "first-connect-specific-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+    })
+
+    expect(appB.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+
+    const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      appB.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+    )
+
+    await postDacpOnPort(
+      appB.appPort,
+      createAddContextListenerMessage(
+        appB.canonicalInstanceId,
+        appB.appId,
+        null,
+        INSTRUMENT_CONTEXT.type,
+      ),
+    )
+
+    const [broadcastEvent, openResponse] = await Promise.all([
+      broadcastPromise,
+      openResponsePromise,
+    ])
+
+    expect(broadcastEvent.payload.context?.type).toBe(INSTRUMENT_CONTEXT.type)
+    expect(openResponse.payload.error).toBeUndefined()
+  })
+
+  it("does not deliver to an instrument-only listener when open context is fdc3.country", async () => {
+    const agent = createTestAgent({
+      appLauncher: createHostInstanceAppLauncher(),
+      openContextListenerTimeoutMs: 2000,
+    })
+    activeAgents.push(agent)
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "first-connect-wrong-type-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+      4000,
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHART_APP.appId,
+        COUNTRY_CONTEXT,
+      ),
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length).toBe(1)
+    })
+
+    const appB = await connectWcpAppFirstConnect(agent, {
+      connectionAttemptUuid: "first-connect-wrong-type-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+    })
+
+    const broadcastCollector = collectPortMessages<BrowserTypes.BroadcastEvent>(
+      appB.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+    )
+
+    await postDacpOnPort(
+      appB.appPort,
+      createAddContextListenerMessage(
+        appB.canonicalInstanceId,
+        appB.appId,
+        null,
+        INSTRUMENT_CONTEXT.type,
+      ),
+    )
+
+    const openResponse = await openResponsePromise
+
+    broadcastCollector.stop()
+    expect(broadcastCollector.messages).toHaveLength(0)
+    expect(openResponse.payload.error).toBe(OpenError.AppTimeout)
+  })
+
+  it("delivers only to the matching listener when multiple context listeners are registered", async () => {
+    const agent = createTestAgent({
+      appLauncher: createHostInstanceAppLauncher(),
+      openContextListenerTimeoutMs: 5000,
+    })
+    activeAgents.push(agent)
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "first-connect-multi-listen-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const openResponses: BrowserTypes.OpenResponse[] = []
+    const openResponseCollector = collectPortMessages<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHART_APP.appId,
+        INSTRUMENT_CONTEXT,
+      ),
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length).toBe(1)
+    })
+
+    const appB = await connectWcpAppFirstConnect(agent, {
+      connectionAttemptUuid: "first-connect-multi-listen-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+    })
+
+    const broadcastCollector = collectPortMessages<BrowserTypes.BroadcastEvent>(
+      appB.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+    )
+
+    await postDacpOnPort(
+      appB.appPort,
+      createAddContextListenerMessage(
+        appB.canonicalInstanceId,
+        appB.appId,
+        null,
+        COUNTRY_CONTEXT.type,
+      ),
+    )
+    await postDacpOnPort(
+      appB.appPort,
+      createAddContextListenerMessage(
+        appB.canonicalInstanceId,
+        appB.appId,
+        null,
+        INSTRUMENT_CONTEXT.type,
+      ),
+    )
+
+    await vi.waitFor(() => {
+      expect(openResponseCollector.messages.length).toBeGreaterThanOrEqual(1)
+      expect(broadcastCollector.messages.length).toBeGreaterThanOrEqual(1)
+    })
+
+    openResponseCollector.stop()
+    broadcastCollector.stop()
+
+    openResponses.push(...openResponseCollector.messages)
+
+    expect(broadcastCollector.messages).toHaveLength(1)
+    expect(broadcastCollector.messages[0]?.payload.context?.type).toBe(INSTRUMENT_CONTEXT.type)
+    expect(openResponses.filter(response => response.payload.error === undefined)).toHaveLength(1)
+    expect(openResponses.filter(response => response.payload.error !== undefined)).toHaveLength(0)
+  })
+
+  it("delivers when context listener is registered on temp routing id before WCP5 adoption completes", async () => {
+    const agent = createTestAgent({
+      appLauncher: createHostInstanceAppLauncher(),
+      openContextListenerTimeoutMs: 5000,
+    })
+    activeAgents.push(agent)
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "first-connect-early-listener-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHART_APP.appId,
+        OPEN_WITH_CONTEXT_LAUNCH,
+      ),
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length).toBe(1)
+    })
+
+    const session = beginWcpAppFirstConnect(agent, {
+      connectionAttemptUuid: "first-connect-early-listener-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+    })
+
+    const broadcastCollector = collectPortMessages<BrowserTypes.BroadcastEvent>(
+      session.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+    )
+
+    await session.postFirstConnectWcp4()
+
+    await postDacpOnPort(
+      session.appPort,
+      createGenericContextListenerMessage(session.tempInstanceId, "chartApp"),
+    )
+
+    const appB = await session.completeFirstConnect()
+
+    expect(appB.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+
+    const openResponse = await openResponsePromise
+
+    broadcastCollector.stop()
+
+    await vi.waitFor(() => {
+      expect(broadcastCollector.messages.length).toBeGreaterThanOrEqual(1)
+    })
+
+    const broadcastEvent = broadcastCollector.messages[0]
+
+    expect(broadcastEvent.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
+    expect(openResponse.payload.error).toBeUndefined()
+    expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length ?? 0).toBe(0)
+  })
+
+  it("returns openResponse error when listener instance does not match pending launcher id", async () => {
+    const agent = createTestAgent({
+      appLauncher: createHostInstanceAppLauncher(),
+      openContextListenerTimeoutMs: 2000,
+    })
+    activeAgents.push(agent)
+
+    const appB = await connectWcpAppFirstConnect(agent, {
+      connectionAttemptUuid: "first-connect-mismatch-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+    })
+
+    expect(appB.canonicalInstanceId).not.toBe(HOST_LAUNCHER_INSTANCE_ID)
+
+    await postDacpOnPort(
+      appB.appPort,
+      createAddContextListenerMessage(
+        appB.canonicalInstanceId,
+        appB.appId,
+        null,
+        INSTRUMENT_CONTEXT.type,
+      ),
+    )
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "first-connect-mismatch-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+      4000,
+    )
+
+    const broadcastCollector = collectPortMessages<BrowserTypes.BroadcastEvent>(
+      appB.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHART_APP.appId,
+        INSTRUMENT_CONTEXT,
+      ),
+    )
+
+    const openResponse = await openResponsePromise
+
+    broadcastCollector.stop()
+    expect(broadcastCollector.messages).toHaveLength(0)
+    expect(openResponse.payload.error).toBe(OpenError.AppTimeout)
+    expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length ?? 0).toBe(0)
   })
 })
 

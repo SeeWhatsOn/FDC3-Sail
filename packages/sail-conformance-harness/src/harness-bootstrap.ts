@@ -109,6 +109,7 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     apps: conformanceApps,
     appLauncher,
     intentResolver: createHarnessIntentResolver(debug),
+    heartbeatEnabled: false,
     userChannels: DEFAULT_FDC3_USER_CHANNELS,
     appConnectionOptions: {
       // Sail host UI is wired externally (no injected resolver/selector iframes).

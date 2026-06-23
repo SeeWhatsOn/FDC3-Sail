@@ -197,6 +197,11 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
         origin: identityOrigin,
         sourceWindow,
       })
+    }
+
+    // Host adoption and brand-new WCP instances can leave older launcher pre-registrations
+    // in PENDING; prune them so findInstances reflects only the canonical instance.
+    if (!canReuseExistingIdentity) {
       reconcileOrphanPendingHostInstances(context, appMetadata.appId, instanceId)
     }
 

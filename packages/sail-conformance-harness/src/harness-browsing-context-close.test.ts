@@ -1,10 +1,17 @@
-import { describe, expect, it, vi } from "vite-plus/test"
+/**
+ * @vitest-environment jsdom
+ */
 
+import { afterEach, describe, expect, it, vi } from "vite-plus/test"
+
+import { createHarnessAppLauncher } from "./app-launcher"
 import {
+  broadcastHarnessFinOsCloseContext,
   closeHarnessBrowsingContext,
   collectHarnessCloseInstanceIds,
   tryCloseBrowsingContext,
 } from "./harness-browsing-context-close"
+import { createHarnessInstanceCleanup } from "./harness-instance-lifecycle"
 import { createPopupCloseWatcher } from "./popup-launcher"
 
 describe("tryCloseBrowsingContext", () => {
@@ -71,5 +78,147 @@ describe("closeHarnessBrowsingContext", () => {
     expect(collectHarnessCloseInstanceIds(desktopAgent as never, "launcher-id")).toEqual([
       "launcher-id",
     ])
+  })
+
+  it("closes browsing context by canonical id after popup re-key from launcher id", () => {
+    let closed = false
+    const close = vi.fn(() => {
+      closed = true
+    })
+    const popup = {
+      get closed() {
+        return closed
+      },
+      close,
+    } as unknown as Window
+
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    watcher.registerPopup("launcher-L", popup)
+    watcher.remapPopupByWindow(popup, "canonical-C")
+
+    const desktopAgent = {
+      apps: {
+        getConnections: () => [{ instanceId: "canonical-C", appId: "MockApp", source: popup }],
+        getInstances: () => [],
+        getConnection: () => undefined,
+      },
+    }
+
+    expect(
+      closeHarnessBrowsingContext({
+        instanceId: "canonical-C",
+        desktopAgent: desktopAgent as never,
+        popupWatcher: watcher,
+      }),
+    ).toBe(true)
+    expect(close).toHaveBeenCalledOnce()
+    expect(watcher.closePopup("launcher-L")).toBe(false)
+
+    watcher.stop()
+  })
+
+  it("AppLauncher.close succeeds with canonical id after WCP5 popup re-key", async () => {
+    let closed = false
+    const close = vi.fn(() => {
+      closed = true
+    })
+    const popup = {
+      get closed() {
+        return closed
+      },
+      close,
+    } as unknown as Window
+
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    watcher.registerPopup("launcher-L", popup)
+    watcher.remapPopupByWindow(popup, "canonical-C")
+
+    const desktopAgent = {
+      apps: {
+        getConnections: () => [{ instanceId: "canonical-C", appId: "MockApp", source: popup }],
+        getInstances: () => [],
+        getConnection: () => undefined,
+        getInstance: vi.fn(() => undefined),
+      },
+      registerPendingHostInstance: vi.fn(),
+      disconnectInstance: vi.fn(),
+    }
+
+    const cleanup = createHarnessInstanceCleanup({
+      desktopAgent: desktopAgent as never,
+      popupWatcher: watcher,
+      removePanel: vi.fn(),
+    })
+
+    const launcher = createHarnessAppLauncher(vi.fn(), {
+      closePopup: instanceId => cleanup.closeHarnessBrowsingContext(instanceId),
+      removePanel: vi.fn(),
+    })
+
+    await launcher.close!("canonical-C")
+
+    expect(close).toHaveBeenCalledOnce()
+    watcher.stop()
+  })
+})
+
+describe("broadcastHarnessFinOsCloseContext", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("broadcasts closeWindow on app-control and triggers browsing context teardown", async () => {
+    const teardownSpy = vi.fn((_instanceId: string) => true)
+    let closed = false
+    const close = vi.fn(() => {
+      closed = true
+    })
+    const popup = {
+      get closed() {
+        return closed
+      },
+      close,
+    } as unknown as Window
+
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    watcher.registerPopup("mock-instance-C", popup)
+
+    const desktopAgent = {
+      apps: {
+        getConnections: () => [
+          { instanceId: "mock-instance-C", appId: "ChannelsAppId", source: popup },
+        ],
+        getInstances: () => [
+          { instanceId: "mock-instance-C", appId: "ChannelsAppId", status: "connected" as const },
+        ],
+        getConnection: () => undefined,
+        getInstance: vi.fn((instanceId: string) =>
+          instanceId === "mock-instance-C"
+            ? { appId: "ChannelsAppId", instanceId, status: "connected" as const }
+            : undefined,
+        ),
+      },
+      registerPendingHostInstance: vi.fn(),
+      disconnectInstance: vi.fn(),
+    }
+
+    const cleanup = createHarnessInstanceCleanup({
+      desktopAgent: desktopAgent as never,
+      popupWatcher: watcher,
+      removePanel: vi.fn(),
+    })
+
+    await broadcastHarnessFinOsCloseContext({
+      desktopAgent: desktopAgent as never,
+      conformance1InstanceId: "conformance1-instance",
+      targetInstanceId: "mock-instance-C",
+      onBrowsingContextTeardown: instanceId =>
+        cleanup.closeHarnessBrowsingContext(instanceId) && teardownSpy(instanceId),
+    })
+
+    expect(teardownSpy).toHaveBeenCalledWith("mock-instance-C")
+    expect(close).toHaveBeenCalledOnce()
+
+    watcher.stop()
   })
 })
