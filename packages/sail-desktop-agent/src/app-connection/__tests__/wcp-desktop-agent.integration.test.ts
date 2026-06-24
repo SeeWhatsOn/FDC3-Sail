@@ -15,6 +15,7 @@ import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import type { AppConnectionMetadata } from "../../app-connection/browser-app-connection"
 import { AppInstanceState } from "../../state/types"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
+import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../handlers/utils/open-with-context"
 import {
   COUNTRY_CONTEXT,
   INSTRUMENT_CONTEXT,
@@ -43,6 +44,15 @@ import {
   HOST_LAUNCHER_INSTANCE_ID,
   PORTFOLIO_APP,
 } from "./wcp-desktop-agent.integration.fixtures"
+
+/** Clears module-level open-with-context timers that outlive a single agent instance. */
+function cleanupWcpIntegrationTestHarness(activeAgents: DesktopAgent[]): void {
+  clearAllPendingOpenWithContextTimeoutsForTesting()
+  clearAllHeartbeatTimersForTesting()
+  for (const agent of activeAgents.splice(0)) {
+    agent.stop()
+  }
+}
 
 const OPEN_WITH_CONTEXT_LAUNCH: Context = {
   type: "testContextY",
@@ -153,10 +163,7 @@ describe("session carry-over", () => {
   const SECOND_LAUNCHER_INSTANCE_ID = "L2"
 
   afterEach(() => {
-    clearAllHeartbeatTimersForTesting()
-    for (const agent of activeAgents.splice(0)) {
-      agent.stop()
-    }
+    cleanupWcpIntegrationTestHarness(activeAgents)
   })
 
   function createSessionSoakAppLauncher(): AppLauncher {
@@ -346,10 +353,7 @@ describe("multi-pending hostIdentifier adoption", () => {
   const NEW_PENDING_ID = "L2"
 
   afterEach(() => {
-    clearAllHeartbeatTimersForTesting()
-    for (const agent of activeAgents.splice(0)) {
-      agent.stop()
-    }
+    cleanupWcpIntegrationTestHarness(activeAgents)
   })
 
   function createMultiPendingAppLauncher(): AppLauncher {
@@ -382,11 +386,13 @@ describe("multi-pending hostIdentifier adoption", () => {
   }
 
   it("delivers open-with-context to L2 when WCP4 omits instanceId and hostIdentifier names L2 among two stale PENDING rows", async () => {
+    const openWithContextWaitMs = 5000
     const agent = createTestAgent({
       appLauncher: createMultiPendingAppLauncher(),
-      openContextListenerTimeoutMs: 5000,
+      openContextListenerTimeoutMs: openWithContextWaitMs,
     })
     activeAgents.push(agent)
+    const portMessageWaitMs = openWithContextWaitMs + 2000
 
     const appA = await connectWcpApp(agent, {
       connectionAttemptUuid: "multi-pending-source-uuid",
@@ -411,6 +417,7 @@ describe("multi-pending hostIdentifier adoption", () => {
     const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
       appA.appPort,
       data => (data as { type?: string }).type === "openResponse",
+      portMessageWaitMs,
     )
 
     await postDacpOnPort(
@@ -441,6 +448,7 @@ describe("multi-pending hostIdentifier adoption", () => {
     const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
       appB.appPort,
       data => (data as { type?: string }).type === "broadcastEvent",
+      portMessageWaitMs,
     )
 
     await postDacpOnPort(
@@ -482,10 +490,7 @@ describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
   const activeAgents: DesktopAgent[] = []
 
   afterEach(() => {
-    clearAllHeartbeatTimersForTesting()
-    for (const agent of activeAgents.splice(0)) {
-      agent.stop()
-    }
+    cleanupWcpIntegrationTestHarness(activeAgents)
   })
 
   it("delivers launch context via broadcastEvent when B adds a generic * listener after host-pre-registered open", async () => {
@@ -648,10 +653,7 @@ describe("open-with-context (first-connect WCP4)", () => {
   const activeAgents: DesktopAgent[] = []
 
   afterEach(() => {
-    clearAllHeartbeatTimersForTesting()
-    for (const agent of activeAgents.splice(0)) {
-      agent.stop()
-    }
+    cleanupWcpIntegrationTestHarness(activeAgents)
   })
 
   it("delivers launch context when B first-connects without instanceUuid and adopts sole pending launcher id", async () => {
@@ -1056,10 +1058,7 @@ describe("WCP edge contract", () => {
   const activeAgents: DesktopAgent[] = []
 
   afterEach(() => {
-    clearAllHeartbeatTimersForTesting()
-    for (const agent of activeAgents.splice(0)) {
-      agent.stop()
-    }
+    cleanupWcpIntegrationTestHarness(activeAgents)
   })
 
   it("routes WCP4 through the connector to DesktopAgent and correlates temp→canonical instance ids", async () => {
@@ -1274,10 +1273,7 @@ describe("browser channels controller (WCP integration)", () => {
   const activeAgents: DesktopAgent[] = []
 
   afterEach(() => {
-    clearAllHeartbeatTimersForTesting()
-    for (const agent of activeAgents.splice(0)) {
-      agent.stop()
-    }
+    cleanupWcpIntegrationTestHarness(activeAgents)
   })
 
   it("reads null app channel before any join", async () => {
@@ -1488,10 +1484,7 @@ describe("browser apps controller (WCP integration)", () => {
   const activeAgents: DesktopAgent[] = []
 
   afterEach(() => {
-    clearAllHeartbeatTimersForTesting()
-    for (const agent of activeAgents.splice(0)) {
-      agent.stop()
-    }
+    cleanupWcpIntegrationTestHarness(activeAgents)
   })
 
   it("notifies onConnect when WCP identity validation completes", async () => {

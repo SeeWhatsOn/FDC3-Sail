@@ -25,3 +25,4 @@ packages/sail-desktop-agent/reports/**/*
 .cursor/hooks/state/continual-learning.json
 
 
+packages/sail-web/playwright-report/index.html
