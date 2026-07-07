@@ -52,7 +52,6 @@ export function handleWCP1Hello(
 
   // Extract host identifier from iframe's name attribute (AppLauncher.instanceId).
   // WCP4 carries this as claimed instanceId; the agent only adopts it on reconnect reuse.
-  // Cross-origin toolbox iframes cannot expose window.name to the host — see harness README.
   // Note: For cross-origin iframes, accessing window.name will throw SecurityError
   // so we wrap it in try-catch and gracefully fall back to undefined
   const sourceWindow = event.source as Window

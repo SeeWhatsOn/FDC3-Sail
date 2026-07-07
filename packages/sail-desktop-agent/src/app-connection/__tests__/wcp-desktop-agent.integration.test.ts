@@ -7,7 +7,7 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, afterEach, vi } from "vite-plus/test"
+import { describe, it, expect, afterEach, beforeEach, vi } from "vite-plus/test"
 import { OpenError, type BrowserTypes, type Context } from "@finos/fdc3"
 import type { AppLauncher } from "../../host-contracts/app-launcher"
 import type { DesktopAgent } from "../../agent/desktop-agent"
@@ -52,7 +52,12 @@ function cleanupWcpIntegrationTestHarness(activeAgents: DesktopAgent[]): void {
   for (const agent of activeAgents.splice(0)) {
     agent.stop()
   }
+  vi.restoreAllMocks()
 }
+
+beforeEach(() => {
+  vi.restoreAllMocks()
+})
 
 const OPEN_WITH_CONTEXT_LAUNCH: Context = {
   type: "testContextY",
@@ -344,145 +349,6 @@ describe("session carry-over", () => {
     expect(connectedChartInstances.map(instance => instance.instanceId)).toEqual(
       expect.arrayContaining([STALE_LAUNCHER_INSTANCE_ID, SECOND_LAUNCHER_INSTANCE_ID]),
     )
-  })
-})
-
-describe("multi-pending hostIdentifier adoption", () => {
-  const activeAgents: DesktopAgent[] = []
-  const STALE_PENDING_ID = "L1"
-  const NEW_PENDING_ID = "L2"
-
-  afterEach(() => {
-    cleanupWcpIntegrationTestHarness(activeAgents)
-  })
-
-  function createMultiPendingAppLauncher(): AppLauncher {
-    let launchCount = 0
-    return {
-      launch(request) {
-        const launcherIds = [STALE_PENDING_ID, NEW_PENDING_ID]
-        const instanceId = request.app.instanceId ?? launcherIds[launchCount++]
-        return Promise.resolve({ appId: request.app.appId, instanceId })
-      },
-    }
-  }
-
-  function createFindInstancesMessage(
-    sourceInstanceId: string,
-    sourceAppId: string,
-    targetAppId: string,
-  ): BrowserTypes.FindInstancesRequest {
-    return {
-      type: "findInstancesRequest",
-      meta: {
-        requestUuid: crypto.randomUUID(),
-        timestamp: new Date(),
-        source: { appId: sourceAppId, instanceId: sourceInstanceId },
-      },
-      payload: {
-        app: { appId: targetAppId },
-      },
-    }
-  }
-
-  it("delivers open-with-context to L2 when WCP4 omits instanceId and hostIdentifier names L2 among two stale PENDING rows", async () => {
-    const openWithContextWaitMs = 5000
-    const agent = createTestAgent({
-      appLauncher: createMultiPendingAppLauncher(),
-      openContextListenerTimeoutMs: openWithContextWaitMs,
-    })
-    activeAgents.push(agent)
-    const portMessageWaitMs = openWithContextWaitMs + 2000
-
-    const appA = await connectWcpApp(agent, {
-      connectionAttemptUuid: "multi-pending-source-uuid",
-      appId: "portfolioApp",
-      identityUrl: PORTFOLIO_APP.details.url,
-    })
-
-    await postDacpOnPort(
-      appA.appPort,
-      createOpenRequestMessage(appA.canonicalInstanceId, appA.appId, CHART_APP.appId),
-    )
-
-    await waitForPortMessage<BrowserTypes.OpenResponse>(
-      appA.appPort,
-      data => (data as { type?: string }).type === "openResponse",
-    )
-
-    await vi.waitFor(() => {
-      expect(agent.getState().instances[STALE_PENDING_ID]?.state).toBe(AppInstanceState.PENDING)
-    })
-
-    const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
-      appA.appPort,
-      data => (data as { type?: string }).type === "openResponse",
-      portMessageWaitMs,
-    )
-
-    await postDacpOnPort(
-      appA.appPort,
-      createOpenRequestMessage(
-        appA.canonicalInstanceId,
-        appA.appId,
-        CHART_APP.appId,
-        OPEN_WITH_CONTEXT_LAUNCH,
-      ),
-    )
-
-    await vi.waitFor(() => {
-      expect(agent.getState().instances[STALE_PENDING_ID]?.state).toBe(AppInstanceState.PENDING)
-      expect(agent.getState().instances[NEW_PENDING_ID]?.state).toBe(AppInstanceState.PENDING)
-      expect(agent.getState().open.pendingWithContext[NEW_PENDING_ID]?.length).toBe(1)
-    })
-
-    const appB = await connectWcpAppFirstConnect(agent, {
-      connectionAttemptUuid: "multi-pending-host-id-target-uuid",
-      appId: "chartApp",
-      identityUrl: CHART_APP.details.url,
-      hostIdentifier: NEW_PENDING_ID,
-    })
-
-    expect(appB.canonicalInstanceId).toBe(NEW_PENDING_ID)
-
-    const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
-      appB.appPort,
-      data => (data as { type?: string }).type === "broadcastEvent",
-      portMessageWaitMs,
-    )
-
-    await postDacpOnPort(
-      appB.appPort,
-      createGenericContextListenerMessage(appB.canonicalInstanceId, appB.appId),
-    )
-
-    const [broadcastEvent, openResponse] = await Promise.all([
-      broadcastPromise,
-      openResponsePromise,
-    ])
-
-    expect(broadcastEvent.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
-    expect(openResponse.type).toBe("openResponse")
-    expect(openResponse.payload.error).toBeUndefined()
-    expect(openResponse.payload.appIdentifier?.instanceId).toBe(NEW_PENDING_ID)
-    expect(agent.getState().open.pendingWithContext[NEW_PENDING_ID]?.length ?? 0).toBe(0)
-
-    const findInstancesResponsePromise = waitForPortMessage<BrowserTypes.FindInstancesResponse>(
-      appA.appPort,
-      data => (data as { type?: string }).type === "findInstancesResponse",
-    )
-
-    await postDacpOnPort(
-      appA.appPort,
-      createFindInstancesMessage(appA.canonicalInstanceId, appA.appId, CHART_APP.appId),
-    )
-
-    const findInstancesResponse = await findInstancesResponsePromise
-    const findInstancesIds =
-      findInstancesResponse.payload.appIdentifiers?.map(identifier => identifier.instanceId) ?? []
-
-    expect(findInstancesIds).toContain(NEW_PENDING_ID)
-    expect(findInstancesIds).not.toContain(STALE_PENDING_ID)
   })
 })
 

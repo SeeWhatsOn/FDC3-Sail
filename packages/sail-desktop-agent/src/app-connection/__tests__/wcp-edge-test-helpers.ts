@@ -313,11 +313,11 @@ export function waitForPortMessage<T>(
   timeoutMs = 5000,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error("Timed out waiting for MessagePort message")),
-      timeoutMs,
-    )
     const priorHandler = appPort.onmessage
+    const timer = setTimeout(() => {
+      appPort.onmessage = priorHandler
+      reject(new Error("Timed out waiting for MessagePort message"))
+    }, timeoutMs)
     appPort.onmessage = event => {
       if (predicate(event.data)) {
         clearTimeout(timer)
