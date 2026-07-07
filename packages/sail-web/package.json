@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vp build",
+    "predev": "npm run build -w @finos/sail-desktop-agent -w @finos/sail-platform-api",
     "dev": "vp dev",
     "format:fix": "vp fmt .",
     "format": "vp fmt --check .",

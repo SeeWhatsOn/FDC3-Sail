@@ -5,6 +5,7 @@ import { ExternalLink, Maximize2, Minimize2, X } from "lucide-react"
 import { ChannelSelector } from "../../../ChannelSelector"
 import { useConnectionStore } from "../../../../contexts"
 import { extractFdc3PanelId } from "../../dockview-options"
+import { dockviewPopoutUrl } from "../../../../utils/dockview-popout"
 
 import { Icon } from "./Icon"
 
@@ -27,10 +28,7 @@ const PopoutButton = (props: IDockviewHeaderActionsProps) => {
   const handlePopoutToggle = () => {
     if (props.api.location.type !== "popout") {
       props.containerApi
-        .addPopoutGroup(props.group)
-        .then(() => {
-          // Optional: Move panel to right position after popout
-        })
+        .addPopoutGroup(props.group, { popoutUrl: dockviewPopoutUrl() })
         .catch(error => {
           console.error("Failed to create popout window:", error)
         })

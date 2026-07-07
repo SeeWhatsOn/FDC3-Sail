@@ -12,6 +12,7 @@ import { Panels } from "./Panels"
 import type { DockviewSailProps } from "./types"
 import { WatermarkPanel } from "./panel-templates/WatermarkPanel"
 import { FDC3Tab } from "./tab-templates/FDC3Tab"
+import { dockviewPopoutUrl } from "../../utils/dockview-popout"
 
 // Custom tab components for rendering tabs with icons
 const TabComponents = {
@@ -323,6 +324,7 @@ const Layout = (props: DockviewSailProps) => {
         leftHeaderActionsComponent={LeftControls}
         prefixHeaderActionsComponent={PrefixToolbarControls}
         defaultRenderer={FDC3_PANEL_RENDERER}
+        popoutUrl={dockviewPopoutUrl()}
         onReady={onReady}
         className={props.theme || "dockview-theme-abyss"}
         watermarkComponent={WatermarkPanel}

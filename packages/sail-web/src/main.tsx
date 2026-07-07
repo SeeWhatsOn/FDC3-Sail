@@ -9,6 +9,10 @@ import type { AppMetadata } from "@finos/fdc3"
 
 import conformanceAppDirectory from "../../sail-conformance-harness/conformance-appd.json"
 import defaultAppDirectory from "../fixtures/default-app-directory.json"
+import {
+  bootstrapDockviewPopoutShell,
+  isDockviewPopoutShell,
+} from "./utils/dockview-popout"
 
 import "./index.css"
 import App from "./App"
@@ -18,7 +22,9 @@ import { ChannelSelectorTestPage } from "./tests/ChannelSelectorTestPage"
 const isChannelSelectorE2e =
   new URLSearchParams(window.location.search).get("e2e") === "channel-selector"
 
-if (isChannelSelectorE2e) {
+if (isDockviewPopoutShell()) {
+  bootstrapDockviewPopoutShell()
+} else if (isChannelSelectorE2e) {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <ChannelSelectorTestPage />
