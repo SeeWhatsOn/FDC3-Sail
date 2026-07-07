@@ -24,7 +24,7 @@ export type ResolverWireAppIntent = {
 }
 
 /**
- * FDC3 conformance raiseIntent* responses surface `intent.name` as `intent.displayName`
+ * FDC3 raiseIntent* wire responses surface `intent.name` as `intent.displayName`
  * on the wire, even when App Directory metadata carries a human-readable label.
  */
 export function appIntentForWireResponse<T extends ResolverWireAppIntent>(appIntent: T): T {
@@ -36,8 +36,7 @@ export function appIntentForWireResponse<T extends ResolverWireAppIntent>(appInt
 
 /**
  * Whether raiseIntent* should queue delivery until the target registers a listener.
- * Explicit instance targeting to a connected app delivers immediately (FDC3 conformance:
- * raise to a running app instance by instanceId).
+ * Explicit instance targeting to a connected app delivers immediately.
  */
 export function shouldWaitForIntentListenerBeforeDelivery(
   context: DACPHandlerContext,
@@ -59,9 +58,9 @@ export function shouldWaitForIntentListenerBeforeDelivery(
 }
 
 /**
- * Resolves human-readable intent labels from the app directory (e.g. conformance-appd.json
- * `displayName` on listensFor entries). FDC3 findIntent / findIntentsByContext responses must
- * surface directory metadata, not the internal intent name.
+ * Resolves human-readable intent labels from App Directory `displayName` entries.
+ * FDC3 findIntent / findIntentsByContext responses must surface directory metadata,
+ * not the internal intent name.
  */
 function getIntentDisplayNameFromDirectory(
   catalog: AppDirectoryState,
@@ -184,7 +183,8 @@ export function findIntentHandlers(
     .map(app => {
       const intents = app.interop?.intents?.listensFor
       const intentDef = intents?.[intent]
-      const contextTypes = Array.isArray(intentDef?.contexts) ? intentDef.contexts : []
+      const contextTypes =
+        intentDef && Array.isArray(intentDef.contexts) ? intentDef.contexts : []
       return {
         intentName: intent,
         appId: app.appId,
@@ -382,7 +382,7 @@ export function findIntentsByContext(
 
   // Intent discovery lists come from the app directory for the requested context type.
   // Running listeners may add live instances via createAppIntents, but must not inflate
-  // the intent list when directory metadata excludes that context (FDC3 conformance).
+  // the intent list when directory metadata excludes that context.
 
   return orderedIntentNames.map(name => ({
     name,

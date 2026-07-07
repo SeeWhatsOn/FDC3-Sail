@@ -53,6 +53,11 @@ export function handleBroadcastRequest(
 
   try {
     const { channelId: payloadChannelId, context: broadcastContext } = message.payload
+    const broadcastPayload = message.payload as BrowserTypes.BroadcastRequest["payload"] & {
+      /** FDC3 3.0: optional app-provided ContextMetadata fields on broadcast. */
+      metadata?: Record<string, unknown>
+    }
+    const broadcastAppMetadata = broadcastPayload.metadata
 
     if (!isValidContext(broadcastContext)) {
       sendDACPErrorResponse({
@@ -115,9 +120,14 @@ export function handleBroadcastRequest(
       setState(state =>
         setPrivateChannelLastContext(state, channelId, broadcastContext.type, broadcastContext),
       )
-      notifyPrivateChannelContextListeners(channelId, broadcastContext, handlerContext)
+      notifyPrivateChannelContextListeners(
+        channelId,
+        broadcastContext,
+        handlerContext,
+        broadcastAppMetadata,
+      )
     } else {
-      notifyContextListeners(channelId, broadcastContext, handlerContext)
+      notifyContextListeners(channelId, broadcastContext, handlerContext, broadcastAppMetadata)
     }
 
     const response = createDACPSuccessResponse(message, "broadcastResponse")
@@ -353,6 +363,7 @@ function notifyContextListeners(
   channelId: string,
   context: Context,
   handlerContext: DACPHandlerContext,
+  appMetadata?: Record<string, unknown>,
 ): void {
   const { getState, logger, logPayloadDetail } = handlerContext
   const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
@@ -402,14 +413,18 @@ function notifyContextListeners(
     try {
       const senderInstance = getInstance(getState(), handlerContext.instanceId)
 
-      const broadcastEvent = createDACPEvent("broadcastEvent", {
-        channelId,
-        context,
-        originatingApp: {
-          appId: senderInstance?.appId || "unknown",
-          instanceId: handlerContext.instanceId,
+      const broadcastEvent = createDACPEvent(
+        "broadcastEvent",
+        {
+          channelId,
+          context,
+          originatingApp: {
+            appId: senderInstance?.appId || "unknown",
+            instanceId: handlerContext.instanceId,
+          },
         },
-      })
+        { appMetadata },
+      )
 
       const broadcastEventWithRouting = {
         ...broadcastEvent,
@@ -511,6 +526,7 @@ function notifyPrivateChannelContextListeners(
   channelId: string,
   context: Context,
   handlerContext: DACPHandlerContext,
+  appMetadata?: Record<string, unknown>,
 ): void {
   const { getState, logger } = handlerContext
   const privateChannel = getPrivateChannel(getState(), channelId)
@@ -531,14 +547,18 @@ function notifyPrivateChannelContextListeners(
     })
     .forEach(listener => {
       const senderInstance = getInstance(getState(), handlerContext.instanceId)
-      const broadcastEvent = createDACPEvent("broadcastEvent", {
-        channelId,
-        context,
-        originatingApp: {
-          appId: senderInstance?.appId || "unknown",
-          instanceId: handlerContext.instanceId,
+      const broadcastEvent = createDACPEvent(
+        "broadcastEvent",
+        {
+          channelId,
+          context,
+          originatingApp: {
+            appId: senderInstance?.appId || "unknown",
+            instanceId: handlerContext.instanceId,
+          },
         },
-      })
+        { appMetadata },
+      )
 
       const broadcastEventWithRouting = {
         ...broadcastEvent,

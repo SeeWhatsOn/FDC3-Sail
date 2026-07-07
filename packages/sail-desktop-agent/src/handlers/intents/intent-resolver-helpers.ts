@@ -130,7 +130,7 @@ export function createResolverAppIntent(
 
   // 1) Connected instances for directory apps (directory order).
   // Include running apps that declare the intent in AppD even when they have not yet
-  // registered an intent listener for this intent name (FDC3 resolver / conformance BDD).
+  // registered an intent listener for this intent name.
   directoryMatches.forEach(app => {
     const connectedInstances = getInstancesByAppId(state, app.appId).filter(
       instance => instance.state === AppInstanceState.CONNECTED,

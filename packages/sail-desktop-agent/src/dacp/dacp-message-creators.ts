@@ -40,12 +40,32 @@ function buildContextMetadataFromOriginatingApp(
 function attachContextMetadataWhenPresent(
   payload: Record<string, unknown>,
   timestamp: string,
+  appMetadata?: Record<string, unknown>,
 ): void {
   const originatingApp = payload.originatingApp as OriginatingAppPayload | undefined
   if (!originatingApp?.appId) {
     return
   }
-  payload.metadata = buildContextMetadataFromOriginatingApp(originatingApp, timestamp)
+  const baseMetadata = buildContextMetadataFromOriginatingApp(originatingApp, timestamp)
+  payload.metadata = appMetadata ? { ...baseMetadata, ...appMetadata } : baseMetadata
+}
+
+/**
+ * FDC3 3.0 behavior: merge app-provided broadcast metadata (traceId, signature, custom)
+ * onto DA-generated ContextMetadata on broadcast events.
+ */
+export function mergeBroadcastAppMetadata(
+  baseMetadata: ReturnType<typeof buildContextMetadataFromOriginatingApp>,
+  appMetadata?: Record<string, unknown>,
+): ReturnType<typeof buildContextMetadataFromOriginatingApp> & Record<string, unknown> {
+  if (!appMetadata) {
+    return baseMetadata
+  }
+
+  return {
+    ...baseMetadata,
+    ...appMetadata,
+  }
 }
 
 /**
@@ -108,10 +128,12 @@ export function createDACPSuccessResponse(
 export function createDACPEvent(
   eventType: BrowserTypes.EventMessageType,
   payload: Record<string, unknown> = {},
+  options?: { appMetadata?: Record<string, unknown> },
 ): BrowserTypes.AgentEventMessage {
   const timestamp = new Date().toISOString()
   const eventPayload = { ...payload }
-  attachContextMetadataWhenPresent(eventPayload, timestamp)
+  const appMetadata = options?.appMetadata
+  attachContextMetadataWhenPresent(eventPayload, timestamp, appMetadata)
 
   const response = {
     type: eventType,

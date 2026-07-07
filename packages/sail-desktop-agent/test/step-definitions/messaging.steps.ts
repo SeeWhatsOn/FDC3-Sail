@@ -40,6 +40,16 @@ Then("messaging will have {int} posts", function (this: CustomWorld, count: numb
 })
 
 Then(
+  "messaging will have {int} posts matching type {string}",
+  function (this: CustomWorld, count: number, messageType: string) {
+    const messages = this.mockTransport
+      .getPostedMessages()
+      .filter(record => record.msg.type === messageType)
+    expect(messages.length).toEqual(count)
+  },
+)
+
+Then(
   "{string} response intent {string} includes app {string} with instanceId {string}",
   function (
     this: CustomWorld,

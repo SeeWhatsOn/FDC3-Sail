@@ -127,6 +127,34 @@ When(
       type: "broadcastRequest",
     }
 
+    this.props.lastInboundRequestAt = Date.now()
+    await this.mockTransport.receiveMessage(message)
+  },
+)
+
+When(
+  "{string} broadcasts {string} on {string} with metadata traceId {string} [fdc3.broadcast]",
+  async function (
+    this: CustomWorld,
+    app: string,
+    contextType: string,
+    channelId: string,
+    traceId: string,
+  ) {
+    ensureAppInstance(this, app)
+    const meta = createMeta(this, app)
+
+    const message = {
+      meta,
+      payload: {
+        channelId: handleResolve(channelId, this) as string,
+        context: contextMap[contextType],
+        metadata: { traceId: handleResolve(traceId, this) as string },
+      },
+      type: "broadcastRequest" as const,
+    } as BroadcastRequest
+
+    this.props.lastInboundRequestAt = Date.now()
     await this.mockTransport.receiveMessage(message)
   },
 )
