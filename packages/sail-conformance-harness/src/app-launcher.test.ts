@@ -36,7 +36,16 @@ describe("resolveHarnessLaunchMode", () => {
 })
 
 describe("createHarnessAppLauncher", () => {
-  it("always removes panel on close even when closePopup succeeds", async () => {
+  it("calls onClose for full host teardown when configured", async () => {
+    const onClose = vi.fn()
+    const launcher = createHarnessAppLauncher(vi.fn(), { onClose })
+
+    await launcher.close!("instance-1")
+
+    expect(onClose).toHaveBeenCalledWith("instance-1")
+  })
+
+  it("falls back to closePopup and removePanel when onClose is not configured", async () => {
     const removePanel = vi.fn()
     const closePopup = vi.fn(() => true)
     const launcher = createHarnessAppLauncher(vi.fn(), { closePopup, removePanel })

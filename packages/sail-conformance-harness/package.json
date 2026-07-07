@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npm run build -w @finos/sail-desktop-agent --prefix ../.. && concurrently -k -n agent,harness \"npm run dev -w @finos/sail-desktop-agent --prefix ../..\" \"vp dev\"",
+    "dev:local": "npm run build -w @finos/sail-desktop-agent --prefix ../.. && concurrently -k -n agent,harness \"npm run dev -w @finos/sail-desktop-agent --prefix ../..\" \"VITE_CONFORMANCE_TOOLBOX=local vp dev\"",
     "build": "vp build",
     "typecheck": "tsc --noEmit",
     "test": "vp test run",

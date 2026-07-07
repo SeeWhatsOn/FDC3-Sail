@@ -6,16 +6,24 @@ import {
   type DirectoryApp,
 } from "@finos/sail-desktop-agent"
 
-import conformanceAppDirectory from "../conformance-appd.json"
-
+import { loadConformanceApplications } from "./conformance-app-directory"
 import { createHarnessAppLauncher } from "./app-launcher"
 import {
   createHarnessInstanceCleanup,
   type HarnessInstanceCleanup,
 } from "./harness-instance-lifecycle"
+import {
+  createHarnessFinOsTeardownObserver,
+  installHarnessInboundAppMessageObserver,
+} from "./harness-finos-teardown"
 import { createHarnessIntentResolver } from "./intent-resolver-wiring"
 import { createPopupCloseWatcher, openHarnessPopup } from "./popup-launcher"
 import type { HarnessPanel } from "./types"
+
+import { resolveConformanceToolboxProfile } from "./conformance-app-directory"
+
+/** Default harness FDC3 target for the active toolbox profile (hosted → 3.0, local → 2.2). */
+export const HARNESS_FDC3_TARGET_VERSION = resolveConformanceToolboxProfile().fdc3Version
 
 export const HARNESS_DEBUG = true
 
@@ -41,6 +49,9 @@ export type HarnessBootstrap = {
   initialPanels: HarnessPanel[]
   onPanelsChange: (setter: Dispatch<SetStateAction<HarnessPanel[]>>) => void
   popupWatcher: ReturnType<typeof createPopupCloseWatcher>
+  toolboxProfile: ReturnType<typeof loadConformanceApplications>["profile"]
+  toolboxOrigin: string
+  fdc3Version: ReturnType<typeof loadConformanceApplications>["fdc3Version"]
 }
 
 /**
@@ -49,7 +60,8 @@ export type HarnessBootstrap = {
  */
 export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBootstrap {
   const debug = options?.debug ?? HARNESS_DEBUG
-  const conformanceApps = conformanceAppDirectory.applications as DirectoryApp[]
+  const { applications: conformanceApps, fdc3Version, profile, origin } =
+    loadConformanceApplications()
   const conformance1InstanceId = crypto.randomUUID()
   const conformance1Url = extractConformance1Url(conformanceApps)
 
@@ -77,6 +89,10 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     disconnectHarnessInstance() {},
   }
 
+  const finOsTeardownObserver = createHarnessFinOsTeardownObserver({
+    instanceCleanup,
+  })
+
   const popupWatcher = createPopupCloseWatcher({
     onPopupClosed: instanceId => {
       instanceCleanup.disconnectHarnessInstance(instanceId)
@@ -101,21 +117,24 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
   }
 
   const appLauncher = createHarnessAppLauncher(mountLaunchedPanel, {
-    closePopup: instanceId => instanceCleanup.closeHarnessBrowsingContext(instanceId),
-    removePanel,
+    onClose: instanceId => instanceCleanup.disconnectHarnessInstance(instanceId),
   })
 
   const desktopAgent = new SailDesktopAgent({
     apps: conformanceApps,
     appLauncher,
     intentResolver: createHarnessIntentResolver(debug),
+    autoStart: false,
     heartbeatEnabled: false,
     userChannels: DEFAULT_FDC3_USER_CHANNELS,
+    implementationMetadata: {
+      fdc3Version,
+    },
     appConnectionOptions: {
       // Sail host UI is wired externally (no injected resolver/selector iframes).
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,
-      fdc3Version: "2.2",
+      fdc3Version,
     },
     logPayloadDetail: debug ? "full" : "metadata",
     onAppConnected: (metadata: AppConnectionMetadata) => {
@@ -129,6 +148,8 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
       instanceCleanup.disconnectHarnessInstance(instanceId)
     },
   })
+
+  installHarnessInboundAppMessageObserver(desktopAgent.connector, finOsTeardownObserver)
 
   Object.assign(
     instanceCleanup,
@@ -144,9 +165,10 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     instanceId: conformance1InstanceId,
   })
 
-  if (debug) {
-    console.log("[ConformanceHarness] Desktop agent started (debug logging enabled)")
-  }
+  desktopAgent.start()
+
+  const startupMessage = `[ConformanceHarness] Desktop agent started (toolbox: ${profile}, origin: ${origin}, FDC3 target: ${fdc3Version}${debug ? ", debug logging enabled" : ""})`
+  console.info(startupMessage)
 
   return {
     desktopAgent,
@@ -155,6 +177,9 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
       setPanels = setter
     },
     popupWatcher,
+    toolboxProfile: profile,
+    toolboxOrigin: origin,
+    fdc3Version,
   }
 }
 

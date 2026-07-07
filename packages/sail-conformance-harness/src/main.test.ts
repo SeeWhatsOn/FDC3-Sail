@@ -7,7 +7,11 @@ import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 import * as sailDesktopAgent from "@finos/sail-desktop-agent"
 import { resolveDesktopAgentConfig, SailDesktopAgent } from "@finos/sail-desktop-agent"
 
-import { createHarnessBootstrap, getConformance1PanelState } from "./harness-bootstrap"
+import {
+  createHarnessBootstrap,
+  getConformance1PanelState,
+  HARNESS_FDC3_TARGET_VERSION,
+} from "./harness-bootstrap"
 import { createPopupCloseWatcher } from "./popup-launcher"
 
 describe("createHarnessBootstrap", () => {
@@ -29,6 +33,8 @@ describe("createHarnessBootstrap", () => {
       expect(constructorSpy).toHaveBeenCalledOnce()
       const resolved = resolveDesktopAgentConfig(capturedOptions ?? {})
       expect(resolved.heartbeatEnabled).toBe(false)
+      expect(resolved.implementationMetadata.fdc3Version).toBe(HARNESS_FDC3_TARGET_VERSION)
+      expect(resolved.appConnectionOptions?.fdc3Version).toBe(HARNESS_FDC3_TARGET_VERSION)
     } finally {
       bootstrap.desktopAgent.stop()
     }
@@ -40,6 +46,8 @@ describe("createHarnessBootstrap", () => {
       expect(bootstrap.desktopAgent).toBeInstanceOf(SailDesktopAgent)
       expect(bootstrap.desktopAgent.connector.getIsStarted()).toBe(true)
       expect(bootstrap.desktopAgent.apps.getById("Conformance1")).toBeDefined()
+      expect(bootstrap.toolboxProfile).toBeDefined()
+      expect(bootstrap.fdc3Version).toBe(HARNESS_FDC3_TARGET_VERSION)
 
       const panelState = getConformance1PanelState(bootstrap)
 
@@ -51,6 +59,22 @@ describe("createHarnessBootstrap", () => {
       expect(instance?.status).toBe("pending")
     } finally {
       bootstrap.desktopAgent.stop()
+    }
+  })
+
+  it("logs toolbox profile and FDC3 target on host startup", () => {
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {})
+    const bootstrap = createHarnessBootstrap({ debug: false })
+    try {
+      expect(infoSpy).toHaveBeenCalled()
+      const startupLine = infoSpy.mock.calls
+        .map(call => String(call[0]))
+        .find(line => line.includes("[ConformanceHarness] Desktop agent started"))
+      expect(startupLine).toBeDefined()
+      expect(startupLine).toContain(`FDC3 target: ${HARNESS_FDC3_TARGET_VERSION}`)
+    } finally {
+      bootstrap.desktopAgent.stop()
+      infoSpy.mockRestore()
     }
   })
 })

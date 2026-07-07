@@ -39,6 +39,8 @@ export function resolveHarnessLaunchMode(appMetadata: AppMetadataWithDetails): H
 export function createHarnessAppLauncher(
   onLaunch: HarnessLaunchCallback,
   options?: {
+    /** Full host teardown when an app calls `fdc3.close()` (popup + panel + agent disconnect). */
+    onClose?: (instanceId: string) => void
     closePopup?: (instanceId: string) => boolean
     removePanel?: (instanceId: string) => void
   },
@@ -72,6 +74,11 @@ export function createHarnessAppLauncher(
     },
 
     close(instanceId: string): Promise<void> {
+      if (options?.onClose) {
+        options.onClose(instanceId)
+        return Promise.resolve()
+      }
+
       options?.closePopup?.(instanceId)
       options?.removePanel?.(instanceId)
       return Promise.resolve()

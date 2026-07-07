@@ -66,6 +66,51 @@ describe("closeHarnessBrowsingContext", () => {
     watcher.stop()
   })
 
+  it("does not close unrelated WCP source windows when targeting a specific instance", () => {
+    const conformancePopup = { closed: false } as Window
+    const mockPopup = { closed: false } as Window
+    const conformanceClose = vi.fn()
+    const mockClose = vi.fn(() => {
+      Object.defineProperty(mockPopup, "closed", { value: true, configurable: true })
+    })
+    Object.assign(conformancePopup, { close: conformanceClose })
+    Object.assign(mockPopup, { close: mockClose })
+
+    const desktopAgent = {
+      apps: {
+        getConnections: () => [
+          {
+            instanceId: "conformance-1",
+            appId: "Conformance1",
+            source: conformancePopup,
+          },
+          {
+            instanceId: "mock-target",
+            appId: "ChannelsAppId",
+            source: mockPopup,
+          },
+        ],
+        getInstances: () => [],
+        getConnection: () => undefined,
+      },
+    }
+
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+
+    expect(
+      closeHarnessBrowsingContext({
+        instanceId: "mock-target",
+        desktopAgent: desktopAgent as never,
+        popupWatcher: watcher,
+      }),
+    ).toBe(true)
+
+    expect(mockClose).toHaveBeenCalledOnce()
+    expect(conformanceClose).not.toHaveBeenCalled()
+
+    watcher.stop()
+  })
+
   it("collects connected instance ids for close attempts", () => {
     const desktopAgent = {
       apps: {
@@ -151,8 +196,7 @@ describe("closeHarnessBrowsingContext", () => {
     })
 
     const launcher = createHarnessAppLauncher(vi.fn(), {
-      closePopup: instanceId => cleanup.closeHarnessBrowsingContext(instanceId),
-      removePanel: vi.fn(),
+      onClose: instanceId => cleanup.disconnectHarnessInstance(instanceId),
     })
 
     await launcher.close!("canonical-C")

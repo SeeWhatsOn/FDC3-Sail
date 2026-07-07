@@ -43,7 +43,6 @@ export function collectHarnessCloseInstanceIds(
   const ids = new Set<string>([instanceId])
 
   for (const connection of desktopAgent.apps.getConnections()) {
-    ids.add(connection.instanceId)
     if (connection.instanceId === instanceId && connection.source) {
       for (const other of desktopAgent.apps.getConnections()) {
         if (other.source === connection.source) {
@@ -81,6 +80,9 @@ export function closeHarnessBrowsingContext(options: {
   }
 
   for (const connection of desktopAgent.apps.getConnections()) {
+    if (!candidateIds.includes(connection.instanceId)) {
+      continue
+    }
     if (tryCloseBrowsingContext(connection.source, connection.instanceId)) {
       return true
     }

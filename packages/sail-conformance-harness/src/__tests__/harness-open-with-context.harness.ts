@@ -12,7 +12,7 @@ import { createDesktopAgentWithTestConnection } from "../../../sail-desktop-agen
 import type { DacpTestAppConnection } from "../../../sail-desktop-agent/test/support/dacp-test-app-connection"
 import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../../sail-desktop-agent/src/handlers/utils/open-with-context"
 
-import conformanceAppDirectory from "../../conformance-appd.json"
+import { loadConformanceApplications } from "../conformance-app-directory"
 import { createHarnessAppLauncher } from "../app-launcher"
 import { extractConformance1Url } from "../harness-bootstrap"
 import {
@@ -192,7 +192,7 @@ export function createHarnessOpenWithContextBootstrap(): {
   launchedPanels: HarnessPanel[]
   cleanup: () => void
 } {
-  const conformanceApps = conformanceAppDirectory.applications as DirectoryApp[]
+  const { applications: conformanceApps } = loadConformanceApplications({ profile: "hosted" })
   const conformance1InstanceId = crypto.randomUUID()
   const conformance1Url = extractConformance1Url(conformanceApps)
   const mockAppUrl = extractMockAppUrl(conformanceApps)
@@ -313,10 +313,9 @@ async function runHarnessOpenWithContextFromBootstrap(bootstrap: {
 }): Promise<HarnessOpenWithContextFixture> {
   const { agent, connection, sourceInstanceId, launchedPanels } = bootstrap
 
-  const conformance1Url = extractConformance1Url(
-    conformanceAppDirectory.applications as DirectoryApp[],
-  )
-  const mockAppUrl = extractMockAppUrl(conformanceAppDirectory.applications as DirectoryApp[])
+  const { applications: conformanceApps } = loadConformanceApplications({ profile: "hosted" })
+  const conformance1Url = extractConformance1Url(conformanceApps)
+  const mockAppUrl = extractMockAppUrl(conformanceApps)
 
   const sourceCanonicalId = await completeWcp4Handshake(connection, {
     connectionAttemptUuid: "conformance1-caller",

@@ -10,7 +10,8 @@ Minimal React host for the [FINOS FDC3 conformance toolbox](https://fdc3.finos.o
 
 | Path | Purpose |
 |------|---------|
-| `conformance-appd.json` | FINOS conformance app directory (shared with `sail-web` dev) |
+| `conformance-appd.json` | FINOS conformance app directory fixture (hosted URLs; shared with `sail-web` dev) |
+| `src/conformance-app-directory.ts` | Loads the fixture and rewrites toolbox origin for local FINOS dev (`VITE_CONFORMANCE_TOOLBOX=local`) |
 | `results/conformance-report-v3.txt` … `v5.txt` | Committed FINOS toolbox export history ( **v5 = current baseline** ) |
 | `results/conformance-test-failure-review.md` | Failure attribution matrix vs exports |
 | `results/README.md` | This folder index |
@@ -23,7 +24,29 @@ From the monorepo root (`npm install` at repo root — shared dev tooling is hoi
 npm run dev -w @finos/sail-conformance-harness
 ```
 
-Dev server: **http://localhost:3001**
+For **FDC3 2.2** (local toolbox profile):
+
+```bash
+npm run dev:local -w @finos/sail-conformance-harness
+```
+
+Dev server: **http://localhost:3001**. The harness page header shows the active toolbox profile and FDC3 target; `[ConformanceHarness]` startup lines appear on the **host page** DevTools console (not inside the Conformance1 iframe).
+
+### Toolbox origin (hosted vs local FINOS)
+
+The harness loads `conformance-appd.json` (hosted FINOS URLs) and optionally rewrites the toolbox base at bootstrap:
+
+| Profile | Env | Toolbox origin | FDC3 target |
+|---------|-----|----------------|-------------|
+| Hosted (default) | — | `https://fdc3.finos.org/toolbox/fdc3-conformance` | 3.0 |
+| Local FINOS dev | `VITE_CONFORMANCE_TOOLBOX=local` | `http://localhost:3001` | 2.2 |
+
+```bash
+# Local FINOS toolbox on port 3001 (run FINOS `npm run dev` instead of the harness, or use another port for one of them)
+VITE_CONFORMANCE_TOOLBOX=local npm run dev -w @finos/sail-conformance-harness
+```
+
+Hosted URLs include `/toolbox/fdc3-conformance` before `/apps/...`; local rewrite drops that segment so paths become `http://localhost:3001/apps/...`.
 
 ## Session teardown
 
