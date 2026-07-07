@@ -1,4 +1,5 @@
 import type { DesktopAgentConfig } from "../../agent/desktop-agent"
+import { isFdc3VersionAtLeast } from "../../agent/fdc3-version"
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
@@ -378,8 +379,20 @@ export async function handleCloseRequest(
   message: CloseRequestMessage,
   context: DACPHandlerContext,
 ): Promise<void> {
-  const { responses, appLauncher, logger, getState } = context
+  const { responses, appLauncher, logger, getState, implementationMetadata } = context
   const targetInstanceId = resolveDacpHandlerInstanceId(message, context)
+
+  // FDC3 3.0 behavior: closeRequest is only supported when the agent advertises 3.0.
+  if (!isFdc3VersionAtLeast(implementationMetadata.fdc3Version, "3.0")) {
+    sendDACPErrorResponse({
+      message,
+      errorType: CloseError.ErrorOnClose as BrowserTypes.ResponsePayloadError,
+      errorMessage: "fdc3.close() requires FDC3 3.0",
+      instanceId: targetInstanceId,
+      responses,
+    })
+    return
+  }
 
   try {
     const instance = getInstance(getState(), targetInstanceId)

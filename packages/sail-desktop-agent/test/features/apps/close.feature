@@ -6,7 +6,7 @@ Feature: App self-close (fdc3.close)
   client library may resolve with CloseError.ApiTimeout when the exchange times out.
 
   Background:
-    Given A desktop agent
+    Given A desktop agent advertising FDC3 "3.0"
     And "appId: App1, instanceId: a1" is opened with connection id "a1"
 
   Scenario: App requests self-close successfully

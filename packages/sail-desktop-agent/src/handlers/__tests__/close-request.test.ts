@@ -24,7 +24,14 @@ function createConnectedCloseContext(instanceId: string) {
   const { context, getState } = createDACPTestContext({ instanceId, initialState: state })
 
   return {
-    context: { ...withResponseDispatcher(context, transport), appLauncher },
+    context: {
+      ...withResponseDispatcher(context, transport),
+      appLauncher,
+      implementationMetadata: {
+        ...context.implementationMetadata,
+        fdc3Version: "3.0",
+      },
+    },
     transport,
     appLauncher,
     getState,
@@ -127,5 +134,36 @@ describe("handleCloseRequest", () => {
     }
     expect(last.type).toBe("closeResponse")
     expect(last.payload.error).toBe(CloseError.ErrorOnClose)
+  })
+
+  it("returns ErrorOnClose when agent advertises FDC3 2.2", async () => {
+    const { context, transport, appLauncher, instanceId } =
+      createConnectedCloseContext("close-22")
+
+    await handleCloseRequest(
+      {
+        type: "closeRequest",
+        meta: createDacpRequestMeta("close-22", {
+          appId: "TestApp",
+          instanceId,
+        }),
+        payload: {},
+      },
+      {
+        ...context,
+        implementationMetadata: {
+          ...context.implementationMetadata,
+          fdc3Version: "2.2",
+        },
+      },
+    )
+
+    const last = transport.getLastMessage() as {
+      type: string
+      payload: { error: string }
+    }
+    expect(last.type).toBe("closeResponse")
+    expect(last.payload.error).toBe(CloseError.ErrorOnClose)
+    expect(appLauncher.getCloseHistory()).toEqual([])
   })
 })
