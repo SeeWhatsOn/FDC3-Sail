@@ -10,25 +10,66 @@ import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
-import { FDC3ResolveError, TargetInstanceUnavailableError } from "../../errors/fdc3-errors"
-import { getInstance } from "../../state/selectors"
+import {
+  FDC3ResolveError,
+  IntentListenerConflictError,
+  TargetInstanceUnavailableError,
+} from "../../errors/fdc3-errors"
+import { isFdc3VersionAtLeast } from "../../agent/fdc3-version"
+import { getInstance, getListenersForInstance } from "../../state/selectors"
 import { registerIntentListener, unregisterIntentListener } from "../../state/mutators"
 import { deliverPendingIntentsForListener } from "./intent-delivery-helpers"
+import { findConflictingIntentListener } from "./intent-listener-conflict"
+
+type AddIntentListenerPayload = BrowserTypes.AddIntentListenerRequest["payload"] & {
+  /** FDC3 3.0 addIntentListenerWithContext — optional until @finos/fdc3 BrowserTypes include it. */
+  contextType?: string | string[] | null
+}
+
+function normalizeIntentListenerContextTypes(
+  contextType: AddIntentListenerPayload["contextType"],
+): string[] {
+  if (contextType == null) {
+    return []
+  }
+
+  if (Array.isArray(contextType)) {
+    return contextType.filter((type): type is string => typeof type === "string" && type.length > 0)
+  }
+
+  return contextType.length > 0 ? [contextType] : []
+}
 
 export function handleAddIntentListener(
   message: BrowserTypes.AddIntentListenerRequest,
   context: DACPHandlerContext,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger, implementationMetadata } = context
 
   try {
-    const payload = message.payload
+    const payload = message.payload as AddIntentListenerPayload
     const instance = getInstance(getState(), instanceId)
 
     if (!instance) {
       throw new TargetInstanceUnavailableError(
         `Instance ${instanceId} not found for adding intent listener`,
       )
+    }
+
+    const contextTypes = normalizeIntentListenerContextTypes(payload.contextType)
+
+    if (isFdc3VersionAtLeast(implementationMetadata.fdc3Version, "3.0")) {
+      const conflict = findConflictingIntentListener(
+        getListenersForInstance(getState(), instanceId),
+        payload.intent,
+        instanceId,
+        contextTypes,
+      )
+      if (conflict) {
+        throw new IntentListenerConflictError(
+          `Intent listener conflict for intent "${payload.intent}" on instance ${instanceId}`,
+        )
+      }
     }
 
     const listenerId = generateEventUuid()
@@ -39,7 +80,7 @@ export function handleAddIntentListener(
         intentName: payload.intent,
         instanceId,
         appId: instance.appId,
-        contextTypes: [],
+        contextTypes,
       }),
     )
 

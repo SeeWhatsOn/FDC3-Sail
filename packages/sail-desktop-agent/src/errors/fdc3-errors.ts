@@ -73,6 +73,20 @@ export class UserCancelledError extends FDC3ResolveError {
   }
 }
 
+/**
+ * FDC3 3.0: thrown when a new intent listener conflicts with an existing listener
+ * for the same intent on the same instance.
+ */
+export class IntentListenerConflictError extends FDC3ResolveError {
+  constructor(message: string) {
+    super(
+      (ResolveError as { IntentListenerConflict?: ResolveError }).IntentListenerConflict ??
+        ("IntentListenerConflict" as ResolveError),
+      message,
+    )
+  }
+}
+
 // ============================================================================
 // OPEN ERRORS (for fdc3.open operations)
 // ============================================================================
@@ -156,7 +170,7 @@ export class ChannelCreationFailedError extends FDC3ChannelError {
 
 /**
  * DACP/desktop-agent: context listener id is unknown or not owned by this instance.
- * Payload error string matches FDC3 conformance tests (`ListenerNotFound`).
+ * Payload error string is the DACP wire value for this condition (`ListenerNotFound`).
  */
 export class ListenerNotFoundChannelError extends FDC3ChannelError {
   constructor(message: string) {

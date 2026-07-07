@@ -183,6 +183,62 @@ When(
 )
 
 Given(
+  "{string} registers an intent listener for {string} with contextType {string} [fdc3.addIntentListener]",
+  async function (this: CustomWorld, appStr: string, intent: string, contextType: string) {
+    await registerIntentListenerWithContextTypes(this, appStr, intent, [contextType])
+  },
+)
+
+Given(
+  "{string} registers an intent listener for {string} with contextType {string} [fdc3.addIntentListenerWithContext]",
+  async function (this: CustomWorld, appStr: string, intent: string, contextType: string) {
+    await registerIntentListenerWithContextTypes(this, appStr, intent, [contextType])
+  },
+)
+
+Given(
+  "{string} registers an intent listener for {string} with contextTypes {string} [fdc3.addIntentListenerWithContext]",
+  async function (this: CustomWorld, appStr: string, intent: string, contextTypesCsv: string) {
+    const contextTypes = contextTypesCsv.split(",").map(type => type.trim())
+    await registerIntentListenerWithContextTypes(this, appStr, intent, contextTypes)
+  },
+)
+
+async function registerIntentListenerWithContextTypes(
+  world: CustomWorld,
+  appStr: string,
+  intent: string,
+  contextTypes: string[],
+): Promise<void> {
+  ensureAppInstance(world, appStr)
+  const meta = createMeta(world, appStr)
+
+  const message = {
+    type: "addIntentListenerRequest",
+    meta,
+    payload: {
+      intent: handleResolve(intent, world) as string,
+      contextType: contextTypes.length === 1 ? contextTypes[0] : contextTypes,
+    },
+  } as AddIntentListenerRequest
+
+  world.props.lastInboundRequestAt = Date.now()
+  await world.mockTransport.receiveMessage(message)
+
+  const lastMessage = world.mockTransport.getLastMessage()
+  const listenerUUID = (lastMessage?.msg?.payload as { listenerUUID?: string } | undefined)
+    ?.listenerUUID
+  if (listenerUUID) {
+    world.props.lastIntentListenerId = listenerUUID
+    const instanceId = getAppInstanceId(world, appStr)
+    const byInstance =
+      (world.props.intentListenersByInstance as Record<string, string> | undefined) ?? {}
+    byInstance[instanceId] = listenerUUID
+    world.props.intentListenersByInstance = byInstance
+  }
+}
+
+Given(
   "{string} registers an intent listener for {string} [fdc3.addIntentListener]",
   async function (this: CustomWorld, appStr: string, intent: string) {
     ensureAppInstance(this, appStr)
@@ -196,38 +252,7 @@ Given(
       },
     }
 
-    await this.mockTransport.receiveMessage(message)
-
-    const lastMessage = this.mockTransport.getLastMessage()
-    const listenerUUID = (lastMessage?.msg?.payload as { listenerUUID?: string } | undefined)
-      ?.listenerUUID
-    if (listenerUUID) {
-      this.props.lastIntentListenerId = listenerUUID
-      const instanceId = getAppInstanceId(this, appStr)
-      const byInstance =
-        (this.props.intentListenersByInstance as Record<string, string> | undefined) ?? {}
-      byInstance[instanceId] = listenerUUID
-      this.props.intentListenersByInstance = byInstance
-    }
-  },
-)
-
-Given(
-  "{string} registers an intent listener for {string} with contextType {string} [fdc3.addIntentListener]",
-  async function (this: CustomWorld, appStr: string, intent: string, contextType: string) {
-    ensureAppInstance(this, appStr)
-    const meta = createMeta(this, appStr)
-
-    // Note: contextType parameter is captured but not used - AddIntentListenerRequest doesn't have contextType
-    void contextType
-    const message: AddIntentListenerRequest = {
-      type: "addIntentListenerRequest",
-      meta,
-      payload: {
-        intent: handleResolve(intent, this) as string,
-      },
-    }
-
+    this.props.lastInboundRequestAt = Date.now()
     await this.mockTransport.receiveMessage(message)
 
     const lastMessage = this.mockTransport.getLastMessage()
@@ -435,6 +460,39 @@ When(
   },
 )
 
+When(
+  "{string} raises an intent for {string} with contextType {string} and metadata traceId {string} on app {string} with requestUuid {string} [fdc3.raiseIntent]",
+  async function (
+    this: CustomWorld,
+    appStr: string,
+    intentName: string,
+    contextType: string,
+    traceId: string,
+    dest: string,
+    requestUuid: string,
+  ) {
+    ensureAppInstance(this, appStr)
+    const meta = {
+      ...createMeta(this, appStr),
+      requestUuid,
+    }
+    const destMeta = createMeta(this, dest)
+    const message = {
+      type: "raiseIntentRequest",
+      meta,
+      payload: {
+        intent: handleResolve(intentName, this),
+        context: {
+          ...contextMap[contextType],
+          metadata: { traceId: handleResolve(traceId, this) as string },
+        },
+        app: destMeta.source,
+      },
+    } as RaiseIntentRequest
+    await this.mockTransport.receiveMessage(message)
+  },
+)
+
 When("we wait for the intent timeout", function (this: CustomWorld) {
   return new Promise<void>(resolve => {
     setTimeout(() => resolve(), 2100)
@@ -522,6 +580,42 @@ When(
             id: channelId,
           },
         },
+        intentEventUuid: resolvedEventUuid,
+        raiseIntentRequestUuid: raiseIntentUuid,
+      },
+    }
+
+    this.props.lastIntentResultRequestUuid = message.meta?.requestUuid
+    await this.mockTransport.receiveMessage(message)
+  },
+)
+
+When(
+  "{string} sends a intentResultRequest with eventUuid {string} and contextWithMetadata type {string} and raiseIntentUuid {string} [IntentResolution.getResult]",
+  async function (
+    this: CustomWorld,
+    appStr: string,
+    eventUuid: string,
+    contextType: string,
+    raiseIntentUuid: string,
+  ) {
+    ensureAppInstance(this, appStr)
+    const meta = createMeta(this, appStr)
+    const resolvedEventUuid = resolveIntentEventUuid(this, eventUuid)
+
+    const message: IntentResultRequest = {
+      type: "intentResultRequest",
+      meta: {
+        ...meta,
+      },
+      payload: {
+        intentResult: {
+          context: contextMap[contextType],
+          metadata: {
+            signature: "conformance-signature",
+            custom: { conformanceKey: "value" },
+          },
+        } as unknown as BrowserTypes.IntentResult,
         intentEventUuid: resolvedEventUuid,
         raiseIntentRequestUuid: raiseIntentUuid,
       },

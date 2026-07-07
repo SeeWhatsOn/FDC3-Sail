@@ -87,6 +87,9 @@ export const contextMap: Record<string, Context> = {
       },
     ],
   },
+  testContextX: {
+    type: "testContextX",
+  },
   "fdc3.chart": {
     type: "fdc3.chart",
     instruments: [
@@ -202,6 +205,12 @@ Given("A desktop agent", function (this: CustomWorld) {
   // Reinitialize DesktopAgent (useful when apps are defined after the Before hook runs,
   // or when you need a fresh desktop agent mid-scenario)
   this.initializeDesktopAgent(apps, cucumberUserChannels())
+})
+
+Given("A desktop agent advertising FDC3 {string}", function (this: CustomWorld, version: string) {
+  const apps = this.props[APP_FIELD] ?? []
+  this.props.fdc3Version = version
+  this.initializeDesktopAgent(apps, cucumberUserChannels(), undefined, version)
 })
 
 Given("the mock intent resolver will cancel the resolution", function (this: CustomWorld) {

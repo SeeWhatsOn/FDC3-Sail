@@ -69,6 +69,7 @@ export class CustomWorld extends World {
     apps: DirectoryApp[],
     channels: BrowserTypes.Channel[],
     heartbeatConfig?: { intervalMs?: number; timeoutMs?: number },
+    fdc3Version?: string,
   ): void {
     // Cucumber defaults: no heartbeat timers unless a scenario opts in via heartbeatConfig
     // (see "A desktop agent with heartbeat checking"). WCP5-on-open would otherwise leave
@@ -105,6 +106,7 @@ export class CustomWorld extends World {
       implementationMetadata: {
         provider: "cucumber-provider",
         providerVersion: "1.0.0",
+        fdc3Version: fdc3Version ?? (this.props.fdc3Version as string | undefined) ?? "2.2",
       },
       openContextListenerTimeoutMs: 2000,
       heartbeatEnabled,
