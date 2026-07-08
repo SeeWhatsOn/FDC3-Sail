@@ -155,6 +155,13 @@ export function clearPendingOpenWithContextForInstance(
 
   pendingList.forEach(pending => {
     clearPendingTimeout(pending.message.meta.requestUuid)
+    sendDACPErrorResponse({
+      message: pending.message,
+      errorType: OpenError.AppTimeout,
+      errorMessage: "Timed out waiting for context listener",
+      instanceId: pending.sourceInstanceId,
+      responses: context.responses,
+    })
   })
   context.setState(state => setPendingOpenWithContextForInstance(state, targetInstanceId, []))
 }

@@ -227,8 +227,6 @@ export function handleAddContextListener(
       addContextListener(state, instanceId, listenerId, contextType, message.payload.channelId),
     )
 
-    notifyContextListenerAdded(instanceId, contextType, context)
-
     logger.info("DACP: Context listener registration result", {
       instanceId,
       contextType,
@@ -242,6 +240,8 @@ export function handleAddContextListener(
     })
 
     sendDACPResponse({ response, instanceId, responses })
+
+    notifyContextListenerAdded(instanceId, contextType, context)
 
     logger.debug("DACP: Context listener added successfully", {
       listenerUUID: listenerId,

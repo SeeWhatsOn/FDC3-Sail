@@ -14,7 +14,7 @@ import {
 import { AppInstanceState } from "../../state/types"
 import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
 import { withResponseDispatcher } from "./test-context"
-import { handleBroadcastRequest } from "../broadcast/handlers"
+import { handleAddContextListener, handleBroadcastRequest } from "../broadcast/handlers"
 
 describe("handleBroadcastRequest stale instance routing", () => {
   it("resolves stale source instance id to the live connected instance for the same app", () => {
@@ -150,5 +150,82 @@ describe("handleBroadcastRequest stale instance routing", () => {
     expect(response.type).toBe("broadcastResponse")
     expect(response.payload?.error).toBeUndefined()
     expect(response.meta?.destination?.instanceId).toBe(connectedSenderId)
+  })
+
+  it("sends listener response before pending open-with-context delivery", () => {
+    const transport = new MockTransport()
+    const sourceInstanceId = "source-conformance-instance"
+    const targetInstanceId = "target-mock-instance"
+    const appId = "MockAppId"
+    const launchContext = { type: "fdc3.instrument", id: { ticker: "MSFT" } }
+
+    const openRequest = {
+      type: "openRequest",
+      meta: {
+        requestUuid: "open-with-context-req",
+        timestamp: new Date(),
+        source: { appId: "Conformance1", instanceId: sourceInstanceId },
+      },
+      payload: {
+        app: { appId, instanceId: targetInstanceId },
+        context: launchContext,
+      },
+    } as BrowserTypes.OpenRequest
+
+    let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+    state = connectInstance(state, {
+      instanceId: sourceInstanceId,
+      appId: "Conformance1",
+      metadata: { appId: "Conformance1", name: "Conformance1" },
+    })
+    state = connectInstance(state, {
+      instanceId: targetInstanceId,
+      appId,
+      metadata: { appId, name: appId },
+    })
+    state = updateInstanceState(state, sourceInstanceId, AppInstanceState.CONNECTED)
+    state = updateInstanceState(state, targetInstanceId, AppInstanceState.CONNECTED)
+    state = addPendingOpenWithContext(state, targetInstanceId, {
+      message: openRequest,
+      appIdentifier: { appId, instanceId: targetInstanceId },
+      launchContext,
+      sourceInstanceId,
+    })
+
+    const { context } = createDACPTestContext({
+      instanceId: targetInstanceId,
+      initialState: state,
+    })
+
+    handleAddContextListener(
+      {
+        type: "addContextListenerRequest",
+        meta: createDacpRequestMeta("add-listener-req", {
+          appId,
+          instanceId: targetInstanceId,
+        }),
+        payload: {
+          channelId: null,
+          contextType: "fdc3.instrument",
+        },
+      },
+      withResponseDispatcher(context, transport),
+    )
+
+    const messages = transport.sentMessages as Array<{
+      type?: string
+      meta?: { destination?: { instanceId?: string } }
+    }>
+
+    expect(messages.map(message => message.type)).toEqual([
+      "addContextListenerResponse",
+      "broadcastEvent",
+      "openResponse",
+    ])
+    expect(messages.map(message => message.meta?.destination?.instanceId)).toEqual([
+      targetInstanceId,
+      targetInstanceId,
+      sourceInstanceId,
+    ])
   })
 })

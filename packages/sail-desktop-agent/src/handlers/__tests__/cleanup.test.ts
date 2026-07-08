@@ -196,29 +196,38 @@ describe("cleanupDACPHandlers", () => {
     expect(reject).toHaveBeenCalledOnce()
   })
 
-  it("clears open-with-context pending state and timeouts when the target instance disconnects", () => {
+  it("sends AppTimeout openResponse to source when the target instance disconnects during pending open", () => {
     let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     state = connectInstance(state, {
       instanceId: "a1",
       appId: "portfolioApp",
       metadata: { appId: "portfolioApp", name: "portfolioApp" },
     })
+    state = connectInstance(state, {
+      instanceId: "uuid-0",
+      appId: "chartApp",
+      metadata: { appId: "chartApp", name: "chartApp" },
+    })
     state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
+    state = updateInstanceState(state, "uuid-0", AppInstanceState.CONNECTED)
 
+    const transport = new MockTransport()
     const { context, getState } = createDACPTestContext({
       instanceId: "a1",
       initialState: state,
     })
+    const contextWithTransport = withResponseDispatcher(context, transport)
 
     const launchContext: Context = {
       type: "fdc3.instrument",
       id: { ticker: "AAPL" },
     }
 
+    const requestUuid = "open-req-target-disconnect"
     const message = {
       type: "openRequest",
       meta: {
-        requestUuid: "open-req-1",
+        requestUuid,
         timestamp: new Date(),
       },
       payload: {
@@ -231,16 +240,31 @@ describe("cleanupDACPHandlers", () => {
       message,
       { appId: "chartApp", instanceId: "uuid-0" },
       launchContext,
-      context,
+      contextWithTransport,
     )
 
     expect(getState().open.pendingWithContext["uuid-0"]?.length).toBe(1)
     expect(getPendingOpenWithContextTimeoutCount()).toBe(1)
 
-    cleanupDACPHandlers({ ...context, instanceId: "uuid-0" })
+    cleanupDACPHandlers({ ...contextWithTransport, instanceId: "uuid-0" })
 
     expect(getState().open.pendingWithContext["uuid-0"]).toBeUndefined()
     expect(getPendingOpenWithContextTimeoutCount()).toBe(0)
+
+    const openErrorResponses = transport.sentMessages.filter(message => {
+      const typed = message as {
+        type?: string
+        meta?: { requestUuid?: string }
+        payload?: { error?: string }
+      }
+      return typed.type === "openResponse" && typed.payload?.error !== undefined
+    })
+    expect(openErrorResponses).toHaveLength(1)
+    expect(openErrorResponses[0]).toMatchObject({
+      type: "openResponse",
+      meta: { requestUuid },
+      payload: { error: OpenError.AppTimeout },
+    })
   })
 
   it("sends AppTimeout openResponse to source when source disconnects during pending open", () => {
