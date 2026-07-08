@@ -31,6 +31,9 @@ export type TestAgentOptions = Pick<
   | "autoStart"
 > & {
   disconnectGracePeriod?: number
+  resolveHostIdentifier?: NonNullable<
+    SailDesktopAgentOptions["appConnectionOptions"]
+  >["resolveHostIdentifier"]
 }
 
 export function createTestAgent(options?: TestAgentOptions): DesktopAgent {
@@ -49,6 +52,9 @@ export function createTestAgent(options?: TestAgentOptions): DesktopAgent {
       fdc3Version: "2.2",
       handshakeTimeout: 30_000,
       disconnectGracePeriod: options?.disconnectGracePeriod,
+      ...(options?.resolveHostIdentifier !== undefined
+        ? { resolveHostIdentifier: options.resolveHostIdentifier }
+        : {}),
     },
   })
 

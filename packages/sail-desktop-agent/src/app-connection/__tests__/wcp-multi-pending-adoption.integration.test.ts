@@ -12,10 +12,12 @@ import { AppInstanceState } from "../../state/types"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../handlers/utils/open-with-context"
 import {
+  beginWcpAppFirstConnect,
   connectWcpApp,
   connectWcpAppFirstConnect,
   createGenericContextListenerMessage,
   createOpenRequestMessage,
+  createWcpSourceWindow,
   postDacpOnPort,
   waitForPortMessage,
 } from "./wcp-edge-test-helpers"
@@ -179,5 +181,97 @@ describe("multi-pending hostIdentifier adoption", () => {
 
     expect(findInstancesIds).toContain(NEW_PENDING_ID)
     expect(findInstancesIds).not.toContain(STALE_PENDING_ID)
+  })
+
+  it("persists hostIdentifier re-resolved at WCP4 when window.name was empty at WCP1", async () => {
+    const openWithContextWaitMs = 5000
+    const popupSource = createWcpSourceWindow("")
+    const popupRegistry = new Map<Window, string>()
+
+    const agent = createTestAgent({
+      appLauncher: createMultiPendingAppLauncher(),
+      openContextListenerTimeoutMs: openWithContextWaitMs,
+      resolveHostIdentifier: source => popupRegistry.get(source),
+    })
+    activeAgents.push(agent)
+    const portMessageWaitMs = openWithContextWaitMs + 2000
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "host-id-persist-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(appA.canonicalInstanceId, appA.appId, CHART_APP.appId),
+    )
+
+    await waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+    )
+
+    const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+      portMessageWaitMs,
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHART_APP.appId,
+        OPEN_WITH_CONTEXT_LAUNCH,
+      ),
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().instances[STALE_PENDING_ID]?.state).toBe(AppInstanceState.PENDING)
+      expect(agent.getState().instances[NEW_PENDING_ID]?.state).toBe(AppInstanceState.PENDING)
+      expect(agent.getState().open.pendingWithContext[NEW_PENDING_ID]?.length).toBe(1)
+    })
+
+    // Simulate FINOS timing: WCP1 arrives before the host registry can map the popup.
+    const handshake = beginWcpAppFirstConnect(agent, {
+      connectionAttemptUuid: "host-id-persist-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+      sourceWindow: popupSource,
+    })
+
+    const connectionAfterWcp1 = agent.getAppConnection(handshake.tempInstanceId)
+    expect(connectionAfterWcp1?.hostIdentifier).toBeUndefined()
+    expect(connectionAfterWcp1?.source).toBe(popupSource)
+
+    popupRegistry.set(popupSource, NEW_PENDING_ID)
+
+    await handshake.postFirstConnectWcp4()
+    const appB = await handshake.completeFirstConnect()
+
+    expect(appB.canonicalInstanceId).toBe(NEW_PENDING_ID)
+    expect(agent.getAppConnection(appB.canonicalInstanceId)?.hostIdentifier).toBe(NEW_PENDING_ID)
+
+    const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      appB.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+      portMessageWaitMs,
+    )
+
+    await postDacpOnPort(
+      appB.appPort,
+      createGenericContextListenerMessage(appB.canonicalInstanceId, appB.appId),
+    )
+
+    const [broadcastEvent, openResponse] = await Promise.all([
+      broadcastPromise,
+      openResponsePromise,
+    ])
+
+    expect(broadcastEvent.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
+    expect(openResponse.payload.error).toBeUndefined()
+    expect(openResponse.payload.appIdentifier?.instanceId).toBe(NEW_PENDING_ID)
   })
 })

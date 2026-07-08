@@ -39,6 +39,11 @@ export interface AgentAppConnection {
 export interface BrowserAppConnectionSurface extends AgentAppConnection {
   bindAgentState(access: { getAgentState: () => AgentState; setAgentState: StateSetter }): void
   disconnectAppByInstanceId(instanceId: string): void
+  /**
+   * Host launcher id when `window.name` was cleared before WCP1.
+   * Used by WCP4 / DACP to re-resolve and persist {@link AppConnectionMetadata.hostIdentifier}.
+   */
+  resolveHostIdentifierForSource?(source: Window): string | undefined
   requestIntentResolution(
     payload: HostIntentResolverPayload,
     timeoutMs?: number,

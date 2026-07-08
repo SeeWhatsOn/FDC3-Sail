@@ -7,6 +7,7 @@ import type {
   WCP3HandshakeMessage,
   AppConnectionOptions,
 } from "./wcp-types"
+import { resolveHostIdentifierFromSource } from "./wcp-host-identifier"
 
 export interface WCPHandshakeContext extends WCPRoutingContext {
   options: Required<AppConnectionOptions>
@@ -55,22 +56,7 @@ export function handleWCP1Hello(
   // Note: For cross-origin iframes, accessing window.name will throw SecurityError
   // so we wrap it in try-catch and gracefully fall back to undefined
   const sourceWindow = event.source as Window
-  let hostIdentifier: string | undefined
-  try {
-    hostIdentifier = sourceWindow.name || undefined
-  } catch (error) {
-    // Cross-origin iframe - cannot access window.name due to same-origin policy
-    // This is expected for apps hosted on different origins
-    // Connection will still work, just without host identifier
-    if (error instanceof Error && error.name === "SecurityError") {
-      context.logger.debug(
-        `Cannot access window.name for cross-origin iframe from ${event.origin}, hostIdentifier will be undefined`,
-      )
-    } else {
-      // Re-throw unexpected errors
-      throw error
-    }
-  }
+  const hostIdentifier = resolveHostIdentifierFromSource(sourceWindow, context.options)
 
   // Store connection metadata
   const metadata: AppConnectionMetadata = {

@@ -55,24 +55,32 @@ export async function flushAsyncDelivery(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 0))
 }
 
-function createNamedSourceWindow(hostIdentifier: string): Window {
-  const namedSource = Object.create(window) as Window
-  Object.defineProperty(namedSource, "name", {
+/** Synthetic browsing context for WCP1 `event.source` (optional `window.name`). */
+export function createWcpSourceWindow(hostIdentifier = ""): Window {
+  const source = Object.create(window) as Window
+  Object.defineProperty(source, "name", {
     value: hostIdentifier,
     writable: true,
     configurable: true,
   })
-  namedSource.postMessage = window.postMessage.bind(window)
-  return namedSource
+  source.postMessage = window.postMessage.bind(window)
+  return source
 }
 
 function captureAppMessagePort(
   connectionAttemptUuid: string,
   identityUrl: string,
-  hostIdentifier?: string,
+  options?: {
+    hostIdentifier?: string
+    sourceWindow?: Window
+  },
 ): MessagePort {
   const postMessageSpy = vi.spyOn(window, "postMessage")
-  const sourceWindow = hostIdentifier ? createNamedSourceWindow(hostIdentifier) : window
+  const sourceWindow =
+    options?.sourceWindow ??
+    (options?.hostIdentifier !== undefined
+      ? createWcpSourceWindow(options.hostIdentifier)
+      : window)
   window.dispatchEvent(
     createMessageEvent(createWCP1Hello(connectionAttemptUuid, identityUrl), sourceWindow),
   )
@@ -104,6 +112,8 @@ export async function connectWcpApp(
     hostInstanceId?: string
     /** WCP1 browsing-context name (`window.name`) — disambiguates multi-pending adoption. */
     hostIdentifier?: string
+    /** Explicit WCP1 `event.source` (e.g. cleared `window.name` + host registry lookup). */
+    sourceWindow?: Window
     instanceUuid?: string
   },
 ): Promise<WcpConnectedApp> {
@@ -113,12 +123,16 @@ export async function connectWcpApp(
     identityUrl,
     hostInstanceId,
     hostIdentifier,
+    sourceWindow,
     instanceUuid: reconnectInstanceUuid,
   } = options
   const tempInstanceId = `temp-${connectionAttemptUuid}`
   const browserAppConnection = getTestConnector(agent)
 
-  const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl, hostIdentifier)
+  const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl, {
+    hostIdentifier,
+    sourceWindow,
+  })
 
   expect(browserAppConnection.getConnection(tempInstanceId)).toBeDefined()
 
@@ -190,13 +204,15 @@ export async function connectWcpAppFirstConnect(
     identityUrl: string
     hostInstanceId?: string
     hostIdentifier?: string
+    sourceWindow?: Window
   },
 ): Promise<WcpConnectedApp> {
-  const { hostInstanceId, hostIdentifier, ...rest } = options
+  const { hostInstanceId, hostIdentifier, sourceWindow, ...rest } = options
   return connectWcpApp(agent, {
     ...rest,
     ...(hostInstanceId !== undefined ? { hostInstanceId } : {}),
     ...(hostIdentifier !== undefined ? { hostIdentifier } : {}),
+    ...(sourceWindow !== undefined ? { sourceWindow } : {}),
   })
 }
 
@@ -218,13 +234,18 @@ export function beginWcpAppFirstConnect(
     connectionAttemptUuid: string
     appId: string
     identityUrl: string
+    hostIdentifier?: string
+    sourceWindow?: Window
   },
 ): WcpFirstConnectSession {
-  const { connectionAttemptUuid, appId, identityUrl } = options
+  const { connectionAttemptUuid, appId, identityUrl, hostIdentifier, sourceWindow } = options
   const tempInstanceId = `temp-${connectionAttemptUuid}`
   const browserAppConnection = getTestConnector(agent)
 
-  const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl)
+  const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl, {
+    hostIdentifier,
+    sourceWindow,
+  })
   expect(browserAppConnection.getConnection(tempInstanceId)).toBeDefined()
 
   let resolveWcp5:

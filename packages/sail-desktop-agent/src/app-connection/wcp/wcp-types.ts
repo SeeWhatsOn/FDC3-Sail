@@ -145,6 +145,13 @@ export interface AppConnectionOptions {
    * OPTIONAL - defaults to consoleLogger if not provided.
    */
   logger?: Logger
+
+  /**
+   * Host fallback when the browsing context clears `window.name` before WCP1
+   * (common for FINOS conformance mock apps). Map `event.source` to the launcher
+   * instance id from {@link AppLauncher.launch}.
+   */
+  resolveHostIdentifier?: (source: Window) => string | undefined
 }
 
 /**
@@ -188,8 +195,9 @@ export interface AppConnectionMetadata {
   connectedAt: Date
 
   /**
-   * Optional identifier from the iframe's name attribute.
-   * Can be used by hosting applications to correlate connections with UI elements.
+   * Host launcher / browsing-context id for this connection.
+   * Usually from `window.name` at WCP1; may be filled later via
+   * {@link AppConnectionOptions.resolveHostIdentifier} when the app clears `window.name`.
    */
   hostIdentifier?: string
 }

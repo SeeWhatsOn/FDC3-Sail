@@ -28,6 +28,7 @@ import {
   reconcileOrphanPendingHostInstances,
   tryAdoptHostPreRegisteredInstance,
 } from "../../handlers/utils/wcp-host-instance-adoption"
+import { resolveAndPersistConnectionHostIdentifier } from "./wcp-host-identifier"
 
 type Wcp4ValidateAppIdentity = WebConnectionProtocol4ValidateAppIdentity
 type WCP5ValidateAppIdentityResponse = WebConnectionProtocol5ValidateAppIdentitySuccessResponse
@@ -392,20 +393,7 @@ function resolveWcpHandshakeHostIdentifier(
   connectionOwner: object,
   tempInstanceId: string,
 ): string | undefined {
-  if (
-    !("getConnection" in connectionOwner) ||
-    typeof (connectionOwner as { getConnection?: unknown }).getConnection !== "function"
-  ) {
-    return undefined
-  }
-
-  const connection = (
-    connectionOwner as {
-      getConnection: (instanceId: string) => { hostIdentifier?: string } | undefined
-    }
-  ).getConnection(tempInstanceId)
-
-  return connection?.hostIdentifier
+  return resolveAndPersistConnectionHostIdentifier(connectionOwner, tempInstanceId)
 }
 
 function canReuseInstanceIdentity(params: {

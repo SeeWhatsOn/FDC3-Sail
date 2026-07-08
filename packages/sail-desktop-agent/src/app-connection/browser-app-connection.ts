@@ -81,6 +81,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
       intentResolutionTimeout: options?.intentResolutionTimeout ?? 60000,
       debug: options?.debug ?? false,
       logger,
+      resolveHostIdentifier: options?.resolveHostIdentifier ?? (() => undefined),
     }
 
     this.connectionRegistry = new AppConnectionRegistry({
@@ -235,6 +236,11 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
 
   getConnection(instanceId: string): AppConnectionMetadata | undefined {
     return getConnection(this.getConnectionContext(), instanceId)
+  }
+
+  /** Host launcher id when `window.name` was cleared before WCP1. */
+  resolveHostIdentifierForSource(source: Window): string | undefined {
+    return this.options.resolveHostIdentifier(source)
   }
 
   pruneAppConnection(instanceId: string): void {

@@ -1,4 +1,5 @@
 import { resolveLinkedInstanceId } from "../../state/selectors/wcp-handshake-routing"
+import { resolveAndPersistConnectionHostIdentifier } from "../../app-connection/wcp/wcp-host-identifier"
 import type { DACPHandlerContext } from "../types"
 import { getInstance } from "../../state/selectors"
 import { AppInstanceState } from "../../state/types"
@@ -41,6 +42,7 @@ export function resolveDacpHandlerInstanceId(
     state,
     sourceAppId,
     instanceId,
+    resolveWcpHostIdentifier(context, instanceId),
   )
   if (pendingHostInstanceId) {
     return pendingHostInstanceId
@@ -76,10 +78,33 @@ export function resolveDacpHandlerInstanceId(
   return instanceId
 }
 
+function resolveWcpHostIdentifier(
+  context: DACPHandlerContext,
+  routedInstanceId: string,
+): string | undefined {
+  const owner = context.responses.connectionOwner
+  if (!owner || typeof owner !== "object") {
+    return undefined
+  }
+
+  const direct = resolveAndPersistConnectionHostIdentifier(owner, routedInstanceId)
+  if (direct) {
+    return direct
+  }
+
+  const linkedInstanceId = resolveLinkedInstanceId(context.getState(), routedInstanceId)
+  if (!linkedInstanceId) {
+    return undefined
+  }
+
+  return resolveAndPersistConnectionHostIdentifier(owner, linkedInstanceId)
+}
+
 function findPendingOpenWithContextHostInstanceId(
   state: ReturnType<DACPHandlerContext["getState"]>,
   sourceAppId: string | undefined,
   routedInstanceId: string,
+  hostIdentifier?: string,
 ): string | undefined {
   if (!sourceAppId) {
     return undefined
@@ -91,6 +116,17 @@ function findPendingOpenWithContextHostInstanceId(
       targetInstanceId !== routedInstanceId &&
       state.instances[targetInstanceId]?.appId === sourceAppId,
   )
+
+  if (pendingTargets.length === 0) {
+    return undefined
+  }
+
+  if (hostIdentifier) {
+    const hostMatch = pendingTargets.find(([targetInstanceId]) => targetInstanceId === hostIdentifier)
+    if (hostMatch) {
+      return hostMatch[0]
+    }
+  }
 
   if (pendingTargets.length !== 1) {
     return undefined
