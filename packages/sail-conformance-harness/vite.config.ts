@@ -9,6 +9,14 @@ export default defineConfig({
   server: {
     port: 3001,
     open: true,
+    proxy: {
+      // Local profile rewrites mock URLs to localhost:3001/apps/... — proxy to hosted FINOS toolbox.
+      "/apps": {
+        target: "https://fdc3.finos.org/toolbox/fdc3-conformance",
+        changeOrigin: true,
+        secure: true,
+      },
+    },
     // Reload when @finos/sail-desktop-agent dist changes (package resolves to dist/, not src/)
     watch: {
       ignored: [

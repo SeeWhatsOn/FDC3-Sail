@@ -3,6 +3,9 @@ import { createRoot } from "react-dom/client"
 
 import App from "./App"
 import { createHarnessBootstrap } from "./harness-bootstrap"
+import { installHarnessConsoleCapture } from "./harness-console-capture"
+
+installHarnessConsoleCapture()
 
 const bootstrap = createHarnessBootstrap()
 

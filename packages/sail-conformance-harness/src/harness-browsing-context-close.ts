@@ -39,6 +39,7 @@ export function tryCloseBrowsingContext(
 export function collectHarnessCloseInstanceIds(
   desktopAgent: SailDesktopAgent,
   instanceId: string,
+  popupWatcher?: Pick<PopupCloseWatcher, "findRegisteredIdsForWindowName">,
 ): string[] {
   const ids = new Set<string>([instanceId])
 
@@ -58,6 +59,12 @@ export function collectHarnessCloseInstanceIds(
     }
   }
 
+  if (popupWatcher) {
+    for (const registeredId of popupWatcher.findRegisteredIdsForWindowName(instanceId)) {
+      ids.add(registeredId)
+    }
+  }
+
   return [...ids]
 }
 
@@ -71,10 +78,14 @@ export function closeHarnessBrowsingContext(options: {
   popupWatcher: PopupCloseWatcher
 }): boolean {
   const { instanceId, desktopAgent, popupWatcher } = options
-  const candidateIds = collectHarnessCloseInstanceIds(desktopAgent, instanceId)
+  const candidateIds = collectHarnessCloseInstanceIds(desktopAgent, instanceId, popupWatcher)
+
+  if (popupWatcher.closePopupForInstance(instanceId)) {
+    return true
+  }
 
   for (const candidateId of candidateIds) {
-    if (popupWatcher.closePopup(candidateId)) {
+    if (candidateId !== instanceId && popupWatcher.closePopupForInstance(candidateId)) {
       return true
     }
   }

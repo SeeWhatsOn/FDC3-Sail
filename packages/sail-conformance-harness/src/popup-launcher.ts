@@ -17,6 +17,12 @@ export type PopupCloseWatcher = {
   unregisterPopup: (instanceId: string) => void
   hasPopup: (instanceId: string) => boolean
   closePopup: (instanceId: string) => boolean
+  /** Close by registry key or by browsing-context `window.name` (launcher instance id). */
+  closePopupForInstance: (instanceId: string) => boolean
+  /** Registry keys whose popup `window.name` matches (for launcher ↔ canonical id drift). */
+  findRegisteredIdsForWindowName: (windowName: string) => string[]
+  /** Reverse lookup for host-owned popups when mock apps clear `window.name`. */
+  findInstanceIdForPopup: (popup: Window) => string | undefined
   /** Re-key a registered popup when WCP5 canonical id differs from launcher id. */
   remapPopupByWindow: (source: Window, canonicalInstanceId: string) => boolean
   stop: () => void
@@ -29,11 +35,16 @@ export type PopupCloseWatcher = {
  * Opens `about:blank` with {@link HARNESS_POPUP_FEATURES} first so browsers treat
  * the context as a host-owned auxiliary window, then navigates to the mock app URL.
  */
-export function openHarnessPopup(panel: HarnessPanel): Window | null {
+export function openHarnessPopup(
+  panel: HarnessPanel,
+  options?: { onPopupCreated?: (popup: Window) => void },
+): Window | null {
   const popup = window.open("about:blank", panel.instanceId, HARNESS_POPUP_FEATURES)
   if (!popup) {
     return null
   }
+
+  options?.onPopupCreated?.(popup)
 
   try {
     popup.location.href = panel.url
@@ -44,6 +55,18 @@ export function openHarnessPopup(panel: HarnessPanel): Window | null {
     )
     tryCloseBrowsingContext(popup, panel.instanceId)
     return null
+  }
+
+  // FINOS mock apps may clear `window.name` during load; WCP1 reads it for host-instance adoption.
+  try {
+    if (popup.name !== panel.instanceId) {
+      popup.name = panel.instanceId
+    }
+  } catch (error) {
+    console.warn(
+      `[ConformanceHarness] Could not reassert window.name for ${panel.appId} (${panel.instanceId})`,
+      error,
+    )
   }
 
   return popup
@@ -89,6 +112,45 @@ export function createPopupCloseWatcher(options: PopupCloseWatcherOptions): Popu
     intervalId = setInterval(pollClosedPopups, pollIntervalMs)
   }
 
+  const readPopupWindowName = (popup: Window): string | undefined => {
+    try {
+      return popup.name || undefined
+    } catch {
+      return undefined
+    }
+  }
+
+  const findRegisteredIdsForWindowName = (windowName: string): string[] => {
+    const matches: string[] = []
+    for (const [registeredId, popup] of popups) {
+      if (registeredId === windowName || readPopupWindowName(popup) === windowName) {
+        matches.push(registeredId)
+      }
+    }
+    return matches
+  }
+
+  const findInstanceIdForPopup = (popup: Window): string | undefined => {
+    for (const [registeredId, registeredPopup] of popups) {
+      if (registeredPopup === popup) {
+        return registeredId
+      }
+    }
+    return undefined
+  }
+
+  const closeRegisteredPopup = (registeredId: string, popup: Window): boolean => {
+    if (popup.closed) {
+      popups.delete(registeredId)
+      return true
+    }
+    if (closeWindow(popup, registeredId)) {
+      popups.delete(registeredId)
+      return true
+    }
+    return false
+  }
+
   return {
     registerPopup(instanceId: string, popup: Window) {
       popups.set(instanceId, popup)
@@ -103,7 +165,7 @@ export function createPopupCloseWatcher(options: PopupCloseWatcherOptions): Popu
     },
 
     hasPopup(instanceId: string) {
-      return popups.has(instanceId)
+      return popups.has(instanceId) || findRegisteredIdsForWindowName(instanceId).length > 0
     },
 
     closePopup(instanceId: string) {
@@ -111,11 +173,28 @@ export function createPopupCloseWatcher(options: PopupCloseWatcherOptions): Popu
       if (!popup) {
         return false
       }
-      if (closeWindow(popup, instanceId)) {
+      return closeRegisteredPopup(instanceId, popup)
+    },
+
+    closePopupForInstance(instanceId: string) {
+      const direct = popups.get(instanceId)
+      if (direct && closeRegisteredPopup(instanceId, direct)) {
         return true
       }
+
+      for (const registeredId of findRegisteredIdsForWindowName(instanceId)) {
+        const popup = popups.get(registeredId)
+        if (popup && closeRegisteredPopup(registeredId, popup)) {
+          return true
+        }
+      }
+
       return false
     },
+
+    findRegisteredIdsForWindowName,
+
+    findInstanceIdForPopup,
 
     remapPopupByWindow(source: Window, canonicalInstanceId: string) {
       for (const [launcherInstanceId, popup] of popups) {

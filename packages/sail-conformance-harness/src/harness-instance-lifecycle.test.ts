@@ -121,12 +121,21 @@ describe("createHarnessInstanceCleanup", () => {
     expect(popupWatcher.hasPopup("canonical-C")).toBe(false)
   })
 
-  it("stops polling unregistered popup after disconnectHarnessInstance", () => {
+  it("stops polling after disconnectHarnessInstance closes the popup", () => {
     vi.useFakeTimers()
 
     const onPopupClosed = vi.fn()
     const popupWatcher = createPopupCloseWatcher({ onPopupClosed, pollIntervalMs: 100 })
-    const popup = { closed: false, close: vi.fn() } as unknown as Window
+    let closed = false
+    const close = vi.fn(() => {
+      closed = true
+    })
+    const popup = {
+      get closed() {
+        return closed
+      },
+      close,
+    } as unknown as Window
     popupWatcher.registerPopup("canonical-C", popup)
 
     const cleanup = createHarnessInstanceCleanup({
@@ -154,6 +163,39 @@ describe("createHarnessInstanceCleanup", () => {
     vi.advanceTimersByTime(300)
 
     expect(onPopupClosed).not.toHaveBeenCalled()
+
+    popupWatcher.stop()
+  })
+
+  it("keeps popup registered when disconnectHarnessInstance cannot close the browsing context", () => {
+    const popupWatcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    const popup = { closed: false, close: vi.fn() } as unknown as Window
+    popupWatcher.registerPopup("pending-instance", popup)
+
+    const cleanup = createHarnessInstanceCleanup({
+      desktopAgent: {
+        registerPendingHostInstance: vi.fn(),
+        apps: {
+          getInstance: vi.fn((instanceId: string) =>
+            instanceId === "pending-instance"
+              ? { appId: "MockAppId", instanceId, status: "pending" as const }
+              : undefined,
+          ),
+          getConnections: () => [],
+          getInstances: () => [
+            { appId: "MockAppId", instanceId: "pending-instance", status: "pending" as const },
+          ],
+          getConnection: () => undefined,
+        },
+        disconnectInstance: vi.fn(),
+      } as never,
+      popupWatcher,
+      removePanel: vi.fn(),
+    })
+
+    cleanup.disconnectHarnessInstance("pending-instance")
+
+    expect(popupWatcher.hasPopup("pending-instance")).toBe(true)
 
     popupWatcher.stop()
   })

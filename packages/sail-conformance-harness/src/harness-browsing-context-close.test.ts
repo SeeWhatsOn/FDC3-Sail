@@ -125,6 +125,44 @@ describe("closeHarnessBrowsingContext", () => {
     ])
   })
 
+  it("closes browsing context by window.name when registry key differs from launcher id", () => {
+    let closed = false
+    const close = vi.fn(() => {
+      closed = true
+    })
+    const popup = {
+      name: "launcher-L",
+      get closed() {
+        return closed
+      },
+      close,
+    } as unknown as Window
+
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    watcher.registerPopup("stale-registry-key", popup)
+
+    const desktopAgent = {
+      apps: {
+        getConnections: () => [],
+        getInstances: () => [
+          { instanceId: "launcher-L", appId: "MockApp", status: "pending" as const },
+        ],
+        getConnection: () => undefined,
+      },
+    }
+
+    expect(
+      closeHarnessBrowsingContext({
+        instanceId: "launcher-L",
+        desktopAgent: desktopAgent as never,
+        popupWatcher: watcher,
+      }),
+    ).toBe(true)
+    expect(close).toHaveBeenCalledOnce()
+
+    watcher.stop()
+  })
+
   it("closes browsing context by canonical id after popup re-key from launcher id", () => {
     let closed = false
     const close = vi.fn(() => {

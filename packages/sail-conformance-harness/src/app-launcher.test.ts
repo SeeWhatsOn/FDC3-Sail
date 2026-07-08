@@ -64,6 +64,29 @@ describe("createHarnessAppLauncher", () => {
 
     expect(removePanel).toHaveBeenCalledWith("instance-2")
   })
+
+  it("marks panels launched with context for orphan-popup cleanup", async () => {
+    const panels: HarnessPanel[] = []
+    const launcher = createHarnessAppLauncher(panel => {
+      panels.push(panel)
+    })
+
+    await launcher.launch!(
+      {
+        app: { appId: "MockAppId" },
+        context: { type: "fdc3.instrument", id: { ticker: "AAPL" } },
+      },
+      {
+        appId: "MockAppId",
+        name: "Mock",
+        type: "web",
+        details: { url: "https://example.com/mock" },
+        hostManifests: { sail: { forceNewWindow: true } },
+      } as never,
+    )
+
+    expect(panels[0]?.openWithContext).toBe(true)
+  })
 })
 
 describe("openHarnessPopup", () => {

@@ -16,6 +16,8 @@ import {
   createHarnessFinOsTeardownObserver,
   installHarnessInboundAppMessageObserver,
 } from "./harness-finos-teardown"
+import { createOpenWithContextCleanupScheduler } from "./harness-open-with-context-cleanup"
+import { pruneStalePendingHostInstances } from "./harness-stale-instance-prune"
 import { createHarnessIntentResolver } from "./intent-resolver-wiring"
 import { createPopupCloseWatcher, openHarnessPopup } from "./popup-launcher"
 import type { HarnessPanel } from "./types"
@@ -93,31 +95,57 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     instanceCleanup,
   })
 
+  let desktopAgentRef: SailDesktopAgent | null = null
+
+  let openWithContextCleanup!: ReturnType<typeof createOpenWithContextCleanupScheduler>
+
   const popupWatcher = createPopupCloseWatcher({
     onPopupClosed: instanceId => {
+      openWithContextCleanup.cancelOrphanPopupCleanup(instanceId)
       instanceCleanup.disconnectHarnessInstance(instanceId)
     },
   })
 
+  openWithContextCleanup = createOpenWithContextCleanupScheduler({
+    instanceCleanup,
+    popupWatcher,
+    hasAgentInstance: instanceId => Boolean(desktopAgentRef?.apps.getInstance(instanceId)),
+  })
+
   const mountLaunchedPanel = (panel: HarnessPanel) => {
+    pruneStalePendingHostInstances({
+      desktopAgent: desktopAgentRef!,
+      appId: panel.appId,
+      popupWatcher,
+      keepInstanceId: panel.instanceId,
+    })
+
     instanceCleanup.prepareLaunchedHostInstance(panel)
 
     if (panel.launchMode === "popup") {
-      const popup = openHarnessPopup(panel)
+      const popup = openHarnessPopup(panel, {
+        onPopupCreated: opened => popupWatcher.registerPopup(panel.instanceId, opened),
+      })
       if (!popup) {
         console.error(
           `[ConformanceHarness] Failed to open tab for ${panel.appId} (${panel.instanceId}) — popup blocked?`,
         )
         return
       }
-      popupWatcher.registerPopup(panel.instanceId, popup)
+
+      if (panel.openWithContext) {
+        openWithContextCleanup.scheduleOrphanPopupCleanup(panel.instanceId, panel.appId)
+      }
     }
 
     setPanels?.(current => [...current, panel])
   }
 
   const appLauncher = createHarnessAppLauncher(mountLaunchedPanel, {
-    onClose: instanceId => instanceCleanup.disconnectHarnessInstance(instanceId),
+    onClose: instanceId => {
+      openWithContextCleanup.cancelOrphanPopupCleanup(instanceId)
+      instanceCleanup.disconnectHarnessInstance(instanceId)
+    },
   })
 
   const desktopAgent = new SailDesktopAgent({
@@ -135,19 +163,29 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,
       fdc3Version,
+      resolveHostIdentifier: source => popupWatcher.findInstanceIdForPopup(source),
     },
     logPayloadDetail: debug ? "full" : "metadata",
     onAppConnected: (metadata: AppConnectionMetadata) => {
+      openWithContextCleanup.cancelOrphanPopupCleanup(metadata.instanceId)
+      if (metadata.hostIdentifier && metadata.hostIdentifier !== metadata.instanceId) {
+        openWithContextCleanup.cancelOrphanPopupCleanup(metadata.hostIdentifier)
+      }
       if (metadata.source) {
         popupWatcher.remapPopupByWindow(metadata.source, metadata.instanceId)
       }
-      console.log(`[ConformanceHarness] WCP connected: ${metadata.appId} (${metadata.instanceId})`)
+      console.log(
+        `[ConformanceHarness] WCP connected: ${metadata.appId} (${metadata.instanceId}) hostIdentifier=${metadata.hostIdentifier ?? "n/a"}`,
+      )
     },
     onAppDisconnected: instanceId => {
+      openWithContextCleanup.cancelOrphanPopupCleanup(instanceId)
       console.log(`[ConformanceHarness] WCP disconnected: ${instanceId}`)
       instanceCleanup.disconnectHarnessInstance(instanceId)
     },
   })
+
+  desktopAgentRef = desktopAgent
 
   installHarnessInboundAppMessageObserver(desktopAgent.connector, finOsTeardownObserver)
 
@@ -159,6 +197,12 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
       removePanel,
     }),
   )
+
+  const disconnectHarnessInstance = instanceCleanup.disconnectHarnessInstance.bind(instanceCleanup)
+  instanceCleanup.disconnectHarnessInstance = instanceId => {
+    openWithContextCleanup.cancelOrphanPopupCleanup(instanceId)
+    disconnectHarnessInstance(instanceId)
+  }
 
   desktopAgent.registerPendingHostInstance({
     appId: "Conformance1",

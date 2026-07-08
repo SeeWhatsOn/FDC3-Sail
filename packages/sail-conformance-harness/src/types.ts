@@ -23,6 +23,8 @@ export type HarnessPanel = {
   url: string
   title?: string
   launchMode: HarnessLaunchMode
+  /** Set when launch was triggered by `fdc3.open` with context (pending listener delivery). */
+  openWithContext?: boolean
 }
 
 /** React host state for mounted app panels. */

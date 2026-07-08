@@ -65,6 +65,7 @@ export function createHarnessAppLauncher(
         url,
         title: metadata.title ?? metadata.name ?? request.app.appId,
         launchMode: resolveHarnessLaunchMode(metadata),
+        openWithContext: request.context !== undefined && request.context !== null,
       })
 
       return Promise.resolve({

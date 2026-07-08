@@ -110,6 +110,35 @@ describe("createPopupCloseWatcher", () => {
     expect(watcher.closePopup("missing-instance")).toBe(false)
     watcher.stop()
   })
+
+  it("closePopupForInstance matches registry key by window.name", () => {
+    const popup = createMockPopup(false)
+    Object.defineProperty(popup, "name", { value: "launcher-name", configurable: true })
+    const close = vi.fn(() => {
+      Object.defineProperty(popup, "closed", { value: true, configurable: true })
+    })
+    Object.assign(popup, { close })
+
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    watcher.registerPopup("registry-key", popup)
+
+    expect(watcher.closePopup("launcher-name")).toBe(false)
+    expect(watcher.closePopupForInstance("launcher-name")).toBe(true)
+    expect(watcher.hasPopup("registry-key")).toBe(false)
+
+    watcher.stop()
+  })
+
+  it("findInstanceIdForPopup resolves launcher id by Window reference", () => {
+    const popup = createMockPopup(false)
+    const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
+    watcher.registerPopup("launcher-id", popup)
+
+    expect(watcher.findInstanceIdForPopup(popup)).toBe("launcher-id")
+    expect(watcher.findInstanceIdForPopup({ closed: false } as Window)).toBeUndefined()
+
+    watcher.stop()
+  })
 })
 
 describe("remapPopupByWindow", () => {

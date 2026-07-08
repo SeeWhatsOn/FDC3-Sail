@@ -37,8 +37,15 @@ export function createHarnessInstanceCleanup(options: {
     })
 
   const disconnectHarnessInstance = (instanceId: string) => {
-    closeHarnessBrowsingContextForInstance(instanceId)
-    popupWatcher.unregisterPopup(instanceId)
+    const closed = closeHarnessBrowsingContextForInstance(instanceId)
+
+    if (closed) {
+      for (const registeredId of popupWatcher.findRegisteredIdsForWindowName(instanceId)) {
+        popupWatcher.unregisterPopup(registeredId)
+      }
+      popupWatcher.unregisterPopup(instanceId)
+    }
+
     removePanel(instanceId)
     if (desktopAgent.apps.getInstance(instanceId)) {
       desktopAgent.disconnectInstance(instanceId)
