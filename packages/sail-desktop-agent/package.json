@@ -1,0 +1,46 @@
+{
+  "name": "@finos/sail-desktop-agent",
+  "version": "0.0.0",
+  "author": "Fintech Open Source Foundation (FINOS)",
+  "homepage": "https://fdc3.finos.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/finos/FDC3.git"
+  },
+  "publishConfig": {
+    "tag": "latest"
+  },
+  "license": "Apache-2.0",
+  "files": [
+    "dist"
+  ],
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "scripts": {
+    "clean": "rimraf dist cucumber-report.html coverage .nyc_output node_modules test-results.xml generated",
+    "directory-openapi": "npx openapi-typescript appd.schema.json --output generated/directory-schema.ts",
+    "test": "npm run directory-openapi && tsc --noEmit && node test/support/patch-fdc3-esm.js && node test/support/run-cucumber-with-coverage.cjs",
+    "test:unit": "vitest run",
+    "build": "npm run directory-openapi && tsc --module es2022",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@finos/fdc3": "2.2.3",
+    "@finos/fdc3-context": "2.2.3",
+    "@finos/fdc3-schema": "2.2.3",
+    "@finos/fdc3-standard": "2.2.3"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "12.9.0",
+    "@types/node": "^20.16.11",
+    "ajv": "^8.18.0",
+    "ajv-formats": "^3.0.1",
+    "expect": "^29.7.0",
+    "nyc": "^18.0.0",
+    "openapi-typescript": "^7.13.0",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.23.0",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4"
+  }
+}

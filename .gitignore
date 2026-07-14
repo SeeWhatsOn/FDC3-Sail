@@ -11,8 +11,12 @@ FDC3-Sail.pem
 tsconfig.tsbuildinfo
 FDC3-Sail.pem
 
-packages/da-impl/coverage
+packages/sail-desktop-agent/coverage
 test-results.xml
 cucumber-report.html
 .vite
 .vite-cache
+.cursor
+.nyc_output/
+docs/
+AGENTS.md

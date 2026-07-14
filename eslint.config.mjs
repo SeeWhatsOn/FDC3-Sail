@@ -3,7 +3,8 @@ import tseslint from "typescript-eslint"
 
 export default tseslint.config(
   {
-    ignores: ["**/*.js", "**/*.mjs", "**/dist/"],
+    // __tests__ are excluded from package tsconfigs (build emit); skip type-aware lint there.
+    ignores: ["**/*.js", "**/*.mjs", "**/dist/", "**/__tests__/**"],
   },
   {
     files: ["packages/*/src/**/*.{ts,tsx}"],

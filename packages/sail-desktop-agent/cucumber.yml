@@ -1,0 +1,15 @@
+default:
+  format:
+    - progress
+    - html:cucumber-report.html
+    - junit:test-results.xml
+  paths:
+    - test/features/*.feature
+  require:
+    - test/step-definitions/*.steps.ts
+    - test/support/*.ts
+    - test/world/index.ts
+  requireModule:
+    - tsx/cjs
+  forceExit: true
+  tags: "not @failing"
