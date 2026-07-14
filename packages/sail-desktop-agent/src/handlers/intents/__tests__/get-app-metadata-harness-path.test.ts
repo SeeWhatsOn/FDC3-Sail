@@ -40,7 +40,7 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
     }
   })
 
-  it("GetAppMetadata includes desktopAgent on wire JSON for directory lookup", async () => {
+  it("GetAppMetadata omits desktopAgent when DesktopAgentBridging is false (local 2.2 conformance)", async () => {
     const initialState = updateInstanceState(
       connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
         instanceId: "caller-1",
@@ -79,11 +79,12 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
 
     expect(response).toBeDefined()
     const wireMetadata = wireVisibleAppMetadata(response!)
-    expect(Object.keys(wireMetadata)).toContain("desktopAgent")
-    expect(wireMetadata.desktopAgent).toBe(DEFAULT_SAIL_IMPLEMENTATION_METADATA.provider)
+    // SeeWhatsOn/FDC3-Sail#73 — local 2.2 toolbox strict-whitelists AppMetadata keys
+    expect(Object.keys(wireMetadata)).not.toContain("desktopAgent")
+    expect(wireMetadata.appId).toBe(CONFORMANCE_APP.appId)
   })
 
-  it("AppInstanceMetadata includes desktopAgent on wire JSON for running instance lookup", async () => {
+  it("AppInstanceMetadata omits desktopAgent when DesktopAgentBridging is false", async () => {
     let initialState = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     initialState = connectInstance(initialState, {
       instanceId: "caller-1",
@@ -130,8 +131,56 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
 
     expect(response).toBeDefined()
     const wireMetadata = wireVisibleAppMetadata(response!)
-    expect(Object.keys(wireMetadata)).toContain("desktopAgent")
+    expect(Object.keys(wireMetadata)).not.toContain("desktopAgent")
     expect(wireMetadata.instanceId).toBe("intent-a-instance")
+  })
+
+  it("GetAppMetadata includes desktopAgent when DesktopAgentBridging is true", async () => {
+    const initialState = updateInstanceState(
+      connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
+        instanceId: "caller-1",
+        appId: "conformance1",
+        metadata: { appId: "conformance1", name: "conformance1" },
+      }),
+      "caller-1",
+      AppInstanceState.CONNECTED,
+    )
+
+    const { agent, connection } = createDesktopAgentWithTestConnection({
+      apps: [CONFORMANCE_APP],
+      initialState,
+      implementationMetadata: {
+        ...DEFAULT_SAIL_IMPLEMENTATION_METADATA,
+        optionalFeatures: {
+          ...DEFAULT_SAIL_IMPLEMENTATION_METADATA.optionalFeatures,
+          DesktopAgentBridging: true,
+        },
+      },
+    })
+    activeAgents.push(agent)
+
+    await connection.receiveMessage({
+      type: "getAppMetadataRequest",
+      meta: createDacpRequestMeta("get-app-metadata-bridging-on", {
+        appId: "conformance1",
+        instanceId: "caller-1",
+      }),
+      payload: {
+        app: { appId: CONFORMANCE_APP.appId },
+      },
+    })
+
+    const response = connection.sentMessages.find(
+      (message): message is GetAppMetadataResponse =>
+        typeof message === "object" &&
+        message !== null &&
+        "type" in message &&
+        (message as { type: string }).type === "getAppMetadataResponse",
+    )
+
+    expect(response).toBeDefined()
+    const wireMetadata = wireVisibleAppMetadata(response!)
+    expect(Object.keys(wireMetadata)).toContain("desktopAgent")
     expect(wireMetadata.desktopAgent).toBe(DEFAULT_SAIL_IMPLEMENTATION_METADATA.provider)
   })
 })

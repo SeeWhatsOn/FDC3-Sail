@@ -91,11 +91,12 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     disconnectHarnessInstance() {},
   }
 
+  let desktopAgentRef: SailDesktopAgent | null = null
+
   const finOsTeardownObserver = createHarnessFinOsTeardownObserver({
     instanceCleanup,
+    getDesktopAgent: () => desktopAgentRef,
   })
-
-  let desktopAgentRef: SailDesktopAgent | null = null
 
   let openWithContextCleanup!: ReturnType<typeof createOpenWithContextCleanupScheduler>
 

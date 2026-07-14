@@ -42,8 +42,9 @@ The harness loads `conformance-appd.json` (hosted FINOS URLs) and optionally rew
 | Local FINOS dev | `VITE_CONFORMANCE_TOOLBOX=local` | `http://localhost:3001` | 2.2 |
 
 ```bash
+# Same as npm run dev:local (Vite --mode toolbox-local → .env.toolbox-local)
 # Local FINOS toolbox on port 3001 (run FINOS `npm run dev` instead of the harness, or use another port for one of them)
-VITE_CONFORMANCE_TOOLBOX=local npm run dev -w @finos/sail-conformance-harness
+npm run dev:local -w @finos/sail-conformance-harness
 ```
 
 Hosted URLs include `/toolbox/fdc3-conformance` before `/apps/...`; local rewrite drops that segment so paths become `http://localhost:3001/apps/...`. Vite proxies `/apps` to the hosted FINOS toolbox so mock apps load same-origin with the harness (required for `window.name` / WCP host-instance adoption).

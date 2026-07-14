@@ -15,8 +15,8 @@ Feature: Opening and Requesting App Details
   Scenario: Looking up app metadata
     When "appId: portfolioApp, instanceId: a1" requests metadata for "chartApp" [fdc3.getAppMetadata]
     Then messaging will have outgoing posts
-      | msg.payload.appMetadata.appId | msg.payload.appMetadata.desktopAgent | to.instanceId | msg.matches_type       |
-      | chartApp                      | cucumber-provider                    | a1            | getAppMetadataResponse |
+      | msg.payload.appMetadata.appId | to.instanceId | msg.matches_type       |
+      | chartApp                      | a1            | getAppMetadataResponse |
 
   @fdc3_2.0
   Scenario: Looking up app metadata from missing app
@@ -34,8 +34,8 @@ Feature: Opening and Requesting App Details
     And "appId: portfolioApp, instanceId: a1" is opened with connection id "a1"
     When "appId: portfolioApp, instanceId: a1" requests metadata for "researchApp" [fdc3.getAppMetadata]
     Then messaging will have outgoing posts
-      | msg.payload.appMetadata.appId | msg.payload.appMetadata.title | msg.payload.appMetadata.desktopAgent | to.instanceId | msg.matches_type       |
-      | researchApp                   | researchApp                   | cucumber-provider                    | a1            | getAppMetadataResponse |
+      | msg.payload.appMetadata.appId | msg.payload.appMetadata.title | to.instanceId | msg.matches_type       |
+      | researchApp                   | researchApp                   | a1            | getAppMetadataResponse |
 
   @fdc3_2.0
   Scenario: Looking up app metadata for running app includes instanceId
@@ -47,8 +47,8 @@ Feature: Opening and Requesting App Details
     And "appId: chartApp, instanceId: chart-123" is opened with connection id "chart-123"
     When "appId: portfolioApp, instanceId: a1" requests metadata for "chartApp" [fdc3.getAppMetadata]
     Then messaging will have outgoing posts
-      | msg.payload.appMetadata.appId | msg.payload.appMetadata.instanceId | msg.payload.appMetadata.desktopAgent | to.instanceId | msg.matches_type       |
-      | chartApp                      | chart-123                          | cucumber-provider                    | a1            | getAppMetadataResponse |
+      | msg.payload.appMetadata.appId | msg.payload.appMetadata.instanceId | to.instanceId | msg.matches_type       |
+      | chartApp                      | chart-123                          | a1            | getAppMetadataResponse |
 
   @fdc3_2.0
   Scenario: Looking up DesktopAgent metadata

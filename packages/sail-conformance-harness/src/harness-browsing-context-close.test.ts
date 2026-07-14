@@ -9,6 +9,7 @@ import {
   broadcastHarnessFinOsCloseContext,
   closeHarnessBrowsingContext,
   collectHarnessCloseInstanceIds,
+  relayFinOsCloseWindowToMockApps,
   tryCloseBrowsingContext,
 } from "./harness-browsing-context-close"
 import { createHarnessInstanceCleanup } from "./harness-instance-lifecycle"
@@ -282,6 +283,7 @@ describe("broadcastHarnessFinOsCloseContext", () => {
       },
       registerPendingHostInstance: vi.fn(),
       disconnectInstance: vi.fn(),
+      connector: { sendToAppInstance: vi.fn() },
     }
 
     const cleanup = createHarnessInstanceCleanup({
@@ -294,13 +296,57 @@ describe("broadcastHarnessFinOsCloseContext", () => {
       desktopAgent: desktopAgent as never,
       conformance1InstanceId: "conformance1-instance",
       targetInstanceId: "mock-instance-C",
+      context: { type: "closeWindow", testId: "UCBasicUsage1" },
       onBrowsingContextTeardown: instanceId =>
         cleanup.closeHarnessBrowsingContext(instanceId) && teardownSpy(instanceId),
     })
 
+    expect(desktopAgent.connector.sendToAppInstance).toHaveBeenCalledWith(
+      "mock-instance-C",
+      expect.objectContaining({
+        type: "broadcastEvent",
+        payload: expect.objectContaining({
+          context: { type: "closeWindow", testId: "UCBasicUsage1" },
+        }),
+      }),
+    )
     expect(teardownSpy).toHaveBeenCalledWith("mock-instance-C")
     expect(close).toHaveBeenCalledOnce()
 
     watcher.stop()
+  })
+})
+
+describe("relayFinOsCloseWindowToMockApps", () => {
+  it("delivers closeWindow with testId to connected mocks only", () => {
+    const sendToAppInstance = vi.fn()
+    const desktopAgent = {
+      connector: { sendToAppInstance },
+      apps: {
+        getInstances: () => [
+          { instanceId: "c1", appId: "Conformance1", status: "connected" as const },
+          { instanceId: "mock-a", appId: "ChannelsAppId", status: "connected" as const },
+          { instanceId: "mock-b", appId: "MockAppId", status: "pending" as const },
+        ],
+      },
+    }
+
+    const delivered = relayFinOsCloseWindowToMockApps({
+      desktopAgent: desktopAgent as never,
+      conformance1InstanceId: "c1",
+      context: { type: "closeWindow", testId: "UCFilteredUsage1" },
+    })
+
+    expect(delivered).toEqual(["mock-a"])
+    expect(sendToAppInstance).toHaveBeenCalledOnce()
+    expect(sendToAppInstance.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        type: "broadcastEvent",
+        payload: expect.objectContaining({
+          channelId: "app-control",
+          context: { type: "closeWindow", testId: "UCFilteredUsage1" },
+        }),
+      }),
+    )
   })
 })

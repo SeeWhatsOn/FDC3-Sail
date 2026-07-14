@@ -35,15 +35,21 @@ export function handleGetInfoRequest(
     let appMetadata: BrowserTypes.AppMetadata | undefined
 
     if (callerInstance) {
+      const includeDesktopAgent = isDesktopAgentBridgingEnabled(implementationMetadata)
       const directoryApps = retrieveAppsById(getState().appDirectory, callerInstance.appId)
       if (directoryApps.length > 0) {
-        appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0], provider, instanceId)
+        appMetadata = convertDirectoryAppToAppMetadata(
+          directoryApps[0],
+          provider,
+          instanceId,
+          includeDesktopAgent,
+        )
       } else {
         appMetadata = {
           appId: callerInstance.appId,
           name: callerInstance.metadata?.name ?? callerInstance.appId,
           instanceId,
-          desktopAgent: provider,
+          ...(includeDesktopAgent ? { desktopAgent: provider } : {}),
         }
       }
     }
@@ -239,17 +245,32 @@ export function handleFindInstancesRequest(
 }
 
 /**
+ * `desktopAgent` is the FDC3 2.1+ experimental bridging field on AppIdentifier.
+ * Local 2.2 conformance Metadata tests strict-whitelist AppMetadata keys and fail
+ * if `desktopAgent` is present while Bridging is not claimed
+ * (SeeWhatsOn/FDC3-Sail#73). Only emit when DesktopAgentBridging is true.
+ */
+function isDesktopAgentBridgingEnabled(
+  implementationMetadata: DesktopAgentConfig["implementationMetadata"],
+): boolean {
+  return implementationMetadata.optionalFeatures.DesktopAgentBridging === true
+}
+
+/**
  * Helper function to convert DirectoryApp to AppMetadata format
  * Maps FDC3 App Directory fields to FDC3 AppMetadata response format
  *
  * @param app - The DirectoryApp from app directory
+ * @param provider - ImplementationMetadata.provider (used only when bridging is on)
  * @param instanceId - Optional instance ID if app is running
+ * @param includeDesktopAgent - When false, omit bridging field for conformance
  * @returns AppMetadata object ready for DACP response
  */
 function convertDirectoryAppToAppMetadata(
   app: DirectoryApp,
   provider: string,
   instanceId?: string,
+  includeDesktopAgent = false,
 ) {
   return {
     appId: app.appId,
@@ -261,7 +282,7 @@ function convertDirectoryAppToAppMetadata(
     icons: app.icons || [],
     screenshots: app.screenshots || [],
     instanceId,
-    desktopAgent: provider,
+    ...(includeDesktopAgent ? { desktopAgent: provider } : {}),
   }
 }
 
@@ -275,6 +296,7 @@ export function handleGetAppMetadataRequest(
 ): void {
   const { responses, instanceId, getState, logger, implementationMetadata } = context
   const provider = implementationMetadata.provider
+  const includeDesktopAgent = isDesktopAgentBridgingEnabled(implementationMetadata)
 
   try {
     // Parse request payload
@@ -303,6 +325,7 @@ export function handleGetAppMetadataRequest(
           directoryApp,
           provider,
           runningInstance.instanceId,
+          includeDesktopAgent,
         )
 
         const response = createDACPSuccessResponse(message, "getAppMetadataResponse", {
@@ -319,7 +342,7 @@ export function handleGetAppMetadataRequest(
         appId: runningInstance.appId,
         name: runningInstance.appId,
         instanceId: runningInstance.instanceId,
-        desktopAgent: provider,
+        ...(includeDesktopAgent ? { desktopAgent: provider } : {}),
       }
 
       const response = createDACPSuccessResponse(message, "getAppMetadataResponse", {
@@ -333,7 +356,12 @@ export function handleGetAppMetadataRequest(
     // Step 3: No running instance - fallback to App Directory
     const directoryApps = retrieveAppsById(getState().appDirectory, appId)
     if (directoryApps.length > 0) {
-      const appMetadata = convertDirectoryAppToAppMetadata(directoryApps[0], provider)
+      const appMetadata = convertDirectoryAppToAppMetadata(
+        directoryApps[0],
+        provider,
+        undefined,
+        includeDesktopAgent,
+      )
 
       const response = createDACPSuccessResponse(message, "getAppMetadataResponse", {
         appMetadata,

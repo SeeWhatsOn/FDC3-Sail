@@ -7,7 +7,13 @@ const HARNESS_LOG_PREFIX = "[ConformanceHarness]"
 /** FINOS toolbox teardown channel for mock-app close handshake. */
 export const HARNESS_FINOS_APP_CONTROL_CHANNEL = "app-control"
 
-const FINOS_CLOSE_WINDOW_CONTEXT = { type: "closeWindow" } as const
+export type FinOsCloseWindowContext = {
+  type: "closeWindow"
+  testId?: string
+  [key: string]: unknown
+}
+
+const FINOS_CLOSE_WINDOW_CONTEXT: FinOsCloseWindowContext = { type: "closeWindow" }
 
 /** Try to destroy a host-owned browsing context opened via {@link window.open}. */
 export function tryCloseBrowsingContext(
@@ -105,12 +111,23 @@ export function closeHarnessBrowsingContext(options: {
   return false
 }
 
-function deliverFinOsCloseWindowBroadcast(options: {
+/**
+ * Deliver a FINOS `closeWindow` `broadcastEvent` directly to a mock MessagePort.
+ * Preserves `testId` (and any other fields) so ChannelsApp / MockApp can echo it on
+ * `windowClosed` — Conformance1 rejects mismatched test ids within its 1s budget.
+ */
+export function deliverFinOsCloseWindowBroadcast(options: {
   desktopAgent: SailDesktopAgent
   conformance1InstanceId: string
   targetInstanceId: string
+  context?: FinOsCloseWindowContext
 }): void {
-  const { desktopAgent, conformance1InstanceId, targetInstanceId } = options
+  const {
+    desktopAgent,
+    conformance1InstanceId,
+    targetInstanceId,
+    context = FINOS_CLOSE_WINDOW_CONTEXT,
+  } = options
   const connector = desktopAgent.connector
 
   if (!connector?.sendToAppInstance) {
@@ -126,33 +143,77 @@ function deliverFinOsCloseWindowBroadcast(options: {
     },
     payload: {
       channelId: HARNESS_FINOS_APP_CONTROL_CHANNEL,
-      context: FINOS_CLOSE_WINDOW_CONTEXT,
+      context,
       originatingApp: { appId: "Conformance1", instanceId: conformance1InstanceId },
     },
   })
 }
 
 /**
- * FINOS toolbox teardown: Conformance1 broadcasts `closeWindow` on `app-control`.
- * Mock apps respond and call `fdc3.close()`; the harness closes the browsing context
- * via {@link onBrowsingContextTeardown} (wired to {@link closeHarnessBrowsingContext}).
+ * Relay Conformance1's `closeWindow` broadcast to every connected non-Conformance1
+ * instance. Used when DACP channel membership would otherwise miss mock listeners
+ * within the FINOS 1s close-context budget. Does **not** close browsing contexts —
+ * mocks must reply with `windowClosed` / `fdc3.nothing` first.
+ */
+export function relayFinOsCloseWindowToMockApps(options: {
+  desktopAgent: SailDesktopAgent
+  conformance1InstanceId: string
+  context: FinOsCloseWindowContext
+}): string[] {
+  const { desktopAgent, conformance1InstanceId, context } = options
+  const delivered: string[] = []
+
+  for (const instance of desktopAgent.apps.getInstances()) {
+    if (instance.appId === "Conformance1") {
+      continue
+    }
+    if (instance.status !== "connected") {
+      continue
+    }
+    if (instance.instanceId === conformance1InstanceId) {
+      continue
+    }
+
+    deliverFinOsCloseWindowBroadcast({
+      desktopAgent,
+      conformance1InstanceId,
+      targetInstanceId: instance.instanceId,
+      context,
+    })
+    delivered.push(instance.instanceId)
+  }
+
+  return delivered
+}
+
+/**
+ * FINOS toolbox teardown helper for unit tests: deliver `closeWindow` then tear down
+ * the browsing context. Live harness path uses {@link relayFinOsCloseWindowToMockApps}
+ * without immediate teardown so Conformance1 can receive `windowClosed` first.
  */
 export function broadcastHarnessFinOsCloseContext(options: {
   desktopAgent: SailDesktopAgent
   conformance1InstanceId: string
   targetInstanceId: string
+  context?: FinOsCloseWindowContext
   onBrowsingContextTeardown: (instanceId: string) => boolean
 }): Promise<void> {
-  const { desktopAgent, conformance1InstanceId, targetInstanceId, onBrowsingContextTeardown } =
-    options
+  const {
+    desktopAgent,
+    conformance1InstanceId,
+    targetInstanceId,
+    context,
+    onBrowsingContextTeardown,
+  } = options
 
   deliverFinOsCloseWindowBroadcast({
     desktopAgent,
     conformance1InstanceId,
     targetInstanceId,
+    context,
   })
 
-  // Mock fdc3.close() path (unit tests) or AppLauncher.close after live mock delivery.
+  // Unit-test path only: simulate AppLauncher.close / popup teardown after delivery.
   onBrowsingContextTeardown(targetInstanceId)
   return Promise.resolve()
 }

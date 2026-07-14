@@ -78,7 +78,7 @@ describe("DACP handlers without context.appDirectory", () => {
     }
     expect(last.type).toBe("getAppMetadataResponse")
     expect(last.payload.appMetadata.appId).toBe("chartApp")
-    expect(last.payload.appMetadata.desktopAgent).toBe(TEST_PROVIDER)
+    expect(last.payload.appMetadata.desktopAgent).toBeUndefined()
     expect(getState().appDirectory.apps).toContainEqual(chartApp)
   })
 
