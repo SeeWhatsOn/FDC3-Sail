@@ -35,6 +35,12 @@ export interface SailAppLauncherConfig {
     instanceId: string,
     context?: unknown,
   ) => Promise<void>
+
+  /**
+   * Tear down the host container for `fdc3.close()` (panel/iframe).
+   * Required for {@link SailAppLauncher.close}.
+   */
+  onCloseApp?: (instanceId: string) => Promise<void> | void
 }
 
 /**
@@ -70,6 +76,15 @@ export class SailAppLauncher implements AppLauncher {
       appId: request.app.appId,
       instanceId,
     }
+  }
+
+  async close(instanceId: string): Promise<void> {
+    if (!this.config.onCloseApp) {
+      throw new Error(
+        `Cannot close instance ${instanceId}: SailAppLauncher onCloseApp is not configured`,
+      )
+    }
+    await this.config.onCloseApp(instanceId)
   }
 
   /**

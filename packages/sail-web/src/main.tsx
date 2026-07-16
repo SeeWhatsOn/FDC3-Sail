@@ -7,12 +7,9 @@ import {
 } from "@finos/sail-platform-api"
 import type { AppMetadata } from "@finos/fdc3"
 
-import conformanceAppDirectory from "../../sail-conformance-harness/conformance-appd.json"
+import { loadConformanceApplications } from "../../sail-conformance-harness/src/conformance-app-directory"
 import defaultAppDirectory from "../fixtures/default-app-directory.json"
-import {
-  bootstrapDockviewPopoutShell,
-  isDockviewPopoutShell,
-} from "./utils/dockview-popout"
+import { bootstrapDockviewPopoutShell, isDockviewPopoutShell } from "./utils/dockview-popout"
 
 import "./index.css"
 import App from "./App"
@@ -83,18 +80,48 @@ if (isDockviewPopoutShell()) {
       })
       return Promise.resolve()
     },
+    onCloseApp: (instanceId: string) => {
+      const workspaceStore = useWorkspaceStore.getState()
+      for (const workspace of workspaceStore.workspaces.values()) {
+        for (const [tabId, tab] of workspace.layout.tabs) {
+          if (tab.panels.has(instanceId)) {
+            workspaceStore.removePanel(workspace.uuid, tabId, instanceId)
+            console.log(`[Sail] Closed app panel ${instanceId}`, {
+              workspaceId: workspace.uuid,
+              tabId,
+            })
+            return
+          }
+        }
+      }
+      console.warn(`[Sail] onCloseApp: no panel found for instance ${instanceId}`)
+    },
   })
+
+  const conformance = loadConformanceApplications({
+    // Same-origin with sail-web so WCP host-instance adoption works via the /apps proxy.
+    localOrigin: window.location.origin,
+  })
+
+  console.info(
+    `[Sail] Conformance toolbox: ${conformance.profile} — FDC3 target ${conformance.fdc3Version} — origin ${conformance.origin}`,
+  )
 
   const agent = createSailBrowserDesktopAgent({
     debug: true,
     appLauncher,
     apps: [
       ...defaultAppDirectory.applications,
-      ...conformanceAppDirectory.applications,
+      ...conformance.applications,
     ] as unknown as DirectoryApp[],
   })
 
   console.log("[Sail] FDC3 Browser Desktop Agent started and listening for connections")
+
+  if (import.meta.env.DEV) {
+    // Smoke / local debugging only — call `await __sailAppLauncher.close(instanceId)`.
+    ;(window as Window & { __sailAppLauncher?: typeof appLauncher }).__sailAppLauncher = appLauncher
+  }
 
   createRoot(document.getElementById("root")!).render(
     <StrictMode>

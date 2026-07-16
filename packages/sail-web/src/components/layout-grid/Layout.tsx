@@ -177,24 +177,15 @@ const Layout = (props: DockviewSailProps) => {
           status: connection?.status,
         })
 
-        if (connection && connection.instanceId) {
-          console.log(
-            `[Layout] Disconnecting instance ${connection.instanceId} for panel ${panelId}`,
-          )
-          try {
-            // Send WCP6Goodbye and disconnect the instance
-            agent.apps.disconnect(connection.instanceId)
-            console.log(
-              `[Layout] Successfully initiated disconnect for instance ${connection.instanceId}`,
-            )
-          } catch (error) {
-            console.error(`[Layout] Error disconnecting instance ${connection.instanceId}:`, error)
-          }
-        } else {
-          console.warn(
-            `[Layout] No connection found for panel ${panelId}, skipping disconnect. ` +
-              `This may indicate the panel was closed before the app connected, or the connection was already cleaned up.`,
-          )
+        // Prefer WCP5 canonical id when linked; otherwise panelId is the host PENDING id.
+        const instanceId = connection?.instanceId ?? panelId
+        console.log(`[Layout] Disconnecting instance ${instanceId} for panel ${panelId}`, {
+          hadConnection: !!connection,
+        })
+        try {
+          agent.apps.disconnect(instanceId)
+        } catch (error) {
+          console.error(`[Layout] Error disconnecting instance ${instanceId}:`, error)
         }
 
         // Remove from store
