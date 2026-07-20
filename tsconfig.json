@@ -7,7 +7,6 @@
     { "path": "./packages/sail-platform-api" },
     { "path": "./packages/sail-ui" },
     { "path": "./packages/sail-web" },
-    { "path": "./packages/sail-electron" },
     { "path": "./packages/sail-server" }
   ]
 }
