@@ -1007,6 +1007,62 @@ describe("WCP edge contract", () => {
     expect(broadcastEvent.payload.context?.type).toBe(INSTRUMENT_CONTEXT.type)
   })
 
+  it("does not deliver user-channel broadcast when A and B are on different channels (UCFilteredUsage6)", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "edge-isolated-listener-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const appB = await connectWcpApp(agent, {
+      connectionAttemptUuid: "edge-isolated-broadcaster-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+    })
+
+    const collected = collectPortMessages<BrowserTypes.BroadcastEvent>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "broadcastEvent",
+    )
+
+    await postDacpOnPort(
+      appA.appPort,
+      createJoinUserChannelMessage(appA.canonicalInstanceId, appA.appId, CHANNEL_ID),
+    )
+    await postDacpOnPort(
+      appA.appPort,
+      createAddContextListenerMessage(
+        appA.canonicalInstanceId,
+        appA.appId,
+        CHANNEL_ID,
+        INSTRUMENT_CONTEXT.type,
+      ),
+    )
+
+    await postDacpOnPort(
+      appB.appPort,
+      createJoinUserChannelMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID_2),
+    )
+    await postDacpOnPort(
+      appB.appPort,
+      createBroadcastMessage(
+        appB.canonicalInstanceId,
+        appB.appId,
+        CHANNEL_ID_2,
+        INSTRUMENT_CONTEXT,
+      ),
+    )
+
+    await flushAsyncDelivery()
+    await flushAsyncDelivery()
+
+    collected.stop()
+    expect(collected.messages).toEqual([])
+  })
+
   it("delivers app-channel broadcast from app B to app A listener over MessagePort routing", async () => {
     const agent = createTestAgent()
     activeAgents.push(agent)

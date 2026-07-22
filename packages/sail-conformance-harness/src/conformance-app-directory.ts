@@ -71,6 +71,8 @@ export type LoadedConformanceApplications = ConformanceToolboxConfig & {
 
 export function loadConformanceApplications(options?: {
   profile?: ConformanceToolboxProfile
+  /** Override local rewrite target (default: {@link CONFORMANCE_LOCAL_ORIGIN}). Use sail-web origin for same-origin iframe adoption. */
+  localOrigin?: string
 }): LoadedConformanceApplications {
   const config = resolveConformanceToolboxProfile(options?.profile)
   const rawApps = conformanceAppDirectory.applications as DirectoryApp[]
@@ -82,12 +84,16 @@ export function loadConformanceApplications(options?: {
     }
   }
 
+  const localOrigin = options?.localOrigin ?? CONFORMANCE_LOCAL_ORIGIN
+
   return {
-    ...config,
+    profile: config.profile,
+    origin: localOrigin,
+    fdc3Version: config.fdc3Version,
     applications: rewriteConformanceAppDirectoryOrigin(
       structuredClone(rawApps),
       CONFORMANCE_HOSTED_ORIGIN,
-      CONFORMANCE_LOCAL_ORIGIN,
+      localOrigin,
     ),
   }
 }

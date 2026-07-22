@@ -45,8 +45,7 @@ jobs:
             -w @finos/sail-platform-api \
             -w @finos/sail-ui \
             -w @finos/sail-web \
-            -w @finos/sail-conformance-harness \
-            -w @finos/sail-server
+            -w @finos/sail-conformance-harness
 
       - name: Build docs site
         run: npm run docs:build

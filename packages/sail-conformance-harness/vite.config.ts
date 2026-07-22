@@ -10,8 +10,23 @@ export default defineConfig({
     port: 3001,
     open: true,
     proxy: {
-      // Local profile rewrites mock URLs to localhost:3001/apps/... — proxy to hosted FINOS toolbox.
+      // Local profile: conformance pages load under /apps; scripts/CSS use /lib.
       "/apps": {
+        target: "https://fdc3.finos.org/toolbox/fdc3-conformance",
+        changeOrigin: true,
+        secure: true,
+      },
+      "/lib": {
+        target: "https://fdc3.finos.org/toolbox/fdc3-conformance",
+        changeOrigin: true,
+        secure: true,
+      },
+      "/screenshots": {
+        target: "https://fdc3.finos.org/toolbox/fdc3-conformance",
+        changeOrigin: true,
+        secure: true,
+      },
+      "/finos-icon-256.png": {
         target: "https://fdc3.finos.org/toolbox/fdc3-conformance",
         changeOrigin: true,
         secure: true,

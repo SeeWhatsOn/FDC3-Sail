@@ -66,7 +66,6 @@ export interface AppInstance {
   /** Instance-specific metadata */
   instanceMetadata?: {
     title?: string
-    hosting?: "frame" | "tab" | "window"
     parentInstanceId?: string
     [key: string]: unknown
   }

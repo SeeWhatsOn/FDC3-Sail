@@ -7,6 +7,8 @@
     "build": "vp build",
     "predev": "npm run build -w @finos/sail-desktop-agent -w @finos/sail-platform-api",
     "dev": "vp dev",
+    "predev:local": "npm run predev",
+    "dev:local": "vp dev --mode toolbox-local",
     "format:fix": "vp fmt .",
     "format": "vp fmt --check .",
     "lint:fix": "vp lint . --fix",

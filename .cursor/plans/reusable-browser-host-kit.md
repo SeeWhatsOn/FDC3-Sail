@@ -1,7 +1,7 @@
 # Plan: FDC3 host (A) then toolbox profile (B)
 
-Status: implementing A
-Current slice: A gap fix (close + pending disconnect)
+Status: A done (committed)
+Current slice: parked — B when toolbox scores needed again
 
 ## Intent
 
@@ -77,4 +77,4 @@ Only when you want Conformance1 / mock-app suite scores:
 ## Next
 
 - Park B until you want toolbox scores again
-- Commit A when ready (includes DEV-only `__sailAppLauncher` hook)
+- A committed: `1c2e75a68` (includes DEV-only `__sailAppLauncher` hook)

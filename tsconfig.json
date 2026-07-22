@@ -6,7 +6,6 @@
     { "path": "./packages/sail-desktop-agent" },
     { "path": "./packages/sail-platform-api" },
     { "path": "./packages/sail-ui" },
-    { "path": "./packages/sail-web" },
-    { "path": "./packages/sail-server" }
+    { "path": "./packages/sail-web" }
   ]
 }

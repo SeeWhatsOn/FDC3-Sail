@@ -10,8 +10,6 @@
   "ignore": [
     "@finos/sail-web",
     "@finos/sail-ui",
-    "@finos/sail-server",
-    "@finos/sail-electron",
     "@finos/sail-conformance-harness",
     "@finos/sail-docs"
   ]

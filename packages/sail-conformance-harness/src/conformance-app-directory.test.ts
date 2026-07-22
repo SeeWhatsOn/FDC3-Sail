@@ -40,6 +40,20 @@ describe("loadConformanceApplications", () => {
     })
   })
 
+  it("accepts a custom localOrigin for same-origin hosts (e.g. sail-web :3000)", () => {
+    const sailWebOrigin = "http://localhost:3000"
+    const loaded = loadConformanceApplications({
+      profile: "local",
+      localOrigin: sailWebOrigin,
+    })
+
+    expect(loaded.origin).toBe(sailWebOrigin)
+    const conformance1 = loaded.applications.find(app => app.appId === "Conformance1")
+    expect(conformance1?.details).toMatchObject({
+      url: `${sailWebOrigin}/apps/app/index.html`,
+    })
+  })
+
   it("preserves paths after the toolbox base when rewriting", () => {
     const apps: DirectoryApp[] = [
       {
@@ -62,9 +76,7 @@ describe("loadConformanceApplications", () => {
     expect(rewritten[0].details).toMatchObject({
       url: `${CONFORMANCE_LOCAL_ORIGIN}/apps/intent-a/index.html`,
     })
-    expect(rewritten[0].icons?.[0]?.src).toBe(
-      `${CONFORMANCE_LOCAL_ORIGIN}/finos-icon-256.png`,
-    )
+    expect(rewritten[0].icons?.[0]?.src).toBe(`${CONFORMANCE_LOCAL_ORIGIN}/finos-icon-256.png`)
   })
 
   it("does not mutate the fixture when loading hosted profile", () => {
