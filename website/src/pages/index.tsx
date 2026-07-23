@@ -57,8 +57,8 @@ function HomepageFeatures(): ReactNode {
             description="Full implementation of the FDC3 2.2 interoperability standard, including the new For-The-Web APIs."
           />
           <Feature
-            title="Browser & Desktop"
-            description="Run FDC3 applications in your browser or as a desktop app with Electron."
+            title="Browser-native"
+            description="Run FDC3 applications in your browser — installable as a PWA, no native install required."
           />
           <Feature
             title="Open Source"

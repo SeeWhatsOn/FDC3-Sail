@@ -14,4 +14,4 @@ FINOS FDC3 conformance toolbox exports and attribution notes for `@finos/sail-co
 
 Save the next full toolbox export as the next `conformance-report-vN.txt` and update `conformance-test-failure-review.md`.
 
-Removed (2026-06): `conformance-report.txt`, `conformance-report-v2.txt` — early **sail-web** `:3000` runs, not harness clean-room.
+Removed (2026-06): `conformance-report.txt`, `conformance-report-v2.txt` — early **sail-finance** `:3000` runs, not harness clean-room.

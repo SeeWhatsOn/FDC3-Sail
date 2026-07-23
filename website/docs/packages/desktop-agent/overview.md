@@ -12,7 +12,7 @@ Browser-ready FDC3 2.2 Desktop Agent — `SailDesktopAgent`, DACP handlers, chan
 
 - Implements mandatory FDC3 2.2 Desktop Agent APIs via DACP
 - **Browser-first:** one `DesktopAgent` per host page, with FDC3 web apps connecting via WCP and per-app `MessagePort`
-- Keeps platform concerns (layout, workspace, storage, config) **out** of the core — those belong in [`@finos/sail-platform-api`](../platform-api/overview)
+- Keeps platform concerns (layout, workspace, storage, config) **out** of the core — those belong in [`@finos/sail-platform`](../platform/overview)
 
 The package also runs in Node.js or test harnesses for handler-level work (`MockTransport`, Cucumber). That is not the primary adoption path for shipping a desktop.
 

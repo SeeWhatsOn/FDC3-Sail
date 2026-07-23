@@ -9,9 +9,9 @@ Attribution matrix for the FINOS FDC3 conformance toolbox against `@finos/sail-c
 | `conformance-report-v3.txt` | First harness clean-room run — **15 pass / 45 fail**, ~155s |
 | `conformance-report-v4.txt` | Measured harness export — **31 pass / 64 fail**, ~305s, **95 scenarios** |
 | `conformance-report-v5.txt` | **Current baseline** — **53 pass / 49 fail**, ~516s, **102 scenarios** |
-| `../conformance-appd.json` | FINOS conformance app directory; merged in `packages/sail-web/src/main.tsx` and loaded by the harness |
+| `../conformance-appd.json` | FINOS conformance app directory; merged in `packages/sail-finance/src/main.tsx` and loaded by the harness |
 
-Removed from repo (2026-06): `conformance-report.txt` and `conformance-report-v2.txt` — early dumps from the full **sail-web** stack (`:3000`), not comparable to harness clean-room runs.
+Removed from repo (2026-06): `conformance-report.txt` and `conformance-report-v2.txt` — early dumps from the full **sail-finance** stack (`:3000`), not comparable to harness clean-room runs.
 
 The harness exercises **browser WCP + `@finos/sail-desktop-agent`** only (no `SailPlatform`). In-repo BDD uses `MockTransport` — documented in `website/docs/packages/desktop-agent/conformance.md` (**104** `@conformance2.2` scenarios, **2** `@conformance3.0` in `close.feature`).
 
@@ -33,7 +33,7 @@ The harness exercises **browser WCP + `@finos/sail-desktop-agent`** only (no `Sa
 |--------|-----------------------------------|------------|
 | **Harness session hygiene** | **Largest** — 26 close-context rows; stale instances inflate `findIntent` (`apps.length` 4 vs 1); open-with-context 20s timeouts (3); `findInstances` instanceId mismatch (1) | High |
 | **@finos/sail-desktop-agent** (client + DACP path) | **`getResultMetadata` empty (4)**, **`desktopAgent` missing (2)**, intent context traceId (1), `findIntent` wrong-context `NoAppsFound` (1), `raiseIntent` throws message (3) | High |
-| **@finos/sail-web** (`:3000`) | Deferral for harness work — launch context, resolver UI, cross-origin panels still apply to full stack only | High |
+| **@finos/sail-finance** (`:3000`) | Deferral for harness work — launch context, resolver UI, cross-origin panels still apply to full stack only | High |
 | **Blocked on FINOS** | `findIntent` dedupe / `NoAppsFound` / throws matrix (~6 rows) — policy before code | Medium |
 
 **Takeaway:** v5 proves **delivery works** (UCR and bulk AppTimeout cleared). Remaining pain is **FINOS scenario teardown** (mock apps must return close context between scenarios) and **client-side metadata APIs**, not missing DACP handlers.
@@ -77,7 +77,7 @@ Wire metadata on `raiseIntentResultResponse` is done (`populate-intent-result-me
 
 `basicRI1`/`basicRI2`, intent Result delivery (void/context/channel/private, 5s), `RaiseIntentSingleResolve`, `fdc3.intentListenerConflict` (7), base `IntentContextMetadata`, bulk channel/open delivery (no bulk AppTimeout).
 
-### Full-stack deferral (`sail-web` :3000 only)
+### Full-stack deferral (`sail-finance` :3000 only)
 
 Launch context dropped, cross-origin conformance iframes, intent resolver UI automation — relevant when comparing harness (:3001) vs platform (:3000), not the current v5 baseline host.
 
@@ -175,7 +175,7 @@ npm test -w @finos/sail-conformance-harness
 
 ### Raw export policy
 
-Committed harness exports: `conformance-report-v3.txt`, `conformance-report-v4.txt`, `conformance-report-v5.txt` under `packages/sail-conformance-harness/results/`. Record future runs as `conformance-report-v6.txt` in the same folder. Removed early sail-web dumps (`conformance-report.txt`, `conformance-report-v2.txt`) — not comparable to harness clean-room runs.
+Committed harness exports: `conformance-report-v3.txt`, `conformance-report-v4.txt`, `conformance-report-v5.txt` under `packages/sail-conformance-harness/results/`. Record future runs as `conformance-report-v6.txt` in the same folder. Removed early sail-finance dumps (`conformance-report.txt`, `conformance-report-v2.txt`) — not comparable to harness clean-room runs.
 
 ---
 

@@ -1,0 +1,64 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": { "correctness": "off" },
+  "overrides": [
+    // ENGINE — sail-desktop-agent must not import the layers that compose it.
+    // Dependencies flow one way: engine -> platform -> shell.
+    {
+      "files": ["packages/sail-desktop-agent/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@finos/sail-platform",
+                  "@finos/sail-finance",
+                  "@finos/sail-one",
+                  "**/sail-platform/**"
+                ],
+                "message": "sail-desktop-agent is the engine: it must not depend on the platform or any shell."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    // SHELLS must not import each other. Each shell owns its own shadcn components;
+    // the only shared design layer is @finos/sail-theme (tokens + assets).
+    // sail-one arrives with the wip/v2.2 reconciliation, so its rule is a no-op until then.
+    {
+      "files": ["packages/sail-finance/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@finos/sail-one", "**/sail-one/**"],
+                "message": "Shells must not import each other. Share via @finos/sail-theme or the platform, never shell-to-shell."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/sail-one/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@finos/sail-finance", "**/sail-finance/**"],
+                "message": "Shells must not import each other. Share via @finos/sail-theme or the platform, never shell-to-shell."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 Pure, transport-agnostic [FDC3 2.2](https://fdc3.finos.org/docs/api/spec) Desktop Agent — DACP handlers, channels, intents, app directory, and browser WCP support. **Browser-first:** one Desktop Agent per host page; FDC3 web apps connect via WCP and `MessagePort`.
 
-Platform concerns (layout, workspace, storage, Sail config) belong in [`@finos/sail-platform-api`](../sail-platform-api/README.md), not in this package.
+Platform concerns (layout, workspace, storage, Sail config) belong in [`@finos/sail-platform`](../sail-platform/README.md), not in this package.
 
 ## Documentation
 

@@ -2,7 +2,7 @@
  * AppLauncher Interface
  *
  * Abstraction for launching FDC3 applications. Implementations handle
- * environment-specific launching (browser tabs/iframes, Electron windows,
+ * environment-specific launching (browser tabs/iframes, native windows,
  * native processes, etc.)
  */
 

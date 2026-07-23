@@ -2,8 +2,8 @@
 description: YAGNI ladder before writing code — minimal change within Sail architecture
 globs:
   - packages/sail-desktop-agent/src/**/*.ts
-  - packages/sail-platform-api/src/**/*.ts
-  - packages/sail-web/src/**/*.{ts,tsx}
+  - packages/sail-platform/src/**/*.ts
+  - packages/sail-finance/src/**/*.{ts,tsx}
 alwaysApply: false
 ---
 

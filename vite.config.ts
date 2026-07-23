@@ -26,7 +26,6 @@ export default defineConfig({
       ".vscode/",
       ".git/",
       ".github/",
-      ".husky/",
       "**/.prettierrc.json",
       "**/.prettierignore",
       "**/package-lock.json",
@@ -346,7 +345,7 @@ export default defineConfig({
         },
       },
       {
-        files: ["packages/sail-desktop-agent/**/*.ts", "packages/sail-platform-api/**/*.ts"],
+        files: ["packages/sail-desktop-agent/**/*.ts", "packages/sail-platform/**/*.ts"],
         rules: {
           "max-lines": [
             "error",
@@ -363,10 +362,10 @@ export default defineConfig({
           "packages/sail-desktop-agent/**/__tests__/**/*.ts",
           "packages/sail-desktop-agent/**/*.test.ts",
           "packages/sail-desktop-agent/test/**/*.ts",
-          "packages/sail-platform-api/**/__tests__/**/*.ts",
-          "packages/sail-platform-api/**/*.test.ts",
+          "packages/sail-platform/**/__tests__/**/*.ts",
+          "packages/sail-platform/**/*.test.ts",
           "packages/sail-desktop-agent/src/core/app-directory/app-directory-manager.ts",
-          "packages/sail-platform-api/src/services/validation/dacp-schemas.ts",
+          "packages/sail-platform/src/services/validation/dacp-schemas.ts",
         ],
         rules: {
           "max-lines": "off",
@@ -428,9 +427,9 @@ export default defineConfig({
       {
         files: [
           "packages/sail-ui/src/*.css",
-          "packages/sail-web/src/*.css",
+          "packages/sail-finance/src/*.css",
           "**/packages/sail-ui/src/*.css",
-          "**/packages/sail-web/src/*.css",
+          "**/packages/sail-finance/src/*.css",
         ],
         rules: {},
         jsPlugins: [],

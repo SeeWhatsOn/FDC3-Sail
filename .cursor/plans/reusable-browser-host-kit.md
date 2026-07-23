@@ -46,19 +46,19 @@ Only when you want Conformance1 / mock-app suite scores:
 
 ## Sequencing
 
-1. **A only** — document + tighten sail-web/DA host contract usage (close/disconnect, identity). No FINOS extract into platform-api yet.
-2. **B later** — optional “toolbox host profile” kit; sail-web opts in when measuring conformance.
+1. **A only** — document + tighten sail-finance/DA host contract usage (close/disconnect, identity). No FINOS extract into platform-api yet.
+2. **B later** — optional “toolbox host profile” kit; sail-finance opts in when measuring conformance.
 
 ## Rolled back
 
-- `packages/sail-platform-api/src/browser-host/`
+- `packages/sail-platform/src/browser-host/`
 - SailAppLauncher close/forceNewWindow API expansion + tests
 - Harness re-exports of platform-api browser-host
-- Harness `@finos/sail-platform-api` dependency (restored)
+- Harness `@finos/sail-platform` dependency (restored)
 
-## sail-web A gap matrix
+## sail-finance A gap matrix
 
-| A need | sail-web | Status |
+| A need | sail-finance | Status |
 |--------|----------|--------|
 | One DA per page | `main.tsx` | OK |
 | `launch` + iframe `name` = instanceId | `SailAppLauncher` + `FDC3IframePanel` | OK |

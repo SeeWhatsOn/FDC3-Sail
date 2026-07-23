@@ -10,7 +10,7 @@ Minimal React host for the [FINOS FDC3 conformance toolbox](https://fdc3.finos.o
 
 | Path | Purpose |
 |------|---------|
-| `conformance-appd.json` | FINOS conformance app directory fixture (hosted URLs; shared with `sail-web` dev) |
+| `conformance-appd.json` | FINOS conformance app directory fixture (hosted URLs; shared with `sail-finance` dev) |
 | `src/conformance-app-directory.ts` | Loads the fixture and rewrites toolbox origin for local FINOS dev (`VITE_CONFORMANCE_TOOLBOX=local`) |
 | `results/conformance-report-v3.txt` … `v5.txt` | Committed FINOS toolbox export history ( **v5 = current baseline** ) |
 | `results/conformance-test-failure-review.md` | Failure attribution matrix vs exports |

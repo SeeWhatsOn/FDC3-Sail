@@ -9,9 +9,9 @@
   },
   "scripts": {
     "clean": "npm run clean --workspaces",
-    "build": "npm run build -w @finos/sail-desktop-agent -w @finos/sail-platform-api -w @finos/sail-ui -w @finos/sail-web -w @finos/sail-conformance-harness",
-    "dev": "concurrently -n agent,api,web \"npm run dev -w @finos/sail-desktop-agent\" \"npm run dev -w @finos/sail-platform-api\" \"npm run dev -w @finos/sail-web\"",
-    "dev:local": "concurrently -n agent,api,web \"npm run dev -w @finos/sail-desktop-agent\" \"npm run dev -w @finos/sail-platform-api\" \"npm run dev:local -w @finos/sail-web\"",
+    "build": "npm run build -w @finos/sail-desktop-agent -w @finos/sail-platform -w @finos/sail-finance -w @finos/sail-conformance-harness",
+    "dev": "concurrently -n agent,api,web \"npm run dev -w @finos/sail-desktop-agent\" \"npm run dev -w @finos/sail-platform\" \"npm run dev -w @finos/sail-finance\"",
+    "dev:local": "concurrently -n agent,api,web \"npm run dev -w @finos/sail-desktop-agent\" \"npm run dev -w @finos/sail-platform\" \"npm run dev:local -w @finos/sail-finance\"",
     "dev:conformance": "npm run dev -w @finos/sail-conformance-harness",
     "docs:dev": "npm run start --workspace=@finos/sail-docs",
     "docs:build": "npm run build --workspace=@finos/sail-docs",
@@ -28,11 +28,12 @@
     "test:cucumber:apps": "npm run test:cucumber:apps -w @finos/sail-desktop-agent",
     "format": "vp fmt --check .",
     "format:fix": "vp fmt .",
-    "validate": "npm run format && npm run lint && npm run typecheck && npm run build && npm run docs:build && npm test -- --run && npm run test:cucumber",
+    "validate": "npm run format && npm run lint && npm run lint:boundaries && npm run typecheck && npm run build && npm run docs:build && npm test -- --run && npm run test:cucumber",
     "changeset": "changeset",
     "changeset:version": "changeset version",
-    "release:publish": "npm run build -w @finos/sail-desktop-agent -w @finos/sail-platform-api && changeset publish",
-    "prepare": "vp config"
+    "release:publish": "npm run build -w @finos/sail-desktop-agent -w @finos/sail-platform && changeset publish",
+    "prepare": "vp config",
+    "lint:boundaries": "oxlint -c .oxlintrc.json packages"
   },
   "overrides": {
     "copy-webpack-plugin": {
@@ -50,9 +51,9 @@
   },
   "workspaces": [
     "packages/sail-desktop-agent",
-    "packages/sail-ui",
-    "packages/sail-platform-api",
-    "packages/sail-web",
+    "packages/sail-theme",
+    "packages/sail-platform",
+    "packages/sail-finance",
     "packages/sail-conformance-harness",
     "website"
   ],

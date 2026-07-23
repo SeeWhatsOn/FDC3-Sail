@@ -13,8 +13,8 @@ For **one agent per browsing context** and why host chrome must not poll `getSta
 | Layer | Responsibility |
 |-------|----------------|
 | **`@finos/sail-desktop-agent`** | FDC3 engine: DACP handlers, agent state, WCP routing, events to apps. Stays **protocol-pure** — no Sail UI, no “chrome” concepts. |
-| **`@finos/sail-platform-api`** | Host integration: `SailPlatform`, lifecycle, **channel APIs for parent UI**, browser app connection events, optional `ChannelSelector` callback. |
-| **`@finos/sail-web`** (example host) | React chrome (`ChannelSelector`), connection store, tiles around iframes. |
+| **`@finos/sail-platform`** | Host integration: `SailPlatform`, lifecycle, **channel APIs for parent UI**, browser app connection events, optional `ChannelSelector` callback. |
+| **`@finos/sail-finance`** (example host) | React chrome (`ChannelSelector`), connection store, tiles around iframes. |
 
 **Principle:** Parent chrome does not mutate Desktop Agent state directly. It calls **platform APIs**; the agent updates state through the same DACP handlers apps use.
 
@@ -28,7 +28,7 @@ For **one agent per browsing context** and why host chrome must not poll `getSta
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│  Host (sail-web) — tabs, channel dots, workspace chrome   │
+│  Host (sail-finance) — tabs, channel dots, workspace chrome   │
 │  ┌────────────────────────────────────────────────────┐  │
 │  │  App iframe — FDC3 API + business UI only           │  │
 │  │  MessagePort ◄──► BrowserAppConnection ◄──► DA       │  │
@@ -116,4 +116,4 @@ Embedders using **`SailDesktopAgent`** directly should use **`channels.*`**, not
 - Integrator singleton + channel reactivity: [Desktop Agent integrator guide](../packages/desktop-agent/integrator-guide.md#one-desktop-agent-per-context)
 - Transport hardening: `plans/work-items/replace-dacp-impersonation-with-channel-api.md`
 - Architecture overview: [Overview](./overview.md) (Sail-controlled UI)
-- Platform API: [@finos/sail-platform-api](../packages/platform-api/overview)
+- Platform API: [@finos/sail-platform](../packages/platform/overview)

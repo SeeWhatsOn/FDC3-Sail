@@ -8,8 +8,7 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [
-    "@finos/sail-web",
-    "@finos/sail-ui",
+    "@finos/sail-finance",
     "@finos/sail-conformance-harness",
     "@finos/sail-docs"
   ]

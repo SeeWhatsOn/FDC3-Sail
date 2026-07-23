@@ -242,4 +242,4 @@ See [conformance traceability](./conformance) for BDD vs toolbox gaps.
 
 - [Integrator guide](./integrator-guide) — host contracts, browser-first agent, WCP/DACP detail
 - [Channel selection (Sail stack)](../../architecture/channel-selection) — `SailPlatform` channel APIs
-- [@finos/sail-platform-api](../platform-api/overview) — workspace, layout, `SailPlatform` wrapper
+- [@finos/sail-platform](../platform/overview) — workspace, layout, `SailPlatform` wrapper

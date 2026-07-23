@@ -33,10 +33,9 @@ If you are new to FDC3, start with the [FDC3 website](https://fdc3.finos.org).
 FDC3 Sail is a fully open source implementation of the [FDC3](https://fdc3.finos.org) interoperability standard. It provides:
 
 - A **pure, transport-agnostic FDC3 Desktop Agent** (`@finos/sail-desktop-agent`) that runs in any JavaScript environment
-- A **browser-based deployment** (`sail-web`) where the Desktop Agent runs inside a browser tab and manages FDC3 apps in iframes
-- An **Electron desktop deployment** (`sail-electron`) for a native desktop app experience
-- A **platform SDK** (`@finos/sail-platform-api`) with middleware, app launcher, and Sail-specific integrations
-- A **shared UI component library** (`@finos/sail-ui`) built with React and shadcn/ui
+- A **browser-based deployment** (`sail-finance`) where the Desktop Agent runs inside a browser tab and manages FDC3 apps in iframes
+- A **platform SDK** (`@finos/sail-platform`) with middleware, app launcher, and Sail-specific integrations
+- A **shared brand theme** (`@finos/sail-theme`) of design tokens and assets; each shell owns its shadcn/ui components
 
 ## Architecture
 
@@ -71,15 +70,14 @@ FDC3 Sail uses a clean two-layer architecture separating the pure FDC3 logic fro
 | Package | Description |
 |---|---|
 | [`packages/sail-desktop-agent`](packages/sail-desktop-agent/) | Pure FDC3 Desktop Agent — environment-agnostic core |
-| [`packages/sail-platform-api`](packages/sail-platform-api/) | Platform SDK — Sail middleware, app launcher, integrations |
+| [`packages/sail-platform`](packages/sail-platform/) | Platform SDK — Sail middleware, app launcher, integrations |
 | [`packages/sail-ui`](packages/sail-ui/) | Shared React UI component library |
 
 ### Apps
 
 | App | Description |
 |---|---|
-| [`packages/sail-web`](packages/sail-web/) | Browser deployment — React app hosting the Desktop Agent |
-| [`packages/sail-electron`](packages/sail-electron/) | Electron deployment — native desktop wrapper |
+| [`packages/sail-finance`](packages/sail-finance/) | Browser deployment — React app hosting the Desktop Agent |
 
 Documentation lives at **[https://finos.github.io/FDC3-Sail/docs/](https://finos.github.io/FDC3-Sail/docs/)** (built from [`website/`](website/) via GitHub Pages).
 
@@ -105,14 +103,6 @@ npm run dev
 ```
 
 Open http://localhost:3000 in your browser. FDC3 apps loaded in iframes will connect automatically via WCP.
-
-### Running the Electron Desktop App
-
-```bash
-npm run dev:desktop
-```
-
-The Electron window will open and connect to the local web server.
 
 ## Development
 
@@ -161,7 +151,7 @@ The generated file (`packages/sail-desktop-agent/src/handlers/validation/dacp-sc
 ## Package Documentation
 
 - [`sail-desktop-agent` README](packages/sail-desktop-agent/README.md) — FDC3 DA API, subpath exports, transport interface
-- [`sail-platform-api` README](packages/sail-platform-api/README.md) — Middleware, app launcher, Sail platform integrations
+- [`sail-platform` README](packages/sail-platform/README.md) — Middleware, app launcher, Sail platform integrations
 - [`sail-ui` README](packages/sail-ui/README.md) — Shared React UI components
 
 ## npm packages
@@ -174,7 +164,7 @@ git tag @finos/sail-desktop-agent@3.0.0-pre.1.0
 git push origin @finos/sail-desktop-agent@3.0.0-pre.1.0
 ```
 
-Tag format: `@finos/<package-name>@<semver>`. Supported today: `@finos/sail-desktop-agent`, `@finos/sail-platform-api`. Requires repo secret `NPM_TOKEN`.
+Tag format: `@finos/<package-name>@<semver>`. Supported today: `@finos/sail-desktop-agent`, `@finos/sail-platform`. Requires repo secret `NPM_TOKEN`.
 
 ## Meetings
 

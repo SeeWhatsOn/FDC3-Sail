@@ -97,7 +97,7 @@ The following are **not** current adoption paths:
 |----------|------------------|-----------|
 | Remote DA (Node server, Web Worker hosting the engine) | **Removed** — `createWCPClient` preset deleted (BFDA-02) | Future bridge/relay/sync architecture if multi-device coordination is needed |
 | Cross-tab or cross-device channel sync | **Deferred** | Explicit sync/relay layer on top of browser-first DA — not by remoting the core agent |
-| Native desktop apps (Electron shell, C++ host) | **Future adapter** | WebSocket or platform-specific **app-connection** transport — native apps join the same channel graph; remoting the DA is not required |
+| Native desktop apps (native shell, C++ host) | **Future adapter** | WebSocket or platform-specific **app-connection** transport — native apps join the same channel graph; remoting the DA is not required |
 
 Framework authors may still use `new DesktopAgent()` plus `attachAppConnection()` for **unit tests** and **manual composition**. That is an advanced integration path, not a deployment fork. See [How to wire](#how-to-wire).
 
@@ -264,7 +264,7 @@ FDC3 `getAgent()` supports more than one web mechanism. Sail's browser host impl
 | Scenario | Does standard `getAgent()` find Sail? | What to do |
 |----------|---------------------------------------|------------|
 | App in an iframe owned by the Sail host | Yes. This is the primary and tested browser path. | Set the iframe `name` to the host instance id and list the app URL in the app directory. |
-| App opened with `window.open` by the Sail host | Can work if the child keeps `window.opener` and the app directory identity matches. | Implement a window-based `AppLauncher`; this is not the default `sail-web` launcher. |
+| App opened with `window.open` by the Sail host | Can work if the child keeps `window.opener` and the app directory identity matches. | Implement a window-based `AppLauncher`; this is not the default `sail-finance` launcher. |
 | App in a traditional preload-style container | `getAgent()` can return `window.fdc3` when the container injects it. | This is a different FDC3 web interface. `SailDesktopAgent` does not currently install `window.fdc3` into the host page. |
 | React component rendered in the same top-level page as the Sail host | No, not as a separate standard FDC3 app. There is no parent/opener for proxy discovery, and no Sail preload object is installed. | Treat it as host UI and use `SailPlatform` / `DesktopAgent` host APIs, or put it in an iframe/window. |
 
@@ -398,7 +398,7 @@ Use the **`channels`** controller on the `SailDesktopAgent` handle:
 
 Do **not** read or mutate `desktopAgent.getState()` for channel chrome. `getState()` is for tests and debugging only.
 
-With **`SailDesktopAgent`** (no platform-api):
+With **`SailDesktopAgent`** (no platform):
 
 ```typescript
 const { channels } = desktopAgent
@@ -422,7 +422,7 @@ With **`SailPlatform`** (reference stack — wraps the same engine path):
 const platform = new SailPlatform({ appLauncher, intentResolver })
 await platform.start()
 
-// In your ChannelSelector component (see packages/sail-web/src/components/ChannelSelector.tsx):
+// In your ChannelSelector component (see packages/sail-finance/src/components/ChannelSelector.tsx):
 const channels = platform.getUserChannels()
 const currentId = platform.getAppUserChannel(instanceId)
 await platform.changeAppChannel(instanceId, channelId) // or null to leave
@@ -454,7 +454,7 @@ SailPlatform.start()
   → <ChannelSelector instanceId={...} /> calls platform.changeAppChannel
 ```
 
-See `packages/sail-web/src/contexts/SailDesktopAgentContext.tsx` for provider wiring.
+See `packages/sail-finance/src/contexts/SailDesktopAgentContext.tsx` for provider wiring.
 
 ## FDC3 2.2 alignment
 

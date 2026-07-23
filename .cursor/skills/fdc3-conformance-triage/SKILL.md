@@ -50,7 +50,7 @@ Group by `fdc3.*` section. For each failing row capture:
 | `getResultMetadata` empty / metadata on intent result | **Agent** | Yes | Vitest + Cucumber intent-result scenarios |
 | **`AppTimeout`** on open-with-context, user/app channels, context metadata | **Integration** (WCP, instance id, iframe) | Sometimes agent open/targeting; often host | WCP Vitest (`wcp-desktop-agent.integration`); harness/Playwright smoke — **mock BDD alone will not catch** |
 | **`IntentDeliveryFailed`** on raiseIntent / basicRI / private channel | **Integration** | Mixed | WCP integration; Cucumber only if steps model **real** instance correlation (`uuid-0`); harness E2E |
-| **`UserCancelledResolution`** on raiseIntent (Result) | **Host / resolver** | Harness/web auto-resolve | Not mock Cucumber — fix conformance harness or sail-web resolver profile |
+| **`UserCancelledResolution`** on raiseIntent (Result) | **Host / resolver** | Harness/web auto-resolve | Not mock Cucumber — fix conformance harness or sail-finance resolver profile |
 | `findInstances` missing instance / `IntentDeliveryFailed` | **Integration** | Often instance lifecycle | WCP host-id bind tests; harness `findInstances` slice |
 | `GetInfo2` timeout | **Integration** | App bootstrap / connection | Harness/WCP integration; not MockTransport-only |
 | Improved open no-context but context paths timeout | **Integration** | Instance + delivery | Same as AppTimeout |
@@ -85,7 +85,7 @@ Failure classified as INTEGRATION?
   → Record harness re-run in conformance-test-failure-review.md
 
 Failure classified as HOST/RESOLVER?
-  → sail-conformance-harness / sail-web — defer pure agent Cucumber
+  → sail-conformance-harness / sail-finance — defer pure agent Cucumber
 ```
 
 ### Step 5 — Output format

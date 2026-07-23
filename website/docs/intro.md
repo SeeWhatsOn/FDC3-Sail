@@ -9,7 +9,7 @@ Financial and enterprise users rarely work in a single application. They move be
 
 **[FDC3](https://fdc3.finos.org/)** (Financial Desktop Connectivity and Collaboration Consortium) is an open FINOS standard for **UI-level interoperability**. It defines how applications on a desktop or in a browser discover each other, share **context** (for example an instrument or portfolio), raise **intents** (“show this chart for this symbol”), and link via **channels** — without each vendor building bespoke integrations pairwise.
 
-**FDC3 Sail** is the open-source implementation of [FDC3 2.2](https://fdc3.finos.org/docs/api/spec) and [FDC3 For-The-Web](https://fdc3.finos.org/docs/api/specs/browserResidentDesktopAgents) in this repository. It provides a **Desktop Agent** (the FDC3 engine), a **browser connection layer** (WCP), and optional **platform UI** (web and Electron) so you can run or embed a standards-compliant FDC3 host.
+**FDC3 Sail** is the open-source implementation of [FDC3 2.2](https://fdc3.finos.org/docs/api/spec) and [FDC3 For-The-Web](https://fdc3.finos.org/docs/api/specs/browserResidentDesktopAgents) in this repository. It provides a **Desktop Agent** (the FDC3 engine), a **browser connection layer** (WCP), and **platform UI** (web) so you can run or embed a standards-compliant FDC3 host.
 
 ## UI control plane vs data plane
 
@@ -49,7 +49,7 @@ FDC3 Sail implements the **Desktop Agent** and host wiring for the UI control pl
 
 FDC3 Sail is a **good fit** if you:
 
-- Need a **browser or Electron FDC3 host** aligned with FDC3 2.2 and For-The-Web
+- Need a **browser FDC3 host** aligned with FDC3 2.2 and For-The-Web
 - Want an **open-source** stack you can run, host, embed, or extend
 - Have (or plan) **FDC3-compliant web applications** that call `fdc3.getAgent()`
 - Prefer standards-based interoperability over one-off app-to-app integrations
@@ -78,8 +78,7 @@ flowchart TD
 
   AddApp --> Apps
 
-  Run --> Web["Browser / PWA — @finos/sail-web"]
-  Run --> Desktop["Desktop app — @finos/sail-electron"]
+  Run --> Web["Browser / PWA — @finos/sail-finance"]
 
   Build --> BrowserAgent["Browser-ready — SailDesktopAgent"]
   Build --> Manual["Advanced — DesktopAgent + app connection"]
@@ -91,7 +90,6 @@ flowchart TD
   Manual --> HostUI
 
   Web --> Apps
-  Desktop --> Apps
   HostUI --> Apps
 
   Apps["Your FDC3 apps use @finos/fdc3 — getAgent()"]

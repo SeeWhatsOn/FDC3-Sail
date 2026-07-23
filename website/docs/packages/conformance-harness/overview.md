@@ -31,7 +31,7 @@ npm run typecheck -w @finos/sail-conformance-harness
 ## Architecture
 
 - **`SailDesktopAgent`** — local DA + WCP browser app connection (no `SailPlatform`)
-- **App directory** — `packages/sail-conformance-harness/conformance-appd.json` via the `apps` option (sail-web dev merges the same fixture)
+- **App directory** — `packages/sail-conformance-harness/conformance-appd.json` via the `apps` option (sail-finance dev merges the same fixture)
 - **Intent resolution** — `intentResolver` host controller with programmatic handler selection
 - **Instance identity** — iframe `name` must equal `instanceId` for WCP4 correlation
 

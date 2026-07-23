@@ -38,7 +38,7 @@ Application code should import the browser preset from **`@finos/sail-desktop-ag
 
 **Do not** teach integrators to import `createBrowserDesktopAgent` from `/browser` as the default path.
 
-**Out of scope:** `@finos/sail-platform-api`, `@finos/sail-web`, monorepo-relative imports (`../../packages/...`), Cucumber `test/support/*`, `*ForTesting` helpers.
+**Out of scope:** `@finos/sail-platform`, `@finos/sail-finance`, monorepo-relative imports (`../../packages/...`), Cucumber `test/support/*`, `*ForTesting` helpers.
 
 ## Two consumption modes
 

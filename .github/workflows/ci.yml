@@ -36,15 +36,17 @@ jobs:
       - name: ESLint
         run: npm run lint
 
+      - name: Package boundaries
+        run: npm run lint:boundaries
+
       - name: Typecheck
         run: npm run typecheck
 
       - name: Build
         run: |
           npm run build -w @finos/sail-desktop-agent \
-            -w @finos/sail-platform-api \
-            -w @finos/sail-ui \
-            -w @finos/sail-web \
+            -w @finos/sail-platform \
+            -w @finos/sail-finance \
             -w @finos/sail-conformance-harness
 
       - name: Build docs site

@@ -19,8 +19,8 @@ This page is the system map. Package APIs, source-tree diagrams, and integration
 ### 2. Clear package ownership
 
 - **`@finos/sail-desktop-agent`** owns FDC3 behavior: `SailDesktopAgent`, `DesktopAgent`, DACP handlers, WCP browser app connection, host contracts, and app directory logic.
-- **`@finos/sail-platform-api`** owns Sail platform features: `SailPlatform`, workspace/layout/config APIs, product middleware, and host integration helpers.
-- **`@finos/sail-web`** and **`@finos/sail-electron`** are deployment hosts that provide UI, app launch surfaces, and packaging.
+- **`@finos/sail-platform`** owns Sail platform features: `SailPlatform`, workspace/layout/config APIs, product middleware, and host integration helpers.
+- **`@finos/sail-finance`** is a deployment host that provides UI, app launch surfaces, and packaging.
 
 ### 3. Composition over hidden globals
 
@@ -35,14 +35,14 @@ The supported v3-pre product path is a browser-resident Desktop Agent: one `Sail
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │  Hosts                                                      │
-│  @finos/sail-web, @finos/sail-electron, custom host shells  │
+│  @finos/sail-finance, custom host shells                        │
 │  - workspace UI, app launch surfaces, channel chrome        │
 │  - intent resolver UI, packaging, product experience        │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │  Sail platform services                                     │
-│  @finos/sail-platform-api                                   │
+│  @finos/sail-platform                                   │
 │  - SailPlatform                                             │
 │  - workspace, layout, config, storage-facing APIs           │
 │  - Sail policy and host integration helpers                 │
@@ -85,7 +85,7 @@ See [Channel selection](./channel-selection) for the boundary between host chrom
 
 ## Learn More
 
-- [Deployment targets](./deployment-targets) — DPWA/browser vs Electron packaging trade-offs.
+- [Deployment targets](./deployment-targets) — browser host deployment and the future native-shell direction.
 - [Channel selection](./channel-selection) — host chrome vs app-hosted channel selector flows.
 - [@finos/sail-desktop-agent](../packages/desktop-agent/overview) — FDC3 engine, integrator guide, and composition diagrams.
-- [@finos/sail-platform-api](../packages/platform-api/overview) — Sail platform services and host integration APIs.
+- [@finos/sail-platform](../packages/platform/overview) — Sail platform services and host integration APIs.

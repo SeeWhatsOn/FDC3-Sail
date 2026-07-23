@@ -45,7 +45,7 @@ FDC3 for the web is different from container environments that inject a Desktop 
 
 | App location | Standard `getAgent()` discovery | Sail browser support |
 |--------------|----------------------------------|----------------------|
-| App loaded in a host iframe | The app posts `WCP1Hello` to parent windows; Sail answers from the host window with `WCP3Handshake` and a `MessagePort`. | Supported and used by `sail-web`. |
+| App loaded in a host iframe | The app posts `WCP1Hello` to parent windows; Sail answers from the host window with `WCP3Handshake` and a `MessagePort`. | Supported and used by `sail-finance`. |
 | App opened as a child window | The app can post `WCP1Hello` to `window.opener` if the opener relationship is preserved. | Supported by the protocol layer; custom hosts must implement the window-launching `AppLauncher`. |
 | App in a traditional preload/container environment | `getAgent()` can return `window.fdc3` when the container injects it. | Not the default browser host path. |
 | React component in the same top-level page as the Sail host | There is no parent or opener for `getAgent()` to discover, and Sail does not currently install a top-level `window.fdc3` preload object. | Use `SailPlatform` / host APIs directly, or isolate the app in an iframe/window. |
@@ -218,9 +218,9 @@ The host's Desktop Agent completes the WCP handshake with the app; `@finos/fdc3`
 
 For app developers, the important rule is simple: write against `@finos/fdc3`, list the app URL in the host app directory, and let the Sail host load the app. Do not reach into the parent frame or import Sail internals from app code.
 
-## Advanced — platform API without sail-web
+## Advanced — platform API without sail-finance
 
-Most embedders use **`@finos/sail-desktop-agent` only**. If you need Sail **workspace, layout, and config** APIs without the full `sail-web` UI, see [@finos/sail-platform-api](./packages/platform-api/overview) (`SailPlatform`). The full Sail platform uses this layer internally; you only need it when building a custom platform shell that is not covered by the preset.
+Most embedders use **`@finos/sail-desktop-agent` only**. If you need Sail **workspace, layout, and config** APIs without the full `sail-finance` UI, see [@finos/sail-platform](./packages/platform/overview) (`SailPlatform`). The full Sail platform uses this layer internally; you only need it when building a custom platform shell that is not covered by the preset.
 
 ## Next steps
 

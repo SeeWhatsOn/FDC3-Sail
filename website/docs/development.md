@@ -25,7 +25,7 @@ cd FDC3-Sail
 npm install
 ```
 
-Always install from the **repository root**. Shared dev tooling (TypeScript, Vite, Vitest, ESLint, Prettier, and React type packages) lives in the root `package.json` and is hoisted for all workspaces. Workspace packages only declare package-specific dev dependencies (for example Cucumber in `@finos/sail-desktop-agent` or Playwright in `@finos/sail-web`). Run workspace scripts with `npm run <script> -w <workspace>` from the root — do not `cd` into a package and run `npm install` there.
+Always install from the **repository root**. Shared dev tooling (TypeScript, Vite, Vitest, ESLint, Prettier, and React type packages) lives in the root `package.json` and is hoisted for all workspaces. Workspace packages only declare package-specific dev dependencies (for example Cucumber in `@finos/sail-desktop-agent` or Playwright in `@finos/sail-finance`). Run workspace scripts with `npm run <script> -w <workspace>` from the root — do not `cd` into a package and run `npm install` there.
 
 ### Run the full stack locally
 
@@ -36,7 +36,6 @@ npm run dev
 Starts Desktop Agent (watch), platform API (watch), server stub, and Sail web UI on **http://localhost:3000**.
 
 ```bash
-npm run dev:desktop   # Electron desktop mode (server + Electron shell)
 npm run dev:harness   # FDC3 toolbox clean room on :3001
 npm run docs:dev      # Documentation site (use --port 3002 if web app is running)
 ```
@@ -49,12 +48,11 @@ FDC3 Sail is an npm workspace monorepo:
 FDC3-Sail/
 ├── packages/          
 │   ├── sail-desktop-agent/  # Pure FDC3 2.2 Desktop Agent (@finos/sail-desktop-agent)
-│   ├── sail-platform-api/  # Platform services & transports (@finos/sail-platform-api)
-│   ├── sail-ui/        # Shared React components
-│   ├── sail-web/       # Browser-based Sail UI (@finos/sail-web)
+│   ├── sail-platform/  # Platform composition layer & transports (@finos/sail-platform)
+│   ├── sail-theme/     # Brand tokens + assets, framework-agnostic (@finos/sail-theme)
+│   ├── sail-finance/   # Browser-based finance shell (@finos/sail-finance)
 │   ├── sail-conformance-harness/  # FDC3 toolbox clean room (@finos/sail-conformance-harness)
-│   ├── sail-server/    # Node.js backend server (@finos/sail-server)
-│   └── sail-electron/  # Electron desktop wrapper (@finos/sail-electron)
+│   └── sail-server/    # Node.js backend server (@finos/sail-server)
 └── website/            # Documentation (Docusaurus)
 ```
 
@@ -62,7 +60,6 @@ FDC3-Sail/
 
 The main package docs focus on packages adopters are likely to use directly. These package docs are most useful when working inside the monorepo:
 
-- [@finos/sail-ui](./packages/sail-ui/overview) - shared React components used by Sail apps.
 - [@finos/sail-conformance-harness](./packages/conformance-harness/overview) - clean-room FDC3 toolbox host for conformance debugging.
 
 ## Common Commands
@@ -72,9 +69,6 @@ The main package docs focus on packages adopters are likely to use directly. The
 ```bash
 # Start browser-based development (most common)
 npm run dev
-
-# Start Electron desktop development
-npm run dev:desktop
 
 # FDC3 conformance toolbox host
 npm run dev:harness
@@ -120,14 +114,14 @@ npm run test:cucumber
 ### Building
 
 ```bash
-# Build publishable / CI workspaces (excludes sail-electron until fixed)
+# Build publishable / CI workspaces
 npm run build
 
 # Documentation site
 npm run docs:build
 
 # Build specific workspace
-npm run build --workspace=@finos/sail-platform-api
+npm run build --workspace=@finos/sail-platform
 
 # Clean build artifacts
 npm run clean
@@ -162,7 +156,7 @@ Individual steps when iterating:
 - `npm run lint` / `npm run lint:fix`
 - `npm run typecheck`
 - `npm run format` / `npm run format:fix`
-- `npm run build` (CI workspaces; excludes `sail-electron` until fixed)
+- `npm run build` (CI workspaces)
 - `npm run docs:build`
 
 #### 3. Quality Check Before Submission
@@ -210,7 +204,7 @@ type: brief description
 
 ## Publishing packages (maintainers)
 
-Public npm packages: `@finos/sail-desktop-agent` and `@finos/sail-platform-api`. Other workspaces are private and are not versioned or published.
+Public npm packages: `@finos/sail-desktop-agent` and `@finos/sail-platform`. Other workspaces are private and are not versioned or published.
 
 Releases use [Changesets](https://github.com/changesets/changesets). Contributors do not need to add changesets; maintainers batch weekly (or per merge) on `main`.
 
