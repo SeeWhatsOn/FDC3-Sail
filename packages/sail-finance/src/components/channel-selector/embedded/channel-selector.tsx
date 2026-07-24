@@ -11,7 +11,6 @@ import { ChannelPicker } from "./channel"
 import { handleChannelUpdates, channels } from "./util"
 type IframeHello = BrowserTypes.Fdc3UserInterfaceHello
 type IframeRestyle = BrowserTypes.Fdc3UserInterfaceRestyle
-type IframeChannelSelected = BrowserTypes.Fdc3UserInterfaceChannelSelected
 
 let channelId: string | null = null
 
