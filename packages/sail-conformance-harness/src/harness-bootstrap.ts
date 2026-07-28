@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react"
-import type { AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
 import {
+  type AppConnectionMetadata,
   DEFAULT_FDC3_USER_CHANNELS,
   SailDesktopAgent,
   type DirectoryApp,
@@ -62,8 +62,12 @@ export type HarnessBootstrap = {
  */
 export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBootstrap {
   const debug = options?.debug ?? HARNESS_DEBUG
-  const { applications: conformanceApps, fdc3Version, profile, origin } =
-    loadConformanceApplications()
+  const {
+    applications: conformanceApps,
+    fdc3Version,
+    profile,
+    origin,
+  } = loadConformanceApplications()
   const conformance1InstanceId = crypto.randomUUID()
   const conformance1Url = extractConformance1Url(conformanceApps)
 

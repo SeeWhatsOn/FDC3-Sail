@@ -40,7 +40,6 @@
   "devDependencies": {},
   "dependencies": {
     "@finos/fdc3": "^2.2.3",
-    "@finos/sail-desktop-agent": "*",
-    "zod": "^4.1.11"
+    "@finos/sail-desktop-agent": "*"
   }
 }

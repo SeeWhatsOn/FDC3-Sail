@@ -9,7 +9,7 @@
 
 import {
   SailDesktopAgent,
-  DesktopAgent,
+  type DesktopAgent,
   type AppLauncher,
   type DirectoryApp,
   type SailImplementationMetadata,
@@ -18,8 +18,7 @@ import {
   type SailDesktopAgentChannels,
 } from "@finos/sail-desktop-agent"
 import type { BrowserIntentResolverController } from "@finos/sail-desktop-agent"
-import type { BrowserAppConnection } from "@finos/sail-desktop-agent/browser"
-import type { AppConnectionMetadata } from "@finos/sail-desktop-agent/browser"
+import type { AppConnectionMetadata, BrowserAppConnection } from "@finos/sail-desktop-agent"
 import type { BrowserTypes } from "@finos/fdc3"
 
 import type { ChannelSelector } from "./interfaces/channel-selector"

@@ -11,11 +11,8 @@ import { routeDACPMessage } from "../handlers"
 import { cleanupDACPHandlers } from "../handlers/cleanup"
 import { handleWcp4ValidateAppIdentity } from "../app-connection/wcp/wcp-identity-validation"
 import { createDacpResponseDispatcherFromDelivery } from "../handlers/utils/dacp-response-utils"
-import type {
-  DACPHandlerContext,
-  MessageValidator,
-  PendingIntentPromiseEntry,
-} from "../handlers/types"
+import type { DACPHandlerContext, PendingIntentPromiseEntry } from "../handlers/types"
+import type { ValidationMode } from "../dacp/validate-dacp-message"
 import type { IntentResolutionCallback } from "../handlers/intent-resolution-callback"
 import type { DirectoryApp } from "../app-directory/types"
 import {
@@ -68,7 +65,14 @@ export interface DesktopAgentOptions {
   apps?: DirectoryApp[]
   userChannels?: BrowserTypes.Channel[]
   requestIntentResolution?: IntentResolutionCallback
-  validator?: MessageValidator
+  /**
+   * How the agent treats inbound messages that fail FDC3 schema validation.
+   *
+   * @defaultValue `'warn'` — log the failure and dispatch anyway. Use `'strict'`
+   * to reject malformed messages with an FDC3 `MalformedMessage` error, or
+   * `'off'` to skip validation entirely.
+   */
+  validation?: ValidationMode
   /**
    * Injectable logger sink for agent-internal structured logs.
    *
@@ -116,7 +120,7 @@ export interface DesktopAgentConfig {
   apps?: DirectoryApp[]
   userChannels: BrowserTypes.Channel[]
   requestIntentResolution?: IntentResolutionCallback
-  validator?: MessageValidator
+  validation: ValidationMode
   logger?: Logger
   logPayloadDetail: LogPayloadDetail
   initialState?: Partial<AgentState>
@@ -168,7 +172,7 @@ export class DesktopAgent {
   private state: AgentState
   private appLauncher?: AppLauncher
   private requestIntentResolution?: IntentResolutionCallback
-  private validator?: MessageValidator
+  private validation: ValidationMode
   private logger: Logger
   private logPayloadDetail: LogPayloadDetail
   private isStarted: boolean = false
@@ -201,7 +205,7 @@ export class DesktopAgent {
 
     this.appLauncher = config.appLauncher
     this.requestIntentResolution = config.requestIntentResolution
-    this.validator = config.validator
+    this.validation = config.validation
     this.logger = config.logger ?? consoleLogger
     this.logPayloadDetail = config.logPayloadDetail
   }
@@ -336,7 +340,7 @@ export class DesktopAgent {
       setState,
       appLauncher: this.appLauncher,
       requestIntentResolution: this.requestIntentResolution,
-      validator: this.validator,
+      validation: this.validation,
       logger: this.logger,
       logPayloadDetail: this.logPayloadDetail,
       implementationMetadata: this.implementationMetadata,
@@ -440,6 +444,10 @@ export class DesktopAgent {
 
   /**
    * Wire the app connection edge (WCP/MessagePort in browser, test recorder in Vitest/Cucumber).
+   *
+   * @internal `SailDesktopAgent` attaches its own edge in the constructor.
+   * {@link AgentAppConnection} is not part of the public API — a replacement edge
+   * would ship as a separate package once one is actually needed.
    */
   attachAppConnection(appConnection: AgentAppConnection): void {
     this.appConnection = appConnection

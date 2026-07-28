@@ -1,5 +1,4 @@
 import type { BrowserTypes } from "@finos/fdc3"
-import type { Transport } from "../../interfaces/transport"
 import { createDACPErrorResponse, type DACPRequestLike } from "../../dacp/dacp-message-creators"
 import type { DACPResponseType } from "../../dacp/dacp-messages"
 import type { DacpOutboundMessage, DacpResponseDispatcher } from "../types"
@@ -60,7 +59,8 @@ export function sendDACPErrorResponse(options: SendDACPErrorResponseOptions): vo
   sendDACPResponse({ response: errorResponse, instanceId, responses })
 }
 
-function withDestinationRouting(instanceId: string, message: DacpOutboundMessage): unknown {
+/** @internal Exported for the test-only dispatcher in `test/support/transport.ts`. */
+export function withDestinationRouting(instanceId: string, message: DacpOutboundMessage): unknown {
   return {
     ...message,
     meta: {
@@ -90,27 +90,6 @@ export function createDacpResponseDispatcherFromDelivery(
 
     getInboundInstanceId() {
       return null
-    },
-  }
-}
-
-/**
- * DACP response delivery via injectable transport (legacy Cucumber / transport tests).
- */
-export function createDacpResponseDispatcher(edgeTransport: Transport): DacpResponseDispatcher {
-  return {
-    connectionOwner: edgeTransport,
-
-    sendToInstance(instanceId, message) {
-      edgeTransport.send(withDestinationRouting(instanceId, message))
-    },
-
-    sendOutbound(message) {
-      edgeTransport.send(message)
-    },
-
-    getInboundInstanceId() {
-      return edgeTransport.getInstanceId()
     },
   }
 }

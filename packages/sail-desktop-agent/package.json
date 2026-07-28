@@ -11,11 +11,6 @@
       "import": "./dist/index.mjs",
       "types": "./dist/index.d.mts",
       "default": "./dist/index.mjs"
-    },
-    "./browser": {
-      "import": "./dist/app-connection/index.mjs",
-      "types": "./dist/app-connection/index.d.mts",
-      "default": "./dist/app-connection/index.mjs"
     }
   },
   "sideEffects": false,

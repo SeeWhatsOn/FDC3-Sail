@@ -70,14 +70,10 @@ Same-page framework components are different. A host page can technically expose
 npm install @finos/sail-desktop-agent @finos/fdc3
 ```
 
-The desktop agent package exposes several entry points:
+Everything public comes from one entry point — `@finos/sail-desktop-agent` — covering
+`SailDesktopAgent`, the host contracts, and the app directory types.
 
-| Import | Purpose |
-|--------|---------|
-| `@finos/sail-desktop-agent` | `SailDesktopAgent`, `DesktopAgent`, host contracts, app directory types |
-| `@finos/sail-desktop-agent/browser` | Lower-level `BrowserAppConnection` and `MessagePortTransport` |
-
-## Path 1 — Browser-ready (`SailDesktopAgent`)
+## Browser-ready (`SailDesktopAgent`)
 
 `SailDesktopAgent` couples the **browser app connection** (WCP, MessagePort per app) and **Desktop Agent** (FDC3 logic) in one process. You implement **`AppLauncher`** (iframe/window creation) and wire host shell UI through the grouped controllers on the agent handle.
 
@@ -127,22 +123,6 @@ apps.onDisconnect(instanceId => {
 **FDC3 boundary:** apps use `@finos/fdc3` `getAgent()` inside iframes; host shell code uses Sail controllers (`intentResolver`, `channels`, `apps`).
 
 Copy-paste examples, unsubscribe patterns, and lifecycle teardown are in the [integrator guide](./packages/desktop-agent/integrator-guide).
-
-## Path 2 — Manual (`DesktopAgent` + app connection)
-
-Use manual composition for handler-level tests or internal framework work. Browser hosts should use `SailDesktopAgent`; it owns the browser app connection and the required state wiring.
-
-```typescript
-import { DesktopAgent } from "@finos/sail-desktop-agent"
-
-const desktopAgent = new DesktopAgent({
-  apps: myApps,
-  appLauncher: myAppLauncher,
-})
-
-desktopAgent.attachAppConnection(myAppConnection)
-desktopAgent.start()
-```
 
 See [composition & internals](./packages/desktop-agent/composition) for the layered model.
 

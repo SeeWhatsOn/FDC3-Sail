@@ -64,26 +64,12 @@ export { MiddlewarePipeline, type Middleware } from "./middleware/middleware"
 // Browser-ready Desktop Agent (re-export from @finos/sail-desktop-agent)
 export { SailDesktopAgent, type SailDesktopAgentOptions } from "@finos/sail-desktop-agent"
 
-// Lower-level browser app connection APIs (BrowserAppConnection, MessagePortTransport)
+// Desktop Agent types (for library consumers)
 export {
-  BrowserAppConnection,
-  MessagePortTransport,
-  type AppConnectionOptions,
-  type AppConnectionEvents,
   type AppConnectionMetadata,
-} from "@finos/sail-desktop-agent/browser"
-
-// Core Desktop Agent types (for library consumers)
-export {
-  DesktopAgent,
-  type DesktopAgentConfig,
-  DEFAULT_SAIL_DESKTOP_AGENT_CONFIG,
-  DEFAULT_SAIL_IMPLEMENTATION_METADATA,
-  resolveDesktopAgentConfig,
+  type AppConnectionOptions,
   type SailImplementationMetadata,
-  type Transport,
-  type MessageHandler,
-  type DisconnectHandler,
+  type ValidationMode,
   type AppLauncher,
   type DirectoryApp,
   type WebAppDetails,
@@ -91,12 +77,3 @@ export {
 
 // Utilities
 export { generateUuid } from "./utils/uuid"
-
-// Validation utilities for downstream consumers
-export {
-  createZodValidator,
-  zodValidator,
-  strictZodValidator,
-} from "./services/validation/zod-validator"
-export { validateDACPMessage, safeParseDACPMessage } from "./services/validation/dacp-zod-validator"
-export * from "./services/validation/dacp-schemas"

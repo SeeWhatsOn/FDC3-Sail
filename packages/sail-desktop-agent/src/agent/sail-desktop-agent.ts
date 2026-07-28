@@ -87,6 +87,7 @@ export interface SailDesktopAgentOptions extends Pick<
   | "appLauncher"
   | "userChannels"
   | "apps"
+  | "validation"
   | "openContextListenerTimeoutMs"
   | "heartbeatEnabled"
   | "heartbeatIntervalMs"
@@ -219,6 +220,7 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
       appLauncher: localOptions.appLauncher,
       apps: localOptions.apps,
       userChannels: localOptions.userChannels,
+      validation: localOptions.validation,
       implementationMetadata: localOptions.implementationMetadata,
       openContextListenerTimeoutMs: localOptions.openContextListenerTimeoutMs,
       heartbeatEnabled: localOptions.heartbeatEnabled,

@@ -47,31 +47,28 @@ flowchart TB
 
 **Key rule:** apps never talk to `DesktopAgent` directly. In browser hosts, app traffic flows **MessagePort → BrowserAppConnection → DesktopAgent → AppConnectionRegistry → MessagePort**.
 
-## Preset vs manual composition
+## One construction path
 
 ```mermaid
 flowchart LR
-  subgraph browserReady ["Browser-ready — default browser hosts"]
-    P["new SailDesktopAgent()"]
-    P --> E1["BrowserAppConnection"]
-    P --> D1["DesktopAgent"]
-    E1 --> D1
-  end
-
-  subgraph manual ["Manual — framework authors & tests"]
-    D2["new DesktopAgent()"]
-    E2["app connection"]
-    D2 --> E2
-  end
+  P["new SailDesktopAgent(options)"]
+  P --> E1["BrowserAppConnection (internal)"]
+  P --> D1["DesktopAgent (internal)"]
+  E1 --> D1
+  P --> C["intentResolver · channels · apps"]
 ```
 
-`SailDesktopAgent` owns the browser edge and required state binding. Most hosts should not compose `DesktopAgent` and `BrowserAppConnection` manually.
+`SailDesktopAgent` owns the browser edge, the state binding, and the lifecycle. It is not
+an assembly of parts you can swap: it *extends* `DesktopAgent`, and a bare `DesktopAgent`
+throws on any DACP routing until an edge is attached.
 
-| Pattern | Returns | You manage |
-|---------|---------|------------|
-| `new SailDesktopAgent()` | `SailDesktopAgent` + `intentResolver`, `channels`, `apps`, `connector` | `AppLauncher`; wire host UI via controllers |
-| `new DesktopAgent()` | Core FDC3 runtime | App connection, state binding, lifecycle |
-| `@finos/sail-desktop-agent/browser` | `BrowserAppConnection`, `MessagePortTransport` | Lower-level browser mechanics |
+| You provide | You get |
+|-------------|---------|
+| `AppLauncher` — mount the iframe with `name = instanceId` | `intentResolver`, `channels`, `apps` controllers plus `start()` / `stop()` |
+
+`AgentAppConnection` — the contract the edge implements — is deliberately not exported.
+A replacement edge (WebSocket, native host) would ship as its own package implementing
+that contract, at the point one is actually needed.
 
 ### Deferred deployment paths (not on v3-pre)
 
@@ -120,6 +117,8 @@ packages/sail-desktop-agent/src/
 │
 ├── handlers/
 ├── state/
+├── dacp/
+│   └── validate-dacp-message.ts  # FDC3 schema validation — off | warn | strict
 └── app-directory/
 ```
 
@@ -225,7 +224,7 @@ sequenceDiagram
 
 Browser hosts use **`channels.changeAppChannel`** and **`channels.onAppChannelChange`**. `SailPlatform` wraps the same engine path for the reference stack — see [integrator guide](./integrator-guide#channel-selector--host-shell-ui).
 
-`SailDesktopAgent` exposes these controllers directly. Manual `DesktopAgent` composition does not add host controllers automatically.
+`SailDesktopAgent` exposes these controllers directly.
 
 ## Testing layers
 

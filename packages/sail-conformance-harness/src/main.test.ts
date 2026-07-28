@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 
 import * as sailDesktopAgent from "@finos/sail-desktop-agent"
-import { resolveDesktopAgentConfig, SailDesktopAgent } from "@finos/sail-desktop-agent"
+import { SailDesktopAgent } from "@finos/sail-desktop-agent"
 
 import {
   createHarnessBootstrap,
@@ -19,7 +19,7 @@ describe("createHarnessBootstrap", () => {
     vi.restoreAllMocks()
   })
 
-  it("creates DesktopAgent with heartbeatEnabled false in resolved config", () => {
+  it("creates DesktopAgent with heartbeat disabled and the harness FDC3 version", () => {
     const OriginalSailDesktopAgent = sailDesktopAgent.SailDesktopAgent
     let capturedOptions: sailDesktopAgent.SailDesktopAgentOptions | undefined
     const constructorSpy = vi
@@ -31,10 +31,12 @@ describe("createHarnessBootstrap", () => {
     const bootstrap = createHarnessBootstrap({ debug: false })
     try {
       expect(constructorSpy).toHaveBeenCalledOnce()
-      const resolved = resolveDesktopAgentConfig(capturedOptions ?? {})
-      expect(resolved.heartbeatEnabled).toBe(false)
-      expect(resolved.implementationMetadata.fdc3Version).toBe(HARNESS_FDC3_TARGET_VERSION)
-      expect(resolved.appConnectionOptions?.fdc3Version).toBe(HARNESS_FDC3_TARGET_VERSION)
+      expect(capturedOptions?.heartbeatEnabled).toBe(false)
+      expect(capturedOptions?.appConnectionOptions?.fdc3Version).toBe(HARNESS_FDC3_TARGET_VERSION)
+      // Assert against the constructed agent rather than re-running the internal merge.
+      expect(bootstrap.desktopAgent.getImplementationMetadata().fdc3Version).toBe(
+        HARNESS_FDC3_TARGET_VERSION,
+      )
     } finally {
       bootstrap.desktopAgent.stop()
     }

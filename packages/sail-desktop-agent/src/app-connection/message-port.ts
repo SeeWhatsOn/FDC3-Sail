@@ -8,8 +8,13 @@
  * browser environments.
  */
 
-import type { Transport, MessageHandler, DisconnectHandler } from "../interfaces/transport"
 import { consoleLogger, type Logger, type LogPayloadDetail } from "../interfaces/logger"
+
+/** Handler for inbound messages from the connected app. */
+type MessageHandler = (message: unknown) => void | Promise<void>
+
+/** Handler for port disconnect. */
+type DisconnectHandler = () => void
 
 export interface MessagePortTransportOptions {
   logger?: Logger
@@ -44,7 +49,7 @@ export interface MessagePortTransportOptions {
  * iframe.contentWindow.postMessage(handshake, '*', [channel.port1])
  * ```
  */
-export class MessagePortTransport implements Transport {
+export class MessagePortTransport {
   private port: MessagePort
   private readonly logger: Logger
   private readonly logPayloadDetail: LogPayloadDetail

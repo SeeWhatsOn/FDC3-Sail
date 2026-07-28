@@ -1,81 +1,14 @@
 /**
- * FDC3 Desktop Agent - Core Package
+ * FDC3 Desktop Agent — public API.
  *
- * Browser-resident hosts use {@link SailDesktopAgent} from this entry point.
- * Lower-level WCP primitives: `@finos/sail-desktop-agent/browser`.
+ * `SailDesktopAgent` is the entry point: construct it, implement {@link AppLauncher},
+ * and wire host UI through the grouped controllers (`intentResolver`, `channels`, `apps`).
+ *
+ * The browser app-connection edge (WCP handshake, per-app `MessagePort`, routing)
+ * is internal — the agent owns it. There is no transport abstraction to configure.
  */
 
-// Desktop Agent
-export { DesktopAgent } from "./agent/desktop-agent"
-export type { DesktopAgentConfig, DesktopAgentOptions } from "./agent/desktop-agent"
-export { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
-export {
-  DEFAULT_SAIL_DESKTOP_AGENT_CONFIG,
-  DEFAULT_SAIL_IMPLEMENTATION_METADATA,
-  resolveDesktopAgentConfig,
-} from "./agent/default-config"
-export type { SailImplementationMetadata } from "./agent/default-config"
-
-// Interfaces (types only - no implementations)
-export type { Transport, MessageHandler, DisconnectHandler } from "./interfaces/transport"
-export * from "./interfaces/index"
-
-// State
-export type { AgentState, AppInstance, AppInstanceState, StateSetter } from "./state/types"
-export { createInitialState, createStateWithOverrides } from "./state/initial-state"
-
-// App Directory
-export { isValidDirectoryUrl, fetchAppDirectory } from "./app-directory/fetch-app-directory"
-export {
-  retrieveAllApps,
-  retrieveAppsById,
-  retrieveApps,
-  retrieveIntents,
-  retrieveAllIntents,
-  retrieveAppsByUrl,
-} from "./app-directory/app-directory-queries"
-export type {
-  DirectoryApp,
-  DirectoryData,
-  DirectoryIntent,
-  WebAppDetails,
-  NativeAppDetails,
-  CitrixAppDetails,
-  OnlineNativeAppDetails,
-  OtherAppDetails,
-  LaunchDetails,
-  AppType,
-  Icon,
-  Screenshot,
-  IntentDefinition,
-  AppIntent,
-} from "./app-directory/types"
-
-// DACP Protocol Messages
-export type {
-  DACPRequestType,
-  DACPResponseType,
-  DACPEventType,
-  DACPMessageType,
-} from "./dacp/dacp-messages"
-export { DACPValidationError, DACPTimeoutError, DACPProcessingError } from "./dacp/dacp-errors"
-
-// Handler types
-export type {
-  DACPHandlerContext,
-  DacpResponseDispatcher,
-  DacpOutboundMessage,
-  DACPMessage,
-  MessageValidator,
-  ValidationResult,
-  MessageType,
-  WCPMessageType,
-} from "./handlers/types"
-
-// UI-free host contracts for platform builders (launch, intent resolver, channel control)
-export * from "./host-contracts/index"
-
-// Browser-ready Sail Desktop Agent (DA-owned WCP app connection)
+// The Desktop Agent
 export {
   SailDesktopAgent,
   type SailDesktopAgentOptions,
@@ -88,7 +21,50 @@ export {
 
 export type { DesktopAgentAppInstance, DesktopAgentOpenOptions } from "./agent/desktop-agent"
 
-// NOTE: Lower-level browser app connection APIs are NOT exported here
-// Import from @finos/sail-desktop-agent/browser for:
-// - BrowserAppConnection
-// - MessagePortTransport
+/**
+ * @internal Base class of {@link SailDesktopAgent}. Exported because TypeScript
+ * declaration emit requires it to be nameable — not an entry point. Construct
+ * `SailDesktopAgent` instead.
+ */
+export type { DesktopAgent } from "./agent/desktop-agent"
+
+// Validation policy
+export type { ValidationMode } from "./agent/default-config"
+
+// Agent identity reported to apps via fdc3.getInfo()
+export type { SailImplementationMetadata } from "./agent/default-config"
+
+/**
+ * The eight FDC3 standard user channels.
+ *
+ * Exported so hosts can extend rather than redeclare them:
+ * `userChannels: [...DEFAULT_FDC3_USER_CHANNELS, ...myChannels]`. Omit the option
+ * entirely to get exactly this set.
+ */
+export { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
+
+// Host contracts — implement these to integrate a shell
+export * from "./host-contracts/index"
+
+// Logging
+export * from "./interfaces/index"
+
+// App directory
+export type { DirectoryApp, WebAppDetails } from "./app-directory/types"
+
+// Errors thrown on paths a host can catch
+export { DACPValidationError, DACPTimeoutError, DACPProcessingError } from "./dacp/dacp-errors"
+
+/**
+ * App-connection types that appear in the public agent surface.
+ *
+ * `AppConnectionMetadata` is the `onAppConnected` payload; `AppConnectionOptions`
+ * configures the edge. `BrowserAppConnection` is `@internal` — exported only
+ * because `SailDesktopAgent.connector` is typed with it and declaration emit
+ * requires the name.
+ */
+export type {
+  AppConnectionMetadata,
+  AppConnectionOptions,
+} from "./app-connection/browser-app-connection"
+export type { BrowserAppConnection } from "./app-connection/browser-app-connection"

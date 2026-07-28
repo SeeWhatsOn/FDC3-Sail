@@ -7,7 +7,7 @@
  * - Support for multiple "clients" in test scenarios
  */
 
-import type { Transport, MessageHandler, DisconnectHandler } from "../../src/interfaces/transport"
+import type { Transport, MessageHandler, DisconnectHandler } from "./transport"
 
 /**
  * DACP message structure (partial, just what we need for routing/querying)

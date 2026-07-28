@@ -1,6 +1,8 @@
 # @finos/sail-desktop-agent
 
-Pure, transport-agnostic [FDC3 2.2](https://fdc3.finos.org/docs/api/spec) Desktop Agent — DACP handlers, channels, intents, app directory, and browser WCP support. **Browser-first:** one Desktop Agent per host page; FDC3 web apps connect via WCP and `MessagePort`.
+Browser-first [FDC3 2.2](https://fdc3.finos.org/docs/api/spec) Desktop Agent — DACP handlers, channels, intents, app directory, and WCP app connection. One Desktop Agent per host page; FDC3 web apps connect via WCP and `MessagePort`.
+
+The agent owns its app-connection edge. You implement `AppLauncher` and wire host UI — there is no transport to configure.
 
 Platform concerns (layout, workspace, storage, Sail config) belong in [`@finos/sail-platform`](../sail-platform/README.md), not in this package.
 
@@ -33,6 +35,10 @@ const desktopAgent = new SailDesktopAgent({
 })
 // Auto-started — iframe apps can await fdc3.getAgent()
 ```
+
+Inbound messages are validated against the FDC3 schema. The default `validation: "warn"`
+logs failures and dispatches anyway; use `"strict"` to reject malformed messages, or
+`"off"` to skip the check.
 
 See the [integrator guide](https://finos.github.io/FDC3-Sail/docs/packages/desktop-agent/integrator-guide) for host contracts, intent resolution, channel chrome, and browser-first adoption.
 

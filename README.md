@@ -1,5 +1,5 @@
 <p align="center">
-    <img height="300" src="./packages/sail-ui/src/assets/logo/logo_bg_white_2x.png" alt="FDC3 Sail Icon">
+    <img height="300" src="./packages/sail-theme/assets/logo/logo_bg_white_2x.png" alt="FDC3 Sail Icon">
 </p>
 
 <h1 align="center">FDC3 Sail</h1>
@@ -32,46 +32,51 @@ If you are new to FDC3, start with the [FDC3 website](https://fdc3.finos.org).
 
 FDC3 Sail is a fully open source implementation of the [FDC3](https://fdc3.finos.org) interoperability standard. It provides:
 
-- A **pure, transport-agnostic FDC3 Desktop Agent** (`@finos/sail-desktop-agent`) that runs in any JavaScript environment
+- A **browser-first FDC3 2.2 Desktop Agent** (`@finos/sail-desktop-agent`) — one agent per host page, ready to use as-is
 - A **browser-based deployment** (`sail-finance`) where the Desktop Agent runs inside a browser tab and manages FDC3 apps in iframes
 - A **platform SDK** (`@finos/sail-platform`) with middleware, app launcher, and Sail-specific integrations
 - A **shared brand theme** (`@finos/sail-theme`) of design tokens and assets; each shell owns its shadcn/ui components
 
 ## Architecture
 
-FDC3 Sail uses a clean two-layer architecture separating the pure FDC3 logic from deployment concerns:
+The Desktop Agent runs in the browser tab alongside the apps it serves. It owns the
+app-connection edge — there is no transport layer to configure or swap.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  FDC3 Apps (iframes / windows)                                          │
-│  Connect via @finos/fdc3-get-agent (WCP)                                │
+│  Connect via @finos/fdc3 — await fdc3.getAgent()                        │
 │  fdc3.raiseIntent(), fdc3.broadcast(), fdc3.getInfo(), etc.             │
 └────────────────────────────────┬────────────────────────────────────────┘
-                                 │ Web Connection Protocol (WCP)
+                                 │ Web Connection Protocol (WCP1–6)
                                  ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  WCPConnector  (@finos/sail-desktop-agent/browser)                      │
-│  - Handles WCP1–6 handshake with iframe apps                           │
-│  - Manages per-app MessagePorts                                         │
-│  - Bridges to the Transport layer                                       │
-└────────────────────────────────┬────────────────────────────────────────┘
-                                 │ Transport (swappable)
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  DesktopAgent  (@finos/sail-desktop-agent)                              │
-│  - Pure FDC3 2.2 logic, zero environment dependencies                  │
-│  - DACP message handlers (intents, channels, open, findInstances…)     │
-│  - State registries: app instances, channels, intent listeners          │
+│  SailDesktopAgent  (@finos/sail-desktop-agent)                          │
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │ BrowserAppConnection — WCP handshake, one MessagePort per app     │  │
+│  │ AppConnectionRegistry — instanceId → MessagePort                  │  │
+│  └───────────────────────────────┬───────────────────────────────────┘  │
+│                                  │ DACP                                 │
+│  ┌───────────────────────────────▼───────────────────────────────────┐  │
+│  │ DACP handlers — intents, channels, open, findInstances…           │  │
+│  │ AgentState — app instances, channels, intent listeners            │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+│  Host contracts: AppLauncher · intentResolver · channels · apps         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
+
+Your host shell implements `AppLauncher` (mount the iframe) and wires UI through the
+grouped controllers. Everything above is internal to the agent.
 
 ### Packages
 
 | Package | Description |
 |---|---|
-| [`packages/sail-desktop-agent`](packages/sail-desktop-agent/) | Pure FDC3 Desktop Agent — environment-agnostic core |
+| [`packages/sail-desktop-agent`](packages/sail-desktop-agent/) | Browser-first FDC3 2.2 Desktop Agent |
 | [`packages/sail-platform`](packages/sail-platform/) | Platform SDK — Sail middleware, app launcher, integrations |
-| [`packages/sail-ui`](packages/sail-ui/) | Shared React UI component library |
+| [`packages/sail-theme`](packages/sail-theme/) | Shared brand theme — design tokens and assets |
 
 ### Apps
 
@@ -150,9 +155,8 @@ The generated file (`packages/sail-desktop-agent/src/handlers/validation/dacp-sc
 
 ## Package Documentation
 
-- [`sail-desktop-agent` README](packages/sail-desktop-agent/README.md) — FDC3 DA API, subpath exports, transport interface
+- [`sail-desktop-agent` README](packages/sail-desktop-agent/README.md) — FDC3 Desktop Agent API and host contracts
 - [`sail-platform` README](packages/sail-platform/README.md) — Middleware, app launcher, Sail platform integrations
-- [`sail-ui` README](packages/sail-ui/README.md) — Shared React UI components
 
 ## npm packages
 

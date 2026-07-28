@@ -626,7 +626,7 @@ Where does the Desktop Agent run?
 | App connection + DA seam tests | `SailDesktopAgent` integration tests or a custom app connection | Duplicating WCP in app code |
 | Remote or multi-device DA | — (not on v3-pre) | `createWCPClient` (removed) |
 
-**Canonical import:** `@finos/sail-desktop-agent` for browser hosts. Use `@finos/sail-desktop-agent/browser` only when you need lower-level `BrowserAppConnection` or `MessagePortTransport` primitives.
+**Canonical import:** `@finos/sail-desktop-agent`. There are no subpath exports — the app-connection internals are not part of the public API.
 
 ## Public API — browser-first surface
 
@@ -658,7 +658,7 @@ Teardown: `desktopAgent.stop()`. Pass `autoStart: false` only if you must config
 
 Most application code should not call lower-level connector methods directly. Host code uses grouped controllers (`intentResolver`, `channels`, `apps`) plus `appLauncher`. Optional `onAppConnected` / `onAppDisconnected` callbacks remain for compatibility — prefer `apps.onConnect` / `apps.onDisconnect`.
 
-Advanced tests can import `BrowserAppConnection` from `@finos/sail-desktop-agent/browser` and attach it to `DesktopAgent` manually.
+`BrowserAppConnection` itself is internal — it is not constructible from the public API.
 
 ### `appConnectionOptions` — injected UI URLs (uncommon)
 
@@ -688,26 +688,28 @@ new SailDesktopAgent({
 })
 ```
 
-### Manual composition (advanced)
+### Message validation
 
-For framework authors and edge tests — not the normal adoption path:
+Inbound DACP and WCP messages are checked against the FDC3 schema from
+`@finos/fdc3-schema` — the same generated source the agent types against, so the
+validation cannot drift from the FDC3 version this package targets.
 
 ```typescript
-import { BrowserAppConnection } from "@finos/sail-desktop-agent/browser"
-import { DesktopAgent } from "@finos/sail-desktop-agent"
-
-const desktopAgent = new DesktopAgent({ appLauncher: myLauncher })
-const appConnection = new BrowserAppConnection()
-
-appConnection.bindAgentState({
-  getAgentState: () => desktopAgent.getState(),
-  setAgentState: update => desktopAgent.updateState(update),
-})
-
-desktopAgent.attachAppConnection(appConnection)
-desktopAgent.start()
-appConnection.start()
+new SailDesktopAgent({ appLauncher: myLauncher, validation: "strict" })
 ```
+
+| Mode | Behaviour | Use when |
+|------|-----------|----------|
+| `"off"` | No validation | Profiling, or you validate upstream |
+| `"warn"` *(default)* | Logs the failure, dispatches anyway | Normal operation |
+| `"strict"` | Rejects with an FDC3 `MalformedMessage` error | You require spec-conformant clients |
+
+`"warn"` is the default deliberately. Rejecting malformed messages is a behaviour change:
+a client library that sends a slightly off-spec shape works today, and `"strict"` would
+break it with no warning. Run on `"warn"`, watch the logs, then tighten if you choose.
+
+Validation covers inbound messages only — responses and events the agent produces are
+not re-checked on the way out.
 
 Use `SailDesktopAgent` unless you are writing package internals or focused tests. Manual composition must own state binding, lifecycle, and any host controllers you need.
 

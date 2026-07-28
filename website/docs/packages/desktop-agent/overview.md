@@ -14,14 +14,15 @@ Browser-ready FDC3 2.2 Desktop Agent — `SailDesktopAgent`, DACP handlers, chan
 - **Browser-first:** one `DesktopAgent` per host page, with FDC3 web apps connecting via WCP and per-app `MessagePort`
 - Keeps platform concerns (layout, workspace, storage, config) **out** of the core — those belong in [`@finos/sail-platform`](../platform/overview)
 
-The package also runs in Node.js or test harnesses for handler-level work (`MockTransport`, Cucumber). That is not the primary adoption path for shipping a desktop.
+Handler-level tests run under Node.js via Cucumber and Vitest, but the browser is the
+only supported deployment target.
 
-## Two ways to integrate
+## How to integrate
 
-| Mode | When to use | Entry |
-|------|-------------|-------|
-| **Browser-ready** | Default — host page runs DA + WCP edge in-tab | `SailDesktopAgent` from `@finos/sail-desktop-agent` |
-| **Manual composition** | Handler tests or framework internals | `DesktopAgent` plus an app connection |
+`SailDesktopAgent` is the entry point — construct it, implement `AppLauncher`, wire host
+UI through the grouped controllers. The app-connection edge (WCP handshake, per-app
+`MessagePort`, routing) is internal to the agent; there is no transport to configure and
+no lower-level composition path to assemble.
 
 ```text
   FDC3 Apps          Your host                 FDC3 engine (in-tab)
@@ -83,11 +84,30 @@ Returns a single `SailDesktopAgent` with grouped host controllers (`intentResolv
 
 See the [integrator guide](./integrator-guide) for intent resolution, channel chrome, runtime catalog registration, and lifecycle.
 
-## Subpath exports
+## Imports
+
+Everything public comes from the package root — there are no subpath exports.
 
 ```typescript
-import { DesktopAgent, SailDesktopAgent } from "@finos/sail-desktop-agent"
-import { BrowserAppConnection, MessagePortTransport } from "@finos/sail-desktop-agent/browser"
+import { SailDesktopAgent, DEFAULT_FDC3_USER_CHANNELS } from "@finos/sail-desktop-agent"
+import type { AppLauncher, IntentResolver, DirectoryApp } from "@finos/sail-desktop-agent"
 ```
 
-Application code should prefer `SailDesktopAgent`. Use `/browser` only when you need lower-level browser app-connection primitives such as `BrowserAppConnection` or `MessagePortTransport`.
+## Message validation
+
+Inbound DACP and WCP messages are validated against the FDC3 schema shipped by
+`@finos/fdc3-schema`, so the check tracks the FDC3 version this package targets.
+
+| Mode | Behaviour |
+|------|-----------|
+| `"off"` | No validation |
+| `"warn"` *(default)* | Log the failure, dispatch the message anyway |
+| `"strict"` | Reject the message with an FDC3 `MalformedMessage` error |
+
+```typescript
+const desktopAgent = new SailDesktopAgent({ appLauncher, validation: "strict" })
+```
+
+`"warn"` is the default because rejecting is a behaviour change — a client library sending
+a slightly off-spec shape works today, and `"strict"` would break it. Warn surfaces the
+problem in logs first so you can decide.

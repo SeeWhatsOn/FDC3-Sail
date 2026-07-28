@@ -9,10 +9,10 @@ import type {
 } from "../types"
 import { createInitialState } from "../../state/initial-state"
 import type { AgentState, StateSetter } from "../../state/types"
-import type { Transport } from "../../interfaces/transport"
+import type { Transport } from "../../../test/support/transport"
 import { InMemoryTransport } from "../../../test/support/in-memory-transport"
-import { createDacpResponseDispatcher } from "../utils/dacp-response-utils"
-export { createDacpResponseDispatcher } from "../utils/dacp-response-utils"
+import { createDacpResponseDispatcher } from "../../../test/support/transport"
+export { createDacpResponseDispatcher } from "../../../test/support/transport"
 
 /** Shared agent state for contexts created with the same initialState reference (multi-connection tests). */
 const sharedStateByInitialSnapshot = new WeakMap<AgentState, AgentState>()

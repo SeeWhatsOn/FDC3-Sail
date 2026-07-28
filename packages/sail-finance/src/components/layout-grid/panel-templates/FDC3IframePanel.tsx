@@ -14,7 +14,7 @@ import { FDC3_PANEL_RENDERER } from "../dockview-options"
  * WCP Flow:
  * 1. Iframe loads and app calls fdc3.getAgent()
  * 2. App sends WCP1Hello via postMessage
- * 3. Browser Desktop Agent's WCPConnector responds with WCP3Handshake
+ * 3. The Desktop Agent's BrowserAppConnection responds with WCP3Handshake
  * 4. MessageChannel established for FDC3 communication
  * 5. App validates identity via WCP4/WCP5
  *

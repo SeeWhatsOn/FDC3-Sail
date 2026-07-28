@@ -9,7 +9,7 @@
  * runtimes without it cannot use this transport.
  */
 
-import type { Transport, MessageHandler, DisconnectHandler } from "../../src/interfaces/transport"
+import type { Transport, MessageHandler, DisconnectHandler } from "./transport"
 import { consoleLogger } from "../../src/interfaces/logger"
 
 /**

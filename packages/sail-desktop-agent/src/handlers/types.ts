@@ -4,55 +4,8 @@ import type { AgentState, StateSetter } from "../state/types"
 import type { Logger, LogPayloadDetail } from "../interfaces/logger"
 import type { DesktopAgentConfig } from "../agent/desktop-agent"
 import type { DACPMessageType } from "../dacp/dacp-messages"
+import type { ValidationMode } from "../dacp/validate-dacp-message"
 import type { IntentResolutionCallback } from "./intent-resolution-callback"
-
-// ============================================================================
-// MESSAGE VALIDATOR
-// ============================================================================
-
-/**
- * Result of message validation
- */
-export interface ValidationResult {
-  /** Whether the message is valid */
-  valid: boolean
-  /** Validation error messages if invalid */
-  errors?: string[]
-}
-
-/**
- * Interface for message validation
- * Can be implemented with Zod, AJV, or any other validation library
- *
- * @example
- * ```typescript
- * // Zod-based validator implementation
- * const zodValidator: MessageValidator = {
- *   validate(messageType, message) {
- *     const schema = schemaMap[messageType]
- *     if (!schema) return { valid: true } // Unknown types pass through
- *     const result = schema.safeParse(message)
- *     return result.success
- *       ? { valid: true }
- *       : { valid: false, errors: result.error.issues.map(i => i.message) }
- *   }
- * }
- *
- * // No-op validator (validation disabled)
- * const noopValidator: MessageValidator = {
- *   validate() { return { valid: true } }
- * }
- * ```
- */
-export interface MessageValidator {
-  /**
-   * Validates a message against its schema
-   * @param messageType - The message type (e.g., "broadcastRequest", "WCP4ValidateAppIdentity")
-   * @param message - The message to validate
-   * @returns Validation result with success status and any errors
-   */
-  validate(messageType: MessageType, message: unknown): ValidationResult
-}
 
 // ============================================================================
 // MESSAGE TYPES
@@ -153,16 +106,14 @@ export interface DACPHandlerContext {
   /**
    * Callback for requesting UI-based intent resolution when multiple handlers exist.
    * If not provided, the first handler is automatically selected.
-   * Injected by browser/server Desktop Agent implementations.
    */
   requestIntentResolution?: IntentResolutionCallback
 
   /**
-   * Optional message validator for validating DACP/WCP messages.
-   * If not provided, messages are processed without validation.
-   * Implementations can inject Zod, AJV, or custom validators.
+   * How inbound messages failing FDC3 schema validation are treated.
+   * Defaults to `'warn'` when omitted (e.g. isolated handler tests).
    */
-  validator?: MessageValidator
+  validation?: ValidationMode
 
   /** Logger instance */
   logger: Logger

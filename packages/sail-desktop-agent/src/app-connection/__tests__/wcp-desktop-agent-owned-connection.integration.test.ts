@@ -2,7 +2,7 @@
  * RED integration tests for DA-owned browser app connection (collapsed architecture).
  *
  * DesktopAgent must own WCP listener lifecycle, per-app MessagePort routing, and
- * connection maps — without BrowserDaEdgeLink or a separate WCPConnector transport hop.
+ * connection maps — without a separate transport hop between edge and agent.
  *
  * @vitest-environment jsdom
  */
