@@ -6,7 +6,9 @@ import {
   intentListenerContextTypesOverlap,
 } from "../intent-listener-conflict"
 
-function listener(overrides: Partial<IntentListener> & Pick<IntentListener, "listenerId">): IntentListener {
+function listener(
+  overrides: Partial<IntentListener> & Pick<IntentListener, "listenerId">,
+): IntentListener {
   return {
     intentName: "aTestingIntent1",
     instanceId: "a1",
@@ -44,12 +46,10 @@ describe("intent listener conflict (FDC3 3.0)", () => {
       contextTypes: ["fdc3.instrument"],
     })
 
-    const conflict = findConflictingIntentListener(
-      [existing],
-      "aTestingIntent1",
-      "a1",
-      ["fdc3.instrument", "fdc3.order"],
-    )
+    const conflict = findConflictingIntentListener([existing], "aTestingIntent1", "a1", [
+      "fdc3.instrument",
+      "fdc3.order",
+    ])
 
     expect(conflict?.listenerId).toBe("l1")
   })

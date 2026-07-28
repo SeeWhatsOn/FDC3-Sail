@@ -12,7 +12,10 @@ export type AppConnectionHostLookup = {
 }
 
 export function asAppConnectionHostLookup(owner: object): AppConnectionHostLookup | undefined {
-  if (!("getConnection" in owner) || typeof (owner as AppConnectionHostLookup).getConnection !== "function") {
+  if (
+    !("getConnection" in owner) ||
+    typeof (owner as AppConnectionHostLookup).getConnection !== "function"
+  ) {
     return undefined
   }
   return owner as AppConnectionHostLookup

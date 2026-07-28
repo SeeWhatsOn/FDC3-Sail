@@ -183,8 +183,7 @@ export function findIntentHandlers(
     .map(app => {
       const intents = app.interop?.intents?.listensFor
       const intentDef = intents?.[intent]
-      const contextTypes =
-        intentDef && Array.isArray(intentDef.contexts) ? intentDef.contexts : []
+      const contextTypes = intentDef && Array.isArray(intentDef.contexts) ? intentDef.contexts : []
       return {
         intentName: intent,
         appId: app.appId,

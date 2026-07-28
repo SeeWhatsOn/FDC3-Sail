@@ -124,7 +124,7 @@ async function completeWcp4FirstConnect(
       identityUrl: params.appUrl,
       actualUrl: params.appUrl,
     },
-  } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity)
+  })
 
   return readWcp5InstanceId(connection)
 }

@@ -13,7 +13,6 @@ import { AppInstanceState } from "../state/types"
 import { createInitialState } from "../state/initial-state"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../default-user-channels"
 import { resolveDesktopAgentConfig } from "../agent/default-config"
-import type { DesktopAgentOptions } from "../agent/desktop-agent"
 import type { DACPHandlerContext } from "../handlers/types"
 import { handleRaiseIntentRequest } from "../handlers/intents/intent-raise-intent"
 import { routeDACPMessage } from "../handlers"
@@ -27,8 +26,6 @@ type LogPayloadDetail = "metadata" | "full"
 type LoggingAwareOptions = {
   logPayloadDetail?: LogPayloadDetail
 }
-
-type LoggingAwareDesktopAgentOptions = DesktopAgentOptions & LoggingAwareOptions
 
 type LoggingAwareHandlerContext = DACPHandlerContext & LoggingAwareOptions
 
@@ -117,7 +114,7 @@ describe("DACP/WCP metadata-only log redaction", () => {
     })
 
     it("defaults logPayloadDetail to metadata when omitted from DesktopAgent config", () => {
-      const config = resolveDesktopAgentConfig({} as LoggingAwareDesktopAgentOptions)
+      const config = resolveDesktopAgentConfig({})
       expect(config).toHaveProperty("logPayloadDetail", "metadata")
     })
   })

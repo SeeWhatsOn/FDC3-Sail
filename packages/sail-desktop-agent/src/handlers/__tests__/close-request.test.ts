@@ -137,8 +137,7 @@ describe("handleCloseRequest", () => {
   })
 
   it("returns ErrorOnClose when agent advertises FDC3 2.2", async () => {
-    const { context, transport, appLauncher, instanceId } =
-      createConnectedCloseContext("close-22")
+    const { context, transport, appLauncher, instanceId } = createConnectedCloseContext("close-22")
 
     await handleCloseRequest(
       {

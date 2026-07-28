@@ -71,7 +71,7 @@ describe("createHarnessAppLauncher", () => {
       panels.push(panel)
     })
 
-    await launcher.launch!(
+    await launcher.launch(
       {
         app: { appId: "MockAppId" },
         context: { type: "fdc3.instrument", id: { ticker: "AAPL" } },

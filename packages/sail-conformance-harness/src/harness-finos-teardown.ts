@@ -89,9 +89,7 @@ export function parseMockAppControlTeardownBroadcast(
   }
 
   const meta = record.meta as { source?: { appId?: string; instanceId?: string } } | undefined
-  const payload = record.payload as
-    | { channelId?: string; context?: { type?: string } }
-    | undefined
+  const payload = record.payload as { channelId?: string; context?: { type?: string } } | undefined
 
   if (payload?.channelId !== HARNESS_FINOS_APP_CONTROL_CHANNEL) {
     return undefined
@@ -125,12 +123,7 @@ export function createHarnessFinOsTeardownObserver(options: {
   conformance1AppId?: string
   deferDisconnectMs?: number
 }): (message: unknown) => void {
-  const {
-    instanceCleanup,
-    getDesktopAgent,
-    conformance1AppId,
-    deferDisconnectMs = 0,
-  } = options
+  const { instanceCleanup, getDesktopAgent, conformance1AppId, deferDisconnectMs = 0 } = options
 
   return message => {
     const closeWindow = parseConformance1CloseWindowBroadcast(message, { conformance1AppId })

@@ -78,9 +78,7 @@ function captureAppMessagePort(
   const postMessageSpy = vi.spyOn(window, "postMessage")
   const sourceWindow =
     options?.sourceWindow ??
-    (options?.hostIdentifier !== undefined
-      ? createWcpSourceWindow(options.hostIdentifier)
-      : window)
+    (options?.hostIdentifier !== undefined ? createWcpSourceWindow(options.hostIdentifier) : window)
   window.dispatchEvent(
     createMessageEvent(createWCP1Hello(connectionAttemptUuid, identityUrl), sourceWindow),
   )

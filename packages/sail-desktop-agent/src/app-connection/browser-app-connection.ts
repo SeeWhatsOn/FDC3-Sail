@@ -295,7 +295,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
     return {
       connectionRegistry: this.connectionRegistry,
       onAppMessage: message => this.forwardAppMessage(message),
-      emit: this.emit.bind(this) as WCPRoutingContext["emit"],
+      emit: this.emit.bind(this),
       logger: this.options.logger,
       enrichMessageWithSource: this.enrichMessageWithSource.bind(this),
       handleWCP6Goodbye: this.handleWCP6Goodbye.bind(this),

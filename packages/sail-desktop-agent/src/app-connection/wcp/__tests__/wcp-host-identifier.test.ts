@@ -14,8 +14,7 @@ describe("resolveHostIdentifierFromSource", () => {
     } as Window
 
     const resolved = resolveHostIdentifierFromSource(popup, {
-      resolveHostIdentifier: source =>
-        source === popup ? "launcher-from-registry" : undefined,
+      resolveHostIdentifier: source => (source === popup ? "launcher-from-registry" : undefined),
     })
 
     expect(resolved).toBe("launcher-from-registry")
@@ -59,8 +58,7 @@ describe("resolveAndPersistConnectionHostIdentifier", () => {
     } as AppConnectionMetadata
 
     const owner = {
-      getConnection: (instanceId: string) =>
-        instanceId === "temp-uuid" ? connection : undefined,
+      getConnection: (instanceId: string) => (instanceId === "temp-uuid" ? connection : undefined),
       resolveHostIdentifierForSource: (source: Window) =>
         source === popup ? "launcher-from-registry" : undefined,
     }

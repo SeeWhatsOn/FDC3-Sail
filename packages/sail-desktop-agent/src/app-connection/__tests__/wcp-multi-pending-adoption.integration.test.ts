@@ -21,11 +21,7 @@ import {
   postDacpOnPort,
   waitForPortMessage,
 } from "./wcp-edge-test-helpers"
-import {
-  CHART_APP,
-  createTestAgent,
-  PORTFOLIO_APP,
-} from "./wcp-desktop-agent.integration.fixtures"
+import { CHART_APP, createTestAgent, PORTFOLIO_APP } from "./wcp-desktop-agent.integration.fixtures"
 
 const OPEN_WITH_CONTEXT_LAUNCH: Context = {
   type: "testContextY",

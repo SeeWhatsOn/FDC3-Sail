@@ -1,538 +1,432 @@
 # FDC3 Sail Production Readiness Review
 
-*Review date: 2026-07-06 · Branch:* `chore/collapse-browser-app-connection-into-desktop-agent` *(descends from* `v3-pre`*) · Reviewer: evidence-based architecture/security/conformance pass.*
+*Review date: **2026-07-28** · Branch: `wip/v3-local` @ `4dddd88f7` · Supersedes the 2026-07-07 review (written against `chore/collapse-browser-app-connection-into-desktop-agent`).*
 
-> Scope note: this is a diagnosis-only review. No implementation code was changed. Findings are grounded in source, docs, the committed conformance exports, CI config, and package manifests, with file paths cited throughout.
+> **Scope note:** diagnosis only. No implementation code was changed. Every finding below was re-verified against the tree at `4dddd88f7` on the date above; findings carried forward from the previous review were individually re-checked rather than assumed.
+
+> **Verification method and its limits.** All findings are **static** — source, package manifests, CI config, committed conformance exports, and a live npm registry query. **Build, typecheck, unit tests, and the FINOS conformance toolbox were not executed for this review.** This checkout's `node_modules/@finos/*` symlinks resolve to a Windows host path (`/mnt/host/c/...`) and the `vite-plus` toolchain ships Windows-native binaries, so the toolchain cannot run in this environment. Nothing here should be read as "the build is green" or "the build is broken" — neither was tested. Claims that require execution are marked **UNMEASURED** and are not scored as if they were measured.
+
+---
+
+## Why this review replaces the previous one
+
+The 2026-07-07 review was accurate when written, then aged badly and *invisibly*. On 2026-07-23 the bulk package-rename commit (`ceb13eae0`) rewrote package names throughout the review file, so it read as current while none of its content had been re-verified. Three packages were deleted after it was written.
+
+**Resolved or made obsolete since 2026-07-07:**
+
+| Previous finding | Status |
+|---|---|
+| BLOCK-1 — Electron `nodeIntegration`/`nodeIntegrationInSubFrames` RCE (**Critical**) | **Obsolete.** `packages/sail-electron` deleted 2026-07-20 (`cd1b4b0e4`). No Electron code in the repo. |
+| `sail-server` stub, `ISC` license, missing `private:true` | **Obsolete.** Package dropped 2026-07-22 (`f5570ad60`). |
+| `sail-ui` — 17+ components, zero tests | **Obsolete.** Package gone; `sail-theme` replaced it. |
+| BLOCK-5 — Zod validator built but not wired | **Superseded.** Zod removed entirely; replaced by `@finos/fdc3-schema` validators **wired on by default**. See NEW-1 for the residual. |
+| D-4 — `WCPConnector` in README architecture diagram | **Fixed.** Zero occurrences repo-wide; diagram says `BrowserAppConnection`. |
+| C-3 — app `traceId`/`antiReplay`/`custom` not forwarded | **Fixed** (`4494c5cd7`). `intent-result-metadata.ts:189-200` forwards them explicitly. |
+| `export *` of `state/selectors` + `state/mutators` leaking the semver surface | **Fixed** (`4dddd88f7`). Neither is exported from `index.ts`. |
+| C-2 — `desktopAgent` missing, "loss point unexplained" | **Superseded.** `77cac2a39` deliberately gates `desktopAgent` on bridging advertisement (`handlers/open/handlers.ts:248-250`). Now a policy decision needing re-test, not a mystery. |
+| Open Question 7 — is the `desktopAgent` omission in WCP5 `ImplementationMetadata` intended? | **Answered: yes, intended.** `wcp-identity-validation.ts:220-227` omits it, consistent with the bridging gate. |
+| "CI doesn't run on `v3-pre`" | **Gap real, branch name stale.** Work moved to `wip/v3-local`; CI still triggers on `main` only. |
+
+The previous review's headline verdict (**2.7/5**, "Security posture: 2") was dominated by the Electron finding. With that package gone, validation wired, and the public API tightened, the security and API scores rise materially. The **documentation** position, by contrast, got *worse*, and the **conformance** position became unmeasured.
 
 ---
 
 ## Executive Summary
 
-**Overall verdict: a genuinely well-architected prototype in late-beta — not production-ready today, and its own documentation over-claims that it is.**
+**Overall verdict: a well-architected FDC3 Desktop Agent at the end of beta, with a genuinely strong core, one unresolved containment gap, and a documentation layer that now actively misdescribes the code.**
 
-FDC3 Sail has a clean, deliberate core: a transport-agnostic FDC3 Desktop Agent with a well-guarded WCP identity-validation boundary, a curated public API, strong unit/BDD coverage on the agent itself, and real release/security tooling (Changesets, CodeQL, Scorecard, Semgrep, CVE scanning). The two-layer separation (pure agent ⟂ deployment) is the right architecture and is largely honored in code.
+The last three weeks removed the project's most serious security exposure by deleting the Electron target outright, replaced the dead Zod validator with schema validation that is actually wired into the default message path, and tightened the public export surface to a single curated entry point. The core `sail-desktop-agent` package is the strongest part of the repo and has gotten stronger.
 
-But it is not shippable as a production interop platform in its current state, and — more damaging for an open-source project — the docs claim it is. The single most serious technical issue is the **Electron shell granting Node.js integration to third-party app iframes that are themselves rendered with no sandbox**, a plausible remote-code-execution path. Alongside that sit a cluster of trust/robustness gaps (no runtime schema validation wired into the shipped agent, an origin allowlist that ships disabled and fails open, conformance/test fixtures compiled into the production bundle), 26 failing FINOS conformance scenarios, and a set of concrete documentation contradictions — most notably a direct "production-ready" vs. "not yet ready for production use" conflict between the docs site and the README, plus install instructions for npm packages that **do not exist on the public registry**.
+What has not moved: the packages are still unpublished (verified 404 today), FDC3 app iframes still render with no `sandbox` attribute, the origin allowlist still fails open, and the documentation still tells users to install packages that don't exist, run scripts that don't exist, and relies on a validation mechanism that was deleted. The conformance baseline is now stale enough to be unusable — the committed v6 export predates roughly ten conformance-fixing commits.
 
 **Biggest strengths**
 
-- Clean two-layer architecture; the WCP4 identity check (origin triple-match + app-directory-origin binding) is a real, well-implemented security control (`packages/sail-desktop-agent/src/app-connection/wcp/wcp-identity-validation.ts`).
-- Strong regression nets on the core agent: 58 Vitest files + ~134 Cucumber scenarios, no skipped/`.only` tests, assertions that check real behavior.
-- Serious CI/OSS scaffolding: Prettier/ESLint/typecheck/build/Vitest/Cucumber gate, plus CodeQL, Scorecard, Semgrep, dependency review, CVE scanning; Changesets-based release pipeline.
-- Conformance trajectory is real: 15→31→53 passing across harness runs; delivery and intent-result paths that used to time out now pass.
+- Clean two-layer architecture (pure agent ⟂ deployment), honored in code: no cross-package `src` imports.
+- WCP4 identity validation — origin triple-match plus app-directory-origin binding — is a real, well-implemented control (`app-connection/wcp/wcp-identity-validation.ts`, `wcp-identity-url-matching.ts`).
+- Inbound DACP/WCP schema validation is now **on by default**, sourced from `@finos/fdc3-schema` so it cannot drift from the targeted FDC3 version (`dacp/validate-dacp-message.ts`, wired at `handlers/index.ts:26-53`).
+- Single curated public entry point after `4dddd88f7`; internal reducer plumbing no longer in the semver contract.
+- Dense regression nets on the core: 42 Vitest files in `sail-desktop-agent` plus 17 Cucumber feature files / 152 scenarios, no `.skip`/`.only`/`@wip`.
+- Real OSS/security tooling: CodeQL, Scorecard, Semgrep, dependency-review, CVE scanning, OSPS baseline; Changesets release pipeline.
+- FDC3 3.0 work has begun in earnest (`agent/fdc3-version.ts`, intent-listener conflict detection, `closeRequest` gated on 3.0 advertisement).
 
 **Biggest risks**
 
-- **Electron** `nodeIntegration:true` **+** `nodeIntegrationInSubFrames:true` over unsandboxed third-party iframes → RCE-class exposure (Critical).
-- **FDC3 app iframes rendered with no** `sandbox` **attribute** (High).
-- **Documentation over-claims production readiness** and instructs `npm install` of unpublished packages (High for trust/adoption).
-- **26 failing FINOS conformance scenarios** (v6), including client metadata APIs and session teardown (High).
-- **No DACP/WCP payload schema validation wired into the shipped agent** despite the README claiming all DACP messages are Zod-validated (Medium-High).
+- **FDC3 app iframes render with no `sandbox`** — now the top security finding (High).
+- **Documentation describes a system that no longer exists**: Zod validation, `generate:schemas`, a `dacp-schemas.ts` path, `sail-server` in the repo tree, `dev:harness` (High for trust/adoption).
+- **Packages remain unpublished** while docs instruct `npm install` (High).
+- **Conformance status is unknown** — the committed baseline is stale, and the failure-review doc still names an even older one (High, unmeasured).
+- **Origin allowlist fails open and ships disabled** (Medium).
 
-**Is it ready for external open-source users today?** As a *contributable incubating project*, yes — with honest framing. As a *production interop platform you can install and deploy*, no.
+**Is it ready for external open-source users today?** As a *contributable incubating project*, yes, with honest framing — and the framing has improved as the surface shrank. As a *production interop platform you can install and deploy*, no.
 
 **Top recommended actions (in order)**
 
-1. Fix Electron `webPreferences` (remove Node integration for content/subframes) and add an explicit iframe `sandbox` allowlist in `sail-finance`.
-2. Reconcile the production-readiness messaging and fix the docs-vs-code drift (unpublished npm packages, `generate:schemas`, `dev:harness`, `WCPConnector`, release process).
-3. Wire the existing Zod validator into the default agent, or stop claiming validation happens.
-4. Land the conformance session-teardown + client-metadata fixes and re-run the toolbox to a fresh, single source-of-truth baseline.
+1. Add an explicit iframe `sandbox` allowlist in `sail-finance`; make the WCP4 origin allowlist fail closed.
+2. Rewrite the README's validation section to describe `@finos/fdc3-schema` validation and its `warn` default; delete the Zod/`generate:schemas` instructions.
+3. Re-run the FINOS toolbox to a fresh baseline and retire v5/v6 as "current".
+4. Reconcile the production-readiness messaging; publish the two packages or make clone-and-build the documented primary path.
+5. Clean up the deletion fallout: dangling `sail-ui` tsconfig reference, `sail-server` in `.changeset/pre.json` and `development.md`.
 
 ---
-
-
 
 ## Final Verdict
 
 1. **Is this a well-architected open-source FDC3 Desktop Agent?**
-  Yes, at the core. The `sail-desktop-agent` package is cleanly layered, transport-agnostic, curated at its public boundary, and well-tested. The architecture is sound; the gaps are at the edges (deployment security, validation wiring, conformance teardown), not in the core design.
+   Yes, and more clearly than three weeks ago. `sail-desktop-agent` is cleanly layered, transport-agnostic, curated at its public boundary, and well-tested. The remaining gaps are at the edges — deployment containment, validation strictness, and an unmeasured conformance position — not in the core design.
 2. **Is this a credible interop platform foundation?**
-  As a foundation, yes; as a finished platform, no. `sail-platform` is real but incomplete — workspace/layout/config APIs are `unknown`-typed, remote persistence throws "not yet implemented," and the flagship `sail-finance` app doesn't actually use the `SailPlatform` entry point the docs recommend. `sail-server` is a one-line stub.
+   As a foundation, yes; as a finished platform, no. `sail-platform` is real but incomplete: `WorkspacesApi`/`LayoutsApi`/`ConfigApi` are `unknown`-typed (`sail-platform.ts:139-159`), remote persistence throws "not yet implemented" (`client/sail-platform-client.ts:78`), and `sail-finance` still bypasses the recommended `SailPlatform` entry point in favour of `createSailBrowserDesktopAgent` (`main.tsx:110`).
 3. **Is it ready for external open-source users today?**
-  For contributors: yes, with caveats. For consumers who want to `npm install` and deploy: no — the packages aren't published, the Electron target is insecure and excluded from the default build, and the docs mislead on readiness.
-4. **Minimum changes required before calling it production-ready** — see [Release Blocking Issues](#release-blocking-issues). In short: fix Electron/iframe sandboxing, wire runtime validation, close the conformance metadata/teardown gaps, publish the packages, and align documentation with reality.
-5. **Recommendation to FINOS/OSS maintainers:** **Accept with conditions.** This is worth accepting and evolving as a FINOS *Incubating* project, but not worth tagging as production-ready or cutting a "1.0/production" release until the blockers below are closed. Hold any "production-ready" marketing until the security and conformance conditions are met.
+   For contributors: yes. For consumers who want to `npm install` and deploy: no — neither package is on the registry, iframe containment is absent, and the docs mislead on both readiness and mechanism.
+4. **Minimum changes before calling it production-ready** — see [Release Blocking Issues](#release-blocking-issues).
+5. **Recommendation to FINOS/OSS maintainers:** **Accept with conditions.** Worth accepting and evolving as a FINOS *Incubating* project. Hold any "production-ready" claim until iframe containment, documentation accuracy, publishing, and a re-measured conformance baseline are in place.
 
 ---
 
-
-
 ## Final Scorecard
 
+| Area | Score (1–5) | Δ vs 2026-07-07 | Justification |
+|---|---|---|---|
+| Product clarity | 3.5 | ▲ 0.5 | Scope tightened honestly — Electron and the server stub removed rather than left as aspirational targets. Readiness messaging still contradicts itself. |
+| Desktop Agent API usability | 4 | ▲ 1.0 | Single curated entry point after `4dddd88f7`; internal selectors/mutators no longer exported. Residual: `export *` of `host-contracts` and `interfaces`. |
+| Platform API usability | 3 | — | Unchanged: `unknown`-typed workspace/layout/config APIs, unimplemented remote backend, not dogfooded by the reference app. |
+| FDC3 conformance | **n/a** | — | **UNMEASURED.** The committed v6 export predates ~10 conformance-fixing commits. Scoring it would be fabricating a number. See [Conformance](#fdc3-conformance-status-unmeasured). |
+| Architecture | 4.5 | ▲ 0.5 | Two-layer separation intact and simplified by three package deletions; no cross-package `src` imports. Docked for deletion fallout in build config. |
+| Browser transport / WCP / DACP correctness | 3.5 | ▲ 0.5 | Identity boundary strong; schema validation now wired. Docked for `warn`-by-default, same-appId sole-pending auto-adopt, and session-teardown hygiene. |
+| Code quality | 3 | — | Readable and consistent; `as unknown as` wire casts are more widespread than previously reported (10+ sites), and `debug:true` is still hardcoded. |
+| Security posture | 3 | ▲ 1.0 | Critical Electron exposure gone; validation wired. Held back by unsandboxed iframes, fail-open allowlist, and unconditional full-payload identity logging. |
+| Performance / runtime robustness | 3 | — | The hardcoded 30s pending-intent timeout with no `delivered` guard is unchanged; stale-instance accumulation still affects `findIntent` correctness. |
+| Test confidence | 3 | — | Strong on the core agent; `sail-theme` untested; duplicate byte-identical Playwright specs still present and still not in CI; no coverage thresholds. |
+| Documentation accuracy | **1.5** | ▼ 0.5 | **Worse.** The README now documents a validation mechanism that was deleted, a script that does not exist, and a file path that does not exist. |
+| Open-source readiness | 3 | — | Good scanners and Changesets; still stale CoC name, boilerplate SECURITY.md routing vulns to public issues, no PR template, unpublished packages. |
+| Contributor experience | 3 | — | `AGENTS.md` is dense and useful but names `v3-pre` as the integration branch; CI still doesn't gate the branch where work happens. |
+| Release readiness | 2 | — | Pipeline exists, has never published. `.changeset/pre.json` still lists the deleted `@finos/sail-server`. |
 
-| Area                                       | Score (1–5) | Justification                                                                                                                                                     |
-| ------------------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Product clarity                            | 3           | Identity is clear (agent + browser/electron deployments + platform SDK), but readiness messaging directly contradicts itself and `sail-server` is a shipped stub. |
-| Desktop Agent API usability                | 3           | Curated `index.ts` with an explicit "not exported" note is good; undermined by wholesale `export *` of internal state selectors/mutators.                         |
-| Platform API usability                     | 3           | Well-documented config, but `unknown`-typed workspace/layout APIs and unimplemented remote backend; not dogfooded by the reference app.                           |
-| FDC3 conformance                           | 2           | v6: 53 pass / 26 fail (~67%). Core delivery works; metadata APIs, teardown, and timing scenarios still fail.                                                      |
-| Architecture                               | 4           | Clean two-layer separation, no cross-package `src` imports, sensible subpath exports. Minor leaks.                                                                |
-| Browser transport / WCP / DACP correctness | 3           | Identity boundary is strong; but no payload schema validation wired, session-teardown hygiene issues, same-appId sole-pending auto-adopt.                         |
-| Code quality                               | 3           | Readable and consistent; some AI-generated-style verbosity, `as unknown as` casts around wire types, dead/misleading config (`debug:true`).                       |
-| Security posture                           | 2           | Electron Node-in-subframes RCE risk, unsandboxed iframes, validation not wired, allowlist ships off and fails open.                                               |
-| Performance / runtime robustness           | 3           | Reasonable; timeouts exist but some are very long (61s intent budget), stale-instance accumulation affects correctness.                                           |
-| Test confidence                            | 3           | Strong on core agent; zero tests for `sail-ui`/`sail-electron`/`sail-server`, dead duplicate Playwright specs, no coverage thresholds.                            |
-| Documentation accuracy                     | 2           | Multiple concrete, reproducible drift items and a direct readiness contradiction.                                                                                 |
-| Open-source readiness                      | 3           | Good CI/security scanners and Changesets; hurt by stale CoC name, minimal/boilerplate SECURITY.md, no PR template, license inconsistency, unpublished packages.   |
-| Contributor experience                     | 3           | Dense, useful `AGENTS.md`; but CI doesn't run on the `v3-pre` integration branch where work actually happens.                                                     |
-| Release readiness                          | 2           | Pipeline exists but has never published; Electron build excluded/broken; docs describe two contradictory release processes.                                       |
+**Overall: ~3.2 / 5 across measured areas** (up from ~2.7), **with conformance explicitly unscored.** A strong, coherent late-beta agent — not yet a production platform.
 
-
-**Overall: ~2.7 / 5 — a strong, coherent prototype approaching beta, not a production platform.**
-
-**Release recommendation: Do not ship yet (as "production"); safe to continue as FINOS Incubating with honest framing.**
-
-**Minimum bar to change that recommendation:** close all [Release Blocking Issues](#release-blocking-issues) (Electron/iframe hardening, wire validation, conformance metadata + teardown fixes, align docs, publish packages), then re-run the FINOS toolbox to a single authoritative baseline.
+**Release recommendation: do not ship as "production."** Safe and reasonable to continue as FINOS Incubating with honest framing.
 
 ---
 
 ## Focused Package Review: `sail-desktop-agent`
 
-_This section scores the core package on its own merits. Deployment-layer issues (Electron Node integration, iframe sandboxing, `debug:true`, fixture bundling) belong to `sail-finance`/`sail-electron` and are deliberately **excluded** here — they are not this package's responsibility. This is the most important and most complete package in the repo, and it deserves to be judged independently._
+*Deployment-layer issues (iframe sandboxing, `debug:true`, fixture bundling) belong to `sail-finance` and are excluded here.*
 
-**Package verdict: the strongest part of the project — near-complete and dependable in design, held back from "done" by a handful of isolated correctness bugs and a public-API surface that needs tightening. ~3.8/5.**
+**Package verdict: the strongest part of the project, and stronger than three weeks ago. ~4.1/5** (was ~3.8). The public-API leak that capped the previous score is closed, and validation is wired. What remains is a small set of pinpointed correctness bugs.
 
-### What it is
+### Scale & coverage (measured statically, 2026-07-28)
 
-The pure, environment-agnostic FDC3 runtime: agent state (immer-based), the full DACP handler set, and the WCP identity/connection primitives, with DACP routing that only activates when an app-connection edge is attached (`agent/desktop-agent.ts` `attachAppConnection`). Browser hosts layer `SailDesktopAgent` on top; tests attach a `DacpTestAppConnection`. This "pure core + attachable transport edge" design is the package's defining strength and is genuinely well-executed.
+- **93 non-test source files, 13,226 LOC** (was 93 / 13,082 — essentially flat).
+- **42 Vitest files in `src`** plus **17 Cucumber feature files / 152 scenarios**; no `.skip`/`.only`/`@wip`.
+- Full FDC3 surface: `broadcast/`, `channels/`, `private-channels/`, `intents/`, `open/`, `events/`, `heartbeat/`, `wcp/`, plus new `agent/fdc3-version.ts` and `handlers/intents/intent-listener-conflict.ts` for FDC3 3.0.
+- Publishable, versioned `3.0.0-pre.1.0`, Apache-2.0, single root export.
 
-### Scale & coverage (measured)
-
-- **93 non-test source files, ~13,082 LOC.**
-- **41 Vitest files in `src` + 17 Cucumber feature files (152 scenarios)** — a very healthy test-to-source ratio, no `.skip`/`.only`/`@wip`.
-- Full FDC3 surface implemented: `broadcast/`, `channels/`, `private-channels/`, `intents/`, `open/`, `events/`, `heartbeat/`, `wcp/`.
-- Publishable, versioned (`3.0.0-pre.1.0`), Apache-2.0, curated subpath exports (`.` vs `./browser`).
+> A correction to the previous review: its Strengths section claimed "58 Vitest files + ~134 Cucumber scenarios", contradicting its own package section ("41 Vitest + 152 scenarios"). The 58/134 figure was wrong when written. The measured figures above supersede both.
 
 ### Package Scorecard
 
-| Sub-area | Score (1–5) | Justification |
-|---|---|---|
-| FDC3 API completeness | 4 | Full surface present; delivery, intent-result (void/context/channel/private), channels, private-channel lifecycle, and intent-listener-conflict all pass conformance. Gaps are isolated, not structural. |
-| Conformance (agent-attributable only) | 3 | Excluding harness-side (C-4) and the client-library gap (C-1), the agent genuinely owns ~5–6 rows: `createAppIntents` dedup (C-5), 30s pending-intent timeout (C-6), traceId forwarding (C-3), and the unexplained `desktopAgent`/open-routing cases (C-2). Real but bounded. |
-| Architecture & design | 4.5 | Pure-core-plus-attachable-edge is excellent; immer state; injectable logger/validator/launcher; clean handler decomposition; no cross-package `src` imports. |
-| Public API design | 3 | Curated `index.ts` with an explicit private-by-design note is good, but `export *` of `state/selectors` and `state/mutators` (`index.ts:26-27`) leaks internal reducer plumbing into the semver contract. |
-| Code quality | 4 | Dense, accurate JSDoc; small focused handlers; readable. Docked for `as unknown as <WireType>` casts at the wire boundary (`wcp-identity-validation.ts:253,363`) with standing TODOs about generated-type/schema mismatch. |
-| Test quality & coverage | 4 | Behavioral assertions (error codes, state transitions, transport message counts), table-driven cases, strong BDD. Docked because there are no coverage thresholds and some regression nets assert the wire payload without reproducing the real client-visible failure (C-1/C-2). |
-| Runtime correctness / robustness | 3 | The hardcoded 30s `attachPendingIntentTimeout` that tears down bookkeeping regardless of delivery (`intent-raise-shared.ts:180`) is a real robustness defect; stale-instance accumulation inflates `findIntent` counts under churn. |
-| Package documentation | 4 | Excellent in-code JSDoc and a real package README/website docs; the one blemish is the *root* README's inaccurate "all DACP messages are Zod-validated" claim, since the validator is opt-in here (the package correctly provides the hook — `validator?: MessageValidator` — and applies it at `handlers/index.ts:38`). |
-
-**Package overall: ~3.8/5 — production-capable core, not yet production-proven.**
-
-### Why it scores well above the project as a whole
-
-The project-level 2.7 is dragged down by deployment security (Electron/iframe), unpublished packages, and docs drift — **none of which are this package's fault.** Judged alone, `sail-desktop-agent` is a well-architected, well-tested, near-complete FDC3 agent. Its conformance failures are mostly *not* its own (harness teardown, a missing client-library method), and the ones that are (`createAppIntents` dedup, the 30s timeout, traceId forwarding) are small, pinpointed, and independently fixable.
+| Sub-area | Score | Δ | Justification |
+|---|---|---|---|
+| FDC3 API completeness | 4.5 | ▲ 0.5 | Full 2.2 surface plus in-progress FDC3 3.0 (version comparison, intent-listener conflict detection, `closeRequest` gating). |
+| Conformance (agent-attributable) | **n/a** | — | UNMEASURED — the export is stale. Two agent-owned defects remain identified in code (C-5, C-6). |
+| Architecture & design | 4.5 | — | Pure-core-plus-attachable-edge remains excellent; immer state; injectable logger/launcher; clean handler decomposition. |
+| Public API design | 4 | ▲ 1.0 | `4dddd88f7` reduced the surface to one entry point. Docked only for remaining `export *` of `host-contracts` and `interfaces`, and a malformed `exports` condition order (NEW-4). |
+| Code quality | 3.5 | ▼ 0.5 | Dense accurate JSDoc, small handlers. Docked further because `as unknown as <WireType>` casts are broader than previously reported — 10+ non-test sites including all of `dacp-message-creators.ts`. |
+| Test quality & coverage | 4 | — | Behavioral assertions, table-driven cases, strong BDD. Still no coverage thresholds. |
+| Runtime correctness / robustness | 3 | — | `attachPendingIntentTimeout` (`intent-raise-shared.ts:177-195`) still hardcodes 30 000 ms and still tears down bookkeeping with no `delivered` guard. `createAppIntents` still double-counts. |
+| Package documentation | 3.5 | ▼ 0.5 | In-code JSDoc remains excellent — `validate-dacp-message.ts` documents *why* `warn` is the default, which is exactly right. Docked because the root README's validation section is now wholly fictional. |
 
 ### What stands between this package and "done"
 
-1. **Fix the three agent-owned conformance bugs:** dedupe `createAppIntents` by `appId` (C-5); add a `delivered` guard / configurable budget to `attachPendingIntentTimeout` (C-6); forward app-provided `traceId`/`antiReplay`/`custom` on raised intents (C-3).
-2. **Resolve C-2** with a live harness trace — the `desktopAgent` field is present in code and in a client that doesn't strip it, so the loss point is currently unexplained and the regression net doesn't reproduce it.
-3. **Tighten the public API:** replace `export *` of `state/selectors` and `state/mutators` with an explicit, intentional export list before publishing a stable version.
-4. **Decide validation policy:** either default-inject `createZodValidator()` or make the root README stop claiming validation is always on.
-5. **Add coverage thresholds** so the strong existing suite protects future refactors (especially relevant given the in-flight `collapse-browser-app-connection-into-desktop-agent` work).
-6. **Retire the wire-type `as unknown as` casts** once a validated boundary exists.
-
-### Maintainer confidence for this package specifically
-
-**Higher than for the repo overall.** A maintainer could accept and evolve `sail-desktop-agent` with confidence today: the tests are strong enough to catch regressions in the core paths, the architecture is documented, and the failure-attribution discipline (`conformance-test-failure-review.md`) is a real asset. The two reservations are the API-surface leakage (a stability risk once external users pin to it) and the fact that the package has never actually been published, so its semver/packaging contract is unproven in the wild.
+1. **Dedupe `createAppIntents` by `appId`** (C-5) — confirmed still open, see below.
+2. **Add a `delivered` guard to `attachPendingIntentTimeout`** and separate "how long to wait for a listener" from "max intent round-trip" (C-6) — confirmed still open.
+3. **Bump `@finos/fdc3`/`@finos/fdc3-agent-proxy`** past 2.2.3 for `getResultMetadata()` (C-1) — confirmed still open.
+4. **Decide the validation default**: `warn` is a defensible transition state, but it is not an enforcement boundary. Ship a plan to reach `strict`.
+5. **Add coverage thresholds** so the strong suite protects future refactors.
+6. **Retire the `as unknown as` wire casts** now that a validated boundary exists.
 
 ---
-
-## Checklist
-
-
-
-### Areas of Strength
-
-- Transport-agnostic core agent with clean deployment separation (`README.md` architecture; borne out in `packages/sail-desktop-agent/src/`).
-- Robust WCP4 identity validation: origin triple-check + app-directory-origin binding (`wcp-identity-validation.ts:79-125`, `wcp-identity-url-matching.ts`).
-- Curated public API with an explicit private-by-design note (`packages/sail-desktop-agent/src/index.ts:87-90`).
-- Deep, honest regression nets on the agent (58 Vitest + ~134 Cucumber scenarios; no `.skip`/`.only`/`@wip`).
-- Real security/OSS tooling: CodeQL, Scorecard, Semgrep, dependency-review, CVE-scanning workflows; Changesets release pipeline (`.github/workflows/`).
-- Measurable conformance progress with a detailed, self-critical failure-attribution doc (`conformance-test-failure-review.md`).
-
-
-
-### Areas of Weakness
-
-- Electron shell security posture (Node integration in subframes).
-- No `sandbox` on FDC3 app iframes; conformance/test fixtures + `debug:true` compiled into the production bundle.
-- Runtime schema validation exists but is not wired into the shipped agent.
-- 26 failing conformance scenarios (client metadata, teardown, timing).
-- Documentation drift and a direct production-readiness contradiction; unpublished npm packages the docs tell users to install.
-- Packages with no tests (`sail-ui`, `sail-electron`, `sail-server`); dead Playwright specs; no coverage gates.
-- CI does not run on the `v3-pre` integration branch; `sail-server` license/`private` inconsistencies.
-
-
-
-### Critical Considerations
-
-- The Electron deployment is one of two advertised targets, yet it is both insecure and excluded from the default build — it should not be presented as a supported production target until hardened.
-- "Production-ready" language on the docs site is not supportable given conformance status, security gaps, and unpublished packages; it risks the project's credibility with FINOS and adopters.
-
----
-
-
 
 ## Release Blocking Issues
 
-Only Critical/High items that block a production or "production-ready" open-source release.
+Only items that block a production or "production-ready" release. Renumbered — the previous BLOCK-1 (Electron) no longer exists.
 
-### BLOCK-1 — Electron grants Node.js to third-party app subframes (Critical, Security)
+### BLOCK-A — FDC3 app iframes render with no `sandbox` (High, Security)
 
-- **Location:** `packages/sail-electron/src/main.ts:12-17` (`WEB_PREFERENCES`), reused for content view and popup views (`:53-56`, `:134-195`).
-- **Evidence:** `nodeIntegration: true` **and** `nodeIntegrationInSubFrames: true` are applied to the `WebContentsView` that loads `SAIL_URL` (the sail-finance app), which in turn iframes arbitrary FDC3 app URLs. `contextIsolation: true` isolates the *preload* context only; it does not remove renderer/subframe Node access.
-- **Why it matters:** Any FDC3 app loaded in a panel — if malicious, compromised, or supply-chain-poisoned — gets `require`, `process`, `child_process`, filesystem, etc. in the Electron renderer. That is remote code execution on the host OS from a web app.
-- **Recommended fix:** Set `nodeIntegration: false`, `nodeIntegrationInSubFrames: false`, `sandbox: true`; expose only what's needed via the existing `contextBridge` preload (`packages/sail-electron/src/preload/desktop-agent-proxy.ts` already uses this pattern correctly). Add a `session.setPermissionRequestHandler` and a CSP for loaded content.
+- **Location:** `packages/sail-finance/src/components/layout-grid/panel-templates/FDC3IframePanel.tsx`.
+- **Evidence:** grep for `sandbox` across `packages/sail-finance/src` returns **zero hits**. The `<iframe>` sets `src`, `name`, and `style` only.
+- **Why it matters:** the iframe is now the *only* structural containment for third-party apps, since the Electron target — which previously compounded this — is gone. Removing Electron narrowed the blast radius to the browser tab; it did not add containment.
+- **Recommended fix:** add an explicit `sandbox` allowlist (e.g. `allow-scripts allow-forms allow-popups`), granting `allow-same-origin` only where an app's directory origin genuinely requires it, plus a minimal `allow` policy. Validate against real FDC3 apps — WCP uses `postMessage`/`MessageChannel`, which survive sandboxing.
 - **Blocks release:** Yes.
 
+### BLOCK-B — Documentation describes a system that no longer exists (High, Docs/Product)
 
+This was previously a readiness-messaging problem. It is now also a *mechanism* problem, and it got worse rather than better.
 
-### BLOCK-2 — FDC3 app iframes rendered with no `sandbox` (High, Security)
-
-- **Location:** `packages/sail-finance/src/components/layout-grid/panel-templates/FDC3IframePanel.tsx:65-80`.
-- **Evidence:** the `<iframe>` sets `src`, `name`, `style` only — no `sandbox` or `allow`. Grep confirms zero `sandbox=` usages in `sail-finance/src`.
-- **Why it matters:** the iframe is the only structural containment for third-party apps in the browser host and it provides none. Compounds BLOCK-1 in the Electron build.
-- **Recommended fix:** add an explicit `sandbox` allowlist (e.g. `allow-scripts allow-forms allow-popups`; grant `allow-same-origin` only where the app's directory origin genuinely requires it) and a minimal `allow` policy. Validate against real FDC3 apps since WCP uses `postMessage`/`MessageChannel`, which survive sandboxing.
+- **Evidence:**
+  - `README.md:141` — "Sail validates all FDC3 Desktop Agent Communication Protocol (DACP) messages using **Zod schemas** auto-generated from the official FDC3 JSON schemas." **There is no Zod in the repository** — no dependency in any `package.json`, no `createZodValidator`, no generated schema file.
+  - `README.md:151` — instructs `npm run generate:schemas --workspace=@finos/sail-desktop-agent`. **No such script exists** in any manifest.
+  - `README.md:154` — names `packages/sail-desktop-agent/src/handlers/validation/dacp-schemas.ts` as the generated file. **That path does not exist.** (The previous review's correction — "it's actually at `sail-platform/src/services/validation/`" — is also now wrong; that file is gone too.)
+  - `website/docs/development.md:55` — repo-tree diagram still lists `sail-server/  # Node.js backend server (@finos/sail-server)`, a package deleted 2026-07-22.
+  - `.changeset/pre.json` — still lists `"@finos/sail-server": "0.0.1"` in `initialVersions`.
+- **Why it matters:** a reader following the README to understand or extend validation will look for a mechanism that was deleted, find nothing, and lose confidence in every other claim in the document. This is more damaging than the previous "validator not wired" finding, because the previous state was at least *describable*.
+- **Recommended fix:** rewrite `README.md:141-160` to describe `dacp/validate-dacp-message.ts`, its `@finos/fdc3-schema` source, the `off`/`warn`/`strict` modes, and the `warn` default. Delete the `generate:schemas` instructions. Sweep `development.md` and `.changeset/pre.json` for deleted packages.
 - **Blocks release:** Yes.
 
+### BLOCK-C — Production-readiness claim contradicts the README (High, Docs/Product)
 
+- **Location:** `website/docs/intro.md:61,65` and `website/docs/run-sail.md:68` vs `README.md:184`.
+- **Evidence:** the docs site says "FDC3 Sail is a **production-ready product** for hosting FDC3 applications" and "Sail is **production-ready** for running FDC3 workloads"; the README says it is "currently in active development and **not yet ready for production use**."
+- **Why it matters:** conflicting readiness claims from the same project destroy trust for a FINOS-incubating effort, and the docs-site claim is not supportable while conformance is unmeasured and the packages are unpublished.
+- **Recommended fix:** pick one honest message (Incubating/beta) and apply it everywhere.
+- **Blocks release:** Yes for any "production-ready" claim.
 
-### BLOCK-3 — Documentation claims production readiness and installability that don't hold (High, Docs/Product)
+### BLOCK-D — Packages are not published (High, Adoption)
 
-- **Location:** `website/docs/intro.md:61,65`, `website/docs/run-sail.md:99` vs `README.md:190`; `website/docs/getting-started.md:70`.
-- **Evidence:** docs site says "FDC3 Sail is a **production-ready product**"; README says "**not yet ready for production use**." Docs tell users to `npm install @finos/sail-desktop-agent @finos/fdc3`, but `npm view` returns **404** for both `@finos/sail-desktop-agent` and `@finos/sail-platform` — neither has ever been published.
-- **Why it matters:** an external developer following the docs fails at step one; conflicting readiness claims destroy trust for a FINOS-incubating project.
-- **Recommended fix:** pick one honest readiness message (Incubating/beta), correct it everywhere, and either publish the packages or change the docs to a clone-and-build primary path until they are.
-- **Blocks release:** Yes for any "production-ready" claim or public adoption push.
+- **Evidence (live registry query, 2026-07-28):** `npm view @finos/sail-desktop-agent` and `npm view @finos/sail-platform` both return **E404 — Not Found**. Neither has ever been published. `website/docs/getting-started.md` instructs `npm install`.
+- **Why it matters:** an external developer following the docs fails at step one. This remains the single biggest adoption blocker.
+- **Recommended fix:** publish both under the `pre` tag, or make clone-and-build the documented primary path until you do.
+- **Blocks release:** Yes for a public adoption push.
 
+### BLOCK-E — Conformance status is unknown (High, Conformance — UNMEASURED)
 
-
-### BLOCK-4 — 26 failing FINOS conformance scenarios (High, Conformance)
-
-- **Location:** `packages/sail-conformance-harness/results/conformance-report-v6.txt` (53 pass / 26 fail).
-- **Evidence:** failing clusters — `getResultMetadata` returns empty (4, a client-library gap), `AppMetadata` missing `desktopAgent` on harness path (2), intent `traceId` not forwarded (1), close-context teardown (4, harness-side, down from 26 in v5), `findIntent`/`findIntentsByContext` count inflation (3), `findInstances` instanceId mismatch (1), open-with-context 20s timeouts (3), `GetInfo2` 10s timeout (1), 61s delayed-result 80s timeouts (2, a real agent bug). ~22 of the 26 are positively evidenced from the text export; a few rows (`AOpensBWithWrongContext`, the long-duration `raiseIntent (throws error)` scenarios) are ambiguous in the raw dump.
-- **Why it matters:** conformance is the core value proposition of an FDC3 agent. ~67% pass is not a production bar.
-- **Recommended fix:** see [FDC3 Conformance Findings](#fdc3-conformance-findings).
-- **Blocks release:** Yes for a conformance-claiming release.
-
-
-
-### BLOCK-5 — Runtime message validation exists but is not enabled in the shipped agent (Medium-High, Security/Docs)
-
-- **Location:** `packages/sail-desktop-agent/src/handlers/index.ts:37-53` (validation is conditional on an injected `validator`); `packages/sail-platform/src/services/validation/zod-validator.ts` (`createZodValidator`) is never passed by `SailDesktopAgent` (`agent/sail-desktop-agent.ts`) or `createSailBrowserDesktopAgent` (`sail-platform/src/sail-browser-desktop-agent.ts`). `README.md:144-159` claims "Sail validates all FDC3 DACP messages using Zod schemas."
-- **Evidence:** inbound WCP/DACP messages are only shape/duck-typed (`app-connection/wcp/wcp-types.ts:29-52`, `isDACPMessage`/`isAppMessage`). The full Zod validator is built and tested but dead in the default path.
-- **Why it matters:** a connected (WCP4-passed) but malicious app can send malformed/type-confused payloads straight to handlers; and the README asserts a guarantee the product doesn't provide.
-- **Recommended fix:** inject `createZodValidator()` by default in `createSailBrowserDesktopAgent`/`SailDesktopAgent` (with an opt-out), or correct the README. Prefer wiring it on.
-- **Blocks release:** Yes for the security claim; otherwise High.
+- **Evidence:** the newest committed export, `packages/sail-conformance-harness/results/conformance-report-v6.txt`, was last written **2026-06-23** (`11c8cda71`). Since then roughly ten conformance-affecting commits have landed, including DACP listener ordering for the open-with-context race (`09b5b7024`), FINOS `closeWindow` relay and the `desktopAgent` bridging gate (`77cac2a39`), WCP host-identifier resolution when `window.name` is cleared (`677d1686c`), popup adoption stabilisation (`da22e7f66`), and `AppLauncher.close` wiring (`1c2e75a68`).
+- **Compounding:** `results/conformance-test-failure-review.md:3` still declares **"Current baseline: `conformance-report-v5.txt` (53 pass / 49 fail)"** — one generation older than the newest committed export and two generations behind the code. The results folder now carries three mutually inconsistent notions of "current."
+- **Why it matters:** conformance is the core value proposition of an FDC3 agent. The project currently cannot state its own conformance position, and the previous review's headline "53 pass / 26 fail (~67%)" now describes code that no longer exists. Quoting it would be misleading.
+- **Recommended fix:** re-run the FINOS toolbox against `wip/v3-local`, commit the export as the single authoritative baseline, update `conformance-test-failure-review.md` to match, and delete or clearly archive v3–v5.
+- **Blocks release:** Yes for any conformance claim.
 
 ---
 
+## FDC3 Conformance Status (UNMEASURED)
 
+**No pass/fail figure is quoted in this review, deliberately.** The committed baseline is stale (BLOCK-E) and the toolbox could not run in this environment. What follows is the status of individual defects *as verified in source*, independent of any harness run.
 
-## FDC3 Conformance Findings
+### C-1 — `getResultMetadata()` unavailable in the client library — **still open, external**
 
-Baseline: **v6 = 53 pass / 26 fail** (`conformance-report-v6.txt`). Note a documentation-hygiene issue: `conformance-test-failure-review.md` still calls **v5 (53/49)** the "current baseline" — the results folder itself is internally stale and should be updated to v6.
+- **Verified today:** all packages still depend on `@finos/fdc3` `^2.2.3`; the installed `@finos/fdc3-agent-proxy` is **2.2.3**, and a recursive grep of that package returns **zero** occurrences of `getResultMetadata`.
+- The agent side is wired (`handlers/intents/intent-result-handlers.ts`, `intent-result-metadata.ts`). This cluster cannot be fixed in `sail-desktop-agent` source.
+- **Fix:** dependency bump, then re-run. Track as a dependency item, not an agent bug.
 
-### C-1 — `getResultMetadata()` returns empty (4 rows) — external/dependency blocker, not a source fix
+### C-2 — `desktopAgent` on `AppMetadata` — **superseded by a design decision**
 
-- **Observed:** `RaiseIntentContextResultMetadata`, `RaiseIntentContextWithMetadataResult`, `RaiseIntentChannelResultMetadata`, `RaiseIntentVoidResultMetadata` all fail `expected '' to not equal ''`.
-- **Root cause (confirmed):** the DA side is fully wired — `handlers/intents/intent-result-handlers.ts:136-171` and `intent-result-metadata.ts` (`buildIntentResultWirePayload`, `attachIntentResultClientMetadata`) populate `raiseIntentResultResponse.payload.metadata` and attach it to the client-visible result (Vitest green). But the pinned client library `@finos/fdc3-agent-proxy@2.2.3` **has no** `getResultMetadata()` **method at all** — its `DefaultIntentResolution` exposes only `getResult()` (verified: zero `getResultMetadata` hits across the installed `@finos/fdc3`/`@finos/fdc3-agent-proxy` dist trees). This cluster **cannot be fixed in** `sail-desktop-agent` **source.**
-- **Fix:** bump `@finos/fdc3`/`@finos/fdc3-agent-proxy` to a version that implements `getResultMetadata()`, then re-run the toolbox. Track as a dependency-upgrade item, not an agent bug.
-- **Regression test:** after the dependency bump, a WCP/browser-path test asserting a non-empty `getResultMetadata()` on the *client*.
+- The previous review flagged this as an unexplained loss. It is now **deliberate**: `handlers/open/handlers.ts:248-250` documents `desktopAgent` as the FDC3 2.1+ experimental bridging field and emits it only when `includeDesktopAgent` is true (bridging claimed). `wcp-identity-validation.ts:220-227` consistently omits it from WCP5 `ImplementationMetadata.appMetadata`.
+- **Action:** confirm against the FINOS toolbox whether its expectation is compatible with bridging-gated emission. If the toolbox expects the field unconditionally, this becomes a spec-interpretation question to raise with FINOS, not a code fix.
 
+### C-3 — app-provided `traceId`/`antiReplay`/`custom` forwarding — **fixed**
 
+- `intent-result-metadata.ts:189-200` now explicitly forwards `traceId`, `signature`, `antiReplay`, and `custom` when present, with DA source/timestamp taking precedence. Commit `4494c5cd7`.
 
-### C-2 — `AppMetadata` missing `desktopAgent` on harness path (2 rows)
+### C-4 — Session teardown — **substantially addressed, needs re-measurement**
 
-- **Observed:** `GetAppMetadata`/`AppInstanceMetadata` — "expected [...] to include 'desktopAgent'".
-- **Root cause:** in-repo tests confirm `desktopAgent` is set on the wire JSON for the open/directory path (`handlers/open/handlers.ts:46,264,322`; `get-app-metadata-harness-path.test.ts:82-83` passes). Yet the toolbox still sees it missing — so either a different response path omits it or the field is stripped before reaching the client. Note `wcp-identity-validation.ts:219-227` builds the `ImplementationMetadata.appMetadata` for WCP5 **without** a `desktopAgent` field, which is at least one path that omits it.
-- **Fix:** audit every `AppMetadata` producer (WCP5 implementation metadata, getAppMetadata response, findInstances) for the `desktopAgent` field; the regression net asserts the wire payload but not the actual failing client path.
-- **Regression test:** harness-path test asserting `desktopAgent` on the metadata the client actually receives for both directory and running-instance lookups.
+- `harness-finos-teardown.ts`, `harness-browsing-context-close.ts`, and `harness-instance-lifecycle.ts` are in place, and `1c2e75a68` wired `AppLauncher.close` to always disconnect on panel removal. This is harness and host code, not shipped-agent code — a good production-readiness signal. Residual status unknown pending a fresh run.
 
+### C-5 — `findIntent`/`findIntentsByContext` count inflation — **CONFIRMED still open**
 
+- **Verified in source:** `handlers/intents/intent-helpers.ts` — `createAppIntents` builds `AppIntent.apps` in two unconditional passes. The first (`// First, add apps from directory in directory order`) pushes every matching directory app with no `instanceId`; the second (`// Then, add running instances with their instanceId`) pushes every matching running listener. **Neither pass dedupes by `appId`**, so an app that is both in the directory and running appears twice.
+- **Reader beware:** a *different* function in the same file (around `:202-206`) does dedupe — `const runningAppIds = new Set(...)` with a `.filter(app => !runningAppIds.has(app.appId))`. It is easy to mistake that for the fix. `createAppIntents` has no equivalent.
+- **Fix:** dedupe by `appId` in `createAppIntents`, preferring the running-instance row. The failure-review flags the dedupe *policy* as pending FINOS clarification — confirm the intended shape before coding.
 
-### C-3 — Intent `traceId`/`antiReplay`/`custom` not forwarded (1 row)
+### C-6 — Hardcoded 30s pending-intent timeout — **CONFIRMED still open**
 
-- **Observed:** `IntentContextMetadataWithAppMetadata` — `expected '<generated-uuid>' to equal 'intent-trace-456'`.
-- **Root cause:** the DA generates its own trace metadata instead of forwarding the app-provided `ContextMetadata` fields on a raised intent. See `handlers/intents/intent-result-metadata.ts` and the raise-intent handler path.
-- **Fix:** when the raising app supplies `traceId`/`signature`/`antiReplay`/`custom`, propagate them into the delivered `ContextMetadata` rather than overwriting with a fresh UUID.
-- **Regression test:** raise an intent with a fixed `traceId` and assert the receiving listener sees that exact value.
-
-
-
-### C-4 — Session-teardown / "App didn't return close context within 1 sec" (4 rows in v6, down from 26 in v5)
-
-- **Observed:** `ACBasicUsage1`, `ACBasicUsage2`, `UCBasicUsage1`, `UCContextMetadataOnBroadcast` fail because mock apps don't return close context before the next scenario.
-- **Root cause:** harness session hygiene, **largely already fixed** — the new `harness-finos-teardown.ts` (`createHarnessFinOsTeardownObserver`, `parseMockAppControlTeardownBroadcast`) + `harness-browsing-context-close.ts` cut this from 26 rows (v5) to 4 (v6). Residual rows look like a timing race in the deferred-disconnect observer (`setTimeout(disconnect, deferDisconnectMs)`, default 0). **This is harness-only, not shipped-agent code** — a good production-readiness signal.
-- **Fix:** tighten the teardown observer timing so all four residual scenarios return to baseline deterministically.
-- **Regression test:** a harness lifecycle test asserting instance/connection count returns to baseline after a scenario close.
-
-
-
-### C-5 — `findIntent`/`findIntentsByContext` count inflation (3 rows) and `findInstances` id mismatch (1 row)
-
-- **Observed:** `FindIntentAppD`, `FindIntentAppDRightContext`, `FindIntentByContextSingleContext` — "expected length 1, got 2"; `FindInstances` — instanceId mismatch.
-- **Root cause (confirmed in code):** `createAppIntents` (`handlers/intents/intent-helpers.ts:281-345`) builds `AppIntent.apps` in two unconditional passes — first every matching **directory** app (no `instanceId`), then every matching **running listener** (with `instanceId`) — **with no dedupe by** `appId`. An app that is both in the directory and running appears twice. Stale instances from teardown (C-4) can compound this. The `findInstances` mismatch is a separate launcher-vs-WCP-canonical instanceId reconciliation issue (`handlers/open/handlers.ts:~145` pre-registers the launcher-assigned id before WCP4; if the canonical id diverges, `findInstances` and `IntentResolution.source.instanceId` disagree).
-- **Fix:** dedupe by `appId` in `createAppIntents` (prefer the running-instance row when both exist); reconcile launcher and WCP5-assigned instanceIds for `findInstances`. The failure-review flags the dedupe *policy* as blocked on FINOS clarification — worth confirming the intended shape before coding.
-- **Regression test:** open N instances of a directory app, assert `findIntent` count and `findInstances` instanceIds match exactly.
-
-
-
-### C-6 — Timing/timeout scenarios (open-with-context 20s ×3, GetInfo2 10s, 61s delayed results ×2)
-
-- **Observed:** Mocha timeouts on `AOpensBWithContext3`/`AOpensBWithSpecificContext`/`AOpensBMultipleListen` (20s), `GetInfo2` (10s), and `RaiseIntentVoidResult61secs`/`RaiseIntentContextResult61secs` (80s).
-- **Root cause:**
-  - **61s delayed results — genuine agent bug (high confidence).** `attachPendingIntentTimeout` (`handlers/intents/intent-raise-shared.ts:177-195`) is called with a **hardcoded 30000ms default** from both raise paths (`intent-raise-intent.ts:230`, `intent-raise-intent-for-context.ts:105`). Its callback unconditionally deletes the pending-intent bookkeeping at t=30s **regardless of whether the result was already delivered** (no `delivered` guard). When the target's result arrives at t≈61s, `getPendingIntent` returns `undefined`, `handleIntentResultRequest` throws "No pending intent found," and the original `raiseIntent()` promise never settles → Mocha's 80s hard timeout. This constant conflates "how long to wait for a listener" with "max intent round-trip time."
-  - **Open-with-context 20s + GetInfo2 10s:** likely a response-routing/instance-identity issue — the DA's own `AppTimeout` (15s, `dacp-constants.ts:17`) fires *before* Mocha's 20s cutoff, so a graceful timeout response *should* reach the client in time; that Mocha itself times out implies the response isn't routing back, pointing at the same launcher-vs-canonical instanceId divergence as C-5's `findInstances`. Needs a live trace to confirm.
-- **Fix:** give `attachPendingIntentTimeout` a `delivered` guard (or clear it on delivery, not just on result) and make the max round-trip budget configurable/larger than the listener-wait; trace the open/GetInfo instanceId routing.
-- **Regression test:** a >30s-delayed intent-result test asserting clean delivery (this directly reproduces the hardcoded-30s bug).
-
-
-
-### Conformance bottom line
-
-Delivery and intent-result plumbing genuinely work now. The remaining failures split into **harness/session hygiene** (largest, and mostly not core-agent bugs) and a **small, well-identified set of client-metadata gaps** in `sail-desktop-agent`. These are isolated and actionable, not systemic — but they must be closed and re-baselined before any conformance claim.
+- **Verified in source:** `handlers/intents/intent-raise-shared.ts:177-195`. `attachPendingIntentTimeout(context, requestId, timeoutMs = 30000)` is called with the default from both raise paths (`intent-raise-intent.ts:230`, `intent-raise-intent-for-context.ts:105`). Its callback deletes the pending-intent bookkeeping at t=30s **with no `delivered` guard** — only a `pendingIntentPromises.has(requestId)` presence check, which does not distinguish "still waiting" from "already delivered."
+- **Consequence:** a result arriving after 30s finds no pending intent, `handleIntentResultRequest` throws, and the originating `raiseIntent()` promise never settles. This constant conflates "how long to wait for a listener" with "maximum intent round-trip time."
+- **Fix:** add a `delivered` guard (or clear the timer on delivery rather than on result), and make the round-trip budget configurable and larger than the listener wait.
+- **Regression test:** a >30s-delayed intent-result test asserting clean delivery. This reproduces the bug directly and does not require the toolbox.
 
 ---
-
-
-
-## Product & API Review
-
-- **Desktop Agent API:** `packages/sail-desktop-agent/src/index.ts` is curated and self-aware (explicit note that `BrowserAppConnection`/`MessagePortTransport` live behind the `/browser` subpath). Good. The blemish: `export * from "./state/selectors/index.js"` and `export * from "./state/mutators/index.js"` (`index.ts:26-27`) dump internal reducer-style state plumbing into the public surface, and `sail-platform/src/index.ts:102` re-exports the auto-generated `dacp-schemas` the README says not to hand-edit. Both widen the semver contract unintentionally.
-- **Platform API:** `SailPlatformConfig` is well-documented (`packages/sail-platform/src/sail-platform.ts:35`), but `WorkspacesApi`/`LayoutsApi`/`ConfigApi` are `Promise<unknown>`/`unknown` (`:140-161`), giving integrators nothing to build against; remote persistence throws "Remote storage backend not yet implemented" (`client/sail-platform-client.ts:76-78`). Persistence is localStorage-only.
-- **Edge cases:** the origin allowlist (`wcp4-origin-allowlist.ts`) **fails open** — if `messageOrigin` is `undefined`, or if `instanceId`/`connectionAttemptUuid` can't be resolved, it falls through to the original handler and allows the connection. For a security control this should fail closed.
-- **Product fit:** the app-developer journey is standards-based and well-documented (`website/docs/add-your-app.md` — use `@finos/fdc3`, call `getAgent()`, add a directory entry). The platform-owner journey is weaker: the docs recommend `SailPlatform`, but the flagship `sail-finance` app uses the lower-level `createSailBrowserDesktopAgent` directly and there's no embedder example beyond the demo shell itself.
-
----
-
-
-
-## Product Coherence & Adoption Review
-
-- **What is Sail?** Coherently described as "a fully open source implementation of FDC3" = a core Desktop Agent library + browser/Electron deployments + a platform SDK + a conformance harness. That identity is clear and consistent across README, `intro.md`, and package descriptions. The incoherence is about *maturity and installability*, not identity.
-- **Which package would a new external developer install?** Answerable in intent (`@finos/sail-desktop-agent` for a custom host, `@finos/sail-platform` for a fuller one) but **not in practice** — neither is on npm (404), so the only working path is clone-and-build, which the docs don't present as primary.
-- **Platform owner path:** exists on paper (`SailPlatform`, `allowedOrigins`, middleware) but is undercut by unimplemented remote persistence, `unknown`-typed workspace APIs, and the reference app not dogfooding the recommended SDK.
-- **Demo-only assumptions in production paths:** the FINOS conformance app directory and a default fixture directory are unconditionally merged into the `sail-finance` bundle (`main.tsx:10-11,91-95`); `debug:true` is hardcoded (`main.tsx:89`); `sail-electron` defaults to `http://localhost:8090` (`main.ts:19`); `sail-server` is an empty stub yet is described in the run docs as part of the dev stack.
-- **Boundaries:** package boundaries are clean at the import level (no cross-package `src` imports), with one exception: `sail-finance/src/main.tsx:10` imports `conformance-appd.json` from the harness package by relative path, coupling the web app to a test-harness fixture.
-- **Local-demo → real-deployment path:** the honest answer is that it isn't there yet — publishing, security hardening, real persistence, and de-fixturing the bundle all stand between the demo and a deployment.
-
----
-
-
-
-## Maintainer Confidence Assessment
-
-Could an OSS maintainer confidently accept, support, and evolve this? **Cautiously yes** — the bones are good and the intent is disciplined, but several things would make a maintainer nervous today:
-
-- **API stability:** the `export `* leakage of state selectors/mutators and generated schemas means the public surface includes things that will churn; semver commitments would be hard to honor as written.
-- **Breaking-change control:** Changesets is set up correctly and the release workflow is real — good. But it has never fired (no published versions), so the process is unproven in practice.
-- **Refactor safety net:** strong for `sail-desktop-agent`; weak-to-absent for `sail-ui`, `sail-electron`, `sail-server`, and the browser E2E path (dead duplicate Playwright specs, never run in CI). No coverage thresholds anywhere.
-- **Conformance actionability:** excellent — the failure-review doc is unusually candid and attributes each failure to an owner/root cause. This is a real asset for a new maintainer.
-- **Architecture documentation:** good (`AGENTS.md` is dense and useful; website architecture docs are current). But the README architecture diagram is stale (`WCPConnector` no longer exists), and in-progress refactor plans reference paths that no longer exist.
-- **CI gating gap:** the primary quality workflow (`ci.yml`) triggers only on `main`, while development happens on `v3-pre` and feature branches off it — so lint/typecheck/build/test may not gate the PRs that actually matter. Only CodeQL/Scorecard cover `v3-pre`.
-- **Support/security expectations:** `SECURITY.md` is boilerplate (supports only "0.0.1," routes vulnerability reports to public GitHub issues — which is itself a poor practice for security disclosures); CoC still carries the old "Electron FDC3 Desktop Agent" project name; no PR template.
-
----
-
-
-
-## Documentation Review
-
-Concrete, reproducible drift (all verified):
-
-
-| #   | Claim / reference                                    | Reality                                                                                | Location                                                                                                                                                   |
-| --- | ---------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D-1 | "production-ready product"                           | README says "not yet ready for production use"                                         | `website/docs/intro.md:61,65`, `run-sail.md:99` vs `README.md:190`                                                                                         |
-| D-2 | `npm run generate:schemas`                           | script does not exist in any `package.json`                                            | `README.md:156`; generated file is actually at `sail-platform/src/services/validation/dacp-schemas.ts`, not the README's `sail-desktop-agent/...` path |
-| D-3 | `npm run dev:harness`                                | actual script is `dev:conformance`                                                     | `website/docs/development.md:40,80`, `conformance-harness/overview.md:19` vs `package.json:15`                                                             |
-| D-4 | `WCPConnector` (architecture diagram)                | class is `BrowserAppConnection`; no `WCPConnector` in `src/`                           | `README.md:54`; stale comments also in `FDC3IframePanel.tsx:17`                                                                                            |
-| D-5 | Manual git-tag release process                       | actual process is Changesets                                                           | `README.md:167-177` vs `.github/workflows/release.yml` + `development.md:211-240`                                                                          |
-| D-6 | "Sail validates all DACP messages using Zod schemas" | validator is not wired into the shipped agent (BLOCK-5)                                | `README.md:144-159` vs `handlers/index.ts:37-53`                                                                                                           |
-| D-7 | CoC title                                            | "Code of Conduct for Electron FDC3 Desktop Agent & App Directory" — stale project name | `.github/CODE_OF_CONDUCT.md:1`                                                                                                                             |
-| D-8 | SECURITY.md supported versions                       | lists only `0.0.1`; boilerplate; routes vuln reports to public issues                  | `SECURITY.md`                                                                                                                                              |
-
-
-The website docs are, notably, *more* current than the README in several places (they use `BrowserAppConnection` correctly). The README is the stale artifact relative to both the code and the docs site.
-
----
-
-
-
-## Architecture Review
-
-- **Monorepo:** npm workspaces, 8 packages, orchestrated via plain `npm -w` + `concurrently` and a unified `vite-plus` (`vp`) toolchain (`package.json` `overrides` alias `vite`/`vitest`). No turbo/nx — acceptable at this size.
-- **Layering:** the two-layer split (pure `sail-desktop-agent` ⟂ deployment `sail-finance`/`sail-electron`, with `sail-platform` as the SDK) is real and honored. Subpath exports (`.` vs `./browser`) correctly separate the environment-agnostic core from browser-only WCP primitives.
-- **Boundaries:** no cross-package `src` imports found; Vitest resolves workspaces via `dist/` exports per `AGENTS.md`. The one coupling is the `sail-finance` → harness JSON fixture import (see Product Coherence).
-- **Gaps:** `sail-conformance-harness` is missing from the root `tsconfig.json` project references despite being built/typechecked in CI; `sail-server` is a stub; `sail-electron` is excluded from the default `npm run build` and flagged as mid-migration (Rollup → `vp pack`).
-- **In-flight refactor:** `plans/work-items/collapse-browser-app-connection-into-desktop-agent.md` (the current branch's theme) is collapsing `BrowserAppConnection` into `DesktopAgent`; the plan's own file manifest references stale paths (`src/core/…`), so the architecture is actively moving and docs/plans lag it.
-
----
-
-
-
-## Code Quality Review
-
-- **General:** readable, consistent formatting/linting, sensible naming, good module decomposition in the agent. Handlers are small and focused.
-- **Smells:**
-  - Repeated `as unknown as <WireType>` casts around WCP responses (`wcp-identity-validation.ts:253,363`; `wcp1-3-handshake.ts:103`) with TODO comments about generated-type/schema mismatch — a real type-safety soft spot at the wire boundary.
-  - Dead/misleading config: `debug:true` hardcoded in `main.tsx:89` while `consoleLogger.debug` is a no-op (`interfaces/logger.ts`), so the flag does nothing today but invites future payload leakage if wired to a verbose logger.
-  - `export *` of internal state modules (see API Review).
-  - Verbose explanatory comment blocks and some duplicated helper logic consistent with AI-assisted authorship — not harmful, but adds surface area.
-- **Refactor targets:** unify the wire-type casts behind a validated boundary (which the Zod validator could provide if wired); tighten the public `index.ts` exports; consolidate the two WCP source-window/pending maps.
-
----
-
-
 
 ## Security Review
 
-Highest-severity first (full detail in [Release Blocking Issues](#release-blocking-issues) for BLOCK-1/2/5):
+Highest severity first.
 
-1. **Electron Node-in-subframes (Critical)** — `sail-electron/src/main.ts:12-17`. RCE-class exposure to any loaded FDC3 app.
-2. **Unsandboxed app iframes (High)** — `FDC3IframePanel.tsx:65-80`.
-3. **No payload schema validation wired (Medium-High)** — `handlers/index.ts:37-53`; validator built but unused by default agent.
-4. **Origin allowlist fails open and ships disabled (Medium)** — `wcp4-origin-allowlist.ts:71-101`. When origin/routing metadata is absent it falls through to allow; and `sail-finance` never sets `allowedOrigins`, so the sole boundary is "origin must match an app-directory entry" — and the conformance-harness apps are merged into that same directory (`main.tsx:91-95`), trusting test apps at production level.
-5. **Same-appId sole-pending auto-adopt (Low-Moderate)** — `wcp-host-instance-adoption.ts` (`findSolePendingHostInstanceId`) adopts any single pending instance of the same appId with no UUID correlation; a same-appId race, not a cross-trust bypass.
-6. **Popout relay has no origin filter (Low-Moderate)** — `dockview-popout.ts:42-58` forwards any `WCP1Hello` to the opener; bounded by WCP4, so resource-consumption class, not identity bypass.
-7. **Unconditional identity-payload logging (Low)** — `wcp-identity-validation.ts:51,127,255` log appId/instanceId/identityUrl via `logger.info` in every build (not secrets, but noisy).
-8. **Strong control worth crediting:** the WCP4 origin triple-check + directory-origin binding genuinely prevents cross-origin appId impersonation (`wcp-identity-validation.ts`, `wcp-identity-url-matching.ts`). `postMessage("*")` is avoided in the WCP path (tests assert a specific `targetOrigin`); the one `"*"` use is in a Sail-owned channel-selector asset.
+1. **Unsandboxed app iframes (High)** — `FDC3IframePanel.tsx`; zero `sandbox=` in `sail-finance/src`. See BLOCK-A. Now the top finding.
+2. **Origin allowlist fails open and ships disabled (Medium)** — `packages/sail-platform/src/wcp4-origin-allowlist.ts:76` guards with `messageOrigin !== undefined && !allowedOrigins.includes(messageOrigin)`, so an absent origin falls through to *allow*. `sail-platform/src/sail-browser-desktop-agent.ts:76-77` only wires the allowlist when `config.allowedOrigins` is supplied, and **`sail-finance` never supplies it** — no `allowedOrigins` occurrences in that package. The sole boundary is therefore "origin must match an app-directory entry," and the conformance-harness app directory is merged into that same directory (`main.tsx:10`), trusting test apps at production level. A security control should fail closed.
+3. **Validation defaults to non-enforcing (Medium)** — see NEW-1.
+4. **Unconditional full-payload identity logging (Low-Medium, worse than previously reported)** — `wcp-identity-validation.ts:52` logs the entire `wcp4Message.payload` and `:256` logs the entire WCP5 `response.payload` via `logger.info` in every build. The previous review described this as logging "appId/instanceId/identityUrl"; it is in fact whole-payload logging. Not secrets today, but it is an unbounded surface that will leak whatever future WCP payloads carry.
+5. **Same-appId sole-pending auto-adopt (Low-Moderate)** — `wcp-host-instance-adoption.ts` (`findSolePendingHostInstanceId`) adopts a single pending instance of the same appId with no UUID correlation. A same-appId race, not a cross-trust bypass.
+6. **Strong control worth crediting** — the WCP4 origin triple-check plus directory-origin binding genuinely prevents cross-origin appId impersonation (`wcp-identity-validation.ts`, `wcp-identity-url-matching.ts`).
 
-**Positive baseline:** CodeQL, Semgrep, Scorecard, dependency-review, and CVE-scanning workflows are all present — the scanning posture is better than most incubating projects. `webSecurity` is left default-on in Electron; localStorage holds only layout/config, no secrets.
+**Positive baseline:** CodeQL, Semgrep, Scorecard, dependency-review, CVE-scanning, and OSPS workflows are all present — a better scanning posture than most incubating projects. **And the biggest structural improvement this cycle was a deletion:** removing `sail-electron` eliminated an RCE-class exposure outright rather than patching it. That is the right call and worth stating plainly.
 
 ---
 
+## New Findings (not in the previous review)
 
+### NEW-1 — Schema validation is wired but non-enforcing by default (Medium, Security/Docs)
 
-## Performance Review
+- **Location:** `packages/sail-desktop-agent/src/dacp/validate-dacp-message.ts`; wired at `handlers/index.ts:26-53`; default set at `agent/default-config.ts:38` (`validation: "warn"`).
+- **What's good:** validators come from `@finos/fdc3-schema` — the same generated source as the `BrowserTypes` the agent types against — so the check cannot drift from the targeted FDC3 version. Only inbound app-sendable messages are validated. The rationale for the `warn` default is documented in-source and is sound: `strict` would break clients sending slightly off-spec shapes, so surfacing first is the right sequencing.
+- **The gap:** in `warn` mode a failing message is logged and **dispatched anyway** (`handlers/index.ts:53`). A connected but malicious app can still push malformed or type-confused payloads into handlers. This is a real improvement over the previous "not wired at all" state, but it is not yet an enforcement boundary, and the `as unknown as` wire casts downstream still assume well-formed input.
+- **Fix:** publish a timeline to `strict`; consider `strict` for the WCP handshake messages specifically, where off-spec shapes are least defensible.
 
-- **Timeouts:** handshake 5s, disconnect grace 2s, intent-resolution 60s (`browser-app-connection.ts:79-81`), plus a separate **hardcoded 30000ms pending-intent timeout** (`intent-raise-shared.ts:180`) that tears down intent bookkeeping regardless of delivery — the confirmed cause of the 61s-delayed-result conformance failures (C-6). Scattered, hardcoded timeout constants with overlapping responsibilities are a robustness smell.
-- **Memory/lifecycle:** a 30s `setInterval` prunes stale disconnects (`browser-app-connection.ts:127`); but the conformance runs show stale CONNECTED instances accumulating within a session and inflating `findIntent` counts — teardown is the weak link, and it has both correctness and memory implications under churn.
-- **Rendering:** dockview-based panel grid; each FDC3 app is an iframe. No obvious rendering bottleneck reviewed, but no performance tests exist.
-- **Bundle:** conformance + default fixture app directories and demo assets are compiled into the `sail-finance` production bundle — dead weight for a real deployment and a correctness/trust concern, not just size.
+### NEW-2 — Dangling `sail-ui` project reference in root `tsconfig.json` (Medium, Build)
+
+- **Location:** `tsconfig.json:8` — `{ "path": "./packages/sail-ui" }`.
+- **Evidence:** `packages/sail-ui` does not exist; the package was replaced by `sail-theme`, which is **not** referenced. `sail-conformance-harness` is also still missing from the references list despite being built and typechecked in CI.
+- **Status: UNMEASURED impact.** A dangling project reference is normally a hard `tsc --build` error, but I could not run the toolchain to confirm whether this surfaces in CI or is bypassed by the `vite-plus` pipeline. Either way it is deletion fallout that should be cleaned up.
+
+### NEW-3 — Deleted `sail-server` still present in release and docs config (Low, Release)
+
+- `.changeset/pre.json` `initialVersions` still lists `"@finos/sail-server": "0.0.1"`; `website/docs/development.md:55` still shows it in the repo tree. Harmless today, confusing during the first real publish.
+
+### NEW-4 — `exports` condition order puts `import` before `types` (Low, Packaging)
+
+- **Location:** `packages/sail-desktop-agent/package.json` — `"." : { "import": ..., "types": ..., "default": ... }`.
+- **Why it matters:** conditional exports are matched in declaration order, and `types` must be listed **first** for TypeScript to resolve declarations reliably under `node16`/`nodenext` resolution. Consumers on `moduleResolution: "bundler"` (as this repo uses internally) will not notice; external consumers on stricter resolution modes may fail to get types.
+- **Fix:** reorder to `types`, then `import`, then `default`. Cheap, and worth doing before the first publish since it is part of the packaging contract.
 
 ---
 
+## Documentation Review
 
+All items re-verified 2026-07-28; line numbers refreshed.
+
+| # | Claim / reference | Reality | Location |
+|---|---|---|---|
+| D-1 | "production-ready product" | README says "not yet ready for production use" | `website/docs/intro.md:61,65`, `run-sail.md:68` vs `README.md:184` |
+| D-2 | `npm run generate:schemas` | Script exists in no manifest | `README.md:151` |
+| D-3 | Generated file at `sail-desktop-agent/src/handlers/validation/dacp-schemas.ts` | Path does not exist; no generated schema file anywhere | `README.md:154` |
+| D-4 | "validates all DACP messages using **Zod** schemas" | No Zod in the repo; validation is `@finos/fdc3-schema`-based and defaults to `warn` | `README.md:141` vs `dacp/validate-dacp-message.ts` |
+| D-5 | `npm run dev:harness` | Actual script is `dev:conformance` | `website/docs/development.md:39,74`, `packages/conformance-harness/overview.md:19` vs `package.json:15` |
+| D-6 | Manual per-package git-tag release process | Actual process is Changesets (`release.yml`, `changeset:version`, `release:publish`) | `README.md:163-167` |
+| D-7 | Repo tree lists `sail-server/` | Package deleted 2026-07-22 | `website/docs/development.md:55` |
+| D-8 | CoC title: "Code of Conduct for **Electron** FDC3 Desktop Agent & App Directory" | Stale project name — and now doubly so, since Electron is gone | `.github/CODE_OF_CONDUCT.md:1` |
+| D-9 | SECURITY.md supports version `0.0.1`; routes vulnerability reports to **public** GitHub issues | Boilerplate; public issues are the wrong channel for vulnerability disclosure | `SECURITY.md` |
+| D-10 | `AGENTS.md` names `v3-pre` as the integration branch | Work happens on `wip/v3-local` | `AGENTS.md:73,110` |
+
+**Resolved since the last review:** the `WCPConnector` reference is gone — the README architecture diagram now correctly shows `BrowserAppConnection` and `AppConnectionRegistry`, and `WCPConnector` appears nowhere in the repo.
+
+**Assessment:** the website docs are cleaner than they were — the `sail-electron` and `sail-web` package pages are gone and `deployment-targets.md` now describes only the browser host. The **README is the stale artifact**, and its validation section is the single most misleading passage in the project.
+
+---
+
+## Architecture Review
+
+- **Monorepo:** npm workspaces, **5 packages** (down from 8): `sail-desktop-agent`, `sail-platform`, `sail-finance`, `sail-conformance-harness`, `sail-theme`, plus `website`. Orchestrated with plain `npm -w` + `concurrently` on a unified `vite-plus` (`vp`) toolchain. No turbo/nx — appropriate at this size.
+- **Layering:** the two-layer split (pure `sail-desktop-agent` ⟂ deployment `sail-finance`, with `sail-platform` as the SDK) is real, honored, and simplified by the deletions. The `/browser` subpath export was removed; everything public now comes from the package root, and the app-connection edge is internal (`attachAppConnection()` is `@internal`).
+- **Boundaries:** no cross-package `src` imports, enforced by `npm run lint:boundaries` (oxlint). **One exception, unchanged:** `packages/sail-finance/src/main.tsx:10` imports `conformance-app-directory` from the harness package by relative path, coupling the production web app to a test-harness fixture.
+- **Deletion fallout:** dangling `sail-ui` tsconfig reference (NEW-2); `sail-conformance-harness` still absent from tsconfig references; `sail-server` in `.changeset/pre.json` (NEW-3).
+- **In flight:** `.cursor/plans/` carries a `sail-one` shell porting plan (`da497d253`, `47f25c242`) — the architecture is still actively moving, so expect further doc lag.
+
+---
+
+## Code Quality Review
+
+- **General:** readable, consistently formatted, well-decomposed; handlers are small and focused. JSDoc quality in the agent is genuinely high — `validate-dacp-message.ts` documenting *why* `warn` is the default is the kind of comment that survives a refactor.
+- **Smells:**
+  - **`as unknown as <WireType>` casts are more pervasive than previously reported** — 10+ non-test sites including `wcp-identity-validation.ts:254,364`, `wcp1-3-handshake.ts:88`, `browser-app-connection.ts:193,204`, `channels/handlers.ts:124`, and every response creator in `dacp/dacp-message-creators.ts:98,122,149,184`. The previous review cited two. Now that a schema-validated boundary exists, these are removable in principle.
+  - `debug: true` hardcoded at `packages/sail-finance/src/main.tsx:111`.
+  - Conformance and default app-directory fixtures unconditionally merged into the `sail-finance` bundle (`main.tsx:10-11`).
+  - Verbose explanatory comment blocks consistent with AI-assisted authorship — not harmful, but it inflates surface area.
+- **Refactor targets:** collapse the wire casts behind the validated boundary; gate fixtures and `debug` behind an env flag; reorder the `exports` conditions.
+
+---
 
 ## Test Coverage Review
 
+Counted statically, 2026-07-28. **Not executed** — see the verification note at the top.
 
-| Package                    | Vitest/spec             | Cucumber                  | Test script                      | Assessment                                       |
-| -------------------------- | ----------------------- | ------------------------- | -------------------------------- | ------------------------------------------------ |
-| `sail-desktop-agent`       | 58                      | 17 files (~134 scenarios) | yes                              | Strong, behavioral, no skips                     |
-| `sail-conformance-harness` | 11                      | 0                         | yes (runs in CI)                 | Real wiring/intent-resolution tests              |
-| `sail-platform`        | 4                       | 0                         | yes                              | Includes allowlist + channel tests               |
-| `sail-finance`                 | 3 Vitest + 2 Playwright | 0                         | Vitest yes; Playwright not in CI | Playwright specs are byte-identical placeholders |
-| `sail-ui`                  | 0                       | 0                         | none                             | 17+ components, zero tests                       |
-| `sail-electron`            | 0                       | 0                         | none                             | Untested Electron shell (see BLOCK-1)            |
-| `sail-server`              | 0                       | 0                         | none                             | Stub                                             |
-| `website`                  | 0                       | n/a                       | n/a                              | Expected                                         |
+| Package | Test files | Cucumber | Assessment |
+|---|---|---|---|
+| `sail-desktop-agent` | 42 | 17 files / 152 scenarios | Strong, behavioral, no skips |
+| `sail-conformance-harness` | 14 | 0 | Real wiring/lifecycle/intent-resolution tests (was 11) |
+| `sail-platform` | 5 | 0 | Includes allowlist + channel tests (was 4) |
+| `sail-finance` | 3 Vitest + 2 Playwright | 0 | Playwright specs are **byte-identical duplicates** (same md5: `packages/sail-finance/tests/example.spec.ts` and `tests/e2e/example.spec.ts`) |
+| `sail-theme` | 0 | 0 | Untested |
+| `website` | 0 | n/a | Expected |
 
-
-- **CI reality:** Vitest (all wired projects, incl. conformance-harness) + Cucumber run in CI; **Playwright never runs**; the conformance *toolbox* run is manual (browser UI), not automated.
-- **Gaps:** no coverage thresholds anywhere; the security-critical Electron and iframe surfaces have no tests; the browser WCP path is not exercised by an automated E2E in CI (`conformance.md` itself admits BDD uses `MockTransport`, so the real browser transport is not conformance-tested via BDD).
-- **Quality where it exists:** spot-checked tests (`close-request.test.ts`, `intent-resolution.test.ts`) assert real behavior and error codes, not mock echoes.
+- **CI reality:** Vitest and Cucumber run in CI; **Playwright never runs**; the conformance toolbox run is manual.
+- **Gaps:** no coverage thresholds anywhere (`vitest.config.ts` has no `coverage` block); the iframe containment surface has no tests; the real browser WCP path is not exercised by an automated E2E in CI — BDD uses `MockTransport` by design.
+- **Improvement worth noting:** the harness gained three test files this cycle, concentrated on exactly the instance-lifecycle and teardown paths that C-4 implicated.
 
 ---
-
-
 
 ## CI/CD & Tooling Review
 
-- **Gates (**`ci.yml`**):** Prettier → ESLint → typecheck → build (6 packages) → docs build → Vitest → Cucumber. Solid as far as it goes.
+- **Gates (`ci.yml`):** Prettier → ESLint → typecheck → build → docs build → Vitest → Cucumber, plus a `lint:boundaries` oxlint step in `npm run validate`. Solid as far as it goes.
 - **Gaps:**
-  - Triggers on `main` only; active development is on `v3-pre` and branches off it → the main quality gate may not run on the PRs that matter. Only CodeQL/Scorecard list `v3-pre`.
+  - `on: push`/`pull_request` → `branches: [main]` **only**. Active development is on `wip/v3-local`, so the main quality gate does not run on the PRs that matter. Only CodeQL/Scorecard cover other branches.
   - No Playwright step; no automated conformance run; no coverage gate.
-- **Release:** Changesets-based (`release.yml`, gated by `NPM_TOKEN`), publishing only `sail-desktop-agent` + `sail-platform`. Correct in design, unproven in practice (nothing published yet).
-- **Package hygiene:** `sail-server` declares `ISC` license in an Apache-2.0 repo and lacks `private:true`; `sail-electron` also lacks `private:true`/`publishConfig` — both could be accidentally published under `@finos` outside the Changesets flow. `sail-ui`/`sail-finance`/`sail-conformance-harness` are correctly `private:true`.
+- **Release:** Changesets-based (`release.yml`, `release:publish` builds `sail-desktop-agent` + `sail-platform` then `changeset publish`). Correct in design, **never fired** — nothing published.
+- **Package hygiene:** improved by deletion. `sail-conformance-harness`, `sail-finance`, and `sail-theme` are correctly `private: true`; the two publishable packages carry Apache-2.0. The previous `ISC`-license and missing-`private` findings died with `sail-server` and `sail-electron`. Residual: `.changeset/pre.json` still names the deleted server package.
 
 ---
-
-
-
-## Accessibility Review
-
-Limited assessment (no a11y-focused agent, no automated a11y tests in the repo). Observations:
-
-- `sail-ui` is shadcn/Radix-based, which provides a reasonable a11y baseline (focus management, ARIA) for primitives.
-- The app shell (`sail-finance`) is a dockview grid of iframes; no a11y tests, no evidence of keyboard-navigation or screen-reader validation for the workspace/panel/channel-selector UI.
-- **Recommendation:** add at least automated a11y smoke checks (axe) to the Playwright suite (once it runs in CI) for the shell chrome; treat this as post-release polish, not a blocker.
-
----
-
-
 
 ## Open-Source Readiness
 
-- **License:** Apache-2.0 at root; consistent for the two publishable packages; **inconsistent** `ISC` on `sail-server`; several packages omit a `license` field.
-- **Governance/community:** FINOS Incubating badge, CLA/ICLA guidance, meetings/mailing list — good. CoC present but stale-named; **no PR template**; SECURITY.md is minimal boilerplate that routes vulnerabilities to public issues (should be a private channel).
-- **Examples:** no `examples/` directory; the "example" is the demo shell plus fixture directories. An external integrator has docs but no standalone runnable sample host.
-- **Publishing:** pipeline exists; packages are unpublished (404). This is the single biggest adoption blocker for consumers.
-- **Vulnerability reporting:** should move off public GitHub issues to GitHub private security advisories or a security@ address.
+- **License:** Apache-2.0 at root and on both publishable packages. The previous `ISC` inconsistency is resolved by deletion. Private packages omit a `license` field, which is acceptable.
+- **Governance/community:** FINOS Incubating badge, CLA/ICLA guidance, meetings, `MAINTAINERS.md` — good. CoC present but stale-named (D-8); **no PR template** (`.github/` contains only `CODE_OF_CONDUCT.md`, `ISSUE_TEMPLATE/`, and `workflows/`); SECURITY.md is minimal boilerplate routing vulnerabilities to public issues (D-9).
+- **Examples:** no `examples/` directory; the example is the demo shell plus fixture directories. An external integrator has docs but no standalone runnable sample host.
+- **Publishing:** pipeline exists; packages are unpublished (verified 404). Biggest adoption blocker.
+- **Vulnerability reporting:** move off public GitHub issues to GitHub private security advisories or a `security@` address. This is a one-line fix with outsized credibility value for a FINOS project.
 
 ---
 
+## Accessibility Review
 
+Limited assessment — no a11y-focused tooling in the repo, and nothing executed.
+
+- `sail-theme` is shadcn/Radix-derived, which provides a reasonable a11y baseline (focus management, ARIA) for primitives.
+- The app shell is a dockview grid of iframes; no a11y tests, no evidence of keyboard-navigation or screen-reader validation for the workspace/panel/channel-selector UI.
+- **Recommendation:** add axe-based a11y smoke checks to the Playwright suite once it runs in CI. Post-release polish, not a blocker.
+
+---
 
 ## Actionable Fixes
 
-
-
 ### Must Fix Before Release
 
-- **Electron:** disable `nodeIntegration`/`nodeIntegrationInSubFrames`, enable `sandbox:true`, add CSP + permission handler (`sail-electron/src/main.ts`). [BLOCK-1]
-- **Iframes:** add an explicit `sandbox` allowlist to `FDC3IframePanel.tsx`. [BLOCK-2]
-- **Docs/readiness:** reconcile production-ready messaging; fix `generate:schemas`, `dev:harness`, `WCPConnector`, and the release-process description; either publish the packages or make clone-and-build the documented primary path. [BLOCK-3, D-1..D-6]
-- **Conformance:** bump `@finos/fdc3-agent-proxy` for `getResultMetadata` (C-1), finish harness teardown (C-4), fix the hardcoded 30s pending-intent timeout (C-6), dedupe `createAppIntents` (C-5), forward app `traceId` (C-3), and trace the `desktopAgent`/open-routing cases (C-2); re-run the toolbox to a fresh v7 baseline and delete the stale v5 "current baseline" claim. [BLOCK-4]
-- **Validation:** wire `createZodValidator()` into the default agent or correct the README. [BLOCK-5]
-- **Allowlist:** make `wireWcp4OriginAllowlist` fail closed. [Security #4]
-
-
+- **Iframes:** add an explicit `sandbox` allowlist to `FDC3IframePanel.tsx`. [BLOCK-A]
+- **README validation section:** rewrite `README.md:141-160` to describe `@finos/fdc3-schema` validation and the `warn` default; delete the Zod and `generate:schemas` instructions. [BLOCK-B, D-2/D-3/D-4]
+- **Readiness messaging:** pick one honest message across `intro.md`, `run-sail.md`, and `README.md`. [BLOCK-C, D-1]
+- **Publish** both packages under the `pre` tag, or make clone-and-build the documented primary path. [BLOCK-D]
+- **Re-baseline conformance:** run the toolbox against `wip/v3-local`, commit a single authoritative export, update `conformance-test-failure-review.md`, archive v3–v5. [BLOCK-E]
+- **Allowlist:** make `wireWcp4OriginAllowlist` fail closed when `messageOrigin` is absent. [Security #2]
+- **C-5:** dedupe `createAppIntents` by `appId`.
+- **C-6:** add a `delivered` guard to `attachPendingIntentTimeout` and separate the listener-wait from the round-trip budget.
 
 ### Should Fix Soon After Release
 
-- Run CI on `v3-pre` (and feature branches); add Playwright to CI; add coverage thresholds.
-- De-fixture the `sail-finance` bundle (gate conformance/default app directories and `debug` behind env/dev flags).
-- Tighten public exports (`sail-desktop-agent/src/index.ts`, `sail-platform/src/index.ts`).
-- Fix `sail-server` license + add `private:true` to `sail-server`/`sail-electron`; add `sail-conformance-harness` to root tsconfig references.
+- Run CI on `wip/v3-local` and feature branches; add Playwright to CI; add coverage thresholds.
+- Clean up deletion fallout: `tsconfig.json:8` dangling `sail-ui`, add `sail-conformance-harness` and `sail-theme` references, remove `@finos/sail-server` from `.changeset/pre.json` and `development.md:55`. [NEW-2, NEW-3]
+- Reorder the `exports` conditions so `types` comes first. [NEW-4]
+- De-fixture the `sail-finance` bundle: gate the conformance/default app directories and `debug` behind env flags.
+- Bump `@finos/fdc3`/`@finos/fdc3-agent-proxy` past 2.2.3 for `getResultMetadata()`. [C-1]
+- Publish a plan to move validation from `warn` to `strict`. [NEW-1]
 - Update SECURITY.md (real supported versions, private reporting channel); rename the CoC; add a PR template.
-- Add tests for `sail-ui`; remove the duplicate placeholder Playwright specs.
-
-
+- Remove the duplicate placeholder Playwright spec; update `AGENTS.md` branch references.
 
 ### Nice To Have
 
-- Type the `WorkspacesApi`/`LayoutsApi`/`ConfigApi` surfaces; implement or clearly defer the remote storage backend.
-- Provide a standalone embedder example that uses `SailPlatform` (and make `sail-finance` dogfood it).
+- Type the `WorkspacesApi`/`LayoutsApi`/`ConfigApi` surfaces; implement or explicitly defer the remote storage backend.
+- Provide a standalone embedder example using `SailPlatform`, and make `sail-finance` dogfood it.
+- Reduce the `as unknown as` wire casts behind the validated boundary.
+- Scope the WCP identity logging down from whole payloads to specific fields. [Security #4]
 - Add axe-based a11y smoke tests to the shell.
-- Reduce `as unknown as` wire casts behind the validated boundary.
 
 ---
 
-
-
 ## Recommended Work Plan
 
-1. **Security hardening sprint (blockers first):** Electron `webPreferences` + iframe sandbox + fail-closed allowlist + wire the Zod validator. Add regression/E2E coverage for these surfaces. *(Unblocks the two most severe issues.)*
-2. **Truth-in-docs sprint:** one honest readiness message everywhere; fix D-1..D-8; decide publish-now vs clone-and-build-primary; publish the two packages if going public.
-3. **Conformance close-out:** complete C-4 teardown → C-1/C-2/C-3 metadata → then C-5 dedupe (unblock with FINOS) → re-baseline to v7; wire an automated toolbox/E2E run into CI.
-4. **CI & OSS hygiene:** run `ci.yml` on `v3-pre`/feature branches; add Playwright + coverage gates; fix package license/private flags; SECURITY.md, CoC, PR template.
-5. **Platform maturation:** type the platform APIs, implement/defer remote persistence, add an embedder example, de-fixture the bundle.
+1. **Containment + truth-in-docs sprint.** Iframe `sandbox`, fail-closed allowlist, and the README validation rewrite. These are small, independent, and they close the two findings most likely to embarrass the project in review.
+2. **Re-baseline conformance.** Run the toolbox, commit one authoritative export, reconcile the failure-review doc. Until this happens the project cannot state its own conformance position — and neither can this review.
+3. **Agent-owned conformance fixes.** C-5 dedupe (confirm policy with FINOS first), C-6 `delivered` guard, C-1 dependency bump. Each has a regression test that does not require the toolbox.
+4. **Publish.** Fix the `exports` ordering, clean the changeset config, cut the first `pre` release. The pipeline is correct but unproven; proving it is itself valuable.
+5. **CI & OSS hygiene.** Gate the real integration branch, add Playwright and coverage, fix SECURITY.md/CoC/PR template.
+6. **Platform maturation.** Type the platform APIs, implement or defer remote persistence, add an embedder example, de-fixture the bundle.
 
 ---
 
 ## Open Questions & Assumptions
 
-1. **Is** `nodeIntegration`**/**`nodeIntegrationInSubFrames` **in Electron intentional?** The preload already uses `contextBridge`, so Node-in-renderer looks like legacy misconfiguration. Needs team confirmation. *(Assumption: unintentional.)*
-2. **Is the missing** `sandbox` **on iframes deliberate** (some FDC3 apps needing `allow-same-origin`+`allow-scripts`) or an oversight? Confirm before choosing the sandbox allowlist.
-3. **Are the packages unpublished because this is pre-release** `v3-pre` **state**, or a genuine gap? Determines whether BLOCK-3 is "fix docs" or "publish now."
-4. **Should the origin allowlist be on by default in** `sail-finance`**,** or is `sail-finance` intended as a permissive reference app with enterprises expected to wire their own? Affects whether #4 is a bug or a documented deployment responsibility.
-5. **Is the CI** `branches:[main]`**-only trigger intentional** (some other gate protecting `v3-pre`) or an oversight leaving the integration branch under-gated?
-6. **Conformance discrepancies (C-1/C-2):** in-repo Vitest asserts the wire payload is correct while the toolbox still fails — confirm whether the gap is in the get-agent client, a specific unaudited response path, or a stale export. The regression nets currently don't reproduce the real client-side failure.
-7. `desktopAgent` **omission in WCP5** `ImplementationMetadata.appMetadata` (`wcp-identity-validation.ts:219-227`) — is this an intended difference from the getAppMetadata path, or the actual source of C-2?
+1. **Is the missing iframe `sandbox` deliberate** — do some FDC3 apps require `allow-same-origin` + `allow-scripts` together? Confirm before choosing the allowlist, since that combination substantially weakens the sandbox.
+2. **Is the FINOS toolbox's `desktopAgent` expectation compatible with bridging-gated emission?** The gate is now a deliberate design decision (C-2); if the toolbox expects the field unconditionally, this is a spec-interpretation question for FINOS, not a code fix.
+3. **What is the timeline from `warn` to `strict` validation,** and is `strict` acceptable for WCP handshake messages sooner than for DACP generally?
+4. **Are the packages unpublished because this is pre-release state, or is publishing blocked?** Determines whether BLOCK-D is "publish now" or "fix the docs."
+5. **Should the origin allowlist be on by default in `sail-finance`,** or is `sail-finance` intended as a permissive reference app with enterprises wiring their own? Affects whether Security #2 is a bug or a documented deployment responsibility.
+6. **Is the CI `branches: [main]`-only trigger intentional,** or an oversight leaving the integration branch under-gated?
+7. **What is the `sail-one` shell's relationship to `sail-finance`?** The porting plan landed 2026-07-24; if `sail-one` supersedes `sail-finance`, several findings above should be retargeted before work starts.
 
 ---
 
-*This review distinguishes technical potential from release readiness deliberately: the core is a serious, coherent, well-tested FDC3 Desktop Agent with a defensible architecture — a strong foundation worth investing in. It is not, today, a production-ready interoperability platform, and its documentation should stop saying that it is until the blocking security, conformance, publishing, and validation gaps are closed.*
+*This review distinguishes technical potential from release readiness deliberately. The core is a serious, coherent, well-tested FDC3 Desktop Agent with a defensible architecture, and it improved materially over the last three weeks — the most severe finding of the previous review was closed by deleting the offending target rather than patching it, validation moved from dead code to the default path, and the public API contracted to something a maintainer could actually commit to. It is not yet a production-ready interoperability platform: iframe containment is absent, the conformance position is unmeasured, the packages are unpublished, and the README describes a validation mechanism that no longer exists. The documentation should stop claiming production readiness until those are closed.*

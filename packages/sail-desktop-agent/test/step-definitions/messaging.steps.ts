@@ -26,11 +26,7 @@ Then("messaging will have outgoing posts", function (this: CustomWorld, dt: Data
 
 Then("messaging will include outgoing posts", function (this: CustomWorld, dt: DataTable) {
   const allMessages = this.mockTransport.getPostedMessages()
-  const matchSubset = matchDataSubset as (
-    world: CustomWorld,
-    actual: unknown[],
-    dataTable: DataTable,
-  ) => void
+  const matchSubset = matchDataSubset
   matchSubset(this, allMessages, dt)
 })
 

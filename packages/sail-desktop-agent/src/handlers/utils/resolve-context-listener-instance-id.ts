@@ -122,7 +122,9 @@ function findPendingOpenWithContextHostInstanceId(
   }
 
   if (hostIdentifier) {
-    const hostMatch = pendingTargets.find(([targetInstanceId]) => targetInstanceId === hostIdentifier)
+    const hostMatch = pendingTargets.find(
+      ([targetInstanceId]) => targetInstanceId === hostIdentifier,
+    )
     if (hostMatch) {
       return hostMatch[0]
     }
