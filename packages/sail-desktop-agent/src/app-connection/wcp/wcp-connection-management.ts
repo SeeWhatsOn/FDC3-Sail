@@ -35,6 +35,16 @@ function clearHandshakeRoutingForInstance(context: AppConnectionContext, instanc
   context.setAgentState(state => clearHandshakeRoutingIdsForInstance(state, instanceId))
 }
 
+function cancelPendingDisconnect(context: AppConnectionContext, instanceId: string): boolean {
+  const pendingDisconnect = context.pendingDisconnects.get(instanceId)
+  if (!pendingDisconnect) {
+    return false
+  }
+  clearTimeout(pendingDisconnect)
+  context.pendingDisconnects.delete(instanceId)
+  return true
+}
+
 type EmitFunction = <EventName extends keyof AppConnectionEvents>(
   event: EventName,
   ...args: Parameters<AppConnectionEvents[EventName]>
@@ -201,14 +211,25 @@ export function updateConnectionMetadata(
   }
 
   // Cancel any pending disconnect for the actual instanceId (reconnection scenario)
-  const pendingDisconnect = context.pendingDisconnects.get(actualInstanceId)
-  if (pendingDisconnect) {
-    clearTimeout(pendingDisconnect)
-    context.pendingDisconnects.delete(actualInstanceId)
+  if (cancelPendingDisconnect(context, actualInstanceId)) {
     context.logger.debug(
       `Cancelled pending disconnect for instance ${actualInstanceId} - reconnection detected`,
     )
   }
+
+  // A WCP6Goodbye that arrived before this handshake completed arms
+  // pendingDisconnects[tempInstanceId] (bridgeAppPort still keys off the temp id at that point).
+  // Left uncancelled, that grace timer would fire, resolve forward through the temp -> canonical
+  // handshake-routing link this function establishes below, and tear down the connection whose
+  // handshake just succeeded.
+  if (cancelPendingDisconnect(context, tempInstanceId)) {
+    context.logger.debug(
+      `Cancelled pending disconnect for temp instance ${tempInstanceId} - superseded by successful handshake`,
+    )
+  }
+  // A recentlyDisconnected entry keyed by a temp handshake id is meaningless - nothing can ever
+  // reconnect to a temp id. Drop it rather than restoring from it.
+  context.recentlyDisconnected.delete(tempInstanceId)
 
   // Check if this is a reconnection to a recently disconnected instance
   const recentlyDisconnectedEntry = context.recentlyDisconnected.get(actualInstanceId)
