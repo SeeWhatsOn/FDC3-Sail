@@ -23,6 +23,7 @@ Feature: Relaying Private Channel Broadcast messages
 
   @fdc3_2.0
   Scenario: Broadcast message sent to one listener
+    Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "{channel1Id}" [fdc3.broadcast]
     Then messaging will have outgoing posts
@@ -33,6 +34,7 @@ Feature: Relaying Private Channel Broadcast messages
 
   @fdc3_2.0
   Scenario: Null lifecycle listener receives addContextListener unsubscribe and disconnect events
+    Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds a catch-all private channel event listener on "{channel1Id}" [PrivateChannel.addEventListener]
     And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
     And we wait for a period of "10" ms
@@ -47,6 +49,7 @@ Feature: Relaying Private Channel Broadcast messages
       | privateChannelDisconnectResponse        | App1     | a1            | {null}                       | {null}                  |
 
   Scenario: Event Listener created for addContextListener and unsubscribe
+    Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds an "addContextListener" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
     And "appId: App2, instanceId: a2" adds an "unsubscribe" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
     And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
@@ -65,6 +68,7 @@ Feature: Relaying Private Channel Broadcast messages
 
   @fdc3_2.0
   Scenario: Disconnecting from a channel sends unsubscribe and disconnect messages
+    Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds an "disconnect" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
     And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App2, instanceId: a2" adds an "unsubscribe" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
@@ -76,6 +80,7 @@ Feature: Relaying Private Channel Broadcast messages
       | privateChannelDisconnectResponse | {null}                       | {null}                  | App1     | a1            |
 
   Scenario: addContextListener Event Listener add and removed, shouldn't fire when addContextListener called.
+    Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds an "addContextListener" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
     And "appId: App2, instanceId: a2" removes event listener "{lastPrivateChannelEventListenerId}" [PrivateChannel.removeContextListener]
     And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
@@ -93,6 +98,20 @@ Feature: Relaying Private Channel Broadcast messages
       | getOrCreateChannelResponse | App2     | a2            | AccessDenied      |
 
   @fdc3_2.0
+  Scenario: addContextListener on a private channel id without grant is AccessDenied
+    When "appId: App2, instanceId: a2" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
+    Then messaging will have outgoing posts
+      | msg.type                   | to.appId | to.instanceId | msg.payload.error |
+      | addContextListenerResponse | App2     | a2            | AccessDenied      |
+
+  @fdc3_2.0
+  Scenario: broadcast on a private channel id without grant is AccessDenied
+    When "appId: App2, instanceId: a2" broadcasts "fdc3.instrument" on "{channel1Id}" [fdc3.broadcast]
+    Then messaging will have outgoing posts
+      | msg.type          | to.appId | to.instanceId | msg.payload.error |
+      | broadcastResponse | App2     | a2            | AccessDenied      |
+
+  @fdc3_2.0
   Scenario: Subscribe to a non-existent channel
     When "appId: App2, instanceId: a2" adds a context listener on "IDontExist" with type "fdc3.instrument" [fdc3.addContextListener]
     Then messaging will have outgoing posts
@@ -101,6 +120,7 @@ Feature: Relaying Private Channel Broadcast messages
 
   @fdc3_2.0
   Scenario: Can't unsubscribe an unconnected listener
+    Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App2, instanceId: a2" removes context listener with id "{lastContextListenerId}" [fdc3.removeContextListener]
     And "appId: App2, instanceId: a2" removes context listener with id "{lastContextListenerId}" [fdc3.removeContextListener]
@@ -111,6 +131,7 @@ Feature: Relaying Private Channel Broadcast messages
 
   @fdc3_2.0
   Scenario: Can't unsubscribe an someone else's listener
+    Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App1, instanceId: a1" removes context listener with id "{lastContextListenerId}" [fdc3.removeContextListener]
     Then messaging will have outgoing posts

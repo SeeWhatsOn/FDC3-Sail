@@ -14,7 +14,6 @@ import {
 import { getInstance, getPrivateChannel } from "../../state/selectors"
 import {
   createPrivateChannel,
-  connectInstanceToPrivateChannel,
   disconnectInstanceFromPrivateChannel,
   addPrivateChannelAddContextListenerListener,
   addPrivateChannelDisconnectListener,
@@ -171,7 +170,9 @@ export function handlePrivateChannelAddContextListenerRequest(
     }
 
     if (!channel.connectedInstances.includes(instanceId)) {
-      setState(state => connectInstanceToPrivateChannel(state, channelId, instanceId))
+      throw new ChannelAccessDeniedError(
+        `Instance ${instanceId} is not connected to private channel ${channelId}`,
+      )
     }
 
     const listenerId = generateEventUuid()

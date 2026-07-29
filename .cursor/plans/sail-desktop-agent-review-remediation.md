@@ -1,9 +1,12 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent Review Remediation
 
 Status: verifying
-Current slice: 2 — Directory-load lost update (ready for human review)
+Current slice: 3 — Private-channel grant model (ready for human review)
 Review/fix loops: 0
 Parked decision: Slice 11 — no changeset; leave API-break note for maintainers.
+Slice 3 decision: Original AccessDenied-if-not-connected rejected (breaks FDC3 client
+flow). Tightened to: no auto-join; grant creator on create + raiser on private
+intent-result; AccessDenied otherwise.
 
 Source: whole-package review of `@finos/sail-desktop-agent` on `wip/v3-local` (`0c5f3966a`),
 15 numbered findings + 6 nits + 6 dead-code candidates, plus a follow-up lint pass that added
@@ -638,8 +641,8 @@ extra abstraction, and broad refactors as Follow-up.
 
 - [x] 0 — Green both quality gates — committed `89598d568`
 - [x] 1 — One typed emitter for `channelChanged` (#2, #11) — committed `89598d568`
-- [x] 2 — Directory-load lost update (#3) — verified; awaiting human review/commit
-- [ ] 3 — Private-channel auto-join (#4)
+- [x] 2 — Directory-load lost update (#3) — committed `203969eb6`
+- [x] 3 — Private-channel grant model (#4 revised) — verified; awaiting human review/commit
 - [ ] 4 — WCP4/WCP6 validation (#5)
 - [ ] 5 — Trusted metadata unconditional (#6)
 - [ ] 6 — Identity-resolution cascade (#7)
@@ -660,6 +663,7 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 2 RED: multi-URL replace kept only last directory's apps (`['app-3']`); partial-fail kept only last success
 - Slice 2 GREEN: app-directory + mutators vitest (34), typecheck/lint exit 0
 - Slice 2 fix: `Promise.allSettled` on fetches only, then synchronous fold into state
+- Slice 3: deny auto-join on addContextListener / PrivateChannel.addEventListener; grant raiser on private intent-result; fixture grant step for lifecycle BDD; AccessDenied scenarios green; typecheck/lint/cucumber private-channel green
 
 ## Review Notes
 

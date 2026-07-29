@@ -57,6 +57,7 @@ Feature: App Disconnection and Cleanup
     And "appId: App2, instanceId: a2" is opened with connection id "a2"
     And "appId: App2, instanceId: a1" creates a private channel [fdc3.createPrivateChannel]
     And I alias the last private channel as "channel1Id"
+    And "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds an "disconnect" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
     And "appId: App1, instanceId: a1" adds a context listener on "{channel1Id}" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App2, instanceId: a2" adds an "unsubscribe" event listener on "{channel1Id}" [PrivateChannel.addEventListener]

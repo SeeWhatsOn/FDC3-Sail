@@ -26,7 +26,6 @@ import {
   addPrivateChannelContextListener,
   removePrivateChannelContextListener,
   setPrivateChannelLastContext,
-  connectInstanceToPrivateChannel,
 } from "../../state/mutators"
 import { generateEventUuid } from "../../dacp/dacp-utils"
 import {
@@ -37,12 +36,7 @@ import { notifyContextListenerAdded } from "../utils/open-with-context"
 import { resolveDacpHandlerInstanceId } from "../utils/resolve-context-listener-instance-id"
 import { isValidContext } from "../utils/context-validation"
 
-/**
- * Handles broadcast requests to send context to a channel
- * Implements DACP broadcastRequest message handling
- *
- * Note: Message validation happens at router level before this handler is called
- */
+/** Handles DACP broadcastRequest (validation runs at the router). */
 export function handleBroadcastRequest(
   message: BrowserTypes.BroadcastRequest,
   context: DACPHandlerContext,
@@ -70,7 +64,6 @@ export function handleBroadcastRequest(
       return
     }
 
-    // Validate that the instance is a member of the channel they're broadcasting to
     const state = getState()
     const instance = getInstance(state, instanceId)
     if (!instance) {
@@ -140,8 +133,6 @@ export function handleBroadcastRequest(
   } catch (error) {
     logger.error("DACP: Broadcast request failed", error)
 
-    // BroadcastResponse schema doesn't validate error payloads, but use ChannelError for consistency
-    // Common errors: MalformedContext, ApiTimeout
     const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Unknown broadcast error"
 
@@ -190,12 +181,13 @@ export function handleAddContextListener(
         const resolvedContextType = privateContextType === "*" ? null : privateContextType
 
         if (!privateChannel.connectedInstances.includes(instanceId)) {
-          setState(state => connectInstanceToPrivateChannel(state, channelId, instanceId))
+          throw new ChannelAccessDeniedError(
+            `Instance ${instanceId} is not connected to private channel ${channelId}`,
+          )
         }
-
-        setState(state =>
+        setState(s =>
           addPrivateChannelContextListener(
-            state,
+            s,
             channelId,
             listenerId,
             instanceId,

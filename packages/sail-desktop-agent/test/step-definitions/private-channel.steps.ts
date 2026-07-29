@@ -1,11 +1,15 @@
-import { When } from "@cucumber/cucumber"
+import { Given, When } from "@cucumber/cucumber"
 import { CustomWorld } from "../world/index.ts"
 import { createMeta, getAppInstanceId } from "./generic.steps"
 import { BrowserTypes } from "@finos/fdc3-schema"
 import { handleResolve } from "../support/testing-utils"
 import { AppInstanceState } from "../../src/state/types"
 import { getInstance } from "../../src/state/selectors"
-import { connectInstance, updateInstanceState } from "../../src/state/mutators"
+import {
+  connectInstance,
+  connectInstanceToPrivateChannel,
+  updateInstanceState,
+} from "../../src/state/mutators"
 
 type CreatePrivateChannelRequest = BrowserTypes.CreatePrivateChannelRequest
 type PrivateChannelAddEventListenerRequest = BrowserTypes.PrivateChannelAddEventListenerRequest
@@ -41,6 +45,22 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
 
   return instanceId
 }
+
+/**
+ * Fixture grant for scenarios that exercise private-channel relay/lifecycle after
+ * membership exists. Production grant for a non-creator is via intent-result
+ * (`handleIntentResultRequest` → `connectInstanceToPrivateChannel`).
+ */
+Given(
+  "{string} is granted access to private channel {string}",
+  function (this: CustomWorld, app: string, channelId: string) {
+    const instanceId = ensureAppInstance(this, app)
+    const resolvedChannelId = handleResolve(channelId, this) ?? channelId
+    this.updateState(state =>
+      connectInstanceToPrivateChannel(state, resolvedChannelId, instanceId),
+    )
+  },
+)
 
 When(
   "{string} creates a private channel [fdc3.createPrivateChannel]",

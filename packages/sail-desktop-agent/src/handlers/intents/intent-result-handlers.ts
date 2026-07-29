@@ -14,8 +14,8 @@ import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ResultError, ResolveError } from "@finos/fdc3"
-import { getInstance, getPendingIntent } from "../../state/selectors"
-import { resolvePendingIntent } from "../../state/mutators"
+import { getInstance, getPendingIntent, getPrivateChannel } from "../../state/selectors"
+import { connectInstanceToPrivateChannel, resolvePendingIntent } from "../../state/mutators"
 import {
   buildIntentResultWirePayload,
   attachIntentResultClientMetadata,
@@ -31,6 +31,32 @@ function isHandlerRejection(intentResult: unknown): boolean {
     "error" in intentResult &&
     (intentResult as { error: string }).error === "IntentHandlerRejected"
   )
+}
+
+/** Grant the intent raiser access when a PrivateChannel is returned as the result. */
+function grantPrivateChannelToIntentSource(
+  intentResult: unknown,
+  sourceInstanceId: string,
+  setState: DACPHandlerContext["setState"],
+  getState: DACPHandlerContext["getState"],
+  logger: DACPHandlerContext["logger"],
+): void {
+  if (typeof intentResult !== "object" || intentResult === null || !("channel" in intentResult)) {
+    return
+  }
+  const channel = (intentResult as { channel?: { id?: string; type?: string } }).channel
+  if (!channel || channel.type !== "private" || typeof channel.id !== "string") {
+    return
+  }
+  const channelId = channel.id
+  if (!getPrivateChannel(getState(), channelId)) {
+    logger.warn("DACP: Private channel intent result references unknown channel", {
+      channelId,
+      sourceInstanceId,
+    })
+    return
+  }
+  setState(state => connectInstanceToPrivateChannel(state, channelId, sourceInstanceId))
 }
 
 export function handleIntentResultRequest(
@@ -93,6 +119,10 @@ export function handleIntentResultRequest(
     }
 
     setState(state => resolvePendingIntent(state, originalRequestId))
+
+    if (intentResult !== null && !isHandlerRejection(intentResult)) {
+      grantPrivateChannelToIntentSource(intentResult, sourceInstanceId, setState, getState, logger)
+    }
 
     const response = createDACPSuccessResponse(message, "intentResultResponse")
     sendDACPResponse({ response, instanceId, responses })
