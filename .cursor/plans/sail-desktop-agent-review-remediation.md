@@ -1,12 +1,12 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent Review Remediation
 
-Status: verifying
-Current slice: 3 — Private-channel grant model (ready for human review)
+Status: ready
+Current slice: 4 — Validate WCP4/WCP6 before dispatch
 Review/fix loops: 0
 Parked decision: Slice 11 — no changeset; leave API-break note for maintainers.
-Slice 3 decision: Original AccessDenied-if-not-connected rejected (breaks FDC3 client
-flow). Tightened to: no auto-join; grant creator on create + raiser on private
-intent-result; AccessDenied otherwise.
+Slice 3 decision (landed `a9614dc46`): Original AccessDenied-if-not-connected rejected
+(breaks FDC3 client flow). Tightened to: no auto-join; grant creator on create + raiser
+on private intent-result; AccessDenied otherwise.
 
 Source: whole-package review of `@finos/sail-desktop-agent` on `wip/v3-local` (`0c5f3966a`),
 15 numbered findings + 6 nits + 6 dead-code candidates, plus a follow-up lint pass that added
@@ -206,50 +206,20 @@ npx vitest run src/app-directory src/state/mutators --root packages/sail-desktop
 
 ---
 
-### Slice 3 — Close the private-channel auto-join hole
+### Slice 3 — Close the private-channel auto-join hole ✅ `a9614dc46`
 
-**Finding:** #4 (Required, security).
+**Finding:** #4 (Required, security). **Landed with revised grant model** (see header).
 
-**The bug:** In `src/handlers/broadcast/handlers.ts`, `handleAddContextListenerRequest` checks
-whether the instance is in `privateChannel.connectedInstances` and, if not, **connects it** rather
-than rejecting. Every sibling path enforces membership and throws `ChannelAccessDeniedError` —
-`src/handlers/private-channels/handlers.ts` (two sites), `broadcast/handlers.ts` (the broadcast
-path), and ten guards in `src/state/mutators/private-channel.ts`. This one path grants access
-instead.
+**The bug:** `handleAddContextListener` (and `PrivateChannel.addEventListener`) auto-joined any
+instance that knew the private channel ID. Broadcast already denied; listen was the hole.
 
-**Consequences:** `privateChannelDisconnectRequest` is voidable — an app can disconnect and silently
-rejoin via `addContextListenerRequest`. Any app that ever held the channel ID keeps permanent access.
+**What landed:** No auto-join. Membership grant: creator on `createPrivateChannel`; intent raiser
+(`pendingIntent.sourceInstanceId`) when an intent result returns an existing private channel.
+Ungranted listen / addEventListener → `AccessDenied`. Cucumber: AccessDenied for ungranted `a2`;
+lifecycle scenarios use fixture grant step.
 
-**Mitigating (why this is Required, not Critical):** channel IDs are `crypto.randomUUID()`, so this
-needs a leaked or previously-granted ID, not a guessable one. It is still a real authorization hole.
-
-**What to do:** Throw `ChannelAccessDeniedError` where the code currently calls
-`connectInstanceToPrivateChannel`, matching every sibling path. Do not add a config flag for it.
-
-**Acceptance:** An instance that is not in `connectedInstances` gets `ChannelAccessDeniedError` when
-adding a context listener on a private channel. An instance that *is* connected is unaffected.
-Disconnect-then-rejoin now fails.
-
-**Test (reproduction-first):**
-- Failing test: instance A creates a private channel, instance B (never granted) calls
-  `addContextListenerRequest` with the channel ID → expect `ChannelAccessDeniedError`. Current code
-  silently succeeds.
-- Failing test: connected instance disconnects, then re-adds a listener → expect denial.
-- Guard test: a legitimately-connected instance still registers its listener fine.
-
-**Watch for:** the legitimate grant path (whatever calls `connectInstanceToPrivateChannel` when a
-private channel is properly handed over) must still work — check the intent-result and
-`privateChannelConnect` flows aren't relying on this auto-join as their actual mechanism. If they
-are, that's a finding; report it rather than reinstating the hole.
-
-**Verify:**
-```bash
-npx vitest run src/handlers/broadcast src/handlers/private-channels src/state/mutators --root packages/sail-desktop-agent
-```
-Plus `npm run test:cucumber` — private channels are conformance-covered.
-
-**Likely files:** `src/handlers/broadcast/handlers.ts`, tests under
-`src/handlers/broadcast/__tests__/`
+**Follow-up (not blocking):** real create→intent-result→listen Vitest; optional lifecycle
+AccessDenied BDD.
 
 ---
 
@@ -642,7 +612,7 @@ extra abstraction, and broad refactors as Follow-up.
 - [x] 0 — Green both quality gates — committed `89598d568`
 - [x] 1 — One typed emitter for `channelChanged` (#2, #11) — committed `89598d568`
 - [x] 2 — Directory-load lost update (#3) — committed `203969eb6`
-- [x] 3 — Private-channel grant model (#4 revised) — verified; awaiting human review/commit
+- [x] 3 — Private-channel grant model (#4 revised) — committed `a9614dc46`
 - [ ] 4 — WCP4/WCP6 validation (#5)
 - [ ] 5 — Trusted metadata unconditional (#6)
 - [ ] 6 — Identity-resolution cascade (#7)
