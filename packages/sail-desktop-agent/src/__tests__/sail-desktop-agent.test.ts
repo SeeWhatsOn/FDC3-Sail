@@ -9,6 +9,22 @@ import * as sailDesktopAgentPackage from "../index"
 import { SailDesktopAgent } from "../agent/sail-desktop-agent"
 import type { DirectoryApp } from "../app-directory/types"
 import type { AppLauncher } from "../host-contracts"
+import { connectInstance, updateInstanceState } from "../state/mutators"
+import type { AgentState } from "../state/types"
+import { AppInstanceState } from "../state/types"
+
+type AgentStateHolder = { state: AgentState }
+
+function seedConnectedInstance(agent: SailDesktopAgent, instanceId: string, appId: string): void {
+  const internal = agent as unknown as AgentStateHolder
+  let state = connectInstance(agent.getState(), {
+    instanceId,
+    appId,
+    metadata: { appId, name: appId },
+  })
+  state = updateInstanceState(state, instanceId, AppInstanceState.CONNECTED)
+  internal.state = state
+}
 
 const mockApp: DirectoryApp = {
   appId: "mock-app",
@@ -108,4 +124,15 @@ describe("SailDesktopAgent", () => {
       intent: "ViewChart",
     })
   })
+
+  it("changeAppChannel resolves on a redundant join to the same channel", async () => {
+    const agent = new SailDesktopAgent({ autoStart: false })
+    const instanceId = "redundant-join-instance"
+    const channel = agent.channels.getUserChannels()[0]
+    expect(channel).toBeDefined()
+    seedConnectedInstance(agent, instanceId, "redundant-app")
+
+    await agent.channels.changeAppChannel(instanceId, channel.id)
+    await expect(agent.channels.changeAppChannel(instanceId, channel.id)).resolves.toBeUndefined()
+  }, 15_000)
 })

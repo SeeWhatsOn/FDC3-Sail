@@ -64,6 +64,7 @@ function createMinimalWCPContext(): AppConnectionContext {
       intentResolutionTimeout: 60000,
       debug: false,
       logger: consoleLogger,
+      resolveHostIdentifier: () => undefined,
     },
     pendingDisconnects: new Map(),
     recentlyDisconnected: new Map(),

@@ -126,8 +126,8 @@ export function handleJoinUserChannelRequest(
 
     if (!wasAlreadyOnChannel) {
       deliverCurrentContextToInstanceListeners(instanceId, channelId, context)
-      notifyChannelChanged(instanceId, channelId, context, options)
     }
+    notifyChannelChanged(instanceId, channelId, context, options)
   } catch (error) {
     const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to join user channel"
@@ -411,22 +411,20 @@ function notifyChannelChanged(
     responses.sendOutbound(channelChangedEventWithRouting)
   })
 
-  // Host-initiated joins/leaves: when no app registered channelChanged listeners, emit on the
-  // app edge so WCP connector can raise channelChanged for host chrome. App-originated
-  // joinUserChannel / leaveCurrentChannel already get DACP responses on the same edge.
-  if (subscriberInstanceIds.size === 0) {
-    if (options?.hostInitiated) {
-      responses.sendOutbound({
-        ...channelChangedEvent,
-        meta: {
-          ...channelChangedEvent.meta,
-          destination: { instanceId },
-        },
-      })
-    } else {
-      context.notifyChannelMembershipChanged?.(instanceId, channelId)
-    }
+  // Host-initiated joins/leaves: when no app registered channelChanged listeners, deliver the
+  // DACP event on the app edge so the target instance still observes membership changes.
+  if (subscriberInstanceIds.size === 0 && options?.hostInitiated) {
+    responses.sendOutbound({
+      ...channelChangedEvent,
+      meta: {
+        ...channelChangedEvent.meta,
+        destination: { instanceId },
+      },
+    })
   }
+
+  // Typed host-chrome path — always emit so redundant joins and leave still resolve host waiters.
+  context.notifyChannelMembershipChanged?.(instanceId, channelId)
 
   logger.debug("Channel changed event broadcast", {
     instanceId,

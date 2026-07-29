@@ -62,10 +62,6 @@ export class AppConnectionRegistry {
       return
     }
 
-    if (message.type === "channelChangedEvent") {
-      this.emitChannelChanged(message)
-    }
-
     this.sendOnPort(destinationId, message)
   }
 
@@ -116,35 +112,6 @@ export class AppConnectionRegistry {
     }
 
     this.sendOnPort(destinationId, message)
-  }
-
-  private emitChannelChanged(
-    message: AgentResponseMessage | AgentEventMessage | WebConnectionProtocolMessage,
-  ): void {
-    if (!("payload" in message) || !message.payload || typeof message.payload !== "object") {
-      return
-    }
-
-    let channelId: string | null | undefined
-    let changedInstanceId: string | undefined
-
-    if ("channelId" in message.payload) {
-      const ch = message.payload.channelId
-      channelId = ch === null || typeof ch === "string" ? ch : undefined
-    }
-    if (
-      "identity" in message.payload &&
-      message.payload.identity &&
-      typeof message.payload.identity === "object" &&
-      "instanceId" in message.payload.identity &&
-      typeof message.payload.identity.instanceId === "string"
-    ) {
-      changedInstanceId = message.payload.identity.instanceId
-    }
-
-    if (changedInstanceId) {
-      this.callbacks.emit("channelChanged", changedInstanceId, channelId ?? null)
-    }
   }
 }
 
