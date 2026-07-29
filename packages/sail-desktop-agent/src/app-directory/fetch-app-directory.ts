@@ -76,16 +76,23 @@ export async function fetchAppDirectory(url: string): Promise<DirectoryApp[]> {
   }
 }
 
-/** Merges fetched apps into catalog.apps without duplicate appIds (same policy as addApplications). */
+/**
+ * Merges fetched apps into catalog.apps without duplicate appIds.
+ *
+ * Identity is `appId` (including fully-qualified forms like `app1@company1.com`),
+ * compared case-insensitively so `App1` and `app1` do not both enter the catalog.
+ * When the same id appears again (across directories or batches), the first entry wins.
+ */
 export function mergeAppsWithoutDuplicates(
   existingApps: DirectoryApp[],
   incomingApps: DirectoryApp[],
 ): DirectoryApp[] {
-  const existingAppIds = new Set(existingApps.map(app => app.appId))
+  const existingAppIds = new Set(existingApps.map(app => app.appId.toLowerCase()))
   const newApps: DirectoryApp[] = []
   for (const app of incomingApps) {
-    if (!existingAppIds.has(app.appId)) {
-      existingAppIds.add(app.appId)
+    const normalizedAppId = app.appId.toLowerCase()
+    if (!existingAppIds.has(normalizedAppId)) {
+      existingAppIds.add(normalizedAppId)
       newApps.push(app)
     }
   }

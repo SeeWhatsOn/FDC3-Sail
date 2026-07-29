@@ -96,6 +96,27 @@ describe("AgentState.appDirectory ownership contract", () => {
     expect(appDirectory.apps.map(app => app.appId).sort()).toEqual(["app-1", "app-2"])
   })
 
+  it("dedupes appIds case-insensitively and keeps the first entry", () => {
+    const agent = new DesktopAgent({
+      userChannels: DEFAULT_FDC3_USER_CHANNELS,
+      apps: [mockApp1],
+    })
+    const upperCaseDuplicate: typeof mockApp1 = {
+      ...mockApp1,
+      appId: "APP-1",
+      title: "Uppercase Duplicate",
+    }
+
+    applyAgentStateUpdate(agent, state => addApplications(state, [upperCaseDuplicate, mockApp2]))
+
+    const appDirectory = expectAppDirectoryOnState(agent.getState())
+    expect(appDirectory.apps).toHaveLength(2)
+    expect(appDirectory.apps.map(app => app.appId).sort()).toEqual(["app-1", "app-2"])
+    expect(appDirectory.apps.find(app => app.appId.toLowerCase() === "app-1")?.title).toBe(
+      "Test App 1",
+    )
+  })
+
   it("addDirectoryUrl updates state.appDirectory.directoryUrls", () => {
     const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
     const url = "https://example.com/v2/apps"
@@ -143,6 +164,56 @@ describe("AgentState.appDirectory ownership contract", () => {
     expect(appDirectory.apps.map(app => app.appId).sort()).toEqual(["app-2", "app-3"])
     expect(appDirectory.apps.map(app => app.appId)).not.toContain("app-1")
     expect(appDirectory.directoryUrls).toEqual([url])
+  })
+
+  it("replaceDirectoriesInState merges apps from all directory URLs", async () => {
+    const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
+    const url1 = "https://example.com/dir1/v2/apps"
+    const url2 = "https://example.com/dir2/v2/apps"
+    const url3 = "https://example.com/dir3/v2/apps"
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      const apps =
+        url === url1 ? [mockApp1] : url === url2 ? [mockApp2] : url === url3 ? [mockApp3] : []
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(apps),
+      })
+    })
+
+    await applyAgentStateUpdateAsync(agent, state =>
+      replaceDirectoriesInState(state, [url1, url2, url3]),
+    )
+
+    const appDirectory = expectAppDirectoryOnState(agent.getState())
+    expect(appDirectory.apps.map(app => app.appId).sort()).toEqual(["app-1", "app-2", "app-3"])
+    expect(appDirectory.directoryUrls).toEqual([url1, url2, url3])
+  })
+
+  it("replaceDirectoriesInState keeps successful directories when one URL fails", async () => {
+    const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
+    const urlOk1 = "https://example.com/ok1/v2/apps"
+    const urlFail = "https://example.com/fail/v2/apps"
+    const urlOk2 = "https://example.com/ok2/v2/apps"
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === urlFail) {
+        return Promise.resolve({ ok: false, status: 500, statusText: "Server Error" })
+      }
+      const apps = url === urlOk1 ? [mockApp1] : url === urlOk2 ? [mockApp2] : []
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(apps),
+      })
+    })
+
+    await applyAgentStateUpdateAsync(agent, state =>
+      replaceDirectoriesInState(state, [urlOk1, urlFail, urlOk2]),
+    )
+
+    const appDirectory = expectAppDirectoryOnState(agent.getState())
+    expect(appDirectory.apps.map(app => app.appId).sort()).toEqual(["app-1", "app-2"])
+    expect(appDirectory.directoryUrls).toEqual([urlOk1, urlFail, urlOk2])
   })
 
   it("query helpers reflect state.appDirectory as the single source of truth", () => {

@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent Review Remediation
 
 Status: verifying
-Current slice: 1 — One typed emitter for channelChanged (ready for human review)
+Current slice: 2 — Directory-load lost update (ready for human review)
 Review/fix loops: 0
 Parked decision: Slice 11 — no changeset; leave API-break note for maintainers.
 
@@ -636,9 +636,9 @@ extra abstraction, and broad refactors as Follow-up.
 
 ## Slice Checkpoints
 
-- [x] 0 — Green both quality gates — verified; awaiting human review/commit
-- [x] 1 — One typed emitter for `channelChanged` (#2, #11) — verified + review PASS; awaiting human review/commit
-- [ ] 2 — Directory-load lost update (#3)
+- [x] 0 — Green both quality gates — committed `89598d568`
+- [x] 1 — One typed emitter for `channelChanged` (#2, #11) — committed `89598d568`
+- [x] 2 — Directory-load lost update (#3) — verified; awaiting human review/commit
 - [ ] 3 — Private-channel auto-join (#4)
 - [ ] 4 — WCP4/WCP6 validation (#5)
 - [ ] 5 — Trusted metadata unconditional (#6)
@@ -657,6 +657,9 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 1 RED (before fix): redundant join notify called 0×; `changeAppChannel` second call timed out at 10s
 - Slice 1 GREEN: join-user-channel-notify (3), sail-desktop-agent (5), channels+app-connection vitest (88), typecheck/lint exit 0, cucumber channels green
 - Slice 1 review: code-reviewer PASS — no Required findings
+- Slice 2 RED: multi-URL replace kept only last directory's apps (`['app-3']`); partial-fail kept only last success
+- Slice 2 GREEN: app-directory + mutators vitest (34), typecheck/lint exit 0
+- Slice 2 fix: `Promise.allSettled` on fetches only, then synchronous fold into state
 
 ## Review Notes
 

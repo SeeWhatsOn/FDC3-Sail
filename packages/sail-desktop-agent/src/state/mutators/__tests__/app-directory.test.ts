@@ -51,6 +51,21 @@ describe("app-directory mutators", () => {
       expect(appDirectory.apps.filter(app => app.appId === "app-1")).toHaveLength(1)
     })
 
+    it("dedupes appIds case-insensitively and keeps the first entry", () => {
+      state = addApplications(state, [mockApp1])
+      state = addApplications(state, [
+        { ...mockApp1, appId: "APP-1", title: "Uppercase Duplicate" },
+        mockApp2,
+      ])
+
+      const appDirectory = expectAppDirectoryOnState(state)
+      expect(appDirectory.apps).toHaveLength(2)
+      expect(appDirectory.apps.map(app => app.appId).sort()).toEqual(["app-1", "app-2"])
+      expect(appDirectory.apps.find(app => app.appId.toLowerCase() === "app-1")?.title).toBe(
+        "Test App 1",
+      )
+    })
+
     it("validates required fields", () => {
       const invalidApp = {
         appId: "invalid",

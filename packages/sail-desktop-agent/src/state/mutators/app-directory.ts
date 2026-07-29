@@ -25,7 +25,6 @@ export function addApp(state: AgentState, app: DirectoryApp): AgentState {
   }
 }
 
-/** Adds apps with duplicate appId skipping and required-field validation. */
 /** Removes every catalog entry whose appId matches case-insensitively. */
 export function removeApplicationsByAppId(state: AgentState, appId: string): AgentState {
   const normalizedAppId = appId.toLowerCase()
@@ -38,6 +37,7 @@ export function removeApplicationsByAppId(state: AgentState, appId: string): Age
   }
 }
 
+/** Adds apps with case-insensitive duplicate appId skipping (first wins) and required-field validation. */
 export function addApplications(
   state: AgentState,
   data: DirectoryApp[] | DirectoryData,
@@ -151,19 +151,34 @@ export async function replaceDirectoriesInState(
     appDirectory: { apps: [], directoryUrls: [...urls] },
   }
 
-  const results = await Promise.allSettled(
-    urls.map(async url => {
-      next = await loadDirectoryIntoState(next, url)
-    }),
-  )
+  // Fetch concurrently; fold results synchronously so concurrent loads cannot
+  // overwrite each other via a shared mutable accumulator.
+  const results = await Promise.allSettled(urls.map(url => fetchAppDirectory(url)))
 
-  const errors = results
-    .map((result, index) =>
-      result.status === "rejected"
-        ? `Failed to load ${urls[index]}: ${(result.reason as Error).message || result.reason}`
-        : null,
+  const errors: string[] = []
+  for (const [index, result] of results.entries()) {
+    const url = urls[index]
+    if (url === undefined) {
+      continue
+    }
+    if (result.status === "fulfilled") {
+      next = {
+        ...next,
+        appDirectory: {
+          ...next.appDirectory,
+          apps: mergeAppsWithoutDuplicates(next.appDirectory.apps, result.value),
+        },
+      }
+      continue
+    }
+
+    logDirectoryLoadFailure(url, result.reason)
+    errors.push(
+      `Failed to load ${url}: ${
+        result.reason instanceof Error ? result.reason.message : String(result.reason)
+      }`,
     )
-    .filter((error): error is string => error !== null)
+  }
 
   const successCount = results.filter(result => result.status === "fulfilled").length
   consoleLogger.info(
