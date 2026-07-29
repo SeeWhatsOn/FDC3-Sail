@@ -40,6 +40,7 @@ import {
   isValidWebConnectionProtocol4ValidateAppIdentity,
   isValidWebConnectionProtocol6Goodbye,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
+import type { Logger } from "../interfaces/logger"
 
 /**
  * How the agent treats a message that fails FDC3 schema validation.
@@ -109,4 +110,41 @@ export function isValidInboundMessage(messageType: string, message: unknown): bo
     // returning false. Treat a throw as a validation failure, not a crash.
     return false
   }
+}
+
+/**
+ * Shared inbound validation gate for DACP routing and WCP MessagePort ingest.
+ *
+ * Call on the **raw** app message (before Sail enrichment). Returns `"rejected"`
+ * only in `strict` mode when the schema check fails.
+ */
+export function applyInboundValidationPolicy(
+  message: unknown,
+  options: {
+    logger: Pick<Logger, "error" | "warn">
+    validation?: ValidationMode
+  },
+): "dispatch" | "rejected" {
+  const resolvedValidation = options.validation ?? "warn"
+  const messageType =
+    message && typeof message === "object" && "type" in message
+      ? (message as { type?: string }).type
+      : undefined
+
+  if (resolvedValidation === "off" || !messageType) {
+    return "dispatch"
+  }
+
+  if (!isValidInboundMessage(messageType, message)) {
+    if (resolvedValidation === "strict") {
+      options.logger.error("DACP message failed FDC3 schema validation — rejected", { messageType })
+      return "rejected"
+    }
+
+    options.logger.warn("DACP message failed FDC3 schema validation — dispatching anyway", {
+      messageType,
+    })
+  }
+
+  return "dispatch"
 }

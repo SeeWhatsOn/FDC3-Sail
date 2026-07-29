@@ -8,11 +8,14 @@ import type { AppConnectionRegistry } from "../app-connection-registry"
 import { isAppMessage } from "./wcp-types"
 import type { Logger } from "../../interfaces/logger"
 import type { AppConnectionEvents } from "../app-connection-events"
+import { applyInboundValidationPolicy, type ValidationMode } from "../../dacp/validate-dacp-message"
 
 export interface WCPRoutingContext {
   connectionRegistry: AppConnectionRegistry
   onAppMessage: AppMessageHandler
   logger: Logger
+  /** Same ValidationMode as DesktopAgent — applied to raw MessagePort messages. */
+  validation: ValidationMode
   emit: <EventName extends keyof AppConnectionEvents>(
     event: EventName,
     ...args: Parameters<AppConnectionEvents[EventName]>
@@ -46,6 +49,17 @@ export function bridgeAppPort(
     const currentInstanceId = connectionRegistry.transportToInstanceId.get(appTransport)
     if (!currentInstanceId) {
       context.logger.warn("Cannot route message: transport not found in reverse lookup")
+      return
+    }
+
+    // Validate raw wire shape before enrichment / WCP6 handling. Sail stamps
+    // meta.source and messageOrigin after this point; those fields fail FDC3 WCP schemas.
+    if (
+      applyInboundValidationPolicy(message, {
+        logger: context.logger,
+        validation: context.validation,
+      }) === "rejected"
+    ) {
       return
     }
 

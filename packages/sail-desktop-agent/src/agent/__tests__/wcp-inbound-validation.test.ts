@@ -1,0 +1,211 @@
+/**
+ * Reproduction tests: WCP4/WCP6 must honor ValidationMode before handler dispatch.
+ *
+ * Today handleWcpMessage (DACP edge) and bridgeAppPort (browser edge) skip
+ * isValidInboundMessage, so strict mode never rejects schema-invalid WCP4/WCP6.
+ *
+ * @vitest-environment jsdom
+ */
+
+import { afterEach, describe, expect, it } from "vite-plus/test"
+
+import {
+  beginWcpAppFirstConnect,
+  connectWcpApp,
+  flushAsyncDelivery,
+} from "../../app-connection/__tests__/wcp-edge-test-helpers"
+import { PORTFOLIO_APP } from "../../app-connection/__tests__/wcp-desktop-agent.integration.fixtures"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
+import { connectInstance, updateInstanceState } from "../../state/mutators"
+import { AppInstanceState } from "../../state/types"
+import { createDesktopAgentWithTestConnection } from "../../../test/support/desktop-agent-test-harness"
+import { applyDesktopAgentStateUpdate } from "../../../test/support/agent-state"
+import { SailDesktopAgent } from "../sail-desktop-agent"
+
+const DIRECTORY_APP = {
+  appId: "test-app",
+  title: "Test App",
+  type: "web" as const,
+  details: { url: "https://example.com/app" },
+}
+
+const SCHEMA_VALID_CONNECTION_ATTEMPT_UUID = "550e8400-e29b-41d4-a716-446655440000"
+
+function isWcp5IdentityResponse(message: unknown): boolean {
+  const type = (message as { type?: string }).type
+  return (
+    type === "WCP5ValidateAppIdentityResponse" || type === "WCP5ValidateAppIdentityFailedResponse"
+  )
+}
+
+describe("WCP inbound schema validation (strict)", () => {
+  const activeAgents: SailDesktopAgent[] = []
+
+  afterEach(() => {
+    clearAllHeartbeatTimersForTesting()
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+  })
+
+  it("rejects schema-invalid WCP4 under strict without entering the identity handler", async () => {
+    const { connection } = createDesktopAgentWithTestConnection({
+      validation: "strict",
+      heartbeatEnabled: false,
+      apps: [DIRECTORY_APP],
+    })
+
+    // Schema-invalid: missing required actualUrl. messageOrigin is Sail-only and
+    // also schema-invalid; included so today's pre-fix handler path can still respond.
+    await connection.receiveMessage({
+      type: "WCP4ValidateAppIdentity",
+      payload: {
+        identityUrl: "https://example.com/app",
+      },
+      meta: {
+        connectionAttemptUuid: SCHEMA_VALID_CONNECTION_ATTEMPT_UUID,
+        timestamp: new Date(),
+        messageOrigin: "https://example.com",
+      },
+    })
+
+    const wcp5Responses = connection.sentMessages.filter(isWcp5IdentityResponse)
+    expect(wcp5Responses).toHaveLength(0)
+  })
+
+  it("rejects schema-invalid WCP6 under strict without cleaning up the instance", async () => {
+    const instanceId = "wcp6-strict-validation-instance"
+    const { agent, connection } = createDesktopAgentWithTestConnection({
+      validation: "strict",
+      heartbeatEnabled: false,
+    })
+
+    applyDesktopAgentStateUpdate(agent, state => {
+      const withInstance = connectInstance(state, {
+        instanceId,
+        appId: "test-app",
+        metadata: { appId: "test-app", name: "Test App" },
+      })
+      return updateInstanceState(withInstance, instanceId, AppInstanceState.CONNECTED)
+    })
+
+    expect(agent.getState().instances[instanceId]?.state).toBe(AppInstanceState.CONNECTED)
+
+    // Schema-invalid: meta.source is forbidden (additionalProperties: false), but
+    // handleWcpMessage today uses extractInstanceId(meta.source) then runs cleanup.
+    await connection.receiveMessage({
+      type: "WCP6Goodbye",
+      meta: {
+        timestamp: new Date(),
+        source: { appId: "test-app", instanceId },
+      },
+    })
+
+    expect(agent.getState().instances[instanceId]).toBeDefined()
+    expect(agent.getState().instances[instanceId]?.state).toBe(AppInstanceState.CONNECTED)
+  })
+
+  function createStrictBrowserAgent(): SailDesktopAgent {
+    const agent = new SailDesktopAgent({
+      validation: "strict",
+      heartbeatEnabled: false,
+      userChannels: DEFAULT_FDC3_USER_CHANNELS,
+      apps: [PORTFOLIO_APP],
+      appConnectionOptions: {
+        getIntentResolverUrl: () => false,
+        getChannelSelectorUrl: () => false,
+        fdc3Version: "2.2",
+        handshakeTimeout: 30_000,
+        disconnectGracePeriod: 0,
+      },
+    })
+    activeAgents.push(agent)
+    return agent
+  }
+
+  it("accepts schema-valid WCP4 under strict on the browser MessagePort path", async () => {
+    const agent = createStrictBrowserAgent()
+
+    // connectWcpApp posts raw schema-valid WCP4 (UUID + Date, no messageOrigin/source).
+    // Browser enrichment adds messageOrigin after the pre-enrichment validation gate.
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "550e8400-e29b-41d4-a716-446655440001",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED,
+    )
+  })
+
+  it("rejects schema-invalid WCP4 under strict on the browser MessagePort path", async () => {
+    const agent = createStrictBrowserAgent()
+    const session = beginWcpAppFirstConnect(agent, {
+      connectionAttemptUuid: "550e8400-e29b-41d4-a716-446655440002",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const wcp5Types: string[] = []
+    session.appPort.onmessage = event => {
+      const type = (event.data as { type?: string }).type
+      if (
+        type === "WCP5ValidateAppIdentityResponse" ||
+        type === "WCP5ValidateAppIdentityFailedResponse"
+      ) {
+        wcp5Types.push(type)
+      }
+    }
+
+    // Schema-invalid: missing required actualUrl. Must be rejected in bridgeAppPort
+    // before enrichment — DA skips re-validation once meta.source is stamped.
+    session.appPort.postMessage({
+      type: "WCP4ValidateAppIdentity",
+      meta: {
+        connectionAttemptUuid: session.connectionAttemptUuid,
+        timestamp: new Date(),
+      },
+      payload: {
+        identityUrl: PORTFOLIO_APP.details.url,
+      },
+    })
+    await flushAsyncDelivery()
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    expect(wcp5Types).toHaveLength(0)
+    expect(
+      Object.values(agent.getState().instances).some(
+        instance =>
+          instance.appId === "portfolioApp" && instance.state === AppInstanceState.CONNECTED,
+      ),
+    ).toBe(false)
+  })
+
+  it("rejects schema-invalid WCP6 under strict on the browser MessagePort path", async () => {
+    const agent = createStrictBrowserAgent()
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "550e8400-e29b-41d4-a716-446655440003",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED,
+    )
+
+    // Schema-invalid: meta.timestamp required. Browser WCP6 is handled in bridgeAppPort.
+    connected.appPort.postMessage({
+      type: "WCP6Goodbye",
+      meta: {},
+    })
+    await flushAsyncDelivery()
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeDefined()
+    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED,
+    )
+  })
+})

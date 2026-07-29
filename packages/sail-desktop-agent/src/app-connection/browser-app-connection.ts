@@ -11,6 +11,7 @@ import type {
   AppRequestMessage,
   WebConnectionProtocolMessage,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
+import type { ValidationMode } from "../dacp/validate-dacp-message"
 import {
   handleWCP1Hello as handleWCP1HelloHandshake,
   type WCPHandshakeContext,
@@ -43,10 +44,16 @@ import { AppConnectionRegistry } from "./app-connection-registry"
 export type { AppConnectionMetadata, AppConnectionOptions } from "./wcp/wcp-types"
 export type { AppConnectionEvents } from "./app-connection-events"
 
+/** Browser edge options: WCP handshake config plus DesktopAgent validation mode. */
+export type BrowserAppConnectionOptions = AppConnectionOptions & {
+  validation?: ValidationMode
+}
+
 export class BrowserAppConnection extends AppConnectionEventEmitter {
   readonly connectionRegistry: AppConnectionRegistry
 
   private options: Required<AppConnectionOptions>
+  private validation: ValidationMode
   private isStarted = false
   private appMessageHandler?: AppMessageHandler
   private boundHandleWindowMessage = this.handleWindowMessage.bind(this)
@@ -61,11 +68,12 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
   private setAgentState?: StateSetter
   private onInstanceTeardown?: (instanceId: string) => void
 
-  constructor(options?: AppConnectionOptions) {
+  constructor(options?: BrowserAppConnectionOptions) {
     super()
     const logger: Logger = options?.logger ?? consoleLogger
     const intentResolverUrl = options?.intentResolverUrl ?? false
     const channelSelectorUrl = options?.channelSelectorUrl ?? false
+    this.validation = options?.validation ?? "warn"
     this.options = {
       intentResolverUrl,
       channelSelectorUrl,
@@ -297,6 +305,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
       onAppMessage: message => this.forwardAppMessage(message),
       emit: this.emit.bind(this),
       logger: this.options.logger,
+      validation: this.validation,
       enrichMessageWithSource: this.enrichMessageWithSource.bind(this),
       handleWCP6Goodbye: this.handleWCP6Goodbye.bind(this),
       onInstanceTeardown,

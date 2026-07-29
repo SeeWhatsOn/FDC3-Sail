@@ -203,6 +203,7 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
     const browserAppConnection = new BrowserAppConnection({
       ...localOptions.appConnectionOptions,
       logger,
+      validation: localOptions.validation,
     })
     const wcpIntentResolutionTimeout =
       localOptions.appConnectionOptions?.intentResolutionTimeout ??

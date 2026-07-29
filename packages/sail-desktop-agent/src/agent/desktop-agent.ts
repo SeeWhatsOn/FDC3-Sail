@@ -12,7 +12,7 @@ import { cleanupDACPHandlers } from "../handlers/cleanup"
 import { handleWcp4ValidateAppIdentity } from "../app-connection/wcp/wcp-identity-validation"
 import { createDacpResponseDispatcherFromDelivery } from "../handlers/utils/dacp-response-utils"
 import type { DACPHandlerContext, PendingIntentPromiseEntry } from "../handlers/types"
-import type { ValidationMode } from "../dacp/validate-dacp-message"
+import { applyInboundValidationPolicy, type ValidationMode } from "../dacp/validate-dacp-message"
 import type { IntentResolutionCallback } from "../handlers/intent-resolution-callback"
 import type { DirectoryApp } from "../app-directory/types"
 import {
@@ -278,7 +278,23 @@ export class DesktopAgent {
 
     const messageObj = message as {
       type?: string
-      meta?: { connectionAttemptUuid?: string }
+      meta?: { connectionAttemptUuid?: string; source?: unknown }
+    }
+
+    // Validate raw WCP before dispatch (same policy as routeDACPMessage).
+    // Browser MessagePort path already validated in bridgeAppPort before
+    // enrichment; enriched WCP4 carries Sail-injected meta.source and must not
+    // be re-checked here (those fields fail the FDC3 WCP schema).
+    const isBrowserEnrichedWcp4 =
+      messageObj.type === "WCP4ValidateAppIdentity" && messageObj.meta?.source !== undefined
+    if (
+      !isBrowserEnrichedWcp4 &&
+      applyInboundValidationPolicy(message, {
+        logger: this.logger,
+        validation: this.validation,
+      }) === "rejected"
+    ) {
+      return
     }
 
     if (messageObj.type === "WCP4ValidateAppIdentity") {

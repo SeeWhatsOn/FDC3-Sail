@@ -3,7 +3,7 @@ import { BridgingError } from "@finos/fdc3"
 import { DACP_TIMEOUTS } from "../dacp/dacp-constants"
 import { DACPProcessingError, DACPTimeoutError, DACPValidationError } from "../dacp/dacp-errors"
 import { withDACPTimeout, logDACPMessage, extractDACPMessageLogMetadata } from "../dacp/dacp-utils"
-import { isValidInboundMessage } from "../dacp/validate-dacp-message"
+import { applyInboundValidationPolicy } from "../dacp/validate-dacp-message"
 import { type DACPHandlerContext, type MessageType } from "./types"
 import { sendDACPErrorResponse } from "./utils/dacp-response-utils"
 
@@ -25,7 +25,6 @@ export async function routeDACPMessage(
 ): Promise<void> {
   const { logger, validation, logPayloadDetail } = context
   const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
-  const resolvedValidation = validation ?? "warn"
   try {
     logDACPMessage("incoming", message, "DACP Router", {
       logger,
@@ -36,24 +35,14 @@ export async function routeDACPMessage(
     // Extract message type for routing
     const messageType = (message as { type?: MessageType })?.type
 
-    // Validate inbound messages against the FDC3 schema for their type
-    if (resolvedValidation !== "off" && messageType) {
-      if (!isValidInboundMessage(messageType, message)) {
-        if (resolvedValidation === "strict") {
-          logger.error("DACP message failed FDC3 schema validation — rejected", { messageType })
-          sendErrorResponseIfRequestLike(
-            message,
-            context,
-            BridgingError.MalformedMessage,
-            "Invalid message structure",
-          )
-          return
-        }
-
-        logger.warn("DACP message failed FDC3 schema validation — dispatching anyway", {
-          messageType,
-        })
-      }
+    if (applyInboundValidationPolicy(message, { logger, validation }) === "rejected") {
+      sendErrorResponseIfRequestLike(
+        message,
+        context,
+        BridgingError.MalformedMessage,
+        "Invalid message structure",
+      )
+      return
     }
 
     // Get appropriate timeout for message type
