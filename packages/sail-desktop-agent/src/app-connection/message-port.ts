@@ -112,7 +112,7 @@ export class MessagePortTransport {
     } catch (error) {
       this.logger.error("[MessagePortTransport] Error sending message through MessagePort:", error)
       // If posting fails, treat as disconnection
-      this.handleDisconnect()
+      this.disconnect()
       throw error
     }
   }
@@ -148,14 +148,6 @@ export class MessagePortTransport {
    */
   isConnected(): boolean {
     return this.connected
-  }
-
-  /**
-   * Get the instance ID associated with this transport connection.
-   * For MessagePortTransport, this is not applicable as it's not a per-instance connection.
-   */
-  getInstanceId(): string | null {
-    return null
   }
 
   /**
@@ -266,26 +258,9 @@ export class MessagePortTransport {
    *
    * Lenient policy: log at error level and keep the connection alive so one
    * bad inbound payload does not tear down an otherwise healthy app session.
-   * Outbound postMessage failures remain fatal via send() → handleDisconnect().
+   * Outbound postMessage failures remain fatal via send() → disconnect().
    */
   private handleError(event: MessageEvent): void {
     this.logger.error("MessagePort error:", event)
-  }
-
-  /**
-   * Handle disconnection (error path or postMessage failure)
-   */
-  private handleDisconnect(): void {
-    if (this.portDisposed && !this.connected) {
-      return
-    }
-
-    const wasConnected = this.connected
-    this.connected = false
-    this.disposePort()
-
-    if (wasConnected) {
-      this.notifyDisconnectHandler()
-    }
   }
 }

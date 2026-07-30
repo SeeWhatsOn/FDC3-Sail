@@ -142,58 +142,59 @@ async function handleDACPMessage(
 }
 
 /**
- * Handler registry - maps message types to handler functions
+ * Handler registry - maps message types to handler functions.
+ * Module-level so the map is not reallocated on every DACP message.
  */
 type RoutedHandler = (message: unknown, context: DACPHandlerContext) => void | Promise<void>
 
+const HANDLER_MAP = {
+  // Context handlers
+  broadcastRequest: contextHandlers.handleBroadcastRequest,
+  addContextListenerRequest: contextHandlers.handleAddContextListener,
+  contextListenerUnsubscribeRequest: contextHandlers.handleContextListenerUnsubscribe,
+
+  // Intent handlers
+  raiseIntentRequest: intentHandlers.handleRaiseIntentRequest,
+  raiseIntentForContextRequest: intentHandlers.handleRaiseIntentForContextRequest,
+  addIntentListenerRequest: intentHandlers.handleAddIntentListener,
+  intentListenerUnsubscribeRequest: intentHandlers.handleIntentListenerUnsubscribe,
+  findIntentRequest: intentHandlers.handleFindIntentRequest,
+  findIntentsByContextRequest: intentHandlers.handleFindIntentsByContextRequest,
+  intentResultRequest: intentHandlers.handleIntentResultRequest,
+
+  // Channel handlers
+  getCurrentChannelRequest: channelHandlers.handleGetCurrentChannelRequest,
+  getCurrentContextRequest: channelHandlers.handleGetCurrentContextRequest,
+  joinUserChannelRequest: channelHandlers.handleJoinUserChannelRequest,
+  leaveCurrentChannelRequest: channelHandlers.handleLeaveCurrentChannelRequest,
+  getUserChannelsRequest: channelHandlers.handleGetUserChannelsRequest,
+  getOrCreateChannelRequest: channelHandlers.handleGetOrCreateChannelRequest,
+
+  // App management handlers
+  getInfoRequest: appHandlers.handleGetInfoRequest,
+  openRequest: appHandlers.handleOpenRequest,
+  closeRequest: appHandlers.handleCloseRequest,
+  findInstancesRequest: appHandlers.handleFindInstancesRequest,
+  getAppMetadataRequest: appHandlers.handleGetAppMetadataRequest,
+
+  // Event handlers
+  addEventListenerRequest: eventHandlers.handleAddEventListenerRequest,
+  eventListenerUnsubscribeRequest: eventHandlers.handleEventListenerUnsubscribeRequest,
+
+  // Private channel handlers
+  createPrivateChannelRequest: privateChannelHandlers.handleCreatePrivateChannelRequest,
+  privateChannelDisconnectRequest: privateChannelHandlers.handlePrivateChannelDisconnectRequest,
+  privateChannelAddEventListenerRequest:
+    privateChannelHandlers.handlePrivateChannelAddContextListenerRequest,
+  privateChannelUnsubscribeEventListenerRequest:
+    privateChannelHandlers.handlePrivateChannelUnsubscribeEventListenerRequest,
+
+  // Heartbeat handlers
+  heartbeatAcknowledgementRequest: heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,
+}
+
 function getHandlerForMessageType(messageType: string): RoutedHandler | null {
-  const handlerMap = {
-    // Context handlers
-    broadcastRequest: contextHandlers.handleBroadcastRequest,
-    addContextListenerRequest: contextHandlers.handleAddContextListener,
-    contextListenerUnsubscribeRequest: contextHandlers.handleContextListenerUnsubscribe,
-
-    // Intent handlers
-    raiseIntentRequest: intentHandlers.handleRaiseIntentRequest,
-    raiseIntentForContextRequest: intentHandlers.handleRaiseIntentForContextRequest,
-    addIntentListenerRequest: intentHandlers.handleAddIntentListener,
-    intentListenerUnsubscribeRequest: intentHandlers.handleIntentListenerUnsubscribe,
-    findIntentRequest: intentHandlers.handleFindIntentRequest,
-    findIntentsByContextRequest: intentHandlers.handleFindIntentsByContextRequest,
-    intentResultRequest: intentHandlers.handleIntentResultRequest,
-
-    // Channel handlers
-    getCurrentChannelRequest: channelHandlers.handleGetCurrentChannelRequest,
-    getCurrentContextRequest: channelHandlers.handleGetCurrentContextRequest,
-    joinUserChannelRequest: channelHandlers.handleJoinUserChannelRequest,
-    leaveCurrentChannelRequest: channelHandlers.handleLeaveCurrentChannelRequest,
-    getUserChannelsRequest: channelHandlers.handleGetUserChannelsRequest,
-    getOrCreateChannelRequest: channelHandlers.handleGetOrCreateChannelRequest,
-
-    // App management handlers
-    getInfoRequest: appHandlers.handleGetInfoRequest,
-    openRequest: appHandlers.handleOpenRequest,
-    closeRequest: appHandlers.handleCloseRequest,
-    findInstancesRequest: appHandlers.handleFindInstancesRequest,
-    getAppMetadataRequest: appHandlers.handleGetAppMetadataRequest,
-
-    // Event handlers
-    addEventListenerRequest: eventHandlers.handleAddEventListenerRequest,
-    eventListenerUnsubscribeRequest: eventHandlers.handleEventListenerUnsubscribeRequest,
-
-    // Private channel handlers
-    createPrivateChannelRequest: privateChannelHandlers.handleCreatePrivateChannelRequest,
-    privateChannelDisconnectRequest: privateChannelHandlers.handlePrivateChannelDisconnectRequest,
-    privateChannelAddEventListenerRequest:
-      privateChannelHandlers.handlePrivateChannelAddContextListenerRequest,
-    privateChannelUnsubscribeEventListenerRequest:
-      privateChannelHandlers.handlePrivateChannelUnsubscribeEventListenerRequest,
-
-    // Heartbeat handlers
-    heartbeatAcknowledgementRequest: heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,
-  }
-
-  return (handlerMap as Record<string, RoutedHandler>)[messageType] || null
+  return (HANDLER_MAP as Record<string, RoutedHandler>)[messageType] || null
 }
 
 export { cleanupDACPHandlers } from "./cleanup"

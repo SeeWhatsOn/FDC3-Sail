@@ -86,19 +86,3 @@ export function bridgeAppPort(
     connectionRegistry.transportToInstanceId.delete(appTransport)
   })
 }
-
-/** @deprecated Use {@link bridgeAppPort} */
-export const bridgeTransports = bridgeAppPort
-
-/** @deprecated Use {@link AppConnectionRegistry.sendToAppInstance} */
-export function handleDesktopAgentMessage(message: unknown, context: WCPRoutingContext): void {
-  context.connectionRegistry.sendToAppInstance(message)
-}
-
-/** @deprecated Use {@link AppConnectionRegistry.sendToAppInstance} */
-export function deliverAgentMessage(
-  message: unknown,
-  connectionRegistry: AppConnectionRegistry,
-): void {
-  connectionRegistry.sendToAppInstance(message)
-}

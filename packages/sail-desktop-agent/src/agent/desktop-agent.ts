@@ -336,7 +336,8 @@ export class DesktopAgent {
   }
 
   private createHandlerContext(instanceId: string): DACPHandlerContext {
-    if (!this.appConnection) {
+    const conn = this.appConnection
+    if (!conn) {
       throw new Error(
         "DesktopAgent has no app connection attached — attach an app edge before routing DACP/WCP messages",
       )
@@ -345,8 +346,8 @@ export class DesktopAgent {
     const setState: StateSetter = callback => {
       this.state = callback(this.state)
     }
-    const responses = createDacpResponseDispatcherFromDelivery(this.appConnection, message =>
-      this.appConnection!.connectionRegistry.sendToAppInstance(message),
+    const responses = createDacpResponseDispatcherFromDelivery(conn, message =>
+      conn.connectionRegistry.sendToAppInstance(message),
     )
 
     return {
@@ -366,9 +367,7 @@ export class DesktopAgent {
       heartbeatTimeoutMs: this.heartbeatTimeoutMs,
       pendingIntentPromises: this.pendingIntentPromises,
       disconnectInstance: instanceId => this.disconnectInstance(instanceId),
-      notifyChannelMembershipChanged: this.appConnection.notifyChannelMembershipChanged?.bind(
-        this.appConnection,
-      ),
+      notifyChannelMembershipChanged: conn.notifyChannelMembershipChanged?.bind(conn),
     }
   }
 
@@ -471,10 +470,7 @@ export class DesktopAgent {
       this.disconnectInstance(instanceId)
     })
 
-    const testConnection = appConnection as {
-      setOnAgentDisconnect?: (handler: () => void) => void
-    }
-    testConnection.setOnAgentDisconnect?.(() => {
+    appConnection.setOnAgentDisconnect?.(() => {
       this.handleDisconnect()
     })
   }

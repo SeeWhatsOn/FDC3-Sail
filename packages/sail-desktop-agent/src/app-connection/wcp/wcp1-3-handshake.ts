@@ -1,5 +1,5 @@
 import { MessagePortTransport } from "../message-port"
-import { bridgeTransports } from "./wcp-message-routing"
+import { bridgeAppPort } from "./wcp-message-routing"
 import type { WCPRoutingContext } from "./wcp-message-routing"
 import type {
   AppConnectionMetadata,
@@ -55,7 +55,7 @@ export function handleWCP1Hello(
   })
 
   // Bridge app port messages into BrowserAppConnection routing.
-  bridgeTransports(appTransport, context)
+  bridgeAppPort(appTransport, context)
 
   // Extract host identifier from iframe's name attribute (AppLauncher.instanceId).
   // WCP4 carries this as claimed instanceId; the agent only adopts it on reconnect reuse.

@@ -1,9 +1,9 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent Review Remediation
 
 Status: implementing
-Current slice: batch B (9) — #12 keep + #14 REVERT; awaiting human commit
+Current slice: batch C (10 + 11) — mechanical nits + dead code; awaiting human review/commit
 Review/fix loops: 0
-Parked decision: Slice 11 — no changeset; leave API-break note for maintainers.
+Parked decision: Slice 11 — no changeset; leave API-break note for maintainers (done in Known Limitations).
 Slice 9 decision (2026-07-30): #14 REVERT — WeakMap-by-owner for heartbeat /
 pending-intent registries is YAGNI. Product is one DesktopAgent per tab (integrator
 singleton; AGENTS.md: do not add multi-agent-in-process isolation for the browser path).
@@ -770,9 +770,9 @@ extra abstraction, and broad refactors as Follow-up.
 - [x] 6 — Identity-resolution cascade (#7) — committed `c9d3eadb6`
 - [x] 7 — Logger threading (#8) — batch A with 8; committed `44e390627`
 - [x] 8 — Constructor rejection handling (#9) — batch A with 7; committed `44e390627`
-- [x] 9 — Behavioral cleanups — #12 keep (throw); #14 REVERT (module-global + clearAll*); awaiting human commit
-- [ ] 10 — Mechanical cleanups and nits (#10, #13, #15, nits) — batch C with 11; heartbeat timer-type / useless-spread already folded into 9
-- [ ] 11 — Dead code removal — batch C with 10
+- [x] 9 — Behavioral cleanups — #12 keep (throw); #14 REVERT (module-global + clearAll*); committed `f13623955`
+- [x] 10 — Mechanical cleanups and nits (#10, #13, #15, nits) — batch C with 11; heartbeat timer-type / useless-spread already folded into 9; awaiting human commit
+- [x] 11 — Dead code removal — batch C with 10; no changeset (API-break noted); awaiting human commit
 
 ## Verification Notes
 
@@ -815,6 +815,10 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 9 RED: resolve-only select/cancel silently no-op (#12). (Earlier #14 multi-agent timer RED was synthetic — dropped.)
 - Slice 9 GREEN: sail-desktop-agent throw (1); heartbeat-runtime without multi-agent suite; typecheck/lint exit 0
 - Slice 9 fix: throw on select/cancel when UI absent (#12). #14 REVERT: module-global heartbeat + pending-intent maps; deleted multi-agent isolation suite; keep `clearAll*ForTesting`. Folded slice-10 nits: `ReturnType<typeof setInterval>`, clear-all without useless spread
+- Slice 10+11 (batch C): #10 delete duplicate `handleDisconnect`; #13 log host resolver throws; #15 declare `setOnAgentDisconnect?` on `AgentAppConnection`; hoist `HANDLER_MAP`; `channelChangeTimeoutMs` option; `"handler" in choice` for both; hoist `conn`; type mock `OpenRequestPayload`; already-done nits skipped (heartbeat timer type / useless-spread / app-directory doc)
+- Slice 11: repoint `bridgeAppPort`; delete `bridgeTransports` / `handleDesktopAgentMessage` / `deliverAgentMessage` / `MessagePortTransport.getInstanceId`; remove public `BrowserIntentResolverController` + `intentResolverUI`; migrate `sail-platform` to `IntentResolverUIMethods`; no changeset per parked decision
+- Slice 11 docs scrub: remove `intentResolverUI` / transitional-alias wording from integrator-guide + composition; `bridgeTransports` → `bridgeAppPort` in channel-selection.md
+- Slice 10+11 GREEN: `typecheck`/`lint` `@finos/sail-desktop-agent` exit 0; `typecheck` `@finos/sail-platform` exit 0; `npm test -w @finos/sail-desktop-agent` — vitest 329/329 (50 files) + cucumber 154/154; root `npm run build` exit 0. Root typecheck/lint fail on pre-existing `sail-finance/playwright.config.ts` Node types — unrelated.
 
 ## Review Notes
 
@@ -826,6 +830,7 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 6 review (code-reviewer): PASS — no Required. Follow-up: `meta.hostInstanceId` still app-authorable via enrich spread (same class as #7; strip/ignore when MessagePort id registered).
 - Slice 7+8 review (main agent): PASS — plumbing matches acceptance; directoriesLoaded is settle-all (no event system); #10 handleDisconnect parked (message-port.ts not edited).
 - Slice 9 review (main agent): PASS after #14 revert — keep #12 throw; module-global timers + clearAll* match one-DA-per-tab product model (AGENTS.md). Multi-agent-in-process isolation suite deleted as YAGNI/test-only.
+- Slice 10+11 review: awaiting human review (no agent commit)
 
 ## Parked Follow-ups
 
@@ -841,4 +846,4 @@ extra abstraction, and broad refactors as Follow-up.
 
 ## Known Limitations
 
-- None accepted yet.
+- Slice 11 API break (accepted, no changeset): removed public `SailDesktopAgent.intentResolverUI` and type alias `BrowserIntentResolverController`. Consumers must use `.intentResolver` / `IntentResolverUIMethods`. `sail-platform` migrated in the same batch. Maintainers: note in next Changesets batch on `main` if desired.

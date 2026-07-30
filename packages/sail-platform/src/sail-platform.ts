@@ -14,10 +14,10 @@ import {
   type DirectoryApp,
   type SailImplementationMetadata,
   type IntentResolver,
+  type IntentResolverUIMethods,
   type SailDesktopAgentApps,
   type SailDesktopAgentChannels,
 } from "@finos/sail-desktop-agent"
-import type { BrowserIntentResolverController } from "@finos/sail-desktop-agent"
 import type { AppConnectionMetadata, BrowserAppConnection } from "@finos/sail-desktop-agent"
 import type { BrowserTypes } from "@finos/fdc3"
 
@@ -298,7 +298,7 @@ export class SailPlatform {
   /**
    * Grouped host intent resolver chrome over the browser Desktop Agent preset.
    */
-  get intentResolver(): BrowserIntentResolverController {
+  get intentResolver(): IntentResolverUIMethods {
     this.ensureStarted()
     return this._desktopAgent!.intentResolver
   }

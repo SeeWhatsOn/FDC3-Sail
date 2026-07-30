@@ -191,14 +191,6 @@ export interface IntentResolverUIMethods {
 }
 
 /**
- * Canonical grouped browser preset resolver controller.
- *
- * Same surface as {@link IntentResolverUIMethods}; `intentResolverUI` remains a
- * transitional alias on the preset handle.
- */
-export type BrowserIntentResolverController = IntentResolverUIMethods
-
-/**
  * Host-side resolver object used by browser shells.
  *
  * It implements the Desktop Agent-facing {@link IntentResolver} contract and
@@ -288,8 +280,9 @@ export function createHostIntentResolver(options?: HostIntentResolverOptions): H
 
       clearPending(requestId)
 
+      // IntentHandler also has `intent`, so discriminate on `handler` for both fields.
       const selectedHandler = "handler" in choice ? choice.handler : choice
-      const selectedIntent = "intent" in choice ? choice.intent.name : selectedHandler.intent.name
+      const selectedIntent = "handler" in choice ? choice.intent.name : selectedHandler.intent.name
 
       resolve({
         selectedHandler,

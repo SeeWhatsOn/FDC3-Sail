@@ -24,6 +24,11 @@ export interface AgentAppConnection {
   stop(): void
   onAppMessage(handler: AppMessageHandler): void
   setOnInstanceTeardown(handler: (instanceId: string) => void): void
+  /**
+   * Optional whole-agent disconnect hook (test edge). Browser path tears down
+   * per-instance via {@link setOnInstanceTeardown} instead.
+   */
+  setOnAgentDisconnect?(handler: () => void): void
   readonly connectionRegistry: AppConnectionDelivery
   getConnection(instanceId: string): AppConnectionMetadata | undefined
   getConnections(): AppConnectionMetadata[]

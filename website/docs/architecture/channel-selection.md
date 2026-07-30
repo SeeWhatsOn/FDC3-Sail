@@ -80,7 +80,7 @@ Both reflect the same agent state change; the host does not need to poke the ifr
 **Flow:**
 
 1. App or selector page sends **`joinUserChannelRequest` / `leaveCurrentChannelRequest`** over the app **MessagePort**.
-2. Messages pass **`bridgeTransports`** validation (`isAppMessage`).
+2. Messages pass **`bridgeAppPort`** validation (`isAppMessage`).
 3. Same agent handlers and **`channelChangedEvent`** as Pattern A.
 
 **Host chrome** may still listen to `channelChanged` for a global indicator, but it does **not** initiate joins.

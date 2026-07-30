@@ -14,7 +14,7 @@ export {
 export type {
   SailDesktopAgentApps,
   SailDesktopAgentChannels,
-  BrowserIntentResolverController,
+  IntentResolverUIMethods,
   AppChannelChangeEvent,
   HandshakeFailureEvent,
 } from "@finos/sail-desktop-agent"

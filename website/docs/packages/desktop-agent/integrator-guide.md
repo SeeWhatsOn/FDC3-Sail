@@ -158,7 +158,7 @@ const { intentResolver, channels, apps } = desktopAgent
 await apps.addDirectory("/apps.json")
 // apps.add(singleApp) or apps.addAll([...]) for inline entries
 
-// Intent resolver — canonical; intentResolverUI is a transitional alias (same methods)
+// Intent resolver — host chrome via grouped controller
 intentResolver.onRequest(request => {
   void showIntentPicker(request.choices ?? []).then(choice => {
     if (choice) intentResolver.select(request.requestId, choice)
@@ -200,7 +200,7 @@ await apps.open("portfolio-app", { context: instrumentContext })
 |--------------|-----------|-------------|
 | `appLauncher` | **Yes** — FDC3 `open()` creates iframes/windows | `new SailDesktopAgent({ appLauncher })` |
 | App catalog | **Yes** — metadata for open/intent resolution | `apps.addDirectory`, `apps.add` / `apps.addAll` (or constructor `appDirectories` / `apps`) |
-| Intent resolver UI | When multiple handlers match | `intentResolver.*` (`intentResolverUI` alias — prefer `intentResolver`) |
+| Intent resolver UI | When multiple handlers match | `intentResolver.*` |
 | Channel chrome | Recommended when `channelSelectorUrl` is false (default) | `channels.getUserChannels`, `channels.changeAppChannel`, `channels.onAppChannelChange` |
 | Instance lifecycle | Recommended — tabs, cleanup | `apps.onConnect` / `onDisconnect` / `onHandshakeFailure`; host tab close via `apps.disconnect` |
 | App self-close | When supporting FDC3 v3.0 `fdc3.close()` | `AppLauncher.close` on the launcher you pass to the preset |
@@ -222,7 +222,7 @@ Grouped controllers are attached to every `SailDesktopAgent` handle. Destructure
 
 | Controller | Key methods | Notes |
 |------------|-------------|-------|
-| **`intentResolver`** | `onRequest`, `select`, `cancel`, `getPendingRequests` | Canonical; `intentResolverUI` is the same surface |
+| **`intentResolver`** | `onRequest`, `select`, `cancel`, `getPendingRequests` | Host chrome when raiseIntent is ambiguous |
 | **`channels`** | `getUserChannels`, `getAppChannelId`, `getAppChannel`, `changeAppChannel`, `onAppChannelChange` | Host channel chrome — not raw DACP impersonation |
 | **`apps`** | `addDirectory`, `add`, `addAll`, `remove`, `getAll`, `getById`, `open`, `getInstances`, `getInstance`, `getConnections`, `getConnection`, `disconnect`, `onConnect`, `onDisconnect`, `onHandshakeFailure` | Runtime catalog + instance lifecycle; no `apps.close` |
 
@@ -316,7 +316,7 @@ FDC3 defines **two different mechanisms** for each UI. Sail and this package def
 
 | UI | Mechanism A — host shell (recommended) | Mechanism B — WCP3 iframe injection |
 |----|----------------------------------------|-------------------------------------|
-| Intent resolver | `desktopAgent.intentResolver` (canonical; `intentResolverUI` transitional alias) or low-level `IntentResolver` contract | `appConnectionOptions.intentResolverUrl` — `@finos/fdc3` loads a page **inside the app window** |
+| Intent resolver | `desktopAgent.intentResolver` or low-level `IntentResolver` contract | `appConnectionOptions.intentResolverUrl` — `@finos/fdc3` loads a page **inside the app window** |
 | Channel selector | Host toolbar + `channels.changeAppChannel` | `appConnectionOptions.channelSelectorUrl` — `@finos/fdc3` loads a page **inside the app window** |
 
 **Default (omit `appConnectionOptions`):** both URLs are `false` — your host shell owns both UIs. This matches FDC3 when the [browser-resident host](https://fdc3.finos.org/docs/api/specs/browserResidentDesktopAgents) renders chrome outside the app iframe.
@@ -345,8 +345,6 @@ const offRequest = intentResolver.onRequest(request => {
 // intentResolver.getPendingRequests() for multi-request UI state
 // Call offRequest() on teardown (see Unsubscribe pattern above)
 ```
-
-`intentResolverUI` exposes the same methods and remains on the handle for backward compatibility — prefer **`intentResolver`**.
 
 The resolver request includes running app instances, launchable app rows, and display metadata from the app directory where available (`title`, `name`, `icons`, `screenshots`, `instanceMetadata`). A selected choice feeds the normal Desktop Agent delivery path: launch if needed, wait for the listener if needed, send the `intentEvent`, and return `IntentResolution` to the raising app.
 
@@ -501,7 +499,6 @@ This package defaults both to **`false`** when `appConnectionOptions` is omitted
 |-----------|---------|
 | WCP3 `intentResolverUrl` | iframe URL injected **into the app window** by `@finos/fdc3` |
 | `intentResolver` on the `SailDesktopAgent` handle | Host UI methods when DA needs disambiguation; not an official DACP/WCP message |
-| `intentResolverUI` on the `SailDesktopAgent` handle | Transitional alias — same methods as `intentResolver` |
 | `intentResolver` option on `SailDesktopAgent` | Low-level host callback for custom composition |
 
 Most browser hosts use **`false`** for WCP3 URLs and implement resolver/channel UI in the host shell via [host contracts](https://github.com/finos/FDC3-Sail/tree/main/packages/sail-desktop-agent/src/host-contracts).

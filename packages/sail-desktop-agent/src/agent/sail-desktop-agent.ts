@@ -35,6 +35,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 
 const DEFAULT_WCP_INTENT_RESOLUTION_TIMEOUT_MS = 60000
 const HOST_RESOLVER_TIMEOUT_BUFFER_MS = 1000
+const DEFAULT_CHANNEL_CHANGE_TIMEOUT_MS = 10000
 
 export interface AppChannelChangeEvent {
   instanceId: string
@@ -103,6 +104,8 @@ export interface SailDesktopAgentOptions extends Pick<
   onAppDisconnected?: (instanceId: string) => void
   onHandshakeFailed?: (error: Error, connectionAttemptUuid: string) => void
   intentResolver?: IntentResolver
+  /** Milliseconds to wait for `channelChanged` after host `changeAppChannel`. @defaultValue 10000 */
+  channelChangeTimeoutMs?: number
 }
 
 function hasIntentResolverUI(
@@ -149,6 +152,7 @@ function resolveUserChannelById(
 function wireIntentResolver(
   browserAppConnection: BrowserAppConnection,
   resolver: IntentResolver,
+  logger: Logger,
 ): void {
   browserAppConnection.on("intentResolverNeeded", payload => {
     void (async () => {
@@ -180,7 +184,12 @@ function wireIntentResolver(
             : null,
           ...(response?.intent ? { intent: response.intent } : {}),
         })
-      } catch {
+      } catch (error) {
+        // Host resolver throw is not the same as user cancel — log before settling null.
+        logger.error(
+          `[SailDesktopAgent] Host intent resolver threw; cancelling resolution for ${payload.requestId}:`,
+          error instanceof Error ? error : new Error(String(error)),
+        )
         browserAppConnection.resolveIntentSelection({
           requestId: payload.requestId,
           selectedHandler: null,
@@ -195,12 +204,12 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
   readonly intentResolver: IntentResolverUIMethods
   readonly channels: SailDesktopAgentChannels
   readonly apps: SailDesktopAgentApps
-  readonly intentResolverUI?: IntentResolverUIMethods
   /**
    * Settles when every constructor `appDirectories` URL load has finished
    * (fulfilled or rejected). Resolves immediately when none were configured.
    */
   readonly directoriesLoaded: Promise<void>
+  private readonly channelChangeTimeoutMs: number
 
   constructor(options?: SailDesktopAgentOptions) {
     const { intentResolver: providedIntentResolver, autoStart, ...localOptions } = options ?? {}
@@ -219,9 +228,7 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
       createHostIntentResolver({
         timeoutMs: Math.max(0, wcpIntentResolutionTimeout - HOST_RESOLVER_TIMEOUT_BUFFER_MS),
       })
-    const intentResolverUI = hasIntentResolverUI(hostIntentResolver)
-      ? hostIntentResolver
-      : undefined
+    const resolverUI = hasIntentResolverUI(hostIntentResolver) ? hostIntentResolver : undefined
 
     super({
       appLauncher: localOptions.appLauncher,
@@ -239,8 +246,9 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
     })
 
     this.connector = browserAppConnection
-    this.intentResolverUI = intentResolverUI
-    this.intentResolver = this.createIntentResolverController(intentResolverUI)
+    this.channelChangeTimeoutMs =
+      localOptions.channelChangeTimeoutMs ?? DEFAULT_CHANNEL_CHANGE_TIMEOUT_MS
+    this.intentResolver = this.createIntentResolverController(resolverUI)
     this.channels = this.createChannelsController()
     this.apps = this.createAppsController()
 
@@ -251,7 +259,7 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
       },
     })
     this.attachAppConnection(browserAppConnection)
-    wireIntentResolver(browserAppConnection, hostIntentResolver)
+    wireIntentResolver(browserAppConnection, hostIntentResolver, logger)
     this.wireLifecycleCallbacks(localOptions, logger)
 
     if (localOptions.appDirectories && localOptions.appDirectories.length > 0) {
@@ -275,26 +283,26 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
   }
 
   private createIntentResolverController(
-    intentResolverUI: IntentResolverUIMethods | undefined,
+    resolverUI: IntentResolverUIMethods | undefined,
   ): IntentResolverUIMethods {
     return {
-      getPendingRequests: () => intentResolverUI?.getPendingRequests() ?? [],
-      onRequest: listener => intentResolverUI?.onRequest(listener) ?? (() => {}),
+      getPendingRequests: () => resolverUI?.getPendingRequests() ?? [],
+      onRequest: listener => resolverUI?.onRequest(listener) ?? (() => {}),
       select: (requestId, choice) => {
-        if (!intentResolverUI) {
+        if (!resolverUI) {
           throw new Error(
             "Cannot select intent resolution: host intentResolver does not provide UI methods",
           )
         }
-        intentResolverUI.select(requestId, choice)
+        resolverUI.select(requestId, choice)
       },
       cancel: requestId => {
-        if (!intentResolverUI) {
+        if (!resolverUI) {
           throw new Error(
             "Cannot cancel intent resolution: host intentResolver does not provide UI methods",
           )
         }
-        intentResolverUI.cancel(requestId)
+        resolverUI.cancel(requestId)
       },
     }
   }
@@ -379,7 +387,7 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
       const timeout = setTimeout(() => {
         cleanup()
         reject(new Error(`Channel change timeout for instance ${instanceId}`))
-      }, 10000)
+      }, this.channelChangeTimeoutMs)
 
       const handleChannelChanged = (changedInstanceId: string, changedChannelId: string | null) => {
         if (changedInstanceId === instanceId && changedChannelId === channelId) {

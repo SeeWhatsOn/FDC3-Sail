@@ -5,6 +5,7 @@
  */
 
 import { describe, expect, it, vi } from "vite-plus/test"
+import type { BrowserTypes } from "@finos/fdc3"
 import * as sailDesktopAgentPackage from "../index"
 import { SailDesktopAgent } from "../agent/sail-desktop-agent"
 import type { DirectoryApp } from "../app-directory/types"
@@ -56,7 +57,7 @@ describe("SailDesktopAgent", () => {
 
   it("manages app catalog and host-open lifecycle through DesktopAgent methods", async () => {
     const appLauncher: AppLauncher = {
-      launch: vi.fn(request =>
+      launch: vi.fn((request: BrowserTypes.OpenRequestPayload) =>
         Promise.resolve({
           appId: request.app.appId,
           instanceId: request.app.instanceId ?? "opened-instance",
