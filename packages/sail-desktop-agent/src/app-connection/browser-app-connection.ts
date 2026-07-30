@@ -5,7 +5,7 @@
  * DACP traffic is forwarded to {@link DesktopAgent} via {@link onAppMessage}.
  */
 
-import { type Logger, consoleLogger } from "../interfaces/logger"
+import { type Logger, type LogPayloadDetail, consoleLogger } from "../interfaces/logger"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type {
   AppRequestMessage,
@@ -47,6 +47,8 @@ export type { AppConnectionEvents } from "./app-connection-events"
 /** Browser edge options: WCP handshake config plus DesktopAgent validation mode. */
 export type BrowserAppConnectionOptions = AppConnectionOptions & {
   validation?: ValidationMode
+  /** How much DACP/WCP payload to include in MessagePortTransport debug logs. */
+  logPayloadDetail?: LogPayloadDetail
 }
 
 export class BrowserAppConnection extends AppConnectionEventEmitter {
@@ -54,6 +56,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
 
   private options: Required<AppConnectionOptions>
   private validation: ValidationMode
+  private logPayloadDetail: LogPayloadDetail
   private isStarted = false
   private appMessageHandler?: AppMessageHandler
   private boundHandleWindowMessage = this.handleWindowMessage.bind(this)
@@ -74,6 +77,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
     const intentResolverUrl = options?.intentResolverUrl ?? false
     const channelSelectorUrl = options?.channelSelectorUrl ?? false
     this.validation = options?.validation ?? "warn"
+    this.logPayloadDetail = options?.logPayloadDetail ?? "metadata"
     this.options = {
       intentResolverUrl,
       channelSelectorUrl,
@@ -353,6 +357,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
     return {
       ...this.getRoutingContext(),
       options: this.options,
+      logPayloadDetail: this.logPayloadDetail,
     }
   }
 }

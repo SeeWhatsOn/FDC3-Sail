@@ -3,7 +3,7 @@
  */
 
 import type { DirectoryApp, DirectoryData } from "./types"
-import { consoleLogger } from "../interfaces/logger"
+import { consoleLogger, type Logger } from "../interfaces/logger"
 
 export function parseDirectoryData(data: DirectoryApp[] | DirectoryData): DirectoryApp[] {
   if (Array.isArray(data)) {
@@ -99,9 +99,13 @@ export function mergeAppsWithoutDuplicates(
   return [...existingApps, ...newApps]
 }
 
-export function logDirectoryLoadFailure(url: string, error: unknown): void {
+export function logDirectoryLoadFailure(
+  url: string,
+  error: unknown,
+  logger: Logger = consoleLogger,
+): void {
   const errorMessage = `Failed to load applications from ${url}: ${
     error instanceof Error ? error.message : String(error)
   }`
-  consoleLogger.error(errorMessage)
+  logger.error(errorMessage)
 }

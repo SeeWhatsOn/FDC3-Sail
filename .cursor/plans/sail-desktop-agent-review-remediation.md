@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent Review Remediation
 
 Status: implementing
-Current slice: 6 (identity-resolution cascade) — implemented; awaiting human commit
+Current slice: batch A (7 + 8) — implemented; awaiting human commit
 Review/fix loops: 0
 Parked decision: Slice 11 — no changeset; leave API-break note for maintainers.
 Slice 3 decision (landed `a9614dc46`): Original AccessDenied-if-not-connected rejected
@@ -762,9 +762,9 @@ extra abstraction, and broad refactors as Follow-up.
 - [x] 5 — Trusted metadata unconditional (#6) — committed `14f7bbf60`
 - [x] 5a — Temp-id teardown escalation — WCP-A `17f5591e1`; WCP-B `befe1e2dc`
 - [x] 5b — Reconnect clobber (WCP-C, WCP-D) Option B — committed `14f7bbf60`
-- [x] 6 — Identity-resolution cascade (#7) — implemented; awaiting human commit
-- [ ] 7 — Logger threading (#8)
-- [ ] 8 — Constructor rejection handling (#9)
+- [x] 6 — Identity-resolution cascade (#7) — committed `c9d3eadb6`
+- [x] 7 — Logger threading (#8) — batch A with 8; implemented; awaiting human commit
+- [x] 8 — Constructor rejection handling (#9) — batch A with 7; implemented; awaiting human commit
 - [ ] 9 — Behavioral cleanups (#12, #14)
 - [ ] 10 — Mechanical cleanups and nits (#10, #13, #15, nits)
 - [ ] 11 — Dead code removal
@@ -803,6 +803,10 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 6 fix: delete CONNECTED/PENDING appId cascade and pending-open-with-context appId matcher; keep hostInstanceId → registered MessagePort id → wcpHandshakeRouting only
 - Slice 6 test retarget: open-with-context pending bucket uses explicit `hostInstanceId`; broadcast-stale uses `linkHandshakeRoutingId`
 - Terminology: WCP identity “canonical” → “validated” across DA/tests/docs/harness (preferred-API “canonical” left alone)
+- Slice 7+8 RED: transport logs miss host spy; full-payload unreachable; directory failure hits console; constructor voided rejection; no directoriesLoaded
+- Slice 7+8 GREEN: host-logger (2) + directory-logger (1) + directory-load (2); typecheck/lint exit 0 (pre-existing warnings only)
+- Slice 7 fix: MessagePortTransport gets host logger + logPayloadDetail via WCPHandshakeContext; directory load failure logger threaded through loadDirectoryIntoState / replaceDirectoriesInState / addAppDirectory
+- Slice 8 fix: constructor addAppDirectory `.catch(logger.error)`; `SailDesktopAgent.directoriesLoaded` settles when all configured URLs settle
 
 ## Review Notes
 
@@ -812,6 +816,7 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 4 review (loop 1): Required browser MessagePort reject tests — **addressed** (WCP4 + WCP6 MessagePort strict reject). Follow-up: DA skip signal / log string says DACP / pre-existing strict+messageOrigin on DACP enrich — parked.
 - Slice 5+5b review (main agent): PASS — Option B applied; unregister-before-disconnect ordering correct; trusted enrich matches FDC3 anti-spoof; negative unhappy-path guards in place. Follow-up: item 7 two-window fight; `recentlyDisconnected` map still written but unused for restore (harmless bookkeeping).
 - Slice 6 review (code-reviewer): PASS — no Required. Follow-up: `meta.hostInstanceId` still app-authorable via enrich spread (same class as #7; strip/ignore when MessagePort id registered).
+- Slice 7+8 review (main agent): PASS — plumbing matches acceptance; directoriesLoaded is settle-all (no event system); #10 handleDisconnect parked (message-port.ts not edited).
 
 ## Parked Follow-ups
 

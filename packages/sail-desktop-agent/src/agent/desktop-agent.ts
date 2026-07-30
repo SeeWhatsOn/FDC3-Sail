@@ -389,7 +389,7 @@ export class DesktopAgent {
   }
 
   async addAppDirectory(url: string): Promise<void> {
-    this.state = await loadDirectoryIntoState(this.state, url)
+    this.state = await loadDirectoryIntoState(this.state, url, this.logger)
   }
 
   removeApp(appId: string): void {

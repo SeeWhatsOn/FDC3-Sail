@@ -196,6 +196,11 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
   readonly channels: SailDesktopAgentChannels
   readonly apps: SailDesktopAgentApps
   readonly intentResolverUI?: IntentResolverUIMethods
+  /**
+   * Settles when every constructor `appDirectories` URL load has finished
+   * (fulfilled or rejected). Resolves immediately when none were configured.
+   */
+  readonly directoriesLoaded: Promise<void>
 
   constructor(options?: SailDesktopAgentOptions) {
     const { intentResolver: providedIntentResolver, autoStart, ...localOptions } = options ?? {}
@@ -204,6 +209,7 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
       ...localOptions.appConnectionOptions,
       logger,
       validation: localOptions.validation,
+      logPayloadDetail: localOptions.logPayloadDetail,
     })
     const wcpIntentResolutionTimeout =
       localOptions.appConnectionOptions?.intentResolutionTimeout ??
@@ -249,9 +255,18 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
     this.wireLifecycleCallbacks(localOptions, logger)
 
     if (localOptions.appDirectories && localOptions.appDirectories.length > 0) {
-      for (const url of localOptions.appDirectories) {
-        void this.addAppDirectory(url)
-      }
+      this.directoriesLoaded = Promise.all(
+        localOptions.appDirectories.map(url =>
+          this.addAppDirectory(url).catch(err => {
+            logger.error(
+              `[SailDesktopAgent] Failed to load app directory ${url}:`,
+              err instanceof Error ? err : new Error(String(err)),
+            )
+          }),
+        ),
+      ).then(() => undefined)
+    } else {
+      this.directoriesLoaded = Promise.resolve()
     }
 
     if (autoStart !== false) {

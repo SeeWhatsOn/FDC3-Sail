@@ -8,9 +8,12 @@ import type {
   AppConnectionOptions,
 } from "./wcp-types"
 import { resolveHostIdentifierFromSource } from "./wcp-host-identifier"
+import type { LogPayloadDetail } from "../../interfaces/logger"
 
 export interface WCPHandshakeContext extends WCPRoutingContext {
   options: Required<AppConnectionOptions>
+  /** Host-configured payload detail for MessagePortTransport logs. */
+  logPayloadDetail: LogPayloadDetail
 }
 
 /**
@@ -45,8 +48,11 @@ export function handleWCP1Hello(
   // before the Desktop Agent has validated the app identity.
   const instanceId = `temp-${connectionAttemptUuid}`
 
-  // Wrap port2 as the app-side MessagePort adapter.
-  const appTransport = new MessagePortTransport(channel.port2)
+  // Wrap port2 as the app-side MessagePort adapter (host logger + payload detail).
+  const appTransport = new MessagePortTransport(channel.port2, {
+    logger: context.options.logger,
+    logPayloadDetail: context.logPayloadDetail,
+  })
 
   // Bridge app port messages into BrowserAppConnection routing.
   bridgeTransports(appTransport, context)

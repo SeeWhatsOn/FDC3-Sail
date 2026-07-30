@@ -3,7 +3,7 @@
  */
 
 import type { DirectoryApp, DirectoryData } from "../../app-directory/types"
-import { consoleLogger } from "../../interfaces/logger"
+import { consoleLogger, type Logger } from "../../interfaces/logger"
 import {
   fetchAppDirectory,
   isValidDirectoryUrl,
@@ -80,7 +80,11 @@ export function addDirectoryUrl(state: AgentState, url: string): AgentState {
   }
 }
 
-export async function loadDirectoryIntoState(state: AgentState, url: string): Promise<AgentState> {
+export async function loadDirectoryIntoState(
+  state: AgentState,
+  url: string,
+  logger: Logger = consoleLogger,
+): Promise<AgentState> {
   try {
     let next = addDirectoryUrl(state, url)
     const apps = await fetchAppDirectory(url)
@@ -93,7 +97,7 @@ export async function loadDirectoryIntoState(state: AgentState, url: string): Pr
     }
     return next
   } catch (error) {
-    logDirectoryLoadFailure(url, error)
+    logDirectoryLoadFailure(url, error, logger)
     throw new Error(
       `Failed to load applications from ${url}: ${
         error instanceof Error ? error.message : String(error)
@@ -125,6 +129,7 @@ export function clearDirectoryUrls(state: AgentState): AgentState {
 export async function replaceDirectoriesInState(
   state: AgentState,
   urls: string[],
+  logger: Logger = consoleLogger,
 ): Promise<AgentState> {
   if (!Array.isArray(urls)) {
     throw new Error("URLs must be an array")
@@ -172,7 +177,7 @@ export async function replaceDirectoriesInState(
       continue
     }
 
-    logDirectoryLoadFailure(url, result.reason)
+    logDirectoryLoadFailure(url, result.reason, logger)
     errors.push(
       `Failed to load ${url}: ${
         result.reason instanceof Error ? result.reason.message : String(result.reason)
@@ -181,12 +186,12 @@ export async function replaceDirectoriesInState(
   }
 
   const successCount = results.filter(result => result.status === "fulfilled").length
-  consoleLogger.info(
+  logger.info(
     `Loaded ${next.appDirectory.apps.length} apps from ${successCount}/${urls.length} directory source(s)`,
   )
 
   if (errors.length > 0) {
-    consoleLogger.warn("Some directories failed to load:", errors)
+    logger.warn("Some directories failed to load:", errors)
   }
 
   return next
