@@ -47,10 +47,10 @@ afterEach(() => {
 describe("wcp handshake routing state contract", () => {
   it("resolveLinkedInstanceId returns linked instanceId for a handshake routing id", () => {
     let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
-    state = linkHandshakeRoutingId(state, "temp-resolver-contract", "canonical-resolver-contract")
+    state = linkHandshakeRoutingId(state, "temp-resolver-contract", "validated-resolver-contract")
 
     expect(resolveLinkedInstanceId(state, "temp-resolver-contract")).toBe(
-      "canonical-resolver-contract",
+      "validated-resolver-contract",
     )
     expect(resolveLinkedInstanceId(state, "temp-unlinked")).toBeUndefined()
     expect(resolveInstanceId(state, "temp-unlinked")).toBe("temp-unlinked")
@@ -58,10 +58,10 @@ describe("wcp handshake routing state contract", () => {
 
   it("clearHandshakeRoutingIdsForInstance removes all routing entries for the instanceId", () => {
     let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
-    state = linkHandshakeRoutingId(state, "temp-unlink-a", "canonical-unlink-target")
-    state = linkHandshakeRoutingId(state, "temp-unlink-b", "canonical-unlink-target")
+    state = linkHandshakeRoutingId(state, "temp-unlink-a", "validated-unlink-target")
+    state = linkHandshakeRoutingId(state, "temp-unlink-b", "validated-unlink-target")
 
-    state = clearHandshakeRoutingIdsForInstance(state, "canonical-unlink-target")
+    state = clearHandshakeRoutingIdsForInstance(state, "validated-unlink-target")
 
     expect(resolveLinkedInstanceId(state, "temp-unlink-a")).toBeUndefined()
     expect(resolveLinkedInstanceId(state, "temp-unlink-b")).toBeUndefined()
@@ -75,12 +75,12 @@ describe("wcp handshake routing state contract", () => {
     }
 
     const tempConnectionId = "temp-cucumber-wcp5"
-    const canonicalInstanceId = "canonical-cucumber-wcp5"
+    const validatedInstanceId = "validated-cucumber-wcp5"
 
-    transport.registerWcp5Mapping(tempConnectionId, canonicalInstanceId)
+    transport.registerWcp5Mapping(tempConnectionId, validatedInstanceId)
 
-    expect(resolveLinkedInstanceId(state, tempConnectionId)).toBe(canonicalInstanceId)
-    expect(transport.resolveWcp5InstanceId(tempConnectionId)).toBe(canonicalInstanceId)
+    expect(resolveLinkedInstanceId(state, tempConnectionId)).toBe(validatedInstanceId)
+    expect(transport.resolveWcp5InstanceId(tempConnectionId)).toBe(validatedInstanceId)
   })
 })
 
@@ -433,70 +433,70 @@ describe("heartbeat cleanup on disconnect", () => {
     const wcp5Response = connection.sentMessages.find(
       message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse",
     ) as { payload?: { instanceId?: string } } | undefined
-    const canonicalInstanceId = wcp5Response?.payload?.instanceId
-    expect(canonicalInstanceId).toBeDefined()
+    const validatedInstanceId = wcp5Response?.payload?.instanceId
+    expect(validatedInstanceId).toBeDefined()
 
     expect(getActiveHeartbeatTimerCount()).toBe(1)
-    expect(agent.getState().heartbeats[canonicalInstanceId!]).toBeDefined()
+    expect(agent.getState().heartbeats[validatedInstanceId!]).toBeDefined()
 
-    agent.disconnectInstance(canonicalInstanceId!)
+    agent.disconnectInstance(validatedInstanceId!)
 
-    expectHeartbeatFullyCleared(() => agent.getState(), canonicalInstanceId!)
+    expectHeartbeatFullyCleared(() => agent.getState(), validatedInstanceId!)
   })
 
-  it("stops heartbeat on canonical instanceId when cleanup runs from WCP4 temp context", () => {
+  it("stops heartbeat on validated instanceId when cleanup runs from WCP4 temp context", () => {
     const tempInstanceId = "temp-wcp4-attempt"
-    const canonicalInstanceId = "canonical-wcp5-instance"
-    const initialState = connectTestInstance(canonicalInstanceId)
+    const validatedInstanceId = "validated-wcp5-instance"
+    const initialState = connectTestInstance(validatedInstanceId)
     const { context, getState } = createHeartbeatTestContext({
       instanceId: tempInstanceId,
       initialState,
     })
 
-    startHeartbeat(canonicalInstanceId, context)
+    startHeartbeat(validatedInstanceId, context)
     expect(getActiveHeartbeatTimerCount()).toBe(1)
-    expect(getState().heartbeats[canonicalInstanceId]).toBeDefined()
+    expect(getState().heartbeats[validatedInstanceId]).toBeDefined()
 
     cleanupDACPHandlers(context)
 
-    expectHeartbeatFullyCleared(getState, canonicalInstanceId)
+    expectHeartbeatFullyCleared(getState, validatedInstanceId)
   })
 
-  it("heartbeat timeout stops heartbeat on canonical instanceId when WCP4 temp context was used", () => {
+  it("heartbeat timeout stops heartbeat on validated instanceId when WCP4 temp context was used", () => {
     vi.useFakeTimers()
     const tempInstanceId = "temp-wcp4-timeout"
-    const canonicalInstanceId = "canonical-wcp5-timeout"
-    const initialState = connectTestInstance(canonicalInstanceId)
+    const validatedInstanceId = "validated-wcp5-timeout"
+    const initialState = connectTestInstance(validatedInstanceId)
     const { context, getState } = createHeartbeatTestContext({
       instanceId: tempInstanceId,
       initialState,
     })
 
-    startHeartbeat(canonicalInstanceId, context)
+    startHeartbeat(validatedInstanceId, context)
     expect(getActiveHeartbeatTimerCount()).toBe(1)
-    expect(getState().heartbeats[canonicalInstanceId]).toBeDefined()
+    expect(getState().heartbeats[validatedInstanceId]).toBeDefined()
 
     vi.advanceTimersByTime(2500)
 
-    expectHeartbeatFullyCleared(getState, canonicalInstanceId)
+    expectHeartbeatFullyCleared(getState, validatedInstanceId)
   })
 
   it("cleanupDACPHandlers clears heartbeat when invoked with WCP4 temp context id", () => {
     const tempInstanceId = "temp-wcp4-direct-cleanup"
-    const canonicalInstanceId = "canonical-wcp5-direct-cleanup"
-    const initialState = connectTestInstance(canonicalInstanceId)
+    const validatedInstanceId = "validated-wcp5-direct-cleanup"
+    const initialState = connectTestInstance(validatedInstanceId)
     const { context, getState } = createHeartbeatTestContext({
       instanceId: tempInstanceId,
       initialState,
     })
 
-    startHeartbeat(canonicalInstanceId, context)
+    startHeartbeat(validatedInstanceId, context)
     expect(getActiveHeartbeatTimerCount()).toBe(1)
-    expect(getState().heartbeats[canonicalInstanceId]).toBeDefined()
+    expect(getState().heartbeats[validatedInstanceId]).toBeDefined()
 
     cleanupDACPHandlers(context)
 
-    expectHeartbeatFullyCleared(getState, canonicalInstanceId)
+    expectHeartbeatFullyCleared(getState, validatedInstanceId)
   })
 
   it("DesktopAgent.disconnectInstance clears heartbeat when called with WCP4 connectionAttemptUuid", async () => {
@@ -525,15 +525,15 @@ describe("heartbeat cleanup on disconnect", () => {
     const wcp5Response = connection.sentMessages.find(
       message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse",
     ) as { payload?: { instanceId?: string } } | undefined
-    const canonicalInstanceId = wcp5Response?.payload?.instanceId
-    expect(canonicalInstanceId).toBeDefined()
+    const validatedInstanceId = wcp5Response?.payload?.instanceId
+    expect(validatedInstanceId).toBeDefined()
 
     expect(getActiveHeartbeatTimerCount()).toBe(1)
-    expect(agent.getState().heartbeats[canonicalInstanceId!]).toBeDefined()
+    expect(agent.getState().heartbeats[validatedInstanceId!]).toBeDefined()
 
     agent.disconnectInstance(`temp-${connectionAttemptUuid}`)
 
-    expectHeartbeatFullyCleared(() => agent.getState(), canonicalInstanceId!)
+    expectHeartbeatFullyCleared(() => agent.getState(), validatedInstanceId!)
   })
 
   it("app connection disconnect clears all active heartbeat timers and state entries", async () => {
@@ -561,13 +561,13 @@ describe("heartbeat cleanup on disconnect", () => {
     const wcp5Response = connection.sentMessages.find(
       message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse",
     ) as { payload?: { instanceId?: string } } | undefined
-    const canonicalInstanceId = wcp5Response?.payload?.instanceId
-    expect(canonicalInstanceId).toBeDefined()
+    const validatedInstanceId = wcp5Response?.payload?.instanceId
+    expect(validatedInstanceId).toBeDefined()
     expect(getActiveHeartbeatTimerCount()).toBe(1)
 
     connection.disconnect()
 
-    expectHeartbeatFullyCleared(() => agent.getState(), canonicalInstanceId!)
+    expectHeartbeatFullyCleared(() => agent.getState(), validatedInstanceId!)
   })
 
   it("duplicate WCP6Goodbye for a closed instance does not clean up another connected app", () => {
@@ -603,31 +603,31 @@ describe("heartbeat cleanup on disconnect", () => {
     expect(getActiveHeartbeatTimerCount()).toBe(1)
   })
 
-  it("cleanupDACPHandlers removes canonical instance state when invoked with WCP4 temp context after WCP5 link without heartbeat", () => {
+  it("cleanupDACPHandlers removes validated instance state when invoked with WCP4 temp context after WCP5 link without heartbeat", () => {
     const tempInstanceId = "temp-wcp5-no-heartbeat-cleanup"
-    const canonicalInstanceId = "canonical-wcp5-no-heartbeat-cleanup"
-    let initialState = connectTestInstance(canonicalInstanceId)
-    initialState = linkHandshakeRoutingId(initialState, tempInstanceId, canonicalInstanceId)
+    const validatedInstanceId = "validated-wcp5-no-heartbeat-cleanup"
+    let initialState = connectTestInstance(validatedInstanceId)
+    initialState = linkHandshakeRoutingId(initialState, tempInstanceId, validatedInstanceId)
 
     const { context, getState } = createHeartbeatTestContext({
       instanceId: tempInstanceId,
       initialState,
     })
 
-    expect(getState().instances[canonicalInstanceId]).toBeDefined()
+    expect(getState().instances[validatedInstanceId]).toBeDefined()
     expect(getActiveHeartbeatTimerCount()).toBe(0)
 
     cleanupDACPHandlers(context)
 
-    expect(getState().instances[canonicalInstanceId]).toBeUndefined()
+    expect(getState().instances[validatedInstanceId]).toBeUndefined()
   })
 
   it("cleanupDACPHandlers clears only the targeted heartbeat when multiple instances are connected and WCP4 temp context is used", () => {
     const tempInstanceId = "temp-wcp4-multi"
-    const canonicalInstanceId = "canonical-wcp5-multi"
+    const validatedInstanceId = "validated-wcp5-multi"
     const otherInstanceId = "other-connected-instance"
 
-    let state = connectTestInstance(canonicalInstanceId)
+    let state = connectTestInstance(validatedInstanceId)
     state = connectTestInstance(otherInstanceId)
     state = updateInstanceState(state, otherInstanceId, AppInstanceState.CONNECTED)
 
@@ -640,14 +640,14 @@ describe("heartbeat cleanup on disconnect", () => {
       initialState: state,
     })
 
-    startHeartbeat(canonicalInstanceId, targetContext)
+    startHeartbeat(validatedInstanceId, targetContext)
     startHeartbeat(otherInstanceId, otherContext)
     expect(getActiveHeartbeatTimerCount()).toBe(2)
 
     cleanupDACPHandlers(targetContext)
 
     expect(getActiveHeartbeatTimerCount()).toBe(1)
-    expect(getTargetState().heartbeats[canonicalInstanceId]).toBeUndefined()
+    expect(getTargetState().heartbeats[validatedInstanceId]).toBeUndefined()
     expect(getTargetState().heartbeats[otherInstanceId]).toBeDefined()
   })
 })

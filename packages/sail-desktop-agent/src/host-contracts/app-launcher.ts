@@ -23,7 +23,7 @@ export interface AppLauncher {
    * 4. Returning launch result for the Desktop Agent to complete registration
    *
    * Host environments should set iframe `name` to the returned instanceId so WCP4
-   * identity validation can adopt it as the canonical WCP5 id.
+   * identity validation can adopt it as the validated WCP5 id.
    *
    * The Desktop Agent will handle:
    * - Pre-registering the launcher instanceId as PENDING until WCP4 completes
@@ -44,7 +44,7 @@ export interface AppLauncher {
    * Invoked by the Desktop Agent when an app calls `fdc3.close()` (FDC3 v3.0). Implementations
    * should tear down the host container; agent state cleanup runs after this resolves.
    *
-   * @param instanceId - Canonical WCP5 instance id for the app to close
+   * @param instanceId - Validated WCP5 instance id for the app to close
    * @throws Error if the host cannot close the container (mapped to CloseError.ErrorOnClose)
    */
   close?(instanceId: string): Promise<void>

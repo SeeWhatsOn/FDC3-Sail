@@ -44,7 +44,7 @@ describe("closeHarnessBrowsingContext", () => {
       apps: {
         getConnections: () => [
           {
-            instanceId: "canonical-id",
+            instanceId: "validated-id",
             appId: "MockApp",
             source: popup,
           },
@@ -58,7 +58,7 @@ describe("closeHarnessBrowsingContext", () => {
 
     expect(
       closeHarnessBrowsingContext({
-        instanceId: "canonical-id",
+        instanceId: "validated-id",
         desktopAgent: desktopAgent as never,
         popupWatcher: watcher,
       }),
@@ -164,7 +164,7 @@ describe("closeHarnessBrowsingContext", () => {
     watcher.stop()
   })
 
-  it("closes browsing context by canonical id after popup re-key from launcher id", () => {
+  it("closes browsing context by validated id after popup re-key from launcher id", () => {
     let closed = false
     const close = vi.fn(() => {
       closed = true
@@ -178,11 +178,11 @@ describe("closeHarnessBrowsingContext", () => {
 
     const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
     watcher.registerPopup("launcher-L", popup)
-    watcher.remapPopupByWindow(popup, "canonical-C")
+    watcher.remapPopupByWindow(popup, "validated-C")
 
     const desktopAgent = {
       apps: {
-        getConnections: () => [{ instanceId: "canonical-C", appId: "MockApp", source: popup }],
+        getConnections: () => [{ instanceId: "validated-C", appId: "MockApp", source: popup }],
         getInstances: () => [],
         getConnection: () => undefined,
       },
@@ -190,7 +190,7 @@ describe("closeHarnessBrowsingContext", () => {
 
     expect(
       closeHarnessBrowsingContext({
-        instanceId: "canonical-C",
+        instanceId: "validated-C",
         desktopAgent: desktopAgent as never,
         popupWatcher: watcher,
       }),
@@ -201,7 +201,7 @@ describe("closeHarnessBrowsingContext", () => {
     watcher.stop()
   })
 
-  it("AppLauncher.close succeeds with canonical id after WCP5 popup re-key", async () => {
+  it("AppLauncher.close succeeds with validated id after WCP5 popup re-key", async () => {
     let closed = false
     const close = vi.fn(() => {
       closed = true
@@ -215,11 +215,11 @@ describe("closeHarnessBrowsingContext", () => {
 
     const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
     watcher.registerPopup("launcher-L", popup)
-    watcher.remapPopupByWindow(popup, "canonical-C")
+    watcher.remapPopupByWindow(popup, "validated-C")
 
     const desktopAgent = {
       apps: {
-        getConnections: () => [{ instanceId: "canonical-C", appId: "MockApp", source: popup }],
+        getConnections: () => [{ instanceId: "validated-C", appId: "MockApp", source: popup }],
         getInstances: () => [],
         getConnection: () => undefined,
         getInstance: vi.fn(() => undefined),
@@ -238,7 +238,7 @@ describe("closeHarnessBrowsingContext", () => {
       onClose: instanceId => cleanup.disconnectHarnessInstance(instanceId),
     })
 
-    await launcher.close!("canonical-C")
+    await launcher.close!("validated-C")
 
     expect(close).toHaveBeenCalledOnce()
     watcher.stop()

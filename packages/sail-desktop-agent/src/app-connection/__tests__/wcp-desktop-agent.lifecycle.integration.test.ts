@@ -49,8 +49,8 @@ describe("Option A instance lifecycle (WCP path)", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.appId).toBe("portfolioApp")
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(agent.getState().instances[connected.validatedInstanceId]?.appId).toBe("portfolioApp")
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
   })
@@ -67,7 +67,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
 
     await postDacpOnPort(
       source.appPort,
-      createOpenRequestMessage(source.canonicalInstanceId, source.appId, CHART_APP.appId),
+      createOpenRequestMessage(source.validatedInstanceId, source.appId, CHART_APP.appId),
     )
     await flushAsyncDelivery()
 
@@ -85,7 +85,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
       instanceUuid: crypto.randomUUID(),
     })
 
-    expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(chart.validatedInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
     expect(agent.getState().instances[HOST_LAUNCHER_INSTANCE_ID]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
@@ -101,7 +101,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
 
@@ -112,7 +112,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
     await flushAsyncDelivery()
 
     await vi.waitFor(() => {
-      expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
+      expect(agent.getState().instances[connected.validatedInstanceId]).toBeUndefined()
     })
   })
 
@@ -129,19 +129,19 @@ describe("Option A instance lifecycle (WCP path)", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
     expect(getActiveHeartbeatTimerCount()).toBe(0)
-    expect(agent.getState().heartbeats[connected.canonicalInstanceId]).toBeUndefined()
+    expect(agent.getState().heartbeats[connected.validatedInstanceId]).toBeUndefined()
 
     await new Promise(resolve => setTimeout(resolve, 300))
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeDefined()
+    expect(agent.getState().instances[connected.validatedInstanceId]).toBeDefined()
     expect(getActiveHeartbeatTimerCount()).toBe(0)
   })
 
-  it("removes canonical instance when disconnectInstance is called with WCP4 temp id and heartbeat is disabled", async () => {
+  it("removes validated instance when disconnectInstance is called with WCP4 temp id and heartbeat is disabled", async () => {
     const agent = createTestAgent({
       heartbeatEnabled: false,
       disconnectGracePeriod: 0,
@@ -154,13 +154,13 @@ describe("Option A instance lifecycle (WCP path)", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
 
     agent.disconnectInstance(connected.tempInstanceId)
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
+    expect(agent.getState().instances[connected.validatedInstanceId]).toBeUndefined()
   })
 
   it("removes instance on heartbeat timeout when heartbeat is enabled", async () => {
@@ -178,14 +178,14 @@ describe("Option A instance lifecycle (WCP path)", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
     expect(getActiveHeartbeatTimerCount()).toBeGreaterThan(0)
 
     await vi.waitFor(
       () => {
-        expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
+        expect(agent.getState().instances[connected.validatedInstanceId]).toBeUndefined()
       },
       { timeout: 2000 },
     )
@@ -206,12 +206,12 @@ describe("Option A instance lifecycle (WCP path)", () => {
       connectionAttemptUuid: "lifecycle-reconnect-chart-second",
       appId: CHART_APP.appId,
       identityUrl: CHART_APP.details.url,
-      hostInstanceId: firstChart.canonicalInstanceId,
+      hostInstanceId: firstChart.validatedInstanceId,
       instanceUuid: firstChart.instanceUuid,
     })
 
-    expect(secondChart.canonicalInstanceId).toBe(firstChart.canonicalInstanceId)
-    expect(agent.getState().instances[firstChart.canonicalInstanceId]?.state).toBe(
+    expect(secondChart.validatedInstanceId).toBe(firstChart.validatedInstanceId)
+    expect(agent.getState().instances[firstChart.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
   })

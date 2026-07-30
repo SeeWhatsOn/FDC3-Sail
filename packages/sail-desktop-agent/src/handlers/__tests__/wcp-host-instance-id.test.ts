@@ -189,7 +189,7 @@ describe("host-assigned instanceId at WCP4", () => {
     )
   })
 
-  it("adopts host-assigned instanceId as canonical WCP5 id on first WCP4 validation", async () => {
+  it("adopts host-assigned instanceId as validated WCP5 id on first WCP4 validation", async () => {
     const initialState = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     const stateWithInstances = updateInstanceState(
       connectInstance(

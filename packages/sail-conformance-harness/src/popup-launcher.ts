@@ -19,12 +19,12 @@ export type PopupCloseWatcher = {
   closePopup: (instanceId: string) => boolean
   /** Close by registry key or by browsing-context `window.name` (launcher instance id). */
   closePopupForInstance: (instanceId: string) => boolean
-  /** Registry keys whose popup `window.name` matches (for launcher ↔ canonical id drift). */
+  /** Registry keys whose popup `window.name` matches (for launcher ↔ validated id drift). */
   findRegisteredIdsForWindowName: (windowName: string) => string[]
   /** Reverse lookup for host-owned popups when mock apps clear `window.name`. */
   findInstanceIdForPopup: (popup: Window) => string | undefined
-  /** Re-key a registered popup when WCP5 canonical id differs from launcher id. */
-  remapPopupByWindow: (source: Window, canonicalInstanceId: string) => boolean
+  /** Re-key a registered popup when WCP5 validated id differs from launcher id. */
+  remapPopupByWindow: (source: Window, validatedInstanceId: string) => boolean
   stop: () => void
 }
 
@@ -196,12 +196,12 @@ export function createPopupCloseWatcher(options: PopupCloseWatcherOptions): Popu
 
     findInstanceIdForPopup,
 
-    remapPopupByWindow(source: Window, canonicalInstanceId: string) {
+    remapPopupByWindow(source: Window, validatedInstanceId: string) {
       for (const [launcherInstanceId, popup] of popups) {
         if (popup === source) {
-          if (launcherInstanceId !== canonicalInstanceId) {
+          if (launcherInstanceId !== validatedInstanceId) {
             popups.delete(launcherInstanceId)
-            popups.set(canonicalInstanceId, popup)
+            popups.set(validatedInstanceId, popup)
           }
           return true
         }

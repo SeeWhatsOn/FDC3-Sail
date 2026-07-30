@@ -317,12 +317,12 @@ async function runHarnessOpenWithContextFromBootstrap(bootstrap: {
   const conformance1Url = extractConformance1Url(conformanceApps)
   const mockAppUrl = extractMockAppUrl(conformanceApps)
 
-  const sourceCanonicalId = await completeWcp4Handshake(connection, {
+  const sourceValidatedId = await completeWcp4Handshake(connection, {
     connectionAttemptUuid: "conformance1-caller",
     appUrl: conformance1Url,
     claimedInstanceId: sourceInstanceId,
   })
-  expect(sourceCanonicalId).toBe(sourceInstanceId)
+  expect(sourceValidatedId).toBe(sourceInstanceId)
 
   connection.clear()
 
@@ -333,7 +333,7 @@ async function runHarnessOpenWithContextFromBootstrap(bootstrap: {
       timestamp: new Date(),
       source: {
         appId: "Conformance1",
-        instanceId: sourceCanonicalId,
+        instanceId: sourceValidatedId,
       },
     },
     payload: {
@@ -365,7 +365,7 @@ async function runHarnessOpenWithContextFromBootstrap(bootstrap: {
   return {
     agent,
     connection,
-    sourceInstanceId: sourceCanonicalId,
+    sourceInstanceId: sourceValidatedId,
     launcherInstanceId,
     adoptedInstanceId,
     cleanup: bootstrap.cleanup,

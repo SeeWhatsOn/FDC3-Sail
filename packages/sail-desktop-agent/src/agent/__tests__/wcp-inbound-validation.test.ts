@@ -130,7 +130,7 @@ describe("WCP inbound schema validation (strict)", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
   })
@@ -185,7 +185,7 @@ describe("WCP inbound schema validation (strict)", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
 
@@ -197,8 +197,8 @@ describe("WCP inbound schema validation (strict)", () => {
     await flushAsyncDelivery()
     await new Promise(resolve => setTimeout(resolve, 50))
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeDefined()
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(agent.getState().instances[connected.validatedInstanceId]).toBeDefined()
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
   })

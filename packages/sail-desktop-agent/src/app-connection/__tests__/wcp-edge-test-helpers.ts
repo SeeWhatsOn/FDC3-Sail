@@ -18,7 +18,7 @@ function getTestConnector(agent: DesktopAgent): SailDesktopAgent["connector"] {
 export type WcpConnectedApp = {
   connectionAttemptUuid: string
   tempInstanceId: string
-  canonicalInstanceId: string
+  validatedInstanceId: string
   instanceUuid: string
   appPort: MessagePort
   appId: string
@@ -169,21 +169,21 @@ export async function connectWcpApp(
   ])
 
   expect(resolvedWcp5.type).toBe("WCP5ValidateAppIdentityResponse")
-  const canonicalInstanceId = resolvedWcp5.payload.instanceId
+  const validatedInstanceId = resolvedWcp5.payload.instanceId
   const validatedInstanceUuid = resolvedWcp5.payload.instanceUuid
-  expect(canonicalInstanceId).toBeTruthy()
+  expect(validatedInstanceId).toBeTruthy()
   expect(validatedInstanceUuid).toBeTruthy()
   expect(resolvedWcp5.payload.appId).toBe(appId)
 
   await vi.waitFor(() => {
-    expect(browserAppConnection.getConnection(canonicalInstanceId)).toBeDefined()
+    expect(browserAppConnection.getConnection(validatedInstanceId)).toBeDefined()
     expect(browserAppConnection.getConnection(tempInstanceId)).toBeUndefined()
   })
 
   return {
     connectionAttemptUuid,
     tempInstanceId,
-    canonicalInstanceId,
+    validatedInstanceId,
     instanceUuid: validatedInstanceUuid,
     appPort,
     appId,
@@ -295,21 +295,21 @@ export function beginWcpAppFirstConnect(
       ])
 
       expect(resolvedWcp5.type).toBe("WCP5ValidateAppIdentityResponse")
-      const canonicalInstanceId = resolvedWcp5.payload.instanceId
+      const validatedInstanceId = resolvedWcp5.payload.instanceId
       const validatedInstanceUuid = resolvedWcp5.payload.instanceUuid
-      expect(canonicalInstanceId).toBeTruthy()
+      expect(validatedInstanceId).toBeTruthy()
       expect(validatedInstanceUuid).toBeTruthy()
       expect(resolvedWcp5.payload.appId).toBe(appId)
 
       await vi.waitFor(() => {
-        expect(browserAppConnection.getConnection(canonicalInstanceId)).toBeDefined()
+        expect(browserAppConnection.getConnection(validatedInstanceId)).toBeDefined()
         expect(browserAppConnection.getConnection(tempInstanceId)).toBeUndefined()
       })
 
       return {
         connectionAttemptUuid,
         tempInstanceId,
-        canonicalInstanceId,
+        validatedInstanceId,
         instanceUuid: validatedInstanceUuid,
         appPort,
         appId,

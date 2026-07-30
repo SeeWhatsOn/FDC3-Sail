@@ -44,7 +44,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     }
   })
 
-  it("completes WCP1-5 handshake and migrates temp to canonical instance on DA-owned connection maps", async () => {
+  it("completes WCP1-5 handshake and migrates temp to validated instance on DA-owned connection maps", async () => {
     const agent = createTestAgent()
     activeAgents.push(agent)
 
@@ -56,18 +56,18 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
 
     const connections = requireDaOwnedAppConnection(agent)
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.appId).toBe("portfolioApp")
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(agent.getState().instances[connected.validatedInstanceId]?.appId).toBe("portfolioApp")
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
-    expect(connections.getAppConnection(connected.canonicalInstanceId)).toMatchObject({
-      instanceId: connected.canonicalInstanceId,
+    expect(connections.getAppConnection(connected.validatedInstanceId)).toMatchObject({
+      instanceId: connected.validatedInstanceId,
       appId: "portfolioApp",
     })
     expect(connections.getAppConnection(connected.tempInstanceId)).toBeUndefined()
   })
 
-  it("routes outbound DACP to the canonical instance MessagePort after WCP5 migration", async () => {
+  it("routes outbound DACP to the validated instance MessagePort after WCP5 migration", async () => {
     const agent = createTestAgent()
     activeAgents.push(agent)
 
@@ -90,12 +90,12 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
 
     await postDacpOnPort(
       appA.appPort,
-      createJoinUserChannelMessage(appA.canonicalInstanceId, appA.appId, CHANNEL_ID),
+      createJoinUserChannelMessage(appA.validatedInstanceId, appA.appId, CHANNEL_ID),
     )
     await postDacpOnPort(
       appA.appPort,
       createAddContextListenerMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHANNEL_ID,
         INSTRUMENT_CONTEXT.type,
@@ -103,11 +103,11 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     )
     await postDacpOnPort(
       appB.appPort,
-      createJoinUserChannelMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID),
+      createJoinUserChannelMessage(appB.validatedInstanceId, appB.appId, CHANNEL_ID),
     )
     await postDacpOnPort(
       appB.appPort,
-      createBroadcastMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID, INSTRUMENT_CONTEXT),
+      createBroadcastMessage(appB.validatedInstanceId, appB.appId, CHANNEL_ID, INSTRUMENT_CONTEXT),
     )
 
     const broadcastEvent = await broadcastPromise
@@ -118,7 +118,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
         destination?: { instanceId?: string }
       }
     ).destination
-    expect(destination?.instanceId).toBe(appA.canonicalInstanceId)
+    expect(destination?.instanceId).toBe(appA.validatedInstanceId)
     expect(broadcastEvent.payload.context?.type).toBe(INSTRUMENT_CONTEXT.type)
   })
 
@@ -133,7 +133,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     })
 
     const connections = requireDaOwnedAppConnection(agent)
-    expect(connections.getAppConnection(connected.canonicalInstanceId)).toBeDefined()
+    expect(connections.getAppConnection(connected.validatedInstanceId)).toBeDefined()
 
     connected.appPort.postMessage({
       type: "WCP6Goodbye",
@@ -142,8 +142,8 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     await flushAsyncDelivery()
 
     await vi.waitFor(() => {
-      expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
-      expect(connections.getAppConnection(connected.canonicalInstanceId)).toBeUndefined()
+      expect(agent.getState().instances[connected.validatedInstanceId]).toBeUndefined()
+      expect(connections.getAppConnection(connected.validatedInstanceId)).toBeUndefined()
       expect(connections.getAppConnection(connected.tempInstanceId)).toBeUndefined()
     })
   })
@@ -162,10 +162,10 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     })
 
     const connections = requireDaOwnedAppConnection(agent)
-    agent.disconnectInstance(connected.canonicalInstanceId)
+    agent.disconnectInstance(connected.validatedInstanceId)
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
-    expect(connections.getAppConnection(connected.canonicalInstanceId)).toBeUndefined()
+    expect(agent.getState().instances[connected.validatedInstanceId]).toBeUndefined()
+    expect(connections.getAppConnection(connected.validatedInstanceId)).toBeUndefined()
   })
 
   it("prunes pending temp connection maps when WCP4 identity validation fails", async () => {
@@ -241,12 +241,12 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
 
     await postDacpOnPort(
       listener.appPort,
-      createJoinUserChannelMessage(listener.canonicalInstanceId, listener.appId, CHANNEL_ID),
+      createJoinUserChannelMessage(listener.validatedInstanceId, listener.appId, CHANNEL_ID),
     )
     await postDacpOnPort(
       listener.appPort,
       createAddContextListenerMessage(
-        listener.canonicalInstanceId,
+        listener.validatedInstanceId,
         listener.appId,
         CHANNEL_ID,
         INSTRUMENT_CONTEXT.type,
@@ -254,12 +254,12 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     )
     await postDacpOnPort(
       broadcaster.appPort,
-      createJoinUserChannelMessage(broadcaster.canonicalInstanceId, broadcaster.appId, CHANNEL_ID),
+      createJoinUserChannelMessage(broadcaster.validatedInstanceId, broadcaster.appId, CHANNEL_ID),
     )
     await postDacpOnPort(
       broadcaster.appPort,
       createBroadcastMessage(
-        broadcaster.canonicalInstanceId,
+        broadcaster.validatedInstanceId,
         broadcaster.appId,
         CHANNEL_ID,
         INSTRUMENT_CONTEXT,
@@ -276,6 +276,6 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
           destination?: { instanceId?: string }
         }
       ).destination?.instanceId,
-    ).toBe(listener.canonicalInstanceId)
+    ).toBe(listener.validatedInstanceId)
   })
 })

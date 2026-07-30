@@ -27,7 +27,7 @@ Most hosts should use `SailDesktopAgent` from the package root. It owns both rol
 ┌────────────────────────── DESKTOP AGENT ─────────────────────────┐
 │  DesktopAgent (agent/)                                           │
 │    • All fdc3.* behaviour via DACP handlers                      │
-│    • WCP4–5 identity validation → canonical instanceId           │
+│    • WCP4–5 identity validation → validated instanceId           │
 │    • Channel membership, intents, open-with-context, heartbeat   │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -465,7 +465,7 @@ This package implements a [Browser-Resident Desktop Agent](https://fdc3.finos.or
 | `getAgent()` / WCP connection | **BrowserAppConnection** — WCP1–3, per-app `MessagePort` |
 | DACP over `MessagePort` | **DA** (`DesktopAgent`) — all `fdc3.*` API behaviour |
 | WCP4 `ValidateAppIdentity` | **DA** — `app-connection/wcp/wcp-identity-validation.ts` plus handlers |
-| WCP5 success / failure | **DA** responds; **BrowserAppConnection** migrates port map to canonical `instanceId` |
+| WCP5 success / failure | **DA** responds; **BrowserAppConnection** migrates port map to validated `instanceId` |
 | WCP6 `Goodbye` | **BrowserAppConnection** drops port; **DA** cleans registry |
 
 Spec references (v2.2):
@@ -511,7 +511,7 @@ Most browser hosts use **`false`** for WCP3 URLs and implement resolver/channel 
 These behaviours stay within FDC3 MUSTs but are host conventions supported by this library:
 
 - **`iframe name = launcher instanceId`** — correlates `AppLauncher` output with WCP4; cross-origin iframes may not expose `window.name` to the host (integration tests use same-origin fixtures).
-- **Host-adopt path** — `open` registers a `PENDING` instance; WCP4 may claim that `instanceId` before first connect so canonical id matches the launcher (supports `open()` returning `instanceId` early).
+- **Host-adopt path** — `open` registers a `PENDING` instance; WCP4 may claim that `instanceId` before first connect so validated id matches the launcher (supports `open()` returning `instanceId` early).
 - **`HostInstanceBinding`** (below) — proposed integrator sugar only; not part of the FDC3 standard.
 
 ## Heartbeat and liveness configuration
@@ -575,8 +575,8 @@ sequenceDiagram
   Edge->>App: WCP3Handshake + MessagePort
   App->>Edge: WCP4ValidateAppIdentity (claims host instanceId)
   Edge->>DA: WCP4 (+ temp instanceId)
-  DA->>Edge: WCP5 (canonical instanceId)
-  Edge->>Edge: Migrate temp → canonical in port map
+  DA->>Edge: WCP5 (validated instanceId)
+  Edge->>Edge: Migrate temp → validated in port map
   Edge->>App: WCP5 response
   App->>Edge: DACP e.g. joinUserChannel (MessagePort)
   Edge->>DA: DACP + meta.source.instanceId
@@ -584,7 +584,7 @@ sequenceDiagram
   Edge->>App: DACP delivered on correct MessagePort
 ```
 
-**Debugging rule:** follow **one instanceId** from launcher → iframe `name` → WCP4 payload → WCP5 canonical → `meta.destination.instanceId`. A break anywhere in that chain produces toolbox `AppTimeout`.
+**Debugging rule:** follow **one instanceId** from launcher → iframe `name` → WCP4 payload → WCP5 validated → `meta.destination.instanceId`. A break anywhere in that chain produces toolbox `AppTimeout`.
 
 ## Where WCP lives
 
@@ -592,7 +592,7 @@ sequenceDiagram
 |-------|--------|----------|
 | WCP1–3 (Hello, Handshake, MessageChannel) | **BrowserAppConnection** | `app-connection/browser-app-connection.ts`, `app-connection/wcp/wcp1-3-handshake.ts` |
 | Per-app MessagePort bridge | **BrowserAppConnection** | `app-connection/message-port-transport.ts`, `app-connection/wcp/wcp-message-routing.ts` |
-| WCP4–5 (validate identity, canonical id) | **DA** | `app-connection/wcp/wcp-identity-validation.ts`, `handlers/open/handlers.ts` |
+| WCP4–5 (validate identity, validated id) | **DA** | `app-connection/wcp/wcp-identity-validation.ts`, `handlers/open/handlers.ts` |
 | WCP6 (Goodbye) | **Both** | BrowserAppConnection disconnects port; DA cleans registry |
 | DACP (open, channels, intents, …) | **DA** | `handlers/*` |
 
@@ -743,7 +743,7 @@ WCP4 payload.instanceId + instanceUuid + sourceWindow
        ↓
 identity validation: canReuse | canAdoptPendingHost | else createAppInstance
        ↓
-WCP5 canonical instanceId → app connection migrates MessagePort map temp → canonical
+WCP5 validated instanceId → app connection migrates MessagePort map temp → validated
        ↓
 open-with-context / broadcast / raiseIntent use meta.destination.instanceId
 ```
@@ -763,7 +763,7 @@ flowchart TB
     I1[iframe name]
     T1[temp connection id]
     W4[WCP4 handlers — 3 branches]
-    C1[canonical id]
+    C1[validated id]
     R1[routing map]
     L1 --> I1 --> T1 --> W4 --> C1 --> R1
   end
@@ -779,9 +779,9 @@ flowchart TB
 
 **Edge contract tests** (maintain here):
 
-1. Single app: WCP4 → temp→canonical migration (existing).
+1. Single app: WCP4 → temp→validated migration (existing).
 2. Two apps: user-channel broadcast received on listener app.
-3. Host instanceId: open → PENDING → WCP4 adopt → canonical === launcher id.
+3. Host instanceId: open → PENDING → WCP4 adopt → validated === launcher id.
 4. Assert `meta.destination.instanceId` on delivered `broadcastEvent`.
 
 Run:

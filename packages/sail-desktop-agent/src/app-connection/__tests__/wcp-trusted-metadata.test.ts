@@ -80,13 +80,13 @@ describe("enrichMessageWithSource trusted metadata", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    const stored = connector.getConnection(connected.canonicalInstanceId)
+    const stored = connector.getConnection(connected.validatedInstanceId)
     expect(stored?.messageOrigin).toBe(TEST_ORIGIN)
 
     const enriched = enrichViaConnector(
       connector,
       createHostileWcp4(connected.connectionAttemptUuid, PORTFOLIO_APP.details.url),
-      connected.canonicalInstanceId,
+      connected.validatedInstanceId,
     )
 
     const meta = enriched.meta as {
@@ -99,7 +99,7 @@ describe("enrichMessageWithSource trusted metadata", () => {
     expect(meta.messageOrigin).not.toBe(HOSTILE_ORIGIN)
 
     // Registry instanceId is fine; app-supplied appId must not be treated as trusted.
-    expect(meta.source?.instanceId).toBe(connected.canonicalInstanceId)
+    expect(meta.source?.instanceId).toBe(connected.validatedInstanceId)
     expect(meta.source?.appId).not.toBe(HOSTILE_APP_ID)
     expect(meta.source?.appId).toBe(stored?.appId)
   })
@@ -115,7 +115,7 @@ describe("enrichMessageWithSource trusted metadata", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    const stored = connector.connectionRegistry.connections.get(connected.canonicalInstanceId)
+    const stored = connector.connectionRegistry.connections.get(connected.validatedInstanceId)
     expect(stored).toBeDefined()
     // Simulate the invariant break: no trusted origin on the connection.
     ;(stored as { messageOrigin?: string }).messageOrigin = ""
@@ -123,7 +123,7 @@ describe("enrichMessageWithSource trusted metadata", () => {
     const enriched = enrichViaConnector(
       connector,
       createHostileWcp4(connected.connectionAttemptUuid, PORTFOLIO_APP.details.url),
-      connected.canonicalInstanceId,
+      connected.validatedInstanceId,
     )
 
     const meta = enriched.meta as {

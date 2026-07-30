@@ -70,7 +70,7 @@ export class MockTransport implements Transport {
    */
   public lastWcp5ValidatedInstanceId: string | null = null
 
-  /** WCP4 connection id → canonical WCP5 instanceId assigned during validation. */
+  /** WCP4 connection id → validated WCP5 instanceId assigned during validation. */
   private wcp5InstanceIdByConnectionId: Map<string, string> = new Map()
 
   /** WCP4 connectionAttemptUuid → host instance id from validate payload (pre-WCP5). */
@@ -86,18 +86,18 @@ export class MockTransport implements Transport {
   }
 
   /**
-   * Resolve the canonical WCP5 instance id for a connection id when validation ran.
+   * Resolve the validated WCP5 instance id for a connection id when validation ran.
    * Falls back to the connection id when no WCP5 mapping exists.
    */
   resolveWcp5InstanceId(connectionId: string): string {
     return this.wcp5InstanceIdByConnectionId.get(connectionId) ?? connectionId
   }
 
-  /** Record test connection id → canonical WCP5 instance id after validate. */
-  registerWcp5Mapping(connectionId: string, canonicalInstanceId: string): void {
-    this.wcp5InstanceIdByConnectionId.set(connectionId, canonicalInstanceId)
-    this.lastWcp5ValidatedInstanceId = canonicalInstanceId
-    this.recordHandshakeRoutingLink(connectionId, canonicalInstanceId)
+  /** Record test connection id → validated WCP5 instance id after validate. */
+  registerWcp5Mapping(connectionId: string, validatedInstanceId: string): void {
+    this.wcp5InstanceIdByConnectionId.set(connectionId, validatedInstanceId)
+    this.lastWcp5ValidatedInstanceId = validatedInstanceId
+    this.recordHandshakeRoutingLink(connectionId, validatedInstanceId)
   }
 
   send(message: unknown): void {

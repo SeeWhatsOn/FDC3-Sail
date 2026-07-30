@@ -68,10 +68,10 @@ async function sendWcp4ValidateForInstance(
 
   await world.mockTransport.receiveMessage(message)
 
-  const canonicalId = world.mockTransport.lastWcp5ValidatedInstanceId
-  if (canonicalId) {
-    world.mockTransport.registerWcp5Mapping(uuid, canonicalId)
-    if (canonicalId !== uuid) {
+  const validatedId = world.mockTransport.lastWcp5ValidatedInstanceId
+  if (validatedId) {
+    world.mockTransport.registerWcp5Mapping(uuid, validatedId)
+    if (validatedId !== uuid) {
       world.updateState(state => removeInstance(state, uuid))
     }
   }

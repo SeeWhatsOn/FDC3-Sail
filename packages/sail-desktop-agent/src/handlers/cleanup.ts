@@ -15,7 +15,7 @@ import { clearPendingIntentTimeoutHandle } from "./intents/intent-pending-timeou
 
 /**
  * WCP4 validation runs under a temp connection id while heartbeat and instance state
- * use the canonical WCP5 instanceId (see wcp-handlers startHeartbeat call).
+ * use the validated WCP5 instanceId (see wcp-handlers startHeartbeat call).
  */
 function resolveCleanupInstanceId(context: DACPHandlerContext): string {
   const { instanceId, getState } = context

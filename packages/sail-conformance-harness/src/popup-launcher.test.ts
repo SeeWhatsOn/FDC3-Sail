@@ -142,7 +142,7 @@ describe("createPopupCloseWatcher", () => {
 })
 
 describe("remapPopupByWindow", () => {
-  it("re-keys popup so closePopup on canonical id closes the same browsing context", () => {
+  it("re-keys popup so closePopup on validated id closes the same browsing context", () => {
     let closed = false
     const close = vi.fn(() => {
       closed = true
@@ -157,11 +157,11 @@ describe("remapPopupByWindow", () => {
     const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
     watcher.registerPopup("launcher-L", popup)
 
-    expect(watcher.remapPopupByWindow(popup, "canonical-C")).toBe(true)
+    expect(watcher.remapPopupByWindow(popup, "validated-C")).toBe(true)
     expect(watcher.hasPopup("launcher-L")).toBe(false)
-    expect(watcher.hasPopup("canonical-C")).toBe(true)
+    expect(watcher.hasPopup("validated-C")).toBe(true)
 
-    expect(watcher.closePopup("canonical-C")).toBe(true)
+    expect(watcher.closePopup("validated-C")).toBe(true)
     expect(close).toHaveBeenCalledOnce()
 
     watcher.stop()
@@ -172,7 +172,7 @@ describe("remapPopupByWindow", () => {
     const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
     watcher.registerPopup("launcher-L", popup)
 
-    expect(watcher.remapPopupByWindow(popup, "canonical-C")).toBe(true)
+    expect(watcher.remapPopupByWindow(popup, "validated-C")).toBe(true)
     expect(watcher.closePopup("launcher-L")).toBe(false)
     expect(watcher.hasPopup("launcher-L")).toBe(false)
 
@@ -181,7 +181,7 @@ describe("remapPopupByWindow", () => {
 
   it("returns false when source window is not registered", () => {
     const watcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
-    expect(watcher.remapPopupByWindow({ closed: false } as Window, "canonical-C")).toBe(false)
+    expect(watcher.remapPopupByWindow({ closed: false } as Window, "validated-C")).toBe(false)
     watcher.stop()
   })
 })

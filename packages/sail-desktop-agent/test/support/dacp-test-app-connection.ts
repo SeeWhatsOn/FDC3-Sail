@@ -93,8 +93,8 @@ export class DacpTestAppConnection {
     return this.outbound.resolveWcp5InstanceId(connectionId)
   }
 
-  registerWcp5Mapping(connectionId: string, canonicalInstanceId: string): void {
-    this.outbound.registerWcp5Mapping(connectionId, canonicalInstanceId)
+  registerWcp5Mapping(connectionId: string, validatedInstanceId: string): void {
+    this.outbound.registerWcp5Mapping(connectionId, validatedInstanceId)
   }
 
   getPostedMessages(): MessageRecord[] {

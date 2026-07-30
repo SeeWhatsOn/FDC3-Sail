@@ -57,7 +57,7 @@ export async function runHarnessOpenAndWcpHandshake(
   })
   const transport = connection.outbound
 
-  const callerCanonicalId = await completeWcp4Handshake(connection, {
+  const callerValidatedId = await completeWcp4Handshake(connection, {
     connectionAttemptUuid: "caller-connect",
     appUrl: "https://example.com/conformance1",
     claimedInstanceId: callerConnectionId,
@@ -72,7 +72,7 @@ export async function runHarnessOpenAndWcpHandshake(
       timestamp: new Date(),
       source: {
         appId: "Conformance1",
-        instanceId: callerCanonicalId,
+        instanceId: callerValidatedId,
       },
     },
     payload: {
@@ -115,7 +115,7 @@ export async function runHarnessOpenAndWcpHandshake(
       timestamp: new Date(),
       source: {
         appId: "Conformance1",
-        instanceId: callerCanonicalId,
+        instanceId: callerValidatedId,
       },
     },
     payload: {
@@ -217,7 +217,7 @@ export function assertInstanceIdentityCorrelated(
   // Host pre-register (openRequest / prepareLaunchedHostInstance) keeps launcher id through WCP5.
   expect(wcp5InstanceId).toBe(launcherInstanceId)
 
-  // findInstances() lists the canonical WCP5-registered instance (same id as launcher).
+  // findInstances() lists the validated WCP5-registered instance (same id as launcher).
   expect(findInstancesInstanceIds).toEqual(expect.arrayContaining([wcp5InstanceId]))
 }
 

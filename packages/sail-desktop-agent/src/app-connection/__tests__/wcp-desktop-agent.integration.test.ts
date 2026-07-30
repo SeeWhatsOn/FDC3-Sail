@@ -221,7 +221,7 @@ describe("session carry-over", () => {
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHART_APP.appId,
         OPEN_WITH_CONTEXT_LAUNCH,
@@ -247,7 +247,7 @@ describe("session carry-over", () => {
 
     await postDacpOnPort(
       staleChart.appPort,
-      createGenericContextListenerMessage(staleChart.canonicalInstanceId, staleChart.appId),
+      createGenericContextListenerMessage(staleChart.validatedInstanceId, staleChart.appId),
     )
 
     const [firstBroadcast, firstOpenResponse] = await Promise.all([
@@ -255,7 +255,7 @@ describe("session carry-over", () => {
       firstOpenResponsePromise,
     ])
 
-    expect(staleChart.canonicalInstanceId).toBe(STALE_LAUNCHER_INSTANCE_ID)
+    expect(staleChart.validatedInstanceId).toBe(STALE_LAUNCHER_INSTANCE_ID)
     expect(firstBroadcast.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
     expect(firstOpenResponse.payload.error).toBeUndefined()
     expect(firstOpenResponse.payload.appIdentifier?.instanceId).toBe(STALE_LAUNCHER_INSTANCE_ID)
@@ -277,7 +277,7 @@ describe("session carry-over", () => {
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHART_APP.appId,
         OPEN_WITH_CONTEXT_LAUNCH,
@@ -296,7 +296,7 @@ describe("session carry-over", () => {
 
     await postDacpOnPort(
       appA.appPort,
-      createFindInstancesMessage(appA.canonicalInstanceId, appA.appId, CHART_APP.appId),
+      createFindInstancesMessage(appA.validatedInstanceId, appA.appId, CHART_APP.appId),
     )
 
     const findInstancesResponse = await findInstancesResponsePromise
@@ -313,7 +313,7 @@ describe("session carry-over", () => {
       hostInstanceId: SECOND_LAUNCHER_INSTANCE_ID,
     })
 
-    expect(appB.canonicalInstanceId).toBe(SECOND_LAUNCHER_INSTANCE_ID)
+    expect(appB.validatedInstanceId).toBe(SECOND_LAUNCHER_INSTANCE_ID)
 
     const newBroadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
       appB.appPort,
@@ -322,7 +322,7 @@ describe("session carry-over", () => {
 
     await postDacpOnPort(
       appB.appPort,
-      createGenericContextListenerMessage(appB.canonicalInstanceId, appB.appId),
+      createGenericContextListenerMessage(appB.validatedInstanceId, appB.appId),
     )
 
     const [staleBroadcast, newBroadcast, openResponse] = await Promise.all([
@@ -380,7 +380,7 @@ describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHART_APP.appId,
         OPEN_WITH_CONTEXT_LAUNCH,
@@ -400,7 +400,7 @@ describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
       instanceUuid: crypto.randomUUID(),
     })
 
-    expect(appB.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(appB.validatedInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
 
     const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
       appB.appPort,
@@ -409,7 +409,7 @@ describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
 
     await postDacpOnPort(
       appB.appPort,
-      createGenericContextListenerMessage(appB.canonicalInstanceId, appB.appId),
+      createGenericContextListenerMessage(appB.validatedInstanceId, appB.appId),
     )
 
     const [broadcastEvent, openResponse] = await Promise.all([
@@ -452,7 +452,7 @@ describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
 
     await postDacpOnPort(
       staleChart.appPort,
-      createGenericContextListenerMessage(staleChart.canonicalInstanceId, staleChart.appId),
+      createGenericContextListenerMessage(staleChart.validatedInstanceId, staleChart.appId),
     )
 
     const appA = await connectWcpApp(agent, {
@@ -476,7 +476,7 @@ describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHART_APP.appId,
         OPEN_WITH_CONTEXT_LAUNCH,
@@ -502,7 +502,7 @@ describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
 
     await postDacpOnPort(
       newChart.appPort,
-      createGenericContextListenerMessage(newChart.canonicalInstanceId, newChart.appId),
+      createGenericContextListenerMessage(newChart.validatedInstanceId, newChart.appId),
     )
 
     const staleBroadcast = await staleBroadcastPromise
@@ -543,7 +543,7 @@ describe("open-with-context (first-connect WCP4)", () => {
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHART_APP.appId,
         OPEN_WITH_CONTEXT_LAUNCH,
@@ -561,7 +561,7 @@ describe("open-with-context (first-connect WCP4)", () => {
       identityUrl: CHART_APP.details.url,
     })
 
-    expect(appB.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(appB.validatedInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
 
     const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
       appB.appPort,
@@ -570,7 +570,7 @@ describe("open-with-context (first-connect WCP4)", () => {
 
     await postDacpOnPort(
       appB.appPort,
-      createGenericContextListenerMessage(appB.canonicalInstanceId, appB.appId),
+      createGenericContextListenerMessage(appB.validatedInstanceId, appB.appId),
     )
 
     const [broadcastEvent, openResponse] = await Promise.all([
@@ -607,7 +607,7 @@ describe("open-with-context (first-connect WCP4)", () => {
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHART_APP.appId,
         INSTRUMENT_CONTEXT,
@@ -624,7 +624,7 @@ describe("open-with-context (first-connect WCP4)", () => {
       identityUrl: CHART_APP.details.url,
     })
 
-    expect(appB.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(appB.validatedInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
 
     const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
       appB.appPort,
@@ -634,7 +634,7 @@ describe("open-with-context (first-connect WCP4)", () => {
     await postDacpOnPort(
       appB.appPort,
       createAddContextListenerMessage(
-        appB.canonicalInstanceId,
+        appB.validatedInstanceId,
         appB.appId,
         null,
         INSTRUMENT_CONTEXT.type,
@@ -672,7 +672,7 @@ describe("open-with-context (first-connect WCP4)", () => {
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHART_APP.appId,
         COUNTRY_CONTEXT,
@@ -697,7 +697,7 @@ describe("open-with-context (first-connect WCP4)", () => {
     await postDacpOnPort(
       appB.appPort,
       createAddContextListenerMessage(
-        appB.canonicalInstanceId,
+        appB.validatedInstanceId,
         appB.appId,
         null,
         INSTRUMENT_CONTEXT.type,
@@ -733,7 +733,7 @@ describe("open-with-context (first-connect WCP4)", () => {
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHART_APP.appId,
         INSTRUMENT_CONTEXT,
@@ -758,7 +758,7 @@ describe("open-with-context (first-connect WCP4)", () => {
     await postDacpOnPort(
       appB.appPort,
       createAddContextListenerMessage(
-        appB.canonicalInstanceId,
+        appB.validatedInstanceId,
         appB.appId,
         null,
         COUNTRY_CONTEXT.type,
@@ -767,7 +767,7 @@ describe("open-with-context (first-connect WCP4)", () => {
     await postDacpOnPort(
       appB.appPort,
       createAddContextListenerMessage(
-        appB.canonicalInstanceId,
+        appB.validatedInstanceId,
         appB.appId,
         null,
         INSTRUMENT_CONTEXT.type,
@@ -811,7 +811,7 @@ describe("open-with-context (first-connect WCP4)", () => {
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHART_APP.appId,
         OPEN_WITH_CONTEXT_LAUNCH,
@@ -842,7 +842,7 @@ describe("open-with-context (first-connect WCP4)", () => {
 
     const appB = await session.completeFirstConnect()
 
-    expect(appB.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(appB.validatedInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
 
     const openResponse = await openResponsePromise
 
@@ -872,12 +872,12 @@ describe("open-with-context (first-connect WCP4)", () => {
       identityUrl: CHART_APP.details.url,
     })
 
-    expect(appB.canonicalInstanceId).not.toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(appB.validatedInstanceId).not.toBe(HOST_LAUNCHER_INSTANCE_ID)
 
     await postDacpOnPort(
       appB.appPort,
       createAddContextListenerMessage(
-        appB.canonicalInstanceId,
+        appB.validatedInstanceId,
         appB.appId,
         null,
         INSTRUMENT_CONTEXT.type,
@@ -904,7 +904,7 @@ describe("open-with-context (first-connect WCP4)", () => {
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHART_APP.appId,
         INSTRUMENT_CONTEXT,
@@ -927,7 +927,7 @@ describe("WCP edge contract", () => {
     cleanupWcpIntegrationTestHarness(activeAgents)
   })
 
-  it("routes WCP4 through the connector to DesktopAgent and correlates temp→canonical instance ids", async () => {
+  it("routes WCP4 through the connector to DesktopAgent and correlates temp→validated instance ids", async () => {
     const agent = createTestAgent()
     activeAgents.push(agent)
 
@@ -942,13 +942,13 @@ describe("WCP edge contract", () => {
 
     expect(appConnected).toHaveBeenCalledWith(
       expect.objectContaining({
-        instanceId: connected.canonicalInstanceId,
+        instanceId: connected.validatedInstanceId,
         appId: "portfolioApp",
         connectionAttemptUuid: "integration-wcp-path-uuid",
       }),
     )
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.appId).toBe("portfolioApp")
+    expect(agent.getState().instances[connected.validatedInstanceId]?.appId).toBe("portfolioApp")
   })
 
   it("delivers user-channel broadcast from app B to app A listener over MessagePort routing", async () => {
@@ -974,12 +974,12 @@ describe("WCP edge contract", () => {
 
     await postDacpOnPort(
       appA.appPort,
-      createJoinUserChannelMessage(appA.canonicalInstanceId, appA.appId, CHANNEL_ID),
+      createJoinUserChannelMessage(appA.validatedInstanceId, appA.appId, CHANNEL_ID),
     )
     await postDacpOnPort(
       appA.appPort,
       createAddContextListenerMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHANNEL_ID,
         INSTRUMENT_CONTEXT.type,
@@ -988,11 +988,11 @@ describe("WCP edge contract", () => {
 
     await postDacpOnPort(
       appB.appPort,
-      createJoinUserChannelMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID),
+      createJoinUserChannelMessage(appB.validatedInstanceId, appB.appId, CHANNEL_ID),
     )
     await postDacpOnPort(
       appB.appPort,
-      createBroadcastMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID, INSTRUMENT_CONTEXT),
+      createBroadcastMessage(appB.validatedInstanceId, appB.appId, CHANNEL_ID, INSTRUMENT_CONTEXT),
     )
 
     const broadcastEvent = await broadcastPromise
@@ -1003,7 +1003,7 @@ describe("WCP edge contract", () => {
         destination?: { instanceId?: string }
       }
     ).destination
-    expect(destination?.instanceId).toBe(appA.canonicalInstanceId)
+    expect(destination?.instanceId).toBe(appA.validatedInstanceId)
     expect(broadcastEvent.payload.context?.type).toBe(INSTRUMENT_CONTEXT.type)
   })
 
@@ -1030,12 +1030,12 @@ describe("WCP edge contract", () => {
 
     await postDacpOnPort(
       appA.appPort,
-      createJoinUserChannelMessage(appA.canonicalInstanceId, appA.appId, CHANNEL_ID),
+      createJoinUserChannelMessage(appA.validatedInstanceId, appA.appId, CHANNEL_ID),
     )
     await postDacpOnPort(
       appA.appPort,
       createAddContextListenerMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHANNEL_ID,
         INSTRUMENT_CONTEXT.type,
@@ -1044,12 +1044,12 @@ describe("WCP edge contract", () => {
 
     await postDacpOnPort(
       appB.appPort,
-      createJoinUserChannelMessage(appB.canonicalInstanceId, appB.appId, CHANNEL_ID_2),
+      createJoinUserChannelMessage(appB.validatedInstanceId, appB.appId, CHANNEL_ID_2),
     )
     await postDacpOnPort(
       appB.appPort,
       createBroadcastMessage(
-        appB.canonicalInstanceId,
+        appB.validatedInstanceId,
         appB.appId,
         CHANNEL_ID_2,
         INSTRUMENT_CONTEXT,
@@ -1083,11 +1083,11 @@ describe("WCP edge contract", () => {
 
     await postDacpOnPort(
       appA.appPort,
-      createGetOrCreateChannelMessage(appA.canonicalInstanceId, appA.appId, appChannelId),
+      createGetOrCreateChannelMessage(appA.validatedInstanceId, appA.appId, appChannelId),
     )
     await postDacpOnPort(
       appB.appPort,
-      createGetOrCreateChannelMessage(appB.canonicalInstanceId, appB.appId, appChannelId),
+      createGetOrCreateChannelMessage(appB.validatedInstanceId, appB.appId, appChannelId),
     )
 
     const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
@@ -1098,7 +1098,7 @@ describe("WCP edge contract", () => {
     await postDacpOnPort(
       appA.appPort,
       createAddContextListenerMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         appChannelId,
         INSTRUMENT_CONTEXT.type,
@@ -1107,7 +1107,7 @@ describe("WCP edge contract", () => {
     await postDacpOnPort(
       appB.appPort,
       createBroadcastMessage(
-        appB.canonicalInstanceId,
+        appB.validatedInstanceId,
         appB.appId,
         appChannelId,
         INSTRUMENT_CONTEXT,
@@ -1122,11 +1122,11 @@ describe("WCP edge contract", () => {
         destination?: { instanceId?: string }
       }
     ).destination
-    expect(destination?.instanceId).toBe(appA.canonicalInstanceId)
+    expect(destination?.instanceId).toBe(appA.validatedInstanceId)
     expect(broadcastEvent.payload.context?.type).toBe(INSTRUMENT_CONTEXT.type)
   })
 
-  it("adopts host launcher instanceId as canonical id when open pre-registers a PENDING instance", async () => {
+  it("adopts host launcher instanceId as validated id when open pre-registers a PENDING instance", async () => {
     const agent = createTestAgent({ appLauncher: createHostInstanceAppLauncher() })
     activeAgents.push(agent)
 
@@ -1138,7 +1138,7 @@ describe("WCP edge contract", () => {
 
     await postDacpOnPort(
       source.appPort,
-      createOpenRequestMessage(source.canonicalInstanceId, source.appId, CHART_APP.appId),
+      createOpenRequestMessage(source.validatedInstanceId, source.appId, CHART_APP.appId),
     )
     await flushAsyncDelivery()
 
@@ -1156,7 +1156,7 @@ describe("WCP edge contract", () => {
       instanceUuid: crypto.randomUUID(),
     })
 
-    expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(chart.validatedInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
     expect(getTestConnector(agent).getConnection(HOST_LAUNCHER_INSTANCE_ID)).toBeDefined()
   })
 
@@ -1172,7 +1172,7 @@ describe("WCP edge contract", () => {
 
     await postDacpOnPort(
       source.appPort,
-      createOpenRequestMessage(source.canonicalInstanceId, source.appId, CHART_APP.appId),
+      createOpenRequestMessage(source.validatedInstanceId, source.appId, CHART_APP.appId),
     )
     await flushAsyncDelivery()
 
@@ -1187,7 +1187,7 @@ describe("WCP edge contract", () => {
       instanceUuid: crypto.randomUUID(),
     })
 
-    expect(chart.canonicalInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(chart.validatedInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
   })
 })
 
@@ -1209,8 +1209,8 @@ describe("browser channels controller (WCP integration)", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    expect(channels.getAppChannelId(app.canonicalInstanceId)).toBeNull()
-    expect(channels.getAppChannel(app.canonicalInstanceId)).toBeNull()
+    expect(channels.getAppChannelId(app.validatedInstanceId)).toBeNull()
+    expect(channels.getAppChannel(app.validatedInstanceId)).toBeNull()
   })
 
   it("host changeAppChannel delivers channelChangedEvent to the app over MessagePort", async () => {
@@ -1226,23 +1226,23 @@ describe("browser channels controller (WCP integration)", () => {
 
     await postDacpOnPort(
       app.appPort,
-      createAddEventListenerMessage(app.canonicalInstanceId, app.appId, "USER_CHANNEL_CHANGED"),
+      createAddEventListenerMessage(app.validatedInstanceId, app.appId, "USER_CHANNEL_CHANGED"),
     )
 
     const channelChangedPromise = waitForChannelChangedEvent(app.appPort, CHANNEL_ID)
 
-    await channels.changeAppChannel(app.canonicalInstanceId, CHANNEL_ID)
+    await channels.changeAppChannel(app.validatedInstanceId, CHANNEL_ID)
 
     const channelChangedEvent = await channelChangedPromise
 
     expect(channelChangedEvent.type).toBe("channelChangedEvent")
     expect(channelChangedEvent.payload.newChannelId).toBe(CHANNEL_ID)
-    expect(channels.getAppChannelId(app.canonicalInstanceId)).toBe(CHANNEL_ID)
-    expect(channels.getAppChannel(app.canonicalInstanceId)).toMatchObject({
+    expect(channels.getAppChannelId(app.validatedInstanceId)).toBe(CHANNEL_ID)
+    expect(channels.getAppChannel(app.validatedInstanceId)).toMatchObject({
       id: CHANNEL_ID,
       type: "user",
     })
-    expect(agent.getState().instances[app.canonicalInstanceId]?.currentUserChannel).toBe(CHANNEL_ID)
+    expect(agent.getState().instances[app.validatedInstanceId]?.currentUserChannel).toBe(CHANNEL_ID)
   })
 
   it("host changeAppChannel to null leaves the channel and notifies the app", async () => {
@@ -1258,28 +1258,28 @@ describe("browser channels controller (WCP integration)", () => {
 
     await postDacpOnPort(
       app.appPort,
-      createAddEventListenerMessage(app.canonicalInstanceId, app.appId, "USER_CHANNEL_CHANGED"),
+      createAddEventListenerMessage(app.validatedInstanceId, app.appId, "USER_CHANNEL_CHANGED"),
     )
     await postDacpOnPort(
       app.appPort,
-      createJoinUserChannelMessage(app.canonicalInstanceId, app.appId, CHANNEL_ID),
+      createJoinUserChannelMessage(app.validatedInstanceId, app.appId, CHANNEL_ID),
     )
 
     await vi.waitFor(() => {
-      expect(channels.getAppChannelId(app.canonicalInstanceId)).toBe(CHANNEL_ID)
+      expect(channels.getAppChannelId(app.validatedInstanceId)).toBe(CHANNEL_ID)
     })
 
     const leavePromise = waitForChannelChangedEvent(app.appPort, null)
 
-    await channels.changeAppChannel(app.canonicalInstanceId, null)
+    await channels.changeAppChannel(app.validatedInstanceId, null)
 
     const leaveEvent = await leavePromise
 
     expect(leaveEvent.type).toBe("channelChangedEvent")
     expect(leaveEvent.payload.newChannelId).toBeNull()
-    expect(channels.getAppChannelId(app.canonicalInstanceId)).toBeNull()
-    expect(channels.getAppChannel(app.canonicalInstanceId)).toBeNull()
-    expect(agent.getState().instances[app.canonicalInstanceId]?.currentUserChannel).toBeNull()
+    expect(channels.getAppChannelId(app.validatedInstanceId)).toBeNull()
+    expect(channels.getAppChannel(app.validatedInstanceId)).toBeNull()
+    expect(agent.getState().instances[app.validatedInstanceId]?.currentUserChannel).toBeNull()
   })
 
   it("getAppChannel reflects app-driven join through the same agent state path", async () => {
@@ -1295,18 +1295,18 @@ describe("browser channels controller (WCP integration)", () => {
 
     await postDacpOnPort(
       app.appPort,
-      createJoinUserChannelMessage(app.canonicalInstanceId, app.appId, CHANNEL_ID_2),
+      createJoinUserChannelMessage(app.validatedInstanceId, app.appId, CHANNEL_ID_2),
     )
 
     await vi.waitFor(() => {
-      expect(channels.getAppChannelId(app.canonicalInstanceId)).toBe(CHANNEL_ID_2)
+      expect(channels.getAppChannelId(app.validatedInstanceId)).toBe(CHANNEL_ID_2)
     })
 
-    expect(channels.getAppChannel(app.canonicalInstanceId)).toMatchObject({
+    expect(channels.getAppChannel(app.validatedInstanceId)).toMatchObject({
       id: CHANNEL_ID_2,
       type: "user",
     })
-    expect(agent.getState().instances[app.canonicalInstanceId]?.currentUserChannel).toBe(
+    expect(agent.getState().instances[app.validatedInstanceId]?.currentUserChannel).toBe(
       CHANNEL_ID_2,
     )
   })
@@ -1329,13 +1329,13 @@ describe("browser channels controller (WCP integration)", () => {
 
     await postDacpOnPort(
       app.appPort,
-      createJoinUserChannelMessage(app.canonicalInstanceId, app.appId, CHANNEL_ID),
+      createJoinUserChannelMessage(app.validatedInstanceId, app.appId, CHANNEL_ID),
     )
 
     await vi.waitFor(() => {
       expect(hostEvents).toHaveLength(1)
       expect(hostEvents[0]).toMatchObject({
-        instanceId: app.canonicalInstanceId,
+        instanceId: app.validatedInstanceId,
         channelId: CHANNEL_ID,
         channel: { id: CHANNEL_ID, type: "user" },
       })
@@ -1358,12 +1358,12 @@ describe("browser channels controller (WCP integration)", () => {
       hostEvents.push(event)
     })
 
-    await channels.changeAppChannel(app.canonicalInstanceId, CHANNEL_ID_2)
+    await channels.changeAppChannel(app.validatedInstanceId, CHANNEL_ID_2)
 
     await vi.waitFor(() => {
       expect(hostEvents).toHaveLength(1)
       expect(hostEvents[0]).toMatchObject({
-        instanceId: app.canonicalInstanceId,
+        instanceId: app.validatedInstanceId,
         channelId: CHANNEL_ID_2,
         channel: { id: CHANNEL_ID_2, type: "user" },
       })
@@ -1386,7 +1386,7 @@ describe("browser channels controller (WCP integration)", () => {
       notificationCount += 1
     })
 
-    await channels.changeAppChannel(app.canonicalInstanceId, CHANNEL_ID)
+    await channels.changeAppChannel(app.validatedInstanceId, CHANNEL_ID)
 
     await vi.waitFor(() => {
       expect(notificationCount).toBe(1)
@@ -1394,7 +1394,7 @@ describe("browser channels controller (WCP integration)", () => {
 
     unsubscribe()
 
-    await channels.changeAppChannel(app.canonicalInstanceId, CHANNEL_ID_2)
+    await channels.changeAppChannel(app.validatedInstanceId, CHANNEL_ID_2)
 
     await flushAsyncDelivery()
 
@@ -1427,7 +1427,7 @@ describe("browser apps controller (WCP integration)", () => {
 
     expect(connectEvents).toEqual([
       expect.objectContaining({
-        instanceId: connected.canonicalInstanceId,
+        instanceId: connected.validatedInstanceId,
         appId: "portfolioApp",
         connectionAttemptUuid: "apps-on-connect-uuid",
       }),
@@ -1445,30 +1445,30 @@ describe("browser apps controller (WCP integration)", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    expect(apps.getConnection(connected.canonicalInstanceId)).toMatchObject({
-      instanceId: connected.canonicalInstanceId,
+    expect(apps.getConnection(connected.validatedInstanceId)).toMatchObject({
+      instanceId: connected.validatedInstanceId,
       appId: "portfolioApp",
     })
     expect(apps.getConnections()).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ instanceId: connected.canonicalInstanceId }),
+        expect.objectContaining({ instanceId: connected.validatedInstanceId }),
       ]),
     )
-    expect(apps.getInstance(connected.canonicalInstanceId)).toMatchObject({
+    expect(apps.getInstance(connected.validatedInstanceId)).toMatchObject({
       appId: "portfolioApp",
-      instanceId: connected.canonicalInstanceId,
+      instanceId: connected.validatedInstanceId,
       status: "connected",
     })
     expect(apps.getInstances()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           appId: "portfolioApp",
-          instanceId: connected.canonicalInstanceId,
+          instanceId: connected.validatedInstanceId,
           status: "connected",
         }),
       ]),
     )
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
   })
@@ -1492,11 +1492,11 @@ describe("browser apps controller (WCP integration)", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    apps.disconnect(connected.canonicalInstanceId)
+    apps.disconnect(connected.validatedInstanceId)
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
-    expect(disconnectedIds).toContain(connected.canonicalInstanceId)
-    expect(apps.getConnection(connected.canonicalInstanceId)).toBeUndefined()
+    expect(agent.getState().instances[connected.validatedInstanceId]).toBeUndefined()
+    expect(disconnectedIds).toContain(connected.validatedInstanceId)
+    expect(apps.getConnection(connected.validatedInstanceId)).toBeUndefined()
   })
 
   it("notifies onHandshakeFailure when WCP handshake fails", () => {

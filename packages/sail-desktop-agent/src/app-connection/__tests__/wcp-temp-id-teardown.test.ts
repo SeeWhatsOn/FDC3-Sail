@@ -2,8 +2,8 @@
  * Regression tests for temp-handshake-id teardown escalation.
  *
  * Between WCP1 and WCP5 a connection is keyed by a temporary id (`temp-{connectionAttemptUuid}`).
- * `updateConnectionMetadata` remaps it to the canonical instanceId on WCP5 success and records a
- * `temp -> canonical` link in `wcpHandshakeRouting` so late handshake-keyed traffic still routes.
+ * `updateConnectionMetadata` remaps it to the validated instanceId on WCP5 success and records a
+ * `temp -> validated` link in `wcpHandshakeRouting` so late handshake-keyed traffic still routes.
  * That link is what makes any *teardown* arriving keyed by the temp id dangerous: it resolves
  * forward and destroys the live connection instead of the dead handshake.
  *
@@ -13,7 +13,7 @@
  *   1. A `WCP6Goodbye` arriving before WCP4 arms a grace timer under the temp id, because
  *      `bridgeAppPort` still resolves the port through `transportToInstanceId` at that point.
  *      Fixed in `updateConnectionMetadata`, which now cancels the temp-keyed pending disconnect
- *      as well as the canonical-keyed one.
+ *      as well as the validated-keyed one.
  *   2. A WCP5 *failure* response is always addressed to the temp id, so pruning it resolved
  *      forward onto a connection an earlier successful handshake had established under that same
  *      temp id. Fixed by `BrowserAppConnection.disconnectHandshakeApp`, which disconnects the id
@@ -61,7 +61,7 @@ describe("WCP6Goodbye arriving on a temp handshake id", () => {
     }
   })
 
-  it("does not tear down the canonical instance when WCP6Goodbye arrives on the temp id before WCP4 completes", async () => {
+  it("does not tear down the validated instance when WCP6Goodbye arrives on the temp id before WCP4 completes", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
     const connector = getTestConnector(agent)
@@ -89,7 +89,7 @@ describe("WCP6Goodbye arriving on a temp handshake id", () => {
     // no-op here — nothing is armed under the actual id yet) but never looks at
     // pendingDisconnects[temp], so the temp-keyed timer from the goodbye above keeps running.
     await session.postFirstConnectWcp4()
-    const { canonicalInstanceId } = await session.completeFirstConnect()
+    const { validatedInstanceId } = await session.completeFirstConnect()
 
     // Wait comfortably past the 25ms grace period (real timer — no fake-timer wind-forward,
     // since MessagePort delivery needs real task turns).
@@ -97,14 +97,14 @@ describe("WCP6Goodbye arriving on a temp handshake id", () => {
     await flushAsyncDelivery()
 
     // Proof this fails for the real reason, not a timeout or a dropped/never-received message:
-    // the surviving temp-keyed timer fired, resolved forward through the temp -> canonical
-    // handshake-routing link, and tore down the *canonical* instance whose handshake succeeded.
-    expect(disconnectedInstanceIds).not.toContain(canonicalInstanceId)
-    expect(connector.getConnection(canonicalInstanceId)).toBeDefined()
-    expect(agent.getState().instances[canonicalInstanceId]?.state).toBe(AppInstanceState.CONNECTED)
+    // the surviving temp-keyed timer fired, resolved forward through the temp -> validated
+    // handshake-routing link, and tore down the *validated* instance whose handshake succeeded.
+    expect(disconnectedInstanceIds).not.toContain(validatedInstanceId)
+    expect(connector.getConnection(validatedInstanceId)).toBeDefined()
+    expect(agent.getState().instances[validatedInstanceId]?.state).toBe(AppInstanceState.CONNECTED)
   })
 
-  it("still disconnects the canonical instance when WCP6Goodbye arrives after the handshake remap (guard)", async () => {
+  it("still disconnects the validated instance when WCP6Goodbye arrives after the handshake remap (guard)", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
     const connector = getTestConnector(agent)
@@ -115,11 +115,11 @@ describe("WCP6Goodbye arriving on a temp handshake id", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
 
-    // Goodbye now arrives keyed by the canonical id (the remap already ran) — this is
+    // Goodbye now arrives keyed by the validated id (the remap already ran) — this is
     // legitimate teardown, and cancelling the temp-keyed timer must not suppress it.
     connected.appPort.postMessage(createWCP6Goodbye())
     await flushAsyncDelivery()
@@ -127,8 +127,8 @@ describe("WCP6Goodbye arriving on a temp handshake id", () => {
     await new Promise(resolve => setTimeout(resolve, 150))
     await flushAsyncDelivery()
 
-    expect(connector.getConnection(connected.canonicalInstanceId)).toBeUndefined()
-    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
+    expect(connector.getConnection(connected.validatedInstanceId)).toBeUndefined()
+    expect(agent.getState().instances[connected.validatedInstanceId]).toBeUndefined()
   })
 
   // KNOWN COVERAGE GAP: the third caller of the non-resolving disconnect — the WCP1 handshake
@@ -142,12 +142,12 @@ describe("WCP6Goodbye arriving on a temp handshake id", () => {
 /**
  * A WCP5 failure response is always addressed to the temp handshake id: `sendFailureResponse`
  * falls back to `temp-{uuid}` because `getInboundInstanceId()` returns null on the browser edge.
- * If that temp id was already remapped to a canonical instanceId by an earlier successful
- * handshake, disconnecting it must not resolve forward through the `temp -> canonical`
+ * If that temp id was already remapped to a validated instanceId by an earlier successful
+ * handshake, disconnecting it must not resolve forward through the `temp -> validated`
  * handshake-routing link — that would tear down the live connection instead of the failed attempt.
  *
  * Reproduced by reusing the same `connectionAttemptUuid` for a second, mismatched-origin WCP4 on
- * an already-connected app's port: `bridgeAppPort` keys the message by the now-canonical transport
+ * an already-connected app's port: `bridgeAppPort` keys the message by the now-validated transport
  * id (so enrichment finds the live connection and supplies `messageOrigin`), but
  * `DesktopAgent.handleWcpMessage` recomputes `tempInstanceId` from the message meta and hands the
  * handler a context addressed to the stale temp id.
@@ -186,7 +186,7 @@ describe("WCP5 failure addressed to an already-remapped temp id", () => {
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
   }
 
-  it("does not tear down the canonical instance when a WCP5 failure resolves the stale temp id forward", async () => {
+  it("does not tear down the validated instance when a WCP5 failure resolves the stale temp id forward", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
     const connector = getTestConnector(agent)
@@ -202,12 +202,12 @@ describe("WCP5 failure addressed to an already-remapped temp id", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
 
     // Second WCP4 on the now-connected port, reusing the same connectionAttemptUuid, with a
-    // mismatched actualUrl origin. bridgeAppPort keys it by the canonical transport id (the
+    // mismatched actualUrl origin. bridgeAppPort keys it by the validated transport id (the
     // live connection), so it is genuinely entered — but handleWcpMessage recomputes the
     // routing context from temp-{connectionAttemptUuid}, which was already remapped.
     connected.appPort.postMessage(
@@ -216,11 +216,11 @@ describe("WCP5 failure addressed to an already-remapped temp id", () => {
     await flushAsyncDelivery()
 
     // Proof this fails for the real reason, not a timeout or a dropped/never-received message:
-    // the WCP5 failure response resolved temp -> canonical and tore down the live instance
+    // the WCP5 failure response resolved temp -> validated and tore down the live instance
     // whose handshake had already succeeded.
-    expect(disconnectedInstanceIds).not.toContain(connected.canonicalInstanceId)
-    expect(connector.getConnection(connected.canonicalInstanceId)).toBeDefined()
-    expect(agent.getState().instances[connected.canonicalInstanceId]?.state).toBe(
+    expect(disconnectedInstanceIds).not.toContain(connected.validatedInstanceId)
+    expect(connector.getConnection(connected.validatedInstanceId)).toBeDefined()
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
   })

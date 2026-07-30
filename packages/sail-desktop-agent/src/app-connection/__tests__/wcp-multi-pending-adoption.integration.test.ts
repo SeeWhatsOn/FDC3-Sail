@@ -96,7 +96,7 @@ describe("multi-pending hostIdentifier adoption", () => {
 
     await postDacpOnPort(
       appA.appPort,
-      createOpenRequestMessage(appA.canonicalInstanceId, appA.appId, CHART_APP.appId),
+      createOpenRequestMessage(appA.validatedInstanceId, appA.appId, CHART_APP.appId),
     )
 
     await waitForPortMessage<BrowserTypes.OpenResponse>(
@@ -117,7 +117,7 @@ describe("multi-pending hostIdentifier adoption", () => {
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHART_APP.appId,
         OPEN_WITH_CONTEXT_LAUNCH,
@@ -137,7 +137,7 @@ describe("multi-pending hostIdentifier adoption", () => {
       hostIdentifier: NEW_PENDING_ID,
     })
 
-    expect(appB.canonicalInstanceId).toBe(NEW_PENDING_ID)
+    expect(appB.validatedInstanceId).toBe(NEW_PENDING_ID)
 
     const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
       appB.appPort,
@@ -147,7 +147,7 @@ describe("multi-pending hostIdentifier adoption", () => {
 
     await postDacpOnPort(
       appB.appPort,
-      createGenericContextListenerMessage(appB.canonicalInstanceId, appB.appId),
+      createGenericContextListenerMessage(appB.validatedInstanceId, appB.appId),
     )
 
     const [broadcastEvent, openResponse] = await Promise.all([
@@ -168,7 +168,7 @@ describe("multi-pending hostIdentifier adoption", () => {
 
     await postDacpOnPort(
       appA.appPort,
-      createFindInstancesMessage(appA.canonicalInstanceId, appA.appId, CHART_APP.appId),
+      createFindInstancesMessage(appA.validatedInstanceId, appA.appId, CHART_APP.appId),
     )
 
     const findInstancesResponse = await findInstancesResponsePromise
@@ -200,7 +200,7 @@ describe("multi-pending hostIdentifier adoption", () => {
 
     await postDacpOnPort(
       appA.appPort,
-      createOpenRequestMessage(appA.canonicalInstanceId, appA.appId, CHART_APP.appId),
+      createOpenRequestMessage(appA.validatedInstanceId, appA.appId, CHART_APP.appId),
     )
 
     await waitForPortMessage<BrowserTypes.OpenResponse>(
@@ -217,7 +217,7 @@ describe("multi-pending hostIdentifier adoption", () => {
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(
-        appA.canonicalInstanceId,
+        appA.validatedInstanceId,
         appA.appId,
         CHART_APP.appId,
         OPEN_WITH_CONTEXT_LAUNCH,
@@ -247,8 +247,8 @@ describe("multi-pending hostIdentifier adoption", () => {
     await handshake.postFirstConnectWcp4()
     const appB = await handshake.completeFirstConnect()
 
-    expect(appB.canonicalInstanceId).toBe(NEW_PENDING_ID)
-    expect(agent.getAppConnection(appB.canonicalInstanceId)?.hostIdentifier).toBe(NEW_PENDING_ID)
+    expect(appB.validatedInstanceId).toBe(NEW_PENDING_ID)
+    expect(agent.getAppConnection(appB.validatedInstanceId)?.hostIdentifier).toBe(NEW_PENDING_ID)
 
     const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
       appB.appPort,
@@ -258,7 +258,7 @@ describe("multi-pending hostIdentifier adoption", () => {
 
     await postDacpOnPort(
       appB.appPort,
-      createGenericContextListenerMessage(appB.canonicalInstanceId, appB.appId),
+      createGenericContextListenerMessage(appB.validatedInstanceId, appB.appId),
     )
 
     const [broadcastEvent, openResponse] = await Promise.all([

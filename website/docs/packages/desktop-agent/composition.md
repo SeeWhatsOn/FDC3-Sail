@@ -139,7 +139,7 @@ sequenceDiagram
   Edge->>DA: WCP4ValidateAppIdentity
   DA->>Edge: WCP5 response
   Edge->>App: WCP5 on MessagePort
-  Edge->>Edge: temp id → canonical id
+  Edge->>Edge: temp id → validated id
 
   Note over App,DA: DACP — DA handlers, edge routes by instanceId
   App->>Edge: joinUserChannelRequest
@@ -166,7 +166,7 @@ flowchart LR
   I["iframe name"]
   T["temp-{uuid} on edge"]
   W4["WCP4 claim"]
-  C["canonical instanceId"]
+  C["validated instanceId"]
   R["meta.destination.instanceId"]
 
   L --> I --> T --> W4 --> C --> R

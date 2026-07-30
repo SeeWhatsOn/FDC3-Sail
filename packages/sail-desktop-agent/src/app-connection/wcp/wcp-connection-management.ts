@@ -220,7 +220,7 @@ export function updateConnectionMetadata(
 
   // A WCP6Goodbye that arrived before this handshake completed arms
   // pendingDisconnects[tempInstanceId] (bridgeAppPort still keys off the temp id at that point).
-  // Left uncancelled, that grace timer would fire, resolve forward through the temp -> canonical
+  // Left uncancelled, that grace timer would fire, resolve forward through the temp -> validated
   // handshake-routing link this function establishes below, and tear down the connection whose
   // handshake just succeeded.
   if (cancelPendingDisconnect(context, tempInstanceId)) {
@@ -229,7 +229,7 @@ export function updateConnectionMetadata(
     )
   }
   // A recentlyDisconnected entry keyed by a temp handshake id is meaningless — nothing
-  // reconnects to a temp id. Drop both temp and canonical snapshots; reconnect metadata
+  // reconnects to a temp id. Drop both temp and validated snapshots; reconnect metadata
   // comes from this handshake (identity continuity lives in agent/identity state).
   context.recentlyDisconnected.delete(tempInstanceId)
   context.recentlyDisconnected.delete(actualInstanceId)
@@ -238,11 +238,11 @@ export function updateConnectionMetadata(
   metadata.instanceId = actualInstanceId
   metadata.appId = appId
 
-  // If canonical already has a live (or leftover) connection, retire it before claiming the key.
+  // If the validated id already has a live (or leftover) connection, retire it before claiming the key.
   // Unregister the reverse map BEFORE disconnect — otherwise onDisconnect can tear down the
   // connection we are about to install under that same id.
-  const existingCanonical = context.connectionRegistry.connections.get(actualInstanceId)
-  if (existingCanonical && existingCanonical !== metadata) {
+  const existingValidated = context.connectionRegistry.connections.get(actualInstanceId)
+  if (existingValidated && existingValidated !== metadata) {
     const displacedTransport =
       context.connectionRegistry.messagePortTransports.get(actualInstanceId)
     if (displacedTransport) {

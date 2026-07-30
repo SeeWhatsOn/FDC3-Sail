@@ -244,7 +244,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
   /**
    * Disconnect a connection still keyed by its temporary handshake id, using that id exactly.
    *
-   * Unlike {@link disconnectApp}, this does NOT resolve through the `temp -> canonical` link that
+   * Unlike {@link disconnectApp}, this does NOT resolve through the `temp -> validated` link that
    * {@link updateConnectionMetadata} records on WCP5 success. Both callers are handshake-scoped and
    * are handed a temp id: the pre-WCP5 handshake timeout, and a WCP5 failure response (always
    * addressed to the temp id — see `sendFailureResponse`'s `getInboundInstanceId()` fallback).

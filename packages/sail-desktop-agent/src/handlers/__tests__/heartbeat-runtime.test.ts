@@ -76,14 +76,14 @@ describe("startHeartbeat disconnect alignment", () => {
 
   it("keys heartbeat timers by the instanceId passed to startHeartbeat, not the handler context id", () => {
     const tempInstanceId = "temp-connection-uuid"
-    const canonicalInstanceId = "canonical-instance-from-wcp5"
+    const validatedInstanceId = "validated-instance-from-wcp5"
     let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     state = connectInstance(state, {
-      instanceId: canonicalInstanceId,
+      instanceId: validatedInstanceId,
       appId: "TestApp",
       metadata: { appId: "TestApp", name: "TestApp" },
     })
-    state = updateInstanceState(state, canonicalInstanceId, AppInstanceState.CONNECTED)
+    state = updateInstanceState(state, validatedInstanceId, AppInstanceState.CONNECTED)
 
     const { context, getState } = createDACPTestContext({
       instanceId: tempInstanceId,
@@ -91,10 +91,10 @@ describe("startHeartbeat disconnect alignment", () => {
     })
     const heartbeatContext = withResponseDispatcher(context, new MockTransport())
 
-    startHeartbeat(canonicalInstanceId, heartbeatContext)
+    startHeartbeat(validatedInstanceId, heartbeatContext)
 
     expect(getActiveHeartbeatTimerCount()).toBe(1)
-    expect(getState().heartbeats[canonicalInstanceId]).toBeDefined()
+    expect(getState().heartbeats[validatedInstanceId]).toBeDefined()
     expect(getState().heartbeats[tempInstanceId]).toBeUndefined()
   })
 })

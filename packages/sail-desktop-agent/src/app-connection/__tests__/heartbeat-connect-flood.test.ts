@@ -94,7 +94,7 @@ describe("heartbeat connect flood", () => {
     await new Promise(resolve => setTimeout(resolve, 50))
 
     expect(getActiveHeartbeatTimerCount()).toBe(0)
-    expect(agent.getState().heartbeats[connected.canonicalInstanceId]).toBeUndefined()
+    expect(agent.getState().heartbeats[connected.validatedInstanceId]).toBeUndefined()
     expect(heartbeatEvents).toHaveLength(0)
   })
 })

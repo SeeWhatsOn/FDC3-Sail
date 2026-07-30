@@ -127,13 +127,13 @@ describe("WCP reconnect clobber", () => {
 
   it("does not Object.assign recentlyDisconnected metadata onto a reconnecting connection", () => {
     const context = createUnitConnectionContext()
-    const canonicalId = "canonical-reconnect-wcp-d"
+    const validatedId = "validated-reconnect-wcp-d"
 
     const oldChannel = new MessageChannel()
     const oldTransport = new MessagePortTransport(oldChannel.port2)
     const oldSource = { name: "old-window" } as unknown as Window
     const oldMetadata = seedConnection(context, {
-      instanceId: canonicalId,
+      instanceId: validatedId,
       connectionAttemptUuid: "old-attempt-uuid",
       messageOrigin: "https://old.example",
       source: oldSource,
@@ -143,10 +143,10 @@ describe("WCP reconnect clobber", () => {
     })
 
     // Grace already fired: snapshot sits in recentlyDisconnected; live maps no longer hold it.
-    context.connectionRegistry.connections.delete(canonicalId)
-    context.connectionRegistry.messagePortTransports.delete(canonicalId)
+    context.connectionRegistry.connections.delete(validatedId)
+    context.connectionRegistry.messagePortTransports.delete(validatedId)
     context.connectionRegistry.transportToInstanceId.delete(oldTransport)
-    context.recentlyDisconnected.set(canonicalId, {
+    context.recentlyDisconnected.set(validatedId, {
       metadata: { ...oldMetadata },
       disconnectedAt: Date.now(),
     })
@@ -165,9 +165,9 @@ describe("WCP reconnect clobber", () => {
       connectedAt: new Date(9_000),
     })
 
-    updateConnectionMetadata(context, tempId, canonicalId, "portfolioApp")
+    updateConnectionMetadata(context, tempId, validatedId, "portfolioApp")
 
-    const restored = context.connectionRegistry.connections.get(canonicalId)
+    const restored = context.connectionRegistry.connections.get(validatedId)
     expect(restored).toBeDefined()
 
     // New handshake fields must win — never the recentlyDisconnected snapshot.
@@ -180,7 +180,7 @@ describe("WCP reconnect clobber", () => {
     expect(restored!.messageOrigin).not.toBe("https://old.example")
     expect(restored!.port === oldChannel.port2).toBe(false)
     expect(restored!.source === oldSource).toBe(false)
-    expect(context.recentlyDisconnected.has(canonicalId)).toBe(false)
+    expect(context.recentlyDisconnected.has(validatedId)).toBe(false)
   })
 
   it("does not tear down the new connection when goodbye arrives on a displaced old port", async () => {
@@ -203,11 +203,11 @@ describe("WCP reconnect clobber", () => {
       connectionAttemptUuid: "wcp-c-second-uuid",
       appId: PORTFOLIO_APP.appId,
       identityUrl: PORTFOLIO_APP.details.url,
-      hostInstanceId: first.canonicalInstanceId,
+      hostInstanceId: first.validatedInstanceId,
       instanceUuid: first.instanceUuid,
     })
 
-    expect(second.canonicalInstanceId).toBe(first.canonicalInstanceId)
+    expect(second.validatedInstanceId).toBe(first.validatedInstanceId)
 
     // Displaced first tab still talks — goodbye on the OLD port must not kill the NEW connection.
     first.appPort.postMessage(createWCP6Goodbye())
@@ -215,9 +215,9 @@ describe("WCP reconnect clobber", () => {
     await new Promise(resolve => setTimeout(resolve, 150))
     await flushAsyncDelivery()
 
-    expect(disconnectedInstanceIds).not.toContain(second.canonicalInstanceId)
-    expect(connector.getConnection(second.canonicalInstanceId)).toBeDefined()
-    expect(agent.getState().instances[second.canonicalInstanceId]?.state).toBe(
+    expect(disconnectedInstanceIds).not.toContain(second.validatedInstanceId)
+    expect(connector.getConnection(second.validatedInstanceId)).toBeDefined()
+    expect(agent.getState().instances[second.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
   })
@@ -245,19 +245,19 @@ describe("WCP reconnect clobber", () => {
       connectionAttemptUuid: "grace-armed-second-uuid",
       appId: PORTFOLIO_APP.appId,
       identityUrl: PORTFOLIO_APP.details.url,
-      hostInstanceId: first.canonicalInstanceId,
+      hostInstanceId: first.validatedInstanceId,
       instanceUuid: first.instanceUuid,
     })
 
-    expect(second.canonicalInstanceId).toBe(first.canonicalInstanceId)
+    expect(second.validatedInstanceId).toBe(first.validatedInstanceId)
 
-    // Advance past the original grace window — no late disconnect for canonical.
+    // Advance past the original grace window — no late disconnect for validated id.
     await new Promise(resolve => setTimeout(resolve, 200))
     await flushAsyncDelivery()
 
-    expect(disconnectedInstanceIds).not.toContain(first.canonicalInstanceId)
-    expect(connector.getConnection(first.canonicalInstanceId)).toBeDefined()
-    expect(agent.getState().instances[first.canonicalInstanceId]?.state).toBe(
+    expect(disconnectedInstanceIds).not.toContain(first.validatedInstanceId)
+    expect(connector.getConnection(first.validatedInstanceId)).toBeDefined()
+    expect(agent.getState().instances[first.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
   })
@@ -271,11 +271,11 @@ describe("WCP reconnect clobber", () => {
       },
     })
 
-    const canonicalId = "canonical-retire-order"
+    const validatedId = "validated-retire-order"
     const oldChannel = new MessageChannel()
     const oldTransport = new MessagePortTransport(oldChannel.port2)
     seedConnection(context, {
-      instanceId: canonicalId,
+      instanceId: validatedId,
       connectionAttemptUuid: "old-retire-uuid",
       source: { name: "old" } as unknown as Window,
       port: oldChannel.port2,
@@ -301,18 +301,18 @@ describe("WCP reconnect clobber", () => {
       transport: newTransport,
     })
 
-    updateConnectionMetadata(context, tempId, canonicalId, "portfolioApp")
+    updateConnectionMetadata(context, tempId, validatedId, "portfolioApp")
 
-    // Displaced transport must already be unmapped; disconnect must not tear down canonical.
+    // Displaced transport must already be unmapped; disconnect must not tear down the validated id.
     expect(context.connectionRegistry.transportToInstanceId.has(oldTransport)).toBe(false)
     oldTransport.disconnect()
 
-    expect(tornDown).not.toContain(canonicalId)
-    expect(context.connectionRegistry.connections.get(canonicalId)).toBeDefined()
-    expect(context.connectionRegistry.messagePortTransports.get(canonicalId) === newTransport).toBe(
+    expect(tornDown).not.toContain(validatedId)
+    expect(context.connectionRegistry.connections.get(validatedId)).toBeDefined()
+    expect(context.connectionRegistry.messagePortTransports.get(validatedId) === newTransport).toBe(
       true,
     )
-    expect(context.connectionRegistry.transportToInstanceId.get(newTransport)).toBe(canonicalId)
+    expect(context.connectionRegistry.transportToInstanceId.get(newTransport)).toBe(validatedId)
   })
 
   it("removes the instance when grace expires with no reconnect", async () => {
@@ -331,30 +331,30 @@ describe("WCP reconnect clobber", () => {
     await new Promise(resolve => setTimeout(resolve, 150))
     await flushAsyncDelivery()
 
-    expect(connector.getConnection(connected.canonicalInstanceId)).toBeUndefined()
-    expect(agent.getState().instances[connected.canonicalInstanceId]).toBeUndefined()
+    expect(connector.getConnection(connected.validatedInstanceId)).toBeUndefined()
+    expect(agent.getState().instances[connected.validatedInstanceId]).toBeUndefined()
   })
 
   it("does not half-restore stale recentlyDisconnected metadata onto a fresh post-grace connection", () => {
-    // After grace, remapping onto the same canonical id must keep this handshake's
+    // After grace, remapping onto the same validated id must keep this handshake's
     // port/source/origin/uuid — not copy fields from a stale recentlyDisconnected snapshot.
     const context = createUnitConnectionContext()
-    const canonicalId = "canonical-post-grace"
+    const validatedId = "validated-post-grace"
 
     const staleChannel = new MessageChannel()
     const staleTransport = new MessagePortTransport(staleChannel.port2)
     const staleMeta = seedConnection(context, {
-      instanceId: canonicalId,
+      instanceId: validatedId,
       connectionAttemptUuid: "stale-post-grace-uuid",
       messageOrigin: "https://stale.example",
       source: { name: "stale" } as unknown as Window,
       port: staleChannel.port2,
       transport: staleTransport,
     })
-    context.connectionRegistry.connections.delete(canonicalId)
-    context.connectionRegistry.messagePortTransports.delete(canonicalId)
+    context.connectionRegistry.connections.delete(validatedId)
+    context.connectionRegistry.messagePortTransports.delete(validatedId)
     context.connectionRegistry.transportToInstanceId.delete(staleTransport)
-    context.recentlyDisconnected.set(canonicalId, {
+    context.recentlyDisconnected.set(validatedId, {
       metadata: { ...staleMeta },
       disconnectedAt: Date.now() - 10,
     })
@@ -371,9 +371,9 @@ describe("WCP reconnect clobber", () => {
       transport: freshTransport,
     })
 
-    updateConnectionMetadata(context, tempId, canonicalId, "portfolioApp")
+    updateConnectionMetadata(context, tempId, validatedId, "portfolioApp")
 
-    const live = context.connectionRegistry.connections.get(canonicalId)
+    const live = context.connectionRegistry.connections.get(validatedId)
     expect(live).toBeDefined()
     expect(live!.connectionAttemptUuid).toBe("fresh-post-grace-uuid")
     expect(live!.messageOrigin).toBe("https://fresh.example")
@@ -381,14 +381,14 @@ describe("WCP reconnect clobber", () => {
     expect((live!.source as { name?: string }).name).toBe("fresh")
   })
 
-  it("leaves exactly one transport mapped to the canonical id after remap (no dual reverse-map)", () => {
+  it("leaves exactly one transport mapped to the validated id after remap (no dual reverse-map)", () => {
     const context = createUnitConnectionContext()
-    const canonicalId = "canonical-dual-map"
+    const validatedId = "validated-dual-map"
 
     const oldChannel = new MessageChannel()
     const oldTransport = new MessagePortTransport(oldChannel.port2)
     seedConnection(context, {
-      instanceId: canonicalId,
+      instanceId: validatedId,
       connectionAttemptUuid: "old-dual-uuid",
       port: oldChannel.port2,
       transport: oldTransport,
@@ -405,14 +405,14 @@ describe("WCP reconnect clobber", () => {
       transport: newTransport,
     })
 
-    updateConnectionMetadata(context, tempId, canonicalId, "portfolioApp")
+    updateConnectionMetadata(context, tempId, validatedId, "portfolioApp")
 
-    const reverseCanonicalCount = [
+    const reverseValidatedCount = [
       ...context.connectionRegistry.transportToInstanceId.values(),
-    ].filter(id => id === canonicalId).length
-    expect(reverseCanonicalCount).toBe(1)
-    expect(context.connectionRegistry.transportToInstanceId.get(newTransport)).toBe(canonicalId)
-    expect(context.connectionRegistry.messagePortTransports.get(canonicalId) === newTransport).toBe(
+    ].filter(id => id === validatedId).length
+    expect(reverseValidatedCount).toBe(1)
+    expect(context.connectionRegistry.transportToInstanceId.get(newTransport)).toBe(validatedId)
+    expect(context.connectionRegistry.messagePortTransports.get(validatedId) === newTransport).toBe(
       true,
     )
     expect(context.connectionRegistry.transportToInstanceId.has(oldTransport)).toBe(false)

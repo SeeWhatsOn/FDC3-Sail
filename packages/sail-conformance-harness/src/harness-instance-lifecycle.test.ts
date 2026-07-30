@@ -93,18 +93,18 @@ describe("createHarnessInstanceCleanup", () => {
     } as unknown as Window
 
     const popupWatcher = createPopupCloseWatcher({ onPopupClosed: vi.fn() })
-    popupWatcher.registerPopup("canonical-C", popup)
+    popupWatcher.registerPopup("validated-C", popup)
 
     const cleanup = createHarnessInstanceCleanup({
       desktopAgent: {
         registerPendingHostInstance: vi.fn(),
         apps: {
           getInstance: vi.fn((instanceId: string) =>
-            instanceId === "canonical-C"
+            instanceId === "validated-C"
               ? { appId: "MockAppId", instanceId, status: "connected" as const }
               : undefined,
           ),
-          getConnections: () => [{ instanceId: "canonical-C", appId: "MockAppId", source: popup }],
+          getConnections: () => [{ instanceId: "validated-C", appId: "MockAppId", source: popup }],
           getInstances: () => [],
           getConnection: () => undefined,
         },
@@ -114,11 +114,11 @@ describe("createHarnessInstanceCleanup", () => {
       removePanel: vi.fn(),
     })
 
-    cleanup.disconnectHarnessInstance("canonical-C")
+    cleanup.disconnectHarnessInstance("validated-C")
 
     expect(close).toHaveBeenCalledOnce()
-    expect(disconnectInstance).toHaveBeenCalledWith("canonical-C")
-    expect(popupWatcher.hasPopup("canonical-C")).toBe(false)
+    expect(disconnectInstance).toHaveBeenCalledWith("validated-C")
+    expect(popupWatcher.hasPopup("validated-C")).toBe(false)
   })
 
   it("stops polling after disconnectHarnessInstance closes the popup", () => {
@@ -136,14 +136,14 @@ describe("createHarnessInstanceCleanup", () => {
       },
       close,
     } as unknown as Window
-    popupWatcher.registerPopup("canonical-C", popup)
+    popupWatcher.registerPopup("validated-C", popup)
 
     const cleanup = createHarnessInstanceCleanup({
       desktopAgent: {
         registerPendingHostInstance: vi.fn(),
         apps: {
           getInstance: vi.fn((instanceId: string) =>
-            instanceId === "canonical-C"
+            instanceId === "validated-C"
               ? { appId: "MockAppId", instanceId, status: "connected" as const }
               : undefined,
           ),
@@ -157,7 +157,7 @@ describe("createHarnessInstanceCleanup", () => {
       removePanel: vi.fn(),
     })
 
-    cleanup.disconnectHarnessInstance("canonical-C")
+    cleanup.disconnectHarnessInstance("validated-C")
 
     Object.defineProperty(popup, "closed", { value: true, configurable: true })
     vi.advanceTimersByTime(300)

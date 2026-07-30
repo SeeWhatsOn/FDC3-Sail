@@ -95,7 +95,7 @@ export interface AppConnectionOptions {
    * Function to generate intent resolver URL for a given app instance.
    * Return undefined to fall back to `false` in WCP3Handshake.
    *
-   * @param instanceId - Temporary or canonical instance id at handshake time
+   * @param instanceId - Temporary or validated instance id at handshake time
    * @returns URL, `false`, `true`, or undefined
    */
   getIntentResolverUrl?: (instanceId: string) => WcpInjectedUiUrl | undefined
@@ -104,7 +104,7 @@ export interface AppConnectionOptions {
    * Function to generate channel selector URL for a given app instance.
    * Return undefined to fall back to `false` in WCP3Handshake.
    *
-   * @param instanceId - Temporary or canonical instance id at handshake time
+   * @param instanceId - Temporary or validated instance id at handshake time
    * @returns URL, `false`, `true`, or undefined
    */
   getChannelSelectorUrl?: (instanceId: string) => WcpInjectedUiUrl | undefined

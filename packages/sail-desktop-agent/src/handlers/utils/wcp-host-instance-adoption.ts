@@ -56,13 +56,13 @@ export function tryAdoptHostPreRegisteredInstance(params: {
 export function reconcileOrphanPendingHostInstances(
   context: DACPHandlerContext,
   appId: string,
-  canonicalInstanceId: string,
+  validatedInstanceId: string,
 ): void {
   const orphanInstanceIds = Object.values(context.getState().instances)
     .filter(
       instance =>
         instance.appId === appId &&
-        instance.instanceId !== canonicalInstanceId &&
+        instance.instanceId !== validatedInstanceId &&
         instance.state === AppInstanceState.PENDING,
     )
     .map(instance => instance.instanceId)
@@ -77,7 +77,7 @@ export function reconcileOrphanPendingHostInstances(
       nextState = migratePendingOpenWithContextTarget(
         nextState,
         orphanInstanceId,
-        canonicalInstanceId,
+        validatedInstanceId,
       )
       nextState = removeInstance(nextState, orphanInstanceId)
     }

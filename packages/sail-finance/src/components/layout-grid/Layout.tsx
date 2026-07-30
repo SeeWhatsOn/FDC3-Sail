@@ -177,7 +177,7 @@ const Layout = (props: DockviewSailProps) => {
           status: connection?.status,
         })
 
-        // Prefer WCP5 canonical id when linked; otherwise panelId is the host PENDING id.
+        // Prefer WCP5 validated id when linked; otherwise panelId is the host PENDING id.
         const instanceId = connection?.instanceId ?? panelId
         console.log(`[Layout] Disconnecting instance ${instanceId} for panel ${panelId}`, {
           hadConnection: !!connection,
