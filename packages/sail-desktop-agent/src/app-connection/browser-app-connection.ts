@@ -97,7 +97,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
       logger: this.options.logger,
       updateConnectionMetadata: (temp, actual, appId) =>
         this.updateConnectionMetadata(temp, actual, appId),
-      disconnectApp: instanceId => this.disconnectApp(instanceId),
+      disconnectApp: instanceId => this.disconnectHandshakeApp(instanceId),
     })
   }
 
@@ -234,6 +234,21 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
     disconnectApp(this.getConnectionContext(), resolvedInstanceId)
   }
 
+  /**
+   * Disconnect a connection still keyed by its temporary handshake id, using that id exactly.
+   *
+   * Unlike {@link disconnectApp}, this does NOT resolve through the `temp -> canonical` link that
+   * {@link updateConnectionMetadata} records on WCP5 success. Both callers are handshake-scoped and
+   * are handed a temp id: the pre-WCP5 handshake timeout, and a WCP5 failure response (always
+   * addressed to the temp id — see `sendFailureResponse`'s `getInboundInstanceId()` fallback).
+   * Resolving either forward would disconnect the live connection that a *different*, successful
+   * handshake had already established under that same temp id.
+   */
+  private disconnectHandshakeApp(instanceId: string): void {
+    clearPendingWcpSourceWindow(this, instanceId)
+    disconnectApp(this.getConnectionContext(), instanceId)
+  }
+
   updateConnectionMetadata(tempInstanceId: string, actualInstanceId: string, appId: string): void {
     updateConnectionMetadata(this.getConnectionContext(), tempInstanceId, actualInstanceId, appId)
   }
@@ -309,7 +324,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
       enrichMessageWithSource: this.enrichMessageWithSource.bind(this),
       handleWCP6Goodbye: this.handleWCP6Goodbye.bind(this),
       onInstanceTeardown,
-      disconnectApp: this.disconnectApp.bind(this),
+      disconnectApp: this.disconnectHandshakeApp.bind(this),
     }
   }
 

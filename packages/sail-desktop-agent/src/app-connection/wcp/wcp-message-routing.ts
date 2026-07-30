@@ -26,7 +26,11 @@ export interface WCPRoutingContext {
   ) => AppRequestMessage | WebConnectionProtocolMessage
   handleWCP6Goodbye: (instanceId: string) => void
   onInstanceTeardown: (instanceId: string) => void
-  /** Connection-only prune (pre-WCP5 handshake timeout). */
+  /**
+   * Disconnect a connection still keyed by its temporary handshake id, using that id exactly —
+   * it must not be resolved forward to a validated instanceId. Used by the pre-WCP5 handshake
+   * timeout; the WCP5-failure path in {@link AppConnectionRegistry} has the same requirement.
+   */
   disconnectApp: (instanceId: string) => void
 }
 

@@ -1,8 +1,9 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent Review Remediation
 
 Status: ready
-Current slice: 5a — Temp-id teardown escalation. WCP-A landed `17f5591e1`; **WCP-B still open**,
-so 5a is not complete and slice 6 is still gated behind it.
+Current slice: 5a — Temp-id teardown escalation. WCP-A landed `17f5591e1`; WCP-B fixed
+(uncommitted — see Verification Notes), so 5a is functionally complete pending commit and
+slice-5a checkpoint sign-off.
 Review/fix loops: 1
 Parked decision: Slice 11 — no changeset; leave API-break note for maintainers.
 Slice 3 decision (landed `a9614dc46`): Original AccessDenied-if-not-connected rejected
@@ -757,7 +758,7 @@ extra abstraction, and broad refactors as Follow-up.
 - [x] 3 — Private-channel grant model (#4 revised) — committed `a9614dc46`
 - [x] 4 — WCP4/WCP6 validation (#5) — committed `a6b1b679d`
 - [ ] 5 — Trusted metadata unconditional (#6)
-- [ ] 5a — Temp-id teardown escalation — **before slice 6** — WCP-A committed `17f5591e1`; WCP-B open
+- [ ] 5a — Temp-id teardown escalation — **before slice 6** — WCP-A committed `17f5591e1`; WCP-B fixed, uncommitted
 - [ ] 5b — Reconnect clobber: displaced transport + stale restore (WCP-C, WCP-D)
 - [ ] 6 — Identity-resolution cascade (#7)
 - [ ] 7 — Logger threading (#8)
@@ -784,7 +785,11 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 5a RED (WCP-A, before fix): goodbye-before-WCP4 then completed handshake → `appDisconnected` fired for the canonical instanceId and the connection was gone from both the registry and agent state. Post-remap goodbye guard passed on unfixed code, so the reproduction isolates the temp-keyed timer rather than teardown generally.
 - Slice 5a GREEN (WCP-A): `wcp-temp-id-teardown.test.ts` (2), full package vitest 311/311 across 45 files, typecheck exit 0, lint exit 0 (5 pre-existing warnings, slice 9/10 scope), cucumber 154/154 — unchanged from the slice 4 baseline.
 - Slice 5a fix (WCP-A): `cancelPendingDisconnect` local helper in `wcp-connection-management.ts`; `updateConnectionMetadata` now cancels the temp-keyed pending disconnect in addition to the canonical-keyed one, and drops `recentlyDisconnected[temp]`. The timer cancellation is the load-bearing part; the `recentlyDisconnected[temp]` delete is defensive — that entry is only written by the temp grace timer firing, which now can't happen before the remap without the `!metadata` early-return already bailing out.
-- Slice 5a note: WCP-B (WCP5-failure `disconnectApp(temp)` resolving forward to canonical) is NOT fixed. Handshake-timeout-prunes-unvalidated-temp guard not covered — `createTestAgent` hard-codes `handshakeTimeout: 30_000` with no override.
+- Slice 5a RED (WCP-B, before fix): second WCP4 on an already-connected port reusing the same `connectionAttemptUuid`, mismatched `actualUrl` origin → `sendFailureResponse` fell back to `destination: { instanceId: temp-{uuid} }` → registry's WCP5-failure prune resolved temp → canonical and tore it down. `disconnectedInstanceIds` contained the canonical instanceId — proof of the real defect, not a setup/timeout artifact.
+- Slice 5a GREEN (WCP-B): `wcp-temp-id-teardown.test.ts` (4, both WCP-A and WCP-B specs), full package vitest 313/313 across 45 files (+2 over the slice-4/WCP-A baseline of 311), typecheck exit 0, lint exit 0 (5 pre-existing warnings, slice 9/10 scope), cucumber 154 scenarios / 1461 steps — unchanged from baseline.
+- Slice 5a fix (WCP-B): new `pruneHandshakeConnection` on `BrowserAppConnection` — same body as the existing private `disconnectApp` minus the `resolveInstanceId` forward-resolution. Wired as the `disconnectApp` callback for both `AppConnectionRegistryCallbacks` (WCP5-failure prune) and `WCPRoutingContext` (pre-WCP5 handshake timeout), i.e. exactly the two callers the plan names as needing non-resolving behavior. `pruneAppConnection` and `disconnectAppByInstanceId` untouched — still resolve, per their contract. The temp→canonical `wcpHandshakeRouting` link itself is untouched (slice 6 depends on it).
+- Slice 5a coverage gap (still open): the "handshake timeout still prunes a never-validated temp connection" guard from the 5a acceptance criteria is NOT covered by a test. `createTestAgent` hard-codes `handshakeTimeout: 30_000` with no override knob, so exercising it for real means a 30s-plus test. The WCP-B fix rewires that exact path (`WCPRoutingContext.disconnectApp`), so it is now an untested caller — worth an override knob on the fixture if any later slice touches handshake teardown again.
+- Slice 5a note: guard test 2 ("WCP5 failure on a genuinely unvalidated first handshake still prunes the temp connection") passed on both unfixed and fixed code, as expected — `disconnectApp(context, instanceId)` is a no-op resolve when `instanceId` was never remapped, so removing the resolve step doesn't change behavior for that path. `disconnectApp(context, ...)` in `wcp-connection-management.ts` still unconditionally emits `appDisconnected` even when nothing was found to disconnect — that's pre-existing, not touched: the WCP-B fix calls it with the (correct, unresolved) temp id, so the spurious event — if `sendOnPort`'s prior warn wasn't enough signal already — fires for the temp id, never for the canonical one. No test required changing that behavior, so it was left alone per the plan's scope guard.
 
 ## Review Notes
 
