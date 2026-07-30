@@ -281,10 +281,20 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
       getPendingRequests: () => intentResolverUI?.getPendingRequests() ?? [],
       onRequest: listener => intentResolverUI?.onRequest(listener) ?? (() => {}),
       select: (requestId, choice) => {
-        intentResolverUI?.select(requestId, choice)
+        if (!intentResolverUI) {
+          throw new Error(
+            "Cannot select intent resolution: host intentResolver does not provide UI methods",
+          )
+        }
+        intentResolverUI.select(requestId, choice)
       },
       cancel: requestId => {
-        intentResolverUI?.cancel(requestId)
+        if (!intentResolverUI) {
+          throw new Error(
+            "Cannot cancel intent resolution: host intentResolver does not provide UI methods",
+          )
+        }
+        intentResolverUI.cancel(requestId)
       },
     }
   }

@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from "vite-plus/test"
 import * as sailDesktopAgentPackage from "../index"
 import { SailDesktopAgent } from "../agent/sail-desktop-agent"
 import type { DirectoryApp } from "../app-directory/types"
-import type { AppLauncher } from "../host-contracts"
+import type { AppLauncher, IntentHandler, IntentResolver } from "../host-contracts"
 import { connectInstance, updateInstanceState } from "../state/mutators"
 import type { AgentState } from "../state/types"
 import { AppInstanceState } from "../state/types"
@@ -135,4 +135,23 @@ describe("SailDesktopAgent", () => {
     await agent.channels.changeAppChannel(instanceId, channel.id)
     await expect(agent.channels.changeAppChannel(instanceId, channel.id)).resolves.toBeUndefined()
   }, 15_000)
+
+  it("throws when select or cancel is called with a resolve-only intentResolver", () => {
+    const resolveOnly: IntentResolver = {
+      resolve: () => Promise.resolve(null),
+    }
+    const agent = new SailDesktopAgent({
+      autoStart: false,
+      intentResolver: resolveOnly,
+    })
+
+    const choice: IntentHandler = {
+      app: { appId: "mock-app", name: "Mock App" },
+      intent: { name: "ViewChart", displayName: "ViewChart" },
+      isRunning: false,
+    }
+
+    expect(() => agent.intentResolver.select("missing-ui-request", choice)).toThrow()
+    expect(() => agent.intentResolver.cancel("missing-ui-request")).toThrow()
+  })
 })

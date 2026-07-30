@@ -1,9 +1,14 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent Review Remediation
 
 Status: implementing
-Current slice: batch A (7 + 8) — implemented; awaiting human commit
+Current slice: batch B (9) — #12 keep + #14 REVERT; awaiting human commit
 Review/fix loops: 0
 Parked decision: Slice 11 — no changeset; leave API-break note for maintainers.
+Slice 9 decision (2026-07-30): #14 REVERT — WeakMap-by-owner for heartbeat /
+pending-intent registries is YAGNI. Product is one DesktopAgent per tab (integrator
+singleton; AGENTS.md: do not add multi-agent-in-process isolation for the browser path).
+Keep module-global maps + `clearAll*ForTesting` / Cucumber After hooks. Delete the
+synthetic multi-agent isolation suite. Keep #12 (throw on resolve-only select/cancel).
 Slice 3 decision (landed `a9614dc46`): Original AccessDenied-if-not-connected rejected
 (breaks FDC3 client flow). Tightened to: no auto-join; grant creator on create + raiser
 on private intent-result; AccessDenied otherwise.
@@ -763,11 +768,11 @@ extra abstraction, and broad refactors as Follow-up.
 - [x] 5a — Temp-id teardown escalation — WCP-A `17f5591e1`; WCP-B `befe1e2dc`
 - [x] 5b — Reconnect clobber (WCP-C, WCP-D) Option B — committed `14f7bbf60`
 - [x] 6 — Identity-resolution cascade (#7) — committed `c9d3eadb6`
-- [x] 7 — Logger threading (#8) — batch A with 8; implemented; awaiting human commit
-- [x] 8 — Constructor rejection handling (#9) — batch A with 7; implemented; awaiting human commit
-- [ ] 9 — Behavioral cleanups (#12, #14)
-- [ ] 10 — Mechanical cleanups and nits (#10, #13, #15, nits)
-- [ ] 11 — Dead code removal
+- [x] 7 — Logger threading (#8) — batch A with 8; committed `44e390627`
+- [x] 8 — Constructor rejection handling (#9) — batch A with 7; committed `44e390627`
+- [x] 9 — Behavioral cleanups — #12 keep (throw); #14 REVERT (module-global + clearAll*); awaiting human commit
+- [ ] 10 — Mechanical cleanups and nits (#10, #13, #15, nits) — batch C with 11; heartbeat timer-type / useless-spread already folded into 9
+- [ ] 11 — Dead code removal — batch C with 10
 
 ## Verification Notes
 
@@ -807,6 +812,9 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 7+8 GREEN: host-logger (2) + directory-logger (1) + directory-load (2); typecheck/lint exit 0 (pre-existing warnings only)
 - Slice 7 fix: MessagePortTransport gets host logger + logPayloadDetail via WCPHandshakeContext; directory load failure logger threaded through loadDirectoryIntoState / replaceDirectoriesInState / addAppDirectory
 - Slice 8 fix: constructor addAppDirectory `.catch(logger.error)`; `SailDesktopAgent.directoriesLoaded` settles when all configured URLs settle
+- Slice 9 RED: resolve-only select/cancel silently no-op (#12). (Earlier #14 multi-agent timer RED was synthetic — dropped.)
+- Slice 9 GREEN: sail-desktop-agent throw (1); heartbeat-runtime without multi-agent suite; typecheck/lint exit 0
+- Slice 9 fix: throw on select/cancel when UI absent (#12). #14 REVERT: module-global heartbeat + pending-intent maps; deleted multi-agent isolation suite; keep `clearAll*ForTesting`. Folded slice-10 nits: `ReturnType<typeof setInterval>`, clear-all without useless spread
 
 ## Review Notes
 
@@ -817,6 +825,7 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 5+5b review (main agent): PASS — Option B applied; unregister-before-disconnect ordering correct; trusted enrich matches FDC3 anti-spoof; negative unhappy-path guards in place. Follow-up: item 7 two-window fight; `recentlyDisconnected` map still written but unused for restore (harmless bookkeeping).
 - Slice 6 review (code-reviewer): PASS — no Required. Follow-up: `meta.hostInstanceId` still app-authorable via enrich spread (same class as #7; strip/ignore when MessagePort id registered).
 - Slice 7+8 review (main agent): PASS — plumbing matches acceptance; directoriesLoaded is settle-all (no event system); #10 handleDisconnect parked (message-port.ts not edited).
+- Slice 9 review (main agent): PASS after #14 revert — keep #12 throw; module-global timers + clearAll* match one-DA-per-tab product model (AGENTS.md). Multi-agent-in-process isolation suite deleted as YAGNI/test-only.
 
 ## Parked Follow-ups
 
@@ -828,6 +837,7 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 4: `applyInboundValidationPolicy` log wording still says “DACP message…” for WCP
 - Slice 4 review: browser DACP under `strict` may reject after Sail stamps `messageOrigin` — pre-existing enrich vs schema tension; not this slice
 - Slice 6: strip or host-stamp `meta.hostInstanceId` at enrich (apps can still author it today)
+- Slice 9 / #14: accepted limitation — module-global timer maps are fine under one DesktopAgent per tab; do not reintroduce WeakMap multi-owner isolation without a real second production owner
 
 ## Known Limitations
 
