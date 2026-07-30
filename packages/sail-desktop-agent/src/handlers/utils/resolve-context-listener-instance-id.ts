@@ -1,8 +1,6 @@
 import { resolveLinkedInstanceId } from "../../state/selectors/wcp-handshake-routing"
-import { resolveAndPersistConnectionHostIdentifier } from "../../app-connection/wcp/wcp-host-identifier"
 import type { DACPHandlerContext } from "../types"
 import { getInstance } from "../../state/selectors"
-import { AppInstanceState } from "../../state/types"
 
 type MessageWithDacpInstanceMeta = {
   meta?: {
@@ -14,8 +12,9 @@ type MessageWithDacpInstanceMeta = {
 /**
  * Resolve the agent instance bucket for DACP handlers during WCP handshake.
  *
- * MessagePort routing may still use a temp id while fdc3.open pre-registers a PENDING
- * instance on the host launcher / iframe name. Prefer the host launcher id when present.
+ * Prefer an explicit host launcher id, then a registered MessagePort-routed id,
+ * then the WCP5 handshake-routing link. Never guess identity from app-supplied
+ * `meta.source.appId`.
  */
 export function resolveDacpHandlerInstanceId(
   message: MessageWithDacpInstanceMeta,
@@ -37,102 +36,10 @@ export function resolveDacpHandlerInstanceId(
     return instanceId
   }
 
-  const sourceAppId = message.meta?.source?.appId
-  const pendingHostInstanceId = findPendingOpenWithContextHostInstanceId(
-    state,
-    sourceAppId,
-    instanceId,
-    resolveWcpHostIdentifier(context, instanceId),
-  )
-  if (pendingHostInstanceId) {
-    return pendingHostInstanceId
-  }
-
   const linkedInstanceId = resolveLinkedInstanceId(state, instanceId)
   if (linkedInstanceId && getInstance(state, linkedInstanceId)) {
     return linkedInstanceId
   }
 
-  if (sourceAppId) {
-    const connectedInstancesForSourceApp = Object.values(state.instances).filter(
-      instance =>
-        instance.appId === sourceAppId &&
-        instance.state === AppInstanceState.CONNECTED &&
-        instance.instanceId !== instanceId,
-    )
-    if (connectedInstancesForSourceApp.length === 1) {
-      return connectedInstancesForSourceApp[0].instanceId
-    }
-
-    const pendingHostInstance = Object.values(state.instances).find(
-      instance =>
-        instance.appId === sourceAppId &&
-        instance.state === AppInstanceState.PENDING &&
-        instance.instanceId !== instanceId,
-    )
-    if (pendingHostInstance) {
-      return pendingHostInstance.instanceId
-    }
-  }
-
   return instanceId
-}
-
-function resolveWcpHostIdentifier(
-  context: DACPHandlerContext,
-  routedInstanceId: string,
-): string | undefined {
-  const owner = context.responses.connectionOwner
-  if (!owner || typeof owner !== "object") {
-    return undefined
-  }
-
-  const direct = resolveAndPersistConnectionHostIdentifier(owner, routedInstanceId)
-  if (direct) {
-    return direct
-  }
-
-  const linkedInstanceId = resolveLinkedInstanceId(context.getState(), routedInstanceId)
-  if (!linkedInstanceId) {
-    return undefined
-  }
-
-  return resolveAndPersistConnectionHostIdentifier(owner, linkedInstanceId)
-}
-
-function findPendingOpenWithContextHostInstanceId(
-  state: ReturnType<DACPHandlerContext["getState"]>,
-  sourceAppId: string | undefined,
-  routedInstanceId: string,
-  hostIdentifier?: string,
-): string | undefined {
-  if (!sourceAppId) {
-    return undefined
-  }
-
-  const pendingTargets = Object.entries(state.open.pendingWithContext).filter(
-    ([targetInstanceId, pendingList]) =>
-      pendingList.length > 0 &&
-      targetInstanceId !== routedInstanceId &&
-      state.instances[targetInstanceId]?.appId === sourceAppId,
-  )
-
-  if (pendingTargets.length === 0) {
-    return undefined
-  }
-
-  if (hostIdentifier) {
-    const hostMatch = pendingTargets.find(
-      ([targetInstanceId]) => targetInstanceId === hostIdentifier,
-    )
-    if (hostMatch) {
-      return hostMatch[0]
-    }
-  }
-
-  if (pendingTargets.length !== 1) {
-    return undefined
-  }
-
-  return pendingTargets[0][0]
 }

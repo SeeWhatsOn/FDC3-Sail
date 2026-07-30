@@ -11,22 +11,23 @@ import {
   createAppChannel,
   updateInstanceState,
 } from "../../state/mutators"
+import { linkHandshakeRoutingId } from "../../state/mutators/wcp-handshake-routing"
 import { AppInstanceState } from "../../state/types"
 import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
 import { withResponseDispatcher } from "./test-context"
 import { handleAddContextListener, handleBroadcastRequest } from "../broadcast/handlers"
 
 describe("handleBroadcastRequest stale instance routing", () => {
-  it("resolves stale source instance id to the live connected instance for the same app", () => {
+  it("resolves handshake routing id to the validated connected instance via wcpHandshakeRouting", () => {
     const transport = new MockTransport()
-    const staleInstanceId = "stale-conformance-instance"
-    const liveInstanceId = "live-conformance-instance"
+    const handshakeRoutingId = "stale-conformance-instance"
+    const validatedInstanceId = "live-conformance-instance"
     const listenerInstanceId = "mock-app-instance"
     const appControlChannelId = "app-control"
 
     let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     state = connectInstance(state, {
-      instanceId: liveInstanceId,
+      instanceId: validatedInstanceId,
       appId: "Conformance1",
       metadata: { appId: "Conformance1", name: "Conformance1" },
     })
@@ -35,7 +36,7 @@ describe("handleBroadcastRequest stale instance routing", () => {
       appId: "MockAppId",
       metadata: { appId: "MockAppId", name: "MockAppId" },
     })
-    state = updateInstanceState(state, liveInstanceId, AppInstanceState.CONNECTED)
+    state = updateInstanceState(state, validatedInstanceId, AppInstanceState.CONNECTED)
     state = updateInstanceState(state, listenerInstanceId, AppInstanceState.CONNECTED)
     state = createAppChannel(state, appControlChannelId)
     state = addContextListener(
@@ -45,9 +46,10 @@ describe("handleBroadcastRequest stale instance routing", () => {
       "closeWindow",
       appControlChannelId,
     )
+    state = linkHandshakeRoutingId(state, handshakeRoutingId, validatedInstanceId)
 
     const { context } = createDACPTestContext({
-      instanceId: staleInstanceId,
+      instanceId: handshakeRoutingId,
       initialState: state,
     })
 
@@ -56,7 +58,7 @@ describe("handleBroadcastRequest stale instance routing", () => {
         type: "broadcastRequest",
         meta: createDacpRequestMeta("broadcast-close-window", {
           appId: "Conformance1",
-          instanceId: staleInstanceId,
+          instanceId: handshakeRoutingId,
         }),
         payload: {
           channelId: appControlChannelId,

@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent Review Remediation
 
 Status: implementing
-Current slice: 5 + 5b (trusted meta + reconnect clobber). 5a already landed.
+Current slice: 6 (identity-resolution cascade) — implemented; awaiting human commit
 Review/fix loops: 0
 Parked decision: Slice 11 — no changeset; leave API-break note for maintainers.
 Slice 3 decision (landed `a9614dc46`): Original AccessDenied-if-not-connected rejected
@@ -16,7 +16,7 @@ Slice 5b decision (2026-07-30): Option B — delete `Object.assign` restore from
 agent/identity state, not connection metadata blob. Unhappy-path tests assert bad
 outcomes must NOT happen.
 Slices 5a/5b inserted (2026-07-29): four new findings (WCP-A..D) from a follow-up review
-of the WCP handshake temp→canonical remap. Inserted as decimals rather than renumbering
+of the WCP handshake temp→validated remap. Inserted as decimals rather than renumbering
 6–11, which are cross-referenced from Test Plan, Review Plan, Risks, and Checkpoints.
 **5a must land before slice 6** — slice 6 makes `wcpHandshakeRouting` the single resolution
 mechanism, and 5a is the proof that that link is currently unsafe in teardown paths.
@@ -320,8 +320,8 @@ npx vitest run src/app-connection --root packages/sail-desktop-agent
 **Must land before slice 6.**
 
 **The bug (two paths, one root cause):** `updateConnectionMetadata` in
-`src/app-connection/wcp/wcp-connection-management.ts` remaps `temp-{uuid}` → canonical `instanceId`
-and links `temp → canonical` in `wcpHandshakeRouting` so late handshake-keyed traffic still routes.
+`src/app-connection/wcp/wcp-connection-management.ts` remaps `temp-{uuid}` → validated `instanceId`
+and links `temp → validated` in `wcpHandshakeRouting` so late handshake-keyed traffic still routes.
 That link is never cleared on success, and the grace-period maps are keyed by whatever id was current
 when the event arrived. So **any teardown that arrives keyed by the temp id resolves forward and
 tears down the live connection.**
@@ -329,25 +329,25 @@ tears down the live connection.**
 *Path A (WCP-A) — `WCP6Goodbye` before WCP4.* `bridgeAppPort` keys goodbye off
 `transportToInstanceId`, which is still the temp id, so `handleWCP6Goodbye` arms
 `pendingDisconnects[temp]`. The remap only cancels `pendingDisconnects[actualInstanceId]` — miss.
-When the grace timer fires it calls `resolveRoutingInstanceId(temp)`, which now resolves to canonical
+When the grace timer fires it calls `resolveRoutingInstanceId(temp)`, which now resolves to validated
 because the remap linked it, and tears down the instance whose handshake just succeeded. Default
 `disconnectGracePeriod` is 2000ms, so the window is goodbye-then-completed-WCP4 inside 2s.
 
 *Path B (WCP-B) — WCP5 failure addressed to an already-remapped temp.*
 `AppConnectionRegistry.sendToAppInstance` calls `disconnectApp(destinationId)` on
 `WCP5ValidateAppIdentityFailedResponse`; `BrowserAppConnection.disconnectApp` resolves temp →
-canonical and prunes the live connection. Note `WCPRoutingContext.disconnectApp` is documented
+validated and prunes the live connection. Note `WCPRoutingContext.disconnectApp` is documented
 "Connection-only prune (pre-WCP5 handshake timeout)" — the implementation contradicts its own
 contract by resolving forward.
 
 **What to do:**
 1. In `updateConnectionMetadata`, cancel and delete `pendingDisconnects[tempInstanceId]` and drop
-   `recentlyDisconnected[tempInstanceId]` alongside the existing canonical-keyed cancellation. This
+   `recentlyDisconnected[tempInstanceId]` alongside the existing validated-keyed cancellation. This
    is the two-line change and it closes Path A.
 2. Make the pre-WCP5 prune path honor its documented contract: the handshake-prune entry point must
    not resolve a temp id forward to a validated instance.
 
-**Do not** fix this by clearing the `temp → canonical` link at remap. Slice 6 makes that link the
+**Do not** fix this by clearing the `temp → validated` link at remap. Slice 6 makes that link the
 single resolution mechanism for legitimate late handshake traffic. The defect is teardown
 escalation, not the link.
 
@@ -355,16 +355,16 @@ escalation, not the link.
 - A `WCP6Goodbye` received before WCP4 cannot tear down the instance the subsequent handshake
   produced.
 - A WCP5 failure response addressed to an already-remapped temp id cannot tear down the live
-  canonical connection.
+  validated connection.
 - Legitimate teardown is unchanged: goodbye *after* remap, handshake timeout on a never-validated
   temp, and explicit `disconnectAppByInstanceId` all behave as before.
 
 **Test (reproduction-first — both must fail on current code):**
 - WCP1 → goodbye on the temp-keyed port → WCP4 completing inside the grace period → advance timers
-  past `disconnectGracePeriod` → assert the canonical connection is still registered and no
+  past `disconnectGracePeriod` → assert the validated connection is still registered and no
   `appDisconnected` fired.
 - Complete a handshake, then deliver a `WCP5ValidateAppIdentityFailedResponse` addressed to
-  `temp-{uuid}` → assert the canonical connection survives.
+  `temp-{uuid}` → assert the validated connection survives.
 - Guards: goodbye *after* remap still tears down; handshake timeout still prunes an unvalidated temp.
 
 **Verify:**
@@ -383,13 +383,13 @@ tests under `src/app-connection/__tests__/`
 
 **Findings:** WCP-C, WCP-D (new — handshake remap review 2026-07-29).
 
-**The bug:** on reconnect, `updateConnectionMetadata` writes the new connection over the canonical
+**The bug:** on reconnect, `updateConnectionMetadata` writes the new connection over the validated
 key without retiring what was already there.
 
 *Displaced transport (WCP-C).* `connections.set(actual, metadata)` and
 `messagePortTransports.set(actual, appTransport)` overwrite the previous entries, but the displaced
 `MessagePortTransport` is never disconnected and its `transportToInstanceId` entry
-(`oldTransport → canonical`) is never deleted. MessagePort has no native close event — see the
+(`oldTransport → validated`) is never deleted. MessagePort has no native close event — see the
 comment in `src/app-connection/message-port.ts` — so nothing retires it on its own. And the grace
 period exists *precisely because* pagehide is a false positive, so the displaced page is usually
 still alive. Any message it sends is attributed to the new connection, and a `WCP6Goodbye` from it
@@ -399,12 +399,12 @@ tears the new one down.
 `Object.assign(metadata, recentlyDisconnectedEntry.metadata)` over all eight
 `AppConnectionMetadata` fields, then re-sets only `instanceId` and `appId`. So
 `connectionAttemptUuid`, `messageOrigin`, `source`, `port`, `connectedAt`, and `hostIdentifier` keep
-the *old* connection's values permanently — `connections.get(canonical).port` is a closed port and
+the *old* connection's values permanently — `connections.get(validated).port` is a closed port and
 `.source` is a dead window, while `messagePortTransports` holds the live one.
 `resolveConnectionHostIdentifier` reads `connection.source`.
 
 **What to do:**
-1. Before claiming the canonical key, retire any existing entry: delete its `transportToInstanceId`
+1. Before claiming the validated key, retire any existing entry: delete its `transportToInstanceId`
    entry, then disconnect its transport. Reuse `disconnectApp`'s existing unregister-then-disconnect
    ordering rather than writing new teardown.
 2. Restore only the fields that should survive a reconnect. `connectedAt` and `hostIdentifier` are
@@ -413,17 +413,17 @@ the *old* connection's values permanently — `connections.get(canonical).port` 
 
 **The trap in this slice:** `transport.disconnect()` fires its `onDisconnect`, which `bridgeAppPort`
 wires to `onInstanceTeardown(currentInstanceId)`. If you disconnect the displaced transport *before*
-deleting its reverse-map entry, that teardown resolves to the canonical id and kills the connection
+deleting its reverse-map entry, that teardown resolves to the validated id and kills the connection
 you just installed. Unregister first, then disconnect — the ordering `disconnectApp` already uses,
 and the reason its comment says so.
 
-**Acceptance:** After a reconnect onto a live-or-in-grace-period canonical id: exactly one transport
+**Acceptance:** After a reconnect onto a live-or-in-grace-period validated id: exactly one transport
 is registered for that id, `transportToInstanceId` holds no entry pointing at it from a retired
-transport, and `connections.get(canonical).port` / `.source` refer to the new connection.
+transport, and `connections.get(validated).port` / `.source` refer to the new connection.
 
 **Test (reproduction-first):** unit tests on `updateConnectionMetadata` for both reconnect sub-cases
 — pending-disconnect still armed, and already moved to `recentlyDisconnected`. Assert the displaced
-transport is disconnected, the reverse map has exactly one entry for the canonical id, and the
+transport is disconnected, the reverse map has exactly one entry for the validated id, and the
 metadata's `port`/`source` are the new ones. Plus a regression test that a goodbye arriving on the
 displaced transport does not disconnect the new connection. All fail on current code.
 
@@ -759,10 +759,10 @@ extra abstraction, and broad refactors as Follow-up.
 - [x] 2 — Directory-load lost update (#3) — committed `203969eb6`
 - [x] 3 — Private-channel grant model (#4 revised) — committed `a9614dc46`
 - [x] 4 — WCP4/WCP6 validation (#5) — committed `a6b1b679d`
-- [x] 5 — Trusted metadata unconditional (#6) — implemented; awaiting human commit
+- [x] 5 — Trusted metadata unconditional (#6) — committed `14f7bbf60`
 - [x] 5a — Temp-id teardown escalation — WCP-A `17f5591e1`; WCP-B `befe1e2dc`
-- [x] 5b — Reconnect clobber (WCP-C, WCP-D) Option B — implemented; awaiting human commit
-- [ ] 6 — Identity-resolution cascade (#7)
+- [x] 5b — Reconnect clobber (WCP-C, WCP-D) Option B — committed `14f7bbf60`
+- [x] 6 — Identity-resolution cascade (#7) — implemented; awaiting human commit
 - [ ] 7 — Logger threading (#8)
 - [ ] 8 — Constructor rejection handling (#9)
 - [ ] 9 — Behavioral cleanups (#12, #14)
@@ -784,20 +784,25 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 4 RED (before fix): invalid WCP4 under strict still got WCP5FailedResponse; invalid WCP6 still cleaned up instance
 - Slice 4 GREEN: `wcp-inbound-validation.test.ts` (5), typecheck/lint exit 0, vitest agent/dacp/wcp (13), cucumber 154/154
 - Slice 4 fix: `applyInboundValidationPolicy` shared helper; validate in `bridgeAppPort` before enrich/WCP6; validate in `handleWcpMessage` for DACP edge; skip DA re-check for browser-enriched WCP4 (`meta.source`); plumb `validation` via `BrowserAppConnectionOptions`
-- Slice 5a RED (WCP-A, before fix): goodbye-before-WCP4 then completed handshake → `appDisconnected` fired for the canonical instanceId and the connection was gone from both the registry and agent state. Post-remap goodbye guard passed on unfixed code, so the reproduction isolates the temp-keyed timer rather than teardown generally.
+- Slice 5a RED (WCP-A, before fix): goodbye-before-WCP4 then completed handshake → `appDisconnected` fired for the validated instanceId and the connection was gone from both the registry and agent state. Post-remap goodbye guard passed on unfixed code, so the reproduction isolates the temp-keyed timer rather than teardown generally.
 - Slice 5a GREEN (WCP-A): `wcp-temp-id-teardown.test.ts` (2), full package vitest 311/311 across 45 files, typecheck exit 0, lint exit 0 (5 pre-existing warnings, slice 9/10 scope), cucumber 154/154 — unchanged from the slice 4 baseline.
-- Slice 5a fix (WCP-A): `cancelPendingDisconnect` local helper in `wcp-connection-management.ts`; `updateConnectionMetadata` now cancels the temp-keyed pending disconnect in addition to the canonical-keyed one, and drops `recentlyDisconnected[temp]`. The timer cancellation is the load-bearing part; the `recentlyDisconnected[temp]` delete is defensive — that entry is only written by the temp grace timer firing, which now can't happen before the remap without the `!metadata` early-return already bailing out.
-- Slice 5a RED (WCP-B, before fix): second WCP4 on an already-connected port reusing the same `connectionAttemptUuid`, mismatched `actualUrl` origin → `sendFailureResponse` fell back to `destination: { instanceId: temp-{uuid} }` → registry's WCP5-failure prune resolved temp → canonical and tore it down. `disconnectedInstanceIds` contained the canonical instanceId — proof of the real defect, not a setup/timeout artifact.
+- Slice 5a fix (WCP-A): `cancelPendingDisconnect` local helper in `wcp-connection-management.ts`; `updateConnectionMetadata` now cancels the temp-keyed pending disconnect in addition to the validated-keyed one, and drops `recentlyDisconnected[temp]`. The timer cancellation is the load-bearing part; the `recentlyDisconnected[temp]` delete is defensive — that entry is only written by the temp grace timer firing, which now can't happen before the remap without the `!metadata` early-return already bailing out.
+- Slice 5a RED (WCP-B, before fix): second WCP4 on an already-connected port reusing the same `connectionAttemptUuid`, mismatched `actualUrl` origin → `sendFailureResponse` fell back to `destination: { instanceId: temp-{uuid} }` → registry's WCP5-failure prune resolved temp → validated and tore it down. `disconnectedInstanceIds` contained the validated instanceId — proof of the real defect, not a setup/timeout artifact.
 - Slice 5a GREEN (WCP-B): `wcp-temp-id-teardown.test.ts` (4, both WCP-A and WCP-B specs), full package vitest 313/313 across 45 files (+2 over the slice-4/WCP-A baseline of 311), typecheck exit 0, lint exit 0 (5 pre-existing warnings, slice 9/10 scope), cucumber 154 scenarios / 1461 steps — unchanged from baseline.
-- Slice 5a fix (WCP-B): new `pruneHandshakeConnection` on `BrowserAppConnection` — same body as the existing private `disconnectApp` minus the `resolveInstanceId` forward-resolution. Wired as the `disconnectApp` callback for both `AppConnectionRegistryCallbacks` (WCP5-failure prune) and `WCPRoutingContext` (pre-WCP5 handshake timeout), i.e. exactly the two callers the plan names as needing non-resolving behavior. `pruneAppConnection` and `disconnectAppByInstanceId` untouched — still resolve, per their contract. The temp→canonical `wcpHandshakeRouting` link itself is untouched (slice 6 depends on it).
+- Slice 5a fix (WCP-B): new `pruneHandshakeConnection` on `BrowserAppConnection` — same body as the existing private `disconnectApp` minus the `resolveInstanceId` forward-resolution. Wired as the `disconnectApp` callback for both `AppConnectionRegistryCallbacks` (WCP5-failure prune) and `WCPRoutingContext` (pre-WCP5 handshake timeout), i.e. exactly the two callers the plan names as needing non-resolving behavior. `pruneAppConnection` and `disconnectAppByInstanceId` untouched — still resolve, per their contract. The temp→validated `wcpHandshakeRouting` link itself is untouched (slice 6 depends on it).
 - Slice 5a coverage gap (still open): the "handshake timeout still prunes a never-validated temp connection" guard from the 5a acceptance criteria is NOT covered by a test. `createTestAgent` hard-codes `handshakeTimeout: 30_000` with no override knob, so exercising it for real means a 30s-plus test. The WCP-B fix rewires that exact path (`WCPRoutingContext.disconnectApp`), so it is now an untested caller — worth an override knob on the fixture if any later slice touches handshake teardown again.
-- Slice 5a note: guard test 2 ("WCP5 failure on a genuinely unvalidated first handshake still prunes the temp connection") passed on both unfixed and fixed code, as expected — `disconnectApp(context, instanceId)` is a no-op resolve when `instanceId` was never remapped, so removing the resolve step doesn't change behavior for that path. `disconnectApp(context, ...)` in `wcp-connection-management.ts` still unconditionally emits `appDisconnected` even when nothing was found to disconnect — that's pre-existing, not touched: the WCP-B fix calls it with the (correct, unresolved) temp id, so the spurious event — if `sendOnPort`'s prior warn wasn't enough signal already — fires for the temp id, never for the canonical one. No test required changing that behavior, so it was left alone per the plan's scope guard.
+- Slice 5a note: guard test 2 ("WCP5 failure on a genuinely unvalidated first handshake still prunes the temp connection") passed on both unfixed and fixed code, as expected — `disconnectApp(context, instanceId)` is a no-op resolve when `instanceId` was never remapped, so removing the resolve step doesn't change behavior for that path. `disconnectApp(context, ...)` in `wcp-connection-management.ts` still unconditionally emits `appDisconnected` even when nothing was found to disconnect — that's pre-existing, not touched: the WCP-B fix calls it with the (correct, unresolved) temp id, so the spurious event — if `sendOnPort`'s prior warn wasn't enough signal already — fires for the temp id, never for the validated one. No test required changing that behavior, so it was left alone per the plan's scope guard.
 - Slice 5 RED: hostile `source.appId` retained; empty stored origin left app `messageOrigin` intact
-- Slice 5b RED: Object.assign restored stale uuid; old-port goodbye tore down new connection; reverse-map count 2; retire-order disconnect killed canonical
+- Slice 5b RED: Object.assign restored stale uuid; old-port goodbye tore down new connection; reverse-map count 2; retire-order disconnect killed validated
 - Slice 5 + 5b GREEN: trusted-metadata (2) + reconnect-clobber (7) = 9/9; typecheck/lint exit 0; app-connection vitest green; cucumber 154/154
 - Slice 5 fix: strip app `source`/`messageOrigin` before spread; set both from connection registry unconditionally (clear origin when absent)
-- Slice 5b fix (Option B): delete Object.assign restore; retire displaced transport unregister-then-disconnect before claiming canonical key; drop `recentlyDisconnected[actual]`
+- Slice 5b fix (Option B): delete Object.assign restore; retire displaced transport unregister-then-disconnect before claiming validated key; drop `recentlyDisconnected[actual]`
 - Slice 5b parked: two-window identity fight (item 7) — needs larger harness; identity reuse requires same WindowProxy
+- Slice 6 RED: stale/unregistered routing rebinds via message `source.appId`; spoofed broadcast appId attributed to victim
+- Slice 6 GREEN: resolve-context-listener-instance-id (7), broadcast-stale-instance retargeted; package vitest 323/323; typecheck/lint exit 0; cucumber 154/154; conformance-harness vitest 69/69
+- Slice 6 fix: delete CONNECTED/PENDING appId cascade and pending-open-with-context appId matcher; keep hostInstanceId → registered MessagePort id → wcpHandshakeRouting only
+- Slice 6 test retarget: open-with-context pending bucket uses explicit `hostInstanceId`; broadcast-stale uses `linkHandshakeRoutingId`
+- Terminology: WCP identity “canonical” → “validated” across DA/tests/docs/harness (preferred-API “canonical” left alone)
 
 ## Review Notes
 
@@ -806,6 +811,7 @@ extra abstraction, and broad refactors as Follow-up.
 - Ignore for MVP: hostInitiated still sends DACP channelChangedEvent; seed helper casts into agent.state
 - Slice 4 review (loop 1): Required browser MessagePort reject tests — **addressed** (WCP4 + WCP6 MessagePort strict reject). Follow-up: DA skip signal / log string says DACP / pre-existing strict+messageOrigin on DACP enrich — parked.
 - Slice 5+5b review (main agent): PASS — Option B applied; unregister-before-disconnect ordering correct; trusted enrich matches FDC3 anti-spoof; negative unhappy-path guards in place. Follow-up: item 7 two-window fight; `recentlyDisconnected` map still written but unused for restore (harmless bookkeeping).
+- Slice 6 review (code-reviewer): PASS — no Required. Follow-up: `meta.hostInstanceId` still app-authorable via enrich spread (same class as #7; strip/ignore when MessagePort id registered).
 
 ## Parked Follow-ups
 
@@ -816,6 +822,7 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 4: tighten DA “already validated” marker beyond `meta.source` (DACP-edge only concern)
 - Slice 4: `applyInboundValidationPolicy` log wording still says “DACP message…” for WCP
 - Slice 4 review: browser DACP under `strict` may reject after Sail stamps `messageOrigin` — pre-existing enrich vs schema tension; not this slice
+- Slice 6: strip or host-stamp `meta.hostInstanceId` at enrich (apps can still author it today)
 
 ## Known Limitations
 
