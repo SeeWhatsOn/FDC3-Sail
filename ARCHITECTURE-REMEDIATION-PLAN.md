@@ -237,7 +237,7 @@ What is missing versus `handlers/index.ts` is not *functions* — it is a **sing
 > docstring contract: *"Never guess identity from app-supplied `meta.source.appId`."* The claim is
 > withdrawn.
 
-**Five defensive id-resolution helpers remain:** `resolveInstanceId`, `resolveLinkedInstanceId`, `resolveRoutingInstanceId`, `resolveDacpHandlerInstanceId` (3 tiers), `resolveWcpHostIdentifier`, `resolveCleanupInstanceId`. Plus four more keyspaces shadowing the same identity: `instanceIdentityRegistry` (canonical), `pendingSourceWindowRegistry` (temp), `heartbeatIntervals` (module-global — already scheduled as slice 9 of the in-flight plan), `open.pendingWithContext` (canonical, must be migrated on adoption).
+**Five defensive id-resolution helpers remain:** `resolveInstanceId`, `resolveLinkedInstanceId`, `resolveRoutingInstanceId`, `resolveDacpHandlerInstanceId` (3 tiers), `resolveWcpHostIdentifier`, `resolveCleanupInstanceId`. Plus four more keyspaces shadowing the same identity: `instanceIdentityRegistry` (canonical), `pendingSourceWindowRegistry` (temp), `heartbeatIntervals` (module-scoped — correct, given the one-agent-per-browsing-context invariant), `open.pendingWithContext` (canonical, must be migrated on adoption).
 
 **Target shape:** one `ConnectionRecord` per WCP attempt, immutably keyed by `connectionAttemptUuid`, holding `{ attemptUuid, phase, canonicalInstanceId?, appId?, port, sourceWindow, hostIdentifier, instanceUuid }`, plus one `Map<canonicalInstanceId, attemptUuid>` index. `AgentState.instances` keeps only FDC3-visible state with `attemptUuid` as the join column. That deletes `wcpHandshakeRouting` and all six resolvers.
 
@@ -369,9 +369,29 @@ Ordered by dependency, not by value.
 
 ## 6. Relationship to the in-flight slice plan
 
-`.cursor/plans/sail-desktop-agent-review-remediation.md` is **execution-ready and mid-flight**
-(slices 0–6 landed, 7–11 outstanding). Its own header says *"Do not re-litigate the findings."*
-This document does not supersede it and does not renumber it.
+`.cursor/plans/sail-desktop-agent-review-remediation.md` is **execution-ready and nearly complete**.
+Its own header says *"Do not re-litigate the findings."* This document does not supersede it and does
+not renumber it.
+
+**Verified in source 2026-07-30 — its checkpoint list was stale at the time of checking, so trust the
+code, not the checkboxes:** slices 0–8, 10 and 11 have landed.
+
+**Slice 9 / finding #14 is closed by decision, not by code.** Maintainer decision (2026-07-30): **there
+will never be more than one Desktop Agent per browsing context.** Module-global
+`heartbeatIntervals` and `pendingIntentTimeoutHandles` are therefore correct as written, and the tests
+were changed rather than the registries. The finding is withdrawn.
+
+Two consequences worth carrying forward:
+
+1. **That invariant is load-bearing and currently unwritten.** It justifies the module-global
+   registries, and it is the reason a whole class of "two agents in one page" concern is out of scope.
+   It belongs in the docs blueprint as an explicit architectural constraint —
+   `packages/desktop-agent/integrator-guide.md` already has a "One Desktop Agent per context" section
+   to build on.
+2. **W8's keyspace analysis is unaffected in substance.** `heartbeatIntervals` is still a separate
+   keyspace for the same identity; it simply is not a *scoping* bug. Drop the "module-global" framing.
+
+Finding #12 (silent no-op intent-resolver controller) not re-verified.
 
 **What this review changes about it: nothing that is already scheduled. Four additions, two
 corrections, one confirmation.**

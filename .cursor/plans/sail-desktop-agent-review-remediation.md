@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent Review Remediation
 
-Status: implementing
-Current slice: batch C (10 + 11) — mechanical nits + dead code; awaiting human review/commit
+Status: done
+Current slice: complete (slices 0–11)
 Review/fix loops: 0
 Parked decision: Slice 11 — no changeset; leave API-break note for maintainers (done in Known Limitations).
 Slice 9 decision (2026-07-30): #14 REVERT — WeakMap-by-owner for heartbeat /
@@ -30,8 +30,7 @@ Source: whole-package review of `@finos/sail-desktop-agent` on `wip/v3-local` (`
 15 numbered findings + 6 nits + 6 dead-code candidates, plus a follow-up lint pass that added
 one hard error and promoted finding #11 from Consider to Required.
 
-**This plan is execution-ready. Do not re-litigate the findings — they were reviewed and accepted.
-Work the slices in order.**
+**This plan is complete.** All slices 0–11 landed; parked follow-ups remain in Parked Follow-ups / Known Limitations.
 
 ---
 
@@ -771,8 +770,8 @@ extra abstraction, and broad refactors as Follow-up.
 - [x] 7 — Logger threading (#8) — batch A with 8; committed `44e390627`
 - [x] 8 — Constructor rejection handling (#9) — batch A with 7; committed `44e390627`
 - [x] 9 — Behavioral cleanups — #12 keep (throw); #14 REVERT (module-global + clearAll*); committed `f13623955`
-- [x] 10 — Mechanical cleanups and nits (#10, #13, #15, nits) — batch C with 11; heartbeat timer-type / useless-spread already folded into 9; awaiting human commit
-- [x] 11 — Dead code removal — batch C with 10; no changeset (API-break noted); awaiting human commit
+- [x] 10 — Mechanical cleanups and nits (#10, #13, #15, nits) — batch C with 11; committed `aed18f8a7`
+- [x] 11 — Dead code removal — batch C with 10; committed `aed18f8a7` (no changeset; API-break in Known Limitations)
 
 ## Verification Notes
 
@@ -830,7 +829,7 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 6 review (code-reviewer): PASS — no Required. Follow-up: `meta.hostInstanceId` still app-authorable via enrich spread (same class as #7; strip/ignore when MessagePort id registered).
 - Slice 7+8 review (main agent): PASS — plumbing matches acceptance; directoriesLoaded is settle-all (no event system); #10 handleDisconnect parked (message-port.ts not edited).
 - Slice 9 review (main agent): PASS after #14 revert — keep #12 throw; module-global timers + clearAll* match one-DA-per-tab product model (AGENTS.md). Multi-agent-in-process isolation suite deleted as YAGNI/test-only.
-- Slice 10+11 review: awaiting human review (no agent commit)
+- Slice 10+11 review: committed `aed18f8a7` — mechanical nits + dead code / public surface trim; docs scrub for removed symbols
 
 ## Parked Follow-ups
 

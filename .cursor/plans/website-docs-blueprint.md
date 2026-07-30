@@ -13,17 +13,27 @@ Source reviews feeding this plan:
 
 ## Intent
 
-- **Outcome:** `website/docs/` becomes the single authoritative description of how the monorepo is
-  composed, what each package owns, and how a host wires them together — with every claim marked as
-  either **implemented** or **planned**, so the docs can lead the code without becoming fiction again.
-- **User:** Sail maintainers first (the docs become the reference they reconcile code against), then
-  external integrators and FINOS reviewers.
+- **Outcome:** the website becomes **the face of Sail for people who want to use the packages** — a
+  reader arrives, works out which package solves their problem, and gets started. Underneath that,
+  it is the single authoritative description of how the packages compose, with every claim marked
+  **implemented** or **planned** so the docs can lead the code without becoming fiction again.
+- **Users — four audiences, in priority order.** The current docs serve none of them cleanly because
+  they are organised by repository layout rather than by what a reader is trying to do:
+  1. **Desktop Agent adopters** — want `@finos/sail-desktop-agent` standalone from npm, as an FDC3
+     Desktop Agent inside their own host. They do not care about Sail the product.
+  2. **Platform integrators** — want `@finos/sail-platform` for the business-readiness layer:
+     workspaces, layouts, telemetry, auth, entitlements, persistent storage, connectors.
+  3. **App deployers** — want `sail-one` or `sail-finance` as a deployable, customisable interop
+     platform, and need to know which one fits and how to customise it.
+  4. **Contributors and FINOS reviewers** — need the architecture and the boundaries.
 - **Success:**
   1. No page contains a verifiably false statement about the code as it exists.
   2. Every architectural claim is marked `implemented` or `planned`; nothing is unmarked.
-  3A new reader can answer, from the docs alone: which package owns what, which entry point to
-     construct, what a host must implement, and how an app connects.
-  4. `npm run docs:build` green, all internal links resolve, all code snippets compile.
+  3. Each of the four audiences has a discoverable path from the landing page to a first success,
+     without reading the other three.
+  4. A reader can state which package owns what, which entry point to construct, what a host must
+     implement, and how an app connects.
+  5. `npm run docs:build` green, all internal links resolve, all code snippets compile.
 - **Constraint:** the docs currently describe a three-layer stack whose middle layer has **zero
   consumers**. That single unresolved decision blocks four pages. Slice 0 is a decision, not prose.
 - **Out of scope:**
@@ -37,6 +47,35 @@ Source reviews feeding this plan:
   - New doc tooling, a new site theme, versioned docs, or i18n.
 
 ---
+
+## Product Positioning
+
+Maintainer statement, 2026-07-30. **This is the intended shape and the thing the docs must
+communicate.** Everything below is the target; the `implemented` / `planned` marker carries how much
+of it exists today. All four packages are designed to work together, and each is independently
+consumable.
+
+| Package | What it is for | Consumed as | Today |
+|---|---|---|---|
+| `@finos/sail-desktop-agent` | A standalone FDC3 Desktop Agent you can drop into your own host | npm | Substantially implemented. **Not published** — see register §C |
+| `@finos/sail-platform` | The business-readiness layer: **workspaces, layouts, telemetry, auth, entitlements, persistent storage, and connectors** | npm | Workspaces/layouts/config exist but are unwired and `unknown`-typed. Telemetry, auth, entitlements, connectors: **not started**. Zero consumers |
+| `sail-one` | Deployable, customisable interop platform. **Domain-neutral** — a canvas where everything placed on it is connected via channels | deploy + customise | Porting plan only — `.cursor/plans/sail-one-port.md` |
+| `sail-finance` | Deployable, customisable interop platform. **Dashboard-style** layout approach | deploy + customise | Shipping; the reference host |
+
+Two things follow that the docs must get right:
+
+- **`sail-one` vs `sail-finance` is a UX-model distinction, not a maturity one.** Canvas-with-channel-wiring
+  versus dashboard. A reader choosing between them needs that framing, not a feature table. This is the
+  clearest single argument for `sail-platform` existing as a shared layer — two shells, one services tier.
+- **Most of `sail-platform`'s stated purpose is `planned`.** Telemetry, auth, entitlements and connectors
+  do not exist in any form. This is where the marker convention earns its keep: the docs may describe the
+  intended platform, but a reader must never mistake it for something they can install today. Getting this
+  wrong reproduces the exact defect this delivery exists to remove — see Risks.
+
+**Middleware / extensions is the one genuinely open mechanism question.** Middleware was designed as an
+easy way to customise `sail-platform` and add features; extensions were also considered. Which one — or
+both, or neither — is a slice 0 output, not an assumption. It is a *mechanism* question now, not a
+purpose question: the purpose above is settled.
 
 ## Simplicity Bias
 
@@ -54,22 +93,46 @@ Source reviews feeding this plan:
 
 ## Slices
 
-### 0. Decide and record the layering contract
+### 0. Design what `SailPlatform` is *meant* to be
 
-- **Goal:** one short decision, written down, that the rest of the docs can be authored against:
-  does `SailPlatform` compose `SailDesktopAgent`, or is the factory the supported entry point and
-  `SailPlatform` withdrawn? Recorded as a section in the spine page, not a separate ADR file.
-- **Why first:** four pages are wrong *because* this is open. Authoring them now guarantees a second
-  rewrite.
-- **Inputs already gathered:** `SailPlatform` has zero consumers outside its own two tests;
-  `sail-finance` uses `createSailBrowserDesktopAgent`; workspaces/layouts are Zustand + `localStorage`;
-  the middleware pipeline collects handlers that are never applied; the agent deliberately exposes no
-  transport seam. `.cursor/plans/sail-platform-extensibility.md` already landed on "build nothing yet."
-- **Acceptance:** the decision names the supported construction path, states what `sail-platform`
-  keeps, and says whether `sail-finance` migrating is `planned` or not happening. One paragraph is
-  enough.
-- **Verify:** maintainer confirms. No build step.
-- **Likely files:** `website/docs/architecture/overview.md`
+- **This is a design session, not a docs task.** Deliberately scoped as "what should it be", **not**
+  "describe what exists today". Do not shortcut it into a one-paragraph decision — that was an earlier
+  framing of this slice and it was rejected. When this work item is picked up, plan it properly and
+  work it through **with diagrams and code examples** before any prose lands in `website/docs/`.
+- **Narrowed 2026-07-30.** The *purpose* is now settled — see Product Positioning: `sail-platform` is
+  the business-readiness layer (workspaces, layouts, telemetry, auth, entitlements, persistent
+  storage, connectors) serving two shells, `sail-one` and `sail-finance`. What remains open is
+  **mechanism and boundary**, which is a smaller and more answerable question.
+- **Goal:** an agreed target design for `SailPlatform` — its boundary against `sail-desktop-agent`,
+  what a host actually calls, how the services tier is composed, and whether customisation happens via
+  **middleware, extensions, both, or neither**.
+- **Why first:** four doc pages are wrong *because* this is open. Authoring them against today's
+  accidental shape guarantees a second rewrite; authoring them against an unexamined aspiration
+  recreates the exact fiction this delivery exists to remove.
+- **Expected outputs:**
+  - A component diagram of the intended composition — where `SailPlatform` sits, what it wraps, what
+    it delegates.
+  - A sequence diagram for at least one flow that justifies the layer existing at all (host boot, or
+    a feature the raw agent cannot provide).
+  - Concrete `SailPlatform` construction and usage code examples, written as the API you *want*, not
+    reverse-engineered from `sail-platform.ts`.
+  - A named decision on middleware: what it wraps, or that it is dropped. The agent currently exposes
+    **no** transport seam by design (`index.ts`: "There is no transport abstraction to configure"), so
+    "middleware" means either reopening that boundary or intercepting at handler-context level. Those
+    are different products; pick one or drop it.
+  - What `sail-platform` keeps versus sheds, per the YAGNI/KISS call.
+- **Context to bring in, but not be constrained by:** `SailPlatform` has zero consumers outside its
+  own two tests; `sail-finance` uses `createSailBrowserDesktopAgent`; workspaces/layouts are Zustand +
+  `localStorage`; the middleware pipeline collects handlers never applied;
+  `.cursor/plans/sail-platform-extensibility.md` previously landed on "build nothing yet, fix defects";
+  `.cursor/plans/sail-one-port.md` describes a possible second shell, which is the main argument for a
+  shared layer existing at all.
+- **Acceptance:** diagrams and code examples exist and are agreed; the middleware question has a named
+  answer; the gap between target and today is written down as the `planned` set. Only then does prose
+  reach `website/docs/`.
+- **Verify:** maintainer confirms the target design. No build step.
+- **Likely files:** new `.cursor/plans/sail-platform-design.md`, then
+  `website/docs/architecture/overview.md`
 
 ### 1. Truth pass — delete every false statement
 
@@ -192,13 +255,35 @@ Docs, so "tests" means mechanical checks. Risk-based, not exhaustive.
   lead the code. Without the status marker convention from slice 2 applied consistently, this delivery
   reproduces the exact defect it is fixing: a plausible architecture nobody implemented. If markers
   start feeling like overhead, that is the signal to write less aspiration, not fewer markers.
+- **The `planned` surface is now large, which sharpens that risk considerably.** Four of
+  `sail-platform`'s seven stated capabilities — telemetry, auth, entitlements, connectors — do not
+  exist in any form, and `sail-one` is a porting plan. That is a lot of aspiration on a site whose
+  stated job is helping people *use* the packages. Two mitigations, both cheap:
+  **(a)** never let a `planned` capability appear in a getting-started or install path — aspiration
+  lives in architecture and roadmap pages, never in a quickstart;
+  **(b)** if a page is more `planned` than `implemented`, say so at the top rather than per-claim, so
+  a reader can leave immediately. Note the existing docs failed exactly here: `platform/overview.md`
+  reads as a shipped API and cost this review a full audit to disprove.
 - **Slice 0 is a genuine product decision, not a docs task.** It may need more than one conversation.
   Slice 1 is deliberately independent so work isn't blocked meanwhile.
-- **Collision with in-flight remediation.** Slices 7–11 of
-  `sail-desktop-agent-review-remediation.md` touch logger threading, timer registries, dead code, and
-  public API (`intentResolverUI`, `BrowserIntentResolverController` are being removed). Slice 3 of
-  this plan documents that surface. **Land the remediation slices first**, or slice 3 documents an API
-  about to change.
+- **Collision with in-flight remediation — largely resolved.** Verified in source 2026-07-30: slices
+  **7, 8, 10 and 11 have landed** (logger threaded into `MessagePortTransport` and the directory
+  functions; `directoriesLoaded` present; `HANDLER_MAP` hoisted and the channel-change timeout is now
+  an option; all six dead-code symbols gone, including `intentResolverUI` and
+  `BrowserIntentResolverController`). The public surface slice 3 documents is therefore settled.
+  Slice 9 / finding #14 is **closed by decision** — there will never be more than one Desktop Agent
+  per browsing context, so the module-scoped timer registries are correct and the tests were changed
+  instead. #12 not re-verified. Nothing outstanding affects the documented API surface, so docs work
+  is unblocked.
+  **Note:** the checkpoint list in that plan file was stale at the time of this check — verify against
+  source, not checkboxes.
+
+- **A load-bearing invariant is currently unwritten: one Desktop Agent per browsing context.** It is
+  what makes the module-scoped registries correct, and it shapes what a host may legitimately do.
+  Slice 2 must state it explicitly as an architectural constraint —
+  `packages/desktop-agent/integrator-guide.md` already has a "One Desktop Agent per context" section
+  to build on. This is a good example of the general problem: the constraint is real and enforced in
+  practice, but a reader cannot currently discover it.
 - **`FDC3-SAIL-REVIEW.md` is itself partly stale** (2026-07-28, `4dddd88f7`; ~10 commits behind, counts
   93 source files vs 103 today). Re-verify before citing it in a doc. Its documentation findings
   D-1…D-7 were independently re-confirmed 2026-07-30 and are safe to act on; its code-level findings
