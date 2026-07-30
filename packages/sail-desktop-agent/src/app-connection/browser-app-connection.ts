@@ -181,27 +181,34 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
       "meta" in message && message.meta && typeof message.meta === "object"
         ? message.meta
         : undefined
-    const hasSourceField = !!currentMeta && "source" in currentMeta
     const isIdentityValidation = message.type === "WCP4ValidateAppIdentity"
-    const storedConnection = isIdentityValidation
-      ? this.connectionRegistry.connections.get(instanceId)
-      : undefined
+    const storedConnection = this.connectionRegistry.connections.get(instanceId)
     const storedMessageOrigin = storedConnection?.messageOrigin
     const storedSourceWindow = storedConnection?.source
+    const trustedAppId = storedConnection?.appId
 
-    const nextMeta = { ...currentMeta } as typeof message.meta
+    // Strip app-authored identity fields before spreading — DA determines source/origin.
+    const {
+      source: _appSource,
+      messageOrigin: _appMessageOrigin,
+      ...safeMetaRest
+    } = (currentMeta ?? {}) as Record<string, unknown>
 
-    ;(nextMeta as { source?: { appId?: string; instanceId?: string } }).source = {
-      appId: hasSourceField
-        ? (currentMeta as { source?: { appId?: string } }).source?.appId
-        : undefined,
+    const nextMeta = { ...safeMetaRest } as unknown as typeof message.meta
+    const nextMetaRecord = nextMeta as unknown as Record<string, unknown>
+
+    nextMetaRecord.source = {
+      appId: trustedAppId,
       instanceId,
     }
 
-    const nextMetaRecord = nextMeta as unknown as Record<string, unknown>
+    // Absence of a trusted origin must clear the field — never keep the client's value.
     if (storedMessageOrigin) {
       nextMetaRecord.messageOrigin = storedMessageOrigin
+    } else {
+      delete nextMetaRecord.messageOrigin
     }
+
     if (isIdentityValidation && storedSourceWindow) {
       setPendingWcpSourceWindow(this, instanceId, storedSourceWindow)
     }

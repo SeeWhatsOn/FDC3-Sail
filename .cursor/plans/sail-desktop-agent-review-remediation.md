@@ -1,10 +1,8 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent Review Remediation
 
-Status: ready
-Current slice: 5a — Temp-id teardown escalation. WCP-A landed `17f5591e1`; WCP-B fixed
-(uncommitted — see Verification Notes), so 5a is functionally complete pending commit and
-slice-5a checkpoint sign-off.
-Review/fix loops: 1
+Status: implementing
+Current slice: 5 + 5b (trusted meta + reconnect clobber). 5a already landed.
+Review/fix loops: 0
 Parked decision: Slice 11 — no changeset; leave API-break note for maintainers.
 Slice 3 decision (landed `a9614dc46`): Original AccessDenied-if-not-connected rejected
 (breaks FDC3 client flow). Tightened to: no auto-join; grant creator on create + raiser
@@ -13,6 +11,10 @@ Slice 4 decision (2026-07-29): Option A — validate raw app message **before** 
 and before WCP6 early-return at the MessagePort edge (`bridgeAppPort`), plus the same
 gate in `DesktopAgent.handleWcpMessage` for the DACP test edge. Do not validate
 post-enrichment (Sail-injected `source`/`messageOrigin` fail FDC3 WCP schemas).
+Slice 5b decision (2026-07-30): Option B — delete `Object.assign` restore from
+`recentlyDisconnected`; cancel pending disconnect only. Identity continuity lives in
+agent/identity state, not connection metadata blob. Unhappy-path tests assert bad
+outcomes must NOT happen.
 Slices 5a/5b inserted (2026-07-29): four new findings (WCP-A..D) from a follow-up review
 of the WCP handshake temp→canonical remap. Inserted as decimals rather than renumbering
 6–11, which are cross-referenced from Test Plan, Review Plan, Risks, and Checkpoints.
@@ -757,9 +759,9 @@ extra abstraction, and broad refactors as Follow-up.
 - [x] 2 — Directory-load lost update (#3) — committed `203969eb6`
 - [x] 3 — Private-channel grant model (#4 revised) — committed `a9614dc46`
 - [x] 4 — WCP4/WCP6 validation (#5) — committed `a6b1b679d`
-- [ ] 5 — Trusted metadata unconditional (#6)
-- [ ] 5a — Temp-id teardown escalation — **before slice 6** — WCP-A committed `17f5591e1`; WCP-B fixed, uncommitted
-- [ ] 5b — Reconnect clobber: displaced transport + stale restore (WCP-C, WCP-D)
+- [x] 5 — Trusted metadata unconditional (#6) — implemented; awaiting human commit
+- [x] 5a — Temp-id teardown escalation — WCP-A `17f5591e1`; WCP-B `befe1e2dc`
+- [x] 5b — Reconnect clobber (WCP-C, WCP-D) Option B — implemented; awaiting human commit
 - [ ] 6 — Identity-resolution cascade (#7)
 - [ ] 7 — Logger threading (#8)
 - [ ] 8 — Constructor rejection handling (#9)
@@ -790,6 +792,12 @@ extra abstraction, and broad refactors as Follow-up.
 - Slice 5a fix (WCP-B): new `pruneHandshakeConnection` on `BrowserAppConnection` — same body as the existing private `disconnectApp` minus the `resolveInstanceId` forward-resolution. Wired as the `disconnectApp` callback for both `AppConnectionRegistryCallbacks` (WCP5-failure prune) and `WCPRoutingContext` (pre-WCP5 handshake timeout), i.e. exactly the two callers the plan names as needing non-resolving behavior. `pruneAppConnection` and `disconnectAppByInstanceId` untouched — still resolve, per their contract. The temp→canonical `wcpHandshakeRouting` link itself is untouched (slice 6 depends on it).
 - Slice 5a coverage gap (still open): the "handshake timeout still prunes a never-validated temp connection" guard from the 5a acceptance criteria is NOT covered by a test. `createTestAgent` hard-codes `handshakeTimeout: 30_000` with no override knob, so exercising it for real means a 30s-plus test. The WCP-B fix rewires that exact path (`WCPRoutingContext.disconnectApp`), so it is now an untested caller — worth an override knob on the fixture if any later slice touches handshake teardown again.
 - Slice 5a note: guard test 2 ("WCP5 failure on a genuinely unvalidated first handshake still prunes the temp connection") passed on both unfixed and fixed code, as expected — `disconnectApp(context, instanceId)` is a no-op resolve when `instanceId` was never remapped, so removing the resolve step doesn't change behavior for that path. `disconnectApp(context, ...)` in `wcp-connection-management.ts` still unconditionally emits `appDisconnected` even when nothing was found to disconnect — that's pre-existing, not touched: the WCP-B fix calls it with the (correct, unresolved) temp id, so the spurious event — if `sendOnPort`'s prior warn wasn't enough signal already — fires for the temp id, never for the canonical one. No test required changing that behavior, so it was left alone per the plan's scope guard.
+- Slice 5 RED: hostile `source.appId` retained; empty stored origin left app `messageOrigin` intact
+- Slice 5b RED: Object.assign restored stale uuid; old-port goodbye tore down new connection; reverse-map count 2; retire-order disconnect killed canonical
+- Slice 5 + 5b GREEN: trusted-metadata (2) + reconnect-clobber (7) = 9/9; typecheck/lint exit 0; app-connection vitest green; cucumber 154/154
+- Slice 5 fix: strip app `source`/`messageOrigin` before spread; set both from connection registry unconditionally (clear origin when absent)
+- Slice 5b fix (Option B): delete Object.assign restore; retire displaced transport unregister-then-disconnect before claiming canonical key; drop `recentlyDisconnected[actual]`
+- Slice 5b parked: two-window identity fight (item 7) — needs larger harness; identity reuse requires same WindowProxy
 
 ## Review Notes
 
@@ -797,12 +805,14 @@ extra abstraction, and broad refactors as Follow-up.
 - Follow-up: optional unit assert for context delivery on real channel change; connector-level single-emit already covered by WCP
 - Ignore for MVP: hostInitiated still sends DACP channelChangedEvent; seed helper casts into agent.state
 - Slice 4 review (loop 1): Required browser MessagePort reject tests — **addressed** (WCP4 + WCP6 MessagePort strict reject). Follow-up: DA skip signal / log string says DACP / pre-existing strict+messageOrigin on DACP enrich — parked.
+- Slice 5+5b review (main agent): PASS — Option B applied; unregister-before-disconnect ordering correct; trusted enrich matches FDC3 anti-spoof; negative unhappy-path guards in place. Follow-up: item 7 two-window fight; `recentlyDisconnected` map still written but unused for restore (harmless bookkeeping).
 
 ## Parked Follow-ups
 
 - Intent-resolution chain review (`handlers/intents/intent-raise-*.ts`) — deliberately out of scope;
   recommended as the next delivery.
-- Slice 11: no changeset in this branch (maintainer decision 2026-07-29)
+- Slice 5b parked: two-window identity fight (item 7) — needs larger harness; identity reuse requires same WindowProxy
+- Slice 5b: `recentlyDisconnected` still written for grace bookkeeping but no longer restored onto reconnect metadata (Option B)
 - Slice 4: tighten DA “already validated” marker beyond `meta.source` (DACP-edge only concern)
 - Slice 4: `applyInboundValidationPolicy` log wording still says “DACP message…” for WCP
 - Slice 4 review: browser DACP under `strict` may reject after Sail stamps `messageOrigin` — pre-existing enrich vs schema tension; not this slice

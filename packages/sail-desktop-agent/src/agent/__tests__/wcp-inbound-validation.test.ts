@@ -1,8 +1,5 @@
 /**
- * Reproduction tests: WCP4/WCP6 must honor ValidationMode before handler dispatch.
- *
- * Today handleWcpMessage (DACP edge) and bridgeAppPort (browser edge) skip
- * isValidInboundMessage, so strict mode never rejects schema-invalid WCP4/WCP6.
+ * WCP4/WCP6 honor ValidationMode before handler dispatch (raw message, before enrichment).
  *
  * @vitest-environment jsdom
  */
@@ -56,8 +53,7 @@ describe("WCP inbound schema validation (strict)", () => {
       apps: [DIRECTORY_APP],
     })
 
-    // Schema-invalid: missing required actualUrl. messageOrigin is Sail-only and
-    // also schema-invalid; included so today's pre-fix handler path can still respond.
+    // Schema-invalid: missing required actualUrl (and messageOrigin is not on the WCP4 schema).
     await connection.receiveMessage({
       type: "WCP4ValidateAppIdentity",
       payload: {
@@ -92,8 +88,7 @@ describe("WCP inbound schema validation (strict)", () => {
 
     expect(agent.getState().instances[instanceId]?.state).toBe(AppInstanceState.CONNECTED)
 
-    // Schema-invalid: meta.source is forbidden (additionalProperties: false), but
-    // handleWcpMessage today uses extractInstanceId(meta.source) then runs cleanup.
+    // Schema-invalid: meta.source is forbidden on WCP6 (additionalProperties: false).
     await connection.receiveMessage({
       type: "WCP6Goodbye",
       meta: {
@@ -127,8 +122,8 @@ describe("WCP inbound schema validation (strict)", () => {
   it("accepts schema-valid WCP4 under strict on the browser MessagePort path", async () => {
     const agent = createStrictBrowserAgent()
 
-    // connectWcpApp posts raw schema-valid WCP4 (UUID + Date, no messageOrigin/source).
-    // Browser enrichment adds messageOrigin after the pre-enrichment validation gate.
+    // Schema-valid WCP4 on the wire (UUID + Date, no messageOrigin/source).
+    // Enrichment may add messageOrigin after validation.
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "550e8400-e29b-41d4-a716-446655440001",
       appId: "portfolioApp",
@@ -159,8 +154,7 @@ describe("WCP inbound schema validation (strict)", () => {
       }
     }
 
-    // Schema-invalid: missing required actualUrl. Must be rejected in bridgeAppPort
-    // before enrichment — DA skips re-validation once meta.source is stamped.
+    // Schema-invalid: missing required actualUrl — rejected on the MessagePort before enrichment.
     session.appPort.postMessage({
       type: "WCP4ValidateAppIdentity",
       meta: {

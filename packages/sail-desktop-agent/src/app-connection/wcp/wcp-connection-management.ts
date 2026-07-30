@@ -93,7 +93,8 @@ export function handleWCP6Goodbye(context: AppConnectionContext, instanceId: str
   const timeoutId = setTimeout(() => {
     context.pendingDisconnects.delete(instanceId)
 
-    // Store in recently disconnected for potential restoration
+    // Snapshot for grace-period bookkeeping only. A later reconnect must keep the
+    // new handshake's connection fields — do not copy these onto the new metadata.
     if (connection) {
       context.recentlyDisconnected.set(instanceId, {
         metadata: connection,
@@ -227,24 +228,30 @@ export function updateConnectionMetadata(
       `Cancelled pending disconnect for temp instance ${tempInstanceId} - superseded by successful handshake`,
     )
   }
-  // A recentlyDisconnected entry keyed by a temp handshake id is meaningless - nothing can ever
-  // reconnect to a temp id. Drop it rather than restoring from it.
+  // A recentlyDisconnected entry keyed by a temp handshake id is meaningless — nothing
+  // reconnects to a temp id. Drop both temp and canonical snapshots; reconnect metadata
+  // comes from this handshake (identity continuity lives in agent/identity state).
   context.recentlyDisconnected.delete(tempInstanceId)
-
-  // Check if this is a reconnection to a recently disconnected instance
-  const recentlyDisconnectedEntry = context.recentlyDisconnected.get(actualInstanceId)
-  if (recentlyDisconnectedEntry) {
-    context.logger.debug(
-      `Restoring recently disconnected instance ${actualInstanceId} - reconnection within grace period`,
-    )
-    // Restore the original metadata
-    Object.assign(metadata, recentlyDisconnectedEntry.metadata)
-    context.recentlyDisconnected.delete(actualInstanceId)
-  }
+  context.recentlyDisconnected.delete(actualInstanceId)
 
   // Update metadata with validated info from Desktop Agent
   metadata.instanceId = actualInstanceId
   metadata.appId = appId
+
+  // If canonical already has a live (or leftover) connection, retire it before claiming the key.
+  // Unregister the reverse map BEFORE disconnect — otherwise onDisconnect can tear down the
+  // connection we are about to install under that same id.
+  const existingCanonical = context.connectionRegistry.connections.get(actualInstanceId)
+  if (existingCanonical && existingCanonical !== metadata) {
+    const displacedTransport =
+      context.connectionRegistry.messagePortTransports.get(actualInstanceId)
+    if (displacedTransport) {
+      context.connectionRegistry.messagePortTransports.delete(actualInstanceId)
+      context.connectionRegistry.transportToInstanceId.delete(displacedTransport)
+      displacedTransport.disconnect()
+    }
+    context.connectionRegistry.connections.delete(actualInstanceId)
+  }
 
   // Migrate connection to actual instanceId key
   // This ensures future lookups use the validated instanceId
