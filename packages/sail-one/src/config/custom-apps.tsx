@@ -1,8 +1,8 @@
 import { getClientState, getServerState } from "../state"
 import styles from "./styles.module.css"
-import { DirectoryApp, WebAppDetails } from "@finos/sail-desktop-agent"
-import { DeleteButton } from "./deleteButton"
-import { AddButton } from "./addButton"
+import type { DirectoryApp, WebAppDetails } from "@finos/sail-platform"
+import { DeleteButton } from "./delete-button"
+import { AddButton } from "./add-button"
 import Combobox from "react-widgets/Combobox"
 import Multiselect from "react-widgets/Multiselect"
 import "react-widgets/styles.css"
@@ -61,24 +61,24 @@ function getAllContextTypes(): string[] {
   const allContexts = [...CONTEXT_TYPES]
   getServerState()
     .getKnownApps()
-    .forEach((a) => {
+    .forEach(a => {
       if (a.interop?.userChannels) {
         allContexts.concat(a.interop.userChannels.listensFor ?? [])
         allContexts.concat(a.interop.userChannels.broadcasts ?? [])
       }
       if (a.interop?.appChannels) {
-        a.interop.appChannels.forEach((ac) => {
+        a.interop.appChannels.forEach(ac => {
           allContexts.concat(ac.broadcasts ?? [])
           allContexts.concat(ac.listensFor ?? [])
         })
       }
       if (a.interop?.intents?.listensFor) {
-        Object.values(a.interop.intents.listensFor).forEach((v) => {
+        Object.values(a.interop.intents.listensFor).forEach(v => {
           allContexts.concat(v.contexts)
         })
       }
       if (a.interop?.intents?.raises) {
-        Object.values(a.interop.intents.raises).forEach((v) => {
+        Object.values(a.interop.intents.raises).forEach(v => {
           allContexts.concat(v)
         })
       }
@@ -89,11 +89,11 @@ function getAllContextTypes(): string[] {
 }
 
 function getAllIntentNames(): string[] {
-  const allIntents = intentTypes.map((i) => i.title)
+  const allIntents = intentTypes.map(i => i.title)
 
   getServerState()
     .getKnownApps()
-    .forEach((a) => {
+    .forEach(a => {
       if (a.interop?.intents?.listensFor) {
         allIntents.concat(Object.keys(a.interop.intents.listensFor) ?? [])
       }
@@ -141,15 +141,15 @@ function newApp(): EditableState {
 function createInitialState(): EditableState[] {
   return getClientState()
     .getCustomApps()
-    .map((a) => {
+    .map(a => {
       const lf = a.interop?.intents?.listensFor ?? {}
       return {
         id: a.appId,
-        type: (a.type === "native" ? "native" : "web") as AppType,
+        type: a.type === "native" ? "native" : "web",
         url: (a.details as WebAppDetails)?.url ?? "",
         title: a.title,
         description: a.description ?? "",
-        intents: Object.keys(lf).map((k) => {
+        intents: Object.keys(lf).map(k => {
           const val = lf[k] ?? { contexts: [] }
           return {
             name: k,
@@ -161,7 +161,7 @@ function createInitialState(): EditableState[] {
 }
 
 function convertToDirectoryApps(es: EditableState[]): DirectoryApp[] {
-  return es.map((s) => {
+  return es.map(s => {
     return {
       appId: s.id,
       title: s.title,
@@ -176,7 +176,7 @@ function convertToDirectoryApps(es: EditableState[]): DirectoryApp[] {
       interop: {
         intents: {
           listensFor: Object.fromEntries(
-            s.intents.map((i) => [
+            s.intents.map(i => [
               i.name,
               {
                 displayName: i.name,
@@ -190,23 +190,12 @@ function convertToDirectoryApps(es: EditableState[]): DirectoryApp[] {
   })
 }
 
-const IntentPicker = ({
-  name,
-  update,
-}: {
-  name: string
-  update: (x: string) => void
-}) => {
+const IntentPicker = ({ name, update }: { name: string; update: (x: string) => void }) => {
   return (
     <label className={styles.settingsField}>
       <span className={styles.settingsFieldLabel}>Intent</span>
       <div className={styles.settingsWidget}>
-        <Combobox
-          hideEmptyPopup
-          data={getAllIntentNames()}
-          value={name}
-          onChange={update}
-        />
+        <Combobox hideEmptyPopup data={getAllIntentNames()} value={name} onChange={update} />
       </div>
     </label>
   )
@@ -229,7 +218,7 @@ const ContextPicker = ({
           data={getAllContextTypes()}
           allowCreate="onFilter"
           onChange={update}
-          onCreate={(n) => {
+          onCreate={n => {
             update([...contextTypes, n])
           }}
         />
@@ -250,23 +239,19 @@ const IntentItem = ({
       <div className={styles.intentRow}>
         <IntentPicker
           name={ei.name}
-          update={(x) => {
+          update={x => {
             update({ ...ei, name: x })
           }}
         />
 
         <ContextPicker
           contextTypes={ei.contexts}
-          update={(x) => {
+          update={x => {
             update({ ...ei, contexts: x })
           }}
         />
       </div>
-      <DeleteButton
-        onClick={() => update(null)}
-        title="Remove this intent"
-        compact
-      />
+      <DeleteButton onClick={() => update(null)} title="Remove this intent" compact />
     </div>
   )
 }
@@ -339,7 +324,7 @@ const CustomAppItem = ({
               className={styles.settingsInput}
               value={d.title}
               placeholder="App title"
-              onChange={(e) => update({ ...d, title: e.target.value })}
+              onChange={e => update({ ...d, title: e.target.value })}
             />
           </label>
           <DeleteButton onClick={() => update(null)} title="Remove this app" />
@@ -351,7 +336,7 @@ const CustomAppItem = ({
             className={styles.settingsInput}
             value={d.description}
             placeholder="App description"
-            onChange={(e) => update({ ...d, description: e.target.value })}
+            onChange={e => update({ ...d, description: e.target.value })}
           />
         </label>
         <div className={styles.appMetaRow}>
@@ -360,9 +345,7 @@ const CustomAppItem = ({
             <select
               className={styles.settingsSelect}
               value={d.type}
-              onChange={(e) =>
-                update({ ...d, type: e.target.value as AppType })
-              }
+              onChange={e => update({ ...d, type: e.target.value as AppType })}
             >
               <option value="web">Web</option>
               <option value="native">Native</option>
@@ -376,7 +359,7 @@ const CustomAppItem = ({
               value={d.url}
               placeholder="https://your.app.url/here"
               disabled={d.type === "native"}
-              onChange={(e) => update({ ...d, url: e.target.value })}
+              onChange={e => update({ ...d, url: e.target.value })}
             />
           </label>
         </div>
@@ -402,27 +385,24 @@ export const CustomAppList = () => {
           No custom apps yet. Add one to include it in the App Launcher.
         </p>
       ) : (
-        apps.map((d) => (
+        apps.map(d => (
           <CustomAppItem
             key={d.id}
             d={d}
-            update={(app) => {
+            update={app => {
               if (app) {
-                const idx = apps.findIndex((a) => a.id == d.id)
+                const idx = apps.findIndex(a => a.id == d.id)
                 const newApps = [...apps]
                 newApps[idx] = app
                 void updateApps(newApps)
               } else {
-                void updateApps(apps.filter((a) => a.id !== d.id))
+                void updateApps(apps.filter(a => a.id !== d.id))
               }
             }}
           />
         ))
       )}
-      <AddButton
-        label="Add custom app"
-        onClick={() => void updateApps([...apps, newApp()])}
-      />
+      <AddButton label="Add custom app" onClick={() => void updateApps([...apps, newApp()])} />
     </div>
   )
 }

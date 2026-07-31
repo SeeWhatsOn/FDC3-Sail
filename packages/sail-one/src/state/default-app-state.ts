@@ -1,4 +1,4 @@
-import { DirectoryApp, WebAppDetails } from "@finos/sail-desktop-agent"
+import type { DirectoryApp, WebAppDetails } from "@finos/sail-platform"
 import { getClientState, getServerState } from "./index"
 
 export enum AppHosting {
@@ -15,6 +15,7 @@ export interface AppOpenDetails {
 export interface AppState {
   registerAppWindow(window: Window, instanceId: string): void
   getInstanceIdForWindow(window: Window): string | undefined
+  createTitle(detail: DirectoryApp): string
   open(detail: DirectoryApp, destination?: AppHosting): Promise<AppOpenDetails>
 }
 
@@ -28,7 +29,7 @@ export class DefaultAppState implements AppState {
   getDirectoryAppForUrl(identityUrl: string): DirectoryApp | undefined {
     const strippedIdentityUrl = normalizeIdentityUrl(identityUrl)
     const applications: DirectoryApp[] = getServerState().getKnownApps()
-    return applications.find((x) => {
+    return applications.find(x => {
       const d = x.details as WebAppDetails
       return (
         d.url == strippedIdentityUrl ||
@@ -50,8 +51,8 @@ export class DefaultAppState implements AppState {
     const existingPanels = getClientState().getPanels()
     const usedNumbers = new Set(
       existingPanels
-        .filter((p) => p.title.startsWith(detail.title))
-        .map((p) => {
+        .filter(p => p.title.startsWith(detail.title))
+        .map(p => {
           const match = /\d+$/.exec(p.title)
           return match ? parseInt(match[0]) : 0
         }),
@@ -65,42 +66,33 @@ export class DefaultAppState implements AppState {
     return `${detail.title} ${number.toString()}`
   }
 
-  open(
-    detail: DirectoryApp,
-    destination?: AppHosting,
-  ): Promise<AppOpenDetails> {
-    const sailManifest = detail.hostManifests?.sail ?? {}
-    const forceNewWindow =
-      (typeof sailManifest === "string" ? {} : sailManifest).forceNewWindow ??
-      false
-    const hosting: AppHosting =
-      (forceNewWindow ? AppHosting.Tab : undefined) ??
-      destination ??
-      AppHosting.Frame
-    const instanceTitle = this.createTitle(detail)
-
-    if (hosting == AppHosting.Tab) {
-      return getServerState()
-        .registerAppLaunch(detail.appId, hosting, null, instanceTitle)
-        .then((instanceId) => {
-          const w = window.open(
-            (detail.details as WebAppDetails).url,
-            instanceId,
-          )
-          if (!w) {
-            throw new Error("Failed to open window")
-          }
-          this.registerAppWindow(w, instanceId)
-          return { instanceId, channel: null, instanceTitle }
-        })
+  /**
+   * Ask the Desktop Agent to open `detail`, hosted as the user asked.
+   *
+   * The agent owns instance ids now, so the panel or window is created by the
+   * host's `SailAppLauncher` callback once the id exists — this method only
+   * records the hosting choice and reports the result back to the caller.
+   */
+  async open(detail: DirectoryApp, destination?: AppHosting): Promise<AppOpenDetails> {
+    if (detail.type !== "web") {
+      throw new Error("Unsupported app type: " + detail.type)
     }
 
-    const channel = getClientState().getActiveTab().id
-    return getServerState()
-      .registerAppLaunch(detail.appId, hosting, channel, instanceTitle)
-      .then((instanceId) => {
-        getClientState().newPanel(detail, instanceId, instanceTitle)
-        return { instanceId, channel, instanceTitle }
-      })
+    const sailManifest = detail.hostManifests?.sail ?? {}
+    const forceNewWindow =
+      (typeof sailManifest === "string" ? {} : sailManifest).forceNewWindow ?? false
+    const hosting: AppHosting =
+      (forceNewWindow ? AppHosting.Tab : undefined) ?? destination ?? AppHosting.Frame
+    const instanceTitle = this.createTitle(detail)
+    const channel = hosting === AppHosting.Tab ? null : getClientState().getActiveTab().id
+
+    const instanceId = await getServerState().registerAppLaunch(
+      detail.appId,
+      hosting,
+      channel,
+      instanceTitle,
+    )
+
+    return { instanceId, channel, instanceTitle }
   }
 }

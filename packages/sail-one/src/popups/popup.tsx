@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from "react"
+import { useEffect, type ReactNode } from "react"
 import { X } from "lucide-react"
 import styles from "./styles.module.css"
 import { Logo } from "../top/top"
@@ -46,7 +46,7 @@ export function Popup({
       id="backdrop"
       className={styles.popup}
       data-variant={variant}
-      onClick={(event) => {
+      onClick={event => {
         if (event.target === event.currentTarget) {
           closeAction()
         }

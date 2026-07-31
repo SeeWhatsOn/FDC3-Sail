@@ -1,9 +1,9 @@
 import { useEffect, useState, type DragEvent } from "react"
 import { GripVertical, Pipette } from "lucide-react"
-import { getClientState, TabDetail } from "../state"
+import { getClientState, type TabDetail } from "../state"
 import styles from "./styles.module.css"
-import { DeleteButton } from "./deleteButton"
-import { AddButton } from "./addButton"
+import { DeleteButton } from "./delete-button"
+import { AddButton } from "./add-button"
 
 const ICON_PATH = "/icons/tabs/"
 
@@ -40,10 +40,7 @@ const BACKGROUND_COLOURS = [
 ]
 
 function newIconUrl(): string {
-  return (
-    ICON_PATH +
-    BUILT_IN_TABS[getClientState().getTabs().length % BUILT_IN_TABS.length]
-  )
+  return ICON_PATH + BUILT_IN_TABS[getClientState().getTabs().length % BUILT_IN_TABS.length]
 }
 
 function newTabTitle(): string {
@@ -51,7 +48,7 @@ function newTabTitle(): string {
   while (
     getClientState()
       .getTabs()
-      .find((t) => t.id == "New Tab " + i)
+      .find(t => t.id == "New Tab " + i)
   ) {
     i++
   }
@@ -59,25 +56,23 @@ function newTabTitle(): string {
 }
 
 function newBackgroundColour(): string {
-  return BACKGROUND_COLOURS[
-    getClientState().getTabs().length % BACKGROUND_COLOURS.length
-  ]
+  return BACKGROUND_COLOURS[getClientState().getTabs().length % BACKGROUND_COLOURS.length]
 }
 
 function updateBackground(id: string, background: string) {
   const tab = getClientState()
     .getTabs()
-    .find((t) => t.id == id)!
+    .find(t => t.id == id)!
   tab.background = background
-  getClientState().updateTab(tab)
+  void getClientState().updateTab(tab)
 }
 
 function updateIconUrl(id: string, url: string) {
   const tab = getClientState()
     .getTabs()
-    .find((t) => t.id == id)!
+    .find(t => t.id == id)!
   tab.icon = url
-  getClientState().updateTab(tab)
+  void getClientState().updateTab(tab)
 }
 
 function removeTab(id: string) {
@@ -88,7 +83,7 @@ function removeTab(id: string) {
 
   const appCount = getClientState()
     .getPanels()
-    .filter((p) => p.tabId == id).length
+    .filter(p => p.tabId == id).length
 
   const message =
     appCount > 0
@@ -136,7 +131,7 @@ function TabItem({
       ]
         .filter(Boolean)
         .join(" ")}
-      onDragOver={(e) => onDragOver(e, d.id)}
+      onDragOver={e => onDragOver(e, d.id)}
       onDrop={() => onDrop(d.id)}
     >
       <div className={styles.tabCardBody}>
@@ -147,7 +142,7 @@ function TabItem({
             draggable
             title="Drag to reorder"
             aria-label={`Drag to reorder ${d.id}`}
-            onDragStart={(e) => {
+            onDragStart={e => {
               e.dataTransfer.effectAllowed = "move"
               e.dataTransfer.setData("text/plain", d.id)
               const row = e.currentTarget.closest(`.${styles.settingsCard}`)
@@ -160,10 +155,7 @@ function TabItem({
           >
             <GripVertical aria-hidden strokeWidth={2} />
           </button>
-          <label
-            className={styles.tabColorSwatch}
-            style={{ backgroundColor: d.background }}
-          >
+          <label className={styles.tabColorSwatch} style={{ backgroundColor: d.background }}>
             <img src={d.icon} alt="" className={styles.tabColorSwatchIcon} />
             <span className={styles.tabColorSwatchHint} aria-hidden>
               <Pipette strokeWidth={2} />
@@ -174,7 +166,7 @@ function TabItem({
               value={d.background}
               title="Change tab color"
               aria-label={`Change color for ${d.id}`}
-              onChange={(e) => updateBackground(d.id, e.currentTarget.value)}
+              onChange={e => updateBackground(d.id, e.currentTarget.value)}
             />
           </label>
         </div>
@@ -187,16 +179,13 @@ function TabItem({
                 className={styles.settingsInput}
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={e => setTitle(e.target.value)}
                 onBlur={() => {
                   void getClientState().renameTab(d.id, title)
                 }}
               />
             </label>
-            <DeleteButton
-              onClick={() => removeTab(d.id)}
-              title="Remove this tab"
-            />
+            <DeleteButton onClick={() => removeTab(d.id)} title="Remove this tab" />
           </div>
           <label className={styles.settingsField}>
             <span className={styles.settingsFieldLabel}>Icon URL</span>
@@ -204,7 +193,7 @@ function TabItem({
               className={styles.settingsInput}
               type="text"
               value={d.icon}
-              onChange={(e) => updateIconUrl(d.id, e.target.value)}
+              onChange={e => updateIconUrl(d.id, e.target.value)}
             />
           </label>
         </div>
@@ -229,7 +218,7 @@ export const TabList = () => {
     <div className={styles.settingsList}>
       {getClientState()
         .getTabs()
-        .map((d) => (
+        .map(d => (
           <TabItem
             key={d.id}
             d={d}
@@ -243,16 +232,13 @@ export const TabList = () => {
                 setDropTarget(null)
                 return
               }
-              const rect = (
-                e.currentTarget as HTMLElement
-              ).getBoundingClientRect()
-              const place =
-                e.clientY < rect.top + rect.height / 2 ? "before" : "after"
-              setDropTarget((prev) =>
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+              const place = e.clientY < rect.top + rect.height / 2 ? "before" : "after"
+              setDropTarget(prev =>
                 prev?.id === id && prev.place === place ? prev : { id, place },
               )
             }}
-            onDrop={(toId) => {
+            onDrop={toId => {
               if (dragId && dropTarget && dropTarget.id === toId) {
                 void getClientState().reorderTab(dragId, toId, dropTarget.place)
               } else if (dragId) {
@@ -266,7 +252,7 @@ export const TabList = () => {
       <AddButton
         label="Add tab"
         onClick={() => {
-          getClientState().addTab({
+          void getClientState().addTab({
             id: newTabTitle(),
             icon: newIconUrl(),
             background: newBackgroundColour(),

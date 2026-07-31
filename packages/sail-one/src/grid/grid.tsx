@@ -3,8 +3,13 @@ import { useLayoutEffect, useRef, type MutableRefObject } from "react"
 import { GridStack, type GridItemHTMLElement } from "gridstack"
 import "gridstack/dist/gridstack.css"
 import styles from "./styles.module.css"
-import { AppPanel, ClientState, getAppState, getServerState } from "../state"
-import { State } from "@finos/sail-desktop-agent"
+import {
+  AppInstanceState,
+  type AppPanel,
+  type ClientState,
+  getAppState,
+  getServerState,
+} from "../state"
 import { findEmptyArea } from "./find-empty-area"
 import { setupTabDropTargets } from "./setup-tab-drop-targets"
 
@@ -27,15 +32,15 @@ export function Grids({ cs, onOpenApp }: GridsProps) {
   const activeTabId = cs.getActiveTab().id
   const tabIds = cs
     .getTabs()
-    .map((t) => t.id)
+    .map(t => t.id)
     .join(",")
   const dropTargetTabId = useRef<string | null>(null)
   const gridByTabId = useRef<Map<string, GridStack>>(new Map())
-  const activePanels = cs.getPanels().filter((p) => p.tabId === activeTabId)
+  const activePanels = cs.getPanels().filter(p => p.tabId === activeTabId)
   const showEmptyState = activePanels.length === 0
 
   useLayoutEffect(() => {
-    return setupTabDropTargets((tabId) => {
+    return setupTabDropTargets(tabId => {
       dropTargetTabId.current = tabId
     })
   }, [tabIds])
@@ -48,21 +53,17 @@ export function Grids({ cs, onOpenApp }: GridsProps) {
           <p className={styles.emptyCopy}>
             Open an app from the directory to start working in this channel.
           </p>
-          <button
-            type="button"
-            className={styles.emptyButton}
-            onClick={onOpenApp}
-          >
+          <button type="button" className={styles.emptyButton} onClick={onOpenApp}>
             Apps
           </button>
         </div>
       ) : null}
-      {cs.getTabs().map((tab) => (
+      {cs.getTabs().map(tab => (
         <TabGrid
           key={tab.id}
           tabId={tab.id}
           visible={tab.id === activeTabId}
-          panels={cs.getPanels().filter((p) => p.tabId === tab.id)}
+          panels={cs.getPanels().filter(p => p.tabId === tab.id)}
           cs={cs}
           dropTargetTabId={dropTargetTabId}
           gridByTabId={gridByTabId}
@@ -106,7 +107,7 @@ function TabGrid({
       if (!node?.id) {
         return
       }
-      const panel = cs.getPanels().find((p) => p.panelId === node.id)
+      const panel = cs.getPanels().find(p => p.panelId === node.id)
       if (!panel) {
         return
       }
@@ -119,11 +120,7 @@ function TabGrid({
       })
     }
 
-    const movePanelToTab = (
-      element: GridItemHTMLElement,
-      panel: AppPanel,
-      targetTabId: string,
-    ) => {
+    const movePanelToTab = (element: GridItemHTMLElement, panel: AppPanel, targetTabId: string) => {
       const targetGrid = gridByTabId.current.get(targetTabId)
       const updated: AppPanel = { ...panel, tabId: targetTabId }
 
@@ -148,34 +145,31 @@ function TabGrid({
       dropTargetTabId.current = null
     })
     grid.on("dragstart resizestart", () => setResizing(true))
-    grid.on(
-      "dragstop resizestop",
-      (_event: Event, element: GridItemHTMLElement) => {
-        setResizing(false)
+    grid.on("dragstop resizestop", (_event: Event, element: GridItemHTMLElement) => {
+      setResizing(false)
 
-        const node = element.gridstackNode
-        if (!node?.id) {
-          return
-        }
+      const node = element.gridstackNode
+      if (!node?.id) {
+        return
+      }
 
-        const panel = cs.getPanels().find((p) => p.panelId === node.id)
-        if (!panel) {
-          return
-        }
+      const panel = cs.getPanels().find(p => p.panelId === node.id)
+      if (!panel) {
+        return
+      }
 
-        const targetTabId = dropTargetTabId.current
-        dropTargetTabId.current = null
+      const targetTabId = dropTargetTabId.current
+      dropTargetTabId.current = null
 
-        if (targetTabId && targetTabId !== tabId) {
-          movePanelToTab(element, panel, targetTabId)
-          return
-        }
+      if (targetTabId && targetTabId !== tabId) {
+        movePanelToTab(element, panel, targetTabId)
+        return
+      }
 
-        persistPanelGeometry(element)
-      },
-    )
+      persistPanelGeometry(element)
+    })
     grid.on("removed", (_event, items) => {
-      items.forEach((item) => {
+      items.forEach(item => {
         if (item.id) {
           void cs.removePanel(item.id)
         }
@@ -196,19 +190,17 @@ function TabGrid({
       return
     }
 
-    const panelIds = new Set(panels.map((p) => p.panelId))
+    const panelIds = new Set(panels.map(p => p.panelId))
 
-    grid.getGridItems().forEach((item) => {
+    grid.getGridItems().forEach(item => {
       const id = item.gridstackNode?.id
       if (id && !panelIds.has(id)) {
         grid.removeWidget(item, true, false)
       }
     })
 
-    panels.forEach((panel) => {
-      const element = itemRefs.current.get(panel.panelId) as
-        | GridItemHTMLElement
-        | undefined
+    panels.forEach(panel => {
+      const element = itemRefs.current.get(panel.panelId) as GridItemHTMLElement | undefined
       if (!element || element.gridstackNode) {
         return
       }
@@ -235,10 +227,10 @@ function TabGrid({
       className="grid-stack"
       style={{ display: visible ? "block" : "none", height: "100%" }}
     >
-      {panels.map((panel) => (
+      {panels.map(panel => (
         <div
           key={panel.panelId}
-          ref={(element) => {
+          ref={element => {
             if (element) {
               itemRefs.current.set(panel.panelId, element)
             } else {
@@ -270,7 +262,11 @@ function PanelContent({ panel, cs }: { panel: AppPanel; cs: ClientState }) {
             <span className={styles.contentTitleTextSpan}>{panel.title}</span>
           </p>
           <AppStateIcon instanceId={panel.panelId} />
-          <CloseIcon action={() => cs.removePanel(panel.panelId)} />
+          <CloseIcon
+            action={() => {
+              void cs.removePanel(panel.panelId)
+            }}
+          />
         </div>
         <div className={styles.resizeBaffle} />
         <div className={styles.contentBody}>
@@ -280,7 +276,7 @@ function PanelContent({ panel, cs }: { panel: AppPanel; cs: ClientState }) {
               id={"iframe_" + panel.panelId}
               name={panel.panelId}
               className={styles.iframe}
-              onLoad={(event) => {
+              onLoad={event => {
                 const win = event.currentTarget.contentWindow
                 if (win) {
                   getAppState().registerAppWindow(win, panel.panelId)
@@ -300,18 +296,18 @@ function AppStateIcon({ instanceId }: { instanceId: string }) {
   const iconBase = "/icons/app-state/"
   const state = getServerState().getAppInstanceState(instanceId)
 
-  function symbolForState(state: State | undefined): [string, string] | null {
+  function symbolForState(state: AppInstanceState | undefined): [string, string] | null {
     switch (state) {
-      case State.NotResponding:
-        return [iconBase + "not-responding.svg", "Not Responding"]
-      case State.Connected:
+      case AppInstanceState.Connected:
         return [iconBase + "connected.svg", "Connected to FDC3"]
-      case State.Pending:
+      case AppInstanceState.Pending:
         return [iconBase + "pending.svg", "Pending"]
-      case State.Terminated:
+      case AppInstanceState.Terminated:
         return [iconBase + "terminated.svg", "Terminated"]
       default:
-        // Hide Unknown — a "?" looks like help and adds little signal
+        // Hide Unknown — a "?" looks like help and adds little signal.
+        // "Not Responding" has no equivalent on the current agent surface;
+        // not-responding.svg is retained for when heartbeat health is exposed.
         return null
     }
   }
@@ -334,11 +330,7 @@ function CloseIcon({ action }: { action: () => void }) {
       aria-label="Close app"
       onClick={() => action()}
     >
-      <X
-        className={styles.contentTitleCloseIcon}
-        aria-hidden
-        strokeWidth={2.5}
-      />
+      <X className={styles.contentTitleCloseIcon} aria-hidden strokeWidth={2.5} />
     </button>
   )
 }

@@ -15,7 +15,7 @@ function ensureWired(): void {
   wired = true
   const bump = () => {
     version++
-    listeners.forEach((listener) => listener())
+    listeners.forEach(listener => listener())
   }
   getClientState().addStateChangeCallback(bump)
   getServerState().addStateChangeCallback(bump)

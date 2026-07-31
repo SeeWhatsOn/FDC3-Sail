@@ -1,6 +1,5 @@
-import { Context } from "@finos/fdc3-context"
-import { AppMetadata, IntentMetadata } from "@finos/fdc3-standard"
-import type { TabDetail } from "../state/ClientState"
+import type { AppMetadata, Context, IntentMetadata } from "@finos/fdc3"
+import type { TabDetail } from "../state/client-state"
 
 export type AugmentedAppMetadata = AppMetadata & {
   channelData: TabDetail | null

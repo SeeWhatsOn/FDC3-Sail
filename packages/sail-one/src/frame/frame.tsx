@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Logo, OpenAppButton, Settings } from "../top/top"
 import { Tabs } from "../tabs/tabs"
 import styles from "./styles.module.css"
-import { ClientState, getServerState } from "../state"
+import { getServerState, type ClientState } from "../state"
 import { AppDPanel } from "../appd/appd"
 import { Grids } from "../grid/grid"
 import { ConfigPanel } from "../config/config"
@@ -41,11 +41,7 @@ export function Frame({ cs }: FrameProps) {
         <AppDPanel key="appd" closeAction={() => setPopup(Popup.NONE)} />
       ) : null}
       {popup == Popup.SETTINGS ? (
-        <ConfigPanel
-          key="config"
-          cs={cs}
-          closeAction={() => setPopup(Popup.NONE)}
-        />
+        <ConfigPanel key="config" cs={cs} closeAction={() => setPopup(Popup.NONE)} />
       ) : null}
       {cs.getIntentResolution() ? (
         <ResolverPanel

@@ -1,29 +1,27 @@
-import { GridStack, type GridItemHTMLElement } from "gridstack"
+import { GridStack } from "gridstack"
 
-export function setupTabDropTargets(
-  onTargetChange: (tabId: string | null) => void,
-): () => void {
+export function setupTabDropTargets(onTargetChange: (tabId: string | null) => void): () => void {
   const dd = GridStack.getDD()
   const tabs = Array.from(document.querySelectorAll<HTMLElement>(".drop-tab"))
 
-  tabs.forEach((tab) => {
-    dd.off(tab as GridItemHTMLElement, "dropover")
-    dd.off(tab as GridItemHTMLElement, "dropout")
-    dd.droppable(tab as GridItemHTMLElement, {
+  tabs.forEach(tab => {
+    dd.off(tab, "dropover")
+    dd.off(tab, "dropout")
+    dd.droppable(tab, {
       accept: () => true,
     })
-    dd.on(tab as GridItemHTMLElement, "dropover", () => {
+    dd.on(tab, "dropover", () => {
       onTargetChange(tab.id)
     })
-    dd.on(tab as GridItemHTMLElement, "dropout", () => {
+    dd.on(tab, "dropout", () => {
       onTargetChange(null)
     })
   })
 
   return () => {
-    tabs.forEach((tab) => {
-      dd.off(tab as GridItemHTMLElement, "dropover")
-      dd.off(tab as GridItemHTMLElement, "dropout")
+    tabs.forEach(tab => {
+      dd.off(tab, "dropover")
+      dd.off(tab, "dropout")
     })
   }
 }

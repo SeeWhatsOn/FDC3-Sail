@@ -1,10 +1,10 @@
 import { useState } from "react"
 import styles from "./styles.module.css"
-import { ClientState } from "../state"
+import type { ClientState } from "../state"
 import { Popup } from "../popups/popup"
 import { DirectoryList } from "./directories"
 import { TabList } from "./tabs"
-import { CustomAppList } from "./customApps"
+import { CustomAppList } from "./custom-apps"
 
 const CONFIG_ITEMS = ["Directories", "Tabs", "Custom Apps"]
 
@@ -24,7 +24,7 @@ export function ConfigPanel({ closeAction }: AppPanelProps) {
       area={
         <div className={styles.configContent}>
           <div className={styles.configChoiceLeft}>
-            {CONFIG_ITEMS.map((a) => (
+            {CONFIG_ITEMS.map(a => (
               <button
                 type="button"
                 key={a}

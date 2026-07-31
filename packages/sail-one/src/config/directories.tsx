@@ -1,7 +1,7 @@
-import { Directory, getClientState } from "../state"
+import { getClientState, type Directory } from "../state"
 import styles from "./styles.module.css"
-import { DeleteButton } from "./deleteButton"
-import { AddButton } from "./addButton"
+import { DeleteButton } from "./delete-button"
+import { AddButton } from "./add-button"
 
 function updateDirectories(directories: Directory[]) {
   void getClientState().setDirectories(directories)
@@ -9,7 +9,7 @@ function updateDirectories(directories: Directory[]) {
 
 function updateDirectory(currentUrl: string, patch: Partial<Directory>): void {
   const directories = getClientState().getDirectories()
-  const i = directories.findIndex((x) => x.url === currentUrl)
+  const i = directories.findIndex(x => x.url === currentUrl)
   if (i < 0) {
     return
   }
@@ -27,15 +27,13 @@ function removeDirectory(d: Directory) {
   }
   const directories = getClientState()
     .getDirectories()
-    .filter((x) => x.url !== d.url)
+    .filter(x => x.url !== d.url)
   updateDirectories(directories)
 }
 
 function DirectoryItem({ d }: { d: Directory }) {
   return (
-    <article
-      className={`${styles.settingsCard} ${d.active ? styles.settingsCardActive : ""}`}
-    >
+    <article className={`${styles.settingsCard} ${d.active ? styles.settingsCardActive : ""}`}>
       <div className={styles.settingsFields}>
         <label className={styles.settingsField}>
           <span className={styles.settingsFieldLabel}>Name</span>
@@ -44,7 +42,7 @@ function DirectoryItem({ d }: { d: Directory }) {
             type="text"
             value={d.label}
             placeholder="Directory name"
-            onChange={(e) => updateDirectory(d.url, { label: e.target.value })}
+            onChange={e => updateDirectory(d.url, { label: e.target.value })}
           />
         </label>
         <label className={styles.settingsField}>
@@ -54,7 +52,7 @@ function DirectoryItem({ d }: { d: Directory }) {
             type="url"
             value={d.url}
             placeholder="https://example.com/v2/apps"
-            onChange={(e) => updateDirectory(d.url, { url: e.target.value })}
+            onChange={e => updateDirectory(d.url, { url: e.target.value })}
           />
         </label>
       </div>
@@ -70,15 +68,10 @@ function DirectoryItem({ d }: { d: Directory }) {
           <span className={styles.directoryToggleTrack} aria-hidden>
             <span className={styles.directoryToggleThumb} />
           </span>
-          <span className={styles.directoryToggleLabel}>
-            {d.active ? "Enabled" : "Disabled"}
-          </span>
+          <span className={styles.directoryToggleLabel}>{d.active ? "Enabled" : "Disabled"}</span>
         </label>
 
-        <DeleteButton
-          onClick={() => removeDirectory(d)}
-          title="Remove this directory"
-        />
+        <DeleteButton onClick={() => removeDirectory(d)} title="Remove this directory" />
       </div>
     </article>
   )
@@ -90,9 +83,7 @@ export const DirectoryList = () => {
   return (
     <div className={styles.settingsList}>
       {directories.length === 0 ? (
-        <p className={styles.settingsEmpty}>
-          No directories yet. Add one to load apps into Sail.
-        </p>
+        <p className={styles.settingsEmpty}>No directories yet. Add one to load apps into Sail.</p>
       ) : (
         directories.map((d, i) => <DirectoryItem key={i} d={d} />)
       )}

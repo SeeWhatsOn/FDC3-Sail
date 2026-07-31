@@ -1,17 +1,24 @@
-import { beforeEach, describe, expect, it } from "vitest"
-import type { DirectoryApp } from "@finos/sail-desktop-agent"
-import { LocalStorageClientState } from "../ClientState"
-import { installLocalStorage } from "./localStorageMock"
+import { beforeEach, describe, expect, it } from "vite-plus/test"
+import type { DirectoryApp } from "@finos/sail-platform"
+import { PlatformClientState } from "../client-state"
+import { installLocalStorage } from "./local-storage-mock"
 
-const STORAGE_KEY = "sail-client-state"
+/** `SailPlatformClient`'s localStorage backend writes config under `<prefix>config`. */
+const STORAGE_KEY = "sail_one_config"
 
-describe("LocalStorageClientState", () => {
+async function loadedState(): Promise<PlatformClientState> {
+  const state = new PlatformClientState()
+  await state.load()
+  return state
+}
+
+describe("PlatformClientState", () => {
   beforeEach(() => {
     installLocalStorage()
   })
 
-  it("loads default tabs and FINOS directory when storage is empty", () => {
-    const state = new LocalStorageClientState()
+  it("loads default tabs and FINOS directory when storage is empty", async () => {
+    const state = await loadedState()
 
     expect(state.getTabs()).toHaveLength(3)
     expect(state.getActiveTab().id).toBe("One")
@@ -26,7 +33,7 @@ describe("LocalStorageClientState", () => {
   })
 
   it("createArgs only includes active directory URLs", async () => {
-    const state = new LocalStorageClientState()
+    const state = await loadedState()
     await state.setDirectories([
       {
         label: "Active",
@@ -40,12 +47,10 @@ describe("LocalStorageClientState", () => {
       },
     ])
 
-    expect(state.createArgs().directories).toEqual([
-      "https://example.com/v2/apps",
-    ])
+    expect(state.createArgs().directories).toEqual(["https://example.com/v2/apps"])
   })
 
-  it("persists custom apps into createArgs and localStorage", async () => {
+  it("persists custom apps into createArgs and platform storage", async () => {
     const customApps: DirectoryApp[] = [
       {
         appId: "demo",
@@ -53,9 +58,9 @@ describe("LocalStorageClientState", () => {
         title: "Demo",
         type: "web",
         details: { url: "https://app.example/" },
-      } as DirectoryApp,
+      },
     ]
-    const state = new LocalStorageClientState()
+    const state = await loadedState()
     await state.setCustomApps(customApps)
 
     expect(state.createArgs().customApps).toEqual(customApps)
@@ -63,7 +68,7 @@ describe("LocalStorageClientState", () => {
     expect(stored.customApps).toEqual(customApps)
   })
 
-  it("rehydrates from localStorage", () => {
+  it("rehydrates from platform storage", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -88,7 +93,7 @@ describe("LocalStorageClientState", () => {
       }),
     )
 
-    const state = new LocalStorageClientState()
+    const state = await loadedState()
     expect(state.getUserSessionID()).toBe("user-fixed")
     expect(state.getActiveTab().id).toBe("Saved")
     expect(state.getDirectories()[0].url).toBe("https://local.example/v2/apps")

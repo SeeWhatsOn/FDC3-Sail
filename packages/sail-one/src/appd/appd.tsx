@@ -2,13 +2,13 @@ import { useEffect, useState } from "react"
 import { Braces, ExternalLink, PanelTop, X } from "lucide-react"
 import { Icon } from "../icon/icon"
 import { getAppState, getServerState } from "../state"
-import { useSailState } from "../state/useSailState"
+import { useSailState } from "../state/use-sail-state"
 import styles from "./styles.module.css"
 import { Popup, PopupHeaderButton } from "../popups/popup"
-import { DirectoryApp, WebAppDetails } from "@finos/sail-desktop-agent"
-import { getIcon } from "../icon/appIcon"
+import type { DirectoryApp, WebAppDetails } from "@finos/sail-platform"
+import { getIcon } from "../icon/app-icon"
 import { AppHosting } from "../state"
-import { Image } from "@finos/fdc3"
+import type { Image } from "@finos/fdc3"
 
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 
@@ -24,8 +24,8 @@ function ConnectionInstructions({ connectionUrl }: { connectionUrl: string }) {
   return (
     <div className={styles.connectionSection}>
       <p className={styles.connectionIntro}>
-        This is a native application that connects to Sail via WebSocket. Use
-        the connection URL below to configure your application.
+        This is a native application that connects to Sail via WebSocket. Use the connection URL
+        below to configure your application.
       </p>
 
       <div className={styles.platformTabs}>
@@ -59,8 +59,8 @@ function ConnectionInstructions({ connectionUrl }: { connectionUrl: string }) {
         {platform === "java" && (
           <div className={styles.platformInstructions}>
             <p>
-              Set the <code>FDC3_WEBSOCKET_URL</code> environment variable or
-              pass the URL to <code>GetAgentParams</code>:
+              Set the <code>FDC3_WEBSOCKET_URL</code> environment variable or pass the URL to{" "}
+              <code>GetAgentParams</code>:
             </p>
             <code className={styles.connectionCode}>{connectionUrl}</code>
           </div>
@@ -69,8 +69,7 @@ function ConnectionInstructions({ connectionUrl }: { connectionUrl: string }) {
         {platform === "csharp" && (
           <div className={styles.platformInstructions}>
             <p className={styles.placeholder}>
-              C# FDC3 support coming soon. Connect using the WebSocket URL
-              below.
+              C# FDC3 support coming soon. Connect using the WebSocket URL below.
             </p>
             <code className={styles.connectionCode}>{connectionUrl}</code>
           </div>
@@ -79,8 +78,7 @@ function ConnectionInstructions({ connectionUrl }: { connectionUrl: string }) {
         {platform === "go" && (
           <div className={styles.platformInstructions}>
             <p className={styles.placeholder}>
-              Go FDC3 support coming soon. Connect using the WebSocket URL
-              below.
+              Go FDC3 support coming soon. Connect using the WebSocket URL below.
             </p>
             <code className={styles.connectionCode}>{connectionUrl}</code>
           </div>
@@ -89,9 +87,8 @@ function ConnectionInstructions({ connectionUrl }: { connectionUrl: string }) {
         {platform === "websocket" && (
           <div className={styles.platformInstructions}>
             <p>
-              Connect directly via WebSocket using the FDC3 Web Connection
-              Protocol. Send and receive JSON messages according to the FDC3
-              specification.
+              Connect directly via WebSocket using the FDC3 Web Connection Protocol. Send and
+              receive JSON messages according to the FDC3 specification.
             </p>
             <code className={styles.connectionCode}>{connectionUrl}</code>
           </div>
@@ -109,7 +106,7 @@ export function AppDPanel({ closeAction }: AppPanelProps) {
   const [showJson, setShowJson] = useState(false)
   const apps = getServerState()
     .getKnownApps()
-    .filter((d) => onlyRelevantApps(d))
+    .filter(d => onlyRelevantApps(d))
 
   const app = chosen
 
@@ -139,11 +136,11 @@ export function AppDPanel({ closeAction }: AppPanelProps) {
           <div className={styles.appDApps}>
             {apps.length === 0 ? (
               <p className={styles.appDEmpty}>
-                No apps available yet. Check your directories in Settings, or
-                wait for directories to finish loading.
+                No apps available yet. Check your directories in Settings, or wait for directories
+                to finish loading.
               </p>
             ) : (
-              apps.map((a) => (
+              apps.map(a => (
                 <button
                   type="button"
                   key={a.appId}
@@ -174,7 +171,7 @@ export function AppDPanel({ closeAction }: AppPanelProps) {
                           icon={<PanelTop aria-hidden strokeWidth={2} />}
                           onClick={() => {
                             if (chosen) {
-                              getAppState().open(chosen, AppHosting.Frame)
+                              void getAppState().open(chosen, AppHosting.Frame)
                               closeAction()
                             }
                           }}
@@ -185,7 +182,7 @@ export function AppDPanel({ closeAction }: AppPanelProps) {
                           icon={<ExternalLink aria-hidden strokeWidth={2} />}
                           onClick={() => {
                             if (chosen) {
-                              getAppState().open(chosen, AppHosting.Tab)
+                              void getAppState().open(chosen, AppHosting.Tab)
                               closeAction()
                             }
                           }}
@@ -193,9 +190,7 @@ export function AppDPanel({ closeAction }: AppPanelProps) {
                       </div>
                     </div>
                     {app.description ? (
-                      <p className={styles.appDDescription}>
-                        {app.description}
-                      </p>
+                      <p className={styles.appDDescription}>{app.description}</p>
                     ) : null}
                     {app.categories && app.categories.length > 0 ? (
                       <div className={styles.appDKeywords}>
@@ -206,12 +201,9 @@ export function AppDPanel({ closeAction }: AppPanelProps) {
                         ))}
                       </div>
                     ) : null}
-                    {app.type === "native" &&
-                      (app.details as any)?.connectionUrl && (
-                        <ConnectionInstructions
-                          connectionUrl={(app.details as any).connectionUrl}
-                        />
-                      )}
+                    {app.type === "native" && (app.details as any)?.connectionUrl && (
+                      <ConnectionInstructions connectionUrl={(app.details as any).connectionUrl} />
+                    )}
                     {app.screenshots && app.screenshots.length > 0 ? (
                       <div className={styles.appDScreenshots}>
                         {app.screenshots.map((s: Image) => (
@@ -234,27 +226,15 @@ export function AppDPanel({ closeAction }: AppPanelProps) {
                   title="View app directory JSON"
                   aria-label="View app directory JSON"
                 >
-                  <Braces
-                    className={styles.jsonToggleIcon}
-                    aria-hidden
-                    strokeWidth={2}
-                  />
+                  <Braces className={styles.jsonToggleIcon} aria-hidden strokeWidth={2} />
                   JSON
                 </button>
 
                 {showJson ? (
-                  <div
-                    className={styles.jsonOverlay}
-                    role="dialog"
-                    aria-label="App JSON"
-                  >
+                  <div className={styles.jsonOverlay} role="dialog" aria-label="App JSON">
                     <div className={styles.jsonOverlayHeader}>
                       <span className={styles.jsonOverlayTitle}>
-                        <Braces
-                          className={styles.jsonToggleIcon}
-                          aria-hidden
-                          strokeWidth={2}
-                        />
+                        <Braces className={styles.jsonToggleIcon} aria-hidden strokeWidth={2} />
                         JSON
                       </span>
                       <button
@@ -267,9 +247,7 @@ export function AppDPanel({ closeAction }: AppPanelProps) {
                         <X aria-hidden strokeWidth={2.25} size={16} />
                       </button>
                     </div>
-                    <pre className={styles.appDJson}>
-                      {JSON.stringify(app, null, 2)}
-                    </pre>
+                    <pre className={styles.appDJson}>{JSON.stringify(app, null, 2)}</pre>
                   </div>
                 ) : null}
               </>

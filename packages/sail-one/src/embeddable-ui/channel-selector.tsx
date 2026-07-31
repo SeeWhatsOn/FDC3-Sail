@@ -1,4 +1,3 @@
-import { BrowserTypes } from "@finos/fdc3"
 import { createRoot } from "react-dom/client"
 import type { TabDetail } from "../state"
 import {
@@ -7,8 +6,6 @@ import {
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import { connectUserInterfacePort, postIframeRestyle } from "./iframe-port"
 import styles from "./styles.module.css"
-
-type IframeChannelSelected = BrowserTypes.Fdc3UserInterfaceChannelSelected
 
 const channels: TabDetail[] = []
 
@@ -77,7 +74,7 @@ const ChannelPicker = ({
   if (open) {
     return (
       <div className={styles.channelBox}>
-        {channelList.map((c) => {
+        {channelList.map(c => {
           return (
             <Channel
               key={c.id}
@@ -103,7 +100,7 @@ const ChannelPicker = ({
     )
   }
 
-  const theChannel = channelList.find((c) => c.id == selected) ?? NO_CHANNEL
+  const theChannel = channelList.find(c => c.id == selected) ?? NO_CHANNEL
   return (
     <div className={styles.channelBox}>
       <Channel channel={theChannel} active={true} onClick={changeSize} />
@@ -118,10 +115,7 @@ window.addEventListener("load", () => {
   const root = createRoot(container)
   let open = false
 
-  const myPort = connectUserInterfacePort(
-    "Sail Channel Selector v1.0",
-    DEFAULT_COLLAPSED_CSS,
-  )
+  const myPort = connectUserInterfacePort("Sail Channel Selector v1.0", DEFAULT_COLLAPSED_CSS)
 
   function changeSize(expanded: boolean) {
     open = expanded
@@ -142,7 +136,7 @@ window.addEventListener("load", () => {
     myPort.postMessage({
       type: "Fdc3UserInterfaceChannelSelected",
       payload: { selected: selectedChannelId },
-    } as IframeChannelSelected)
+    })
   }
 
   function renderChannels(isOpen: boolean) {
@@ -157,14 +151,14 @@ window.addEventListener("load", () => {
     )
   }
 
-  myPort.addEventListener("message", (e) => {
+  myPort.addEventListener("message", e => {
     if (isFdc3UserInterfaceHandshake(e.data)) {
       postIframeRestyle(myPort, DEFAULT_COLLAPSED_CSS)
     } else if (isFdc3UserInterfaceChannels(e.data)) {
       const details = e.data
 
       if (channels.length == 0) {
-        const tabDetails = details.payload.userChannels.map((c) => {
+        const tabDetails = details.payload.userChannels.map(c => {
           const out: TabDetail = {
             background: c.displayMetadata?.color ?? "white",
             icon: c.displayMetadata?.glyph ?? "/icons/logo/logo.svg",

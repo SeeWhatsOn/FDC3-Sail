@@ -1,4 +1,4 @@
-import { BrowserTypes, AppIdentifier } from "@finos/fdc3"
+import type { AppIdentifier, BrowserTypes } from "@finos/fdc3"
 import { createRoot } from "react-dom/client"
 import { ResolverPanel } from "../resolver/resolver"
 import {
@@ -8,7 +8,6 @@ import {
 import type { AugmentedAppIntent, TabDetail } from "../state"
 import { connectUserInterfacePort, postIframeRestyle } from "./iframe-port"
 
-type IframeResolveAction = BrowserTypes.Fdc3UserInterfaceResolveAction
 type IframeResolvePayload = BrowserTypes.Fdc3UserInterfaceResolvePayload
 
 const channels: TabDetail[] = []
@@ -35,10 +34,7 @@ window.addEventListener("load", () => {
   const container = document.getElementById("intentResolver")!
   const root = createRoot(container)
 
-  const myPort = connectUserInterfacePort(
-    "Sail Intent Resolver v1.0",
-    DEFAULT_COLLAPSED_CSS,
-  )
+  const myPort = connectUserInterfacePort("Sail Intent Resolver v1.0", DEFAULT_COLLAPSED_CSS)
 
   function renderIntentResolver(data: IframeResolvePayload | null) {
     if (data) {
@@ -53,7 +49,7 @@ window.addEventListener("load", () => {
             renderIntentResolver(null)
           }}
           channelDetails={channels}
-          chooseAction={async (app, intent) => {
+          chooseAction={(app, intent) => {
             callback(intent, app)
             renderIntentResolver(null)
           }}
@@ -64,7 +60,7 @@ window.addEventListener("load", () => {
     }
   }
 
-  async function callback(intent: string | null, app: AppIdentifier | null) {
+  function callback(intent: string | null, app: AppIdentifier | null) {
     postIframeRestyle(myPort, DEFAULT_COLLAPSED_CSS)
 
     if (intent && app && app.instanceId == undefined) {
@@ -75,18 +71,18 @@ window.addEventListener("load", () => {
           appIdentifier: app,
           intent: intent,
         },
-      } as IframeResolveAction)
+      })
     } else {
       myPort.postMessage({
         type: "Fdc3UserInterfaceResolveAction",
         payload: {
           action: "cancel",
         },
-      } as IframeResolveAction)
+      })
     }
   }
 
-  myPort.addEventListener("message", (e) => {
+  myPort.addEventListener("message", e => {
     if (isFdc3UserInterfaceHandshake(e.data)) {
       renderIntentResolver(null)
     } else if (isFdc3UserInterfaceResolve(e.data)) {

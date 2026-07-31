@@ -1,7 +1,6 @@
 import type { BrowserTypes } from "@finos/fdc3"
 
 type IframeHello = BrowserTypes.Fdc3UserInterfaceHello
-type IframeRestyle = BrowserTypes.Fdc3UserInterfaceRestyle
 
 export function connectUserInterfacePort(
   implementationDetails: string,
@@ -29,5 +28,5 @@ export function postIframeRestyle(
   port.postMessage({
     type: "Fdc3UserInterfaceRestyle",
     payload: { updatedCSS },
-  } as IframeRestyle)
+  })
 }

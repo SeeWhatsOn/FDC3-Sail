@@ -1,5 +1,10 @@
-import { GridStackPosition } from "gridstack"
-import { DirectoryApp, WebAppDetails } from "@finos/sail-desktop-agent"
+import type { GridStackPosition } from "gridstack"
+import {
+  SailPlatformClient,
+  type DirectoryApp,
+  type SailPlatformClientConfig,
+  type WebAppDetails,
+} from "@finos/sail-platform"
 import type { IntentResolution } from "../resolver/types"
 
 type ClientStateSyncTarget = {
@@ -36,6 +41,11 @@ export type AppPanel = GridStackPosition & {
 }
 
 export interface ClientState {
+  /**
+   * Hydrate from platform storage. Must be awaited before the shell renders —
+   * the platform storage API is async, unlike the localStorage reads it replaces.
+   */
+  load(): Promise<void>
   getUserSessionID(): string
   getActiveTab(): TabDetail
   setActiveTabId(n: string): Promise<void>
@@ -45,11 +55,7 @@ export interface ClientState {
   updateTab(td: TabDetail): Promise<void>
   renameTab(oldId: string, newId: string): Promise<void>
   moveTab(id: string, delta: "up" | "down"): Promise<void>
-  reorderTab(
-    fromId: string,
-    toId: string,
-    place?: "before" | "after",
-  ): Promise<void>
+  reorderTab(fromId: string, toId: string, place?: "before" | "after"): Promise<void>
   updatePanel(ap: AppPanel): Promise<void>
   removePanel(id: string): Promise<void>
   getPanels(): AppPanel[]
@@ -65,7 +71,26 @@ export interface ClientState {
   setIntentResolution(ir: IntentResolution | null): void
 }
 
-const STORAGE_KEY = "sail-client-state"
+/**
+ * Persisted shape of the shell's own state.
+ *
+ * Stored through {@link SailPlatformClient}'s config API rather than raw
+ * `localStorage`, so the backend is swappable (localStorage today, remote later)
+ * without touching the shell.
+ */
+type PersistedClientState = {
+  tabs: TabDetail[]
+  panels: AppPanel[]
+  activeTabId: string
+  userSessionId: string
+  directories: Directory[]
+  customApps: DirectoryApp[]
+}
+
+const STORAGE_CONFIG: SailPlatformClientConfig = {
+  storage: "localStorage",
+  localStorage: { keyPrefix: "sail_one_" },
+}
 
 const DEFAULT_DIRECTORIES: Directory[] = [
   {
@@ -111,7 +136,7 @@ const LEGACY_TAB_ICONS: Record<string, string> = {
 }
 
 function migrateTabColors(tabs: TabDetail[]): TabDetail[] {
-  return tabs.map((tab) => {
+  return tabs.map(tab => {
     const nextBg = LEGACY_TAB_BACKGROUNDS[tab.background.toLowerCase()]
     const nextIcon = LEGACY_TAB_ICONS[tab.icon]
     return {
@@ -122,43 +147,42 @@ function migrateTabColors(tabs: TabDetail[]): TabDetail[] {
   })
 }
 
-export class LocalStorageClientState implements ClientState {
-  private tabs: TabDetail[] = []
+export class PlatformClientState implements ClientState {
+  private tabs: TabDetail[] = DEFAULT_TABS
   private panels: AppPanel[] = []
-  private activeTabId: string
-  private readonly userSessionId: string
-  private directories: Directory[] = []
+  private activeTabId: string = DEFAULT_TABS[0].id
+  private userSessionId = "user-" + crypto.randomUUID()
+  private directories: Directory[] = DEFAULT_DIRECTORIES
   private callbacks: (() => void)[] = []
   private intentResolution: IntentResolution | null = null
   private customApps: DirectoryApp[] = []
   private ss: ClientStateSyncTarget | null = null
+  private readonly platformClient: SailPlatformClient
 
-  constructor() {
-    const theState = localStorage.getItem(STORAGE_KEY)
-    if (theState) {
-      const {
-        tabs,
-        panels,
-        activeTabId,
-        userSessionId,
-        directories,
-        customApps,
-      } = JSON.parse(theState)
-      this.tabs = migrateTabColors(tabs)
-      this.panels = panels
-      this.activeTabId = activeTabId
-      this.userSessionId = userSessionId
-      this.directories = directories ?? []
-      this.customApps = customApps ?? []
-      if (JSON.stringify(this.tabs) !== JSON.stringify(tabs)) {
-        void this.saveState()
-      }
-    } else {
-      this.tabs = DEFAULT_TABS
-      this.panels = []
-      this.activeTabId = DEFAULT_TABS[0].id
-      this.userSessionId = "user-" + crypto.randomUUID()
-      this.directories = DEFAULT_DIRECTORIES
+  constructor(platformClient: SailPlatformClient = new SailPlatformClient(STORAGE_CONFIG)) {
+    this.platformClient = platformClient
+  }
+
+  async load(): Promise<void> {
+    const stored = (await this.platformClient.getConfig()) as Partial<PersistedClientState> | null
+
+    if (!stored?.tabs || stored.tabs.length === 0) {
+      // Nothing persisted yet — keep the constructor defaults and write them out
+      // so the agent and the shell start from the same channel set.
+      await this.saveState()
+      return
+    }
+
+    const migratedTabs = migrateTabColors(stored.tabs)
+    this.tabs = migratedTabs
+    this.panels = stored.panels ?? []
+    this.activeTabId = stored.activeTabId ?? migratedTabs[0].id
+    this.userSessionId = stored.userSessionId ?? this.userSessionId
+    this.directories = stored.directories ?? []
+    this.customApps = stored.customApps ?? []
+
+    if (JSON.stringify(migratedTabs) !== JSON.stringify(stored.tabs)) {
+      await this.saveState()
     }
   }
 
@@ -169,23 +193,23 @@ export class LocalStorageClientState implements ClientState {
   }
 
   private async saveState(): Promise<void> {
-    const data = JSON.stringify({
+    const data: PersistedClientState = {
       tabs: this.tabs,
       panels: this.panels,
       activeTabId: this.activeTabId,
       userSessionId: this.userSessionId,
       directories: this.directories,
       customApps: this.customApps,
-    })
-    localStorage.setItem(STORAGE_KEY, data)
-    this.callbacks.forEach((cb) => cb())
+    }
+    await this.platformClient.updateConfig(data)
+    this.callbacks.forEach(cb => cb())
     if (this.ss) {
       await this.ss.sendClientState(this.createArgs())
     }
   }
 
   getActiveTab(): TabDetail {
-    const out = this.tabs.find((t) => t.id == this.activeTabId)
+    const out = this.tabs.find(t => t.id == this.activeTabId)
     if (!out) {
       this.activeTabId = this.tabs[0].id
       this.saveState().catch(() => {
@@ -211,8 +235,8 @@ export class LocalStorageClientState implements ClientState {
   }
 
   async removeTab(id: string): Promise<void> {
-    this.tabs = this.tabs.filter((t) => t.id != id)
-    this.panels = this.panels.filter((p) => p.tabId != id)
+    this.tabs = this.tabs.filter(t => t.id != id)
+    this.panels = this.panels.filter(p => p.tabId != id)
     if (this.activeTabId === id && this.tabs.length > 0) {
       this.activeTabId = this.tabs[0].id
     }
@@ -220,7 +244,7 @@ export class LocalStorageClientState implements ClientState {
   }
 
   async updateTab(td: TabDetail): Promise<void> {
-    const idx = this.tabs.findIndex((t) => t.id == td.id)
+    const idx = this.tabs.findIndex(t => t.id == td.id)
     if (idx != -1) {
       this.tabs[idx] = td
     }
@@ -232,18 +256,16 @@ export class LocalStorageClientState implements ClientState {
     if (!nextId || nextId === oldId) {
       return
     }
-    if (this.tabs.some((t) => t.id === nextId)) {
+    if (this.tabs.some(t => t.id === nextId)) {
       alert("A channel with that name already exists")
       return
     }
-    const idx = this.tabs.findIndex((t) => t.id == oldId)
+    const idx = this.tabs.findIndex(t => t.id == oldId)
     if (idx < 0) {
       return
     }
     this.tabs[idx] = { ...this.tabs[idx], id: nextId }
-    this.panels = this.panels.map((p) =>
-      p.tabId === oldId ? { ...p, tabId: nextId } : p,
-    )
+    this.panels = this.panels.map(p => (p.tabId === oldId ? { ...p, tabId: nextId } : p))
     if (this.activeTabId === oldId) {
       this.activeTabId = nextId
     }
@@ -251,7 +273,7 @@ export class LocalStorageClientState implements ClientState {
   }
 
   async moveTab(id: string, delta: "up" | "down"): Promise<void> {
-    const idx = this.tabs.findIndex((t) => t.id == id)
+    const idx = this.tabs.findIndex(t => t.id == id)
     if (idx != -1) {
       if (delta == "up" && idx > 0) {
         const temp = this.tabs[idx - 1]
@@ -275,12 +297,12 @@ export class LocalStorageClientState implements ClientState {
     if (fromId === toId) {
       return
     }
-    const fromIdx = this.tabs.findIndex((t) => t.id == fromId)
-    if (fromIdx < 0 || this.tabs.findIndex((t) => t.id == toId) < 0) {
+    const fromIdx = this.tabs.findIndex(t => t.id == fromId)
+    if (fromIdx < 0 || this.tabs.findIndex(t => t.id == toId) < 0) {
       return
     }
     const [moved] = this.tabs.splice(fromIdx, 1)
-    const toIdx = this.tabs.findIndex((t) => t.id == toId)
+    const toIdx = this.tabs.findIndex(t => t.id == toId)
     if (toIdx < 0) {
       this.tabs.splice(fromIdx, 0, moved)
       return
@@ -291,7 +313,7 @@ export class LocalStorageClientState implements ClientState {
   }
 
   async updatePanel(ap: AppPanel): Promise<void> {
-    const idx = this.panels.findIndex((p) => p.panelId == ap.panelId)
+    const idx = this.panels.findIndex(p => p.panelId == ap.panelId)
     if (idx != -1) {
       this.panels[idx] = ap
     } else {
@@ -302,7 +324,7 @@ export class LocalStorageClientState implements ClientState {
   }
 
   async removePanel(id: string): Promise<void> {
-    this.panels = this.panels.filter((p) => p.panelId != id)
+    this.panels = this.panels.filter(p => p.panelId != id)
     await this.saveState()
   }
 
@@ -355,7 +377,7 @@ export class LocalStorageClientState implements ClientState {
   }
 
   async updateDirectory(din: Directory) {
-    const idx = this.directories.findIndex((d) => d.url == din.url)
+    const idx = this.directories.findIndex(d => d.url == din.url)
     if (idx > -1) {
       this.directories[idx] = din
     } else {
@@ -368,7 +390,7 @@ export class LocalStorageClientState implements ClientState {
   createArgs(): SailClientStateArgs {
     return {
       userSessionId: this.userSessionId,
-      directories: this.directories.filter((d) => d.active).map((d) => d.url),
+      directories: this.directories.filter(d => d.active).map(d => d.url),
       channels: this.tabs,
       panels: this.panels,
       customApps: this.customApps,

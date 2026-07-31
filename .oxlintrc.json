@@ -27,7 +27,6 @@
     },
     // SHELLS must not import each other. Each shell owns its own shadcn components;
     // the only shared design layer is @finos/sail-theme (tokens + assets).
-    // sail-one arrives with the wip/v2.2 reconciliation, so its rule is a no-op until then.
     {
       "files": ["packages/sail-finance/**"],
       "rules": {
