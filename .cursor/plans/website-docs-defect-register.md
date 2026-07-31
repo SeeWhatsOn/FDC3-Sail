@@ -4,6 +4,9 @@ Companion to `.cursor/plans/website-docs-blueprint.md`. This is the working mate
 (truth pass) and slice 3 (package pages).
 
 **Audited:** 2026-07-30 against `wip/v3-local` @ `83eee8261` + working tree.
+**Partial re-check:** 2026-07-31 @ `06476be62` after `sail-one` landed — §A premise, A12, and G2 updated
+below. The rest of the register was **not** re-verified against the newer tree; re-check each row before
+acting, per "How to use this."
 **Sources:** full read of all 13 pages under `website/docs/`, plus `README.md` and `AGENTS.md`,
 each claim checked against `packages/`. Overlaps independently confirmed against
 `FDC3-SAIL-REVIEW.md` (2026-07-28) are marked ✔.
@@ -29,24 +32,42 @@ each claim checked against `packages/`. Overlaps independently confirmed against
 
 ---
 
-## A. The structural defect — a middle layer with no consumers
+## A. The structural defect — a middle layer with ~~no~~ **one** consumer
 
-`SailPlatform` has **zero consumers** outside its own two tests.
+> ⚠ **Superseded in part, 2026-07-31 (`06476be62`).** The headline below — "`SailPlatform` has zero
+> consumers" — is **no longer true.** `sail-one` landed as a real shell built on `SailPlatform`:
+> `packages/sail-one/src/state/sail-host.ts:129` constructs `new SailPlatform({...})` with
+> `SailAppLauncher`, and `client-state.ts:162` persists via `SailPlatformClient`. Re-run the verify
+> command below and it now returns `sail-one` files. **What this changes:** the layer's right-to-exist
+> is settled by code, so blueprint slice 0 is reframed from a design session to a two-entry-point docs
+> task. **What it does NOT change:** the individual rows A1–A11 below are about
+> `packages/sail-finance/overview.md`, `architecture/*.md`, and `integrator-guide.md`, which still
+> describe `sail-finance` — and `sail-finance` still uses `createSailBrowserDesktopAgent`, not
+> `SailPlatform`. So those rows remain valid finance-page defects. Only the *structural framing* ("no
+> host goes through the layer", "blocks pages") is retired, and row A12 flips (see below).
+
+`SailPlatform` had **zero consumers** outside its own two tests when this register was written.
 Verify: `grep -rn "SailPlatform" packages/ --include=*.ts --include=*.tsx -l | grep -v sail-platform/`
-→ no results. ✔ (matches `FDC3-SAIL-REVIEW.md` §Final Verdict ¶2)
+→ **now returns `sail-one` files** (`sail-host.ts`, `client-state.ts`, `default-app-state.ts`, `appd/appd.tsx`,
+`config/custom-apps.tsx`, `icon/app-icon.ts`). The finance files it also returns are types/context, not a
+`new SailPlatform` construction.
 
-What `sail-finance` actually does: `packages/sail-finance/src/main.tsx:35` constructs `SailAppLauncher`;
-`:110` calls `createSailBrowserDesktopAgent({ debug, appLauncher, apps })`; `:128` passes the
-`SailDesktopAgent` into React.
+What `sail-finance` actually does (unchanged): `packages/sail-finance/src/main.tsx:35` constructs
+`SailAppLauncher`; `:110` calls `createSailBrowserDesktopAgent({ debug, appLauncher, apps })`; `:128` passes
+the `SailDesktopAgent` into React.
 
-**This is the one defect that blocks pages rather than lines.** Four pages are wrong *because* it is
-open. Do not rewrite them until blueprint slice 0 lands.
+What `sail-one` now does: `sail-host.ts:129` `new SailPlatform({...})` → `:155` `platform.start()` →
+`platform.apps.open` / `platform.intentResolver` / `platform.changeAppChannel`; `client-state.ts:162`
+`new SailPlatformClient(STORAGE_CONFIG)` for `sail_one_`-prefixed persistence.
+
+**This was the one defect that blocked pages rather than lines** — that blocker is now largely cleared by
+`sail-one`. The finance-page rows still need fixing, but slice 0 is no longer a green-field decision.
 
 | # | Page:line | Claim | Reality | Sev |
 |---|---|---|---|---|
 | A1 | `packages/sail-finance/overview.md:13` | "Hosts `SailPlatform` in the browser main window" | `main.tsx:110` calls `createSailBrowserDesktopAgent`; `SailPlatform` never constructed | WRONG |
 | A2 | `packages/sail-finance/overview.md:16`, diagram `:32-37` | Workspaces/layouts managed via `SailPlatform` | Zustand `persist` + raw `localStorage` — `sail-finance/src/stores/workspace-store.ts:4,114,192,204`. `platform.workspaces` / `platform.layouts` / `SailPlatformClient` / `LocalStorageBackend` never called | WRONG |
-| A3 | `packages/sail-finance/overview.md:32-37` | ASCII: `sail-finance → sail-platform (SailPlatform, launcher, middleware) → sail-desktop-agent` | Real edge is `sail-finance → createSailBrowserDesktopAgent + SailAppLauncher → SailDesktopAgent`. Middleware pipeline created but never wired — `sail-platform/src/sail-browser-desktop-agent.ts:80-88`, comment at `:88` | WRONG |
+| A3 | `packages/sail-finance/overview.md:32-37` | ASCII: `sail-finance → sail-platform (SailPlatform, launcher, middleware) → sail-desktop-agent` | Real edge is `sail-finance → createSailBrowserDesktopAgent + SailAppLauncher → SailDesktopAgent`. Middleware pipeline created but never wired — `sail-platform/src/sail-browser-desktop-agent.ts:80-88`, comment at `:88`. **Decided 2026-07-31: middleware is superseded by the observability seam (`.cursor/plans/agent-observability-seam.md`, `planned`) — do not document "middleware" as a live mechanism; the corrected diagram drops it** | WRONG |
 | A4 | `packages/sail-finance/overview.md:41` | "`SailDesktopAgentContext.tsx` — platform provider" | It is a `SailDesktopAgent` provider — `sail-finance/src/contexts/SailDesktopAgentContext.tsx:11` | STALE |
 | A5 | `architecture/overview.md:35-58` | 3-box stack with "Sail platform services" as mandatory middle layer | No host in this repo goes through it | WRONG |
 | A6 | `architecture/deployment-targets.md:11-25` | Same 3-layer diagram, "Layer 2: Platform SDK" | ditto | WRONG |
@@ -55,7 +76,7 @@ open. Do not rewrite them until blueprint slice 0 lands.
 | A9 | `packages/desktop-agent/integrator-guide.md:419-436` | "With `SailPlatform` (reference stack)… uses `SailPlatform.changeAppChannel`" | As A8. `ChannelSelector.tsx:23` reads `useConnectionStore`, created from the **agent** (`SailDesktopAgentContext.tsx:17`) | WRONG |
 | A10 | `packages/desktop-agent/integrator-guide.md:447-457` | Bootstrap `SailPlatform.start() → new SailDesktopAgent(...)` | `main.tsx:110` `createSailBrowserDesktopAgent(...)` | WRONG |
 | A11 | `run-sail.md:75` | Workspace/layout persistence "provided through `@finos/sail-platform`" | See A2 | WRONG |
-| A12 | `getting-started.md:51`; `integrator-guide.md:269,298-307` | Recommends `new SailPlatform({...}); platform.start()` as *the* same-page answer | API exists (`sail-platform/src/sail-platform.ts:192`) but is unexercised by any shipping host | OVERSTATED |
+| A12 | `getting-started.md:51`; `integrator-guide.md:269,298-307` | Recommends `new SailPlatform({...}); platform.start()` as *the* same-page answer | **Flipped 2026-07-31:** `sail-one` now exercises exactly this (`sail-host.ts:129,155`), so it is no longer "unexercised". But it is still OVERSTATED as *the* answer — it is one of **two** entry points, and `sail-finance` uses the other (`createSailBrowserDesktopAgent`). Fix by presenting both, not by deleting this one | OVERSTATED |
 | A13 | `packages/desktop-agent/integrator-guide.md:423` | `await platform.start()` | `sail-platform/src/sail-platform.ts:222` — `start(): void`, not a Promise | WRONG |
 
 ---
@@ -187,8 +208,9 @@ Input for blueprint slice 4. Each is load-bearing and currently undiscoverable.
 | # | Thing | Where it lives | Why it matters |
 |---|---|---|---|
 | G1 | `@finos/sail-theme` | Root `package.json:54`; referenced in `README.md:38,79`, `AGENTS.md:31`; owns the README logo | A real workspace package mentioned in **no** docs page |
-| G2 | `createSailBrowserDesktopAgent` | `sail-platform/src/sail-browser-desktop-agent.ts` | **The actual production entry point.** `platform/overview.md:69-87` files it under "(advanced)" and says "prefer `SailPlatform`" — the exact inversion of `main.tsx:110` |
-| G3 | `SailAppLauncher` + `onLaunchApp`/`onCloseApp` | `sail-platform/src/services/app-launcher/sail-app-launcher.ts`; used `main.tsx:35-99`; exported `sail-platform/src/index.ts:48` | The real host-integration seam. Every doc teaches the raw `AppLauncher` interface instead |
+| G2 | `createSailBrowserDesktopAgent` **and** `SailPlatform` | `sail-platform/src/sail-browser-desktop-agent.ts`; `sail-platform/src/sail-platform.ts` | **Updated 2026-07-31: there are two production entry points, not one.** `sail-finance/src/main.tsx:110` uses `createSailBrowserDesktopAgent`; `sail-one/src/state/sail-host.ts:129` uses `SailPlatform`. `platform/overview.md:69-87` files `createSailBrowserDesktopAgent` under "(advanced)" and says "prefer `SailPlatform`" — that framing is now half-right (`sail-one` does prefer `SailPlatform`) and half-wrong (`sail-finance` does not). Document the choice, not a single winner |
+| G3 | `SailAppLauncher` + `onLaunchApp`/`onCloseApp` | `sail-platform/src/services/app-launcher/sail-app-launcher.ts`; used by **both** shells — `sail-finance/src/main.tsx:35-99` and `sail-one/src/state/sail-host.ts:172-209`; exported `sail-platform/src/index.ts:48` | The real host-integration seam. Every doc teaches the raw `AppLauncher` interface instead |
+| G13 | `SailPlatformClient` config-backed persistence | `sail-platform`; consumed at `sail-one/src/state/client-state.ts:162` (`sail_one_` prefix, localStorage backend) | **New 2026-07-31.** The platform persistence story G6 said "isn't wired" — `sail-one` now wires it. It is the concrete contrast with `sail-finance`'s Zustand + raw `localStorage`. Document both |
 | G4 | WCP4 origin allowlist | `sail-platform/src/wcp4-origin-allowlist.ts`; `wireWcp4OriginAllowlist` at `sail-browser-desktop-agent.ts:76-78` | The one genuinely Sail-specific security control. One passing mention at `platform/overview.md:79`, no threat model. **Document that it fails open and ships unwired** — `FDC3-SAIL-REVIEW.md` Security #2 |
 | G5 | Dockview panel model + popout relay shell | `sail-finance/src/utils/dockview-popout.ts`; `bootstrapDockviewPopoutShell` (`main.tsx:12,22-23`); Zustand stores (`workspace`, `panel`, `connection`, `app-directory`, `intent-resolver`, `fdc3`, `ui`) | This **is** the product architecture. No doc describes it |
 | G6 | Workspace/layout persistence contract | `sail-finance/src/stores/workspace-store.ts:114-195` (custom serializer) | Docs point readers at a `sail-platform` storage layer that isn't wired |
