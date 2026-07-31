@@ -99,7 +99,7 @@ The following are **not** current adoption paths:
 | Cross-tab or cross-device channel sync | **Deferred** | Explicit sync/relay layer on top of browser-first DA — not by remoting the core agent |
 | Native desktop apps (native shell, C++ host) | **Future adapter** | WebSocket or platform-specific **app-connection** transport — native apps join the same channel graph; remoting the DA is not required |
 
-Framework authors may still use `new DesktopAgent()` plus `attachAppConnection()` for **unit tests** and **manual composition**. That is an advanced integration path, not a deployment fork. See [How to wire](#how-to-wire).
+This package's own tests compose `DesktopAgent` and `attachAppConnection()` directly via internal source paths — both are `@internal` and are not part of the public `@finos/sail-desktop-agent` API. That is package-internal composition, not a public integration path. See [How to wire](#how-to-wire).
 
 ### Host channel UI and `getState()`
 
@@ -414,13 +414,13 @@ channelButton.onclick = () => {
 }
 ```
 
-With **`SailPlatform`** (reference stack — wraps the same engine path):
+With **`SailPlatform`** (wraps the same engine path):
 
 ```typescript
 const platform = new SailPlatform({ appLauncher, intentResolver })
-await platform.start()
+platform.start()
 
-// In your ChannelSelector component (see packages/sail-finance/src/components/ChannelSelector.tsx):
+// In a SailPlatform-based host's channel UI component:
 const channels = platform.getUserChannels()
 const currentId = platform.getAppUserChannel(instanceId)
 await platform.changeAppChannel(instanceId, channelId) // or null to leave
@@ -431,7 +431,7 @@ platform.connector.on("channelChanged", (id, channelId) => {
 })
 ```
 
-`ChannelControl` in `host-contracts/` describes the **picker contract** (`selectChannel(request)`); wire your toolbar to call `channels.changeAppChannel` (or `platform.changeAppChannel`) with the chosen channel id. Sail web uses `SailPlatform.changeAppChannel` plus connector push events (`connection-store.ts` subscribes; `ChannelSelector.tsx` reads from the store, not `getState()`).
+`ChannelControl` in `host-contracts/` describes the **picker contract** (`selectChannel(request)`); wire your toolbar to call `channels.changeAppChannel` (or `platform.changeAppChannel`) with the chosen channel id. Sail web (`sail-finance`) uses `channels.changeAppChannel` on the `SailDesktopAgent` handle plus connector push events (`connection-store.ts` subscribes; `ChannelSelector.tsx` reads from the store, not `getState()`) — a `SailPlatform`-based host would call `platform.changeAppChannel` instead.
 
 **Injected channel iframe (uncommon):**
 
@@ -442,14 +442,14 @@ new SailDesktopAgent({
 })
 ```
 
-#### End-to-end with Sail (reference stack)
+#### End-to-end with Sail web (`sail-finance`)
 
 ```text
-SailPlatform.start()
-  → new SailDesktopAgent({ appConnectionOptions: { intentResolverUrl: false, channelSelectorUrl: false } })
-  → SailDesktopAgentProvider wires stores to platform.connector events
+createSailBrowserDesktopAgent({ appLauncher, ... })
+  → SailDesktopAgent (browser app connection starts with the agent)
+  → SailDesktopAgentProvider wires stores to agent events
   → <IntentResolverDialog /> listens via intent-resolver-store
-  → <ChannelSelector instanceId={...} /> calls platform.changeAppChannel
+  → <ChannelSelector instanceId={...} /> calls channels.changeAppChannel
 ```
 
 See `packages/sail-finance/src/contexts/SailDesktopAgentContext.tsx` for provider wiring.
@@ -542,16 +542,6 @@ const quietAgent = new SailDesktopAgent({
 })
 ```
 
-```typescript
-// Manual composition or tests — same options on DesktopAgent
-import { DesktopAgent } from "@finos/sail-desktop-agent"
-
-const agent = new DesktopAgent({
-  appLauncher,
-  heartbeatEnabled: false,
-})
-```
-
 **When to disable:** rare — e.g. local debugging, or a host that implements disconnect detection solely via [WCP6 Goodbye](https://fdc3.finos.org/docs/api/specs/webConnectionProtocol#step-5-disconnection) and port teardown. Production and conformance runs should normally leave heartbeat **enabled**; browser-resident agents often combine heartbeat with WCP6 and other signals.
 
 **Logging vs protocol:** `@finos/fdc3` `getAgent({ logLevels: { proxy: "WARN" } })` hides `"Responding to heartbeat request"` in the browser console only. It does not stop heartbeat on the wire — use `heartbeatEnabled: false` on the host agent for that.
@@ -588,7 +578,7 @@ sequenceDiagram
 | Phase | Owner | Location |
 |-------|--------|----------|
 | WCP1–3 (Hello, Handshake, MessageChannel) | **BrowserAppConnection** | `app-connection/browser-app-connection.ts`, `app-connection/wcp/wcp1-3-handshake.ts` |
-| Per-app MessagePort bridge | **BrowserAppConnection** | `app-connection/message-port-transport.ts`, `app-connection/wcp/wcp-message-routing.ts` |
+| Per-app MessagePort bridge | **BrowserAppConnection** | `app-connection/message-port.ts`, `app-connection/wcp/wcp-message-routing.ts` |
 | WCP4–5 (validate identity, validated id) | **DA** | `app-connection/wcp/wcp-identity-validation.ts`, `handlers/open/handlers.ts` |
 | WCP6 (Goodbye) | **Both** | BrowserAppConnection disconnects port; DA cleans registry |
 | DACP (open, channels, intents, …) | **DA** | `handlers/*` |
@@ -607,10 +597,9 @@ Where does the Desktop Agent run?
 │    → Implement AppLauncher (iframes + instanceId on iframe name)
 │    → Wire host UI via intentResolver, channels, apps controllers
 │
-├─ Manual composition (framework authors, edge tests)
-│    → new DesktopAgent()
-│    → attachAppConnection(customConnection)
-│    → Own lifecycle and state binding explicitly
+├─ Manual composition (package internals only — not part of the public API)
+│    → DesktopAgent and attachAppConnection() are @internal
+│    → Used by this package's own tests; SailDesktopAgent is the only supported entry point
 │
 └─ Server / worker / multi-tab / native host (not supported on v3-pre)
      → Deferred — see Server, worker, native, and multi-device paths (deferred) above
@@ -618,8 +607,7 @@ Where does the Desktop Agent run?
 
 | Integrator goal | Entry point | Avoid unless advanced |
 |-----------------|-------------|------------------------|
-| Ship a browser desktop | `SailDesktopAgent` | Manual `DesktopAgent` + app connection wiring |
-| Unit-test FDC3 handlers | `MockTransport` + `DesktopAgent` | Expecting this to prove iframe delivery |
+| Ship a browser desktop | `SailDesktopAgent` | `DesktopAgent` is package-internal — not a public entry point |
 | App connection + DA seam tests | `SailDesktopAgent` integration tests or a custom app connection | Duplicating WCP in app code |
 | Remote or multi-device DA | — (not on v3-pre) | `createWCPClient` (removed) |
 

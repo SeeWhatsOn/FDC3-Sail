@@ -10,7 +10,7 @@ Browser deployment of FDC3 Sail — a React application that hosts the Desktop A
 
 ## What it does
 
-- Hosts `SailPlatform` in the browser main window
+- Hosts a `SailDesktopAgent` (constructed via `createSailBrowserDesktopAgent`) in the browser main window
 - Renders workspace UI (tabs, panels) for FDC3 apps in iframes
 - Provides intent resolver and channel selector chrome (host-controlled UI)
 - Manages workspaces, layouts, and app directory integration
@@ -18,7 +18,7 @@ Browser deployment of FDC3 Sail — a React application that hosts the Desktop A
 ## Development
 
 ```bash
-# From monorepo root (starts agent, platform, server, and web)
+# From monorepo root (starts agent, platform API, and web)
 npm run dev
 
 # Or this package only
@@ -31,14 +31,14 @@ Dev server: **http://localhost:3000**
 
 ```text
 sail-finance (React)
-  ├── @finos/sail-platform  — SailPlatform, launcher, middleware
+  ├── @finos/sail-platform  — createSailBrowserDesktopAgent, SailAppLauncher
   │     └── @finos/sail-desktop-agent
   └── @finos/sail-theme — brand tokens + assets
 ```
 
 Reference wiring for host contracts:
 
-- `src/contexts/SailDesktopAgentContext.tsx` — platform provider
+- `src/contexts/SailDesktopAgentContext.tsx` — `SailDesktopAgent` provider
 - `src/components/ChannelSelector.tsx` — channel chrome
 - `src/stores/intent-resolver-store.ts` — intent resolution UI
 

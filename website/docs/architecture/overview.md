@@ -18,7 +18,7 @@ This page is the system map. Package APIs, source-tree diagrams, and integration
 
 ### 2. Clear package ownership
 
-- **`@finos/sail-desktop-agent`** owns FDC3 behavior: `SailDesktopAgent`, `DesktopAgent`, DACP handlers, WCP browser app connection, host contracts, and app directory logic.
+- **`@finos/sail-desktop-agent`** owns FDC3 behavior: `SailDesktopAgent`, DACP handlers, WCP browser app connection, host contracts, and app directory logic. (`DesktopAgent` is the internal base class `SailDesktopAgent` extends — it is `@internal` and not a public entry point; see [Composition & internals](../packages/desktop-agent/composition#one-construction-path).)
 - **`@finos/sail-platform`** owns Sail platform features: `SailPlatform`, workspace/layout/config APIs, product middleware, and host integration helpers.
 - **`@finos/sail-finance`** is a deployment host that provides UI, app launch surfaces, and packaging.
 
@@ -51,7 +51,7 @@ The supported v3-pre product path is a browser-resident Desktop Agent: one `Sail
 ┌─────────────────────────────────────────────────────────────┐
 │  FDC3 Desktop Agent engine                                  │
 │  @finos/sail-desktop-agent                                  │
-│  - SailDesktopAgent, DesktopAgent, DACP handlers, AgentState│
+│  - SailDesktopAgent, DACP handlers, AgentState              │
 │  - BrowserAppConnection, WCP protocol helpers               │
 │  - host contracts and app directory logic                   │
 └─────────────────────────────────────────────────────────────┘

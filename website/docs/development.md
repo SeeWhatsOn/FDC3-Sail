@@ -33,11 +33,11 @@ Always install from the **repository root**. Shared dev tooling (TypeScript, Vit
 npm run dev
 ```
 
-Starts Desktop Agent (watch), platform API (watch), server stub, and Sail web UI on **http://localhost:3000**.
+Starts Desktop Agent (watch), platform API (watch), and Sail web UI on **http://localhost:3000**.
 
 ```bash
-npm run dev:harness   # FDC3 toolbox clean room on :3001
-npm run docs:dev      # Documentation site (use --port 3002 if web app is running)
+npm run dev:conformance   # FDC3 toolbox clean room on :3001
+npm run docs:dev          # Documentation site (use --port 3002 if web app is running)
 ```
 
 ## Project Structure
@@ -51,8 +51,7 @@ FDC3-Sail/
 │   ├── sail-platform/  # Platform composition layer & transports (@finos/sail-platform)
 │   ├── sail-theme/     # Brand tokens + assets, framework-agnostic (@finos/sail-theme)
 │   ├── sail-finance/   # Browser-based finance shell (@finos/sail-finance)
-│   ├── sail-conformance-harness/  # FDC3 toolbox clean room (@finos/sail-conformance-harness)
-│   └── sail-server/    # Node.js backend server (@finos/sail-server)
+│   └── sail-conformance-harness/  # FDC3 toolbox clean room (@finos/sail-conformance-harness)
 └── website/            # Documentation (Docusaurus)
 ```
 
@@ -71,7 +70,7 @@ The main package docs focus on packages adopters are likely to use directly. The
 npm run dev
 
 # FDC3 conformance toolbox host
-npm run dev:harness
+npm run dev:conformance
 
 # Start documentation site
 npm run docs:dev
@@ -149,7 +148,7 @@ git checkout -b fix/your-bug-fix
 
 **Code Quality Requirements:**
 
-Run `npm run validate` before commits. It runs the same gate as CI: Prettier, ESLint, TypeScript, workspace build, docs build, Vitest (`npm test -- --run`), and Cucumber (`npm run test:cucumber`).
+Run `npm run validate` before commits. It runs the same gate as CI: Prettier, ESLint, package boundaries (`lint:boundaries`), TypeScript, workspace build, docs build, Vitest (`npm test -- --run`), and Cucumber (`npm run test:cucumber`).
 
 Individual steps when iterating:
 
@@ -194,7 +193,6 @@ type: brief description
 
 - **TypeScript** - Type-safe JavaScript
 - **React 19** - UI framework
-- **Socket.IO** - Real-time communication
 - **Zustand** - State management
 - **Dockview** - Workspace layout management
 - **Tailwind CSS** - Styling
@@ -204,7 +202,7 @@ type: brief description
 
 ## Publishing packages (maintainers)
 
-Public npm packages: `@finos/sail-desktop-agent` and `@finos/sail-platform`. Other workspaces are private and are not versioned or published.
+Publishable npm packages (not yet published — see the root [README status](https://github.com/finos/FDC3-Sail#status)): `@finos/sail-desktop-agent` and `@finos/sail-platform`. Other workspaces are private and are not versioned or published.
 
 Releases use [Changesets](https://github.com/changesets/changesets). Contributors do not need to add changesets; maintainers batch weekly (or per merge) on `main`.
 

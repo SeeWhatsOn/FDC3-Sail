@@ -43,7 +43,7 @@ npm install
 npm run dev
 ```
 
-This starts the Desktop Agent, platform API, server stub, and Sail web UI. Open **http://localhost:3000**.
+This starts the Desktop Agent, platform API, and Sail web UI. Open **http://localhost:3000**.
 
 ## App directory
 
@@ -65,14 +65,14 @@ Host the `packages/sail-finance/dist` output on HTTPS in production (FDC3 For-Th
 
 ## Enterprise deployment
 
-FDC3 Sail is **production-ready** for running FDC3 applications. Treat the following as **your** integration work when rolling out at enterprise scale:
+FDC3 Sail is under active development and not yet ready for production use (see the root [README status](https://github.com/finos/FDC3-Sail#status)). Treat the following as **your** integration work when rolling out at enterprise scale:
 
 - **Identity and access** — SSO, entitlements, and app directory governance
 - **Packaging and distribution** — PWA policy, MDM
 - **Operations** — monitoring, logging, incident response, version pinning
 - **Network and security** — HTTPS, origin policy, app URL allowlists
 
-The platform runs in-memory by default; persistent workspace and layout features are provided through `@finos/sail-platform` (used internally by `sail-finance`). You do not need to adopt the platform SDK separately unless you are building a custom host — see [Getting Started](./getting-started) and the [platform overview](./packages/platform/overview).
+Workspace and layout state persists via `sail-finance`'s own store (Zustand + `localStorage`) — it does not go through `@finos/sail-platform`. If you are building a custom host and want platform-backed persistence instead, see [Getting Started](./getting-started) and the [platform overview](./packages/platform/overview).
 
 ## What happens at runtime
 

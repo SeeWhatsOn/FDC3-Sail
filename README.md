@@ -136,22 +136,9 @@ npm run lint
 npm run format
 ```
 
-### Regenerating FDC3 Schemas
+### Message validation
 
-Sail validates all FDC3 Desktop Agent Communication Protocol (DACP) messages using Zod schemas auto-generated from the official FDC3 JSON schemas.
-
-**When to regenerate schemas:**
-- After updating the `@finos/fdc3-schema` package
-- When the FDC3 specification is updated
-- When adding support for new DACP message types
-
-**To regenerate schemas:**
-
-```bash
-npm run generate:schemas --workspace=@finos/sail-desktop-agent
-```
-
-The generated file (`packages/sail-desktop-agent/src/handlers/validation/dacp-schemas.ts`) should not be edited manually.
+Sail validates inbound FDC3 Desktop Agent Communication Protocol (DACP) messages against the FDC3 schema shipped by `@finos/fdc3-schema` — the same generated source the agent types against, so the check cannot drift from the FDC3 version this package targets. See `packages/sail-desktop-agent/src/dacp/validate-dacp-message.ts`.
 
 ## Package Documentation
 
@@ -160,15 +147,7 @@ The generated file (`packages/sail-desktop-agent/src/handlers/validation/dacp-sc
 
 ## npm packages
 
-Publishable libraries use **per-package git tags** (independent release cycles):
-
-```bash
-# 1. Bump version in packages/sail-desktop-agent/package.json
-git tag @finos/sail-desktop-agent@3.0.0-pre.1.0
-git push origin @finos/sail-desktop-agent@3.0.0-pre.1.0
-```
-
-Tag format: `@finos/<package-name>@<semver>`. Supported today: `@finos/sail-desktop-agent`, `@finos/sail-platform`. Requires repo secret `NPM_TOKEN`.
+Releases use [Changesets](https://github.com/changesets/changesets); maintainers batch changesets on `main` and the Release GitHub Action opens a Version Packages PR that publishes on merge. See the [Development Guide](https://finos.github.io/FDC3-Sail/docs/development#publishing-packages-maintainers) for the full process. Supported today: `@finos/sail-desktop-agent`, `@finos/sail-platform`. Requires repo secret `NPM_TOKEN`.
 
 ## Meetings
 

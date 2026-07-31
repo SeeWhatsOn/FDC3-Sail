@@ -16,7 +16,7 @@ From the monorepo root (install dependencies there — Vite, TypeScript, and Vit
 nvm use 24
 cd FDC3-Sail
 npm install
-npm run dev:harness
+npm run dev:conformance
 ```
 
 Dev server: **http://localhost:3001**

@@ -14,20 +14,17 @@ If you are an **application developer** trying to make an existing web app run i
 
 ## Choose your integration path
 
-Both paths below use **`@finos/sail-desktop-agent`** from npm. The difference is how much wiring you do yourself.
+This guide uses **`@finos/sail-desktop-agent`**'s `SailDesktopAgent` — the supported entry point for embedding a browser-ready Desktop Agent in your own host.
 
 ```mermaid
 flowchart TD
   Start([Build your own FDC3 Desktop Agent in your web app])
 
   Start --> BrowserReady["Browser-ready — SailDesktopAgent"]
-  Start --> Manual["Manual — DesktopAgent + app connection"]
 
   BrowserReady --> Package["@finos/sail-desktop-agent"]
-  Manual --> Package
 
   BrowserReady --> HostUI[AppLauncher + intentResolver, channels, apps]
-  Manual --> HostUI
 
   HostUI --> Apps["Your FDC3 apps use @finos/fdc3 — getAgent()"]
 ```
@@ -35,7 +32,6 @@ flowchart TD
 | Path | When to use | npm entry |
 |------|-------------|-----------|
 | **Browser-ready** | Most custom hosts — browser edge and Desktop Agent wired for you | `SailDesktopAgent` from `@finos/sail-desktop-agent` |
-| **Manual** | Handler-level tests or custom app-connection experiments | `DesktopAgent` plus an app connection |
 
 For composition diagrams, WCP handshake detail, and sequence flows, see the [integrator guide](./packages/desktop-agent/integrator-guide) and [composition reference](./packages/desktop-agent/composition).
 
@@ -65,6 +61,8 @@ Same-page framework components are different. A host page can technically expose
 - FDC3 web applications that use `@finos/fdc3`
 
 ## Install
+
+`@finos/sail-desktop-agent` is not yet published to npm — see the root [README status](https://github.com/finos/FDC3-Sail#status). Once published:
 
 ```bash
 npm install @finos/sail-desktop-agent @finos/fdc3

@@ -89,7 +89,7 @@ Does **not** include workspace/layout APIs or `SailPlatform` event wiring. Prefe
 ## Middleware and validation
 
 - **`MiddlewarePipeline`** — intercept DACP messages before the Desktop Agent
-- **`validateDACPMessage` / `safeParseDACPMessage`** — Zod-based DACP validation
+- **Message validation** — inbound DACP/WCP messages are checked against the FDC3 schema from `@finos/fdc3-schema`, the same mechanism `@finos/sail-desktop-agent` uses
 
 ## Re-exports
 
@@ -97,7 +97,6 @@ For convenience, commonly used sail-desktop-agent symbols are re-exported:
 
 ```typescript
 import {
-  DesktopAgent,
   SailDesktopAgent,
   createSailBrowserDesktopAgent,
 } from "@finos/sail-platform"

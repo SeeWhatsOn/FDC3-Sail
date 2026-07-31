@@ -58,11 +58,11 @@ Consider alternatives or additional work if you:
 
 - Only need back-end system integration with no linked UI (data plane only)
 - Require a mature vendor desktop with long-term support contracts today — evaluate Sail against your risk tolerance; the project is actively evolving with the standard
-- Need **enterprise packaging** out of the box (SSO, MDM distribution, hardened installers, multi-tenant ops) — Sail is **production-ready** for running FDC3 workloads, but **organisational deployment and governance** remain your integration work
+- Need **enterprise packaging** out of the box (SSO, MDM distribution, hardened installers, multi-tenant ops) — that remains your integration work regardless of which FDC3 host you choose
 
 ## Status
 
-FDC3 Sail is a **production-ready product** for hosting FDC3 applications. It implements FDC3 2.2 (DACP, WCP) and works with the standard `@finos/fdc3` client library unchanged. Packaging Sail as an **enterprise system** — identity, deployment pipelines, operational monitoring, and IT policy — is a separate layer of work for your organisation.
+FDC3 Sail is **under active development** and not yet ready for production use (see the root [README](https://github.com/finos/FDC3-Sail#status)). It implements FDC3 2.2 (DACP, WCP) and works with the standard `@finos/fdc3` client library unchanged. Packaging Sail as an **enterprise system** — identity, deployment pipelines, operational monitoring, and IT policy — is a separate layer of work for your organisation.
 
 ## Choose your path
 
@@ -81,13 +81,10 @@ flowchart TD
   Run --> Web["Browser / PWA — @finos/sail-finance"]
 
   Build --> BrowserAgent["Browser-ready — SailDesktopAgent"]
-  Build --> Manual["Advanced — DesktopAgent + app connection"]
 
   BrowserAgent --> Package["@finos/sail-desktop-agent"]
-  Manual --> Package
 
   BrowserAgent --> HostUI[You provide: app launcher, intent UI, channel UI]
-  Manual --> HostUI
 
   Web --> Apps
   HostUI --> Apps
@@ -99,7 +96,7 @@ flowchart TD
 |------------|--------|
 | **Add an existing web app to Sail or another FDC3 Desktop Agent** | [Add your app to Sail](./add-your-app) |
 | **Run or host the full FDC3 Sail platform** (browser or desktop, minimal custom code) | [Run Sail](./run-sail) |
-| **Build my own FDC3 Desktop Agent** inside my web app (`SailDesktopAgent` first, manual wiring for advanced cases) | [Getting Started](./getting-started) |
+| **Build my own FDC3 Desktop Agent** inside my web app (`SailDesktopAgent`) | [Getting Started](./getting-started) |
 | **Contribute to or build Sail from source** | [Development Guide](./development) |
 
 ## Features
@@ -111,4 +108,4 @@ flowchart TD
 
 ## Documentation policy
 
-The **Docusaurus site** (`website/docs/`) is the single source of truth for package documentation. npm `README.md` files in each package are brief summaries that link here.
+The **Docusaurus site** (`website/docs/`) is the single source of truth for all documentation. npm `README.md` files in each package are brief summaries that link here.
