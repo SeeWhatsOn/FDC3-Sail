@@ -30,61 +30,19 @@
 
 If you are new to FDC3, start with the [FDC3 website](https://fdc3.finos.org).
 
-FDC3 Sail is a fully open source implementation of the [FDC3](https://fdc3.finos.org) interoperability standard. It provides:
+FDC3 Sail is an open source implementation of the [FDC3](https://fdc3.finos.org) interoperability standard: a browser-first FDC3 2.2 **Desktop Agent** (`@finos/sail-desktop-agent`) that other packages compose into a broader **interoperability platform** (`@finos/sail-platform`) and two example shells. For how the pieces fit together — package ownership, entry points, and what's implemented vs. planned — see the [Architecture Overview](https://finos.github.io/FDC3-Sail/docs/architecture/overview) on the documentation site; this README does not repeat it.
 
-- A **browser-first FDC3 2.2 Desktop Agent** (`@finos/sail-desktop-agent`) — one agent per host page, ready to use as-is
-- A **browser-based deployment** (`sail-finance`) where the Desktop Agent runs inside a browser tab and manages FDC3 apps in iframes
-- A **platform SDK** (`@finos/sail-platform`) with middleware, app launcher, and Sail-specific integrations
-- A **shared brand theme** (`@finos/sail-theme`) of design tokens and assets; each shell owns its shadcn/ui components
-
-## Architecture
-
-The Desktop Agent runs in the browser tab alongside the apps it serves. It owns the
-app-connection edge — there is no transport layer to configure or swap.
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  FDC3 Apps (iframes / windows)                                          │
-│  Connect via @finos/fdc3 — await fdc3.getAgent()                        │
-│  fdc3.raiseIntent(), fdc3.broadcast(), fdc3.getInfo(), etc.             │
-└────────────────────────────────┬────────────────────────────────────────┘
-                                 │ Web Connection Protocol (WCP1–6)
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  SailDesktopAgent  (@finos/sail-desktop-agent)                          │
-│                                                                         │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │ BrowserAppConnection — WCP handshake, one MessagePort per app     │  │
-│  │ AppConnectionRegistry — instanceId → MessagePort                  │  │
-│  └───────────────────────────────┬───────────────────────────────────┘  │
-│                                  │ DACP                                 │
-│  ┌───────────────────────────────▼───────────────────────────────────┐  │
-│  │ DACP handlers — intents, channels, open, findInstances…           │  │
-│  │ AgentState — app instances, channels, intent listeners            │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-│                                                                         │
-│  Host contracts: AppLauncher · intentResolver · channels · apps         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-Your host shell implements `AppLauncher` (mount the iframe) and wires UI through the
-grouped controllers. Everything above is internal to the agent.
-
-### Packages
+### Packages and apps
 
 | Package | Description |
 |---|---|
 | [`packages/sail-desktop-agent`](packages/sail-desktop-agent/) | Browser-first FDC3 2.2 Desktop Agent |
-| [`packages/sail-platform`](packages/sail-platform/) | Platform SDK — Sail middleware, app launcher, integrations |
+| [`packages/sail-platform`](packages/sail-platform/) | Composition layer — host UI seams, pluggable storage, lifecycle |
 | [`packages/sail-theme`](packages/sail-theme/) | Shared brand theme — design tokens and assets |
+| [`packages/sail-finance`](packages/sail-finance/) | Example shell — finance-specific workspace dashboard |
+| [`packages/sail-one`](packages/sail-one/) | Example shell — domain-neutral tab-and-grid canvas |
 
-### Apps
-
-| App | Description |
-|---|---|
-| [`packages/sail-finance`](packages/sail-finance/) | Browser deployment — React app hosting the Desktop Agent |
-
-Documentation lives at **[https://finos.github.io/FDC3-Sail/docs/](https://finos.github.io/FDC3-Sail/docs/)** (built from [`website/`](website/) via GitHub Pages).
+Full documentation, including per-package guides, lives at **[https://finos.github.io/FDC3-Sail/docs/](https://finos.github.io/FDC3-Sail/docs/)** (built from [`website/`](website/) via GitHub Pages).
 
 ## Prerequisites
 
@@ -107,47 +65,11 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 in your browser. FDC3 apps loaded in iframes will connect automatically via WCP.
+Open http://localhost:3000 in your browser. FDC3 apps loaded in iframes will connect automatically via WCP. (To run the `sail-one` shell instead, use `npm run dev:one` — see the [Development Guide](https://finos.github.io/FDC3-Sail/docs/development) for details and every other command.)
 
 ## Development
 
-### Build All Packages
-
-```bash
-npm run build
-```
-
-### Run All Tests
-
-```bash
-npm test
-```
-
-### Type Check
-
-```bash
-npm run typecheck
-```
-
-### Lint and Format
-
-```bash
-npm run lint
-npm run format
-```
-
-### Message validation
-
-Sail validates inbound FDC3 Desktop Agent Communication Protocol (DACP) messages against the FDC3 schema shipped by `@finos/fdc3-schema` — the same generated source the agent types against, so the check cannot drift from the FDC3 version this package targets. See `packages/sail-desktop-agent/src/dacp/validate-dacp-message.ts`.
-
-## Package Documentation
-
-- [`sail-desktop-agent` README](packages/sail-desktop-agent/README.md) — FDC3 Desktop Agent API and host contracts
-- [`sail-platform` README](packages/sail-platform/README.md) — Middleware, app launcher, Sail platform integrations
-
-## npm packages
-
-Releases use [Changesets](https://github.com/changesets/changesets); maintainers batch changesets on `main` and the Release GitHub Action opens a Version Packages PR that publishes on merge. See the [Development Guide](https://finos.github.io/FDC3-Sail/docs/development#publishing-packages-maintainers) for the full process. Supported today: `@finos/sail-desktop-agent`, `@finos/sail-platform`. Requires repo secret `NPM_TOKEN`.
+This repository is documented on the site, not in this README: environment setup, the full command reference (build, test, lint, typecheck), code quality gates, and the npm publishing process all live in the [Development Guide](https://finos.github.io/FDC3-Sail/docs/development).
 
 ## Meetings
 
@@ -178,6 +100,8 @@ FDC3 is an open standard; other desktop agents are listed on the [FDC3 website](
 4. Commit your changes (`git commit -am 'Add some fooBar'`)
 5. Push to the branch (`git push origin feature/fooBar`)
 6. Create a new Pull Request
+
+See the [Development Guide](https://finos.github.io/FDC3-Sail/docs/development) for environment setup and the commands to run before opening a PR.
 
 _NOTE:_ Commits and pull requests to FINOS repositories will only be accepted from those contributors with an active, executed Individual Contributor License Agreement (ICLA) with FINOS OR who are covered under an existing and active Corporate Contribution License Agreement (CCLA) executed with FINOS. Commits from individuals not covered under an ICLA or CCLA will be flagged and blocked by the FINOS Clabot tool (or [EasyCLA](https://github.com/finos/community/blob/master/governance/Software-Projects/EasyCLA.md)). Please note that some CCLAs require individuals/employees to be explicitly named on the CCLA.
 

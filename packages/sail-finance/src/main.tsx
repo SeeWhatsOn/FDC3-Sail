@@ -8,13 +8,14 @@ import {
 import type { AppMetadata } from "@finos/fdc3"
 
 import { loadConformanceApplications } from "../../sail-conformance-harness/src/conformance-app-directory"
-import defaultAppDirectory from "../fixtures/default-app-directory.json"
 import { bootstrapDockviewPopoutShell, isDockviewPopoutShell } from "./utils/dockview-popout"
 
 import "./index.css"
 import App from "./App"
 import { useWorkspaceStore } from "./stores/workspace-store"
 import { ChannelSelectorTestPage } from "./tests/ChannelSelectorTestPage"
+
+const FINOS_APP_DIRECTORY_URL = "https://directory.fdc3.finos.org/v2/apps"
 
 const isChannelSelectorE2e =
   new URLSearchParams(window.location.search).get("e2e") === "channel-selector"
@@ -110,10 +111,8 @@ if (isDockviewPopoutShell()) {
   const agent = createSailBrowserDesktopAgent({
     debug: true,
     appLauncher,
-    apps: [
-      ...defaultAppDirectory.applications,
-      ...conformance.applications,
-    ] as unknown as DirectoryApp[],
+    appDirectories: [FINOS_APP_DIRECTORY_URL],
+    apps: [...conformance.applications],
   })
 
   console.log("[Sail] FDC3 Browser Desktop Agent started and listening for connections")

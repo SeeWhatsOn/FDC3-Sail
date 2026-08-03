@@ -9,7 +9,7 @@
       "@/*": ["./src/*"]
     },
     "outDir": "./dist",
-    "types": ["vitest/globals"],
+    "types": ["node", "vitest/globals"],
     "noEmit": true,
     "skipLibCheck": true
   },
