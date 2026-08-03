@@ -525,10 +525,10 @@ Docs, so "tests" means mechanical checks. Risk-based, not exhaustive.
 - [x] 2 — Spine page + status marker convention (`bf71283d1`; build gate still owed — see Verification Notes)
 - [x] 2b — Front door: newcomer funnel + "how to consume" (`d01a3d31a`; framing corrected `9897b48ac`)
 - [x] 3 — Package pages reconciled (`d86f26642`; build gate still owed)
-- [ ] 4 — Undocumented load-bearing pieces
-- [ ] 4b — Contributor/build/governance docs consolidated onto the site; repo files stubbed
-- [ ] 5 — Generated conformance inventory
-- [ ] 6 — Snippet + link guardrails in CI
+- [x] 4 — Undocumented load-bearing pieces (`7e6f38993`)
+- [x] 4b — Contributor/build/governance docs consolidated onto the site (`7e6f38993`; README done independently in `b11126123`)
+- [x] 5 — Generated conformance inventory (`7e6f38993`)
+- [ ] 6 — Snippet + link guardrails in CI **— last remaining slice**
 
 ## Verification Notes
 
@@ -597,6 +597,31 @@ Docs, so "tests" means mechanical checks. Risk-based, not exhaustive.
   parameter, which are mid-change in an uncommitted working tree (maintainer's own WIP, left untouched).
   **Noted, not fixed (out of slice):** `architecture/channel-selection.md` shows
   `platform.start({ onChannelChanged: ... })` — config goes to the constructor, not `start()`. Assign it.
+
+- **Slices 4 / 4b / 5 (2026-08-03, `7e6f38993`):** run as three parallel sonnet writers partitioned by
+  file ownership, with `sidebars.ts` reserved to the orchestrator so they could not collide. 790 ins /
+  52 del across 16 files.
+  - **4:** new `architecture/security.md` (WCP4 allowlist — documented as **failing open** when
+    `allowedOrigins` is unset, set by neither shell, and absent from `SailPlatform` entirely),
+    `packages/sail-theme/overview.md`, `packages/sail-finance/panel-architecture.md` (Dockview model +
+    popout relay). `SailAppLauncher` promoted as the host seam.
+  - **4b:** `development.md`, `CONTRIBUTING.md`, `.github/CODE_OF_CONDUCT.md` (D-8 stale name).
+  - **5:** generator at `website/scripts/generate-conformance-inventory.mjs`, `--check` wired into both
+    `validate` scripts so the inventory cannot drift.
+  - **Counts independently re-verified by the orchestrator, not taken on the writer's word:** 154
+    scenarios / 17 feature files; 11 files tagged `@fdc3_2.2`; 116 scenario-level `@fdc3_2.0`; no
+    `Scenario Outline`. The old page claimed 103 across 12 files and cited three non-existent features.
+  - **Verification:** all 111 links + 44 anchors across 20 pages resolve (programmatic, `github-slugger`);
+    generator `--check` run for real; fences and MDX hazards clean on every new page.
+
+- **Mid-delivery collision (2026-08-03):** a parallel session merged `b11126123` into `wip/v3-local`
+  while these writers were running. It committed the maintainer's `sail-finance` WIP, added
+  `MAINTAINERS.md` and `.cursor/plans/draft-pr-readiness.md`, and **independently rewrote `README.md`
+  into a site-linking stub — the same goal as slice 4b**, overwriting 4b's version. Duplicated effort,
+  not lost work. Two lessons recorded: (1) `sail-finance/src/main.tsx` shifted by one line, invalidating
+  every `main.tsx:NN` citation — those are now dropped repo-wide rather than re-pinned; (2) that merge's
+  own plan opens with a **`BLOCKER`: the branch is ~9 months stale, 22 upstream commits missing.** That
+  is outside this docs delivery but sits above it in priority.
 
 ## Review Notes
 
