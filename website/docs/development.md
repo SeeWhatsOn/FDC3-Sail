@@ -8,6 +8,8 @@ This guide is for **contributors** who clone the FDC3-Sail monorepo and work on 
 
 If you want to **run the Sail platform** without contributing, see [Run Sail](./run-sail). If you want to **embed a Desktop Agent in your own web app**, see [Getting Started](./getting-started).
 
+For the contribution process, CLA requirements, and project governance (maintainer roles and voting), see [CONTRIBUTING.md](https://github.com/finos/FDC3-Sail/blob/main/CONTRIBUTING.md) in the repository — this guide covers only the technical side: environment setup, commands, and code quality gates.
+
 ## Prerequisites
 
 - Node.js **24+**
@@ -50,7 +52,8 @@ FDC3-Sail/
 │   ├── sail-desktop-agent/  # Pure FDC3 2.2 Desktop Agent (@finos/sail-desktop-agent)
 │   ├── sail-platform/  # Platform composition layer & transports (@finos/sail-platform)
 │   ├── sail-theme/     # Brand tokens + assets, framework-agnostic (@finos/sail-theme)
-│   ├── sail-finance/   # Browser-based finance shell (@finos/sail-finance)
+│   ├── sail-finance/   # Browser-based finance-specific shell (@finos/sail-finance)
+│   ├── sail-one/       # Browser-based domain-neutral shell (@finos/sail-one)
 │   └── sail-conformance-harness/  # FDC3 toolbox clean room (@finos/sail-conformance-harness)
 └── website/            # Documentation (Docusaurus)
 ```
@@ -66,8 +69,11 @@ The main package docs focus on packages adopters are likely to use directly. The
 ### Development
 
 ```bash
-# Start browser-based development (most common)
+# Start browser-based development (most common) — sail-finance shell
 npm run dev
+
+# Same, but with the sail-one shell instead of sail-finance
+npm run dev:one
 
 # FDC3 conformance toolbox host
 npm run dev:conformance

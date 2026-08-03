@@ -89,7 +89,7 @@ want the package to own**, not by which shell in this repo happened to pick whic
 
 - **`createSailBrowserDesktopAgent`** — reach for this when you want a standards-compliant FDC3 Desktop
   Agent and nothing else: you already have state management, persistence, and UI, and you'll bind the
-  agent's controllers yourself. This is what `sail-finance` calls (`sail-finance/src/main.tsx:110`).
+  agent's controllers yourself. This is what `sail-finance` calls (`sail-finance/src/main.tsx`).
 - **`SailPlatform`** — reach for this when you want the agent *plus* host scaffolding: pluggable
   persistence for workspaces and layouts, lifecycle callbacks instead of manual controller wiring, the
   intent-resolver and channel-selector seams, and a place for the `[planned]` services tier to arrive
@@ -178,7 +178,7 @@ the low-level contract the engine calls (`launch`/`close`); `SailAppLauncher` (f
 `@finos/sail-platform`) is the supplied implementation of it — give it `onLaunchApp` and `onCloseApp`
 callbacks and it handles instance-id generation and delegation for you. Both shells in this repo
 construct a `SailAppLauncher` rather than implementing `AppLauncher` by hand
-(`sail-finance/src/main.tsx:35`, `sail-one/src/state/sail-host.ts:172`).
+(`sail-finance/src/main.tsx`, `sail-one/src/state/sail-host.ts:172`).
 
 Because Sail hosts control their own UI, both entry points disable the agent's injected-iframe intent
 resolver and channel-selector surfaces by default (`getIntentResolverUrl: () => false`,
@@ -255,5 +255,7 @@ Treat this as the executable version of the rules on this page, not a restatemen
 
 - [Deployment targets](./deployment-targets) — browser host deployment and the future native-shell direction.
 - [Channel selection](./channel-selection) — host chrome vs app-hosted channel selector flows.
+- [WCP4 origin allowlist](./security) — the one Sail-specific security control, and why it fails open by default.
 - [@finos/sail-desktop-agent](../packages/desktop-agent/overview) — FDC3 engine, integrator guide, and composition diagrams.
 - [@finos/sail-platform](../packages/platform/overview) — Sail platform services and host integration APIs.
+- [@finos/sail-theme](../packages/sail-theme/overview) — the shared design-token package the two shells and this site draw from.

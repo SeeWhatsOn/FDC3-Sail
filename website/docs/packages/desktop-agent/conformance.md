@@ -2,47 +2,171 @@
 sidebar_position: 4
 ---
 
-# FDC3 2.2 conformance traceability map
+# FDC3 conformance traceability
 
-This document maps FINOS FDC3 2.2 interop / conformance pack areas to in-repo Cucumber BDD scenarios under `packages/sail-desktop-agent/test/features/`. Scenarios tagged `@fdc3_2.2` are explicit pack alignments; the current inventory is listed below. Scenarios tagged `@fdc3_3.0` include the full 2.2 surface plus `close.feature` (2 scenarios). Use `@fdc3_2.0` on scenarios for FDC3 2.0-era API behavior. Status is honest: `covered` means representative `@fdc3_2.2` scenarios exist and pass in CI; `partial` means gaps remain; `missing` means no BDD yet; `n/a` means outside the FDC3 2.2 public API conformance surface (e.g. Sail WCP browser app connection).
+This page maps FDC3 conformance surface to two distinct signals, and is careful not to conflate
+them:
 
-| Conformance area | Feature file + scenario | Status | Notes/slug |
+1. **Cucumber BDD scenarios** under `packages/sail-desktop-agent/test/features/` — fast,
+   `MockTransport`-based tests of `SailDesktopAgent` behavior, tagged by FDC3 version
+   (`@fdc3_2.0`, `@fdc3_2.2`, `@fdc3_3.0`). This is what most of this page documents, and it is
+   **generated from the feature files themselves** (see below) so it cannot drift the way a
+   hand-maintained inventory did.
+2. **The FINOS FDC3 conformance toolbox**, run live in a browser against
+   `@finos/sail-conformance-harness` — a different, browser/WCP-integrated signal with its own
+   pass/fail exports. See [@finos/sail-conformance-harness](../conformance-harness/overview) for
+   how that harness is wired, and [Conformance baseline status](#conformance-baseline-status)
+   below for why this page does not currently state a pass rate.
+
+For how `@finos/sail-desktop-agent` fits into the rest of the stack, see the
+[architecture overview](../../architecture/overview) — this page does not restate that.
+
+## Generated tag inventory
+
+<!-- GENERATED:CONFORMANCE-INVENTORY:START -->
+
+_This section is generated from `packages/sail-desktop-agent/test/features/` — do not hand-edit between the markers. Regenerate with `npm run conformance:inventory --workspace=@finos/sail-docs` (see `website/scripts/generate-conformance-inventory.mjs`)._
+
+**17 feature files** under `test/features/` today: **11** carry `@fdc3_2.2` (the 2.2 pack, 136 scenarios), and **6** more are `@fdc3_3.0`-only (18 scenarios) — the 3.0 profile runs both, **154** scenarios total. `@fdc3_2.0` is a scenario-level tag inside the 2.2 files marking scenarios also valid under FDC3 2.0 (**116** scenarios across **10** files).
+
+#### `@fdc3_2.2` feature files
+
+| Feature file | `@fdc3_2.2` scenarios | of which `@fdc3_2.0` |
+| --- | --- | --- |
+| `test/features/apps/apps.feature` | 17 | 16 |
+| `test/features/apps/disconnect-cleanup.feature` | 3 | 3 |
+| `test/features/channels/app-channels.feature` | 16 | 16 |
+| `test/features/channels/private-channel.feature` | 13 | 11 |
+| `test/features/channels/user-channels.feature` | 20 | 19 |
+| `test/features/context/broadcast.feature` | 7 | 4 |
+| `test/features/context/event-listeners.feature` | 8 | — |
+| `test/features/intents/find-intent.feature` | 20 | 18 |
+| `test/features/intents/intent-result.feature` | 6 | 6 |
+| `test/features/intents/raise-intent-with-context.feature` | 10 | 9 |
+| `test/features/intents/raise-intent.feature` | 16 | 14 |
+
+**Total: 136 scenarios across 11 files.**
+
+#### `@fdc3_3.0`-only feature files (no `@fdc3_2.2` tag)
+
+| Feature file | `@fdc3_3.0` scenarios |
+| --- | --- |
+| `test/features/apps/close.feature` | 2 |
+| `test/features/context/context-metadata.feature` | 2 |
+| `test/features/intents/intent-context-metadata.feature` | 2 |
+| `test/features/intents/intent-listener-conflict.feature` | 7 |
+| `test/features/intents/intent-metadata-performance.feature` | 2 |
+| `test/features/intents/intent-result-metadata.feature` | 3 |
+
+**Total: 18 scenarios across 6 files.**
+
+#### Run by profile (`packages/sail-desktop-agent/cucumber.yml`)
+
+```bash
+cd packages/sail-desktop-agent
+npx cucumber-js --profile fdc3-2.2   # 136 scenarios
+npx cucumber-js --profile fdc3-3.0   # 154 scenarios
+npx cucumber-js --profile fdc3-2.0   # 116 scenarios
+```
+
+<!-- GENERATED:CONFORMANCE-INVENTORY:END -->
+
+## What the FDC3-version tags mean
+
+- **`@fdc3_2.2`** — the current FDC3 2.2 conformance pack surface: user/app/private channels,
+  broadcast, event listeners, intents (raise, raise-for-context, find, result), apps (metadata,
+  open, findInstances), and disconnect/cleanup behavior.
+- **`@fdc3_3.0`** — every `@fdc3_2.2` scenario (3.0 is a superset for this surface) **plus**
+  scenarios that only make sense under 3.0: `fdc3.close`, `ContextMetadata`/`traceId` on
+  broadcast and intent events, intent-listener-conflict detection, intent-result metadata
+  (`getResultMetadata`), and two performance-budget guards. These live in their own feature
+  files (listed below) and carry no `@fdc3_2.2` tag, because the behavior they assert
+  (e.g. `IntentListenerConflict`) does not exist in the 2.2 API.
+- **`@fdc3_2.0`** — a scenario-level tag *inside* the `@fdc3_2.2` files, marking the subset of
+  scenarios whose asserted behavior is also valid under the older FDC3 2.0 API shape (no
+  `ContextMetadata`, no `MalformedContext` guards on every path, etc.). It is not a separate
+  feature-file set — it is a same-file, same-scenario overlay.
+
+Each version has a matching `cucumber.yml` profile (`fdc3-2.0`, `fdc3-2.2`, `fdc3-3.0`) that
+filters by tag; the generated section above lists the exact scenario counts each profile runs
+today.
+
+## Conformance area traceability (Cucumber BDD)
+
+Status is honest: **covered** means representative `@fdc3_2.2` scenarios exist and pass in CI;
+**partial** means real gaps remain (most commonly: the Cucumber suite uses `MockTransport`, so it
+cannot exercise the live-browser WCP path the toolbox does); **missing** means no BDD coverage at
+all; **n/a** means outside the FDC3 conformance pack's public-API surface.
+
+| Conformance area | Feature file | Status | Notes |
 |---|---|---|---|
-| DesktopAgent.getInfo / implementation metadata | `test/features/basic/basic.feature` — GetInfo returns implementation metadata; GetInfo returns optionalFeatures capability flags | partial | Core metadata assertions covered. Toolbox `GetInfo2` timed out in the browser/WCP harness path; owner: **bdd-wcp-integration-scenario**, final attribution in **harness-toolbox-rerun-baseline** |
-| User channels (list, join, leave, current) | `test/features/channels/user-channels.feature` — User channels include displayMetadata for all predefined channels; Current context is delivered when joining a user channel; Broadcasting on a user channel does not echo back to the sender | partial | 14 `@fdc3_2.2` MockTransport scenarios cover API behavior. Toolbox user-channel delivery and ContextMetadata require browser/WCP regression; owners: **bdd-wcp-integration-scenario**, **bind-host-instance-id-at-wcp4**, **context-metadata-conformance-bdd** |
-| App channels (create, broadcast, listeners) | `test/features/channels/app-channels.feature` — Broadcasting context on an app channel; Listener subscribed after two broadcasts only receives subsequent broadcasts; getCurrentContext returns latest after multiple broadcasts in order | partial | 11 `@fdc3_2.2` MockTransport scenarios cover API behavior. Toolbox app-channel delivery still depends on WCP/browser instance routing; owners: **bdd-wcp-integration-scenario**, **bind-host-instance-id-at-wcp4** |
-| Private channels | `test/features/channels/private-channel.feature` — Null lifecycle listener receives addContextListener unsubscribe and disconnect events; Disconnecting from a channel sends unsubscribe and disconnect messages | covered | 4 `@fdc3_2.2` scenarios |
-| Context broadcast (user channel) | `test/features/context/broadcast.feature` — Broadcast Event Includes OriginatingApp Metadata; Broadcast Is A No-Op When Not Joined To A User Channel | covered | MockTransport originatingApp and no-op behavior; malformed-context error row covered separately below |
-| ContextMetadata on broadcast (`fdc3.contextMetadata`) | `test/features/context/broadcast.feature` — Broadcast Event Includes ContextMetadata With Source And Timestamp | covered | Asserts `metadata.source` (`@finos/fdc3` `ContextMetadata`) and `metadata.timestamp` on `broadcastEvent` DACP payload (mirrors `originatingApp` + `meta.timestamp`; toolbox `UCContextMetadataOnBroadcast` still needs WCP/harness re-run — **harness-toolbox-rerun-baseline**, **bdd-wcp-integration-scenario**) |
-| Context / event listeners | `test/features/context/event-listeners.feature` — Receiving channelChanged event when another app joins a channel; addEventListener with null type subscribes to all event types | covered | Listener creation smoke in `test/features/basic/basic.feature` — Context listener for a specific type can be created |
-| raiseIntent | `test/features/intents/raise-intent.feature` — Raising an intent that should auto-resolve (only one option); User Cancels The Intent Resolver Returns UserCancelledResolution; Raising An Intent With Malformed Context Returns MalformedContext | partial | MockTransport scenarios cover core behavior, but toolbox launch/delivery rows require host-id/WCP routing and targeted error-code assertions; owners: **fix-cucumber-raise-intent-launch-correlation**, **bind-host-instance-id-at-wcp4**, **fdc3-error-enum-boundary-tests** |
-| ContextMetadata on intent (`fdc3.intentContextMetadata`) | `test/features/intents/raise-intent.feature` — Intent Event Includes ContextMetadata With Source And Timestamp | covered | Asserts `metadata.source` and `metadata.timestamp` on `intentEvent` DACP payload (mirrors `originatingApp` + `meta.timestamp`; toolbox `IntentContextMetadata` still needs WCP/harness re-run — **harness-toolbox-rerun-baseline**, **bdd-wcp-integration-scenario**) |
-| raiseIntentForContext | `test/features/intents/raise-intent-with-context.feature` — Raising An Intent With Context To A Running App; User Cancels The Intent Resolver Returns UserCancelledResolution | partial | MockTransport scenarios cover running-app behavior. Toolbox launch delivery and context metadata require WCP/browser evidence; owners: **bdd-wcp-integration-scenario**, **context-metadata-conformance-bdd** |
-| findIntent / findIntentByContext | `test/features/intents/find-intent.feature` — Successful Find Intents Request; Find Intents by Context Request; Find Intent With Malformed Context Returns MalformedContext | partial | API-area coverage exists, but toolbox oracle checks directory `displayName`, dedupe counts, and `NoAppsFound` error paths; owners: **fix-intent-discovery-displayname-dedupe**, **toolbox-bdd-metadata-assertions**, **fdc3-error-enum-boundary-tests** |
-| Intent resolution / IntentResult | `test/features/intents/intent-result.feature` — App Returns An Intent Result; IntentResolution.getResult() rejects with NoResultReturned when handler returns nothing | partial | MockTransport result behavior covered. Toolbox result rows fail through launch/WCP delivery; owners: **fix-cucumber-raise-intent-launch-correlation**, **bdd-wcp-integration-scenario** |
-| Apps (metadata, open, open with context, findInstances) | `test/features/apps/apps.feature` — Opening An App; Opening An App With Context; Find Instances with Some Apps Running; Opening An App With Malformed Context Returns MalformedContext | partial | API-area coverage exists, but toolbox oracle requires `desktopAgent`, host-assigned instance id adoption, open-with-context delivery, and WCP-backed `findInstances`; owners: **fix-app-metadata-desktop-agent-field**, **toolbox-bdd-metadata-assertions**, **bind-host-instance-id-at-wcp4**, **bdd-wcp-integration-scenario** |
-| Disconnect / lifecycle cleanup | `test/features/apps/disconnect-cleanup.feature` — Apps that disconnect and reconnect to the DA should receive one copy of a broadcast message from an app channel as state was cleaned up; Disconnecting from the DA when subscribed to a private channel channel sends unsubscribe and disconnect messages | partial | P0 source/open-with-context gaps in `test/features/apps/disconnect-cleanup-p0.feature` (not `@fdc3_2.2`) — **extend-cleanup-source-and-open-with-context** |
-| FDC3 error enums (ResolveError, OpenError, ChannelError, …) | `test/features/intents/raise-intent.feature` — Raising An Intent With Malformed Context Returns MalformedContext; `test/features/apps/apps.feature` — Opening A Missing App; `test/features/context/broadcast.feature` — Broadcast With Malformed Context Returns MalformedContext Error | partial | Many scenarios assert error names ad hoc; systematic boundary matrix — **fdc3-error-enum-boundary-tests** |
-| WCP browser app connection | — | partial | Cucumber uses `MockTransport`; no `@fdc3_2.2` WCP path — **bdd-wcp-integration-scenario** |
-| Heartbeat / liveness (Sail infrastructure) | `test/features/infrastructure/heartbeat.feature` — App Responds to heartbeats; App Doesn't Respond to heartbeats | n/a | WCP6 heartbeat is Sail transport hygiene, not FDC3 2.2 public API pack; test hygiene — **audit-heartbeat-disconnect-cleanup** |
+| `getInfo` / implementation metadata | `apps/apps.feature` | partial | Core metadata assertions covered by Cucumber; the live-toolbox path is a separate, unmeasured signal — see [Conformance baseline status](#conformance-baseline-status) |
+| User channels (list, join, leave, current, `displayMetadata`) | `channels/user-channels.feature` | covered | MockTransport coverage of API behavior |
+| App channels (create, broadcast, listeners) | `channels/app-channels.feature` | covered | MockTransport coverage of API behavior |
+| Private channels | `channels/private-channel.feature` | covered | Includes `AccessDenied` grant checks |
+| Context broadcast (user channel) | `context/broadcast.feature` | covered | Includes `MalformedContext` and no-op-when-not-joined paths |
+| `ContextMetadata` on broadcast (`fdc3.contextMetadata`) | `context/broadcast.feature`, `context/context-metadata.feature` (`@fdc3_3.0`) | covered | `context-metadata.feature` also asserts app-provided `traceId` propagation, a 3.0-only behavior |
+| Context / event listeners | `context/event-listeners.feature` | covered | Includes `channelChanged`, null-type "listen to everything", and error paths for unsupported event types |
+| `raiseIntent` | `intents/raise-intent.feature` | covered | Auto-resolve, resolver UI, cancellation, and `MalformedContext` paths |
+| `ContextMetadata` on intent (`fdc3.intentContextMetadata`) | `intents/raise-intent.feature`, `intents/intent-context-metadata.feature` (`@fdc3_3.0`) | covered | 3.0-only file also asserts `traceId` propagation |
+| `raiseIntentForContext` | `intents/raise-intent-with-context.feature` | covered | Running/non-running app targeting, resolver UI, `MalformedContext` |
+| `findIntent` / `findIntentByContext` | `intents/find-intent.feature` | covered | Includes result-type/channel filters and `NoAppsFound` paths |
+| Intent resolution / `IntentResolution.getResult()` | `intents/intent-result.feature` | covered | Includes `NoResultReturned` and `IntentHandlerRejected` rejection paths |
+| Intent listener conflict (`IntentListenerConflict`) | `intents/intent-listener-conflict.feature` (`@fdc3_3.0` only) | covered | 3.0-only — the 2.2 API has no conflict detection to test |
+| Intent result metadata (`getResultMetadata`) | `intents/intent-result-metadata.feature` (`@fdc3_3.0` only) | covered | 3.0-only — covers void, context, and `ContextWithMetadata` result shapes |
+| `fdc3.close` | `apps/close.feature` (`@fdc3_3.0` only) | covered | Success path and `ErrorOnClose` |
+| Apps (metadata, open, open with context, `findInstances`) | `apps/apps.feature` | covered | Includes `ErrorOnLaunch` and `MalformedContext` paths |
+| Disconnect / lifecycle cleanup | `apps/disconnect-cleanup.feature` | covered | Broadcast and intent-result state cleanup on reconnect |
+| FDC3 3.0 metadata performance guards | `intents/intent-metadata-performance.feature` (`@fdc3_3.0` + `@performance`) | covered | Budget assertions, not correctness assertions — a different kind of check from the rows above |
+| WCP browser app connection | — | missing | Cucumber uses `MockTransport`; there is no `@fdc3_2.2`/`@fdc3_3.0` scenario that exercises the real WCP/`postMessage` path. This is exactly the gap the toolbox (browser-based) covers instead |
+| Heartbeat / liveness | — | n/a | Sail transport hygiene (WCP6), not part of the FDC3 conformance pack's public API surface. No dedicated feature file exists today |
 
-## Tag inventory (`@fdc3_2.2`, `@fdc3_3.0`, `@fdc3_2.0`)
+## Toolbox local dev (`toolbox-local` / `VITE_CONFORMANCE_TOOLBOX`) **`[implemented]`**
 
-Run by version: `npx cucumber-js --profile fdc3-2.2` (or `fdc3-3.0`, `fdc3-2.0`).
+Running the FINOS toolbox against a **local** copy (instead of the hosted
+`https://fdc3.finos.org/toolbox/fdc3-conformance`) is a supported dev mode, controlled by the
+`VITE_CONFORMANCE_TOOLBOX` Vite env var:
 
-- `test/features/basic/basic.feature` — 10
-- `test/features/channels/user-channels.feature` — 14
-- `test/features/channels/app-channels.feature` — 11
-- `test/features/channels/private-channel.feature` — 4
-- `test/features/context/broadcast.feature` — 4
-- `test/features/context/event-listeners.feature` — 2
-- `test/features/intents/raise-intent.feature` — 13
-- `test/features/intents/raise-intent-with-context.feature` — 9
-- `test/features/intents/find-intent.feature` — 12
-- `test/features/intents/intent-result.feature` — 6
-- `test/features/apps/apps.feature` — 16
-- `test/features/apps/disconnect-cleanup.feature` — 3
+| Profile | Env | Toolbox origin | FDC3 target |
+|---|---|---|---|
+| Hosted (default) | — | `https://fdc3.finos.org/toolbox/fdc3-conformance` | 3.0 |
+| Local FINOS dev | `VITE_CONFORMANCE_TOOLBOX=local` | `http://localhost:3001` | 2.2 |
 
-**Total: 103** tagged scenarios across 12 feature files.
+Two workspaces read this variable, each via its own `.env.toolbox-local` and a `dev:local` npm
+script that passes Vite's `--mode toolbox-local`:
 
-Files without `@fdc3_2.2` tags: `close.feature` is `@fdc3_3.0` only (3.0 close API).
+- **`@finos/sail-conformance-harness`** — `npm run dev:local -w @finos/sail-conformance-harness`
+  runs the harness itself against the local toolbox on port 3001. See
+  [@finos/sail-conformance-harness](../conformance-harness/overview).
+- **`@finos/sail-finance`** — the root `dev:local` script runs `sail-desktop-agent`,
+  `sail-platform`, and `sail-finance`'s own `dev:local` together, which passes the same
+  `--mode toolbox-local` through to `sail-finance`'s Vite dev server.
+
+`sail-finance` always loads the same conformance app-directory fixture and merges it into its own
+app directory alongside the public FINOS app directory (`https://directory.fdc3.finos.org/v2/apps`)
+— that merge is unconditional, in every dev mode. What `VITE_CONFORMANCE_TOOLBOX=local` changes is
+only the **origin** those conformance apps resolve to: hosted FINOS URLs by default, rewritten to
+`sail-finance`'s own origin (so they load same-origin, which `window.name` / WCP4 host-instance
+adoption requires) when the local profile is active. The harness does the same origin rewrite
+against its own origin instead. Vite proxies `/apps`, `/lib`, and a couple of static assets to the
+hosted FINOS toolbox so the rewritten URLs still resolve when running locally.
+
+## Conformance baseline status
+
+**Unmeasured against the current suite.** `@finos/sail-conformance-harness` has a committed
+FINOS toolbox export history under `results/conformance-report-v*.txt`; the newest,
+`conformance-report-v6.txt`, was committed 2026-06-23 (53 pass / 26 fail, mixed 2.2 + 3.0 rows).
+Five commits touching `test/features/` have landed since then (most recently 2026-07-29),
+including FDC3 3.0 intent-listener-conflict detection, context-metadata propagation on broadcast
+and intent events, a private-channel auto-join fix, and 3.0 `closeRequest` gating — none of which
+are reflected in that export. This page does not state a current pass rate because there isn't
+a current one to state; re-running the toolbox against today's tree is tracked separately from
+this documentation delivery.
+
+## Related
+
+- [@finos/sail-conformance-harness](../conformance-harness/overview) — the browser host the
+  live FINOS toolbox runs against.
+- [Composition & internals](./composition) — module ownership inside
+  `@finos/sail-desktop-agent`.
+- [Integrator guide](./integrator-guide) — the host-contract surface these scenarios exercise.

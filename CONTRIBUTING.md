@@ -2,6 +2,8 @@
 
 This document describes the contribution process and governance policies of the FINOS FDC3 Sail project. The project is also governed by the [Linux Foundation Antitrust Policy](https://www.linuxfoundation.org/antitrust-policy/), and the FINOS [IP Policy](https://github.com/finos/community/blob/master/governance/IP-Policy.pdf), [Code of Conduct](https://github.com/finos/community/blob/master/governance/Code-of-Conduct.md), [Collaborative Principles](https://github.com/finos/community/blob/master/governance/Collaborative-Principles.md), and [Meeting Procedures](https://github.com/finos/community/blob/master/governance/Meeting-Procedures.md).
 
+For environment setup, build/test/lint commands, and code quality gates, see the [Development Guide](https://finos.github.io/FDC3-Sail/docs/development) on the documentation site. This document covers the contribution *process* and project *governance* only.
+
 ## Contribution Process
 
 Before making a contribution, please take the following steps:

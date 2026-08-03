@@ -12,6 +12,7 @@ const sidebars: SidebarsConfig = {
       label: "Architecture",
       items: [
         "architecture/overview",
+        "architecture/security",
         "architecture/deployment-targets",
         "architecture/channel-selection",
       ],
@@ -27,7 +28,9 @@ const sidebars: SidebarsConfig = {
         },
         "packages/platform/overview",
         "packages/sail-finance/overview",
+        "packages/sail-finance/panel-architecture",
         "packages/sail-one/overview",
+        "packages/sail-theme/overview",
         "packages/conformance-harness/overview",
       ],
     },

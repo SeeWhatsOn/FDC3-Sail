@@ -69,6 +69,11 @@ additions: `allowedOrigins` — when set, WCP4 identity validation rejects conne
 [Extensibility](#extensibility-the-observability-seam-planned) for why that pipeline is not a working
 extension point today.
 
+`allowedOrigins` is undefined by default, which means **no allowlist is applied** — this is a
+fail-open control, not a fail-closed one, and it exists only on this entry point (`SailPlatform` has no
+equivalent option). See [Architecture Overview — WCP4 origin allowlist](../../architecture/security) for
+the full picture, including that neither shell in this repo sets it today.
+
 ### `new SailPlatform(config)` + `.start()`
 
 ```typescript
@@ -133,7 +138,29 @@ the only UI.
 implementation: give it `onLaunchApp(appMetadata, instanceId, context?)` and, optionally,
 `onCloseApp(instanceId)`, and it generates the instance id and delegates launch/close to your
 callbacks. `onCloseApp` is required only if you need `fdc3.close()` support — omitting it makes
-`SailAppLauncher.close()` reject.
+`SailAppLauncher.close()` reject. This is the real host seam — **both** shells in this repo construct a
+`SailAppLauncher` rather than hand-implementing the raw `AppLauncher` interface
+(`sail-finance/src/main.tsx`, `sail-one/src/state/sail-host.ts:172`):
+
+```typescript
+import { SailAppLauncher } from "@finos/sail-platform"
+
+const appLauncher = new SailAppLauncher({
+  async onLaunchApp(appMetadata, instanceId, context) {
+    // Mount an iframe/panel/tab for this instance — the launcher generated instanceId for you.
+    mountAppPanel({ instanceId, appId: appMetadata.appId, context })
+  },
+  async onCloseApp(instanceId) {
+    // Required only to support fdc3.close() — tear down the container you mounted above.
+    unmountAppPanel(instanceId)
+  },
+})
+```
+
+Pass this `appLauncher` to either entry point — `createSailBrowserDesktopAgent({ appLauncher, ... })` or
+`new SailPlatform({ appLauncher, ... })` — instead of implementing the lower-level `AppLauncher`
+contract by hand. The [Desktop Agent integrator guide](../desktop-agent/integrator-guide#host-contract-example)
+teaches the raw `AppLauncher` contract this wraps.
 
 **Host chrome — push-based controllers for host UI:** `platform.apps`, `platform.channels`,
 `platform.intentResolver` expose the underlying agent's grouped controllers directly.

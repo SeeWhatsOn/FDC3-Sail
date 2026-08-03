@@ -207,6 +207,13 @@ await apps.open("portfolio-app", { context: instrumentContext })
 
 `SailDesktopAgent` starts the browser app connection by default. Use `autoStart: false` only when you need to finish setup before the WCP listener is installed. Stop the agent with `desktopAgent.stop()` when the host shell tears down.
 
+> The `appLauncher` above implements the raw `AppLauncher` contract by hand, which is what this package
+> defines and expects. If you are building on `@finos/sail-platform` rather than this package alone,
+> prefer its supplied `SailAppLauncher` — give it `onLaunchApp`/`onCloseApp` callbacks and it generates
+> instance ids and implements this contract for you. Both `sail-finance` and `sail-one` construct a
+> `SailAppLauncher` rather than writing `AppLauncher` from scratch. See
+> [@finos/sail-platform — API surface](../platform/overview#api-surface).
+
 ### FDC3 boundary
 
 | Who | API |

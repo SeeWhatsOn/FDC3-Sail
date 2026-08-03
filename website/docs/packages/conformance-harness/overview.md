@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # @finos/sail-conformance-harness
 
-Minimal React host that wires **only** `@finos/sail-desktop-agent` to run the [FINOS FDC3 conformance toolbox](https://fdc3.finos.org/toolbox/fdc3-conformance/). Use as a diagnostic clean room compared to the full Sail stack.
+Minimal React host that wires **only** `@finos/sail-desktop-agent` to run the [FINOS FDC3 conformance toolbox](https://fdc3.finos.org/toolbox/fdc3-conformance/) live in a browser. Use as a diagnostic clean room compared to the full Sail stack (no `SailPlatform`, no shell UI). This is a different conformance signal from the Cucumber BDD scenarios documented on the [Desktop Agent conformance traceability](../desktop-agent/conformance) page — that suite runs against `MockTransport`; this harness runs the toolbox against a real browser and WCP.
 
 **Location:** `packages/sail-conformance-harness/`
 
@@ -35,7 +35,43 @@ npm run typecheck -w @finos/sail-conformance-harness
 - **Intent resolution** — `intentResolver` host controller with programmatic handler selection
 - **Instance identity** — iframe `name` must equal `instanceId` for WCP4 correlation
 
+## Toolbox origin: hosted vs local FINOS dev **`[implemented]`**
+
+By default the harness points the toolbox at the hosted FINOS instance. A local mode exists for
+developing against a FINOS toolbox checkout instead, controlled by the `VITE_CONFORMANCE_TOOLBOX`
+Vite env var (via `packages/sail-conformance-harness/.env.toolbox-local`):
+
+| Profile | Env | Toolbox origin | FDC3 target |
+|---|---|---|---|
+| Hosted (default) | — | `https://fdc3.finos.org/toolbox/fdc3-conformance` | 3.0 |
+| Local FINOS dev | `VITE_CONFORMANCE_TOOLBOX=local` | `http://localhost:3001` | 2.2 |
+
+```bash
+npm run dev:local -w @finos/sail-conformance-harness
+```
+
+The harness's own app directory (`conformance-appd.json`) always uses hosted FINOS URLs;
+`src/conformance-app-directory.ts` rewrites their origin to `localhost:3001` at bootstrap when
+the local profile is active, and Vite proxies `/apps`, `/lib`, and a couple of static asset paths
+back to the hosted toolbox so the rewritten same-origin URLs still resolve. Same-origin loading is
+required for `window.name` / WCP4 host-instance adoption to work.
+
+`sail-finance` has an equivalent `dev:local` mode (via the root `dev:local` script) that runs the
+same origin rewrite against its own dev server instead of the harness's — it always merges this
+fixture into its app directory, in every dev mode; `toolbox-local` only changes which origin the
+mock apps resolve to. See
+[FDC3 conformance traceability — toolbox local dev](../desktop-agent/conformance#toolbox-local-dev-toolbox-local--vite_conformance_toolbox-implemented)
+for both paths side by side.
+
+## Toolbox result exports
+
+`packages/sail-conformance-harness/results/conformance-report-v*.txt` holds committed FINOS
+toolbox exports (pass/fail, per FDC3 API method under test). These are a point-in-time signal, not
+a continuously-updated one — see [Conformance baseline status](../desktop-agent/conformance#conformance-baseline-status)
+on the traceability page for why this page does not restate a current pass rate.
+
 ## Related
 
-- [Desktop Agent conformance traceability](../desktop-agent/conformance)
+- [Desktop Agent conformance traceability](../desktop-agent/conformance) — the Cucumber BDD
+  inventory (a different signal from the live toolbox this harness runs).
 - [Integrator guide](../desktop-agent/integrator-guide)
