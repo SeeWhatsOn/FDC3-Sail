@@ -27,6 +27,7 @@ const sidebars: SidebarsConfig = {
         },
         "packages/platform/overview",
         "packages/sail-finance/overview",
+        "packages/sail-one/overview",
         "packages/conformance-harness/overview",
       ],
     },

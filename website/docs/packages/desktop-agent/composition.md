@@ -222,7 +222,7 @@ sequenceDiagram
   Ctrl->>Chrome: onAppChannelChange callback
 ```
 
-Browser hosts use **`channels.changeAppChannel`** and **`channels.onAppChannelChange`**. `SailPlatform` wraps the same engine path for the reference stack — see [integrator guide](./integrator-guide#channel-selector--host-shell-ui).
+Browser hosts use **`channels.changeAppChannel`** and **`channels.onAppChannelChange`**. `SailPlatform` wraps the same engine path when a host is built on the high entry point — see [integrator guide](./integrator-guide#channel-selector--host-shell-ui).
 
 `SailDesktopAgent` exposes these controllers directly.
 

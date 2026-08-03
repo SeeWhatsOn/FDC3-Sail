@@ -103,7 +103,7 @@ This package's own tests compose `DesktopAgent` and `attachAppConnection()` dire
 
 ### Host channel UI and `getState()`
 
-Channel chrome must use **push events plus granular getters**, not full state snapshots. Prefer `channels.onAppChannelChange` / `channels.getAppChannelId` on `SailDesktopAgent`, or `SailPlatform.changeAppChannel` / `getAppUserChannel` on the reference stack. Do **not** poll or mutate `desktopAgent.getState()` for UI — that API is for tests and debugging only.
+Channel chrome must use **push events plus granular getters**, not full state snapshots. Prefer `channels.onAppChannelChange` / `channels.getAppChannelId` on `SailDesktopAgent`, or `SailPlatform.changeAppChannel` / `getAppUserChannel` when a host is built on `SailPlatform`. Do **not** poll or mutate `desktopAgent.getState()` for UI — that API is for tests and debugging only.
 
 Details and platform vs preset APIs: [Channel selector — host shell UI](#channel-selector--host-shell-ui) and [Channel selection architecture](../../architecture/channel-selection.md).
 
@@ -266,7 +266,7 @@ FDC3 `getAgent()` supports more than one web mechanism. Sail's browser host impl
 | App in an iframe owned by the Sail host | Yes. This is the primary and tested browser path. | Set the iframe `name` to the host instance id and list the app URL in the app directory. |
 | App opened with `window.open` by the Sail host | Can work if the child keeps `window.opener` and the app directory identity matches. | Implement a window-based `AppLauncher`; this is not the default `sail-finance` launcher. |
 | App in a traditional preload-style container | `getAgent()` can return `window.fdc3` when the container injects it. | This is a different FDC3 web interface. `SailDesktopAgent` does not currently install `window.fdc3` into the host page. |
-| React component rendered in the same top-level page as the Sail host | No, not as a separate standard FDC3 app. There is no parent/opener for proxy discovery, and no Sail preload object is installed. | Treat it as host UI and use `SailPlatform` / `DesktopAgent` host APIs, or put it in an iframe/window. |
+| React component rendered in the same top-level page as the Sail host | No, not as a separate standard FDC3 app. There is no parent/opener for proxy discovery, and no Sail preload object is installed. | Treat it as host UI and use `SailPlatform` / `SailDesktopAgent` host APIs, or put it in an iframe/window. |
 
 This is the key difference for teams coming from preload-style desktop agents: in the browser-resident model, independent apps usually need independent browsing contexts. Same-page components can still participate in the product UI, but they are not separate FDC3 app instances through `@finos/fdc3` unless Sail later provides a dedicated top-level adapter.
 
