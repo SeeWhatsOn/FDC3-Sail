@@ -515,9 +515,9 @@ Docs, so "tests" means mechanical checks. Risk-based, not exhaustive.
 
 ## Slice Checkpoints
 
-- [ ] 0 — Layering + middleware/observability decision recorded
-- [x] 1 — Truth pass (done 2026-07-31, uncommitted; sonnet writer + orchestrator spot-review, `docs:build` green)
-- [ ] 2 — Spine page + status marker convention
+- [x] 0 — Layering + middleware/observability decision recorded (`063553212`, reframed standalone `457a0896c`)
+- [x] 1 — Truth pass (done 2026-07-31, committed `ffdd94f5b`; sonnet writer + orchestrator spot-review, `docs:build` green)
+- [x] 2 — Spine page + status marker convention (`bf71283d1`; build gate still owed — see Verification Notes)
 - [ ] 2b — Front door: newcomer funnel + "how to consume" (incl. hosted-as-`planned`)
 - [ ] 3 — Package pages reconciled
 - [ ] 4 — Undocumented load-bearing pieces
@@ -533,7 +533,37 @@ Docs, so "tests" means mechanical checks. Risk-based, not exhaustive.
   `validateDACPMessage`/`safeParseDACPMessage` absent from `packages/`; package-page diffs minimal (no
   slice-3 rewrite); `intro.md` corrected without narrative reshaping. Deferred (correctly) to slice 2:
   A5/A6/A7 three-layer framing, A12 SailPlatform-as-the-answer. **Open for slice 2:** add a `planned`/
-  superseded caveat to `platform/overview.md`'s `MiddlewarePipeline` bullet. **Not yet committed.**
+  superseded caveat to `platform/overview.md`'s `MiddlewarePipeline` bullet. Committed as `ffdd94f5b`.
+
+- **Slice 0 (2026-08-03):** `.cursor/plans/sail-platform-design.md` drafted (`063553212`), then rewritten
+  as a **standalone package description** on maintainer direction (`457a0896c`) — see the framing rule in
+  this plan's header. Two substantive corrections came out of that rewrite: `workspaces`/`layouts`/
+  `sailConfig` flip `planned` → `implemented` (they delegate to a working `LocalStorageBackend`), and the
+  async-storage-before-construct ordering is stated as a package contract rather than a shell anecdote.
+  **Still unconfirmed (non-blocking, design doc §9):** the scope-boundary charter, the ordering rule as
+  intent-not-accident, the ownership-framed decision rule, and observability-as-the-middleware-answer.
+  Slice 2 built on these without contradiction, but they have not been explicitly signed off.
+
+- **Slice 2 (2026-08-03, `bf71283d1`):** `architecture/overview.md` rewritten as the spine (213 ins /
+  60 del across 2 files); `deployment-targets.md` ASCII layer diagram replaced by a link, native-shell
+  content untouched. Status-marker convention established on the page. Orchestrator verified against
+  source, not taken on the writer's word: `MiddlewarePipeline` collected-but-unwired
+  (`sail-browser-desktop-agent.ts:81-88`); **both** entry points disable injected resolver/selector UI
+  (`:64-65`, `sail-platform.ts:239-241`); `SailAppLauncher` generates instance ids
+  (`sail-app-launcher.ts:60`); boundary rules as stated (`.oxlintrc.json:8-54`). Layer language grep-clean
+  to one file. All link targets, anchors, and heading slugs verified (slugs computed with the site's own
+  `github-slugger`).
+  **Two defects fixed in review:** a link to `.cursor/plans/` on GitHub `main` that would 404 for every
+  reader (the path is not on `main`, and `onBrokenLinks: "throw"` does not check external links); and an
+  internal-note tone left in `deployment-targets.md`.
+  Also closed slice 1's deferred item: `platform/overview.md`'s `MiddlewarePipeline` bullet now marked
+  superseded, and the page's lede no longer advertises "middleware".
+  **⚠️ Owed: `npm run docs:build` has NOT completed successfully in this environment.** Four attempts were
+  killed past the 10-minute mark; the cause was orphaned `docusaurus build` processes from earlier killed
+  runs competing over the same output dir (since cleaned up). MDX hazards were hand-scanned instead
+  (JSX-like tags and braces all inside mermaid fences; fence counts balanced). **Run the build before
+  trusting slice 2 as fully verified** — it is the only check covering MDX/mermaid parse errors, and this
+  slice added two mermaid blocks.
 
 ## Review Notes
 

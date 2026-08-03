@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # @finos/sail-platform
 
-Platform SDK for FDC3 Sail. Wraps `@finos/sail-desktop-agent` with Sail-specific middleware, workspace/layout/config persistence, and host integration helpers.
+Platform SDK for FDC3 Sail. Wraps `@finos/sail-desktop-agent` with host UI seams, workspace/layout/config persistence, and host integration helpers.
 
 **Location:** `packages/sail-platform/`
 
@@ -86,9 +86,13 @@ desktopAgent.start()
 
 Does **not** include workspace/layout APIs or `SailPlatform` event wiring. Prefer `SailPlatform` for production hosts.
 
-## Middleware and validation
+## Extensibility and validation
 
-- **`MiddlewarePipeline`** — intercept DACP messages before the Desktop Agent
+- **`MiddlewarePipeline`** — **superseded; not a working extension point.** The class is exported and a
+  pipeline is constructed, but it is never wired into the message path, so registering middleware has no
+  effect on DACP traffic. Do not build against it. The intended mechanism is the observability seam —
+  see [Architecture Overview](../../architecture/overview#extensibility-the-observability-seam-planned),
+  which is `planned` and not yet callable.
 - **Message validation** — inbound DACP/WCP messages are checked against the FDC3 schema from `@finos/fdc3-schema`, the same mechanism `@finos/sail-desktop-agent` uses
 
 ## Re-exports
