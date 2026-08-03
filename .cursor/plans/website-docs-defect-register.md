@@ -7,6 +7,9 @@ Companion to `.cursor/plans/website-docs-blueprint.md`. This is the working mate
 **Partial re-check:** 2026-07-31 @ `06476be62` after `sail-one` landed — §A premise, A12, and G2 updated
 below. The rest of the register was **not** re-verified against the newer tree; re-check each row before
 acting, per "How to use this."
+**Framing correction:** 2026-08-03 @ `063553212` — maintainer rule: package docs are written **standalone**,
+so consumer count never determines an API's status. §A carries the supersession note; G6 corrected; G14 and
+G15 added. Reasoning of the form "unproven because nothing uses it" is invalid throughout this register.
 **Sources:** full read of all 13 pages under `website/docs/`, plus `README.md` and `AGENTS.md`,
 each claim checked against `packages/`. Overlaps independently confirmed against
 `FDC3-SAIL-REVIEW.md` (2026-07-28) are marked ✔.
@@ -45,6 +48,16 @@ each claim checked against `packages/`. Overlaps independently confirmed against
 > describe `sail-finance` — and `sail-finance` still uses `createSailBrowserDesktopAgent`, not
 > `SailPlatform`. So those rows remain valid finance-page defects. Only the *structural framing* ("no
 > host goes through the layer", "blocks pages") is retired, and row A12 flips (see below).
+>
+> **Superseded further — 2026-08-03 (maintainer framing rule).** Consumer count is no longer a valid basis
+> for *any* status judgement in this register. Package documentation is written **standalone**: an API is
+> `implemented` if the code implements it, regardless of whether a shell drives it. Concretely,
+> `platform.workspaces` / `platform.layouts` / `platform.sailConfig` are **`implemented`** — they delegate
+> to `SailPlatformClient` → `LocalStorageBackend`, which is fully written
+> (`local-storage-backend.ts:72-130`). Rows below that reason "X is undocumented/unproven **because**
+> nothing consumes it" must be re-read as "X is undocumented" only. The real caveats on platform storage
+> are `unknown`-typed payloads (`sail-platform.ts:139-160`) and `storage: "remote"` throwing
+> (`sail-platform-client.ts:78`) — both now recorded in `.cursor/plans/sail-platform-design.md` §4/§7.
 
 `SailPlatform` had **zero consumers** outside its own two tests when this register was written.
 Verify: `grep -rn "SailPlatform" packages/ --include=*.ts --include=*.tsx -l | grep -v sail-platform/`
@@ -211,9 +224,11 @@ Input for blueprint slice 4. Each is load-bearing and currently undiscoverable.
 | G2 | `createSailBrowserDesktopAgent` **and** `SailPlatform` | `sail-platform/src/sail-browser-desktop-agent.ts`; `sail-platform/src/sail-platform.ts` | **Updated 2026-07-31: there are two production entry points, not one.** `sail-finance/src/main.tsx:110` uses `createSailBrowserDesktopAgent`; `sail-one/src/state/sail-host.ts:129` uses `SailPlatform`. `platform/overview.md:69-87` files `createSailBrowserDesktopAgent` under "(advanced)" and says "prefer `SailPlatform`" — that framing is now half-right (`sail-one` does prefer `SailPlatform`) and half-wrong (`sail-finance` does not). Document the choice, not a single winner |
 | G3 | `SailAppLauncher` + `onLaunchApp`/`onCloseApp` | `sail-platform/src/services/app-launcher/sail-app-launcher.ts`; used by **both** shells — `sail-finance/src/main.tsx:35-99` and `sail-one/src/state/sail-host.ts:172-209`; exported `sail-platform/src/index.ts:48` | The real host-integration seam. Every doc teaches the raw `AppLauncher` interface instead |
 | G13 | `SailPlatformClient` config-backed persistence | `sail-platform`; consumed at `sail-one/src/state/client-state.ts:162` (`sail_one_` prefix, localStorage backend) | **New 2026-07-31.** The platform persistence story G6 said "isn't wired" — `sail-one` now wires it. It is the concrete contrast with `sail-finance`'s Zustand + raw `localStorage`. Document both |
+| G14 | `platform.workspaces` / `layouts` / `sailConfig` | `sail-platform/src/sail-platform.ts:203-205,412-435`; backend `client/local-storage-backend.ts:72-130` | **New 2026-08-03.** `implemented` and working (localStorage, configurable key prefix, pluggable via `PlatformApi`) but documented nowhere and driven by neither shell — which, per the framing rule, is a fact about the shells, not a status downgrade. Document the API **and** its two real caveats: payloads typed `unknown`, and `storage: "remote"` throws `"Remote storage backend not yet implemented"` (`sail-platform-client.ts:78`) |
+| G15 | `SailPlatform` JSDoc example is wrong | `sail-platform.ts:178,189` (`await platform.start()` / `await platform.stop()` — both return `void`); `:185-187` (`platform.config.get()` — the property is `sailConfig`, `:205`) | **New 2026-08-03.** A source-comment defect, not a site defect, but docs get copy-pasted from it. Docs must not reproduce this example. Fixing the JSDoc is a **product change — out of scope for this docs delivery**; logged here so it is not lost |
 | G4 | WCP4 origin allowlist | `sail-platform/src/wcp4-origin-allowlist.ts`; `wireWcp4OriginAllowlist` at `sail-browser-desktop-agent.ts:76-78` | The one genuinely Sail-specific security control. One passing mention at `platform/overview.md:79`, no threat model. **Document that it fails open and ships unwired** — `FDC3-SAIL-REVIEW.md` Security #2 |
 | G5 | Dockview panel model + popout relay shell | `sail-finance/src/utils/dockview-popout.ts`; `bootstrapDockviewPopoutShell` (`main.tsx:12,22-23`); Zustand stores (`workspace`, `panel`, `connection`, `app-directory`, `intent-resolver`, `fdc3`, `ui`) | This **is** the product architecture. No doc describes it |
-| G6 | Workspace/layout persistence contract | `sail-finance/src/stores/workspace-store.ts:114-195` (custom serializer) | Docs point readers at a `sail-platform` storage layer that isn't wired |
+| G6 | Workspace/layout persistence contract | `sail-finance/src/stores/workspace-store.ts:114-195` (custom serializer) | Docs point readers at a `sail-platform` storage layer that `sail-finance` does not use. **Corrected 2026-08-03:** that layer is not "unwired" — it is implemented (see G14); `sail-finance` simply persists its own way. Document both, and do not imply the platform store is unfinished |
 | G7 | `@fdc3_3.0` Cucumber suite | 6 files, 18 scenarios | `conformance.md` acknowledges only `close.feature` |
 | G8 | `@fdc3_2.0` tag + profile | `cucumber.yml:59-70`; documented in `AGENTS.md:125` | One-line mention at `conformance.md:7` |
 | G9 | `toolbox-local` / `VITE_CONFORMANCE_TOOLBOX` | Root `package.json:14` (`dev:local`); `--mode toolbox-local`; `loadConformanceApplications({ localOrigin })` at `main.tsx:101-104` | Load-bearing for conformance work; undocumented |

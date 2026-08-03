@@ -1,11 +1,10 @@
 # Minimal Viable Delivery Plan: Website & Docs Blueprint
 
 Status: planning
-Current slice: 0 (layering + middleware/observability decision) — decisions recorded; the diagrams and
-description are now **drafted** in `.cursor/plans/sail-platform-design.md` (two entry points + shared
-`SailDesktopAgent` engine, `sail-one` boot sequence, when-to-use rule, middleware→observability, the
-`planned` gap). **The only thing left for slice 0 is the maintainer source-check** (that doc's §6). Slice 1
-(truth pass) is **committed** (`ffdd94f5b`).
+Current slice: 0 (layering + middleware/observability decision) — decisions recorded; the description is
+**drafted** in `.cursor/plans/sail-platform-design.md`, rewritten 2026-08-03 as a **standalone package
+description** (see the framing rule below). **The only thing left for slice 0 is the maintainer
+source-check** (that doc's §9, now 4 items). Slice 1 (truth pass) is **committed** (`ffdd94f5b`).
 Review/fix loops: 0
 Updated 2026-07-31 (`06476be62`): `sail-one` landed as a real `SailPlatform` consumer. This resolves the
 "middle layer with zero consumers" premise and reframes slice 0 from a green-field design session to
@@ -24,6 +23,16 @@ is people new to the project deciding whether and how to adopt it. **(3) All doc
 Docusaurus site** — including building and contributing, like [fdc3.finos.org](https://fdc3.finos.org) —
 and the repo keeps only the files GitHub/npm resolve by path, as stubs. See the revised Intent, Product
 Positioning, Documentation homes, Slice 0, Slice 2b, Slice 4b, and Risks.
+
+Updated 2026-08-03 (maintainer direction — **framing rule for all package pages**): **package
+documentation is written standalone.** A package page says what the package **is**, what it **does**, why
+it **needs to be what it is**, and **how** to use it. It does **not** justify the package by who consumes
+it, and it does **not** downgrade an API's status because no in-repo shell drives it — "no consumer" is a
+fact about the shells, not a limitation of the package. Consumers appear only as *reference
+implementations* in an appendix. Consequence already applied: `workspaces`/`layouts`/`sailConfig` flip from
+`planned` to **`implemented`** (they delegate to a working `LocalStorageBackend`); the honest caveats are
+`unknown`-typed payloads and `storage: "remote"` throwing. This rule binds Slice 3 (per-package pages) and
+the package sections of Slice 2.
 
 Source reviews feeding this plan:
 - `ARCHITECTURE-REMEDIATION-PLAN.md` (2026-07-30) — docs audit, 40+ defects across 13 `website/docs/` pages
@@ -123,9 +132,12 @@ Two things follow that the docs must get right:
 - **Most of `sail-platform`'s stated purpose is still `planned`.** Telemetry, auth, entitlements and
   connectors do not exist in any form, and the middleware pipeline remains collected-but-unwired. This is
   where the marker convention earns its keep: the docs may describe the intended platform, but a reader must
-  never mistake the `planned` services for something they can install today. What `sail-one` changes is that
-  the *composition spine* (construct → launch → resolve → persist) is now `implemented` and has a reference
-  consumer; the services tier is what stays `planned`.
+  never mistake the `planned` services for something they can install today. The *composition spine*
+  (construct → launch → resolve → persist) is `implemented`; the services tier is what stays `planned`.
+  **Status is decided by the code, not by consumer count** (2026-08-03 framing rule): `workspaces`,
+  `layouts` and `sailConfig` are `implemented` — backed by a working `LocalStorageBackend` — even though
+  neither shell drives them. Their real caveats are `unknown`-typed payloads and a `"remote"` backend that
+  throws.
 
 **Middleware / extensions — decided 2026-07-31 (no longer open).** The mechanism is **not** middleware.
 It is the **agent observability seam**: a typed `AgentEvent` stream (broadcast delivered, intent resolved
@@ -210,20 +222,21 @@ the sidebar; it becomes canonical and `CONTRIBUTING.md` points to it. This conso
     `sail-finance → createSailBrowserDesktopAgent → SailDesktopAgent` and
     `sail-one → SailPlatform → (SailAppLauncher, SailPlatformClient, SailDesktopAgent)` — so a reader
     sees the shared engine and the divergent entry.
-  - A sequence diagram for the `sail-one` boot flow (`ClientState.load()` →
-    `SailPlatform.start()` → `registerDesktopAgent`), which is the flow that justifies the layer:
-    async platform-backed persistence hydrated before the agent starts. `src/index.tsx` and
-    `src/state/sail-host.ts` are the reference.
+  - A lifecycle sequence diagram stated as a **package contract**, not a shell walkthrough: platform
+    storage is async while `apps`/`userChannels` are constructor data and `start()` is synchronous, so a
+    host seeding from persisted state must `await` its reads **before** constructing. `sail-one`'s boot is
+    the worked example of this rule, not its justification.
   - The decision rule: **when does a host reach for `SailPlatform` vs `createSailBrowserDesktopAgent`?**
-    (`sail-one`'s answer: it wanted `SailPlatformClient` persistence and the platform lifecycle
-    callbacks; `sail-finance` did not.)
+    Framed by **what the host wants the package to own** (agent only vs agent + seams + storage +
+    lifecycle), not by which shell picked which and not as a maturity gradient.
   - The middleware decision, now **recorded rather than made**: middleware is dropped in favour of the
     **observability seam** — a typed `AgentEvent` stream surfaced on the `SailDesktopAgent` controllers,
     mapped to OpenTelemetry in `@finos/sail-platform`, with plain `Logger` diagnostics as the second half.
     It observes **after** each operation and can never block or alter FDC3. Fully specified at
     `.cursor/plans/agent-observability-seam.md`; docs mark it `planned` and describe only its shape.
   - The gap between target and today, written as the `planned` set (telemetry/auth/entitlements/
-    connectors + middleware).
+    connectors + middleware + the remote storage backend + typed storage payloads). Status is read off
+    the code, never off consumer count — see the 2026-08-03 framing rule.
 - **Context, now grounded in a real consumer:** `sail-one/src/state/sail-host.ts` is the worked
   example of `SailPlatform` composition; `sail-one/src/state/client-state.ts` is the worked example of
   `SailPlatformClient` persistence (`sail_one_` prefix); `sail-finance/src/main.tsx:110` remains the
@@ -303,14 +316,22 @@ the sidebar; it becomes canonical and `CONTRIBUTING.md` points to it. This conso
 
 ### 3. Package pages reconciled to the spine
 
+- **Framing rule (2026-08-03) governs this slice.** Every package page is written **standalone**: what the
+  package is, what it does, why it needs to be what it is, how to use it. No page justifies a package by
+  naming its consumers, and no API is marked down for lacking one. Where a worked example helps, put it in
+  an appendix section clearly labelled as a reference implementation.
+  `.cursor/plans/sail-platform-design.md` is the model to follow for `packages/platform/overview.md`.
 - **Goal:** each package page describes what that package actually owns and links to the spine for
   layering. Rewrite `packages/sail-finance/overview.md` (every substantive claim is currently wrong)
   and `packages/platform/overview.md` (blocked on slice 0). Patch `composition.md` and
   `integrator-guide.md` — but **do not excise the `SailPlatform` sections wholesale as originally
-  planned**: `sail-one` now makes `SailPlatform` a real, documentable path. Instead rewrite those
-  sections to describe `SailPlatform` as `sail-one` actually uses it (construct → `start()` →
-  `apps.open` → `intentResolver` → `changeAppChannel`), and correct the manual `new DesktopAgent()`
-  composition path (still `@internal` — see register §B).
+  planned**: `SailPlatform` is a real, documentable path. Instead rewrite those sections to describe the
+  supported call sequence (construct → `start()` → `apps.open` → `intentResolver` → `changeAppChannel`),
+  and correct the manual `new DesktopAgent()` composition path (still `@internal` — see register §B).
+- **Carry the source defects from the design doc's §3:** the `SailPlatform` JSDoc example
+  (`sail-platform.ts:178,189`) shows `await platform.start()` / `await platform.stop()` when both are
+  `void`, and `platform.config.get()` when the property is `sailConfig`. Docs must not copy it; fixing the
+  JSDoc itself is a product change, so log it rather than doing it in this docs delivery.
 - **New: add `packages/sail-one/overview.md`.** `sail-one` had no doc page because it did not exist
   when this plan was drafted. It now does, and it is the reference consumer for `SailPlatform`. The
   page names: its `SailPlatform` construction (`src/state/sail-host.ts`), its `SailPlatformClient`

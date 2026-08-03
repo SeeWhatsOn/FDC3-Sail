@@ -1,160 +1,243 @@
-# Sail Platform — Composition & Entry-Point Description (Slice 0 output)
+# `@finos/sail-platform` — Package Description (Slice 0 output)
 
 Status: **draft — awaiting maintainer source-check.** This is the sign-off gate for blueprint Slice 0.
-It is a *description of how the shipped code composes today*, not a green-field design. Every claim is
-marked **[implemented]** or **[planned]**; the marker convention formalises in Slice 2, but it starts here.
 
-Reference sources (read 2026-07-31 @ `18d0de16f`):
-- `packages/sail-one/src/index.tsx` — boot flow
-- `packages/sail-one/src/state/sail-host.ts` — `SailPlatform` composition
-- `packages/sail-one/src/state/client-state.ts` — `SailPlatformClient` persistence
-- `packages/sail-finance/src/main.tsx` — `createSailBrowserDesktopAgent` composition
-- `packages/sail-platform/src/sail-platform.ts` — `SailPlatform` itself
+**Framing rule (maintainer decision, 2026-08-03).** This describes `@finos/sail-platform` **as a standalone
+package**: what it is, what it does, why it needs to be what it is, and how to use it. It does **not**
+justify the package by who consumes it. No API is downgraded because no in-repo shell drives it, and no API
+is explained in terms of what a shell wanted. In-repo shells appear only in §8, as reference
+implementations a reader may go look at — never as the reason an API exists.
+
+Every claim is marked **[implemented]** or **[planned]**; the marker convention formalises in Slice 2.
+
+Reference sources (read 2026-08-03 @ `063553212`):
+- `packages/sail-platform/src/sail-platform.ts`
+- `packages/sail-platform/src/client/sail-platform-client.ts`
+- `packages/sail-platform/src/client/local-storage-backend.ts`
 
 ---
 
-## 1. Two supported entry points, one shared engine
+## 1. What the package is
 
-Both entry points live in `@finos/sail-platform`. Both end at the **same** `SailDesktopAgent` — the FDC3
-engine from `@finos/sail-desktop-agent`. They differ in what they wrap around it and how the host persists.
+`@finos/sail-platform` is the **composition layer** for building an FDC3 host. It packages a standards-
+compliant FDC3 Desktop Agent (`SailDesktopAgent`, from `@finos/sail-desktop-agent`) together with the
+things a host application needs around that agent but which the FDC3 standard does not specify:
 
-- **`createSailBrowserDesktopAgent(config)` [implemented]** — builds a `SailDesktopAgent` directly and
-  returns it. The lower entry: a standards-compliant FDC3 Desktop Agent, nothing else. `sail-finance`
-  calls it (`main.tsx:110`) with `{ debug, appLauncher, apps }`.
-- **`new SailPlatform(config)` + `.start()` [implemented]** — `start()` (`sail-platform.ts:222`, returns
-  `void`) constructs `new SailDesktopAgent({...})` internally (`:227`) and wraps it with namespaced APIs
-  (`apps`, `intentResolver`, `changeAppChannel`, `workspaces`, `layouts`, `sailConfig`), lifecycle event
-  callbacks, and `SailPlatformClient` storage. `sail-one` calls it (`sail-host.ts:129,155`).
+- **host UI seams** — where the host plugs in app launching, intent resolution and channel selection;
+- **host chrome** — grouped, push-based controllers a host's own UI can bind to, instead of polling agent state;
+- **platform storage** — pluggable persistence for workspaces, layouts and host config;
+- **a lifecycle** — construct, start, stop, with events forwarded to the host.
+
+**Scope boundary [implemented].** The package does not own FDC3 semantics — intents, contexts, channels and
+the DACP/WCP wire protocols all live in `@finos/sail-desktop-agent`. `sail-platform` composes that engine;
+it does not reimplement or extend the standard. It also holds **no UI**: every visual surface is an
+interface the host implements.
+
+**`SailPlatform` is stateless [implemented].** It forwards lifecycle events to host callbacks and does not
+maintain a model of connected apps or channel membership (`sail-platform.ts:384`). Hosts own their state.
+
+---
+
+## 2. Two entry points
+
+The package exposes two ways in. Both end at the **same** `SailDesktopAgent` — there is one FDC3 engine,
+not two. They differ only in what is composed around it.
+
+| | `createSailBrowserDesktopAgent(config)` | `new SailPlatform(config)` + `.start()` |
+|---|---|---|
+| Returns | a `SailDesktopAgent` | a platform object owning an agent |
+| FDC3 conformance | identical — same engine | identical — same engine |
+| Host UI seams | `appLauncher` | `appLauncher`, `intentResolver`, `channelSelector` |
+| Lifecycle callbacks | none | connect / disconnect / channel-change / handshake-failure |
+| Platform storage | none | `workspaces`, `layouts`, `sailConfig` |
+| Host owns | everything above the agent | everything above the platform |
+| Status | **[implemented]** | **[implemented]** |
+
+`SailPlatform.start()` (`sail-platform.ts:222`) constructs `new SailDesktopAgent({...})` internally
+(`:227`) and wires the config callbacks to the agent's grouped controllers (`:384`).
 
 ```mermaid
 flowchart TB
-  subgraph FIN["sail-finance (dashboard shell)"]
-    F1["main.tsx"]
-  end
-  subgraph ONE["sail-one (canvas shell)"]
-    O1["index.tsx / sail-host.ts"]
-  end
+  HOST["Host application<br/>(any shell: yours or Sail's)"]
 
   subgraph PLAT["@finos/sail-platform"]
-    CE["createSailBrowserDesktopAgent(config)<br/>[implemented] — lower entry"]
-    SP["SailPlatform + .start()<br/>[implemented] — higher entry"]
-    SPC["SailPlatformClient<br/>[implemented] — config-backed async storage"]
-    WS["workspaces / layouts / sailConfig<br/>[planned] — exposed, not driven by either shell"]
-    SVC["telemetry · auth · entitlements · connectors<br/>[planned] — not started"]
-    OBS["observability seam → OpenTelemetry<br/>[planned] — see §4"]
+    direction TB
+    CE["createSailBrowserDesktopAgent(config)<br/>[implemented] — agent only"]
+    SP["SailPlatform + .start()/.stop()<br/>[implemented] — agent + seams + storage"]
+    CHROME["host chrome: apps · channels · intentResolver<br/>connector · changeAppChannel<br/>[implemented]"]
+    STORE["platform storage: workspaces · layouts · sailConfig<br/>[implemented] — via SailPlatformClient"]
+    SEAMS["host UI seams: SailAppLauncher · IntentResolver · ChannelSelector<br/>[implemented] — host implements these"]
+    OBS["observability seam → OpenTelemetry<br/>[planned] — see §6"]
+    SVC["auth · entitlements · connectors<br/>[planned] — not started"]
   end
 
   subgraph AGENT["@finos/sail-desktop-agent"]
-    SDA["SailDesktopAgent<br/>[implemented] — the shared FDC3 engine"]
+    SDA["SailDesktopAgent<br/>[implemented] — the FDC3 engine (DACP · WCP · intents · channels)"]
   end
 
-  F1 -->|"{ debug, appLauncher, apps }"| CE
-  O1 -->|"{ appLauncher, apps, userChannels, lifecycle callbacks }"| SP
-  O1 -->|"shell state (tabs/panels)"| SPC
+  HOST -->|"implements"| SEAMS
+  HOST -->|"low entry"| CE
+  HOST -->|"high entry"| SP
   CE --> SDA
   SP --> SDA
-  SP -.owns.-> WS
-  SP -.owns.-> SVC
+  SP --> CHROME
+  SP --> STORE
   SP -.owns.-> OBS
-
-  F1 -.persists via.-> ZUS["Zustand + raw localStorage<br/>[implemented] — sail-finance only"]
+  SP -.owns.-> SVC
+  CHROME --> SDA
 ```
-
-**The one host seam both paths share [implemented]:** `SailAppLauncher` with `onLaunchApp` / `onCloseApp`.
-`sail-finance/main.tsx:35` and `sail-one/sail-host.ts:172` each construct one. This — not the raw
-`AppLauncher` interface the current docs teach — is where a host plugs its window/panel management in.
 
 ---
 
-## 2. The `sail-one` boot flow — why the higher entry exists
-
-The flow that justifies `SailPlatform`: **async, platform-backed persistence hydrated *before* the agent
-starts**, so the agent is seeded with the persisted channel set rather than defaults-then-restart.
+## 3. Lifecycle and its one real constraint
 
 ```mermaid
 sequenceDiagram
   autonumber
-  participant Boot as index.tsx bootstrap()
-  participant CS as PlatformClientState
+  participant Host as Host application
   participant SPC as SailPlatformClient
-  participant Host as SailHost
   participant SP as SailPlatform
   participant SDA as SailDesktopAgent
 
-  Boot->>CS: await load()
-  CS->>SPC: await getConfig()  (localStorage, "sail_one_" prefix)
-  SPC-->>CS: persisted tabs / panels / directories
-  Note over Boot,CS: hydrate BEFORE first render — storage is async,<br/>unlike the localStorage reads it replaces
-  Boot->>Boot: render React
-  Boot->>Host: registerDesktopAgent(createArgs())
-  Host->>SP: new SailPlatform({ appLauncher, apps, userChannels, lifecycle callbacks })
-  Host->>SP: start()
-  SP->>SDA: new SailDesktopAgent({...})  (the shared engine)
-  Host->>SP: intentResolver.onRequest(fn)
-  Host->>SP: apps.addDirectory(url)  (per active directory)
+  Note over Host,SPC: storage is async — read it BEFORE constructing
+  Host->>SPC: await getConfig() / getWorkspaces()
+  SPC-->>Host: persisted channels, apps, layout
+  Host->>SP: new SailPlatform({ appLauncher, apps, userChannels, callbacks })
+  Host->>SP: start()          — synchronous, returns void
+  SP->>SDA: new SailDesktopAgent({...})
+  SP->>SDA: wire callbacks to apps/channels controllers
+  Host->>SP: intentResolver / apps / channels — host chrome
+  Host->>SP: stop()           — synchronous, tears the agent down
 ```
 
-`sail-finance` has no equivalent async-hydrate step: it builds its Zustand store from `localStorage`
-synchronously and creates the agent directly, before React renders (`main.tsx:110,126`).
+**The constraint worth documenting [implemented].** `apps` and `userChannels` are **constructor data**, and
+`start()` is **synchronous** — but platform storage is **asynchronous**. A host that seeds the agent from
+persisted state must therefore `await` its reads *before* constructing, not after starting. Starting first
+and reconciling later means the agent runs briefly on defaults and needs a restart to correct itself. This
+is the ordering rule to state in the docs, and it is a property of the package, not of any one host.
+
+**`start()`/`stop()` are `void`, not `Promise` [implemented]** (`sail-platform.ts:222,261`). Calling
+`start()` twice throws; `stop()` on a stopped platform is a no-op. Every accessor throws
+`"SailPlatform not started"` before `start()` (`:373`).
+
+> **Source defect for Slice 3:** the `SailPlatform` class JSDoc (`sail-platform.ts:178,189`) shows
+> `await platform.start()` and `await platform.stop()`. Both are `void`. The example also shows
+> `platform.config.get()`, but the property is `sailConfig` (`:205`). Docs must not copy this example.
 
 ---
 
-## 3. Decision rule — which entry point?
+## 4. API surface
 
-| Reach for… | when the host wants… | evidenced by |
+**Host UI seams — the host implements these [implemented].**
+
+| Seam | Required? | Purpose |
 |---|---|---|
-| **`SailPlatform`** [implemented] | config-backed **async** persistence (`SailPlatformClient`, swappable backend), platform **lifecycle callbacks** (`onAppConnected`/`onAppDisconnected`/`onChannelChanged`/`onHandshakeFailed`), the built-in **intent-resolver façade** (`platform.intentResolver.onRequest`), and a place for the **[planned]** services tier to plug in | `sail-one` wanted exactly these — `sail-host.ts:129-162`, `client-state.ts:162` |
-| **`createSailBrowserDesktopAgent`** [implemented] | just a **standards-compliant FDC3 Desktop Agent** in the browser, owning its own state and UI wiring | `sail-finance` manages Zustand itself and wires the agent's controllers directly — `main.tsx:110` |
+| `appLauncher: AppLauncher` | **yes** | open and close apps in the host's own windows/panels. `SailAppLauncher` is the supplied helper: give it `onLaunchApp` / `onCloseApp`. This — not raw `AppLauncher` — is the intended host entry. |
+| `intentResolver?: IntentResolver` | no | render intent-resolution UI. Omitted ⇒ first handler auto-selected. |
+| `channelSelector?: ChannelSelector` | no | render channel-selection UI. Omitted ⇒ apps handle it themselves. |
 
-Both require the host to implement `SailAppLauncher` (`onLaunchApp`/`onCloseApp`). Neither is more "mature"
-than the other — this is a batteries-included vs. bring-your-own choice, not a maturity gradient. The
-`sail-one`/`sail-finance` split is likewise a **UX-model** distinction (canvas vs dashboard), not maturity.
+Because Sail hosts control their own UI, the platform disables the agent's injected-iframe resolver and
+channel-selector surfaces (`getIntentResolverUrl: () => false`, `getChannelSelectorUrl: () => false`,
+`:239-241`). The host's implementations are the only UI.
+
+**Host chrome — push-based controllers for host UI [implemented].**
+`platform.apps`, `platform.channels`, `platform.intentResolver` expose the agent's grouped controllers;
+`platform.changeAppChannel(instanceId, channelId)` resolves once the change is confirmed on the wire, and
+`getAppUserChannel(instanceId)` is the authoritative one-off read. `platform.connector` is the raw
+`BrowserAppConnection` for advanced integrators. **Hosts should not poll `getState()`** — the grouped
+controllers are the supported path (`:338-340`).
+
+**Lifecycle callbacks [implemented].** `onAppConnected`, `onAppDisconnected`, `onChannelChanged`,
+`onHandshakeFailed` — each wired only if supplied (`:389-407`).
+
+**Platform storage [implemented].** `platform.workspaces` (`list`/`get`/`create`/`delete`),
+`platform.layouts` (`get`/`save`), `platform.sailConfig` (`get`/`update`) — all async, all delegating to
+`SailPlatformClient`, which defaults to a `localStorage` backend with a configurable key prefix. Two honest
+caveats to carry into the docs:
+- payloads are typed `unknown` (`sail-platform.ts:139-160`) — the schemas are not yet part of the contract;
+- `storage: "remote"` **throws** `"Remote storage backend not yet implemented"`
+  (`sail-platform-client.ts:78`); only `"localStorage"` works today.
+
+The backend is pluggable behind the `PlatformApi` interface, which is what makes a server-backed store a
+later swap rather than a rewrite.
+
+**Agent configuration passthrough [implemented].** `apps`, `userChannels`, `implementationMetadata`,
+`openContextListenerTimeoutMs`, `heartbeatEnabled` / `heartbeatIntervalMs` / `heartbeatTimeoutMs`, `debug`.
 
 ---
 
-## 4. Middleware — decided: it is the observability seam [planned]
+## 5. Choosing an entry point
 
-There is no "middleware" mechanism to document. The customisation/telemetry mechanism is the **agent
-observability seam**: a typed `AgentEvent` stream surfaced on the `SailDesktopAgent` controller surface
-(like the logging, channels and intent controllers), emitted **after** each FDC3 operation and unable to
-block or alter it. It has two separable halves:
+Pick by **what you want the package to own**, not by maturity — neither entry is more finished than the other.
 
-1. **Event tracking [planned]** — events mapped to OpenTelemetry **in `@finos/sail-platform`** (the agent
-   takes no OTEL dependency). This is where `SailPlatform` earns the services tier: it already owns storage
-   and the lifecycle callbacks, so it is the natural OTEL mapping point.
+- **`createSailBrowserDesktopAgent`** — you want a standards-compliant FDC3 Desktop Agent and nothing else.
+  You already have state management, persistence and UI, and you will bind the agent's controllers yourself.
+- **`SailPlatform`** — you want the agent *plus* the host scaffolding: pluggable persistence for workspaces
+  and layouts, lifecycle callbacks instead of manual controller wiring, the intent-resolver and
+  channel-selector seams, and a place for the [planned] services tier to arrive without a re-architecture.
+
+Both require an `appLauncher`. You can start at the low entry and move up later; the FDC3 surface your apps
+see is identical either way.
+
+---
+
+## 6. Extensibility: the observability seam [planned]
+
+There is no "middleware" mechanism in this package to document. The customisation and telemetry mechanism
+is the **agent observability seam**: a typed `AgentEvent` stream surfaced on the `SailDesktopAgent`
+controller surface — alongside logging, channels and intents — emitted **after** each FDC3 operation and
+unable to block or alter it. Two separable halves:
+
+1. **Event tracking [planned]** — events mapped to OpenTelemetry **inside `@finos/sail-platform`**, so the
+   desktop agent takes no OTEL dependency. The platform is the mapping point because it is already the
+   layer that owns storage, lifecycle and host composition.
 2. **Logging [planned/existing]** — the `Logger` stays plain diagnostics; a host may map it to OTEL Logs.
 
 Fully specified at `.cursor/plans/agent-observability-seam.md`. The collected-but-unwired
-`MiddlewarePipeline` in `sail-platform` is **superseded** — docs must not present it as a live mechanism.
-Neither shell uses middleware today.
+`MiddlewarePipeline` is **superseded** — docs must not present it as a live mechanism.
 
 ---
 
-## 5. Implemented vs planned — the gap the docs must mark
+## 7. Implemented vs planned
 
-**[implemented] — the composition spine, with a reference consumer (`sail-one`):**
-construct → launch → resolve → persist. Both entry points; `SailDesktopAgent` engine; `SailAppLauncher`
-host seam; `SailPlatformClient` async persistence; the intent-resolver façade; `changeAppChannel`.
+**[implemented]** — both entry points; the shared `SailDesktopAgent`; the three host UI seams; host chrome
+(`apps`/`channels`/`intentResolver`/`connector`/`changeAppChannel`/`getAppUserChannel`); the four lifecycle
+callbacks; platform storage over a pluggable `PlatformApi` with a `localStorage` backend; agent config
+passthrough; start/stop lifecycle.
 
-**[planned] — the services tier and adjacent APIs:**
-- **Telemetry** — via the observability seam (§4). Not started beyond the seam's design.
+**[planned]** —
+- **Remote storage backend** — the config option exists and throws.
+- **Typed storage payloads** — `unknown` today.
+- **Observability / OpenTelemetry** — §6; designed, not built.
 - **Auth, entitlements, connectors** — do not exist in any form.
-- **Middleware pipeline** — collected-but-unwired; superseded by the seam.
-- **`workspaces` / `layouts` / `sailConfig`** — exposed on `SailPlatform` (`sail-platform.ts:203-205`) but
-  **driven by neither shell** (sail-finance uses Zustand; sail-one uses its own `PlatformClientState`).
-  Treat as `planned`/unproven pending a real consumer. *(Maintainer: confirm — this is the claim most
-  likely to be wrong if a consumer exists that I did not find.)*
-
-**Interim gaps in `sail-one` itself [planned to close]:** structural channel/directory *removals* restart
-the agent (`sail-host.ts:268-289`); `embeddable-ui/` carried but unwired.
+- **Middleware pipeline** — collected-but-unwired; superseded by §6.
 
 ---
 
-## 6. Maintainer source-check (the Slice 0 gate)
+## 8. Reference implementations (appendix, not justification)
 
-Please confirm or correct, so Slice 2 can build on it:
-1. The two entry points and the shared `SailDesktopAgent` engine (§1).
-2. The `sail-one` async-hydrate-before-start rationale (§2).
-3. The decision rule (§3) — especially "sail-one wanted `SailPlatformClient` + lifecycle callbacks."
-4. §5's claim that `workspaces`/`layouts`/`sailConfig` have **no** shipping consumer.
-5. The middleware→observability decision (§4) as the recorded answer.
+Two shells in this repo consume the package and can be read as worked examples. Neither defines the
+package's contract.
+
+- **`sail-finance`** — low entry. `createSailBrowserDesktopAgent` + `SailAppLauncher`, with Zustand for its
+  own state (`main.tsx:35,110`).
+- **`sail-one`** — high entry. `new SailPlatform(...).start()` with the lifecycle callbacks, async-hydrating
+  its persisted state before construction per §3 (`sail-host.ts:129,155`).
+
+The `sail-one` / `sail-finance` split is a **UX-model** distinction (canvas vs dashboard), not a maturity
+gradient. Neither shell currently drives `workspaces`/`layouts`/`sailConfig`; that is a fact about the
+shells, not a limitation of the package.
+
+---
+
+## 9. Maintainer source-check (the Slice 0 gate)
+
+**Answered 2026-08-03:** the standalone-package framing rule (header) is the maintainer's; the
+`workspaces`/`layouts`/`sailConfig` question is closed — no consumer today, and that no longer downgrades
+the API (§7 marks it `implemented`, §4 records the real caveats).
+
+Remaining to confirm:
+1. §1's scope boundary — "composes the agent, owns no FDC3 semantics, holds no UI" — is the intended charter.
+2. §3's ordering rule (async storage read must precede construction) is a contract to state, not an accident.
+3. §5's decision rule, framed as ownership rather than maturity.
+4. §6 as the recorded answer to "what happened to middleware".
