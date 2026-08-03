@@ -1,10 +1,11 @@
 # Minimal Viable Delivery Plan: Website & Docs Blueprint
 
 Status: planning
-Current slice: 0 (layering + middleware/observability decision) — **decisions recorded** in this plan
-(two entry points; middleware → observability seam; newcomer-first audience; README/site boundary);
-remaining slice-0 work is writing the diagrams into `.cursor/plans/sail-platform-design.md` and a
-maintainer source-check. Slice 1 (truth pass) is unblocked and can start in parallel.
+Current slice: 0 (layering + middleware/observability decision) — decisions recorded; the diagrams and
+description are now **drafted** in `.cursor/plans/sail-platform-design.md` (two entry points + shared
+`SailDesktopAgent` engine, `sail-one` boot sequence, when-to-use rule, middleware→observability, the
+`planned` gap). **The only thing left for slice 0 is the maintainer source-check** (that doc's §6). Slice 1
+(truth pass) is **committed** (`ffdd94f5b`).
 Review/fix loops: 0
 Updated 2026-07-31 (`06476be62`): `sail-one` landed as a real `SailPlatform` consumer. This resolves the
 "middle layer with zero consumers" premise and reframes slice 0 from a green-field design session to
