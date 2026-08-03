@@ -224,8 +224,10 @@ package's contract.
 - **`sail-one`** — high entry. `new SailPlatform(...).start()` with the lifecycle callbacks, async-hydrating
   its persisted state before construction per §3 (`sail-host.ts:129,155`).
 
-The `sail-one` / `sail-finance` split is a **UX-model** distinction (canvas vs dashboard), not a maturity
-gradient. Neither shell currently drives `workspaces`/`layouts`/`sailConfig`; that is a fact about the
+Both are **example UIs for the platform**, and the split between them is **domain**, not maturity:
+`sail-finance` is finance-specific; `sail-one` is domain-neutral, for more general use. (Canvas vs
+dashboard is a secondary layout detail, not the primary distinction — corrected 2026-08-03 on maintainer
+direction.) Neither shell currently drives `workspaces`/`layouts`/`sailConfig`; that is a fact about the
 shells, not a limitation of the package.
 
 ---

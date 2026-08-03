@@ -40,10 +40,12 @@ Status is read off the code, not off how many hosts in this repo happen to exerc
   with host UI seams, push-based host chrome, pluggable platform storage (workspaces, layouts, config),
   and a lifecycle. See [Two entry points](#two-entry-points) below and
   [@finos/sail-platform](../packages/platform/overview) for the full package description.
-- **Shells** — `sail-finance` and `sail-one` are host applications: deployable, customisable interop
-  platforms built on top of the engine (directly or via the platform layer). They provide UI, app launch
-  surfaces, and packaging. The `sail-one` vs `sail-finance` split is a UX-model distinction (canvas vs
-  dashboard), not a maturity ranking, and neither is more "the" reference host than the other.
+- **Shells** — `sail-finance` and `sail-one` are **example host applications**: working, deployable UIs
+  that demonstrate what the platform can be built into. They provide UI, app launch surfaces, and
+  packaging, composing the stack either directly or through the platform layer. The split between them is
+  **domain**, not maturity: `sail-finance` is a **finance-specific** example, `sail-one` a
+  **domain-neutral** one for more general use. Treat both as starting points to deploy or adapt, not as
+  the only shapes a Sail host can take.
 
 ### 3. Composition over hidden globals
 

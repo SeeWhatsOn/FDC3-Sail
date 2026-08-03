@@ -74,7 +74,7 @@ FDC3 Sail is **under active development** and not yet ready for production use (
 
 ## What Sail grows into
 
-A single Desktop Agent is enough for a lot of hosts, but a real deployment usually needs more around it: pluggable persistence for workspaces and layouts, a lifecycle, and a place for host chrome to bind to instead of polling agent state. `@finos/sail-platform` composes the same Desktop Agent together with that scaffolding, growing Sail from a standalone engine into an **interoperability platform** — the layer that two shells — `sail-one` and [`sail-finance`](./packages/sail-finance/overview) — are both built on.
+A single Desktop Agent is enough for a lot of hosts, but a real deployment usually needs more around it: pluggable persistence for workspaces and layouts, a lifecycle, and a place for host chrome to bind to instead of polling agent state. `@finos/sail-platform` composes the same Desktop Agent together with that scaffolding, growing Sail from a standalone engine into an **interoperability platform** — the layer that Sail's two example UIs are built on: [`sail-finance`](./packages/sail-finance/overview), a finance-specific shell, and `sail-one`, a domain-neutral one for more general use.
 
 Most of that platform's intended business-readiness surface — telemetry, auth, entitlements, connectors — is **`[planned]`**, not built yet. The composition itself (construct → launch → resolve → persist) is real today. See the [Architecture Overview](./architecture/overview#two-entry-points) for exactly what's implemented versus planned.
 

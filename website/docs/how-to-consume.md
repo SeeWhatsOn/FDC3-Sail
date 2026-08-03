@@ -24,19 +24,22 @@ decision rule and diagram; this page does not repeat it.
 
 **Start here:** [Getting Started](./getting-started).
 
-## Path 2: Serve a shell `[implemented]`
+## Path 2: Serve an example shell `[implemented]`
 
-Deploy one of Sail's own shells — a ready-made, customisable interop platform — instead of building a
-host yourself. Sail ships two:
+Deploy one of Sail's own shells instead of building a host yourself. These are **example UIs** — working,
+deployable applications that show what the platform can be built into. Run one as-is, or take it as the
+starting point for your own. Sail ships two, and the difference between them is **domain, not maturity**:
 
-- **`sail-one`** — a canvas UX: a tab-and-grid workspace with channel wiring.
-- **`sail-finance`** — a dashboard UX: a workspace-and-panel layout.
+- **`sail-finance`** — a **finance-specific** example: a workspace-and-panel dashboard aimed at financial
+  desktop workflows.
+- **`sail-one`** — a **domain-neutral** example for more general use: a tab-and-grid canvas with channel
+  wiring.
 
-**This is a UX-model choice, not a maturity ranking.** Both are real shells built on the same engine —
-`sail-finance` composes `createSailBrowserDesktopAgent` directly, `sail-one` composes `SailPlatform` — and
-neither is "the" reference host; pick the layout model that fits how your users want to arrange
-applications. See [Architecture Overview](./architecture/overview#2-clear-package-ownership) for how the
-two shells relate to the engine.
+Both are real applications on the same engine — `sail-finance` composes `createSailBrowserDesktopAgent`
+directly, `sail-one` composes `SailPlatform`. Neither is more finished than the other; pick the one whose
+domain and layout are closer to what you need, and expect to customise. See
+[Architecture Overview](./architecture/overview#2-clear-package-ownership) for how the shells relate to
+the engine.
 
 **Start here:** [Run Sail](./run-sail) covers the `sail-finance` deployment path in detail, including
 build, hosting, and app-directory setup — see also [`@finos/sail-finance`](./packages/sail-finance/overview).

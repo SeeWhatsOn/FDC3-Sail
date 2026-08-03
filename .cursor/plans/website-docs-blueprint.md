@@ -112,13 +112,16 @@ consumable.
 |---|---|---|---|
 | `@finos/sail-desktop-agent` | A standalone FDC3 Desktop Agent you can drop into your own host | npm | Substantially implemented. **Not published** — see register §C |
 | `@finos/sail-platform` | The business-readiness layer: **workspaces, layouts, telemetry, auth, entitlements, persistent storage, and connectors** | npm | `SailPlatform` + `SailAppLauncher` + `SailPlatformClient` persistence now have a **real consumer** — `sail-one` (below). Telemetry, auth, entitlements, connectors: **not started**. Observability is the planned home for telemetry — the collected-but-unwired middleware pipeline is **superseded by the observability seam** (`.cursor/plans/agent-observability-seam.md`, `planned`) |
-| `sail-one` | Deployable, customisable interop platform. **Domain-neutral** — a canvas (tab-and-grid) where everything placed on it is connected via channels | deploy + customise | **Landed 2026-07-31** (`06476be62`). Real shell built on `SailPlatform`; `private`/`v0.0.0`, not published. Interim gaps: structural channel/directory edits restart the agent, `embeddable-ui/` carried but unwired. Port brief: `.cursor/plans/sail-one-port.md` (its "no code written" status is now stale) |
-| `sail-finance` | Deployable, customisable interop platform. **Dashboard-style** layout approach | deploy + customise | Shipping; the reference host |
+| `sail-one` | **Example UI** for the platform — **domain-neutral**, for general use. Tab-and-grid canvas with channel wiring | deploy + customise | **Landed 2026-07-31** (`06476be62`). Real shell built on `SailPlatform`; `private`/`v0.0.0`, not published. Interim gaps: structural channel/directory edits restart the agent, `embeddable-ui/` carried but unwired. Port brief: `.cursor/plans/sail-one-port.md` (its "no code written" status is now stale) |
+| `sail-finance` | **Example UI** for the platform — **finance-specific**. Workspace-and-panel dashboard | deploy + customise | Shipping. **Not** "the reference host" — corrected 2026-08-03; both shells are examples, neither is canonical |
 
 Two things follow that the docs must get right:
 
-- **`sail-one` vs `sail-finance` is a UX-model distinction, not a maturity one.** Canvas-with-channel-wiring
-  versus dashboard. A reader choosing between them needs that framing, not a feature table. This is the
+- **`sail-one` and `sail-finance` are two example UIs for the platform, split by domain, not maturity**
+  (maintainer correction, 2026-08-03). `sail-finance` is finance-specific; `sail-one` is domain-neutral,
+  for more general use. Layout (dashboard vs canvas) is a secondary detail — do **not** lead with it, and
+  do **not** call either one "the reference host". A reader choosing between them needs the domain
+  framing, not a feature table. This is the
   clearest single argument for `sail-platform` existing as a shared layer — two shells, one services tier —
   and as of 2026-07-31 it is **demonstrated, not hypothetical**: `sail-one` is the second shell and it
   composes the stack for real.
@@ -301,8 +304,9 @@ the sidebar; it becomes canonical and `CONTRIBUTING.md` points to it. This conso
 - **The "How to consume Sail" decision page — three paths, honestly marked:**
   1. **Compose the pieces yourself** — the two-entry-point model (`createSailBrowserDesktopAgent` vs
      `SailPlatform`); links to Slice 4's entry-point pages and getting-started.
-  2. **Serve a shell** — deploy `sail-one` (canvas) or `sail-finance` (dashboard); links to their Slice 3
-     package pages, framed as a UX-model choice, not a maturity one.
+  2. **Serve an example shell** — deploy `sail-finance` (finance-specific) or `sail-one` (domain-neutral);
+     links to their Slice 3 package pages, framed as a **domain** choice between two example UIs, not a
+     maturity one.
   3. **Use a hosted version** — intended, **`planned`, no address yet.** State this and stop; do not imply
      it is available.
 - **Acceptance:** `intro.md` reads as the five-step funnel; a cold reader reaches a path decision without
@@ -335,8 +339,9 @@ the sidebar; it becomes canonical and `CONTRIBUTING.md` points to it. This conso
 - **New: add `packages/sail-one/overview.md`.** `sail-one` had no doc page because it did not exist
   when this plan was drafted. It now does, and it is the reference consumer for `SailPlatform`. The
   page names: its `SailPlatform` construction (`src/state/sail-host.ts`), its `SailPlatformClient`
-  persistence (`src/state/client-state.ts`, `sail_one_` prefix), the canvas/tab-and-grid UX model
-  (vs `sail-finance`'s dashboard), and its interim gaps marked `planned` — restart-on-structural-edit,
+  persistence (`src/state/client-state.ts`, `sail_one_` prefix), its role as the **domain-neutral example
+  UI** (vs `sail-finance`'s finance-specific one) with tab-and-grid canvas as a secondary layout detail,
+  and its interim gaps marked `planned` — restart-on-structural-edit,
   `embeddable-ui/` unwired. Reuse `packages/sail-one/README.md`, which is already accurate.
 - **Acceptance:** no page re-describes the layering. `sail-finance`'s page names its real
   construction path (`createSailBrowserDesktopAgent`), its real persistence (Zustand + `localStorage`),
