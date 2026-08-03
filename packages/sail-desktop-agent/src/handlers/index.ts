@@ -1,7 +1,7 @@
 import { BridgingError } from "@finos/fdc3"
 
 import { DACP_TIMEOUTS } from "../dacp/dacp-constants"
-import { DACPProcessingError, DACPTimeoutError, DACPValidationError } from "../dacp/dacp-errors"
+import { DACPProcessingError, DACPTimeoutError } from "../dacp/dacp-errors"
 import { withDACPTimeout, logDACPMessage, extractDACPMessageLogMetadata } from "../dacp/dacp-utils"
 import { applyInboundValidationPolicy } from "../dacp/validate-dacp-message"
 import { type DACPHandlerContext, type MessageType } from "./types"
@@ -57,30 +57,20 @@ export async function routeDACPMessage(
     )
   } catch (error) {
     const err =
-      error instanceof DACPValidationError || error instanceof DACPTimeoutError
+      error instanceof DACPTimeoutError
         ? error
-        : new DACPProcessingError(
-            "DACP processing failed",
-            error instanceof Error ? error : undefined,
-          )
+        : new DACPProcessingError("DACP processing failed", { cause: error })
     logger.error("DACP message routing failed:", {
-      error: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
-      originalError: err instanceof DACPProcessingError ? err.originalError : undefined,
+      error: err.message,
+      stack: err.stack,
+      cause: err.cause,
       messageType:
         typeof message === "object" && message !== null && "type" in message
           ? (message as { type: string }).type
           : "unknown",
       messageData: extractDACPMessageLogMetadata(message),
     })
-    if (err instanceof DACPValidationError) {
-      sendErrorResponseIfRequestLike(
-        message,
-        context,
-        BridgingError.MalformedMessage,
-        "Invalid message structure",
-      )
-    } else if (err instanceof DACPTimeoutError) {
+    if (err instanceof DACPTimeoutError) {
       sendErrorResponseIfRequestLike(
         message,
         context,

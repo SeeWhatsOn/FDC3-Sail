@@ -52,8 +52,9 @@ export * from "./interfaces/index"
 // App directory
 export type { DirectoryApp, WebAppDetails } from "./app-directory/types"
 
-// Errors thrown on paths a host can catch
-export { DACPValidationError, DACPTimeoutError, DACPProcessingError } from "./dacp/dacp-errors"
+// Error types a host may see on a `cause` chain or in injected-logger output.
+// `routeDACPMessage` converts both to FDC3 wire errors — neither is re-thrown to a host.
+export { DACPTimeoutError, DACPProcessingError } from "./dacp/dacp-errors"
 
 /**
  * App-connection types that appear in the public agent surface.

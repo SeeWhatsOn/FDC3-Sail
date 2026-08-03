@@ -7,16 +7,6 @@
  * DACP* classes are for internal use only; wire error codes come from @finos/fdc3.
  */
 
-export class DACPValidationError extends Error {
-  constructor(
-    message: string,
-    public readonly zodError?: unknown,
-  ) {
-    super(message)
-    this.name = "DACPValidationError"
-  }
-}
-
 export class DACPTimeoutError extends Error {
   constructor(message: string) {
     super(message)
@@ -24,12 +14,10 @@ export class DACPTimeoutError extends Error {
   }
 }
 
+/** Wraps an unrecognised failure from a handler. The original throw is on `cause`. */
 export class DACPProcessingError extends Error {
-  constructor(
-    message: string,
-    public readonly originalError?: Error,
-  ) {
-    super(message)
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options)
     this.name = "DACPProcessingError"
   }
 }
