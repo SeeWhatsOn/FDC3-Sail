@@ -7,11 +7,11 @@ slug: /
 
 Financial and enterprise users rarely work in a single application. They move between pricing tools, order entry, portfolio views, research, and CRM — copying identifiers, re-keying context, and switching windows. **Interoperability** is what removes that friction: connected applications share context and actions so the user stays in flow, makes fewer mistakes, and finishes tasks faster.
 
+## What FDC3 is
+
 **[FDC3](https://fdc3.finos.org/)** (Financial Desktop Connectivity and Collaboration Consortium) is an open FINOS standard for **UI-level interoperability**. It defines how applications on a desktop or in a browser discover each other, share **context** (for example an instrument or portfolio), raise **intents** (“show this chart for this symbol”), and link via **channels** — without each vendor building bespoke integrations pairwise.
 
-**FDC3 Sail** is the open-source implementation of [FDC3 2.2](https://fdc3.finos.org/docs/api/spec) and [FDC3 For-The-Web](https://fdc3.finos.org/docs/api/specs/browserResidentDesktopAgents) in this repository. It provides a **Desktop Agent** (the FDC3 engine), a **browser connection layer** (WCP), and **platform UI** (web) so you can run or embed a standards-compliant FDC3 host.
-
-## UI control plane vs data plane
+### UI control plane vs data plane
 
 Most integration effort in large organisations goes into the **data plane** — APIs, messaging, ETL, and services that move business data between systems (prices, orders, positions, reference data).
 
@@ -43,9 +43,17 @@ flowchart LR
   data -.->|"feeds the apps"| ui
 ```
 
-FDC3 Sail implements the **Desktop Agent** and host wiring for the UI control plane. Your FDC3 applications use the standard [`@finos/fdc3`](https://www.npmjs.com/package/@finos/fdc3) library and `getAgent()` — the same API regardless of which Sail path you choose.
+## What Sail is
 
-## Is FDC3 Sail right for you?
+**FDC3 Sail** is a standards-compliant FDC3 **Desktop Agent** — an implementation of [FDC3 2.2](https://fdc3.finos.org/docs/api/spec) and [FDC3 For-The-Web](https://fdc3.finos.org/docs/api/specs/browserResidentDesktopAgents) that runs in the browser. Concretely, it does:
+
+- **Intent resolution** — route intents between applications
+- **Channel linking** — connect applications via user and app channels
+- **Directory search** — discover and launch FDC3 applications via an app directory
+
+FDC3 Sail implements the Desktop Agent and host wiring for the UI control plane above. Your FDC3 applications use the standard [`@finos/fdc3`](https://www.npmjs.com/package/@finos/fdc3) library and `getAgent()` — the same API regardless of which Sail path you choose.
+
+### Is it a good fit for you?
 
 FDC3 Sail is a **good fit** if you:
 
@@ -60,11 +68,21 @@ Consider alternatives or additional work if you:
 - Require a mature vendor desktop with long-term support contracts today — evaluate Sail against your risk tolerance; the project is actively evolving with the standard
 - Need **enterprise packaging** out of the box (SSO, MDM distribution, hardened installers, multi-tenant ops) — that remains your integration work regardless of which FDC3 host you choose
 
-## Status
+### Status
 
-FDC3 Sail is **under active development** and not yet ready for production use (see the root [README](https://github.com/finos/FDC3-Sail#status)). It implements FDC3 2.2 (DACP, WCP) and works with the standard `@finos/fdc3` client library unchanged. Packaging Sail as an **enterprise system** — identity, deployment pipelines, operational monitoring, and IT policy — is a separate layer of work for your organisation.
+FDC3 Sail is **under active development** and not yet ready for production use (see the root [README](https://github.com/finos/FDC3-Sail)). It implements FDC3 2.2 (DACP, WCP) and works with the standard `@finos/fdc3` client library unchanged. Packaging Sail as an **enterprise system** — identity, deployment pipelines, operational monitoring, and IT policy — is a separate layer of work for your organisation.
 
-## Choose your path
+## What Sail grows into
+
+A single Desktop Agent is enough for a lot of hosts, but a real deployment usually needs more around it: pluggable persistence for workspaces and layouts, a lifecycle, and a place for host chrome to bind to instead of polling agent state. `@finos/sail-platform` composes the same Desktop Agent together with that scaffolding, growing Sail from a standalone engine into an **interoperability platform** — the layer that two shells — `sail-one` and [`sail-finance`](./packages/sail-finance/overview) — are both built on.
+
+Most of that platform's intended business-readiness surface — telemetry, auth, entitlements, connectors — is **`[planned]`**, not built yet. The composition itself (construct → launch → resolve → persist) is real today. See the [Architecture Overview](./architecture/overview#two-entry-points) for exactly what's implemented versus planned.
+
+## Composite parts
+
+Package ownership, the two supported entry points, the host-contract surface, and the app-connection model all live in one place: the [Architecture Overview](./architecture/overview). That page owns the single layering diagram for these docs — this introduction links to it rather than redrawing it.
+
+## How to consume it
 
 Where you go next depends on what you are building:
 
@@ -73,38 +91,19 @@ flowchart TD
   Start([What do you need?])
 
   Start --> AddApp[Add an existing web app to Sail]
-  Start --> Run[Run or host the FDC3 Sail platform]
-  Start --> Build[Build your own FDC3 Desktop Agent in your web app]
+  Start --> Consume[Adopt or host Sail itself]
+  Start --> Contribute[Contribute to Sail from source]
 
-  AddApp --> Apps
-
-  Run --> Web["Browser / PWA — @finos/sail-finance"]
-
-  Build --> BrowserAgent["Browser-ready — SailDesktopAgent"]
-
-  BrowserAgent --> Package["@finos/sail-desktop-agent"]
-
-  BrowserAgent --> HostUI[You provide: app launcher, intent UI, channel UI]
-
-  Web --> Apps
-  HostUI --> Apps
-
-  Apps["Your FDC3 apps use @finos/fdc3 — getAgent()"]
+  AddApp --> Apps["Your FDC3 apps use @finos/fdc3 — getAgent()"]
+  Consume -.-> HowTo[["How to consume Sail →"]]
+  Contribute -.-> DevGuide[["Development Guide →"]]
 ```
 
 | I want to… | Go to |
 |------------|--------|
 | **Add an existing web app to Sail or another FDC3 Desktop Agent** | [Add your app to Sail](./add-your-app) |
-| **Run or host the full FDC3 Sail platform** (browser or desktop, minimal custom code) | [Run Sail](./run-sail) |
-| **Build my own FDC3 Desktop Agent** inside my web app (`SailDesktopAgent`) | [Getting Started](./getting-started) |
+| **Adopt or host Sail itself** — compose the pieces yourself, deploy a shell, or check on a hosted version | [How to consume Sail](./how-to-consume) |
 | **Contribute to or build Sail from source** | [Development Guide](./development) |
-
-## Features
-
-- **Intent resolution** — route intents between applications
-- **Channel linking** — connect applications via user and app channels
-- **Directory search** — discover and launch FDC3 applications
-- **Workspace management** — organise applications in tabs and panels (full platform)
 
 ## Documentation policy
 

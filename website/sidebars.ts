@@ -3,6 +3,7 @@ import type { SidebarsConfig } from "@docusaurus/plugin-content-docs"
 const sidebars: SidebarsConfig = {
   docsSidebar: [
     "intro",
+    "how-to-consume",
     "run-sail",
     "add-your-app",
     "getting-started",
