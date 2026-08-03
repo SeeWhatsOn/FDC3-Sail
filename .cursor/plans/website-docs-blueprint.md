@@ -523,8 +523,8 @@ Docs, so "tests" means mechanical checks. Risk-based, not exhaustive.
 - [x] 0 — Layering + middleware/observability decision recorded (`063553212`, reframed standalone `457a0896c`)
 - [x] 1 — Truth pass (done 2026-07-31, committed `ffdd94f5b`; sonnet writer + orchestrator spot-review, `docs:build` green)
 - [x] 2 — Spine page + status marker convention (`bf71283d1`; build gate still owed — see Verification Notes)
-- [ ] 2b — Front door: newcomer funnel + "how to consume" (incl. hosted-as-`planned`)
-- [ ] 3 — Package pages reconciled
+- [x] 2b — Front door: newcomer funnel + "how to consume" (`d01a3d31a`; framing corrected `9897b48ac`)
+- [x] 3 — Package pages reconciled (`d86f26642`; build gate still owed)
 - [ ] 4 — Undocumented load-bearing pieces
 - [ ] 4b — Contributor/build/governance docs consolidated onto the site; repo files stubbed
 - [ ] 5 — Generated conformance inventory
@@ -569,6 +569,34 @@ Docs, so "tests" means mechanical checks. Risk-based, not exhaustive.
   (JSX-like tags and braces all inside mermaid fences; fence counts balanced). **Run the build before
   trusting slice 2 as fully verified** — it is the only check covering MDX/mermaid parse errors, and this
   slice added two mermaid blocks.
+
+- **Slice 2b (2026-08-03, `d01a3d31a`):** `intro.md` reshaped into the five-step funnel; new
+  `how-to-consume.md` with three paths (hosted marked `planned`, no address invented); stale
+  finance-only routing flowchart fixed. Orchestrator caught five fabrications before commit: a `./intro`
+  link that would break (`intro.md` sets `slug: /`, so extensionless links resolve to a non-existent
+  `/intro`); an invented "FINOS-run" attribution for the hosted version; an embellished `sail-one`
+  description; an unverified `sail-one` deployment recipe; and a `README#status` anchor that is wrong on
+  `origin/main` (heading there is "Status / Disclaimer").
+
+- **Shell framing corrected (2026-08-03, `9897b48ac`):** maintainer direction — `sail-finance` and
+  `sail-one` are two **example UIs**, split by **domain** (finance-specific vs domain-neutral), not by UX
+  model or maturity. The canvas/dashboard framing was demoted to a secondary detail and "the reference
+  host" removed. Note the blueprint had already recorded `sail-one` as "domain-neutral"; the miss was not
+  pairing it with `sail-finance` being finance-specific.
+
+- **Slice 3 (2026-08-03, `d86f26642`):** `platform/overview.md` and `sail-finance/overview.md` rewritten,
+  new `packages/sail-one/overview.md` (+ `_category_.json`, sidebar entry), surgical patches to
+  `composition.md`/`integrator-guide.md`. 428 ins / 95 del.
+  **Real bug fixed:** the old platform page told readers to call `desktopAgent.start()` after
+  `createSailBrowserDesktopAgent(...)`, but the agent auto-starts unless `autoStart: false`
+  (`sail-desktop-agent.ts:280`), so that throws `"DesktopAgent is already started"`
+  (`desktop-agent.ts:218`). The documented example crashed on its second line.
+  **Verification:** all 94 relative links and every internal anchor across all 17 doc pages checked
+  programmatically against target headings using the site's own `github-slugger` — not by eye.
+  **Care taken:** `sail-finance` citations avoid `main.tsx` line numbers and the `appDirectories`
+  parameter, which are mid-change in an uncommitted working tree (maintainer's own WIP, left untouched).
+  **Noted, not fixed (out of slice):** `architecture/channel-selection.md` shows
+  `platform.start({ onChannelChanged: ... })` — config goes to the constructor, not `start()`. Assign it.
 
 ## Review Notes
 
