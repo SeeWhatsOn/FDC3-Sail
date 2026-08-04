@@ -2,7 +2,7 @@
   "name": "@finos/sail-platform",
   "version": "0.0.1",
   "type": "module",
-  "description": "SDK for the FDC3 Sail platform - wraps sail-desktop-agent with Sail middleware and transports",
+  "description": "Workspaces, layouts and storage for FDC3 Sail hosts - UI-agnostic, zero dependencies",
   "license": "Apache-2.0",
   "homepage": "https://github.com/finos/FDC3-Sail",
   "repository": "github:finos/FDC3-Sail",
@@ -38,8 +38,5 @@
     "validate": "npm run typecheck && npm run lint && npm run format"
   },
   "devDependencies": {},
-  "dependencies": {
-    "@finos/fdc3": "^2.2.3",
-    "@finos/sail-desktop-agent": "*"
-  }
+  "dependencies": {}
 }

@@ -58,8 +58,9 @@ const desktopAgent = createSailBrowserDesktopAgent({
   debug: true,
 })
 
-// Already started — SailDesktopAgent auto-starts by default (autoStart: false to defer).
-// Calling desktopAgent.start() here would throw "DesktopAgent is already started".
+desktopAgent.start()
+// Construction only builds the object — start() attaches the window listener that
+// lets iframe apps complete fdc3.getAgent().
 ```
 
 Its config is `SailDesktopAgentOptions` (everything `SailDesktopAgent` accepts) plus two Sail-specific
