@@ -37,6 +37,7 @@ import {
   BrowserAppConnection,
   type AppConnectionMetadata,
 } from "../app-connection/browser-app-connection"
+import { DEFAULT_INTENT_RESOLUTION_TIMEOUT_MS } from "../app-connection/wcp/wcp-types"
 import { createHostIntentResolver, type IntentResolverUIMethods } from "../host-contracts"
 import {
   changeAppChannel,
@@ -57,22 +58,6 @@ import {
   type DesktopAgentOpenOptions,
   type SailDesktopAgentOptions,
 } from "./sail-desktop-agent-types"
-
-const DEFAULT_WCP_INTENT_RESOLUTION_TIMEOUT_MS = 60000
-const HOST_RESOLVER_TIMEOUT_BUFFER_MS = 1000
-const DEFAULT_CHANNEL_CHANGE_TIMEOUT_MS = 10000
-
-/**
- * Structure of DACP message metadata for routing
- */
-interface DACPMessageMeta {
-  source?: {
-    instanceId?: string
-  }
-  destination?: {
-    instanceId?: string
-  }
-}
 
 /**
  * FDC3-Sail's Desktop Agent implementation.
@@ -154,6 +139,7 @@ export class SailDesktopAgent<
     this.heartbeatEnabled = config.heartbeatEnabled
     this.heartbeatIntervalMs = config.heartbeatIntervalMs
     this.heartbeatTimeoutMs = config.heartbeatTimeoutMs
+    this.channelChangeTimeoutMs = config.channelChangeTimeoutMs
     // userChannels config seeds state once; runtime reads use state.channels.user only.
     this.state = config.initialState
       ? createStateWithOverrides(config.initialState, config.userChannels)
@@ -210,16 +196,15 @@ export class SailDesktopAgent<
 
     const wcpIntentResolutionTimeout =
       localOptions.appConnectionOptions?.intentResolutionTimeout ??
-      DEFAULT_WCP_INTENT_RESOLUTION_TIMEOUT_MS
+      DEFAULT_INTENT_RESOLUTION_TIMEOUT_MS
     const hostIntentResolver =
       providedIntentResolver ??
       createHostIntentResolver({
-        timeoutMs: Math.max(0, wcpIntentResolutionTimeout - HOST_RESOLVER_TIMEOUT_BUFFER_MS),
+        // Host UI times out slightly before the WCP edge so the edge owns the hard deadline.
+        timeoutMs: Math.max(0, wcpIntentResolutionTimeout - 1000),
       })
     const resolverUI = hasIntentResolverUI(hostIntentResolver) ? hostIntentResolver : undefined
 
-    this.channelChangeTimeoutMs =
-      localOptions.channelChangeTimeoutMs ?? DEFAULT_CHANNEL_CHANGE_TIMEOUT_MS
     this.intentResolver = createIntentResolverController(resolverUI)
     this.channels = createChannelsController(
       {
@@ -333,7 +318,9 @@ export class SailDesktopAgent<
       return null
     }
 
-    const messageObj = message as { meta?: DACPMessageMeta }
+    const messageObj = message as {
+      meta?: { source?: { instanceId?: string } }
+    }
     return messageObj.meta?.source?.instanceId || null
   }
 

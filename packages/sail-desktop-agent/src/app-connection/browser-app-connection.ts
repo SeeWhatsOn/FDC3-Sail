@@ -37,7 +37,12 @@ import { clearPendingWcpSourceWindow, setPendingWcpSourceWindow } from "./wcp/pe
 import { resolveInstanceId } from "../state/selectors/wcp-handshake-routing"
 import type { AgentState, StateSetter } from "../state/types"
 import type { HostIntentResolverPayload, HostIntentResolverResponse } from "../host-contracts"
-import type { AppConnectionMetadata, AppConnectionOptions, WCP1HelloMessage } from "./wcp/wcp-types"
+import {
+  DEFAULT_INTENT_RESOLUTION_TIMEOUT_MS,
+  type AppConnectionMetadata,
+  type AppConnectionOptions,
+  type WCP1HelloMessage,
+} from "./wcp/wcp-types"
 import type { AppMessageHandler } from "./types"
 import { AppConnectionRegistry } from "./app-connection-registry"
 
@@ -90,7 +95,8 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
       fdc3Version: options?.fdc3Version ?? "2.2",
       handshakeTimeout: options?.handshakeTimeout ?? 5000,
       disconnectGracePeriod: options?.disconnectGracePeriod ?? 2000,
-      intentResolutionTimeout: options?.intentResolutionTimeout ?? 60000,
+      intentResolutionTimeout:
+        options?.intentResolutionTimeout ?? DEFAULT_INTENT_RESOLUTION_TIMEOUT_MS,
       debug: options?.debug ?? false,
       logger,
       resolveHostIdentifier: options?.resolveHostIdentifier ?? (() => undefined),

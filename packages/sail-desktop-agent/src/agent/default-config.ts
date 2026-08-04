@@ -41,6 +41,7 @@ export const DEFAULT_SAIL_DESKTOP_AGENT_CONFIG = {
   heartbeatEnabled: true,
   heartbeatIntervalMs: 30_000,
   heartbeatTimeoutMs: 60_000,
+  channelChangeTimeoutMs: 10_000,
 } satisfies Pick<
   SailDesktopAgentConfig,
   | "desktopAgentMetadata"
@@ -51,6 +52,7 @@ export const DEFAULT_SAIL_DESKTOP_AGENT_CONFIG = {
   | "heartbeatEnabled"
   | "heartbeatIntervalMs"
   | "heartbeatTimeoutMs"
+  | "channelChangeTimeoutMs"
 >
 
 function mergeImplementationMetadata(
@@ -99,6 +101,8 @@ export function resolveDesktopAgentConfig(
       rest.heartbeatIntervalMs ?? DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.heartbeatIntervalMs,
     heartbeatTimeoutMs:
       rest.heartbeatTimeoutMs ?? DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.heartbeatTimeoutMs,
+    channelChangeTimeoutMs:
+      rest.channelChangeTimeoutMs ?? DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.channelChangeTimeoutMs,
     desktopAgentMetadata: mergeImplementationMetadata(
       DEFAULT_SAIL_DESKTOP_AGENT_METADATA,
       implementationMetadata,

@@ -70,6 +70,9 @@ export function isAgentMessage(
 /** WCP3Handshake `payload.intentResolverUrl` / `payload.channelSelectorUrl` per FDC3 2.2 */
 export type WcpInjectedUiUrl = string | boolean
 
+/** Default for {@link AppConnectionOptions.intentResolutionTimeout}. */
+export const DEFAULT_INTENT_RESOLUTION_TIMEOUT_MS = 60_000
+
 /**
  * Configuration options for {@link BrowserAppConnection} (WCP listener + handshake).
  */
@@ -130,7 +133,7 @@ export interface AppConnectionOptions {
 
   /**
    * Timeout for intent resolution UI response (ms).
-   * Defaults to 60000ms (60 seconds).
+   * Defaults to {@link DEFAULT_INTENT_RESOLUTION_TIMEOUT_MS}.
    */
   intentResolutionTimeout?: number
 

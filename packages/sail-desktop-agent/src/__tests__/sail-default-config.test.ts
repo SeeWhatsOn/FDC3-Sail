@@ -25,6 +25,7 @@ describe("resolveDesktopAgentConfig", () => {
     expect(config.heartbeatIntervalMs).toBe(30_000)
     expect(config.heartbeatTimeoutMs).toBe(60_000)
     expect(config.heartbeatEnabled).toBe(true)
+    expect(config.channelChangeTimeoutMs).toBe(10_000)
   })
 
   it("does not let explicit undefined heartbeat options clobber product defaults", () => {
@@ -32,11 +33,13 @@ describe("resolveDesktopAgentConfig", () => {
       heartbeatEnabled: undefined,
       heartbeatIntervalMs: undefined,
       heartbeatTimeoutMs: undefined,
+      channelChangeTimeoutMs: undefined,
     })
 
     expect(config.heartbeatEnabled).toBe(true)
     expect(config.heartbeatIntervalMs).toBe(30_000)
     expect(config.heartbeatTimeoutMs).toBe(60_000)
+    expect(config.channelChangeTimeoutMs).toBe(10_000)
   })
 
   it("allows disabling heartbeat at the Desktop Agent level", () => {

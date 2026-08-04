@@ -85,7 +85,7 @@ interface SailDesktopAgentBaseOptions {
   onAppDisconnected?: (instanceId: string) => void
   onHandshakeFailed?: (error: Error, connectionAttemptUuid: string) => void
   intentResolver?: IntentResolver
-  /** Milliseconds to wait for `channelChanged` after host `changeAppChannel`. @defaultValue 10000 */
+  /** Milliseconds to wait for `channelChanged` after host `changeAppChannel`. @defaultValue `10000` */
   channelChangeTimeoutMs?: number
 }
 
@@ -147,6 +147,7 @@ export interface SailDesktopAgentConfig {
   heartbeatEnabled: boolean
   heartbeatIntervalMs: number
   heartbeatTimeoutMs: number
+  channelChangeTimeoutMs: number
   appConnection?: AgentAppConnection
 }
 
