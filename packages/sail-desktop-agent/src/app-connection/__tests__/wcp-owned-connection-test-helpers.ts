@@ -9,7 +9,8 @@
 import { expect, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 import { BrowserAppConnection } from "../../app-connection/browser-app-connection"
-import type { SailDesktopAgent, SailDesktopAgentApps } from "../../agent/sail-desktop-agent"
+import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
+import type { SailDesktopAgentApps } from "../../agent/sail-desktop-agent-controllers"
 import {
   createMessageEvent,
   createWCP1Hello,

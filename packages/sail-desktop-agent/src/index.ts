@@ -13,16 +13,18 @@
  */
 
 // The Desktop Agent
-export {
-  SailDesktopAgent,
-  type SailDesktopAgentOptions,
-  type SailDesktopAgentChannels,
-  type SailDesktopAgentApps,
-  type AppChannelChangeEvent,
-  type HandshakeFailureEvent,
-  type DesktopAgentAppInstance,
-  type DesktopAgentOpenOptions,
-} from "./agent/sail-desktop-agent"
+export { SailDesktopAgent } from "./agent/sail-desktop-agent"
+export type {
+  SailDesktopAgentOptions,
+  DesktopAgentAppInstance,
+  DesktopAgentOpenOptions,
+} from "./agent/sail-desktop-agent-types"
+export type {
+  SailDesktopAgentChannels,
+  SailDesktopAgentApps,
+  AppChannelChangeEvent,
+  HandshakeFailureEvent,
+} from "./agent/sail-desktop-agent-controllers"
 
 // Validation policy
 export type { ValidationMode } from "./agent/default-config"

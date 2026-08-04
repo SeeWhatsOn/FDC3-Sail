@@ -1,7 +1,7 @@
 import type { AppLauncher } from "../../host-contracts/app-launcher"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
-import type { SailDesktopAgentOptions } from "../../agent/sail-desktop-agent"
+import type { SailDesktopAgentOptions } from "../../agent/sail-desktop-agent-types"
 
 export const CHANNEL_ID = "fdc3.channel.1"
 export const HOST_LAUNCHER_INSTANCE_ID = "uuid-host-0"

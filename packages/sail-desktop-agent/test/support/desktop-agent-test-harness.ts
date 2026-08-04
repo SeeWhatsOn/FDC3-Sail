@@ -1,4 +1,5 @@
-import { SailDesktopAgent, type SailDesktopAgentOptions } from "../../src/agent/sail-desktop-agent"
+import { SailDesktopAgent } from "../../src/agent/sail-desktop-agent"
+import type { SailDesktopAgentOptions } from "../../src/agent/sail-desktop-agent-types"
 import { DacpTestAppConnection } from "./dacp-test-app-connection"
 
 export function createDesktopAgentWithTestConnection(

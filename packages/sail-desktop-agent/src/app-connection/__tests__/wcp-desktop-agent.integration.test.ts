@@ -10,13 +10,13 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vite-plus/test"
 import { OpenError, type BrowserTypes, type Context } from "@finos/fdc3"
 import type { AppLauncher } from "../../host-contracts/app-launcher"
+import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import type {
   AppChannelChangeEvent,
   HandshakeFailureEvent,
-  SailDesktopAgent,
   SailDesktopAgentApps,
   SailDesktopAgentChannels,
-} from "../../agent/sail-desktop-agent"
+} from "../../agent/sail-desktop-agent-controllers"
 import type { AppConnectionMetadata } from "../../app-connection/browser-app-connection"
 import { AppInstanceState } from "../../state/types"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"

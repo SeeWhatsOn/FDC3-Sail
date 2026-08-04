@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test"
-import { SailDesktopAgent, type SailDesktopAgentOptions } from "../../agent/sail-desktop-agent"
+import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
+import type { SailDesktopAgentOptions } from "../../agent/sail-desktop-agent-types"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { retrieveAllApps, retrieveApps, retrieveAppsById } from "../app-directory-queries"
 import { createInitialState } from "../../state/initial-state"

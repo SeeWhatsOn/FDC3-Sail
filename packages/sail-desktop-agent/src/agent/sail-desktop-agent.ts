@@ -1,5 +1,5 @@
 /**
- * FDC3 Desktop Agent — the entry point.
+ * FDC3 Desktop Agent entry point.
  *
  * Owns agent state, host APIs, DACP/WCP routing over the app-connection edge (`connector`),
  * and the grouped host controllers (`apps`, `channels`, `intentResolver`) a shell wires into
@@ -56,21 +56,6 @@ import {
   type DesktopAgentAppInstance,
   type DesktopAgentOpenOptions,
   type SailDesktopAgentOptions,
-} from "./sail-desktop-agent-types"
-
-export type {
-  AppChannelChangeEvent,
-  HandshakeFailureEvent,
-  SailDesktopAgentApps,
-  SailDesktopAgentChannels,
-  SailDesktopAgentHostControllers,
-} from "./sail-desktop-agent-controllers"
-
-export type {
-  DesktopAgentAppInstance,
-  DesktopAgentOpenOptions,
-  SailDesktopAgentConfig,
-  SailDesktopAgentOptions,
 } from "./sail-desktop-agent-types"
 
 const DEFAULT_WCP_INTENT_RESOLUTION_TIMEOUT_MS = 60000
