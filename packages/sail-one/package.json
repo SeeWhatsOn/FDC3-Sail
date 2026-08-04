@@ -30,6 +30,7 @@
   "dependencies": {
     "@finos/fdc3": "^2.2.3",
     "@finos/fdc3-schema": "^2.2.1-beta.3",
+    "@finos/sail-desktop-agent": "*",
     "@finos/sail-platform": "*",
     "color": "^5.0.0",
     "gridstack": "^12.6.0",

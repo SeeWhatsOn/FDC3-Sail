@@ -7,7 +7,7 @@
 import { expect, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { DEFAULT_FDC3_USER_CHANNELS, type DirectoryApp } from "@finos/sail-desktop-agent"
-import type { DesktopAgent } from "../../../sail-desktop-agent/src/agent/desktop-agent"
+import type { SailDesktopAgent } from "../../../sail-desktop-agent/src/agent/sail-desktop-agent"
 import { createDesktopAgentWithTestConnection } from "../../../sail-desktop-agent/test/support/desktop-agent-test-harness"
 import type { DacpTestAppConnection } from "../../../sail-desktop-agent/test/support/dacp-test-app-connection"
 import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../../sail-desktop-agent/src/handlers/utils/open-with-context"
@@ -30,7 +30,7 @@ export const INSTRUMENT_CONTEXT: Context = {
 }
 
 export type HarnessOpenWithContextFixture = {
-  agent: DesktopAgent
+  agent: SailDesktopAgent<DacpTestAppConnection>
   connection: DacpTestAppConnection
   sourceInstanceId: string
   launcherInstanceId: string
@@ -186,7 +186,7 @@ function collectOpenWithContextSnapshot(
  * jsdom popup stub for `forceNewWindow` mock apps, and DacpTestAppConnection edge.
  */
 export function createHarnessOpenWithContextBootstrap(): {
-  agent: DesktopAgent
+  agent: SailDesktopAgent<DacpTestAppConnection>
   connection: DacpTestAppConnection
   sourceInstanceId: string
   launchedPanels: HarnessPanel[]
@@ -305,7 +305,7 @@ export function createHarnessOpenWithContextBootstrap(): {
 }
 
 async function runHarnessOpenWithContextFromBootstrap(bootstrap: {
-  agent: DesktopAgent
+  agent: SailDesktopAgent<DacpTestAppConnection>
   connection: DacpTestAppConnection
   sourceInstanceId: string
   launchedPanels: HarnessPanel[]

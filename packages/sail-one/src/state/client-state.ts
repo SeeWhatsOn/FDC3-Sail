@@ -1,10 +1,10 @@
 import type { GridStackPosition } from "gridstack"
 import {
-  SailPlatformClient,
-  type DirectoryApp,
-  type SailPlatformClientConfig,
-  type WebAppDetails,
+  createLocalStorage,
+  type LocalStorageOptions,
+  type SailStorage,
 } from "@finos/sail-platform"
+import type { DirectoryApp, WebAppDetails } from "@finos/sail-desktop-agent"
 import type { IntentResolution } from "../resolver/types"
 
 type ClientStateSyncTarget = {
@@ -74,8 +74,8 @@ export interface ClientState {
 /**
  * Persisted shape of the shell's own state.
  *
- * Stored through {@link SailPlatformClient}'s config API, which wraps raw
- * `localStorage` reads/writes behind a small typed get/set surface.
+ * Stored through a {@link SailStorage}, which wraps raw `localStorage`
+ * reads/writes behind a small typed get/set surface.
  */
 type PersistedClientState = {
   tabs: TabDetail[]
@@ -86,9 +86,12 @@ type PersistedClientState = {
   customApps: DirectoryApp[]
 }
 
-const STORAGE_CONFIG: SailPlatformClientConfig = {
+const STORAGE_CONFIG: LocalStorageOptions = {
   keyPrefix: "sail_one_",
 }
+
+/** Key this shell's state lives under, giving `sail_one_config` as before. */
+const STATE_KEY = "config"
 
 const DEFAULT_DIRECTORIES: Directory[] = [
   {
@@ -155,18 +158,14 @@ export class PlatformClientState implements ClientState {
   private intentResolution: IntentResolution | null = null
   private customApps: DirectoryApp[] = []
   private ss: ClientStateSyncTarget | null = null
-  private readonly platformClient: SailPlatformClient<Partial<PersistedClientState>>
+  private readonly storage: SailStorage
 
-  constructor(
-    platformClient: SailPlatformClient<Partial<PersistedClientState>> = new SailPlatformClient(
-      STORAGE_CONFIG,
-    ),
-  ) {
-    this.platformClient = platformClient
+  constructor(storage: SailStorage = createLocalStorage(STORAGE_CONFIG)) {
+    this.storage = storage
   }
 
   async load(): Promise<void> {
-    const stored = await this.platformClient.getConfig()
+    const stored = await this.storage.get<Partial<PersistedClientState>>(STATE_KEY)
 
     if (!stored?.tabs || stored.tabs.length === 0) {
       // Nothing persisted yet — keep the constructor defaults and write them out
@@ -203,7 +202,7 @@ export class PlatformClientState implements ClientState {
       directories: this.directories,
       customApps: this.customApps,
     }
-    await this.platformClient.updateConfig(data)
+    await this.storage.set(STATE_KEY, data)
     this.callbacks.forEach(cb => cb())
     if (this.ss) {
       await this.ss.sendClientState(this.createArgs())

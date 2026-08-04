@@ -1,4 +1,4 @@
-import type { DirectoryApp, WebAppDetails } from "@finos/sail-platform"
+import type { DirectoryApp, WebAppDetails } from "@finos/sail-desktop-agent"
 import { getClientState, getServerState } from "./index"
 
 export enum AppHosting {

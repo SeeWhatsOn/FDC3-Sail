@@ -1,6 +1,6 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { SailAppLauncher, createSailBrowserDesktopAgent } from "@finos/sail-platform"
+import { SailDesktopAgent, type AppLauncher } from "@finos/sail-desktop-agent"
 import type { AppMetadata } from "@finos/fdc3"
 
 import { loadConformanceApplications } from "../../sail-conformance-harness/src/conformance-app-directory"
@@ -29,9 +29,10 @@ if (isDockviewPopoutShell()) {
   // This ensures the agent is listening for WCP1Hello messages when getAgent() is called
   console.log("[Sail] Initializing FDC3 Desktop Agent")
 
-  const appLauncher = new SailAppLauncher({
-    onLaunchApp: (appMetadata: AppMetadata, instanceId: string, context?: unknown) => {
-      void context
+  const appLauncher: AppLauncher = {
+    // eslint-disable-next-line @typescript-eslint/require-await -- async so a throw rejects the returned promise
+    launch: async (request, appMetadata: AppMetadata) => {
+      const instanceId = request.app.instanceId || crypto.randomUUID()
       const workspaceStore = useWorkspaceStore.getState()
       const { activeWorkspaceId } = workspaceStore
 
@@ -75,9 +76,10 @@ if (isDockviewPopoutShell()) {
         tabId: activeTabId,
         url,
       })
-      return Promise.resolve()
+      return { appId: request.app.appId, instanceId }
     },
-    onCloseApp: (instanceId: string) => {
+
+    close: (instanceId: string) => {
       const workspaceStore = useWorkspaceStore.getState()
       for (const workspace of workspaceStore.workspaces.values()) {
         for (const [tabId, tab] of workspace.layout.tabs) {
@@ -87,13 +89,14 @@ if (isDockviewPopoutShell()) {
               workspaceId: workspace.uuid,
               tabId,
             })
-            return
+            return Promise.resolve()
           }
         }
       }
-      console.warn(`[Sail] onCloseApp: no panel found for instance ${instanceId}`)
+      console.warn(`[Sail] close: no panel found for instance ${instanceId}`)
+      return Promise.resolve()
     },
-  })
+  }
 
   const conformance = loadConformanceApplications({
     // Same-origin with sail-finance so WCP host-instance adoption works via the /apps proxy.
@@ -104,12 +107,12 @@ if (isDockviewPopoutShell()) {
     `[Sail] Conformance toolbox: ${conformance.profile} — FDC3 target ${conformance.fdc3Version} — origin ${conformance.origin}`,
   )
 
-  const agent = createSailBrowserDesktopAgent({
-    debug: true,
+  const agent = new SailDesktopAgent({
     appLauncher,
     appDirectories: [FINOS_APP_DIRECTORY_URL],
     apps: [...conformance.applications],
   })
+  agent.start()
 
   console.log("[Sail] FDC3 Browser Desktop Agent started and listening for connections")
 

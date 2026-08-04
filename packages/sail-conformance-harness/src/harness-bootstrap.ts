@@ -157,7 +157,6 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     apps: conformanceApps,
     appLauncher,
     intentResolver: createHarnessIntentResolver(debug),
-    autoStart: false,
     heartbeatEnabled: false,
     userChannels: DEFAULT_FDC3_USER_CHANNELS,
     implementationMetadata: {

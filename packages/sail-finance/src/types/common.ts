@@ -1,11 +1,17 @@
-// Import shared types from sail-api package
-export type {
-  TabDetail,
-  DirectoryApp,
-  WebAppDetails,
-  AppHosting,
-  InstanceID,
-} from "@finos/sail-platform"
+// App directory shapes come from the Desktop Agent, which owns FDC3.
+export type { DirectoryApp, WebAppDetails } from "@finos/sail-desktop-agent"
+
+/**
+ * A user channel as this shell paints it.
+ *
+ * Presentation only — the channel itself is the Desktop Agent's; `icon` and
+ * `background` are how the channel selector renders it here.
+ */
+export interface TabDetail {
+  id: string
+  icon: string
+  background: string
+}
 
 // Sail app-specific message constants
 export const AppManagementMessages = {

@@ -1,6 +1,6 @@
 import { getClientState, getServerState } from "../state"
 import styles from "./styles.module.css"
-import type { DirectoryApp, WebAppDetails } from "@finos/sail-platform"
+import type { DirectoryApp, WebAppDetails } from "@finos/sail-desktop-agent"
 import { DeleteButton } from "./delete-button"
 import { AddButton } from "./add-button"
 import Combobox from "react-widgets/Combobox"

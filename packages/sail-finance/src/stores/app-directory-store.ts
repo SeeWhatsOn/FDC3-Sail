@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
-import type { SailDesktopAgent } from "@finos/sail-platform"
+import type { SailDesktopAgent } from "@finos/sail-desktop-agent"
 
 import type { DirectoryApp } from "../types/common"
 

@@ -1,5 +1,5 @@
 import type { AppMetadata } from "@finos/fdc3"
-import type { DirectoryApp } from "@finos/sail-platform"
+import type { DirectoryApp } from "@finos/sail-desktop-agent"
 
 export const DEFAULT_ICON = "/icons/control/choose-app.svg"
 

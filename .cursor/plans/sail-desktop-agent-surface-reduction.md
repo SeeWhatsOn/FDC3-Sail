@@ -79,7 +79,7 @@ Apply principle 2. Remove from `src/index.ts`:
 
 Retained (evidence: actually imported by `sail-platform` / `sail-finance` / `sail-conformance-harness`):
 
-`SailDesktopAgent` · `SailDesktopAgentOptions` · `SailDesktopAgentApps` · `SailDesktopAgentChannels` · `SailDesktopAgentHostControllers` · `DesktopAgentAppInstance` · `DesktopAgentOpenOptions` · `AppChannelChangeEvent` · `HandshakeFailureEvent` · `SailImplementationMetadata` · `DirectoryApp` · `WebAppDetails` · `Logger` · `LogPayloadDetail` · `DACPValidationError` · host-contracts (`AppLauncher`, `IntentResolver`, `IntentResolutionRequest`, `BrowserIntentResolverController`, `ChannelControl`, …)
+`SailDesktopAgent` · `SailDesktopAgentOptions` · `SailDesktopAgentApps` · `SailDesktopAgentChannels` · `SailDesktopAgentHostControllers` · `DesktopAgentAppInstance` · `DesktopAgentOpenOptions` · `AppChannelChangeEvent` · `HandshakeFailureEvent` · `SailDesktopAgentMetadata` · `DirectoryApp` · `WebAppDetails` · `Logger` · `LogPayloadDetail` · `DACPValidationError` · host-contracts (`AppLauncher`, `IntentResolver`, `IntentResolutionRequest`, `BrowserIntentResolverController`, `ChannelControl`, …)
 
 `DesktopAgent` stays exported **as a type only**, marked `@internal` — three type-position uses in `sail-platform`, and TypeScript declaration emit needs the base class of `SailDesktopAgent` to be nameable.
 

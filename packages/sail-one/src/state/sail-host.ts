@@ -1,10 +1,10 @@
 import {
-  SailPlatform,
-  SailAppLauncher,
+  SailDesktopAgent,
+  type AppLauncher,
   type DirectoryApp,
   type IntentResolutionRequest,
   type WebAppDetails,
-} from "@finos/sail-platform"
+} from "@finos/sail-desktop-agent"
 import type { AppIdentifier, AppMetadata, BrowserTypes } from "@finos/fdc3"
 import type { SailClientStateArgs, TabDetail } from "./client-state"
 import { AppHosting } from "./default-app-state"
@@ -29,7 +29,7 @@ export enum AppInstanceState {
 
 /**
  * A launch the shell initiated itself, waiting to be paired with the instance id
- * the Desktop Agent mints in {@link SailAppLauncher}.
+ * minted by the shell's own {@link AppLauncher}.
  *
  * Apps opened by the user (via the app directory) carry an explicit hosting
  * choice; apps opened by another app through `fdc3.open()` have no queued intent
@@ -99,7 +99,7 @@ function toDirectoryApp(app: AppMetadata): DirectoryApp | undefined {
 }
 
 export class SailHost implements ServerState {
-  private platform: SailPlatform | null = null
+  private agent: SailDesktopAgent | null = null
   private callbacks: (() => void)[] = []
 
   private pendingLaunches: PendingLaunchIntent[] = []
@@ -122,11 +122,11 @@ export class SailHost implements ServerState {
   }
 
   async registerDesktopAgent(props: SailClientStateArgs): Promise<void> {
-    await this.startPlatform(props)
+    await this.startAgent(props)
   }
 
-  private async startPlatform(props: SailClientStateArgs): Promise<void> {
-    const platform = new SailPlatform({
+  private async startAgent(props: SailClientStateArgs): Promise<void> {
+    const agent = new SailDesktopAgent({
       appLauncher: this.createAppLauncher(),
       apps: props.customApps,
       userChannels: tabsToChannels(props.channels),
@@ -144,19 +144,19 @@ export class SailHost implements ServerState {
         this.instanceStates.set(instanceId, AppInstanceState.Terminated)
         this.notify()
       },
-      onChannelChanged: () => {
-        this.notify()
-      },
       onHandshakeFailed: error => {
         console.error("WCP handshake failed", error)
       },
     })
 
-    platform.start()
-    this.platform = platform
+    agent.start()
+    this.agent = agent
 
     this.unsubscribes.push(
-      platform.intentResolver.onRequest(request => {
+      agent.channels.onAppChannelChange(() => {
+        this.notify()
+      }),
+      agent.intentResolver.onRequest(request => {
         this.presentIntentResolution(request)
       }),
     )
@@ -169,9 +169,17 @@ export class SailHost implements ServerState {
     this.notify()
   }
 
-  private createAppLauncher(): SailAppLauncher {
-    return new SailAppLauncher({
-      onLaunchApp: async (appMetadata, instanceId) => {
+  /**
+   * The shell's own {@link AppLauncher}, mounting apps as panels or breakout windows.
+   *
+   * Mints the instance id when the agent has not supplied one, so the id the shell
+   * renders with is the id WCP4 later adopts.
+   */
+  private createAppLauncher(): AppLauncher {
+    return {
+      // eslint-disable-next-line @typescript-eslint/require-await -- async so a throw rejects the returned promise
+      launch: async (request, appMetadata) => {
+        const instanceId = request.app.instanceId || crypto.randomUUID()
         const app = toDirectoryApp(appMetadata)
         if (!app) {
           throw new Error(`Cannot launch ${appMetadata.appId}: metadata has no directory details`)
@@ -198,25 +206,27 @@ export class SailHost implements ServerState {
         }
 
         this.notify()
-        return Promise.resolve()
+        return { appId: app.appId, instanceId }
       },
-      onCloseApp: (instanceId: string) => {
+
+      close: (instanceId: string) => {
         void getClientState().removePanel(instanceId)
         this.instanceStates.set(instanceId, AppInstanceState.Terminated)
         this.notify()
+        return Promise.resolve()
       },
-    })
+    }
   }
 
   getKnownApps(): DirectoryApp[] {
-    return this.platform ? this.platform.apps.getAll() : []
+    return this.agent ? this.agent.apps.getAll() : []
   }
 
   getApplications(): Promise<DirectoryApp[]> {
-    if (!this.platform) {
+    if (!this.agent) {
       return Promise.reject(new Error("Desktop Agent not registered"))
     }
-    return Promise.resolve(this.platform.apps.getAll())
+    return Promise.resolve(this.agent.apps.getAll())
   }
 
   getAppInstanceState(instanceId: string): AppInstanceState | undefined {
@@ -224,7 +234,7 @@ export class SailHost implements ServerState {
     if (known) {
       return known
     }
-    const instance = this.platform?.apps.getInstance(instanceId)
+    const instance = this.agent?.apps.getInstance(instanceId)
     if (!instance) {
       return undefined
     }
@@ -237,13 +247,13 @@ export class SailHost implements ServerState {
     _channel: string | null,
     instanceTitle: string,
   ): Promise<string> {
-    if (!this.platform) {
+    if (!this.agent) {
       throw new Error("Desktop Agent not registered")
     }
 
     this.pendingLaunches.push({ appId, hosting, instanceTitle })
     try {
-      const identifier = await this.platform.apps.open(appId)
+      const identifier = await this.agent.apps.open(appId)
       if (!identifier.instanceId) {
         throw new Error(`Desktop Agent returned no instance id for ${appId}`)
       }
@@ -266,7 +276,7 @@ export class SailHost implements ServerState {
    * `channels.ensureUserChannel` and `apps.setDirectories`.
    */
   async sendClientState(cs: SailClientStateArgs): Promise<void> {
-    if (!this.platform) {
+    if (!this.agent) {
       return
     }
 
@@ -289,12 +299,12 @@ export class SailHost implements ServerState {
   }
 
   private async loadDirectories(urls: string[]): Promise<void> {
-    if (!this.platform) {
+    if (!this.agent) {
       return
     }
     for (const url of urls) {
       try {
-        await this.platform.apps.addDirectory(url)
+        await this.agent.apps.addDirectory(url)
         this.loadedDirectoryUrls.add(url)
       } catch (e) {
         console.error(`Failed to load app directory ${url}`, e)
@@ -313,28 +323,28 @@ export class SailHost implements ServerState {
       unsubscribe()
     })
     this.unsubscribes = []
-    this.platform?.stop()
-    this.platform = null
+    this.agent?.stop()
+    this.agent = null
     this.instanceStates.clear()
     this.pendingLaunches = []
 
-    await this.startPlatform(cs)
+    await this.startAgent(cs)
   }
 
   async setUserChannel(instanceId: string, channelId: string): Promise<void> {
-    if (!this.platform) {
+    if (!this.agent) {
       return
     }
 
     // `changeAppChannel` resolves on the agent's `channelChanged` push, so an
     // instance the agent has never seen (a stale panel, an app that never
     // handshook) would leave the caller hanging until the change timeout.
-    if (!this.platform.apps.getInstance(instanceId)) {
+    if (!this.agent.apps.getInstance(instanceId)) {
       return
     }
 
     try {
-      await this.platform.channels.changeAppChannel(instanceId, channelId)
+      await this.agent.channels.changeAppChannel(instanceId, channelId)
     } catch (e) {
       console.error(`Failed to move ${instanceId} to channel ${channelId}`, e)
     }
@@ -352,7 +362,7 @@ export class SailHost implements ServerState {
       if (!instanceId) {
         return null
       }
-      const channelId = this.platform?.channels.getAppChannelId(instanceId) ?? null
+      const channelId = this.agent?.channels.getAppChannelId(instanceId) ?? null
       return tabs.find(t => t.id === channelId) ?? null
     }
 
@@ -380,16 +390,16 @@ export class SailHost implements ServerState {
     intent: string | null,
     _channel: string | null,
   ): void {
-    if (!this.platform) {
+    if (!this.agent) {
       return
     }
 
     if (!ai || !intent) {
-      this.platform.intentResolver.cancel(requestId)
+      this.agent.intentResolver.cancel(requestId)
       return
     }
 
-    const pending = this.platform.intentResolver
+    const pending = this.agent.intentResolver
       .getPendingRequests()
       .find(r => r.requestId === requestId)
     if (!pending) {
@@ -405,10 +415,10 @@ export class SailHost implements ServerState {
     )
 
     if (!chosen) {
-      this.platform.intentResolver.cancel(requestId)
+      this.agent.intentResolver.cancel(requestId)
       return
     }
 
-    this.platform.intentResolver.select(requestId, chosen)
+    this.agent.intentResolver.select(requestId, chosen)
   }
 }

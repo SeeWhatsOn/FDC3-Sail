@@ -1,6 +1,6 @@
 # sail-desktop-agent — collapse `DesktopAgent` / `SailDesktopAgent` into one class
 
-**Status:** planning — nothing written.
+**Status:** all slices landed (uncommitted) — 1, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6.
 **Branch base:** `wip/v3-local`
 **Version context:** `3.0.0-pre.1.0` — pre-release, never published to npm (`npm view` 404 for both
 packages, per draft-PR register item 13). No backward-compatibility obligation.
@@ -120,7 +120,28 @@ Base methods with no controller equivalent, staying flat: `start`, `stop`, `getS
 
 ## Landmines — read before starting
 
-### 1. `sail-platform` monkey-patches a private method. Breaking it is silent. **[verified]**
+### 1. `sail-platform` monkey-patches a private method. **[verified — hazard RETIRED by 2.3, see below]**
+
+> **Status update after slice 2.3.** The bind-early hazard described below is **gone for the only
+> production path that uses it.** Removing `autoStart` flipped the ordering in
+> `createSailBrowserDesktopAgent` from *construct(auto-starts) → wire* to *construct → wire →
+> caller starts*. The patch now lands on `handleMessage` strictly **before** `start()` runs, so
+> `.bind(this)` would capture the already-patched method and the control survives. Proven
+> empirically: 2.3 re-ran the bind-early experiment and the interception test **stayed green**,
+> where in 2.0 it went red.
+>
+> Verified `sail-browser-desktop-agent.ts:73` is the **only** production wiring site
+> (`SailPlatform` does not wire the allowlist), so the retirement is complete, not partial.
+>
+> **What the 2.0 test now protects:** that the allowlist intercepts genuine WCP4 traffic on the
+> real message path rather than a mock. That is still worth having. It no longer protects against
+> bind timing, because that hazard no longer exists here.
+>
+> **Do not delete the rules below.** They become live again the moment anything re-introduces
+> auto-start, or wires the allowlist after `start()`. The monkey-patch itself is unchanged and is
+> still reaching past a `private` modifier.
+
+### 1 (original). The mechanism, for reference. **[verified]**
 
 [`wcp4-origin-allowlist.ts:68-71`](../../packages/sail-platform/src/wcp4-origin-allowlist.ts:68):
 
@@ -365,10 +386,39 @@ Resolves: draft-PR register **item 14**; docs defect register rows **B2** and (v
 - [x] 1 — Collapse duplicate spellings (14 shadowed methods; `SailPlatform` third alias)
 - [x] 2.0 — **WCP4 origin-allowlist interception test** (must precede 2.1–2.3; landmine 1)
 - [x] 2.1 — Edge as constructor parameter; delete `attachAppConnection`
-- [ ] 2.2 — Merge the two classes
-- [ ] 2.3 — Explicit `.start()`; delete `autoStart`
-- [ ] 2.4 — Index cleanup; declaration-emit pass
-- [ ] 2.5 — Enable `stripInternal`; confirm `@internal` symbols leave the `.d.ts`
+- [x] 2.2 — Merge the two classes
+- [x] 2.3 — Explicit `.start()`; delete `autoStart`
+- [x] 2.4 — Index cleanup; declaration-emit pass
+- [x] 2.5 — Enable `stripInternal`; confirm `@internal` symbols leave the `.d.ts`
+- [x] 2.6 — **NEW (found in 2.2):** reunify `connector` / `appConnection`; remove the
+  injection-gated intent-resolver wiring — see "Known issue" below
+
+## Known issue — opened by 2.2, fixed by 2.6
+
+Merging the classes removed a structural distinction (browser class vs bare class) and re-expressed
+it as **two implicit conditionals on whether an edge was injected**. Both live in
+`src/agent/sail-desktop-agent.ts`:
+
+1. **`connector` and `appConnection` can diverge.** `connector` is *always* a freshly built
+   `BrowserAppConnection` (`:156`, `:162`); `appConnection` is `config.appConnection ?? browserAppConnection`
+   (`:166`). In the browser path they are the same object. With an injected test edge they are not —
+   so the controllers, which wire to `connector` (`apps.onConnect`, `channels.onAppChannelChange`),
+   would listen on an object nothing routes through.
+   **Not a live bug** — verified the only two injection sites
+   (`test/support/desktop-agent-test-harness.ts:9`, `test/world/index.ts:115`) use no controllers.
+   It is a latent trap: `new SailDesktopAgent({ appConnection: edge }).apps.onConnect(fn)` would
+   silently never fire. Every injected-edge agent also allocates an unused `BrowserAppConnection`
+   (harmless — the constructor is inert).
+2. **`if (config.appConnection === undefined)` gates the `requestIntentResolution` wiring** (`:172`).
+   This encodes "am I under test?" into the production class. It was a genuine regression 2.2 found
+   the honest way — wiring it unconditionally broke 4 Cucumber multi-handler `raiseIntent`
+   scenarios, because bare `DesktopAgent` never had that wiring. The gate restores the old
+   per-class behaviour exactly, so it is a faithful port, not a bodge — but the shape is wrong.
+
+**Proposed fix (slice 2.6):** point the controllers at `this.appConnection` (the edge that actually
+routes) and make `connector` a narrowed view of it rather than a second object; then derive the
+intent-resolver wiring from a real capability check rather than from "was an option passed".
+Deferred rather than folded into 2.2 to keep that slice reviewable.
 
 ## Verification Notes
 
@@ -441,6 +491,344 @@ Resolves: draft-PR register **item 14**; docs defect register rows **B2** and (v
   `sail-platform/src/index.ts`, `sail-finance/src/main.tsx`; new untracked `client/__tests__/`).
   Net −1152 lines. It is not part of this plan and was flagged to the user, who chose to continue.
   Greens are therefore relative to that tree, not to `HEAD`.
+- **Slice 2.3 GREEN:** vitest 329/329 (50 files) · sail-platform 27/27 (6 files) · cucumber
+  154/154 / 1461 steps · conformance-harness 69/69 · `validate -w @finos/sail-desktop-agent`
+  typecheck/lint clean (format drift only on the same pre-existing 7 files, none touched here) ·
+  root typecheck clean across all workspaces. Rebuilt `sail-desktop-agent`'s dist before the
+  sail-platform runs and before root typecheck, per this plan's own note — the first
+  pre-rebuild sail-platform run failed 13/27 with `"DesktopAgent is already started"` because the
+  linked dist still had the old always-auto-start constructor.
+- Slice 2.3: `autoStart` deleted from `SailDesktopAgentOptions` and the constructor. `.start()`
+  added at every construction site that needs a running agent: `wcp-host-logger-threading.test.ts`,
+  both cases in `heartbeat-connect-flood.test.ts`, `createStrictBrowserAgent()` in
+  `wcp-inbound-validation.test.ts`, the shared `createTestAgent()` fixture in
+  `wcp-desktop-agent.integration.fixtures.ts` (backs ~50 WCP integration test call sites),
+  `SailPlatform.start()`, `sail-finance/src/main.tsx`, and both cases in the 2.0 interception test
+  (`wcp4-origin-allowlist-interception.test.ts`). Everywhere else `autoStart: false` was simply
+  dropped — those sites either already called `.start()` explicitly
+  (`desktop-agent-test-harness.ts`, `test/world/index.ts`, `harness-bootstrap.ts`,
+  `sail-desktop-agent-lifecycle.test.ts`) or never needed a running agent at all (pure
+  state/catalog unit tests).
+- **`createSailBrowserDesktopAgent` contract — resolved: caller starts, factory does not.**
+  `SailPlatform.start()` and `sail-finance/src/main.tsx` now call `.start()` explicitly on the
+  agent the factory returns. Reasoning: the factory is sugar over `new SailDesktopAgent()` with
+  Sail defaults merged in and the allowlist wired — construction-time concerns only. Auto-starting
+  inside it would reintroduce, one layer up, exactly the implicit two-phase behaviour this slice
+  removes from the constructor, and the naming (`create…`, not `createAndStart…`) doesn't promise
+  a running agent. `SailPlatform.start()` was already required by this slice to call
+  `desktopAgent.start()` itself, which independently confirms *some* caller must do it — making
+  the factory do it too would just be a second, redundant place to reason about start ordering.
+- **Origin-allowlist ordering — deliberate, not incidental.** Removing `autoStart` flips
+  `createSailBrowserDesktopAgent`'s ordering from *construct (auto-starts) → wire allowlist* to
+  *construct → wire allowlist → caller starts*. The allowlist patch now lands on `handleMessage`
+  strictly before `start()` ever runs, for every production and test caller of that factory.
+  **Bind-early experiment re-run under the new ordering:** temporarily changed `start()` to
+  `onAppMessage(this.handleMessage.bind(this))`, rebuilt `sail-desktop-agent`'s dist, re-ran
+  `wcp4-origin-allowlist-interception.test.ts` — **both cases stayed green.** This is the expected,
+  predicted result: `.bind(this)` now captures `handleMessage` *after* `wireWcp4OriginAllowlist`
+  has already overwritten it on the instance, so early-binding no longer discards the patch. The
+  hazard this test was written to catch (slice 2.0, when `createSailBrowserDesktopAgent`
+  auto-started before wiring) is genuinely gone for this production path — reverted immediately
+  after the experiment, dist rebuilt again, full sail-platform suite re-confirmed 27/27. The test
+  still has value: it proves the allowlist actually intercepts real WCP4 traffic (not just a mock's
+  branching), which is real coverage independent of bind timing. What it can no longer prove is the
+  *early-binding* hazard specifically — that guarantee now comes from the ordering itself
+  (wire-before-start is structural, not incidental to closure timing), not from this test. Per the
+  plan's instruction not to alter `start()`'s dynamic lookup or relocate `handleMessage`, both are
+  untouched in the landed code — this was purely an experiment, run and reverted.
+- Docs fixed to match: `website/docs/packages/platform/overview.md:76-84` (resolves item 22's
+  `start()`-after-auto-start half — the sample now calls `.start()` and no longer throws),
+  `website/docs/packages/desktop-agent/integrator-guide.md` (two examples plus prose that said
+  "auto-started by default"), `packages/sail-desktop-agent/README.md` (minimal example). Not
+  touched: `.cursor/plans/*` (historical planning docs) and
+  `.cursor/skills/consume-sail-desktop-agent/SKILL.md` (already describes a `/presets` /
+  `createBrowserDesktopAgent` architecture that doesn't match this codebase at all, independent of
+  this slice — out of scope to fix here).
+- **Slice 2.4 GREEN:** vitest 329/329 (50 files, 1 known flake re-confirmed by isolation re-run) ·
+  sail-platform 27/27 (6 files, incl. the 2.0 interception test, re-run individually and green) ·
+  cucumber 154/154 / 1461 steps · conformance-harness 69/69 · `validate -w @finos/sail-desktop-agent`
+  typecheck/lint clean (format drift only on the same pre-existing 8 files, none touched here — the
+  4 files this slice edited pass `vp fmt --check` individually) · root typecheck clean across all
+  workspaces including `sail-finance`, `sail-one`, `sail-docs`. Rebuilt `sail-desktop-agent`'s dist
+  before every sail-platform/conformance-harness run and before root typecheck, per the plan's
+  build-ordering note.
+- **Root export count: 40 → 39.** Measured empirically by swapping the pre-slice and post-slice
+  `index.ts` into the build and diffing `dist/index.d.mts`'s bundled `export { ... }` statement —
+  not by reading source. Exactly one symbol removed: `SailDesktopAgentHostControllers`.
+- **`DesktopAgent` type export: already gone before this slice started.** Slice 2.2's merge had
+  already deleted `index.ts`'s `DesktopAgent` re-export and its apology comment as a side effect
+  (confirmed via `git diff HEAD` — the working tree already differed from `HEAD` on exactly those
+  lines before slice 2.4 touched anything). Nothing to do here beyond confirming it stayed gone
+  through the rest of this slice's edits.
+- **`BrowserAppConnection` — survived, and the reason changed.** Cut it from `index.ts`, rebuilt
+  dist, ran `sail-platform` typecheck: `error TS2459: Module '"@finos/sail-desktop-agent"' declares
+  'BrowserAppConnection' locally, but it is not exported`, pointing at
+  `sail-platform.ts:17` (`import type { AppConnectionMetadata, BrowserAppConnection } from
+  "@finos/sail-desktop-agent"`), used at `:102` (`private _browserAppConnection:
+  BrowserAppConnection | null`) and `:210` (`get connector(): BrowserAppConnection`). This is not
+  the deviation the surface-reduction plan originally described ("declaration emit requires it to
+  be nameable") — `sail-desktop-agent`'s own `tsc` and `vp pack` both succeed with the export
+  removed, because `BrowserAppConnection` is already `export class`-ed from its own defining module
+  and the `.d.mts` bundler inlines referenced-but-unexported types as anonymous locals without
+  complaint. The real reason is a genuine external consumer importing the name directly. Restored
+  the export and rewrote its doc comment to say so; it must **not** be marked `@internal` — doing so
+  would make it a `stripInternal` casualty in 2.5 and break `sail-platform`'s build.
+- **`AppConnectionMetadata` / `AppConnectionOptions` — both survived, both genuinely public.**
+  Same cut-and-rebuild method: removing both produces `TS2459` in `sail-platform.ts:17`
+  (`AppConnectionMetadata`), `sail-platform/src/index.ts:51-52` (both, re-exported), the
+  `sail-platform-preset-wiring.test.ts:8` (`AppConnectionOptions`), and
+  `sail-conformance-harness/src/harness-bootstrap.ts:3` (`AppConnectionMetadata`, used as the
+  `onAppConnected` callback parameter type at `:173`). Neither was ever marked `@internal` in the
+  doc comment (only `BrowserAppConnection` was), consistent with them being real public API rather
+  than a declaration-emit artifact.
+- **One additional export removed, found by applying the same method beyond the plan's three named
+  deviations:** `SailDesktopAgentHostControllers` (the interface `SailDesktopAgent implements`).
+  Zero repo-wide consumers (checked `sail-platform`, `sail-finance`, `sail-one`,
+  `sail-conformance-harness` — only hit is the defining file and the `implements` clause itself).
+  Cut it, rebuilt dist, ran typecheck on all four consumer packages plus `sail-desktop-agent`
+  itself: all clean. The `implements` clause does not require the interface to be re-exported from
+  `index.ts` — it only requires the interface to be exported from *some* module (it already is,
+  from `sail-desktop-agent-controllers.ts`), which is a different, weaker constraint than being
+  nameable from the package's single public entry point. Not one of the plan's three named
+  deviations (it predates the two-class split, from the surface-reduction plan), but it fit the same
+  failure mode — a controller-grouping convenience type nobody outside the class needs to name — so
+  removed under the slice's general "audit the whole root export surface" instruction.
+- **Tried and restored: `DesktopAgentAppInstance` / `DesktopAgentOpenOptions`.** Empirically these
+  are *not* load-bearing either — cutting them, rebuilding, and typechecking all four consumers is
+  clean, because the `.d.mts` bundler inlines them as anonymous local interfaces referenced
+  structurally inside the exported `SailDesktopAgentApps` shape, and every current consumer
+  (`sail-one/src/state/sail-host.ts`, `sail-conformance-harness/src/harness-bootstrap.ts` and
+  others) only ever uses `apps.getInstance(s)` / `apps.open` through inference, never by importing
+  the type name. Restored anyway: unlike `SailDesktopAgentHostControllers`, these are the return/
+  param types of a commonly-called public method a shell would plausibly want to name explicitly
+  (e.g. typing a list-of-running-instances prop), and the plan's own "Open decisions #4" already
+  resolved *"RESOLVED: no [rename]... both are exported and used"* — a premise this slice's method
+  could have overturned but chose not to, since they are unrelated to the two-class deviations this
+  slice targets (no `@internal` tag was ever on them, and the "apologetic exports" count in the
+  plan's own "Expected outcome" table only ever referred to `DesktopAgent` and
+  `BrowserAppConnection`).
+- **Not touched, deliberately:** `DACPTimeoutError` / `DACPProcessingError` — no repo consumer
+  imports either by name, but they are unrelated to the subclass-collapse deviations (a host
+  catching errors off a `cause` chain is a different design question than declaration-emit fallout
+  from a deleted base class), so left as-is rather than re-litigated here.
+- **Header comment:** already accurate before this slice started — the "two-class construction
+  story" the task description warned about was already gone at `HEAD` (predates this slice; written
+  during the surface-reduction plan's own pass, `git diff HEAD` shows no header lines changed by
+  slices 2.1–2.3). Rewrote it anyway to state explicitly "there is no base class to extend or attach
+  to" and to mention the now-mandatory explicit `.start()` call (2.3), which the old header never
+  described.
+- **Docs register row B2 — resolved.** `website/docs/packages/desktop-agent/integrator-guide.md`
+  still described a "Manual composition ... `DesktopAgent` and `attachAppConnection()` are
+  `@internal`" path in the "How to wire" decision tree (a `text` block) and its accompanying table,
+  plus one prose sentence claiming "this package's own tests compose `DesktopAgent` and
+  `attachAppConnection()` directly via internal source paths." Both APIs are fully deleted, not
+  merely internal — verified the actual replacement pattern in
+  `test/support/desktop-agent-test-harness.ts:1-9` (`new SailDesktopAgent({ ...options,
+  appConnection: connection })`). Deleted the "Manual composition" branch from the decision tree
+  (there is no longer a manual-composition path — that is the point of the collapse) and rewrote the
+  table and prose to describe the real `appConnection` constructor-injection option instead.
+- **Stray `{@link DesktopAgent}` doc references fixed, found while auditing.** Not part of the
+  index.ts export surface, but same root cause (references to a class deleted in 2.2) and cheap to
+  fix while in the area: `app-connection/browser-app-connection.ts:5`,
+  `app-connection/types.ts:19,47`, `app-connection/browser-app-connection.ts:113`,
+  `handlers/types.ts:155` — all changed `{@link DesktopAgent...}` to `{@link SailDesktopAgent...}`.
+  Left alone: uses of the bare word "DesktopAgent" as English prose or as part of an unrelated name
+  (`DesktopAgentBridging` — a real FDC3 optional-feature flag; `createDesktopAgentWithTestConnection`
+  — a test helper name; test `describe`/`it` titles; the `"DesktopAgent is already started"` runtime
+  error string) — none of these assert the deleted class still exists.
+- **Slice 2.5 — STEP 0: `stripInternal` is a `tsc` option, but declaration emit for this package
+  runs through `vp pack` → `tsdown` → `rolldown-plugin-dts` (empirically confirmed: build log's
+  `[PLUGIN_TIMINGS]` block names `rolldown-plugin-dts:generate`/`:resolver` as the dominant build
+  phases). That plugin does read the package's own `tsconfig.json` compilerOptions, `stripInternal`
+  included — **it is honoured, not decorative here.** Proof: with `stripInternal` absent,
+  `dist/index.d.mts` contains `appConnection?: AgentAppConnection;` on `SailDesktopAgentOptions`
+  (the option tagged `@internal` at `sail-desktop-agent-types.ts:80`). Setting `stripInternal: true`
+  and rebuilding removes that property line entirely, and with it the two supporting interfaces
+  (`AgentAppConnection`, `AppConnectionDelivery`) that were only reachable through it — a clean
+  before/after diff, saved during the session, confirms exactly those ~40 lines left the output and
+  nothing else changed structurally at first.
+- **Slice 2.5 — STEP 0 found a real defect, not a false alarm: stripInternal had collateral damage.**
+  The first before/after diff showed the root `export { ... }` statement also silently dropped
+  `AppConnectionMetadata` and `AppConnectionOptions` — two types that carry **no** `@internal` tag
+  anywhere and are independently re-exported straight from `index.ts`
+  (`export type { AppConnectionMetadata, AppConnectionOptions } from "./app-connection/browser-app-connection"`).
+  Rebuilding `sail-platform` against that dist reproduced real breakage: `TS2459` at
+  `sail-platform.ts:17`, `sail-platform/src/index.ts:51-52`, and
+  `sail-platform-preset-wiring.test.ts:8` — i.e. enabling the option, unmodified, would have broken
+  a genuinely public, never-tagged export. **Root cause traced and fixed, not worked around:**
+  `app-connection/types.ts:5` carried a second, unused re-export of the same two names
+  (`export type { AppConnectionMetadata, AppConnectionOptions } from "./wcp/wcp-types"`) — dead code,
+  zero consumers repo-wide (checked; only `AgentAppConnection`, defined in that same file, is ever
+  imported from `app-connection/types`). That file also holds the `AgentAppConnection` interface,
+  which is only reachable through the now-`@internal`-stripped `appConnection` property. With
+  `rolldown-plugin-dts`'s cross-module dedup, stripping the reachable-only-via-`@internal` path
+  through that module corrupted the *other*, independently-exported re-export sharing the same file
+  — a genuine bundler limitation, not a `tsc` semantics issue. Deleting the dead re-export line
+  (`app-connection/types.ts:5`) fixed it outright: rebuilt, diffed again — the new before/after
+  diff is *exactly* the `appConnection` property plus its two internal-only interfaces, nothing else;
+  root export list is byte-identical to the `stripInternal`-off state aside from that. `sail-platform`
+  re-typechecked clean afterward (0 errors). This satisfies the "before/after diff proving a symbol
+  left the output" requirement *and* proves nothing else silently left with it.
+- **Slice 2.5 — full `@internal` enumeration (9 tags, 9 distinct symbols):**
+  1. `agent/sail-desktop-agent-types.ts:80` — `appConnection?: AgentAppConnection` property on
+     `SailDesktopAgentOptions` (exported from `index.ts`). **No consumer imports it through the
+     package** — checked `sail-platform`, `sail-finance`, `sail-one`, `sail-conformance-harness` for
+     `appConnection:` as a constructed option; the only repo-wide hit outside this package's own
+     source-importing tests is `sail-conformance-harness/src/harness-finos-teardown.ts:165`, which
+     is a **false alarm** (see below) — an unrelated function parameter with the same name. Tag is
+     correct; left as `@internal`.
+  2. `handlers/heartbeat/runtime.ts:16` — `getActiveHeartbeatTimerCount`
+  3. `handlers/heartbeat/runtime.ts:21` — `getActiveHeartbeatInstanceIds`
+  4. `handlers/heartbeat/runtime.ts:26` — `clearAllHeartbeatTimersForTesting`
+  5. `handlers/intents/intent-pending-timeout-registry.ts:27` — `getActivePendingIntentTimeoutCount`
+  6. `handlers/intents/intent-pending-timeout-registry.ts:32` — `clearAllPendingIntentTimeoutsForTesting`
+  7. `handlers/utils/dacp-response-utils.ts:62` — `withDestinationRouting`
+  8. `handlers/utils/open-with-context.ts:19` — `getPendingOpenWithContextTimeoutCount`
+  9. `handlers/utils/open-with-context.ts:24` — `clearAllPendingOpenWithContextTimeoutsForTesting`
+
+  Symbols 2–9 are free functions **never re-exported from `index.ts`** — module-boundary already
+  keeps them out of the built `.d.mts` regardless of `stripInternal`; the tag is belt-and-suspenders
+  documentation on top of an already-enforced boundary, not doing independent work for these eight.
+  Checked all four consumer packages for direct imports of each by name: `sail-platform` and
+  `sail-finance` import none of them. `sail-conformance-harness` imports exactly one —
+  `clearAllPendingOpenWithContextTimeoutsForTesting` — via **relative source paths**
+  (`../../sail-desktop-agent/src/handlers/utils/open-with-context`) in
+  `src/__tests__/harness-open-with-context.harness.ts:13` and
+  `src/harness-open-with-context.test.ts:6`, both test files. This is not a contradiction: a source
+  import never touches `dist/index.d.mts`, so `stripInternal` has zero effect on it either way — the
+  consumer is already reaching past the package's public npm-style surface deliberately (same
+  pattern the package's own in-package tests use, and the same pattern `test/support/*` helpers use
+  for `sail-conformance-harness` generally). The `@internal` tag is accurately describing "not part
+  of the built public API," which remains true regardless of this source-level test wiring. No tag
+  removed, no consumer reworked.
+- **Slice 2.5 — the task's flagged "SPECIFIC RISK" is a false alarm, verified by reading the code.**
+  `harness-finos-teardown.ts:164-178`'s `installHarnessInboundAppMessageObserver(appConnection: {
+  onAppMessage(handler): void }, observer)` takes a **structurally-typed parameter incidentally named
+  `appConnection`** — unrelated to `SailDesktopAgentOptions.appConnection`. Its only call site,
+  `harness-bootstrap.ts:194`, passes `desktopAgent.connector` (the `BrowserAppConnection` instance,
+  which is genuinely public and never tagged `@internal`), not a constructor option. Confirmed via
+  `grep -rn "appConnection:" packages/sail-conformance-harness/src packages/sail-platform/src
+  packages/sail-finance/src` (excluding `.test.ts`): the harness-finos-teardown.ts parameter is the
+  only hit anywhere. No agent is constructed with an injected edge through any consumer package's
+  use of the public `@finos/sail-desktop-agent` import. Nothing to decide here — the risk does not
+  exist as described.
+- **Slice 2.5 — one line of source changed for the fix, formatted with `vp fmt`:** deleted
+  `app-connection/types.ts:5`'s dead re-export. No other symbol was untagged, retagged, or reworked.
+- **Slice 2.5 — root export count: 39 → 39, unchanged.** `stripInternal` only removes a struct
+  member (`appConnection`) and two structurally-referenced-only interfaces that were never named in
+  the root `export { ... }` statement to begin with (they were unexported locals inlined by the
+  bundler) — so the *count* of root-exported names does not move, only the file's internal body
+  shrinks (`dist/index.d.mts`: 47.50 kB → 45.77 kB after the fix).
+- **Slice 2.5 GREEN (after rebuilding dist with the fix in place):** `validate -w
+  @finos/sail-desktop-agent` — typecheck and lint clean; `format --check` fails only the same
+  pre-existing 8 files from prior slices, none touched here. sail-desktop-agent vitest 329/329 (50
+  files, flaky `wcp-host-logger-threading.test.ts` re-run in isolation and green). sail-platform
+  vitest 27/27 (6 files). cucumber 154/154 scenarios / 1461/1461 steps. conformance-harness vitest
+  69/69 (14 files). Root typecheck clean across all workspaces (`sail-desktop-agent`, `sail-platform`,
+  `sail-finance`, `sail-one`, `sail-conformance-harness`, `sail-docs`) — one transient failure
+  surfaced on a single run (`sail-finance` → `TS2307` resolving `@finos/sail-desktop-agent` through
+  its relative import of `sail-conformance-harness/src/conformance-app-directory.ts`); reproduced a
+  clean re-run immediately after, and independently re-tested with this slice's two edits fully
+  `git stash`ed (then restored) to rule out causation — passed clean both stashed and restored,
+  confirming a one-off fluke (most likely `vp pack`/`tsc` I/O race immediately after a dist rebuild),
+  not a regression from this slice. Rebuilt `sail-desktop-agent`'s dist before every consumer run per
+  the plan's build-ordering note.
+- **Slice 2.5 — tsconfig.json diff:** added `"stripInternal": true` alongside the existing `outDir`.
+  Nothing else in the package's tsconfig changed.
+- **Slice 2.6 — reproduction test proved the trap red before any fix.** New
+  `src/agent/__tests__/sail-desktop-agent-edge-routing.test.ts` constructs an
+  `EmittingTestAppConnection` (extends the real `AppConnectionEventEmitter`, satisfies
+  `AgentAppConnection`) — unlike `DacpTestAppConnection`, which has no event-emitter capability at
+  all and so cannot distinguish "wired to the right object" from "wired to nothing." Against
+  pre-fix code: `new SailDesktopAgent({ appConnection: edge })` → `agent.apps.onConnect(fn)` →
+  `edge.simulateAppConnected(metadata)` → `fn` never called (`expected [] to deeply equal
+  [{...}]`) — confirms `apps.onConnect` was wired to the separately-constructed `connector`, not
+  the injected edge.
+- **Slice 2.6 — design chosen: `SailDesktopAgent<TEdge extends AgentAppConnection =
+  BrowserAppConnection>`, `get connector(): TEdge { return this.appConnection }`.** Considered
+  three options per the plan's own text: (a) widen `AgentAppConnection` with optional
+  capabilities and leave `connector` as a second, harmless-but-still-separate object; (b) the
+  generic class, making `connector` a literal alias of `appConnection`; (c) narrow `connector`
+  only when the edge happens to be a `BrowserAppConnection`. Chose (b) combined with (a)'s
+  capability-widening (still needed regardless, for `on`/`off`/`disconnectAppByInstanceId`/
+  `requestIntentResolution`/`resolveIntentSelection`, all now optional on `AgentAppConnection`,
+  narrowed back to required on `BrowserAppConnectionSurface`). (b) alone doesn't remove the need
+  for (a)'s widening — the controllers still take an edge that might not have those members. (b)
+  over a plain (a)-only fix because (a) alone only makes the divergence *harmless* (nothing
+  internal reads the stale `connector`); (b) *removes* the divergence structurally — `connector`
+  cannot disagree with `appConnection` because they are the same reference by construction, which
+  is what the plan's own proposed fix text asks for ("make `connector` a narrowed view of
+  `this.appConnection` ... rather than a second object"). Verified empirically the hard constraint
+  still holds: bare `SailDesktopAgent` (every production call site — `sail-platform`,
+  `sail-finance`, `sail-one`, the landmine file) resolves `TEdge` to the default
+  `BrowserAppConnection`, so `connector: BrowserAppConnection` for every consumer that doesn't
+  explicitly inject an edge. `Pick<SailDesktopAgent, "connector">` in
+  `wcp4-origin-allowlist.ts:11` (`type BrowserDesktopAgentWithConnector = SailDesktopAgent`)
+  compiles unchanged.
+- **Slice 2.6 — blast radius measured empirically, not assumed.** Making the class generic
+  requires every internal helper that stores an agent typed by its *injected* edge (not the
+  default) to say so explicitly — `SailDesktopAgent<DacpTestAppConnection>` in
+  `test/support/desktop-agent-test-harness.ts`, `test/world/index.ts`, and
+  `sail-conformance-harness/src/__tests__/harness-open-with-context.harness.ts` (the one consumer
+  outside `sail-desktop-agent` that constructs an agent via
+  `createDesktopAgentWithTestConnection`); `SailDesktopAgent<AgentAppConnection>` (the widest
+  bound) in edge-agnostic test helpers (`test/support/agent-state.ts`) and in the three Slice-1-debt
+  cast sites this collapses back to real controller calls
+  (`desktop-agent-user-channels.test.ts`, `wcp-inbound-validation.test.ts`,
+  `get-app-metadata-harness-path.test.ts`). Measured the full risk by grepping every
+  `SailDesktopAgent` type reference across `sail-desktop-agent`, `sail-conformance-harness`,
+  `sail-platform`, and `sail-finance` (33 files matched) and then running root `tsc` to see which
+  actually broke: exactly one file outside `sail-desktop-agent`
+  (`harness-open-with-context.harness.ts`, fixed by pointing its fixture type at
+  `SailDesktopAgent<DacpTestAppConnection>`). Every other match was a bare `SailDesktopAgent`
+  reference that only ever sees the default `BrowserAppConnection` type parameter in practice
+  (`sail-platform`, `sail-finance`, `sail-one` production code; harness functions that only touch
+  edge-independent members) and needed no change. Confirms this was a same-slice-sized fix, not the
+  "materially larger, stop and say so" scope the task warned about.
+- **Slice 2.6 — `requestIntentResolution` gate replaced with a capability check on the routing
+  edge.** `if (config.appConnection === undefined)` → `if (typeof
+  this.appConnection.requestIntentResolution === "function")`. `requestIntentResolution` /
+  `resolveIntentSelection` / `disconnectAppByInstanceId` / `on` / `off` all moved to optional
+  members on `AgentAppConnection` (`app-connection/types.ts`), matching the existing
+  `setOnAgentDisconnect?` / `notifyChannelMembershipChanged?` / `bindAgentState?` shape, and
+  narrowed back to required on `BrowserAppConnectionSurface`. `createAppsController`,
+  `createChannelsController`, `wireIntentResolver`, `wireLifecycleCallbacks`, and
+  `changeAppChannel`'s `ChannelOperationsBacking.connector` all retyped from `BrowserAppConnection`
+  to `AgentAppConnection`, with `?.` at each call; `apps.disconnect` falls back to the
+  always-present `pruneAppConnection` when `disconnectAppByInstanceId` (host-initiated
+  WCP6Goodbye) isn't available. Every one of these is now constructed with `this.appConnection`
+  (which, per the generic design, always *is* `connector`), not a second object. **Proof the 4
+  Cucumber multi-handler `raiseIntent` scenarios still pass:** full `npm run test:cucumber` —
+  154/154 scenarios, 1461/1461 steps, unchanged from every prior slice's baseline (see full run
+  transcript in the slice's chat verification — same intent-resolution scenarios exercised, same
+  pass count).
+- **Slice 2.6 — the `@internal` tag on `SailDesktopAgentOptions.appConnection` predates this
+  slice** (confirmed against the Slice 2.5 notes above, which already show `appConnection?:
+  AgentAppConnection` tagged `@internal` before 2.6 started) — not introduced or altered here.
+  `stripInternal` still removes it from `dist/index.d.mts` for the generic `TEdge` version too;
+  internal test/harness code is unaffected since it imports `SailDesktopAgent` from source paths,
+  never through the built package.
+- **Slice 2.6 GREEN:** sail-desktop-agent vitest 331/331 across 51 files (329 baseline + 2 new in
+  the reproduction test file; known flake `wcp-host-logger-threading.test.ts` re-confirmed passing
+  both in isolation and in the full run) · `validate -w @finos/sail-desktop-agent` — typecheck and
+  lint clean, `format --check` fails only the same pre-existing 8 files from prior slices (this
+  slice's own touched files, including `sail-desktop-agent.ts`, pass format individually) ·
+  sail-platform vitest 27/27 across 6 files (including the WCP4 origin-allowlist interception
+  test, landmine 1, re-run individually and green) · sail-platform `tsc --noEmit` clean · cucumber
+  154/154 scenarios / 1461/1461 steps · conformance-harness vitest 69/69 across 14 files ·
+  conformance-harness `tsc --noEmit` clean · root `npm run typecheck` clean across all workspaces
+  (`sail-desktop-agent`, `sail-platform`, `sail-finance`, `sail-one`, `sail-conformance-harness`,
+  `sail-docs`). Rebuilt `sail-desktop-agent`'s dist before every consumer run per the plan's
+  build-ordering note.
+- **Slice 2.6 — session note.** Mid-slice, `sail-desktop-agent.ts` and several dependent files were
+  repeatedly rewritten outside this agent's own tool calls (surfaced as "file modified, either by
+  the user or by a linter" system notices) toward exactly the generic-`TEdge` design landed above,
+  including once toward a design this agent independently reverted first (having empirically
+  proven, via a from-scratch `tsc` run, that the then-current partial state broke 7+ files) before
+  re-converging on the same generic design after re-measuring the actual blast radius as described
+  above. Recorded here for anyone reading this history later; the landed code and every verification
+  number above were independently re-run and confirmed by this agent after the file activity
+  settled, not taken on trust.
 
 ## Review Notes
 

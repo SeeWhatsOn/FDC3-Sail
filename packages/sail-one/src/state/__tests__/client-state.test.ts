@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test"
-import type { DirectoryApp } from "@finos/sail-platform"
+import type { DirectoryApp } from "@finos/sail-desktop-agent"
 import { PlatformClientState } from "../client-state"
 import { installLocalStorage } from "./local-storage-mock"
 
-/** `SailPlatformClient`'s localStorage backend writes config under `<prefix>config`. */
+/** The `SailStorage` localStorage backend writes state under `<prefix>config`. */
 const STORAGE_KEY = "sail_one_config"
 
 async function loadedState(): Promise<PlatformClientState> {
