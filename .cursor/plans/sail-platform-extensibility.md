@@ -90,9 +90,11 @@ renders.** `SailAppLauncher.onLaunchApp` calls `workspaceStore.addPanel` (state)
 - **State middleware** — Redux-style, intercepts a state mutation before it reaches the store/UI. Never
   touches the agent.
 
-They share a word and nothing else. The dead `MiddlewarePipeline` in `sail-platform/src/middleware/` is a
-general block-capable Chain-of-Responsibility that is wired to nothing — it is neither of the above and
-should not be kept because the name matches.
+They share a word and nothing else. The dead `MiddlewarePipeline` in `sail-platform/src/middleware/` was a
+general block-capable Chain-of-Responsibility that was wired to nothing — it was neither of the above and
+was not worth keeping because the name matched. **Deleted 2026-08-03** (file, the `use()` graft on
+`createSailBrowserDesktopAgent`, and all exports). Nothing in this section changes: when wire middleware is
+built it is a decorator around `AgentAppConnection`, not a revival of that pipeline.
 
 ### 3.5 The one real seam (when entitlement is built)
 
@@ -173,22 +175,24 @@ These are the load-bearing rules the direction must not violate:
 
 ## 6. Near-term, actionable now (needs no requirement, no consumer, no thesis)
 
-These are real, present-tense, verified — independent of any extensibility work:
+These are real, present-tense, verified — independent of any extensibility work.
+**Status line added 2026-08-03** after a cleanup pass landed items 3 (in altered form) and part of the
+`sail-platform` hygiene; items 1, 2 and 4 remain OPEN.
 
-1. **Fix the UUID defect.** `packages/sail-finance/src/stores/workspace-store.ts:78` mints IDs with
+1. **[OPEN]** **Fix the UUID defect.** `packages/sail-finance/src/stores/workspace-store.ts:78` mints IDs with
    `Math.random`; the package already exports `generateUuid` (`crypto.randomUUID`, `utils/uuid.ts`) and
    uses it everywhere else. Switch to it.
-2. **Test the workspace store.** The 411-line store with hand-rolled `Map` serialization and no schema
+2. **[OPEN]** **Test the workspace store.** The 411-line store with hand-rolled `Map` serialization and no schema
    versioning has no test, while thinner stores (`connection`/`fdc3`/`panel`) do. Add a
    serialization round-trip + schema-version guard.
-3. **Demote — do not delete — `SailPlatform`.** `index.ts` bills it "Primary API," but the shipping shell
+3. **[SUPERSEDED 2026-08-03 — see §10]** **Demote — do not delete — `SailPlatform`.** `index.ts` bills it "Primary API," but the shipping shell
    boots via `createSailBrowserDesktopAgent` (the *secondary* export). Two front doors, the advertised one
    unused. Promote `createSailBrowserDesktopAgent` to primary in docs/index; **annotate**
    `WorkspacesApi`/`LayoutsApi`/`ConfigApi` as *reserved for the workspace-model migration, currently
    unused* (do **not** delete — they are the agreed slot the domain model migrates into); fix the README.
    *If* any of it is ever truly removed, it is published FINOS API (`@finos/sail-platform`, has a publish
    pipeline) — do it as a changeset major-bump + deprecation, after checking npm, never a silent removal.
-4. **Investigate the candidate fork (promoted from "leave it").** `findIntentHandlers` does **not** drop
+4. **[OPEN]** **Investigate the candidate fork (promoted from "leave it").** `findIntentHandlers` does **not** drop
    dead-instance listeners (no `getInstance` guard), while `createAppIntents` does. Trace whether raising
    to a possibly-dead instance is caught downstream. If not, this is a **fourth present-tense defect**, not
    a future hazard.
@@ -233,8 +237,59 @@ one of these, "compose, don't extend" is discipline cosplaying as commitment.
 | Swappable connection edge | `sail-desktop-agent/src/app-connection/types.ts` (`AgentAppConnection`) |
 | WCP4 admission (directory gate) | `sail-desktop-agent/src/app-connection/wcp/wcp-identity-validation.ts:115` |
 | Forked candidate computation | `sail-desktop-agent/src/handlers/intents/intent-helpers.ts:121` & `:221` |
-| Dead composition point | `sail-platform/src/sail-platform.ts` (`SailPlatform`, `Promise<unknown>` APIs) |
-| Dead pipeline | `sail-platform/src/middleware/middleware.ts` |
-| Boot factory (the real entry point) | `sail-platform/src/sail-browser-desktop-agent.ts` |
+| Composition point | `sail-platform/src/sail-platform.ts` (`SailPlatform` — now composes over the boot factory; the `Promise<unknown>` storage APIs were deleted 2026-08-03) |
+| ~~Dead pipeline~~ | ~~`sail-platform/src/middleware/middleware.ts`~~ — deleted 2026-08-03 |
+| Boot factory (owns Sail's agent defaults; both entry points route through it) | `sail-platform/src/sail-browser-desktop-agent.ts` |
+| Config persistence (standalone, generic) | `sail-platform/src/client/sail-platform-client.ts` |
 | Workspace store (defect + migration source) | `sail-finance/src/stores/workspace-store.ts` |
 | Popout WCP relay | `sail-finance/src/utils/dockview-popout.ts` |
+
+---
+
+## 10. What actually landed, 2026-08-03 (and one reversal to confirm)
+
+A cleanup pass ran against `sail-platform`. `src` went 2075 → 1332 lines. `sail-platform`, `sail-one` and
+`sail-finance` all typecheck clean with tests green (26 / 10 / 28).
+
+**Deleted as dead (zero importers, verified by ripgrep across all packages):** `MiddlewarePipeline` and its
+`use()` graft (§3.4); `types/sail-messages.ts` and the `FDC3Server`/`ServerContext`/`AppRegistration`/`State`
+half of `types/sail-types.ts` (both leftovers of the deleted socket server); the orphan
+`interfaces/intent-resolver.ts` and `interfaces/channel-selector.ts`; and
+`__tests__/host-contracts-reexport.test.ts`, which asserted on another package's raw *source text* by regex
+and was RED on a cosmetic difference (`./host-contracts/index` vs the expected `./host-contracts/index.js`).
+
+**Defects fixed:** `SailPlatformConfig.channelSelector` was accepted, documented and exported but never
+passed anywhere — `SailDesktopAgentOptions` has no field to receive it — so setting it did nothing, silently;
+removed. `LocalStorageBackend.createWorkspace` minted **two different UUIDs** for `id` and `uuid` on the same
+object; gone with the file. A `Math.random` UUID fallback in that same file is gone; note §6.1's *separate*
+`Math.random` defect in `sail-finance/src/stores/workspace-store.ts` is **still open**.
+
+**Structural fix — the two front doors are now layered, not parallel.** §6.3 was written when
+`createSailBrowserDesktopAgent` was the only shell entry. That is no longer true: `sail-one` boots via
+`SailPlatform` (`sail-host.ts:129`) and `sail-finance` via the factory (`main.tsx`). Both doors are
+load-bearing, so demoting either would break a shell. Worse, they were *different lossy subsets* of each
+other and their Sail-defaults blocks had already drifted (the factory set `handshakeTimeout: 5000`;
+`SailPlatform` did not). `SailPlatform` now composes over `createSailBrowserDesktopAgent` and its config
+extends `SailBrowserDesktopAgentConfig`. This makes `allowedOrigins` — the WCP4 origin allowlist, the
+package's only deployment security policy — **reachable from `SailPlatform` for the first time**, along with
+`appDirectories`, `logger`, `validation`, `autoStart`, `channelChangeTimeoutMs` and an overridable
+`appConnectionOptions`. Both new capabilities are pinned by tests.
+
+**⚠️ The reversal that needs maintainer confirmation.** §6.3 said *annotate, do not delete*
+`WorkspacesApi`/`LayoutsApi`/`ConfigApi`, and `sail-platform-design.md` §9 independently closed the same
+question the same day on the "no consumer today does not downgrade an API" rule. **They were deleted
+instead**, together with `PlatformApi`, `LocalStorageBackend`, `RemoteBackendConfig` and the
+`storage: "localStorage" | "remote"` discriminator whose `"remote"` branch only ever threw. What remains is
+`SailPlatformClient<T>`, a standalone generic config store — no longer reachable through `SailPlatform`.
+
+Two facts drove it, both of which postdate §6.3's reasoning:
+- §8's "npm consumers unverified" caveat is **resolved**: `npm view @finos/sail-platform` returns **404**.
+  The package is unpublished, so the changeset/major-bump/deprecation path §6.3 required does not apply.
+- The "reserved slot" argument does not survive contact with the types. Every method was
+  `Promise<unknown>`; migrating a real domain model into `Promise<unknown>` is a breaking change *anyway*,
+  so keeping the interfaces bought nothing over deleting them while continuing to advertise a feature that
+  did not exist.
+
+This is recorded as a reversal, not a settled decision. If the maintainer prefers the original
+annotate-don't-delete stance, it is a `git revert` of the storage slice — the deletion is isolated to it.
+§8's *other* open items are untouched and still open.
