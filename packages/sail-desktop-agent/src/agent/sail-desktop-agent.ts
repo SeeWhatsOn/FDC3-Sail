@@ -294,25 +294,33 @@ export class SailDesktopAgent<
     this.isStarted = false
   }
 
+  /**
+   * Inbound edge dispatch: WCP4/WCP6 on this agent path, else DACP from apps.
+   * WCP1–3 stay on `window.postMessage` in {@link BrowserAppConnection}.
+   */
   private async handleMessage(message: unknown): Promise<void> {
-    const messageType = (message as { type?: string })?.type
-    if (messageType?.startsWith("WCP")) {
-      await this.handleWcpMessage(message)
+    if (!message || typeof message !== "object") {
       return
     }
 
-    // Only process messages FROM apps (have source.instanceId)
-    // Messages TO apps (have destination.instanceId but no source) should pass through
+    const messageType = (message as { type?: string }).type
+    if (!messageType) {
+      return
+    }
+
+    if (messageType.startsWith("WCP")) {
+      this.dispatchWcpMessage(message, messageType)
+      return
+    }
+
+    // Only process messages FROM apps (have source.instanceId).
+    // Messages TO apps (destination only) pass through without processing.
     const instanceId = this.extractInstanceId(message)
-
     if (!instanceId) {
-      // Message has no source.instanceId - this is likely a message going TO an app
-      // (e.g., contextEvent, responses). Let it pass through without processing.
       return
     }
 
-    const context = this.createHandlerContext(instanceId)
-    await routeDACPMessage(message, context)
+    await routeDACPMessage(message, this.createHandlerContext(instanceId))
   }
 
   private extractInstanceId(message: unknown): string | null {
@@ -326,22 +334,18 @@ export class SailDesktopAgent<
     return messageObj.meta?.source?.instanceId || null
   }
 
-  private async handleWcpMessage(message: unknown): Promise<void> {
-    if (!message || typeof message !== "object") {
-      return
-    }
+  /**
+   * WCP messages that share the app MessagePort with DACP after handshake.
+   * One switch: identity validation, goodbye cleanup, or warn+drop.
+   */
+  private dispatchWcpMessage(message: unknown, messageType: string): void {
+    const meta = (message as { meta?: { connectionAttemptUuid?: string; source?: unknown } }).meta
 
-    const messageObj = message as {
-      type?: string
-      meta?: { connectionAttemptUuid?: string; source?: unknown }
-    }
-
-    // Validate raw WCP before dispatch (same policy as routeDACPMessage).
-    // Browser MessagePort path already validated in bridgeAppPort before
-    // enrichment; enriched WCP4 carries Sail-injected meta.source and must not
-    // be re-checked here (those fields fail the FDC3 WCP schema).
+    // Browser MessagePort path already validated in bridgeAppPort before enrichment;
+    // enriched WCP4 carries Sail-injected meta.source and must not be re-checked
+    // (those fields fail the FDC3 WCP schema).
     const isBrowserEnrichedWcp4 =
-      messageObj.type === "WCP4ValidateAppIdentity" && messageObj.meta?.source !== undefined
+      messageType === "WCP4ValidateAppIdentity" && meta?.source !== undefined
     if (
       !isBrowserEnrichedWcp4 &&
       applyInboundValidationPolicy(message, {
@@ -352,34 +356,31 @@ export class SailDesktopAgent<
       return
     }
 
-    if (messageObj.type === "WCP4ValidateAppIdentity") {
-      const connectionAttemptUuid = messageObj.meta?.connectionAttemptUuid
-      if (!connectionAttemptUuid) {
-        this.logger.warn("[WCP4] Missing connectionAttemptUuid, cannot route message")
+    switch (messageType) {
+      case "WCP4ValidateAppIdentity": {
+        const connectionAttemptUuid = meta?.connectionAttemptUuid
+        if (!connectionAttemptUuid) {
+          this.logger.warn("[WCP4] Missing connectionAttemptUuid, cannot route message")
+          return
+        }
+        handleWcp4ValidateAppIdentity(
+          message,
+          this.createHandlerContext(`temp-${connectionAttemptUuid}`),
+        )
         return
       }
-
-      const tempInstanceId = `temp-${connectionAttemptUuid}`
-      const wcpContext = this.createHandlerContext(tempInstanceId)
-      handleWcp4ValidateAppIdentity(message, wcpContext)
-      return
+      case "WCP6Goodbye": {
+        const instanceId = this.extractInstanceId(message)
+        if (!instanceId) {
+          this.logger.warn("[WCP] Missing instanceId, cannot route message", { messageType })
+          return
+        }
+        cleanupDACPHandlers(this.createHandlerContext(instanceId))
+        return
+      }
+      default:
+        this.logger.warn(`[WCP] Unhandled message type on agent edge: ${messageType}`)
     }
-
-    const instanceId = this.extractInstanceId(message)
-    if (!instanceId) {
-      this.logger.warn("[WCP] Missing instanceId, cannot route message", {
-        messageType: messageObj.type,
-      })
-      return
-    }
-
-    if (messageObj.type === "WCP6Goodbye") {
-      cleanupDACPHandlers(this.createHandlerContext(instanceId))
-      return
-    }
-
-    const wcpContext = this.createHandlerContext(instanceId)
-    await routeDACPMessage(message, wcpContext)
   }
 
   private handleDisconnect(): void {
