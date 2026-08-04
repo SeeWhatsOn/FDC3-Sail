@@ -334,7 +334,7 @@ export class SailHost implements ServerState {
     }
 
     try {
-      await this.platform.changeAppChannel(instanceId, channelId)
+      await this.platform.channels.changeAppChannel(instanceId, channelId)
     } catch (e) {
       console.error(`Failed to move ${instanceId} to channel ${channelId}`, e)
     }
@@ -352,7 +352,7 @@ export class SailHost implements ServerState {
       if (!instanceId) {
         return null
       }
-      const channelId = this.platform?.getAppUserChannel(instanceId) ?? null
+      const channelId = this.platform?.channels.getAppChannelId(instanceId) ?? null
       return tabs.find(t => t.id === channelId) ?? null
     }
 

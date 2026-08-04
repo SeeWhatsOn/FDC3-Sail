@@ -77,20 +77,20 @@ describe("SailPlatform channel APIs", () => {
     vi.unstubAllGlobals()
   })
 
-  describe("getAppUserChannel", () => {
+  describe("channels.getAppChannelId", () => {
     it("throws when platform is not started", () => {
-      expect(() => platform.getAppUserChannel(INSTANCE_ID)).toThrow(/not started/i)
+      expect(() => platform.channels).toThrow(/not started/i)
     })
 
     it("returns null for unknown instance", () => {
       platform.start()
-      expect(platform.getAppUserChannel("unknown-instance")).toBeNull()
+      expect(platform.channels.getAppChannelId("unknown-instance")).toBeNull()
     })
 
     it("returns null when instance has no channel", () => {
       platform.start()
       seedConnectedInstance(platform.agent)
-      expect(platform.getAppUserChannel(INSTANCE_ID)).toBeNull()
+      expect(platform.channels.getAppChannelId(INSTANCE_ID)).toBeNull()
     })
 
     it("returns current channel after instance joins a user channel", () => {
@@ -98,7 +98,7 @@ describe("SailPlatform channel APIs", () => {
       seedConnectedInstance(platform.agent)
       setInstanceUserChannel(platform.agent, INSTANCE_ID, CHANNEL_ID)
 
-      expect(platform.getAppUserChannel(INSTANCE_ID)).toBe(CHANNEL_ID)
+      expect(platform.channels.getAppChannelId(INSTANCE_ID)).toBe(CHANNEL_ID)
     })
 
     it("returns null after instance leaves its user channel", () => {
@@ -107,54 +107,41 @@ describe("SailPlatform channel APIs", () => {
       setInstanceUserChannel(platform.agent, INSTANCE_ID, CHANNEL_ID)
       setInstanceUserChannel(platform.agent, INSTANCE_ID, null)
 
-      expect(platform.getAppUserChannel(INSTANCE_ID)).toBeNull()
+      expect(platform.channels.getAppChannelId(INSTANCE_ID)).toBeNull()
     })
   })
 
-  describe("changeAppChannel", () => {
-    it("throws when platform is not started", async () => {
-      await expect(platform.changeAppChannel(INSTANCE_ID, CHANNEL_ID)).rejects.toThrow(
-        /not started/i,
-      )
+  describe("channels.changeAppChannel", () => {
+    it("throws when platform is not started", () => {
+      expect(() => platform.channels).toThrow(/not started/i)
     })
 
     it("throws when channel does not exist", async () => {
       platform.start()
       seedConnectedInstance(platform.agent)
 
-      await expect(platform.changeAppChannel(INSTANCE_ID, "nonexistent-channel")).rejects.toThrow(
-        /does not exist/i,
-      )
+      await expect(
+        platform.channels.changeAppChannel(INSTANCE_ID, "nonexistent-channel"),
+      ).rejects.toThrow(/does not exist/i)
     })
 
-    it("joins channel and getAppUserChannel returns the updated channel id", async () => {
+    it("joins channel and getAppChannelId returns the updated channel id", async () => {
       platform.start()
       seedConnectedInstance(platform.agent)
 
-      await platform.changeAppChannel(INSTANCE_ID, CHANNEL_ID)
+      await platform.channels.changeAppChannel(INSTANCE_ID, CHANNEL_ID)
 
-      expect(platform.getAppUserChannel(INSTANCE_ID)).toBe(CHANNEL_ID)
+      expect(platform.channels.getAppChannelId(INSTANCE_ID)).toBe(CHANNEL_ID)
     })
 
-    it("leaves channel and getAppUserChannel returns null", async () => {
+    it("leaves channel and getAppChannelId returns null", async () => {
       platform.start()
       seedConnectedInstance(platform.agent)
 
-      await platform.changeAppChannel(INSTANCE_ID, CHANNEL_ID)
-      await platform.changeAppChannel(INSTANCE_ID, null)
+      await platform.channels.changeAppChannel(INSTANCE_ID, CHANNEL_ID)
+      await platform.channels.changeAppChannel(INSTANCE_ID, null)
 
-      expect(platform.getAppUserChannel(INSTANCE_ID)).toBeNull()
-    })
-
-    it("delegates changeAppChannel to the grouped channels controller", async () => {
-      platform.start()
-      seedConnectedInstance(platform.agent)
-      const changeSpy = vi.spyOn(platform.channels, "changeAppChannel")
-
-      await platform.changeAppChannel(INSTANCE_ID, CHANNEL_ID)
-
-      expect(changeSpy).toHaveBeenCalledWith(INSTANCE_ID, CHANNEL_ID)
-      changeSpy.mockRestore()
+      expect(platform.channels.getAppChannelId(INSTANCE_ID)).toBeNull()
     })
   })
 })

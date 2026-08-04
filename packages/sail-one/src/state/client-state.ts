@@ -74,9 +74,8 @@ export interface ClientState {
 /**
  * Persisted shape of the shell's own state.
  *
- * Stored through {@link SailPlatformClient}'s config API rather than raw
- * `localStorage`, so the backend is swappable (localStorage today, remote later)
- * without touching the shell.
+ * Stored through {@link SailPlatformClient}'s config API, which wraps raw
+ * `localStorage` reads/writes behind a small typed get/set surface.
  */
 type PersistedClientState = {
   tabs: TabDetail[]
@@ -88,8 +87,7 @@ type PersistedClientState = {
 }
 
 const STORAGE_CONFIG: SailPlatformClientConfig = {
-  storage: "localStorage",
-  localStorage: { keyPrefix: "sail_one_" },
+  keyPrefix: "sail_one_",
 }
 
 const DEFAULT_DIRECTORIES: Directory[] = [
@@ -157,14 +155,18 @@ export class PlatformClientState implements ClientState {
   private intentResolution: IntentResolution | null = null
   private customApps: DirectoryApp[] = []
   private ss: ClientStateSyncTarget | null = null
-  private readonly platformClient: SailPlatformClient
+  private readonly platformClient: SailPlatformClient<Partial<PersistedClientState>>
 
-  constructor(platformClient: SailPlatformClient = new SailPlatformClient(STORAGE_CONFIG)) {
+  constructor(
+    platformClient: SailPlatformClient<Partial<PersistedClientState>> = new SailPlatformClient(
+      STORAGE_CONFIG,
+    ),
+  ) {
     this.platformClient = platformClient
   }
 
   async load(): Promise<void> {
-    const stored = (await this.platformClient.getConfig()) as Partial<PersistedClientState> | null
+    const stored = await this.platformClient.getConfig()
 
     if (!stored?.tabs || stored.tabs.length === 0) {
       // Nothing persisted yet — keep the constructor defaults and write them out

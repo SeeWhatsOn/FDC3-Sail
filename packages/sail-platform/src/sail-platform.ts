@@ -1,9 +1,9 @@
 /**
  * SailPlatform - Main entry point for Sail Platform SDK
  *
- * Provides a unified, namespaced API for:
+ * Provides a unified API for:
  * - FDC3 Desktop Agent operations
- * - Sail platform features (workspaces, layouts, config)
+ * - Lifecycle (start/stop) and connection-event callbacks
  * - UI integration via injectable interfaces
  */
 
@@ -11,18 +11,16 @@ import {
   SailDesktopAgent,
   type DesktopAgent,
   type AppLauncher,
-  type DirectoryApp,
-  type SailImplementationMetadata,
-  type IntentResolver,
   type IntentResolverUIMethods,
   type SailDesktopAgentApps,
   type SailDesktopAgentChannels,
 } from "@finos/sail-desktop-agent"
 import type { AppConnectionMetadata, BrowserAppConnection } from "@finos/sail-desktop-agent"
-import type { BrowserTypes } from "@finos/fdc3"
 
-import type { ChannelSelector } from "./interfaces/channel-selector"
-import { SailPlatformClient, type SailPlatformClientConfig } from "./client/sail-platform-client"
+import {
+  createSailBrowserDesktopAgent,
+  type SailBrowserDesktopAgentConfig,
+} from "./sail-browser-desktop-agent"
 
 // ============================================================================
 // CONFIGURATION
@@ -30,29 +28,22 @@ import { SailPlatformClient, type SailPlatformClientConfig } from "./client/sail
 
 /**
  * Configuration for SailPlatform
+ *
+ * Extends {@link SailBrowserDesktopAgentConfig} so every agent-level option
+ * (`allowedOrigins`, `appDirectories`, `logger`, `logPayloadDetail`, `validation`,
+ * `autoStart`, `channelChangeTimeoutMs`, `appConnectionOptions`, etc.) flows through
+ * to `createSailBrowserDesktopAgent`. The three connection-lifecycle callbacks are
+ * re-declared with platform-specific signatures — see {@link SailPlatform.wireEvents}.
  */
-export interface SailPlatformConfig {
-  // ===== UI Interfaces (injectable) =====
-
+export interface SailPlatformConfig extends Omit<
+  SailBrowserDesktopAgentConfig,
+  "onAppConnected" | "onAppDisconnected" | "onHandshakeFailed"
+> {
   /**
    * App launcher implementation for opening FDC3 applications.
    * REQUIRED - must be provided to launch apps.
    */
   appLauncher: AppLauncher
-
-  /**
-   * Intent resolver implementation for handling intent resolution UI.
-   * OPTIONAL - if not provided, first handler is auto-selected.
-   */
-  intentResolver?: IntentResolver
-
-  /**
-   * Channel selector implementation for handling channel selection UI.
-   * OPTIONAL - if not provided, channel selection is handled by apps.
-   */
-  channelSelector?: ChannelSelector
-
-  // ===== Event Callbacks =====
 
   /**
    * Called when an app successfully connects via WCP.
@@ -73,90 +64,6 @@ export interface SailPlatformConfig {
    * Called when WCP handshake fails.
    */
   onHandshakeFailed?: (error: Error, instanceId?: string) => void
-
-  // ===== Data =====
-
-  /**
-   * Initial apps to load into the directory.
-   */
-  apps?: DirectoryApp[]
-
-  /**
-   * Custom user channels (defaults to standard FDC3 channels).
-   */
-  userChannels?: BrowserTypes.Channel[]
-
-  /**
-   * Override FDC3 implementation metadata (defaults to FDC3-Sail product values).
-   */
-  implementationMetadata?: Partial<SailImplementationMetadata>
-
-  /**
-   * Timeout (ms) to wait for a context listener after open-with-context.
-   */
-  openContextListenerTimeoutMs?: number
-
-  /**
-   * Heartbeat interval (ms).
-   */
-  heartbeatIntervalMs?: number
-
-  /**
-   * Heartbeat timeout (ms).
-   */
-  heartbeatTimeoutMs?: number
-
-  /**
-   * When `false`, the agent does not send DACP heartbeat events (host policy).
-   *
-   * @defaultValue `true`
-   */
-  heartbeatEnabled?: boolean
-
-  // ===== Storage =====
-
-  /**
-   * Configuration for platform storage (workspaces, layouts, config).
-   * Defaults to localStorage.
-   */
-  storage?: SailPlatformClientConfig
-
-  // ===== Options =====
-
-  /**
-   * Enable debug logging.
-   */
-  debug?: boolean
-}
-
-// ============================================================================
-// NAMESPACED API TYPES
-// ============================================================================
-
-/**
- * Workspaces namespace API
- */
-export interface WorkspacesApi {
-  list(): Promise<unknown[]>
-  get(workspaceId: string): Promise<unknown>
-  create(name: string, initialLayout?: unknown): Promise<unknown>
-  delete(workspaceId: string): Promise<boolean>
-}
-
-/**
- * Layouts namespace API
- */
-export interface LayoutsApi {
-  get(workspaceId: string): Promise<unknown>
-  save(workspaceId: string, layout: unknown): Promise<boolean>
-}
-
-/**
- * Config namespace API
- */
-export interface ConfigApi {
-  get(): Promise<unknown>
-  update(config: unknown): Promise<boolean>
 }
 
 // ============================================================================
@@ -175,23 +82,17 @@ export interface ConfigApi {
  *   apps: directoryApps,
  * })
  *
- * await platform.start()
+ * platform.start()
  *
  * // Access desktop agent
  * platform.agent
  * platform.connector
  *
- * // Access platform features
- * await platform.workspaces.list()
- * await platform.layouts.save(workspaceId, layout)
- * await platform.config.get()
- *
- * await platform.stop()
+ * platform.stop()
  * ```
  */
 export class SailPlatform {
   private readonly config: SailPlatformConfig
-  private platformClient: SailPlatformClient
   private started = false
 
   // Browser Desktop Agent session (created on start)
@@ -199,19 +100,8 @@ export class SailPlatform {
   private _browserAppConnection: BrowserAppConnection | null = null
   private _stopBrowserSession: (() => void) | null = null
 
-  // Namespaced APIs (initialized in constructor)
-  public readonly workspaces: WorkspacesApi
-  public readonly layouts: LayoutsApi
-  public readonly sailConfig: ConfigApi // Renamed to avoid conflict with config property
-
   constructor(config: SailPlatformConfig) {
     this.config = config
-    this.platformClient = new SailPlatformClient(config.storage)
-
-    // Initialize namespaced APIs
-    this.workspaces = this.createWorkspacesApi()
-    this.layouts = this.createLayoutsApi()
-    this.sailConfig = this.createConfigApi()
   }
 
   // ===== Lifecycle =====
@@ -224,23 +114,20 @@ export class SailPlatform {
       throw new Error("SailPlatform already started")
     }
 
-    const desktopAgent = new SailDesktopAgent({
-      appLauncher: this.config.appLauncher,
-      apps: this.config.apps,
-      userChannels: this.config.userChannels,
-      implementationMetadata: this.config.implementationMetadata,
-      openContextListenerTimeoutMs: this.config.openContextListenerTimeoutMs,
-      heartbeatEnabled: this.config.heartbeatEnabled,
-      heartbeatIntervalMs: this.config.heartbeatIntervalMs,
-      heartbeatTimeoutMs: this.config.heartbeatTimeoutMs,
-      intentResolver: this.config.intentResolver,
-      appConnectionOptions: {
-        // Sail controls UI externally (no injected iframes)
-        getIntentResolverUrl: () => false,
-        getChannelSelectorUrl: () => false,
-        fdc3Version: "2.2",
-      },
-    })
+    // Platform-only fields: not part of the agent's config surface.
+    // - onAppConnected/onAppDisconnected/onHandshakeFailed are wired below via
+    //   wireEvents() through the agent's grouped host controllers, not passed to
+    //   the constructor (passing both would fire handlers twice).
+    // - onChannelChanged has no agent-config equivalent.
+    const {
+      onAppConnected: _onAppConnected,
+      onAppDisconnected: _onAppDisconnected,
+      onHandshakeFailed: _onHandshakeFailed,
+      onChannelChanged: _onChannelChanged,
+      ...agentConfig
+    } = this.config
+
+    const desktopAgent = createSailBrowserDesktopAgent(agentConfig)
 
     this._desktopAgent = desktopAgent
     this._browserAppConnection = desktopAgent.connector
@@ -328,46 +215,6 @@ export class SailPlatform {
     return this.started
   }
 
-  // ===== Channel Management =====
-
-  /**
-   * Change an app's channel membership on behalf of the host shell.
-   *
-   * Updates agent state via {@link DesktopAgent.changeAppUserChannel} and resolves
-   * when the WCP connector emits `channelChanged` (push model for host UI).
-   * Do not poll `getState()` — use {@link getAppUserChannel} for one-off reads.
-   *
-   * @param instanceId - The app instance to change channel for
-   * @param channelId - The channel ID to join, or null to leave current channel
-   * @returns Promise that resolves when the channel change is confirmed
-   */
-  async changeAppChannel(instanceId: string, channelId: string | null): Promise<void> {
-    this.ensureStarted()
-    return this.channels.changeAppChannel(instanceId, channelId)
-  }
-
-  /**
-   * Get the available user channels.
-   */
-  getUserChannels(): BrowserTypes.Channel[] {
-    this.ensureStarted()
-    return this.channels.getUserChannels()
-  }
-
-  /**
-   * Read an app's current user channel from Desktop Agent state.
-   *
-   * Does not send DACP on behalf of the app — use for host chrome that needs
-   * an authoritative read without waiting for channel push events.
-   *
-   * @param instanceId - Connected app instance id
-   * @returns Channel id when joined; `null` when not on a channel or instance unknown
-   */
-  getAppUserChannel(instanceId: string): string | null {
-    this.ensureStarted()
-    return this.channels.getAppChannelId(instanceId)
-  }
-
   // ===== Private Methods =====
 
   private ensureStarted(): void {
@@ -404,33 +251,6 @@ export class SailPlatform {
       apps.onHandshakeFailure(event => {
         this.config.onHandshakeFailed!(event.error, event.connectionAttemptUuid)
       })
-    }
-  }
-
-  // ===== Namespaced API Factories =====
-
-  private createWorkspacesApi(): WorkspacesApi {
-    return {
-      list: () => this.platformClient.getWorkspaces(),
-      get: (workspaceId: string) => this.platformClient.getWorkspace(workspaceId),
-      create: (name: string, initialLayout?: unknown) =>
-        this.platformClient.createWorkspace(name, initialLayout),
-      delete: (workspaceId: string) => this.platformClient.deleteWorkspace(workspaceId),
-    }
-  }
-
-  private createLayoutsApi(): LayoutsApi {
-    return {
-      get: (workspaceId: string) => this.platformClient.getWorkspaceLayout(workspaceId),
-      save: (workspaceId: string, layout: unknown) =>
-        this.platformClient.saveWorkspaceLayout(workspaceId, layout),
-    }
-  }
-
-  private createConfigApi(): ConfigApi {
-    return {
-      get: () => this.platformClient.getConfig(),
-      update: (config: unknown) => this.platformClient.updateConfig(config),
     }
   }
 }

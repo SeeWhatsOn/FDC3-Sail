@@ -1,140 +1,73 @@
-import type { PlatformApi } from "./platform-api"
-import { LocalStorageBackend, type LocalStorageBackendConfig } from "./local-storage-backend"
-
-/**
- * Configuration for remote storage backend (future use)
- */
-export interface RemoteBackendConfig {
-  /**
-   * REST API URL for remote storage
-   */
-  restApiUrl?: string
-
-  /**
-   * Socket.IO instance for WebSocket-based storage
-   */
-  socket?: unknown
-
-  /**
-   * Enable debug logging
-   */
-  debug?: boolean
-}
-
 /**
  * Configuration for Sail Platform Client
  */
 export interface SailPlatformClientConfig {
   /**
-   * Storage backend type
-   * - "localStorage" - Use browser localStorage (default)
-   * - "remote" - Use remote server via REST/WebSocket (future)
+   * Prefix for storage keys.
+   * @defaultValue "sail_"
    */
-  storage?: "localStorage" | "remote"
+  keyPrefix?: string
 
   /**
-   * Configuration for localStorage backend
+   * Storage implementation.
+   * @defaultValue globalThis.localStorage
    */
-  localStorage?: LocalStorageBackendConfig
+  storage?: Storage
 
   /**
-   * Configuration for remote backend (future)
+   * Enable debug logging.
    */
-  remote?: RemoteBackendConfig
+  debug?: boolean
 }
 
 /**
- * Sail Platform Client - High-level API for Sail-specific features.
- *
- * This class provides a unified interface for Sail Platform features (workspaces,
- * layouts, config) with pluggable storage backends. Defaults to localStorage
- * for client-side storage.
+ * Sail Platform Client - stores a single host-owned config blob in `Storage`
+ * (browser `localStorage` by default, or any injected `Storage` implementation).
  *
  * @example
  * ```typescript
- * // Default: localStorage (client-side)
- * const client = new SailPlatformClient()
- *
- * // Explicit localStorage with options
- * const client = new SailPlatformClient({
- *   storage: "localStorage",
- *   localStorage: { keyPrefix: "sail_", debug: true }
- * })
- *
- * // Usage
- * const workspaces = await client.getWorkspaces()
- * await client.saveWorkspaceLayout(workspaceId, layout)
+ * const client = new SailPlatformClient<MyConfig>({ keyPrefix: "sail_" })
+ * await client.updateConfig(config)
  * const config = await client.getConfig()
  * ```
  */
-export class SailPlatformClient implements PlatformApi {
-  private backend: PlatformApi
+export class SailPlatformClient<T = unknown> {
+  private readonly keyPrefix: string
+  private readonly storage: Storage
+  private readonly debug: boolean
 
   constructor(config?: SailPlatformClientConfig) {
-    const storageType = config?.storage ?? "localStorage"
+    this.keyPrefix = config?.keyPrefix ?? "sail_"
+    this.storage = config?.storage ?? globalThis.localStorage
+    this.debug = config?.debug ?? false
+  }
 
-    if (storageType === "remote") {
-      // Future: RemoteBackend implementation
-      throw new Error("Remote storage backend not yet implemented")
+  private get configKey(): string {
+    return `${this.keyPrefix}config`
+  }
+
+  /**
+   * Get the stored config, or `null` if nothing is stored or the stored value
+   * cannot be read.
+   */
+  async getConfig(): Promise<T | null> {
+    try {
+      const item = this.storage.getItem(this.configKey)
+      if (!item) return Promise.resolve(null)
+      return Promise.resolve(JSON.parse(item) as T)
+    } catch (error) {
+      if (this.debug) {
+        console.error(`[SailPlatformClient] Error reading ${this.configKey}:`, error)
+      }
+      return Promise.resolve(null)
     }
-
-    // Default to localStorage
-    this.backend = new LocalStorageBackend(config?.localStorage)
   }
 
   /**
-   * Get all workspaces for the current user.
+   * Persist the config, replacing any previously stored value.
    */
-  async getWorkspaces(): Promise<unknown[]> {
-    return this.backend.getWorkspaces()
-  }
-
-  /**
-   * Get a specific workspace by ID.
-   */
-  async getWorkspace(workspaceId: string): Promise<unknown> {
-    return this.backend.getWorkspace(workspaceId)
-  }
-
-  /**
-   * Create a new workspace.
-   */
-  async createWorkspace(name: string, initialLayout?: unknown): Promise<unknown> {
-    return this.backend.createWorkspace(name, initialLayout)
-  }
-
-  /**
-   * Delete a workspace.
-   */
-  async deleteWorkspace(workspaceId: string): Promise<boolean> {
-    return this.backend.deleteWorkspace(workspaceId)
-  }
-
-  /**
-   * Get the layout for a specific workspace.
-   */
-  async getWorkspaceLayout(workspaceId: string): Promise<unknown> {
-    return this.backend.getWorkspaceLayout(workspaceId)
-  }
-
-  /**
-   * Save the layout for a specific workspace.
-   */
-  async saveWorkspaceLayout(workspaceId: string, layout: unknown): Promise<boolean> {
-    return this.backend.saveWorkspaceLayout(workspaceId, layout)
-  }
-
-  /**
-   * Get user configuration.
-   */
-  async getConfig(): Promise<unknown> {
-    return this.backend.getConfig()
-  }
-
-  /**
-   * Update user configuration.
-   */
-  async updateConfig(config: unknown): Promise<boolean> {
-    return this.backend.updateConfig(config)
+  async updateConfig(config: T): Promise<void> {
+    this.storage.setItem(this.configKey, JSON.stringify(config))
+    return Promise.resolve()
   }
 }

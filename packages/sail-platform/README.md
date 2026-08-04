@@ -1,6 +1,6 @@
 # @finos/sail-platform
 
-Platform SDK for FDC3 Sail. Wraps [`@finos/sail-desktop-agent`](../sail-desktop-agent/README.md) with `SailPlatform`, workspace/layout/config persistence, middleware, and host channel APIs.
+Platform SDK for FDC3 Sail. Wraps [`@finos/sail-desktop-agent`](../sail-desktop-agent/README.md) with `SailPlatform` (lifecycle and host channel APIs) and `SailPlatformClient` (a small typed config-persistence helper backed by `localStorage`).
 
 ## Documentation
 

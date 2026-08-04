@@ -3,13 +3,7 @@
 // ============================================================================
 
 // SailPlatform - Primary API for Sail Platform SDK
-export {
-  SailPlatform,
-  type SailPlatformConfig,
-  type WorkspacesApi,
-  type LayoutsApi,
-  type ConfigApi,
-} from "./sail-platform"
+export { SailPlatform, type SailPlatformConfig } from "./sail-platform"
 
 export type {
   SailDesktopAgentApps,
@@ -34,7 +28,6 @@ export type {
 // ============================================================================
 
 export * from "./types/sail-types"
-export * from "./types/sail-messages"
 
 // ============================================================================
 // LOW-LEVEL APIs (for advanced use cases)
@@ -47,19 +40,8 @@ export type { SailBrowserDesktopAgentConfig } from "./sail-browser-desktop-agent
 // Services
 export { SailAppLauncher } from "./services/app-launcher/sail-app-launcher"
 
-// Sail Platform Client (workspaces, layouts, config)
-export {
-  // Platform client
-  SailPlatformClient,
-  LocalStorageBackend,
-  type PlatformApi,
-  type SailPlatformClientConfig,
-  type LocalStorageBackendConfig,
-  type RemoteBackendConfig,
-} from "./client"
-
-// Middleware pipeline (kept for future usage)
-export { MiddlewarePipeline, type Middleware } from "./middleware/middleware"
+// Sail Platform Client (host-owned config persistence)
+export { SailPlatformClient, type SailPlatformClientConfig } from "./client"
 
 // Browser-ready Desktop Agent (re-export from @finos/sail-desktop-agent)
 export { SailDesktopAgent, type SailDesktopAgentOptions } from "@finos/sail-desktop-agent"

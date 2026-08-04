@@ -1,7 +1,5 @@
 import { SailDesktopAgent, type SailDesktopAgentOptions } from "@finos/sail-desktop-agent"
-import { MiddlewarePipeline, type Middleware } from "./middleware/middleware"
 import { wireWcp4OriginAllowlist } from "./wcp4-origin-allowlist"
-export type { Middleware }
 
 /**
  * Configuration for Sail Browser Desktop Agent
@@ -36,7 +34,6 @@ export interface SailBrowserDesktopAgentConfig extends Omit<
  *
  * This class wraps the browser Desktop Agent with Sail-specific features:
  * - Sail-specific WCP configuration defaults
- * - Middleware support (logging, metrics)
  * - Connection lifecycle management
  *
  * For host channel chrome, use {@link SailPlatform} (`changeAppChannel`, `getAppUserChannel`)
@@ -52,12 +49,7 @@ export interface SailBrowserDesktopAgentConfig extends Omit<
  */
 export function createSailBrowserDesktopAgent(
   config?: SailBrowserDesktopAgentConfig,
-): SailDesktopAgent & {
-  /**
-   * Add middleware to the message processing pipeline
-   */
-  use: (middleware: Middleware<unknown>) => void
-} {
+): SailDesktopAgent {
   // Merge Sail-specific defaults with user config
   const appConnectionOptions: SailDesktopAgentOptions["appConnectionOptions"] = {
     // Sail-specific defaults: UI is provided by Sail parent window
@@ -77,19 +69,9 @@ export function createSailBrowserDesktopAgent(
     wireWcp4OriginAllowlist(desktopAgent, config.allowedOrigins, config.debug)
   }
 
-  // Create middleware pipeline for future use
-  const pipeline = new MiddlewarePipeline<unknown>()
-
-  // Add middleware support
-  const use = (middleware: Middleware<unknown>) => {
-    pipeline.use(middleware)
-  }
-
-  // This will require wrapping the agent's transport with middleware
-
   if (config?.debug) {
     console.log("[SailBrowserDesktopAgent] Created with Sail-specific defaults")
   }
 
-  return Object.assign(desktopAgent, { use })
+  return desktopAgent
 }
