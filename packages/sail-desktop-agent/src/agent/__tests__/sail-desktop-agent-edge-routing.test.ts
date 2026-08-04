@@ -1,14 +1,9 @@
 /**
- * Reproduction test for the `connector` / `appConnection` divergence (plan slice 2.6).
+ * Controllers must wire to the injected `appConnection` edge (not a second unused edge).
  *
- * The `apps` / `channels` controllers must wire to the edge that actually routes messages
- * (`this.appConnection`), not to a second, separately-constructed `BrowserAppConnection`
- * (`connector`) that nothing ever sends events to once a test edge is injected.
- *
- * `DacpTestAppConnection` (the package's usual injected test edge) has no event-emitter
- * capability at all, so it cannot distinguish "wired to the right object" from "wired to
- * nothing" — a listener never fires either way. This edge adds just enough (extends the real
- * `AppConnectionEventEmitter`) to prove which object the controllers actually listen on.
+ * `DacpTestAppConnection` has no event emitter, so it cannot distinguish "wired to the right
+ * object" from "wired to nothing". This edge adds just enough (extends
+ * `AppConnectionEventEmitter`) to prove which object the controllers listen on.
  */
 
 import { describe, expect, it } from "vite-plus/test"
@@ -52,7 +47,7 @@ const fakeMetadata: AppConnectionMetadata = {
 }
 
 describe("SailDesktopAgent — injected edge routing (slice 2.6)", () => {
-  it("apps.onConnect fires from the injected appConnection edge, not an unused connector", () => {
+  it("apps.onConnect fires from the injected appConnection edge", () => {
     const edge = new EmittingTestAppConnection()
     const agent = new SailDesktopAgent({ appConnection: edge })
 
@@ -66,10 +61,10 @@ describe("SailDesktopAgent — injected edge routing (slice 2.6)", () => {
     expect(received).toEqual([fakeMetadata])
   })
 
-  it("connector is the injected edge itself, not a second unused BrowserAppConnection", () => {
+  it("appConnection is the injected edge itself", () => {
     const edge = new EmittingTestAppConnection()
     const agent = new SailDesktopAgent({ appConnection: edge })
 
-    expect(agent.connector).toBe(edge)
+    expect(agent.appConnection).toBe(edge)
   })
 })

@@ -175,7 +175,7 @@ channels.onAppChannelChange(({ instanceId, channelId }) => {
   updateTabChrome(instanceId, channelId)
 })
 
-// Instance lifecycle — prefer controller subscriptions over lower-level connector hooks
+// Instance lifecycle — prefer controller subscriptions over lower-level appConnection hooks
 apps.onConnect(meta => tabs.markConnected(meta.instanceId, meta.appId))
 apps.onDisconnect(instanceId => {
   tabs.remove(instanceId)
@@ -635,12 +635,12 @@ Teardown: `desktopAgent.stop()`. Construction never starts the agent — call `.
 
 ### Browser app connection
 
-`SailDesktopAgent` owns a `BrowserAppConnection` exposed as `desktopAgent.connector`:
+`SailDesktopAgent` owns a `BrowserAppConnection` exposed as `desktopAgent.appConnection`:
 
 - `desktopAgent.start()` also starts the browser app connection (`window` listener for WCP1, MessagePort routing)
 - `desktopAgent.stop()` tears down the app connection and disconnects app instances
 
-Most application code should not call lower-level connector methods directly. Host code uses grouped controllers (`intentResolver`, `channels`, `apps`) plus `appLauncher`. Optional `onAppConnected` / `onAppDisconnected` callbacks remain for compatibility — prefer `apps.onConnect` / `apps.onDisconnect`.
+Most application code should not call lower-level `appConnection` methods directly. Host code uses grouped controllers (`intentResolver`, `channels`, `apps`) plus `appLauncher`. Optional `onAppConnected` / `onAppDisconnected` callbacks remain for compatibility — prefer `apps.onConnect` / `apps.onDisconnect`.
 
 `BrowserAppConnection` itself is internal — it is not constructible from the public API.
 

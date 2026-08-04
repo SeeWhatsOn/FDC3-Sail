@@ -59,7 +59,7 @@ describe("WCP6Goodbye arriving on a temp handshake id", () => {
   it("does not tear down the validated instance when WCP6Goodbye arrives on the temp id before WCP4 completes", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
-    const connector = agent.connector
+    const connector = agent.appConnection
 
     const disconnectedInstanceIds: string[] = []
     connector.on("appDisconnected", instanceId => {
@@ -102,7 +102,7 @@ describe("WCP6Goodbye arriving on a temp handshake id", () => {
   it("still disconnects the validated instance when WCP6Goodbye arrives after the handshake remap (guard)", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
-    const connector = agent.connector
+    const connector = agent.appConnection
 
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "wcp-a-goodbye-after-remap-uuid",
@@ -184,7 +184,7 @@ describe("WCP5 failure addressed to an already-remapped temp id", () => {
   it("does not tear down the validated instance when a WCP5 failure resolves the stale temp id forward", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
-    const connector = agent.connector
+    const connector = agent.appConnection
 
     const disconnectedInstanceIds: string[] = []
     connector.on("appDisconnected", instanceId => {
@@ -223,7 +223,7 @@ describe("WCP5 failure addressed to an already-remapped temp id", () => {
   it("still prunes the temp connection on a WCP5 failure for a genuinely unvalidated first handshake (guard)", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
-    const connector = agent.connector
+    const connector = agent.appConnection
 
     const session = beginWcpAppFirstConnect(agent, {
       connectionAttemptUuid: "wcp-b-guard-unvalidated-uuid",

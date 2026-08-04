@@ -283,7 +283,7 @@ describe("broadcastHarnessFinOsCloseContext", () => {
       },
       registerPendingHostInstance: vi.fn(),
       disconnectInstance: vi.fn(),
-      connector: { sendToAppInstance: vi.fn() },
+      appConnection: { sendToAppInstance: vi.fn() },
     }
 
     const cleanup = createHarnessInstanceCleanup({
@@ -301,7 +301,7 @@ describe("broadcastHarnessFinOsCloseContext", () => {
         cleanup.closeHarnessBrowsingContext(instanceId) && teardownSpy(instanceId),
     })
 
-    expect(desktopAgent.connector.sendToAppInstance).toHaveBeenCalledWith(
+    expect(desktopAgent.appConnection.sendToAppInstance).toHaveBeenCalledWith(
       "mock-instance-C",
       expect.objectContaining({
         type: "broadcastEvent",
@@ -321,7 +321,7 @@ describe("relayFinOsCloseWindowToMockApps", () => {
   it("delivers closeWindow with testId to connected mocks only", () => {
     const sendToAppInstance = vi.fn()
     const desktopAgent = {
-      connector: { sendToAppInstance },
+      appConnection: { sendToAppInstance },
       apps: {
         getInstances: () => [
           { instanceId: "c1", appId: "Conformance1", status: "connected" as const },

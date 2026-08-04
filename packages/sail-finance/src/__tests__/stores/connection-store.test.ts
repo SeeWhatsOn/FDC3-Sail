@@ -198,6 +198,6 @@ describe("Channel UI source audit", () => {
     expect(channelSelectorSource).not.toMatch(/getState\s*\(/)
     expect(channelSelectorSource).toMatch(/connections\.get/)
     expect(channelSelectorSource).toMatch(/channels\.changeAppChannel/)
-    expect(connectionStoreSource).not.toMatch(/agent\.connector/)
+    expect(connectionStoreSource).not.toMatch(/agent\.appConnection/)
   })
 })

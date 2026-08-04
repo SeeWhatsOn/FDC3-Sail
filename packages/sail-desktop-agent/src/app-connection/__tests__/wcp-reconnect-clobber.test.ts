@@ -181,7 +181,7 @@ describe("WCP reconnect clobber", () => {
   it("does not tear down the new connection when goodbye arrives on a displaced old port", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
-    const connector = agent.connector
+    const connector = agent.appConnection
 
     const disconnectedInstanceIds: string[] = []
     connector.on("appDisconnected", instanceId => {
@@ -220,7 +220,7 @@ describe("WCP reconnect clobber", () => {
   it("cancels grace teardown when reconnect completes before the timer fires", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 80 })
     activeAgents.push(agent)
-    const connector = agent.connector
+    const connector = agent.appConnection
 
     const disconnectedInstanceIds: string[] = []
     connector.on("appDisconnected", instanceId => {
@@ -313,7 +313,7 @@ describe("WCP reconnect clobber", () => {
   it("removes the instance when grace expires with no reconnect", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
-    const connector = agent.connector
+    const connector = agent.appConnection
 
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "grace-expire-no-reconnect-uuid",

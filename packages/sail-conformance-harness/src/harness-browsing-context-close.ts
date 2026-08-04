@@ -128,13 +128,13 @@ export function deliverFinOsCloseWindowBroadcast(options: {
     targetInstanceId,
     context = FINOS_CLOSE_WINDOW_CONTEXT,
   } = options
-  const connector = desktopAgent.connector
+  const appConnection = desktopAgent.appConnection
 
-  if (!connector?.sendToAppInstance) {
+  if (!appConnection?.sendToAppInstance) {
     return
   }
 
-  connector.sendToAppInstance(targetInstanceId, {
+  appConnection.sendToAppInstance(targetInstanceId, {
     type: "broadcastEvent",
     meta: {
       eventUuid: crypto.randomUUID(),

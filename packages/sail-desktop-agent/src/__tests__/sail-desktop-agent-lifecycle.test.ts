@@ -90,7 +90,7 @@ describe("SailDesktopAgent lifecycle", () => {
     secondAgent.start()
 
     await expectWCP3Handshake("reuse-after-stop-uuid")
-    expect(secondAgent.connector.getConnections()).toHaveLength(1)
+    expect(secondAgent.appConnection.getConnections()).toHaveLength(1)
   })
 
   it("allows stop then start on a new instance without stale in-memory transport", async () => {
@@ -105,8 +105,8 @@ describe("SailDesktopAgent lifecycle", () => {
 
     await expectWCP3Handshake("fresh-pair-uuid")
 
-    expect(sessionOne.connector.getIsStarted()).toBe(false)
-    expect(sessionTwo.connector.getIsStarted()).toBe(true)
-    expect(sessionTwo.connector.getConnections()).toHaveLength(1)
+    expect(sessionOne.appConnection.getIsStarted()).toBe(false)
+    expect(sessionTwo.appConnection.getIsStarted()).toBe(true)
+    expect(sessionTwo.appConnection.getConnections()).toHaveLength(1)
   })
 })

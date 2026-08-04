@@ -46,10 +46,10 @@ describe("SailDesktopAgent", () => {
     expect(sailDesktopAgentPackage.SailDesktopAgent).toBe(SailDesktopAgent)
   })
 
-  it("owns a browser connector and grouped host controllers", () => {
+  it("owns a browser appConnection and grouped host controllers", () => {
     const agent = new SailDesktopAgent()
 
-    expect(agent.connector).toBeDefined()
+    expect(agent.appConnection).toBeDefined()
     expect(agent.apps.getConnections()).toEqual([])
     expect(agent.channels.getUserChannels().length).toBeGreaterThan(0)
     expect(agent.intentResolver.getPendingRequests()).toEqual([])
@@ -85,7 +85,7 @@ describe("SailDesktopAgent", () => {
     })
   })
 
-  it("exposes default intent resolver UI methods over the browser connector", async () => {
+  it("exposes default intent resolver UI methods over the browser appConnection", async () => {
     const agent = new SailDesktopAgent()
     const requests: unknown[] = []
 
@@ -94,7 +94,7 @@ describe("SailDesktopAgent", () => {
       agent.intentResolver.select(request.requestId, request.handlers[0])
     })
 
-    const response = await agent.connector.requestIntentResolution(
+    const response = await agent.appConnection.requestIntentResolution(
       {
         requestId: "intent-request",
         intent: "ViewChart",

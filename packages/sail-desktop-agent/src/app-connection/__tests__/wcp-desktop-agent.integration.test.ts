@@ -881,7 +881,7 @@ describe("WCP edge contract", () => {
     activeAgents.push(agent)
 
     const appConnected = vi.fn()
-    agent.connector.on("appConnected", appConnected)
+    agent.appConnection.on("appConnected", appConnected)
 
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "integration-wcp-path-uuid",
@@ -1106,7 +1106,7 @@ describe("WCP edge contract", () => {
     })
 
     expect(chart.validatedInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
-    expect(agent.connector.getConnection(HOST_LAUNCHER_INSTANCE_ID)).toBeDefined()
+    expect(agent.appConnection.getConnection(HOST_LAUNCHER_INSTANCE_ID)).toBeDefined()
   })
 
   it("adopts sole pending launcher id when WCP4 omits host instanceId", async () => {

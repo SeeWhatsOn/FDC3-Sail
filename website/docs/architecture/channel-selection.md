@@ -43,7 +43,7 @@ Hosts call **`channels.changeAppChannel(instanceId, channelId | null)`** on the 
 1. Send a typed **`joinUserChannelRequest`** or **`leaveCurrentChannelRequest`** with `meta.source.instanceId` set to that app.
 2. Desktop Agent handlers update `instance.currentUserChannel`.
 3. Agent emits **`channelChangedEvent`** toward the app.
-4. WCP routes the event and emits **`channelChanged`** on the connector; the `channels` controller surfaces this via **`onAppChannelChange`**.
+4. WCP routes the event and emits **`channelChanged`** on `appConnection`; the `channels` controller surfaces this via **`onAppChannelChange`**.
 
 This is “on behalf of the app” in **identity** (source instance id), not “bypass FDC3”.
 
@@ -99,7 +99,7 @@ const channelId = channels.getAppChannelId(instanceId)
 const unsubscribe = channels.onAppChannelChange(({ instanceId, channelId }) => { ... })
 ```
 
-Use **`channels.*`**, not raw connector delivery or `getAppUserChannelId` alone. Channel state is
+Use **`channels.*`**, not raw `appConnection` delivery or `getAppUserChannelId` alone. Channel state is
 FDC3 state and lives in the agent — `@finos/sail-platform` stores which tab a panel sits in, which is
 a different question from which channel its app has joined.
 

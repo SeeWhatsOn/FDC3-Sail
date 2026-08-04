@@ -46,7 +46,7 @@ describe("createHarnessBootstrap", () => {
     const bootstrap = createHarnessBootstrap({ debug: false })
     try {
       expect(bootstrap.desktopAgent).toBeInstanceOf(SailDesktopAgent)
-      expect(bootstrap.desktopAgent.connector.getIsStarted()).toBe(true)
+      expect(bootstrap.desktopAgent.appConnection.getIsStarted()).toBe(true)
       expect(bootstrap.desktopAgent.apps.getById("Conformance1")).toBeDefined()
       expect(bootstrap.toolboxProfile).toBeDefined()
       expect(bootstrap.fdc3Version).toBe(HARNESS_FDC3_TARGET_VERSION)

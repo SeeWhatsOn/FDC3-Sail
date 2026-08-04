@@ -191,7 +191,7 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
 
   desktopAgentRef = desktopAgent
 
-  installHarnessInboundAppMessageObserver(desktopAgent.connector, finOsTeardownObserver)
+  installHarnessInboundAppMessageObserver(desktopAgent.appConnection, finOsTeardownObserver)
 
   Object.assign(
     instanceCleanup,

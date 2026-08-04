@@ -1,12 +1,10 @@
 /**
  * FDC3 Desktop Agent entry point.
  *
- * Owns agent state, host APIs, DACP/WCP routing over the app-connection edge (`connector`),
+ * Owns agent state, host APIs, DACP/WCP routing over {@link SailDesktopAgent.appConnection},
  * and the grouped host controllers (`apps`, `channels`, `intentResolver`) a shell wires into
- * its UI. Production construction defaults `connector` to a real {@link BrowserAppConnection}.
- * Test suites (DACP oracle tests, Cucumber, integration tests) inject a lighter test edge via
- * the `appConnection` constructor option instead — `connector` becomes that same edge, typed
- * as its own type; it is never a second, separately-constructed object.
+ * its UI. Production defaults `appConnection` to a real {@link BrowserAppConnection}; tests
+ * may inject a lighter edge via the same-named constructor option.
  */
 
 import type { AppLauncher } from "../host-contracts/app-launcher"
@@ -68,12 +66,11 @@ import {
  *
  * Construct it, implement {@link AppLauncher}, and wire host UI through the grouped
  * controllers (`intentResolver`, `channels`, `apps`). The app-connection edge (WCP handshake,
- * per-app `MessagePort`, routing) is internal — the agent owns it via `connector`, which is a
- * typed view of the same object used for routing (`appConnection`), never a second one.
+ * per-app `MessagePort`, routing) is owned as {@link SailDesktopAgent.appConnection}.
  *
- * Generic in the edge type (`TEdge`) so `connector` types as the real {@link BrowserAppConnection}
- * for default/production construction, and as the injected edge's own type for tests that pass
- * `appConnection` — see {@link SailDesktopAgentOptions}.
+ * Generic in the edge type (`TEdge`) so `appConnection` types as the real
+ * {@link BrowserAppConnection} for default construction, and as the injected edge's own type
+ * for tests — see {@link SailDesktopAgentOptions}.
  */
 export class SailDesktopAgent<
   TEdge extends AgentAppConnection = BrowserAppConnection,
@@ -92,13 +89,11 @@ export class SailDesktopAgent<
   private heartbeatTimeoutMs: number
   private pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
   /**
-   * Inbound DACP/WCP routing edge, and what every controller (`apps`, `channels`,
-   * intent-resolver wiring) actually listens/sends on. Defaults to a fresh real
-   * {@link BrowserAppConnection} (its constructor is inert — no `window`, no listeners); tests
-   * may inject a lighter edge via the `appConnection` option instead. `connector` (below) is
-   * this same object — see its accessor.
+   * Inbound DACP/WCP routing edge. Defaults to a fresh {@link BrowserAppConnection}
+   * (constructor is inert — no `window`, no listeners); tests may inject via the
+   * `appConnection` constructor option.
    */
-  private readonly appConnection: TEdge
+  readonly appConnection: TEdge
   private readonly channelChangeTimeoutMs: number
 
   readonly intentResolver: IntentResolverUIMethods
@@ -109,15 +104,6 @@ export class SailDesktopAgent<
    * (fulfilled or rejected). Resolves immediately when none were configured.
    */
   readonly directoriesLoaded: Promise<void>
-
-  /**
-   * The app-connection edge — the same object that routes DACP/WCP and that `apps`/`channels`
-   * controllers listen on, typed as `TEdge`. Default construction: a real
-   * {@link BrowserAppConnection}. With an injected `appConnection` (tests): that edge's own type.
-   */
-  get connector(): TEdge {
-    return this.appConnection
-  }
 
   /**
    * Options are optional only when `TEdge` is the default {@link BrowserAppConnection} (or a
@@ -160,11 +146,8 @@ export class SailDesktopAgent<
     this.logger = config.logger ?? consoleLogger
     this.logPayloadDetail = config.logPayloadDetail
 
-    // The edge that actually routes DACP/WCP, and that `connector` is a view of — an injected
-    // test edge, or a fresh real BrowserAppConnection (its constructor is inert: no `window`,
-    // no listeners). Never two objects: `config.appConnection`'s own type is `TEdge` per
-    // `SailDesktopAgentOptions<TEdge>`, so the only unchecked case is the default branch, where
-    // `TEdge` is `BrowserAppConnection` (the class's default type parameter).
+    // Injected test edge, or a fresh BrowserAppConnection (inert until start). Cast is only
+    // for the default branch where `TEdge` is `BrowserAppConnection`.
     this.appConnection = (config.appConnection ??
       new BrowserAppConnection({
         ...localOptions.appConnectionOptions,
@@ -251,7 +234,7 @@ export class SailDesktopAgent<
               getState: () => this.state,
               createHandlerContext: id => this.createHandlerContext(id),
               getUserChannels: () => this.getUserChannels(),
-              connector: this.appConnection,
+              appConnection: this.appConnection,
               channelChangeTimeoutMs: this.channelChangeTimeoutMs,
             },
             instanceId,

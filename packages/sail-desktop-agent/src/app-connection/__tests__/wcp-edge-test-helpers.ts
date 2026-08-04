@@ -120,7 +120,7 @@ export async function connectWcpApp(
     instanceUuid: reconnectInstanceUuid,
   } = options
   const tempInstanceId = `temp-${connectionAttemptUuid}`
-  const browserAppConnection = agent.connector
+  const browserAppConnection = agent.appConnection
 
   const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl, {
     hostIdentifier,
@@ -233,7 +233,7 @@ export function beginWcpAppFirstConnect(
 ): WcpFirstConnectSession {
   const { connectionAttemptUuid, appId, identityUrl, hostIdentifier, sourceWindow } = options
   const tempInstanceId = `temp-${connectionAttemptUuid}`
-  const browserAppConnection = agent.connector
+  const browserAppConnection = agent.appConnection
 
   const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl, {
     hostIdentifier,

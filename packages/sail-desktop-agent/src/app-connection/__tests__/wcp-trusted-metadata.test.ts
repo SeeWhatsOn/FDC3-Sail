@@ -20,7 +20,7 @@ const HOSTILE_APP_ID = "hostile-spoofed-app"
  * agent-recorded meta without a production export.
  */
 function enrichViaConnector(
-  connector: SailDesktopAgent["connector"],
+  connector: SailDesktopAgent["appConnection"],
   message: BrowserTypes.WebConnectionProtocol4ValidateAppIdentity,
   instanceId: string,
 ): BrowserTypes.WebConnectionProtocol4ValidateAppIdentity {
@@ -67,7 +67,7 @@ describe("enrichMessageWithSource trusted metadata", () => {
   it("replaces hostile messageOrigin and source.appId when the connection has a stored WCP1 origin", async () => {
     const agent = createTestAgent()
     activeAgents.push(agent)
-    const connector = agent.connector
+    const connector = agent.appConnection
 
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "trusted-meta-with-origin-uuid",
@@ -102,7 +102,7 @@ describe("enrichMessageWithSource trusted metadata", () => {
   it("drops app-supplied messageOrigin when the connection has no stored origin", async () => {
     const agent = createTestAgent()
     activeAgents.push(agent)
-    const connector = agent.connector
+    const connector = agent.appConnection
 
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "trusted-meta-no-origin-uuid",

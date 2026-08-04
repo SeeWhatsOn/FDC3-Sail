@@ -2,7 +2,7 @@
  * Host controller factories for {@link SailDesktopAgent}.
  *
  * Each factory combines a narrow "backing" of already-bound agent operations (the class keeps
- * the underlying methods private) with `connector` event wiring into the public grouped
+ * the underlying methods private) with `appConnection` event wiring into the public grouped
  * controller shape (`apps`, `channels`, `intentResolver`). Extracted from `sail-desktop-agent.ts`
  * to keep the class file focused on agent state and DACP routing.
  */
@@ -173,7 +173,7 @@ export interface ChannelOperationsBacking {
   getState: () => AgentState
   createHandlerContext: (instanceId: string) => DACPHandlerContext
   getUserChannels: () => BrowserTypes.Channel[]
-  connector: AgentAppConnection
+  appConnection: AgentAppConnection
   channelChangeTimeoutMs: number
 }
 
@@ -250,10 +250,10 @@ export function changeAppChannel(
 
     const cleanup = () => {
       clearTimeout(timeout)
-      backing.connector.off?.("channelChanged", handleChannelChanged)
+      backing.appConnection.off?.("channelChanged", handleChannelChanged)
     }
 
-    backing.connector.on?.("channelChanged", handleChannelChanged)
+    backing.appConnection.on?.("channelChanged", handleChannelChanged)
 
     try {
       changeAppUserChannel(backing, instanceId, channelId)
@@ -266,7 +266,7 @@ export function changeAppChannel(
 
 export function createChannelsController(
   backing: ChannelsControllerBacking,
-  connector: AgentAppConnection,
+  appConnection: AgentAppConnection,
 ): SailDesktopAgentChannels {
   return {
     getUserChannels: () => backing.getUserChannels(),
@@ -284,9 +284,9 @@ export function createChannelsController(
           channel: resolveUserChannelById(backing.getUserChannels(), channelId),
         })
       }
-      connector.on?.("channelChanged", handler)
+      appConnection.on?.("channelChanged", handler)
       return () => {
-        connector.off?.("channelChanged", handler)
+        appConnection.off?.("channelChanged", handler)
       }
     },
   }
@@ -294,7 +294,7 @@ export function createChannelsController(
 
 export function createAppsController(
   backing: AppsControllerBacking,
-  connector: AgentAppConnection,
+  appConnection: AgentAppConnection,
 ): SailDesktopAgentApps {
   return {
     add: app => {
@@ -317,43 +317,43 @@ export function createAppsController(
     disconnect: instanceId => {
       // Prefer the graceful host-initiated disconnect (sends WCP6Goodbye) when the edge
       // supports it; fall back to the plain teardown every AgentAppConnection provides.
-      if (connector.disconnectAppByInstanceId) {
-        connector.disconnectAppByInstanceId(instanceId)
+      if (appConnection.disconnectAppByInstanceId) {
+        appConnection.disconnectAppByInstanceId(instanceId)
       } else {
-        connector.pruneAppConnection(instanceId)
+        appConnection.pruneAppConnection(instanceId)
       }
     },
     onConnect: listener => {
-      connector.on?.("appConnected", listener)
+      appConnection.on?.("appConnected", listener)
       return () => {
-        connector.off?.("appConnected", listener)
+        appConnection.off?.("appConnected", listener)
       }
     },
     onDisconnect: listener => {
-      connector.on?.("appDisconnected", listener)
+      appConnection.on?.("appDisconnected", listener)
       return () => {
-        connector.off?.("appDisconnected", listener)
+        appConnection.off?.("appDisconnected", listener)
       }
     },
     onHandshakeFailure: listener => {
       const handler = (error: Error, connectionAttemptUuid: string) => {
         listener({ error, connectionAttemptUuid })
       }
-      connector.on?.("handshakeFailed", handler)
+      appConnection.on?.("handshakeFailed", handler)
       return () => {
-        connector.off?.("handshakeFailed", handler)
+        appConnection.off?.("handshakeFailed", handler)
       }
     },
   }
 }
 
-/** Wires host-resolver UI callbacks to `connector`'s `intentResolverNeeded` WCP event. */
+/** Wires host-resolver UI callbacks to `appConnection`'s `intentResolverNeeded` WCP event. */
 export function wireIntentResolver(
-  connector: AgentAppConnection,
+  appConnection: AgentAppConnection,
   resolver: IntentResolver,
   logger: Logger,
 ): void {
-  connector.on?.("intentResolverNeeded", payload => {
+  appConnection.on?.("intentResolverNeeded", payload => {
     void (async () => {
       try {
         const request: IntentResolutionRequest = {
@@ -373,7 +373,7 @@ export function wireIntentResolver(
 
         const response = await resolver.resolve(request)
 
-        connector.resolveIntentSelection?.({
+        appConnection.resolveIntentSelection?.({
           requestId: payload.requestId,
           selectedHandler: response
             ? {
@@ -389,7 +389,7 @@ export function wireIntentResolver(
           `[SailDesktopAgent] Host intent resolver threw; cancelling resolution for ${payload.requestId}:`,
           error instanceof Error ? error : new Error(String(error)),
         )
-        connector.resolveIntentSelection?.({
+        appConnection.resolveIntentSelection?.({
           requestId: payload.requestId,
           selectedHandler: null,
         })
@@ -405,23 +405,23 @@ export interface LifecycleCallbackOptions {
   onHandshakeFailed?: (error: Error, connectionAttemptUuid: string) => void
 }
 
-/** Wires `connector` connection-lifecycle events to shell-supplied option callbacks. */
+/** Wires `appConnection` connection-lifecycle events to shell-supplied option callbacks. */
 export function wireLifecycleCallbacks(
-  connector: AgentAppConnection,
+  appConnection: AgentAppConnection,
   logger: Logger,
   options: LifecycleCallbackOptions,
 ): void {
-  connector.on?.("appConnected", metadata => {
+  appConnection.on?.("appConnected", metadata => {
     logger.info(`[SailDesktopAgent] App connected: ${metadata.appId} (${metadata.instanceId})`)
     options.onAppConnected?.(metadata)
   })
 
-  connector.on?.("appDisconnected", instanceId => {
+  appConnection.on?.("appDisconnected", instanceId => {
     logger.info(`[SailDesktopAgent] App disconnected: ${instanceId}`)
     options.onAppDisconnected?.(instanceId)
   })
 
-  connector.on?.("handshakeFailed", (error, connectionAttemptUuid) => {
+  appConnection.on?.("handshakeFailed", (error, connectionAttemptUuid) => {
     logger.error(`[SailDesktopAgent] WCP handshake failed for ${connectionAttemptUuid}:`, error)
     options.onHandshakeFailed?.(error, connectionAttemptUuid)
   })

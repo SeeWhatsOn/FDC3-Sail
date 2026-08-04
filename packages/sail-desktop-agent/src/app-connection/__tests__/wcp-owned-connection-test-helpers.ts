@@ -23,7 +23,7 @@ import {
  * Assert the agent uses the collapsed browser architecture (DA-owned connection backend).
  */
 export function assertCollapsedBrowserArchitecture(agent: SailDesktopAgent): void {
-  expect(agent.connector).toBeInstanceOf(BrowserAppConnection)
+  expect(agent.appConnection).toBeInstanceOf(BrowserAppConnection)
 }
 
 /**

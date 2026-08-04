@@ -135,7 +135,7 @@ describe("createHarnessFinOsTeardownObserver", () => {
     } as unknown as HarnessInstanceCleanup
 
     const desktopAgent = {
-      connector: { sendToAppInstance },
+      appConnection: { sendToAppInstance },
       apps: {
         getInstances: () => [
           { instanceId: "conformance-1", appId: "Conformance1", status: "connected" as const },

@@ -59,7 +59,7 @@ export { DACPTimeoutError, DACPProcessingError } from "./dacp/dacp-errors"
  *
  * `AppConnectionMetadata` is the `onAppConnected` / `apps.getConnection(s)` payload;
  * `AppConnectionOptions` configures the edge. All three — including `BrowserAppConnection`,
- * which types `SailDesktopAgent.connector` — are genuinely public, not internal-only
+ * which types `SailDesktopAgent.appConnection` — are genuinely public, not internal-only
  * declaration-emit artifacts: `sail-platform.ts` imports `AppConnectionMetadata` and
  * `BrowserAppConnection` by name, `sail-platform`'s own re-exports and test suite pull in
  * `AppConnectionOptions`, and `sail-conformance-harness` imports `AppConnectionMetadata`.

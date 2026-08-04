@@ -93,18 +93,16 @@ interface SailDesktopAgentBaseOptions {
  * Options for constructing {@link SailDesktopAgent}. Omitted fields use FDC3-Sail product
  * defaults from `default-config.ts` (merged in the constructor).
  *
- * Generic over the injected app-connection edge type so `appConnection` round-trips through
- * to `SailDesktopAgent<TEdge>.connector` — see that class's doc comment. Defaults to
- * {@link BrowserAppConnection}, matching `SailDesktopAgent`'s own default type parameter, so a
- * bare `SailDesktopAgentOptions` (no explicit `appConnection` in the value) still infers a bare
- * `SailDesktopAgent` at a `new SailDesktopAgent(options)` call site.
+ * Generic over the injected app-connection edge type so `appConnection` round-trips to
+ * `SailDesktopAgent<TEdge>.appConnection`. Defaults to {@link BrowserAppConnection}, matching
+ * `SailDesktopAgent`'s own default type parameter, so a bare `SailDesktopAgentOptions` still
+ * infers a bare `SailDesktopAgent` at a `new SailDesktopAgent(options)` call site.
  *
- * `appConnection` itself is **required whenever `TEdge` is narrowed away from the default**
+ * `appConnection` is **required whenever `TEdge` is narrowed away from the default**
  * {@link BrowserAppConnection} (e.g. `SailDesktopAgentOptions<DacpTestAppConnection>`), and stays
- * optional when `TEdge` is the default or a *widening* (e.g. `AgentAppConnection`, which a real
- * `BrowserAppConnection` genuinely satisfies). This closes the hole where narrowing `TEdge`
- * without injecting a matching edge used to compile and then fail at runtime the first time
- * `connector` was used as that narrower type — see `SailDesktopAgent`'s constructor.
+ * optional when `TEdge` is the default or a *widening* (e.g. `AgentAppConnection`). This closes
+ * the hole where narrowing `TEdge` without injecting a matching edge used to compile and then
+ * fail at runtime — see `SailDesktopAgent`'s constructor.
  */
 export type SailDesktopAgentOptions<TEdge extends AgentAppConnection = BrowserAppConnection> =
   SailDesktopAgentBaseOptions &
@@ -122,7 +120,7 @@ export type SailDesktopAgentOptions<TEdge extends AgentAppConnection = BrowserAp
           /**
            * App connection edge for inbound DACP/WCP and outbound delivery. Required here:
            * `TEdge` has been narrowed to a non-default edge type, so there is no safe default
-           * to fall back to — omitting it would make `connector` lie about its runtime type.
+           * to fall back to — omitting it would make `appConnection` lie about its runtime type.
            */
           appConnection: TEdge
         })
