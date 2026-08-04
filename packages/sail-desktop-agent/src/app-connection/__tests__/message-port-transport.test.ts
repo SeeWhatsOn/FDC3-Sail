@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from "vite-plus/test"
 import { disconnectApp, type AppConnectionContext } from "../wcp/wcp-connection-management"
 import { MessagePortTransport } from "../message-port"
-import { consoleLogger } from "../../interfaces/logger"
+import { consoleLogger } from "../../logging/logger"
 import { AppConnectionRegistry } from "../../app-connection/app-connection-registry"
 
 function createListenerTracker(port: MessagePort) {

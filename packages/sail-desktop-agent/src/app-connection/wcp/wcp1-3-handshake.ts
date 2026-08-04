@@ -8,7 +8,7 @@ import type {
   AppConnectionOptions,
 } from "./wcp-types"
 import { resolveHostIdentifierFromSource } from "./wcp-host-identifier"
-import type { LogPayloadDetail } from "../../interfaces/logger"
+import type { LogPayloadDetail } from "../../logging/logger"
 
 export interface WCPHandshakeContext extends WCPRoutingContext {
   options: Required<AppConnectionOptions>

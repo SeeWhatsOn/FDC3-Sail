@@ -5,7 +5,6 @@
  */
 
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
-import { generateEventUuid } from "../../dacp/dacp-utils"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
@@ -72,7 +71,7 @@ export function handleAddIntentListener(
       }
     }
 
-    const listenerId = generateEventUuid()
+    const listenerId = crypto.randomUUID()
 
     setState(state =>
       registerIntentListener(state, {

@@ -45,14 +45,16 @@ export { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
 export * from "./host-contracts/index"
 
 // Logging
-export * from "./interfaces/index"
+export {
+  consoleLogger,
+  noopLogger,
+  createPrefixedLogger,
+  type Logger,
+  type LogPayloadDetail,
+} from "./logging/logger"
 
 // App directory
 export type { DirectoryApp, WebAppDetails } from "./app-directory/types"
-
-// Error types a host may see on a `cause` chain or in injected-logger output.
-// `routeDACPMessage` converts both to FDC3 wire errors — neither is re-thrown to a host.
-export { DACPTimeoutError, DACPProcessingError } from "./dacp/dacp-errors"
 
 /**
  * App-connection types that appear in the public agent surface.

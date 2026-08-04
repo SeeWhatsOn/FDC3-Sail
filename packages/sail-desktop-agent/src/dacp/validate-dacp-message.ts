@@ -40,7 +40,7 @@ import {
   isValidWebConnectionProtocol4ValidateAppIdentity,
   isValidWebConnectionProtocol6Goodbye,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import type { Logger } from "../interfaces/logger"
+import type { Logger } from "../logging/logger"
 
 /**
  * How the agent treats a message that fails FDC3 schema validation.

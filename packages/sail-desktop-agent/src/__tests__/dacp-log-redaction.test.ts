@@ -150,8 +150,8 @@ describe("DACP/WCP metadata-only log redaction", () => {
     })
   })
 
-  describe("injectable logger contract", () => {
-    it("routes logDACPMessage output through the injected handler logger", async () => {
+  describe("router inbound logging", () => {
+    it("routes inbound debug output through the injected handler logger", async () => {
       const logger = createCapturingLogger()
       const context = createConnectedRaiseIntentContext({ logger, logPayloadDetail: "metadata" })
       const message = {
@@ -171,6 +171,52 @@ describe("DACP/WCP metadata-only log redaction", () => {
         call.message.includes("DACP INCOMING"),
       )
       expect(dacpIncomingDebug).toBe(true)
+    })
+
+    it("does not include sensitive values in warn logs for invalid messages", async () => {
+      const logger = createCapturingLogger()
+      const context = createConnectedRaiseIntentContext({ logger, logPayloadDetail: "metadata" })
+
+      await routeDACPMessage("not-an-object", context)
+
+      expect(serializeNonDebugLogs(logger)).not.toContain(SENSITIVE_MARKER)
+      expect(logger.warnCalls.length).toBeGreaterThan(0)
+    })
+
+    it("includes full payload on debug only when logPayloadDetail is full", async () => {
+      const logger = createCapturingLogger()
+      const context = createConnectedRaiseIntentContext({ logger, logPayloadDetail: "full" })
+      const message = {
+        type: "broadcastRequest",
+        meta: { requestUuid: "broadcast-log-redaction-uuid" },
+        payload: {
+          channelId: "fdc3.channel.1",
+          context: SENSITIVE_CONTEXT,
+        },
+      }
+
+      await routeDACPMessage(message, context)
+
+      expect(serializeNonDebugLogs(logger)).not.toContain(SENSITIVE_MARKER)
+      expect(serializeLogCalls(logger.debugCalls)).toContain(SENSITIVE_MARKER)
+    })
+
+    it("omits full payload from debug when logPayloadDetail is metadata", async () => {
+      const logger = createCapturingLogger()
+      const context = createConnectedRaiseIntentContext({ logger, logPayloadDetail: "metadata" })
+      const message = {
+        type: "broadcastRequest",
+        meta: { requestUuid: "broadcast-log-redaction-uuid" },
+        payload: {
+          channelId: "fdc3.channel.1",
+          context: SENSITIVE_CONTEXT,
+        },
+      }
+
+      await routeDACPMessage(message, context)
+
+      expect(serializeLogCalls(logger.debugCalls)).not.toContain(SENSITIVE_MARKER)
+      expect(serializeLogCalls(logger.debugCalls)).toContain("broadcastRequest")
     })
   })
 })

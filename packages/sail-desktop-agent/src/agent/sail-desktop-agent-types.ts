@@ -11,7 +11,7 @@ import type { DirectoryApp } from "../app-directory/types"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import type { AgentState, AppInstance } from "../state/types"
 import { AppInstanceState } from "../state/types"
-import type { Logger, LogPayloadDetail } from "../interfaces/logger"
+import type { Logger, LogPayloadDetail } from "../logging/logger"
 import type { SailDesktopAgentMetadata } from "./default-config"
 import type { AgentAppConnection } from "../app-connection/types"
 import type {

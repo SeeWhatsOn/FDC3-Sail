@@ -3,7 +3,7 @@ import type {
   AgentResponseMessage,
   WebConnectionProtocolMessage,
 } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
-import type { Logger } from "../interfaces/logger"
+import type { Logger } from "../logging/logger"
 import type { MessagePortTransport } from "./message-port"
 import type { AppConnectionMetadata } from "./wcp/wcp-types"
 import { isAgentMessage } from "./wcp/wcp-types"

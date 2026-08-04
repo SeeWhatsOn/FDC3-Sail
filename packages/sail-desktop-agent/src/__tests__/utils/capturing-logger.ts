@@ -1,4 +1,4 @@
-import type { Logger } from "../../interfaces/logger"
+import type { Logger } from "../../logging/logger"
 
 export const SENSITIVE_MARKER = "SECRET-123"
 

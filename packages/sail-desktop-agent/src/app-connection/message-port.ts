@@ -8,7 +8,7 @@
  * browser environments.
  */
 
-import { consoleLogger, type Logger, type LogPayloadDetail } from "../interfaces/logger"
+import { consoleLogger, type Logger, type LogPayloadDetail } from "../logging/logger"
 
 /** Handler for inbound messages from the connected app. */
 type MessageHandler = (message: unknown) => void | Promise<void>

@@ -17,7 +17,7 @@ import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runt
 import { AppInstanceState } from "../../state/types"
 import { MessagePortTransport } from "../message-port"
 import { AppConnectionRegistry } from "../app-connection-registry"
-import { consoleLogger } from "../../interfaces/logger"
+import { consoleLogger } from "../../logging/logger"
 import {
   disconnectApp,
   updateConnectionMetadata,

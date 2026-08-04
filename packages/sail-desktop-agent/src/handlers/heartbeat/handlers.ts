@@ -1,5 +1,4 @@
 import { createDACPEvent } from "../../dacp/dacp-message-creators"
-import { generateEventUuid } from "../../dacp/dacp-utils"
 import { type DACPHandlerContext } from "../types"
 import type { BrowserTypes } from "@finos/fdc3"
 import { getHeartbeatState } from "../../state/selectors"
@@ -36,7 +35,7 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
 
   const sendHeartbeat = () => {
     const heartbeatEvent = createDACPEvent("heartbeatEvent", {
-      eventId: generateEventUuid(),
+      eventId: crypto.randomUUID(),
     })
 
     // Add routing metadata

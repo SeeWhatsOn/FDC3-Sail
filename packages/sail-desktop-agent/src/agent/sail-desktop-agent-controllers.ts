@@ -26,7 +26,7 @@ import type {
   IntentResolutionChoice,
   IntentResolutionRequest,
 } from "../host-contracts"
-import type { Logger } from "../interfaces/logger"
+import type { Logger } from "../logging/logger"
 import { getInstance, getUserChannel } from "../state/selectors"
 import type { AgentState } from "../state/types"
 import type { DesktopAgentAppInstance, DesktopAgentOpenOptions } from "./sail-desktop-agent-types"

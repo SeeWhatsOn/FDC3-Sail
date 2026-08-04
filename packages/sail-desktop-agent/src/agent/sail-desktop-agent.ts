@@ -26,7 +26,7 @@ import { retrieveAllApps, retrieveAppsById } from "../app-directory/app-director
 import type { BrowserTypes } from "@finos/fdc3"
 import type { AgentState, StateSetter } from "../state/types"
 import { createInitialState, createStateWithOverrides } from "../state/initial-state"
-import { consoleLogger, type Logger, type LogPayloadDetail } from "../interfaces/logger"
+import { consoleLogger, type Logger, type LogPayloadDetail } from "../logging/logger"
 import { resolveDesktopAgentConfig, type SailDesktopAgentMetadata } from "./default-config"
 import { getAllInstances, getAllUserChannels, getInstance } from "../state/selectors"
 import { connectInstance } from "../state/mutators"

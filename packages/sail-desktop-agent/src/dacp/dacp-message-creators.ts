@@ -5,7 +5,8 @@
  */
 
 import type { BrowserTypes } from "@finos/fdc3"
-import type { DACPResponseType } from "./dacp-messages"
+
+type DACPResponseType = BrowserTypes.ResponseMessageType
 
 export interface DACPRequestLike {
   type: string

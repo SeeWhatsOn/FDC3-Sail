@@ -10,7 +10,7 @@ import {
   SENSITIVE_MARKER,
   serializeLogCalls,
 } from "../../__tests__/utils/capturing-logger"
-import type { Logger } from "../../interfaces/logger"
+import type { Logger } from "../../logging/logger"
 import { MessagePortTransport } from "../message-port"
 
 type MessagePortTransportLoggingOptions = {

@@ -16,7 +16,7 @@ import type { CapturingLogger } from "../../__tests__/utils/capturing-logger"
 import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
-import type { LogPayloadDetail } from "../../interfaces/logger"
+import type { LogPayloadDetail } from "../../logging/logger"
 import {
   createMessageEvent,
   createWCP1Hello,

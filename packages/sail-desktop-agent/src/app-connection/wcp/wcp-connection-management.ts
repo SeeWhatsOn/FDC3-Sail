@@ -1,5 +1,5 @@
 import type { AppConnectionMetadata, AppConnectionOptions } from "./wcp-types"
-import type { Logger } from "../../interfaces/logger"
+import type { Logger } from "../../logging/logger"
 import type { AgentState, StateSetter } from "../../state/types"
 import type { AppConnectionRegistry } from "../app-connection-registry"
 import type { AppConnectionEvents } from "../app-connection-events"

@@ -5,7 +5,7 @@
 
 import { createDacpResponseDispatcher } from "./transport"
 import type { DACPHandlerContext } from "../../src/handlers/types"
-import { consoleLogger } from "../../src/interfaces/logger"
+import { consoleLogger } from "../../src/logging/logger"
 import type { CustomWorld } from "../world/index.ts"
 import { applyDesktopAgentStateUpdate, getDesktopAgentPendingIntentPromises } from "./agent-state"
 

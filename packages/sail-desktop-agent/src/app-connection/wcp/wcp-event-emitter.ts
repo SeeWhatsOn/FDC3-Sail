@@ -1,5 +1,5 @@
 import type { AppConnectionEvents } from "../app-connection-events"
-import { consoleLogger } from "../../interfaces/logger"
+import { consoleLogger } from "../../logging/logger"
 
 export class WCPEventEmitter {
   private handlers: { [K in keyof AppConnectionEvents]?: Set<AppConnectionEvents[K]> } = {}

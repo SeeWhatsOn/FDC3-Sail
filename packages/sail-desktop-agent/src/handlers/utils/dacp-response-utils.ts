@@ -1,6 +1,5 @@
 import type { BrowserTypes } from "@finos/fdc3"
 import { createDACPErrorResponse, type DACPRequestLike } from "../../dacp/dacp-message-creators"
-import type { DACPResponseType } from "../../dacp/dacp-messages"
 import type { DacpOutboundMessage, DacpResponseDispatcher } from "../types"
 
 /**
@@ -54,7 +53,7 @@ function deriveResponseType(requestType: string): string {
  */
 export function sendDACPErrorResponse(options: SendDACPErrorResponseOptions): void {
   const { message, errorType, errorMessage, instanceId, responses } = options
-  const responseType = deriveResponseType(message.type) as DACPResponseType
+  const responseType = deriveResponseType(message.type) as BrowserTypes.ResponseMessageType
   const errorResponse = createDACPErrorResponse(message, errorType, responseType, errorMessage)
   sendDACPResponse({ response: errorResponse, instanceId, responses })
 }

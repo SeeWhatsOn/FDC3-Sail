@@ -10,7 +10,7 @@
  */
 
 import type { Transport, MessageHandler, DisconnectHandler } from "./transport"
-import { consoleLogger } from "../../src/interfaces/logger"
+import { consoleLogger } from "../../src/logging/logger"
 
 /**
  * In-memory transport for same-process communication.

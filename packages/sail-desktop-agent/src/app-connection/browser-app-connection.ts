@@ -5,7 +5,7 @@
  * DACP traffic is forwarded to {@link SailDesktopAgent} via {@link onAppMessage}.
  */
 
-import { type Logger, type LogPayloadDetail, consoleLogger } from "../interfaces/logger"
+import { type Logger, type LogPayloadDetail, consoleLogger } from "../logging/logger"
 import { isWebConnectionProtocol1Hello } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type {
   AppRequestMessage,

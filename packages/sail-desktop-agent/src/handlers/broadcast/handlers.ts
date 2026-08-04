@@ -27,7 +27,6 @@ import {
   removePrivateChannelContextListener,
   setPrivateChannelLastContext,
 } from "../../state/mutators"
-import { generateEventUuid } from "../../dacp/dacp-utils"
 import {
   notifyPrivateChannelAddContextListener,
   notifyPrivateChannelUnsubscribe,
@@ -177,7 +176,7 @@ export function handleAddContextListener(
 
       if (privateChannel) {
         const privateContextType = payloadContextType ?? null
-        const listenerId = generateEventUuid()
+        const listenerId = crypto.randomUUID()
         const resolvedContextType = privateContextType === "*" ? null : privateContextType
 
         if (!privateChannel.connectedInstances.includes(instanceId)) {

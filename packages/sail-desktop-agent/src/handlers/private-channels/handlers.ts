@@ -1,5 +1,4 @@
 import { createDACPSuccessResponse, createDACPEvent } from "../../dacp/dacp-message-creators"
-import { generateEventUuid } from "../../dacp/dacp-utils"
 import type { DACPHandlerContext, DacpResponseDispatcher } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
@@ -45,7 +44,7 @@ export function handleCreatePrivateChannelRequest(
     }
 
     // Generate channel ID
-    const channelId = generateEventUuid()
+    const channelId = crypto.randomUUID()
 
     // Create the private channel using state transform
     setState(state => createPrivateChannel(state, channelId, instance.appId, instanceId))
@@ -175,7 +174,7 @@ export function handlePrivateChannelAddContextListenerRequest(
       )
     }
 
-    const listenerId = generateEventUuid()
+    const listenerId = crypto.randomUUID()
 
     if (listenerType === null) {
       setState(state =>

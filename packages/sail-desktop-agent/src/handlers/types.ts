@@ -1,9 +1,8 @@
 import type { BrowserTypes } from "@finos/fdc3"
 import type { AppLauncher } from "../host-contracts/app-launcher"
 import type { AgentState, StateSetter } from "../state/types"
-import type { Logger, LogPayloadDetail } from "../interfaces/logger"
+import type { Logger, LogPayloadDetail } from "../logging/logger"
 import type { SailDesktopAgentMetadata } from "../agent/default-config"
-import type { DACPMessageType } from "../dacp/dacp-messages"
 import type { ValidationMode } from "../dacp/validate-dacp-message"
 import type { IntentResolutionCallback } from "./intent-resolution-callback"
 
@@ -19,6 +18,14 @@ export type DACPMessage =
   | BrowserTypes.AppRequestMessage
   | BrowserTypes.AgentResponseMessage
   | BrowserTypes.AgentEventMessage
+
+/**
+ * DACP wire `type` string unions from FDC3 BrowserTypes.
+ */
+type DACPMessageType =
+  | BrowserTypes.RequestMessageType
+  | BrowserTypes.ResponseMessageType
+  | BrowserTypes.EventMessageType
 
 /**
  * WCP message type union from the FDC3 schema definitions.

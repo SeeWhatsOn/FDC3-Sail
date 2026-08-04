@@ -3,7 +3,7 @@
  */
 
 import type { DirectoryApp, DirectoryData } from "../../app-directory/types"
-import { consoleLogger, type Logger } from "../../interfaces/logger"
+import { consoleLogger, type Logger } from "../../logging/logger"
 import {
   fetchAppDirectory,
   isValidDirectoryUrl,

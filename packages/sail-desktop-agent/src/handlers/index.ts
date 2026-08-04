@@ -2,8 +2,8 @@ import { BridgingError } from "@finos/fdc3"
 
 import { DACP_TIMEOUTS } from "../dacp/dacp-constants"
 import { DACPProcessingError, DACPTimeoutError } from "../dacp/dacp-errors"
-import { withDACPTimeout, logDACPMessage, extractDACPMessageLogMetadata } from "../dacp/dacp-utils"
 import { applyInboundValidationPolicy } from "../dacp/validate-dacp-message"
+import type { Logger, LogPayloadDetail } from "../logging/logger"
 import { type DACPHandlerContext, type MessageType } from "./types"
 import { sendDACPErrorResponse } from "./utils/dacp-response-utils"
 
@@ -26,10 +26,7 @@ export async function routeDACPMessage(
   const { logger, validation, logPayloadDetail } = context
   const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
   try {
-    logDACPMessage("incoming", message, "DACP Router", {
-      logger,
-      logPayloadDetail: resolvedLogPayloadDetail,
-    })
+    logIncomingDacpMessage(message, logger, resolvedLogPayloadDetail)
     logger.info("DACP: Routing message", extractDACPMessageLogMetadata(message))
 
     // Extract message type for routing
@@ -207,4 +204,89 @@ function getTimeoutForMessageType(messageType: string): number {
 
   // Default timeout for other operations
   return DACP_TIMEOUTS.DEFAULT
+}
+
+/**
+ * Wraps a promise with a timeout, rejecting with DACPTimeoutError if exceeded.
+ */
+function withDACPTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number = DACP_TIMEOUTS.DEFAULT,
+  operation: string = "DACP operation",
+): Promise<T> {
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(new DACPTimeoutError(`${operation} timed out after ${timeoutMs}ms`))
+    }, timeoutMs)
+  })
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutHandle !== undefined) {
+      clearTimeout(timeoutHandle)
+    }
+  })
+}
+
+/**
+ * Build metadata-only fields for structured DACP logs (no sensitive context values).
+ */
+function extractDACPMessageLogMetadata(message: unknown): Record<string, unknown> {
+  if (typeof message !== "object" || message === null) {
+    return { messageFormat: typeof message }
+  }
+
+  const msg = message as Record<string, unknown>
+  const meta = msg.meta as Record<string, unknown> | undefined
+  const payload = msg.payload as Record<string, unknown> | undefined
+  const context = payload?.context as Record<string, unknown> | undefined
+
+  const metadata: Record<string, unknown> = {
+    type: msg.type,
+    requestUuid: meta?.requestUuid,
+    eventUuid: meta?.eventUuid,
+  }
+
+  if (payload?.channelId !== undefined) {
+    metadata.channelId = payload.channelId
+  }
+
+  if (context) {
+    metadata.contextType = context.type
+    metadata.contextKeys = Object.keys(context)
+  }
+
+  return metadata
+}
+
+/**
+ * Metadata-only at info/warn/error; full payloads only on {@link Logger.debug}
+ * when `logPayloadDetail` is `'full'`.
+ */
+function logIncomingDacpMessage(
+  message: unknown,
+  logger: Logger,
+  logPayloadDetail: LogPayloadDetail,
+): void {
+  try {
+    if (typeof message === "object" && message !== null) {
+      const metadata = extractDACPMessageLogMetadata(message)
+      logger.debug("[DACP INCOMING]", { ...metadata, source: "DACP Router" })
+
+      if (logPayloadDetail === "full") {
+        logger.debug("[DACP INCOMING full payload]", {
+          source: "DACP Router",
+          fullMessage: JSON.stringify(message),
+        })
+      }
+    } else {
+      logger.warn("[DACP INVALID INCOMING]", {
+        message: "Invalid message format",
+        source: "DACP Router",
+      })
+    }
+  } catch (error) {
+    logger.error(`[DACP LOG ERROR]`, error)
+  }
 }
