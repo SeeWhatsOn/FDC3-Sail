@@ -7,7 +7,6 @@
 
 import { afterEach, describe, expect, it } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { DesktopAgent } from "../../agent/desktop-agent"
 import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import { connectWcpApp, TEST_ORIGIN } from "./wcp-edge-test-helpers"
@@ -15,10 +14,6 @@ import { createTestAgent, PORTFOLIO_APP } from "./wcp-desktop-agent.integration.
 
 const HOSTILE_ORIGIN = "https://evil.example"
 const HOSTILE_APP_ID = "hostile-spoofed-app"
-
-function getTestConnector(agent: DesktopAgent): SailDesktopAgent["connector"] {
-  return (agent as SailDesktopAgent).connector
-}
 
 /**
  * Private on BrowserAppConnection — accessed only so these tests can assert the
@@ -60,7 +55,7 @@ function createHostileWcp4(
 }
 
 describe("enrichMessageWithSource trusted metadata", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     clearAllHeartbeatTimersForTesting()
@@ -72,7 +67,7 @@ describe("enrichMessageWithSource trusted metadata", () => {
   it("replaces hostile messageOrigin and source.appId when the connection has a stored WCP1 origin", async () => {
     const agent = createTestAgent()
     activeAgents.push(agent)
-    const connector = getTestConnector(agent)
+    const connector = agent.connector
 
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "trusted-meta-with-origin-uuid",
@@ -107,7 +102,7 @@ describe("enrichMessageWithSource trusted metadata", () => {
   it("drops app-supplied messageOrigin when the connection has no stored origin", async () => {
     const agent = createTestAgent()
     activeAgents.push(agent)
-    const connector = getTestConnector(agent)
+    const connector = agent.connector
 
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "trusted-meta-no-origin-uuid",

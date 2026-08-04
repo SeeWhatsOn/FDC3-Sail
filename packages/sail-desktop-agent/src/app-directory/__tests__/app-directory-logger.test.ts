@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 
 import { createCapturingLogger } from "../../__tests__/utils/capturing-logger"
-import { DesktopAgent } from "../../agent/desktop-agent"
+import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 
 describe("app directory host logger", () => {
@@ -17,7 +17,7 @@ describe("app directory host logger", () => {
     const logger = createCapturingLogger()
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 
-    const agent = new DesktopAgent({
+    const agent = new SailDesktopAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       logger,
     })
@@ -28,7 +28,7 @@ describe("app directory host logger", () => {
       statusText: "Server Error",
     })
 
-    await expect(agent.addAppDirectory("https://example.com/apps")).rejects.toThrow(
+    await expect(agent.apps.addDirectory("https://example.com/apps")).rejects.toThrow(
       /Failed to load applications/,
     )
 

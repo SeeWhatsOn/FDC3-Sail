@@ -33,7 +33,8 @@ const desktopAgent = new SailDesktopAgent({
   appDirectories: ["/apps.json"],
   appLauncher: myAppLauncher,
 })
-// Auto-started — iframe apps can await fdc3.getAgent()
+desktopAgent.start()
+// iframe apps can await fdc3.getAgent()
 ```
 
 Inbound messages are validated against the FDC3 schema. The default `validation: "warn"`

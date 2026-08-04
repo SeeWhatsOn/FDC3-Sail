@@ -4,7 +4,7 @@ import { MockTransport } from "../../__tests__/utils/mock-transport"
 import type { DirectoryApp } from "../../app-directory/types"
 import { retrieveIntents } from "../../app-directory/app-directory-queries"
 import { addApplications } from "../../state/mutators/app-directory"
-import { DesktopAgent } from "../../agent/desktop-agent"
+import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { registerIntentListener } from "../../state/mutators/intent"
@@ -200,7 +200,7 @@ describe("state-owned app directory intent discovery contract", () => {
   })
 
   it("DesktopAgent intent lookup uses state.appDirectory as the directory source", () => {
-    const agent = new DesktopAgent({
+    const agent = new SailDesktopAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       apps: [intentAppA],
     })
@@ -241,7 +241,9 @@ describe("state-owned app directory intent discovery contract", () => {
       ...intentAppA,
       title: "Duplicate Intent App A",
     }
-    const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
+    const agent = new SailDesktopAgent({
+      userChannels: DEFAULT_FDC3_USER_CHANNELS,
+    })
 
     const internal = agent as unknown as { state: AgentState }
     internal.state = addApplications(internal.state, [intentAppA, duplicateVariant])

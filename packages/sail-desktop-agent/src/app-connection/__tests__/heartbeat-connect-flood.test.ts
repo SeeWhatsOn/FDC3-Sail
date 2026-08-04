@@ -12,7 +12,6 @@ import {
   clearAllHeartbeatTimersForTesting,
 } from "../../handlers/heartbeat/runtime"
 import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
-import type { DesktopAgent } from "../../agent/desktop-agent"
 import { connectWcpApp, flushAsyncDelivery } from "./wcp-edge-test-helpers"
 
 const PORTFOLIO_APP = {
@@ -23,7 +22,7 @@ const PORTFOLIO_APP = {
 }
 
 describe("heartbeat connect flood", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     for (const agent of activeAgents.splice(0)) {
@@ -41,6 +40,7 @@ describe("heartbeat connect flood", () => {
         getChannelSelectorUrl: () => false,
       },
     })
+    agent.start()
     activeAgents.push(agent)
 
     const heartbeatEvents: BrowserTypes.AgentEventMessage[] = []
@@ -74,6 +74,7 @@ describe("heartbeat connect flood", () => {
         getChannelSelectorUrl: () => false,
       },
     })
+    agent.start()
     activeAgents.push(agent)
 
     const heartbeatEvents: BrowserTypes.HeartbeatEvent[] = []

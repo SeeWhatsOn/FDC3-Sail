@@ -10,8 +10,13 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vite-plus/test"
 import { OpenError, type BrowserTypes, type Context } from "@finos/fdc3"
 import type { AppLauncher } from "../../host-contracts/app-launcher"
-import type { DesktopAgent } from "../../agent/desktop-agent"
-import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
+import type {
+  AppChannelChangeEvent,
+  HandshakeFailureEvent,
+  SailDesktopAgent,
+  SailDesktopAgentApps,
+  SailDesktopAgentChannels,
+} from "../../agent/sail-desktop-agent"
 import type { AppConnectionMetadata } from "../../app-connection/browser-app-connection"
 import { AppInstanceState } from "../../state/types"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
@@ -46,7 +51,7 @@ import {
 } from "./wcp-desktop-agent.integration.fixtures"
 
 /** Clears module-level open-with-context timers that outlive a single agent instance. */
-function cleanupWcpIntegrationTestHarness(activeAgents: DesktopAgent[]): void {
+function cleanupWcpIntegrationTestHarness(activeAgents: SailDesktopAgent[]): void {
   clearAllPendingOpenWithContextTimeoutsForTesting()
   clearAllHeartbeatTimersForTesting()
   for (const agent of activeAgents.splice(0)) {
@@ -66,64 +71,8 @@ const OPEN_WITH_CONTEXT_LAUNCH: Context = {
 
 const CHANNEL_ID_2 = "fdc3.channel.2"
 
-type AppChannelChangeEvent = {
-  instanceId: string
-  channelId: string | null
-  channel: BrowserTypes.Channel | null
-}
-
-type SailDesktopAgentChannelsController = {
-  getUserChannels: () => BrowserTypes.Channel[]
-  getAppChannel: (instanceId: string) => BrowserTypes.Channel | null
-  getAppChannelId: (instanceId: string) => string | null
-  changeAppChannel: (instanceId: string, channelId: string | null) => Promise<void>
-  onAppChannelChange: (listener: (event: AppChannelChangeEvent) => void) => () => void
-}
-
-type BrowserAppInstance = {
-  appId: string
-  instanceId: string
-  status: "pending" | "connected"
-  currentUserChannel?: string | null
-}
-
-type HandshakeFailureEvent = {
-  error: Error
-  connectionAttemptUuid: string
-}
-
-type SailDesktopAgentAppsController = {
-  add: (app: typeof PORTFOLIO_APP) => void
-  addAll: (apps: (typeof PORTFOLIO_APP)[]) => void
-  addDirectory: (url: string) => Promise<void>
-  remove: (appId: string) => void
-  getAll: () => Array<typeof PORTFOLIO_APP>
-  getById: (appId: string) => typeof PORTFOLIO_APP | undefined
-  open: (
-    app: string | BrowserTypes.AppIdentifier,
-    options?: { context?: Context; instanceId?: string },
-  ) => Promise<BrowserTypes.AppIdentifier>
-  getInstances: () => BrowserAppInstance[]
-  getInstance: (instanceId: string) => BrowserAppInstance | undefined
-  getConnections: () => AppConnectionMetadata[]
-  getConnection: (instanceId: string) => AppConnectionMetadata | undefined
-  disconnect: (instanceId: string) => void
-  onConnect: (listener: (metadata: AppConnectionMetadata) => void) => () => void
-  onDisconnect: (listener: (instanceId: string) => void) => () => void
-  onHandshakeFailure: (listener: (event: HandshakeFailureEvent) => void) => () => void
-}
-
-type TestBrowserAgent = DesktopAgent & {
-  channels: SailDesktopAgentChannelsController
-  apps: SailDesktopAgentAppsController
-}
-
-function getTestConnector(agent: DesktopAgent): SailDesktopAgent["connector"] {
-  return (agent as SailDesktopAgent).connector
-}
-
-function requireChannelsController(agent: DesktopAgent): SailDesktopAgentChannelsController {
-  const { channels } = agent as TestBrowserAgent
+function requireChannelsController(agent: SailDesktopAgent): SailDesktopAgentChannels {
+  const { channels } = agent
   expect(channels).toBeDefined()
   expect(typeof channels.getAppChannelId).toBe("function")
   expect(typeof channels.getAppChannel).toBe("function")
@@ -132,8 +81,8 @@ function requireChannelsController(agent: DesktopAgent): SailDesktopAgentChannel
   return channels
 }
 
-function requireAppsController(agent: DesktopAgent): SailDesktopAgentAppsController {
-  const { apps } = agent as TestBrowserAgent
+function requireAppsController(agent: SailDesktopAgent): SailDesktopAgentApps {
+  const { apps } = agent
   expect(apps).toBeDefined()
   expect(typeof apps.onConnect).toBe("function")
   expect(typeof apps.onDisconnect).toBe("function")
@@ -163,7 +112,7 @@ function waitForChannelChangedEvent(
 }
 
 describe("session carry-over", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
   const STALE_LAUNCHER_INSTANCE_ID = "L-stale"
   const SECOND_LAUNCHER_INSTANCE_ID = "L2"
 
@@ -353,7 +302,7 @@ describe("session carry-over", () => {
 })
 
 describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     cleanupWcpIntegrationTestHarness(activeAgents)
@@ -516,7 +465,7 @@ describe("WCP open-with-context (AOpensBWithContext3 path)", () => {
 })
 
 describe("open-with-context (first-connect WCP4)", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     cleanupWcpIntegrationTestHarness(activeAgents)
@@ -921,7 +870,7 @@ describe("open-with-context (first-connect WCP4)", () => {
 })
 
 describe("WCP edge contract", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     cleanupWcpIntegrationTestHarness(activeAgents)
@@ -932,7 +881,7 @@ describe("WCP edge contract", () => {
     activeAgents.push(agent)
 
     const appConnected = vi.fn()
-    getTestConnector(agent).on("appConnected", appConnected)
+    agent.connector.on("appConnected", appConnected)
 
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "integration-wcp-path-uuid",
@@ -1157,7 +1106,7 @@ describe("WCP edge contract", () => {
     })
 
     expect(chart.validatedInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
-    expect(getTestConnector(agent).getConnection(HOST_LAUNCHER_INSTANCE_ID)).toBeDefined()
+    expect(agent.connector.getConnection(HOST_LAUNCHER_INSTANCE_ID)).toBeDefined()
   })
 
   it("adopts sole pending launcher id when WCP4 omits host instanceId", async () => {
@@ -1192,7 +1141,7 @@ describe("WCP edge contract", () => {
 })
 
 describe("browser channels controller (WCP integration)", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     cleanupWcpIntegrationTestHarness(activeAgents)
@@ -1403,7 +1352,7 @@ describe("browser channels controller (WCP integration)", () => {
 })
 
 describe("browser apps controller (WCP integration)", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     cleanupWcpIntegrationTestHarness(activeAgents)

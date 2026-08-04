@@ -1,38 +1,34 @@
 /**
  * FDC3 Desktop Agent — public API.
  *
- * `SailDesktopAgent` is the entry point: construct it, implement {@link AppLauncher},
- * and wire host UI through the grouped controllers (`intentResolver`, `channels`, `apps`).
+ * `SailDesktopAgent` is the entry point and the whole implementation — there is no base
+ * class to extend or attach to. Construct it with `new SailDesktopAgent(options)`,
+ * implement {@link AppLauncher}, call `.start()`, and wire host UI through the grouped
+ * controllers (`intentResolver`, `channels`, `apps`).
  *
- * The browser app-connection edge (WCP handshake, per-app `MessagePort`, routing)
- * is internal — the agent owns it. There is no transport abstraction to configure.
+ * The browser app-connection edge (WCP handshake, per-app `MessagePort`, routing) is
+ * internal — the agent owns it and builds one on construction. There is no transport
+ * abstraction to configure; test suites may inject a lighter edge via the `appConnection`
+ * constructor option instead.
  */
 
 // The Desktop Agent
 export {
   SailDesktopAgent,
   type SailDesktopAgentOptions,
-  type SailDesktopAgentHostControllers,
   type SailDesktopAgentChannels,
   type SailDesktopAgentApps,
   type AppChannelChangeEvent,
   type HandshakeFailureEvent,
+  type DesktopAgentAppInstance,
+  type DesktopAgentOpenOptions,
 } from "./agent/sail-desktop-agent"
-
-export type { DesktopAgentAppInstance, DesktopAgentOpenOptions } from "./agent/desktop-agent"
-
-/**
- * @internal Base class of {@link SailDesktopAgent}. Exported because TypeScript
- * declaration emit requires it to be nameable — not an entry point. Construct
- * `SailDesktopAgent` instead.
- */
-export type { DesktopAgent } from "./agent/desktop-agent"
 
 // Validation policy
 export type { ValidationMode } from "./agent/default-config"
 
 // Agent identity reported to apps via fdc3.getInfo()
-export type { SailImplementationMetadata } from "./agent/default-config"
+export type { SailDesktopAgentMetadata } from "./agent/default-config"
 
 /**
  * The eight FDC3 standard user channels.
@@ -59,10 +55,14 @@ export { DACPTimeoutError, DACPProcessingError } from "./dacp/dacp-errors"
 /**
  * App-connection types that appear in the public agent surface.
  *
- * `AppConnectionMetadata` is the `onAppConnected` payload; `AppConnectionOptions`
- * configures the edge. `BrowserAppConnection` is `@internal` — exported only
- * because `SailDesktopAgent.connector` is typed with it and declaration emit
- * requires the name.
+ * `AppConnectionMetadata` is the `onAppConnected` / `apps.getConnection(s)` payload;
+ * `AppConnectionOptions` configures the edge. All three — including `BrowserAppConnection`,
+ * which types `SailDesktopAgent.connector` — are genuinely public, not internal-only
+ * declaration-emit artifacts: `sail-platform.ts` imports `AppConnectionMetadata` and
+ * `BrowserAppConnection` by name, `sail-platform`'s own re-exports and test suite pull in
+ * `AppConnectionOptions`, and `sail-conformance-harness` imports `AppConnectionMetadata`.
+ * Verified by cutting each and rebuilding: removing any one breaks a real consumer's
+ * typecheck, not just this package's own declaration emit.
  */
 export type {
   AppConnectionMetadata,

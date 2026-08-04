@@ -67,7 +67,6 @@ describe("SailDesktopAgent lifecycle", () => {
 
   it("completes WCP handshake after a previous agent was started and stopped", async () => {
     const firstAgent = new SailDesktopAgent({
-      autoStart: false,
       appConnectionOptions: {
         getIntentResolverUrl: () => false,
         getChannelSelectorUrl: () => false,
@@ -80,7 +79,6 @@ describe("SailDesktopAgent lifecycle", () => {
     firstAgent.stop()
 
     const secondAgent = new SailDesktopAgent({
-      autoStart: false,
       appConnectionOptions: {
         getIntentResolverUrl: () => false,
         getChannelSelectorUrl: () => false,
@@ -96,12 +94,12 @@ describe("SailDesktopAgent lifecycle", () => {
   })
 
   it("allows stop then start on a new instance without stale in-memory transport", async () => {
-    const sessionOne = new SailDesktopAgent({ autoStart: false })
+    const sessionOne = new SailDesktopAgent()
     activeAgents.push(sessionOne)
     sessionOne.start()
     sessionOne.stop()
 
-    const sessionTwo = new SailDesktopAgent({ autoStart: false })
+    const sessionTwo = new SailDesktopAgent()
     activeAgents.push(sessionTwo)
     sessionTwo.start()
 

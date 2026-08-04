@@ -43,7 +43,6 @@ describe("SailDesktopAgent constructor directory load", () => {
       agent = new SailDesktopAgent({
         userChannels: DEFAULT_FDC3_USER_CHANNELS,
         logger,
-        autoStart: false,
         appDirectories: [FAILING_DIRECTORY_URL],
         appConnectionOptions: {
           getIntentResolverUrl: () => false,
@@ -89,7 +88,6 @@ describe("SailDesktopAgent constructor directory load", () => {
     const agent = new SailDesktopAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       logger,
-      autoStart: false,
       appDirectories: ["https://example.com/ok-directory/apps"],
       appConnectionOptions: {
         getIntentResolverUrl: () => false,

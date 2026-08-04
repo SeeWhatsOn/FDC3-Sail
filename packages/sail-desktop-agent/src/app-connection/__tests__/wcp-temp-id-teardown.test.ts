@@ -24,16 +24,11 @@
 
 import { describe, it, expect, afterEach } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { DesktopAgent } from "../../agent/desktop-agent"
 import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import { AppInstanceState } from "../../state/types"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import { beginWcpAppFirstConnect, connectWcpApp, flushAsyncDelivery } from "./wcp-edge-test-helpers"
 import { createTestAgent, PORTFOLIO_APP } from "./wcp-desktop-agent.integration.fixtures"
-
-function getTestConnector(agent: DesktopAgent): SailDesktopAgent["connector"] {
-  return (agent as SailDesktopAgent).connector
-}
 
 /**
  * Schema-valid WCP6Goodbye, modeled on the message `disconnectAppByInstanceId` builds in
@@ -52,7 +47,7 @@ function createWCP6Goodbye(): BrowserTypes.WebConnectionProtocol6Goodbye {
 }
 
 describe("WCP6Goodbye arriving on a temp handshake id", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     clearAllHeartbeatTimersForTesting()
@@ -64,7 +59,7 @@ describe("WCP6Goodbye arriving on a temp handshake id", () => {
   it("does not tear down the validated instance when WCP6Goodbye arrives on the temp id before WCP4 completes", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
-    const connector = getTestConnector(agent)
+    const connector = agent.connector
 
     const disconnectedInstanceIds: string[] = []
     connector.on("appDisconnected", instanceId => {
@@ -107,7 +102,7 @@ describe("WCP6Goodbye arriving on a temp handshake id", () => {
   it("still disconnects the validated instance when WCP6Goodbye arrives after the handshake remap (guard)", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
-    const connector = getTestConnector(agent)
+    const connector = agent.connector
 
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "wcp-a-goodbye-after-remap-uuid",
@@ -155,7 +150,7 @@ describe("WCP6Goodbye arriving on a temp handshake id", () => {
  * @vitest-environment jsdom
  */
 describe("WCP5 failure addressed to an already-remapped temp id", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     clearAllHeartbeatTimersForTesting()
@@ -189,7 +184,7 @@ describe("WCP5 failure addressed to an already-remapped temp id", () => {
   it("does not tear down the validated instance when a WCP5 failure resolves the stale temp id forward", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
-    const connector = getTestConnector(agent)
+    const connector = agent.connector
 
     const disconnectedInstanceIds: string[] = []
     connector.on("appDisconnected", instanceId => {
@@ -228,7 +223,7 @@ describe("WCP5 failure addressed to an already-remapped temp id", () => {
   it("still prunes the temp connection on a WCP5 failure for a genuinely unvalidated first handshake (guard)", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
-    const connector = getTestConnector(agent)
+    const connector = agent.connector
 
     const session = beginWcpAppFirstConnect(agent, {
       connectionAttemptUuid: "wcp-b-guard-unvalidated-uuid",

@@ -47,7 +47,7 @@ describe("SailDesktopAgent", () => {
   })
 
   it("owns a browser connector and grouped host controllers", () => {
-    const agent = new SailDesktopAgent({ autoStart: false })
+    const agent = new SailDesktopAgent()
 
     expect(agent.connector).toBeDefined()
     expect(agent.apps.getConnections()).toEqual([])
@@ -65,7 +65,6 @@ describe("SailDesktopAgent", () => {
       ),
     }
     const agent = new SailDesktopAgent({
-      autoStart: false,
       apps: [mockApp],
       appLauncher,
     })
@@ -87,7 +86,7 @@ describe("SailDesktopAgent", () => {
   })
 
   it("exposes default intent resolver UI methods over the browser connector", async () => {
-    const agent = new SailDesktopAgent({ autoStart: false })
+    const agent = new SailDesktopAgent()
     const requests: unknown[] = []
 
     const unsubscribe = agent.intentResolver.onRequest(request => {
@@ -127,7 +126,7 @@ describe("SailDesktopAgent", () => {
   })
 
   it("changeAppChannel resolves on a redundant join to the same channel", async () => {
-    const agent = new SailDesktopAgent({ autoStart: false })
+    const agent = new SailDesktopAgent()
     const instanceId = "redundant-join-instance"
     const channel = agent.channels.getUserChannels()[0]
     expect(channel).toBeDefined()
@@ -142,7 +141,6 @@ describe("SailDesktopAgent", () => {
       resolve: () => Promise.resolve(null),
     }
     const agent = new SailDesktopAgent({
-      autoStart: false,
       intentResolver: resolveOnly,
     })
 

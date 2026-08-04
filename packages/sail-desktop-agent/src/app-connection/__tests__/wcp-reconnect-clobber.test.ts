@@ -12,7 +12,6 @@
 
 import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { DesktopAgent } from "../../agent/desktop-agent"
 import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import { AppInstanceState } from "../../state/types"
@@ -27,10 +26,6 @@ import {
 import type { AppConnectionMetadata } from "../wcp/wcp-types"
 import { connectWcpApp, flushAsyncDelivery, TEST_ORIGIN } from "./wcp-edge-test-helpers"
 import { createTestAgent, PORTFOLIO_APP } from "./wcp-desktop-agent.integration.fixtures"
-
-function getTestConnector(agent: DesktopAgent): SailDesktopAgent["connector"] {
-  return (agent as SailDesktopAgent).connector
-}
 
 function createWCP6Goodbye(): BrowserTypes.WebConnectionProtocol6Goodbye {
   return {
@@ -115,7 +110,7 @@ function seedConnection(
 }
 
 describe("WCP reconnect clobber", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     clearAllHeartbeatTimersForTesting()
@@ -186,7 +181,7 @@ describe("WCP reconnect clobber", () => {
   it("does not tear down the new connection when goodbye arrives on a displaced old port", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
-    const connector = getTestConnector(agent)
+    const connector = agent.connector
 
     const disconnectedInstanceIds: string[] = []
     connector.on("appDisconnected", instanceId => {
@@ -225,7 +220,7 @@ describe("WCP reconnect clobber", () => {
   it("cancels grace teardown when reconnect completes before the timer fires", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 80 })
     activeAgents.push(agent)
-    const connector = getTestConnector(agent)
+    const connector = agent.connector
 
     const disconnectedInstanceIds: string[] = []
     connector.on("appDisconnected", instanceId => {
@@ -318,7 +313,7 @@ describe("WCP reconnect clobber", () => {
   it("removes the instance when grace expires with no reconnect", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
-    const connector = getTestConnector(agent)
+    const connector = agent.connector
 
     const connected = await connectWcpApp(agent, {
       connectionAttemptUuid: "grace-expire-no-reconnect-uuid",

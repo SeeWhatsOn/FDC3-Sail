@@ -1,206 +1,132 @@
 /**
- * Browser-ready Sail Desktop Agent.
+ * FDC3 Desktop Agent — the entry point.
  *
- * Owns the browser WCP app connection and exposes host shell controls directly
- * on the agent instance. Lower-level WCP mechanics stay in BrowserAppConnection.
+ * Owns agent state, host APIs, DACP/WCP routing over the app-connection edge (`connector`),
+ * and the grouped host controllers (`apps`, `channels`, `intentResolver`) a shell wires into
+ * its UI. Production construction defaults `connector` to a real {@link BrowserAppConnection}.
+ * Test suites (DACP oracle tests, Cucumber, integration tests) inject a lighter test edge via
+ * the `appConnection` constructor option instead — `connector` becomes that same edge, typed
+ * as its own type; it is never a second, separately-constructed object.
  */
 
-import type { Context } from "@finos/fdc3"
-
-import { BrowserAppConnection } from "../app-connection/browser-app-connection"
-import type {
-  AppConnectionMetadata,
-  AppConnectionOptions,
-} from "../app-connection/browser-app-connection"
+import type { AppLauncher } from "../host-contracts/app-launcher"
+import { routeDACPMessage } from "../handlers"
+import { cleanupDACPHandlers } from "../handlers/cleanup"
+import { handleWcp4ValidateAppIdentity } from "../app-connection/wcp/wcp-identity-validation"
+import { createDacpResponseDispatcherFromDelivery } from "../handlers/utils/dacp-response-utils"
+import type { DACPHandlerContext, PendingIntentPromiseEntry } from "../handlers/types"
+import { applyInboundValidationPolicy, type ValidationMode } from "../dacp/validate-dacp-message"
+import type { IntentResolutionCallback } from "../handlers/intent-resolution-callback"
 import type { DirectoryApp } from "../app-directory/types"
 import {
-  createHostIntentResolver,
-  type HostIntentResolverChoice,
-  type HostIntentResolverHandler,
-  type IntentHandler,
-  type IntentResolver,
-  type IntentResolverUIMethods,
-  type IntentResolutionChoice,
-  type IntentResolutionRequest,
-} from "../host-contracts"
+  addApp as addDirectoryApp,
+  addApplications,
+  loadDirectoryIntoState,
+  removeApplicationsByAppId,
+} from "../state/mutators/app-directory"
+import { retrieveAllApps, retrieveAppsById } from "../app-directory/app-directory-queries"
+import type { BrowserTypes } from "@finos/fdc3"
+import type { AgentState, StateSetter } from "../state/types"
+import { createInitialState, createStateWithOverrides } from "../state/initial-state"
 import { consoleLogger, type Logger, type LogPayloadDetail } from "../interfaces/logger"
-import type { SailImplementationMetadata } from "./default-config"
+import { resolveDesktopAgentConfig, type SailDesktopAgentMetadata } from "./default-config"
+import { getAllInstances, getAllUserChannels, getInstance } from "../state/selectors"
+import { connectInstance } from "../state/mutators"
+import type { AgentAppConnection } from "../app-connection/types"
 import {
-  DesktopAgent,
+  BrowserAppConnection,
+  type AppConnectionMetadata,
+} from "../app-connection/browser-app-connection"
+import { createHostIntentResolver, type IntentResolverUIMethods } from "../host-contracts"
+import {
+  changeAppChannel,
+  createAppsController,
+  createChannelsController,
+  createIntentResolverController,
+  hasIntentResolverUI,
+  wireIntentResolver,
+  wireLifecycleCallbacks,
+  type SailDesktopAgentApps,
+  type SailDesktopAgentChannels,
+  type SailDesktopAgentHostControllers,
+} from "./sail-desktop-agent-controllers"
+import {
+  mapToDesktopAgentAppInstance,
+  resolveOpenAppIdentifier,
   type DesktopAgentAppInstance,
   type DesktopAgentOpenOptions,
-  type DesktopAgentOptions,
-} from "./desktop-agent"
-import type { BrowserTypes } from "@finos/fdc3"
+  type SailDesktopAgentOptions,
+} from "./sail-desktop-agent-types"
+
+export type {
+  AppChannelChangeEvent,
+  HandshakeFailureEvent,
+  SailDesktopAgentApps,
+  SailDesktopAgentChannels,
+  SailDesktopAgentHostControllers,
+} from "./sail-desktop-agent-controllers"
+
+export type {
+  DesktopAgentAppInstance,
+  DesktopAgentOpenOptions,
+  SailDesktopAgentConfig,
+  SailDesktopAgentOptions,
+} from "./sail-desktop-agent-types"
 
 const DEFAULT_WCP_INTENT_RESOLUTION_TIMEOUT_MS = 60000
 const HOST_RESOLVER_TIMEOUT_BUFFER_MS = 1000
 const DEFAULT_CHANNEL_CHANGE_TIMEOUT_MS = 10000
 
-export interface AppChannelChangeEvent {
-  instanceId: string
-  channelId: string | null
-  channel: BrowserTypes.Channel | null
-}
-
-export interface HandshakeFailureEvent {
-  error: Error
-  connectionAttemptUuid: string
-}
-
-export interface SailDesktopAgentChannels {
-  getUserChannels: () => BrowserTypes.Channel[]
-  getAppChannelId: (instanceId: string) => string | null
-  getAppChannel: (instanceId: string) => BrowserTypes.Channel | null
-  changeAppChannel: (instanceId: string, channelId: string | null) => Promise<void>
-  onAppChannelChange: (listener: (event: AppChannelChangeEvent) => void) => () => void
-}
-
-export interface SailDesktopAgentApps {
-  add: (app: DirectoryApp) => void
-  addAll: (apps: DirectoryApp[]) => void
-  addDirectory: (url: string) => Promise<void>
-  remove: (appId: string) => void
-  getAll: () => DirectoryApp[]
-  getById: (appId: string) => DirectoryApp | undefined
-  open: (
-    app: string | BrowserTypes.AppIdentifier,
-    options?: DesktopAgentOpenOptions,
-  ) => Promise<BrowserTypes.AppIdentifier>
-  getInstances: () => DesktopAgentAppInstance[]
-  getInstance: (instanceId: string) => DesktopAgentAppInstance | undefined
-  getConnections: () => AppConnectionMetadata[]
-  getConnection: (instanceId: string) => AppConnectionMetadata | undefined
-  disconnect: (instanceId: string) => void
-  onConnect: (listener: (metadata: AppConnectionMetadata) => void) => () => void
-  onDisconnect: (listener: (instanceId: string) => void) => () => void
-  onHandshakeFailure: (listener: (event: HandshakeFailureEvent) => void) => () => void
-}
-
-export interface SailDesktopAgentHostControllers {
-  intentResolver: IntentResolverUIMethods
-  channels: SailDesktopAgentChannels
-  apps: SailDesktopAgentApps
-}
-
-export interface SailDesktopAgentOptions extends Pick<
-  DesktopAgentOptions,
-  | "appLauncher"
-  | "userChannels"
-  | "apps"
-  | "validation"
-  | "openContextListenerTimeoutMs"
-  | "heartbeatEnabled"
-  | "heartbeatIntervalMs"
-  | "heartbeatTimeoutMs"
-> {
-  implementationMetadata?: Partial<SailImplementationMetadata>
-  appConnectionOptions?: AppConnectionOptions
-  appDirectories?: string[]
-  logger?: Logger
-  logPayloadDetail?: LogPayloadDetail
-  autoStart?: boolean
-  onAppConnected?: (metadata: AppConnectionMetadata) => void
-  onAppDisconnected?: (instanceId: string) => void
-  onHandshakeFailed?: (error: Error, connectionAttemptUuid: string) => void
-  intentResolver?: IntentResolver
-  /** Milliseconds to wait for `channelChanged` after host `changeAppChannel`. @defaultValue 10000 */
-  channelChangeTimeoutMs?: number
-}
-
-function hasIntentResolverUI(
-  resolver: IntentResolver,
-): resolver is IntentResolver & IntentResolverUIMethods {
-  const candidate = resolver as Partial<IntentResolverUIMethods>
-  return (
-    typeof candidate.onRequest === "function" &&
-    typeof candidate.select === "function" &&
-    typeof candidate.cancel === "function" &&
-    typeof candidate.getPendingRequests === "function"
-  )
-}
-
-function mapHandler(intentName: string, handler: HostIntentResolverHandler): IntentHandler {
-  return {
-    app: handler,
-    intent: { name: intentName, displayName: intentName },
-    instanceId: handler.instanceId,
-    isRunning: handler.isRunning,
+/**
+ * Structure of DACP message metadata for routing
+ */
+interface DACPMessageMeta {
+  source?: {
+    instanceId?: string
+  }
+  destination?: {
+    instanceId?: string
   }
 }
 
-function mapChoice(choice: HostIntentResolverChoice): IntentResolutionChoice {
-  return {
-    intent: choice.intent,
-    handler: {
-      ...mapHandler(choice.intent.name, choice.handler),
-      intent: choice.intent,
-    },
-  }
-}
+/**
+ * FDC3-Sail's Desktop Agent implementation.
+ *
+ * Construct it, implement {@link AppLauncher}, and wire host UI through the grouped
+ * controllers (`intentResolver`, `channels`, `apps`). The app-connection edge (WCP handshake,
+ * per-app `MessagePort`, routing) is internal — the agent owns it via `connector`, which is a
+ * typed view of the same object used for routing (`appConnection`), never a second one.
+ *
+ * Generic in the edge type (`TEdge`) so `connector` types as the real {@link BrowserAppConnection}
+ * for default/production construction, and as the injected edge's own type for tests that pass
+ * `appConnection` — see {@link SailDesktopAgentOptions}.
+ */
+export class SailDesktopAgent<
+  TEdge extends AgentAppConnection = BrowserAppConnection,
+> implements SailDesktopAgentHostControllers {
+  private state: AgentState
+  private appLauncher?: AppLauncher
+  private requestIntentResolution?: IntentResolutionCallback
+  private validation: ValidationMode
+  private logger: Logger
+  private logPayloadDetail: LogPayloadDetail
+  private isStarted: boolean = false
+  private implementationMetadata: SailDesktopAgentMetadata
+  private openContextListenerTimeoutMs: number
+  private heartbeatEnabled: boolean
+  private heartbeatIntervalMs: number
+  private heartbeatTimeoutMs: number
+  private pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
+  /**
+   * Inbound DACP/WCP routing edge, and what every controller (`apps`, `channels`,
+   * intent-resolver wiring) actually listens/sends on. Defaults to a fresh real
+   * {@link BrowserAppConnection} (its constructor is inert — no `window`, no listeners); tests
+   * may inject a lighter edge via the `appConnection` option instead. `connector` (below) is
+   * this same object — see its accessor.
+   */
+  private readonly appConnection: TEdge
+  private readonly channelChangeTimeoutMs: number
 
-function resolveUserChannelById(
-  desktopAgent: DesktopAgent,
-  channelId: string | null,
-): BrowserTypes.Channel | null {
-  if (channelId === null) {
-    return null
-  }
-  return desktopAgent.getUserChannels().find(channel => channel.id === channelId) ?? null
-}
-
-function wireIntentResolver(
-  browserAppConnection: BrowserAppConnection,
-  resolver: IntentResolver,
-  logger: Logger,
-): void {
-  browserAppConnection.on("intentResolverNeeded", payload => {
-    void (async () => {
-      try {
-        const request: IntentResolutionRequest = {
-          requestId: payload.requestId,
-          intent: payload.intent,
-          context: payload.context as Context,
-          handlers:
-            payload.choices?.map(choice => mapChoice(choice).handler) ??
-            payload.handlers.map(handler => mapHandler(payload.intent, handler)),
-          choices:
-            payload.choices?.map(choice => mapChoice(choice)) ??
-            payload.handlers.map(handler => ({
-              intent: { name: payload.intent, displayName: payload.intent },
-              handler: mapHandler(payload.intent, handler),
-            })),
-        }
-
-        const response = await resolver.resolve(request)
-
-        browserAppConnection.resolveIntentSelection({
-          requestId: payload.requestId,
-          selectedHandler: response
-            ? {
-                appId: response.target.appId,
-                instanceId: response.target.instanceId,
-              }
-            : null,
-          ...(response?.intent ? { intent: response.intent } : {}),
-        })
-      } catch (error) {
-        // Host resolver throw is not the same as user cancel — log before settling null.
-        logger.error(
-          `[SailDesktopAgent] Host intent resolver threw; cancelling resolution for ${payload.requestId}:`,
-          error instanceof Error ? error : new Error(String(error)),
-        )
-        browserAppConnection.resolveIntentSelection({
-          requestId: payload.requestId,
-          selectedHandler: null,
-        })
-      }
-    })()
-  })
-}
-
-export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHostControllers {
-  readonly connector: BrowserAppConnection
   readonly intentResolver: IntentResolverUIMethods
   readonly channels: SailDesktopAgentChannels
   readonly apps: SailDesktopAgentApps
@@ -209,17 +135,94 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
    * (fulfilled or rejected). Resolves immediately when none were configured.
    */
   readonly directoriesLoaded: Promise<void>
-  private readonly channelChangeTimeoutMs: number
 
-  constructor(options?: SailDesktopAgentOptions) {
-    const { intentResolver: providedIntentResolver, autoStart, ...localOptions } = options ?? {}
-    const logger = localOptions.logger ?? consoleLogger
-    const browserAppConnection = new BrowserAppConnection({
-      ...localOptions.appConnectionOptions,
-      logger,
-      validation: localOptions.validation,
-      logPayloadDetail: localOptions.logPayloadDetail,
+  /**
+   * The app-connection edge — the same object that routes DACP/WCP and that `apps`/`channels`
+   * controllers listen on, typed as `TEdge`. Default construction: a real
+   * {@link BrowserAppConnection}. With an injected `appConnection` (tests): that edge's own type.
+   */
+  get connector(): TEdge {
+    return this.appConnection
+  }
+
+  /**
+   * Options are optional only when `TEdge` is the default {@link BrowserAppConnection} (or a
+   * widening like `AgentAppConnection`); once narrowed to a non-default edge (e.g.
+   * `SailDesktopAgent<DacpTestAppConnection>`), `SailDesktopAgentOptions<TEdge>` itself requires
+   * `appConnection`, so the argument can no longer be omitted — see that type's doc comment.
+   * Modeled as a conditional tuple rest-param (rather than `options: SailDesktopAgentOptions<TEdge>
+   * = {}`) because a plain default value is checked once against the *unresolved* `TEdge` at this
+   * declaration, not per call site, and can't express "optional for the default type parameter,
+   * required otherwise".
+   */
+  constructor(
+    ...args: BrowserAppConnection extends TEdge
+      ? [options?: SailDesktopAgentOptions<TEdge>]
+      : [options: SailDesktopAgentOptions<TEdge>]
+  ) {
+    const options = (args[0] ?? {}) as SailDesktopAgentOptions<TEdge>
+    const { intentResolver: providedIntentResolver, ...localOptions } = options
+    const config = resolveDesktopAgentConfig(localOptions)
+
+    this.implementationMetadata = config.desktopAgentMetadata
+    this.openContextListenerTimeoutMs = config.openContextListenerTimeoutMs
+    this.heartbeatEnabled = config.heartbeatEnabled
+    this.heartbeatIntervalMs = config.heartbeatIntervalMs
+    this.heartbeatTimeoutMs = config.heartbeatTimeoutMs
+    // userChannels config seeds state once; runtime reads use state.channels.user only.
+    this.state = config.initialState
+      ? createStateWithOverrides(config.initialState, config.userChannels)
+      : createInitialState(config.userChannels)
+
+    if (config.apps) {
+      for (const app of config.apps) {
+        this.state = addDirectoryApp(this.state, app)
+      }
+    }
+
+    this.appLauncher = config.appLauncher
+    this.validation = config.validation
+    this.logger = config.logger ?? consoleLogger
+    this.logPayloadDetail = config.logPayloadDetail
+
+    // The edge that actually routes DACP/WCP, and that `connector` is a view of — an injected
+    // test edge, or a fresh real BrowserAppConnection (its constructor is inert: no `window`,
+    // no listeners). Never two objects: `config.appConnection`'s own type is `TEdge` per
+    // `SailDesktopAgentOptions<TEdge>`, so the only unchecked case is the default branch, where
+    // `TEdge` is `BrowserAppConnection` (the class's default type parameter).
+    this.appConnection = (config.appConnection ??
+      new BrowserAppConnection({
+        ...localOptions.appConnectionOptions,
+        logger: this.logger,
+        validation: this.validation,
+        logPayloadDetail: this.logPayloadDetail,
+      })) as TEdge
+
+    // Only wire DACP intent-resolution requests to a host-resolver UI when the routing edge
+    // actually provides that capability (declared on BrowserAppConnectionSurface, optional on
+    // AgentAppConnection). Real browser edge: present, wired. Minimal test edges
+    // (DacpTestAppConnection): absent — left unset, so raiseIntent auto-selects the first
+    // handler. Derived from the edge's real capability, not from whether an edge was injected.
+    if (typeof this.appConnection.requestIntentResolution === "function") {
+      const conn = this.appConnection
+      this.requestIntentResolution = request => conn.requestIntentResolution!(request)
+    }
+
+    this.appConnection.bindAgentState?.({
+      getAgentState: () => this.getState(),
+      setAgentState: callback => {
+        this.updateState(callback)
+      },
     })
+
+    this.appConnection.setOnInstanceTeardown(instanceId => {
+      this.disconnectInstance(instanceId)
+    })
+
+    this.appConnection.setOnAgentDisconnect?.(() => {
+      this.handleDisconnect()
+    })
+
     const wcpIntentResolutionTimeout =
       localOptions.appConnectionOptions?.intentResolutionTimeout ??
       DEFAULT_WCP_INTENT_RESOLUTION_TIMEOUT_MS
@@ -230,43 +233,53 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
       })
     const resolverUI = hasIntentResolverUI(hostIntentResolver) ? hostIntentResolver : undefined
 
-    super({
-      appLauncher: localOptions.appLauncher,
-      apps: localOptions.apps,
-      userChannels: localOptions.userChannels,
-      validation: localOptions.validation,
-      implementationMetadata: localOptions.implementationMetadata,
-      openContextListenerTimeoutMs: localOptions.openContextListenerTimeoutMs,
-      heartbeatEnabled: localOptions.heartbeatEnabled,
-      heartbeatIntervalMs: localOptions.heartbeatIntervalMs,
-      heartbeatTimeoutMs: localOptions.heartbeatTimeoutMs,
-      logger,
-      logPayloadDetail: localOptions.logPayloadDetail,
-      requestIntentResolution: request => browserAppConnection.requestIntentResolution(request),
-    })
-
-    this.connector = browserAppConnection
     this.channelChangeTimeoutMs =
       localOptions.channelChangeTimeoutMs ?? DEFAULT_CHANNEL_CHANGE_TIMEOUT_MS
-    this.intentResolver = this.createIntentResolverController(resolverUI)
-    this.channels = this.createChannelsController()
-    this.apps = this.createAppsController()
-
-    browserAppConnection.bindAgentState({
-      getAgentState: () => this.getState(),
-      setAgentState: callback => {
-        this.updateState(callback)
+    this.intentResolver = createIntentResolverController(resolverUI)
+    this.channels = createChannelsController(
+      {
+        getUserChannels: () => this.getUserChannels(),
+        getAppChannelId: instanceId => this.getAppUserChannelId(instanceId),
+        changeAppChannel: (instanceId, channelId) =>
+          changeAppChannel(
+            {
+              getState: () => this.state,
+              createHandlerContext: id => this.createHandlerContext(id),
+              getUserChannels: () => this.getUserChannels(),
+              connector: this.appConnection,
+              channelChangeTimeoutMs: this.channelChangeTimeoutMs,
+            },
+            instanceId,
+            channelId,
+          ),
       },
-    })
-    this.attachAppConnection(browserAppConnection)
-    wireIntentResolver(browserAppConnection, hostIntentResolver, logger)
-    this.wireLifecycleCallbacks(localOptions, logger)
+      this.appConnection,
+    )
+    this.apps = createAppsController(
+      {
+        add: app => this.addApp(app),
+        addAll: apps => this.addApps(apps),
+        addDirectory: url => this.addAppDirectory(url),
+        remove: appId => this.removeApp(appId),
+        getAll: () => this.getApps(),
+        getById: appId => this.getApp(appId),
+        open: (app, openOptions) => this.openApp(app, openOptions),
+        getInstances: () => this.getAppInstances(),
+        getInstance: instanceId => this.getAppInstance(instanceId),
+        getConnections: () => this.getAppConnections(),
+        getConnection: instanceId => this.getAppConnection(instanceId),
+      },
+      this.appConnection,
+    )
+
+    wireIntentResolver(this.appConnection, hostIntentResolver, this.logger)
+    wireLifecycleCallbacks(this.appConnection, this.logger, localOptions)
 
     if (localOptions.appDirectories && localOptions.appDirectories.length > 0) {
       this.directoriesLoaded = Promise.all(
         localOptions.appDirectories.map(url =>
           this.addAppDirectory(url).catch(err => {
-            logger.error(
+            this.logger.error(
               `[SailDesktopAgent] Failed to load app directory ${url}:`,
               err instanceof Error ? err : new Error(String(err)),
             )
@@ -276,159 +289,281 @@ export class SailDesktopAgent extends DesktopAgent implements SailDesktopAgentHo
     } else {
       this.directoriesLoaded = Promise.resolve()
     }
-
-    if (autoStart !== false) {
-      this.start()
-    }
   }
 
-  private createIntentResolverController(
-    resolverUI: IntentResolverUIMethods | undefined,
-  ): IntentResolverUIMethods {
-    return {
-      getPendingRequests: () => resolverUI?.getPendingRequests() ?? [],
-      onRequest: listener => resolverUI?.onRequest(listener) ?? (() => {}),
-      select: (requestId, choice) => {
-        if (!resolverUI) {
-          throw new Error(
-            "Cannot select intent resolution: host intentResolver does not provide UI methods",
-          )
-        }
-        resolverUI.select(requestId, choice)
-      },
-      cancel: requestId => {
-        if (!resolverUI) {
-          throw new Error(
-            "Cannot cancel intent resolution: host intentResolver does not provide UI methods",
-          )
-        }
-        resolverUI.cancel(requestId)
-      },
+  /**
+   * Start the Desktop Agent, activating the app connection edge.
+   */
+  start(): void {
+    if (this.isStarted) {
+      throw new Error("DesktopAgent is already started")
     }
+
+    this.appConnection?.start()
+
+    if (this.appConnection) {
+      this.appConnection.onAppMessage(message => {
+        void this.handleMessage(message)
+      })
+    }
+
+    this.isStarted = true
   }
 
-  private createChannelsController(): SailDesktopAgentChannels {
-    return {
-      getUserChannels: () => this.getUserChannels(),
-      getAppChannelId: instanceId => this.getAppUserChannelId(instanceId),
-      getAppChannel: instanceId => {
-        const channelId = this.getAppUserChannelId(instanceId)
-        return resolveUserChannelById(this, channelId)
-      },
-      changeAppChannel: (instanceId, channelId) => this.changeAppChannel(instanceId, channelId),
-      onAppChannelChange: listener => {
-        const handler = (instanceId: string, channelId: string | null) => {
-          listener({
-            instanceId,
-            channelId,
-            channel: resolveUserChannelById(this, channelId),
-          })
-        }
-        this.connector.on("channelChanged", handler)
-        return () => {
-          this.connector.off("channelChanged", handler)
-        }
-      },
+  /**
+   * Stop the Desktop Agent and clean up resources.
+   */
+  stop(): void {
+    if (!this.isStarted) {
+      return
     }
+
+    this.appConnection?.stop()
+    this.isStarted = false
   }
 
-  private createAppsController(): SailDesktopAgentApps {
-    return {
-      add: app => {
-        this.addApp(app)
-      },
-      addAll: apps => {
-        this.addApps(apps)
-      },
-      addDirectory: url => this.addAppDirectory(url),
-      remove: appId => {
-        this.removeApp(appId)
-      },
-      getAll: () => this.getApps(),
-      getById: appId => this.getApp(appId),
-      open: (app, openOptions) => this.openApp(app, openOptions),
-      getInstances: () => this.getAppInstances(),
-      getInstance: instanceId => this.getAppInstance(instanceId),
-      getConnections: () => this.getAppConnections(),
-      getConnection: instanceId => this.getAppConnection(instanceId),
-      disconnect: instanceId => {
-        this.connector.disconnectAppByInstanceId(instanceId)
-      },
-      onConnect: listener => {
-        this.connector.on("appConnected", listener)
-        return () => {
-          this.connector.off("appConnected", listener)
-        }
-      },
-      onDisconnect: listener => {
-        this.connector.on("appDisconnected", listener)
-        return () => {
-          this.connector.off("appDisconnected", listener)
-        }
-      },
-      onHandshakeFailure: listener => {
-        const handler = (error: Error, connectionAttemptUuid: string) => {
-          listener({ error, connectionAttemptUuid })
-        }
-        this.connector.on("handshakeFailed", handler)
-        return () => {
-          this.connector.off("handshakeFailed", handler)
-        }
-      },
+  private async handleMessage(message: unknown): Promise<void> {
+    const messageType = (message as { type?: string })?.type
+    if (messageType?.startsWith("WCP")) {
+      await this.handleWcpMessage(message)
+      return
     }
+
+    // Only process messages FROM apps (have source.instanceId)
+    // Messages TO apps (have destination.instanceId but no source) should pass through
+    const instanceId = this.extractInstanceId(message)
+
+    if (!instanceId) {
+      // Message has no source.instanceId - this is likely a message going TO an app
+      // (e.g., contextEvent, responses). Let it pass through without processing.
+      return
+    }
+
+    const context = this.createHandlerContext(instanceId)
+    await routeDACPMessage(message, context)
   }
 
-  private changeAppChannel(instanceId: string, channelId: string | null): Promise<void> {
-    if (channelId !== null && !this.getUserChannels().find(channel => channel.id === channelId)) {
-      return Promise.reject(new Error(`Channel "${channelId}" does not exist`))
+  private extractInstanceId(message: unknown): string | null {
+    if (!message || typeof message !== "object") {
+      return null
     }
 
-    return new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        cleanup()
-        reject(new Error(`Channel change timeout for instance ${instanceId}`))
-      }, this.channelChangeTimeoutMs)
+    const messageObj = message as { meta?: DACPMessageMeta }
+    return messageObj.meta?.source?.instanceId || null
+  }
 
-      const handleChannelChanged = (changedInstanceId: string, changedChannelId: string | null) => {
-        if (changedInstanceId === instanceId && changedChannelId === channelId) {
-          cleanup()
-          resolve()
-        }
+  private async handleWcpMessage(message: unknown): Promise<void> {
+    if (!message || typeof message !== "object") {
+      return
+    }
+
+    const messageObj = message as {
+      type?: string
+      meta?: { connectionAttemptUuid?: string; source?: unknown }
+    }
+
+    // Validate raw WCP before dispatch (same policy as routeDACPMessage).
+    // Browser MessagePort path already validated in bridgeAppPort before
+    // enrichment; enriched WCP4 carries Sail-injected meta.source and must not
+    // be re-checked here (those fields fail the FDC3 WCP schema).
+    const isBrowserEnrichedWcp4 =
+      messageObj.type === "WCP4ValidateAppIdentity" && messageObj.meta?.source !== undefined
+    if (
+      !isBrowserEnrichedWcp4 &&
+      applyInboundValidationPolicy(message, {
+        logger: this.logger,
+        validation: this.validation,
+      }) === "rejected"
+    ) {
+      return
+    }
+
+    if (messageObj.type === "WCP4ValidateAppIdentity") {
+      const connectionAttemptUuid = messageObj.meta?.connectionAttemptUuid
+      if (!connectionAttemptUuid) {
+        this.logger.warn("[WCP4] Missing connectionAttemptUuid, cannot route message")
+        return
       }
 
-      const cleanup = () => {
-        clearTimeout(timeout)
-        this.connector.off("channelChanged", handleChannelChanged)
-      }
+      const tempInstanceId = `temp-${connectionAttemptUuid}`
+      const wcpContext = this.createHandlerContext(tempInstanceId)
+      handleWcp4ValidateAppIdentity(message, wcpContext)
+      return
+    }
 
-      this.connector.on("channelChanged", handleChannelChanged)
+    const instanceId = this.extractInstanceId(message)
+    if (!instanceId) {
+      this.logger.warn("[WCP] Missing instanceId, cannot route message", {
+        messageType: messageObj.type,
+      })
+      return
+    }
 
-      try {
-        this.changeAppUserChannel(instanceId, channelId)
-      } catch (error) {
-        cleanup()
-        reject(error instanceof Error ? error : new Error(String(error)))
-      }
+    if (messageObj.type === "WCP6Goodbye") {
+      cleanupDACPHandlers(this.createHandlerContext(instanceId))
+      return
+    }
+
+    const wcpContext = this.createHandlerContext(instanceId)
+    await routeDACPMessage(message, wcpContext)
+  }
+
+  private handleDisconnect(): void {
+    const allInstances = Object.values(this.state.instances)
+    for (const instance of allInstances) {
+      const context = this.createHandlerContext(instance.instanceId)
+      cleanupDACPHandlers(context)
+    }
+  }
+
+  private createHandlerContext(instanceId: string): DACPHandlerContext {
+    const conn = this.appConnection
+
+    const setState: StateSetter = callback => {
+      this.state = callback(this.state)
+    }
+    const responses = createDacpResponseDispatcherFromDelivery(conn, message =>
+      conn.connectionRegistry.sendToAppInstance(message),
+    )
+
+    return {
+      responses,
+      instanceId,
+      getState: () => this.getState(),
+      setState,
+      appLauncher: this.appLauncher,
+      requestIntentResolution: this.requestIntentResolution,
+      validation: this.validation,
+      logger: this.logger,
+      logPayloadDetail: this.logPayloadDetail,
+      implementationMetadata: this.implementationMetadata,
+      openContextListenerTimeoutMs: this.openContextListenerTimeoutMs,
+      heartbeatEnabled: this.heartbeatEnabled,
+      heartbeatIntervalMs: this.heartbeatIntervalMs,
+      heartbeatTimeoutMs: this.heartbeatTimeoutMs,
+      pendingIntentPromises: this.pendingIntentPromises,
+      disconnectInstance: instanceId => this.disconnectInstance(instanceId),
+      notifyChannelMembershipChanged: conn.notifyChannelMembershipChanged?.bind(conn),
+    }
+  }
+
+  getState(): AgentState {
+    return this.state
+  }
+
+  private updateState(callback: Parameters<StateSetter>[0]): void {
+    this.state = callback(this.state)
+  }
+
+  private addApp(app: DirectoryApp): void {
+    this.state = addDirectoryApp(this.state, app)
+  }
+
+  private addApps(apps: DirectoryApp[]): void {
+    this.state = addApplications(this.state, apps)
+  }
+
+  private async addAppDirectory(url: string): Promise<void> {
+    this.state = await loadDirectoryIntoState(this.state, url, this.logger)
+  }
+
+  private removeApp(appId: string): void {
+    this.state = removeApplicationsByAppId(this.state, appId)
+  }
+
+  private getApps(): DirectoryApp[] {
+    return retrieveAllApps(this.state.appDirectory)
+  }
+
+  private getApp(appId: string): DirectoryApp | undefined {
+    return retrieveAppsById(this.state.appDirectory, appId)[0]
+  }
+
+  private async openApp(
+    app: string | BrowserTypes.AppIdentifier,
+    options?: DesktopAgentOpenOptions,
+  ): Promise<BrowserTypes.AppIdentifier> {
+    if (!this.appLauncher) {
+      throw new Error("App launching not available - no AppLauncher configured")
+    }
+
+    const appIdentifier = resolveOpenAppIdentifier(app, options)
+    const catalogApps = retrieveAppsById(this.state.appDirectory, appIdentifier.appId)
+    if (catalogApps.length === 0) {
+      throw new Error(`App not found in directory: ${appIdentifier.appId}`)
+    }
+
+    const payload: BrowserTypes.OpenRequestPayload = {
+      app: appIdentifier,
+      ...(options?.context !== undefined ? { context: options.context } : {}),
+    }
+
+    const launched = await this.appLauncher.launch(payload, catalogApps[0])
+    if (launched.instanceId) {
+      this.registerPendingHostInstance({
+        appId: launched.appId,
+        instanceId: launched.instanceId,
+      })
+    }
+
+    return launched
+  }
+
+  private getAppInstances(): DesktopAgentAppInstance[] {
+    return getAllInstances(this.state).map(mapToDesktopAgentAppInstance)
+  }
+
+  private getAppInstance(instanceId: string): DesktopAgentAppInstance | undefined {
+    const instance = getInstance(this.state, instanceId)
+    return instance ? mapToDesktopAgentAppInstance(instance) : undefined
+  }
+
+  registerPendingHostInstance(params: { appId: string; instanceId: string }): void {
+    if (getInstance(this.state, params.instanceId)) {
+      return
+    }
+
+    this.state = connectInstance(this.state, {
+      instanceId: params.instanceId,
+      appId: params.appId,
+      metadata: {
+        appId: params.appId,
+        name: params.appId,
+      },
     })
   }
 
-  private wireLifecycleCallbacks(
-    options: Omit<SailDesktopAgentOptions, "intentResolver" | "autoStart">,
-    logger: Logger,
-  ): void {
-    this.connector.on("appConnected", metadata => {
-      logger.info(`[SailDesktopAgent] App connected: ${metadata.appId} (${metadata.instanceId})`)
-      options.onAppConnected?.(metadata)
-    })
+  private getAppConnection(instanceId: string): AppConnectionMetadata | undefined {
+    return this.appConnection?.getConnection(instanceId)
+  }
 
-    this.connector.on("appDisconnected", instanceId => {
-      logger.info(`[SailDesktopAgent] App disconnected: ${instanceId}`)
-      options.onAppDisconnected?.(instanceId)
-    })
+  private getAppConnections(): AppConnectionMetadata[] {
+    return this.appConnection?.getConnections() ?? []
+  }
 
-    this.connector.on("handshakeFailed", (error, connectionAttemptUuid) => {
-      logger.error(`[SailDesktopAgent] WCP handshake failed for ${connectionAttemptUuid}:`, error)
-      options.onHandshakeFailed?.(error, connectionAttemptUuid)
-    })
+  disconnectInstance(instanceId: string): void {
+    cleanupDACPHandlers(this.createHandlerContext(instanceId))
+    this.appConnection?.pruneAppConnection(instanceId)
+  }
+
+  exportState(): string {
+    return JSON.stringify(this.state, null, 2)
+  }
+
+  getIsStarted(): boolean {
+    return this.isStarted
+  }
+
+  getImplementationMetadata(): SailDesktopAgentMetadata {
+    return this.implementationMetadata
+  }
+
+  private getUserChannels(): BrowserTypes.Channel[] {
+    return getAllUserChannels(this.state)
+  }
+
+  private getAppUserChannelId(instanceId: string): string | null {
+    const instance = getInstance(this.state, instanceId)
+    return instance?.currentUserChannel ?? null
   }
 }

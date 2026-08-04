@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vite-plus/test"
-import { DesktopAgent } from "../agent/desktop-agent"
+import { SailDesktopAgent } from "../agent/sail-desktop-agent"
 import {
-  DEFAULT_SAIL_IMPLEMENTATION_METADATA,
+  DEFAULT_SAIL_DESKTOP_AGENT_METADATA,
   resolveDesktopAgentConfig,
 } from "../agent/default-config"
 
@@ -12,7 +12,7 @@ const { version: packageVersion } = JSON.parse(
 
 describe("DEFAULT_SAIL_IMPLEMENTATION_METADATA", () => {
   it("uses the published package version as providerVersion", () => {
-    expect(DEFAULT_SAIL_IMPLEMENTATION_METADATA.providerVersion).toBe(packageVersion)
+    expect(DEFAULT_SAIL_DESKTOP_AGENT_METADATA.providerVersion).toBe(packageVersion)
   })
 })
 
@@ -20,8 +20,8 @@ describe("resolveDesktopAgentConfig", () => {
   it("applies FDC3-Sail product defaults when overrides omit implementationMetadata", () => {
     const config = resolveDesktopAgentConfig({})
 
-    expect(config.implementationMetadata).toEqual(DEFAULT_SAIL_IMPLEMENTATION_METADATA)
-    expect(config.implementationMetadata.provider).toBe("FDC3-Sail")
+    expect(config.desktopAgentMetadata).toEqual(DEFAULT_SAIL_DESKTOP_AGENT_METADATA)
+    expect(config.desktopAgentMetadata.provider).toBe("FDC3-Sail")
     expect(config.heartbeatIntervalMs).toBe(30_000)
     expect(config.heartbeatTimeoutMs).toBe(60_000)
     expect(config.heartbeatEnabled).toBe(true)
@@ -65,28 +65,28 @@ describe("resolveDesktopAgentConfig", () => {
       },
     })
 
-    expect(config.implementationMetadata.provider).toBe("cucumber-provider")
-    expect(config.implementationMetadata.providerVersion).toBe("1.0.0")
-    expect(config.implementationMetadata.fdc3Version).toBe("2.2")
-    expect(config.implementationMetadata.optionalFeatures).toEqual(
-      DEFAULT_SAIL_IMPLEMENTATION_METADATA.optionalFeatures,
+    expect(config.desktopAgentMetadata.provider).toBe("cucumber-provider")
+    expect(config.desktopAgentMetadata.providerVersion).toBe("1.0.0")
+    expect(config.desktopAgentMetadata.fdc3Version).toBe("2.2")
+    expect(config.desktopAgentMetadata.optionalFeatures).toEqual(
+      DEFAULT_SAIL_DESKTOP_AGENT_METADATA.optionalFeatures,
     )
   })
 })
 
-describe("DesktopAgent constructor defaults", () => {
+describe("SailDesktopAgent constructor defaults", () => {
   it("applies Sail defaults when constructed without browser connection", () => {
-    const agent = new DesktopAgent()
-    expect(agent.getImplementationMetadata()).toEqual(DEFAULT_SAIL_IMPLEMENTATION_METADATA)
+    const agent = new SailDesktopAgent()
+    expect(agent.getImplementationMetadata()).toEqual(DEFAULT_SAIL_DESKTOP_AGENT_METADATA)
   })
 
   it("deep-merges partial implementationMetadata from constructor options", () => {
-    const agent = new DesktopAgent({
+    const agent = new SailDesktopAgent({
       implementationMetadata: { provider: "Acme" },
     })
     const metadata = agent.getImplementationMetadata()
     expect(metadata.provider).toBe("Acme")
-    expect(metadata.providerVersion).toBe(DEFAULT_SAIL_IMPLEMENTATION_METADATA.providerVersion)
-    expect(metadata.optionalFeatures).toEqual(DEFAULT_SAIL_IMPLEMENTATION_METADATA.optionalFeatures)
+    expect(metadata.providerVersion).toBe(DEFAULT_SAIL_DESKTOP_AGENT_METADATA.providerVersion)
+    expect(metadata.optionalFeatures).toEqual(DEFAULT_SAIL_DESKTOP_AGENT_METADATA.optionalFeatures)
   })
 })

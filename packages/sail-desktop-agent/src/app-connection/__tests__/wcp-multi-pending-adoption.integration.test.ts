@@ -7,7 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import type { AppLauncher } from "../../host-contracts/app-launcher"
-import type { DesktopAgent } from "../../agent/desktop-agent"
+import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import { AppInstanceState } from "../../state/types"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../handlers/utils/open-with-context"
@@ -28,7 +28,7 @@ const OPEN_WITH_CONTEXT_LAUNCH: Context = {
   id: { value: "conformance-open-context" },
 }
 
-function cleanupWcpIntegrationTestHarness(activeAgents: DesktopAgent[]): void {
+function cleanupWcpIntegrationTestHarness(activeAgents: SailDesktopAgent[]): void {
   clearAllPendingOpenWithContextTimeoutsForTesting()
   clearAllHeartbeatTimersForTesting()
   for (const agent of activeAgents.splice(0)) {
@@ -38,7 +38,7 @@ function cleanupWcpIntegrationTestHarness(activeAgents: DesktopAgent[]): void {
 }
 
 describe("multi-pending hostIdentifier adoption", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
   const STALE_PENDING_ID = "mp-stale-pending-l1"
   const NEW_PENDING_ID = "mp-new-pending-l2"
 
@@ -238,7 +238,7 @@ describe("multi-pending hostIdentifier adoption", () => {
       sourceWindow: popupSource,
     })
 
-    const connectionAfterWcp1 = agent.getAppConnection(handshake.tempInstanceId)
+    const connectionAfterWcp1 = agent.apps.getConnection(handshake.tempInstanceId)
     expect(connectionAfterWcp1?.hostIdentifier).toBeUndefined()
     expect(connectionAfterWcp1?.source).toBe(popupSource)
 
@@ -248,7 +248,7 @@ describe("multi-pending hostIdentifier adoption", () => {
     const appB = await handshake.completeFirstConnect()
 
     expect(appB.validatedInstanceId).toBe(NEW_PENDING_ID)
-    expect(agent.getAppConnection(appB.validatedInstanceId)?.hostIdentifier).toBe(NEW_PENDING_ID)
+    expect(agent.apps.getConnection(appB.validatedInstanceId)?.hostIdentifier).toBe(NEW_PENDING_ID)
 
     const broadcastPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
       appB.appPort,

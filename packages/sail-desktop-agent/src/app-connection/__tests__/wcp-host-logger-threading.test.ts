@@ -14,7 +14,6 @@ import {
 } from "../../__tests__/utils/capturing-logger"
 import type { CapturingLogger } from "../../__tests__/utils/capturing-logger"
 import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
-import type { DesktopAgent } from "../../agent/desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import type { LogPayloadDetail } from "../../interfaces/logger"
@@ -30,7 +29,7 @@ function createAgentWithHostLogger(
   logger: CapturingLogger,
   logPayloadDetail?: LogPayloadDetail,
 ): SailDesktopAgent {
-  return new SailDesktopAgent({
+  const agent = new SailDesktopAgent({
     userChannels: DEFAULT_FDC3_USER_CHANNELS,
     apps: [PORTFOLIO_APP],
     logger,
@@ -43,6 +42,8 @@ function createAgentWithHostLogger(
       handshakeTimeout: 30_000,
     },
   })
+  agent.start()
+  return agent
 }
 
 function captureAppPortAfterWcp1(connectionAttemptUuid: string, identityUrl: string): MessagePort {
@@ -82,7 +83,7 @@ function transportDebugCallsInclude(logger: CapturingLogger, fragment: string): 
 }
 
 describe("host logger threading through WCP MessagePortTransport", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     clearAllHeartbeatTimersForTesting()

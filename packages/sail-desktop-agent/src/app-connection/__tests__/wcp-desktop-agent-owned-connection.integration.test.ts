@@ -9,7 +9,7 @@
 
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { DesktopAgent } from "../../agent/desktop-agent"
+import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import { AppInstanceState } from "../../state/types"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import {
@@ -35,7 +35,7 @@ import {
 } from "./wcp-edge-test-helpers"
 
 describe("DA-owned browser app connection (collapsed architecture)", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     clearAllHeartbeatTimersForTesting()
@@ -60,11 +60,11 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
       AppInstanceState.CONNECTED,
     )
-    expect(connections.getAppConnection(connected.validatedInstanceId)).toMatchObject({
+    expect(connections.getConnection(connected.validatedInstanceId)).toMatchObject({
       instanceId: connected.validatedInstanceId,
       appId: "portfolioApp",
     })
-    expect(connections.getAppConnection(connected.tempInstanceId)).toBeUndefined()
+    expect(connections.getConnection(connected.tempInstanceId)).toBeUndefined()
   })
 
   it("routes outbound DACP to the validated instance MessagePort after WCP5 migration", async () => {
@@ -133,7 +133,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     })
 
     const connections = requireDaOwnedAppConnection(agent)
-    expect(connections.getAppConnection(connected.validatedInstanceId)).toBeDefined()
+    expect(connections.getConnection(connected.validatedInstanceId)).toBeDefined()
 
     connected.appPort.postMessage({
       type: "WCP6Goodbye",
@@ -143,8 +143,8 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
 
     await vi.waitFor(() => {
       expect(agent.getState().instances[connected.validatedInstanceId]).toBeUndefined()
-      expect(connections.getAppConnection(connected.validatedInstanceId)).toBeUndefined()
-      expect(connections.getAppConnection(connected.tempInstanceId)).toBeUndefined()
+      expect(connections.getConnection(connected.validatedInstanceId)).toBeUndefined()
+      expect(connections.getConnection(connected.tempInstanceId)).toBeUndefined()
     })
   })
 
@@ -165,7 +165,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     agent.disconnectInstance(connected.validatedInstanceId)
 
     expect(agent.getState().instances[connected.validatedInstanceId]).toBeUndefined()
-    expect(connections.getAppConnection(connected.validatedInstanceId)).toBeUndefined()
+    expect(connections.getConnection(connected.validatedInstanceId)).toBeUndefined()
   })
 
   it("prunes pending temp connection maps when WCP4 identity validation fails", async () => {
@@ -188,7 +188,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     appPort.start()
     postMessageSpy.mockRestore()
 
-    expect(connections.getAppConnection(tempInstanceId)).toBeDefined()
+    expect(connections.getConnection(tempInstanceId)).toBeDefined()
 
     const wcp5FailurePromise =
       waitForPortMessage<BrowserTypes.WebConnectionProtocol5ValidateAppIdentityFailedResponse>(
@@ -213,7 +213,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     expect(failureResponse.type).toBe("WCP5ValidateAppIdentityFailedResponse")
 
     await vi.waitFor(() => {
-      expect(connections.getAppConnection(tempInstanceId)).toBeUndefined()
+      expect(connections.getConnection(tempInstanceId)).toBeUndefined()
       expect(agent.getState().instances[tempInstanceId]).toBeUndefined()
     })
   })

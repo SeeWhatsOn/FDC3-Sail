@@ -2,24 +2,25 @@
  * FDC3-Sail product defaults for Desktop Agent configuration.
  *
  * Single source of truth for implementation metadata, user channels, and timing
- * defaults. `DesktopAgent` merges these with caller overrides in its constructor.
+ * defaults. `SailDesktopAgent` merges these with caller overrides in its constructor.
  */
 
 import type { BrowserTypes } from "@finos/fdc3"
 import pkg from "../../package.json"
 import { DACP_TIMEOUTS } from "../dacp/dacp-constants"
-import type { DesktopAgentConfig, DesktopAgentOptions } from "./desktop-agent"
+import type { SailDesktopAgentConfig, SailDesktopAgentOptions } from "./sail-desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../default-user-channels"
+import type { AgentAppConnection } from "../app-connection/types"
 
 export type { ValidationMode } from "../dacp/validate-dacp-message"
 
-export type SailImplementationMetadata = Pick<
+export type SailDesktopAgentMetadata = Pick<
   BrowserTypes.ImplementationMetadata,
   "fdc3Version" | "provider" | "providerVersion"
 > &
   Pick<Required<BrowserTypes.ImplementationMetadata>, "optionalFeatures">
 
-export const DEFAULT_SAIL_IMPLEMENTATION_METADATA: SailImplementationMetadata = {
+export const DEFAULT_SAIL_DESKTOP_AGENT_METADATA: SailDesktopAgentMetadata = {
   fdc3Version: "2.2",
   provider: "FDC3-Sail",
   providerVersion: pkg.version,
@@ -30,9 +31,9 @@ export const DEFAULT_SAIL_IMPLEMENTATION_METADATA: SailImplementationMetadata = 
   },
 }
 
-/** Product defaults merged into every `DesktopAgent` unless overridden. */
+/** Product defaults merged into every `SailDesktopAgent` unless overridden. */
 export const DEFAULT_SAIL_DESKTOP_AGENT_CONFIG = {
-  implementationMetadata: DEFAULT_SAIL_IMPLEMENTATION_METADATA,
+  desktopAgentMetadata: DEFAULT_SAIL_DESKTOP_AGENT_METADATA,
   userChannels: DEFAULT_FDC3_USER_CHANNELS,
   logPayloadDetail: "metadata" as const,
   validation: "warn" as const,
@@ -41,8 +42,8 @@ export const DEFAULT_SAIL_DESKTOP_AGENT_CONFIG = {
   heartbeatIntervalMs: 30_000,
   heartbeatTimeoutMs: 60_000,
 } satisfies Pick<
-  DesktopAgentConfig,
-  | "implementationMetadata"
+  SailDesktopAgentConfig,
+  | "desktopAgentMetadata"
   | "userChannels"
   | "logPayloadDetail"
   | "validation"
@@ -53,9 +54,9 @@ export const DEFAULT_SAIL_DESKTOP_AGENT_CONFIG = {
 >
 
 function mergeImplementationMetadata(
-  base: SailImplementationMetadata,
-  override?: Partial<SailImplementationMetadata>,
-): SailImplementationMetadata {
+  base: SailDesktopAgentMetadata,
+  override?: Partial<SailDesktopAgentMetadata>,
+): SailDesktopAgentMetadata {
   if (!override) {
     return base
   }
@@ -72,9 +73,16 @@ function mergeImplementationMetadata(
 
 /**
  * Merge FDC3-Sail product defaults with caller options.
- * Used by `DesktopAgent` constructor; exported for tests and pre-built config.
+ * Used by `SailDesktopAgent`'s constructor; exported for tests and pre-built config.
+ *
+ * Accepts `SailDesktopAgentOptions<AgentAppConnection>` — the widest edge bound — because this
+ * function only merges and forwards `appConnection`, never inspects its specific edge type. That
+ * lets `SailDesktopAgent<TEdge>`'s constructor call it with `SailDesktopAgentOptions<TEdge>` for
+ * any `TEdge`, not just the default `BrowserAppConnection`.
  */
-export function resolveDesktopAgentConfig(options: DesktopAgentOptions = {}): DesktopAgentConfig {
+export function resolveDesktopAgentConfig(
+  options: SailDesktopAgentOptions<AgentAppConnection> = {},
+): SailDesktopAgentConfig {
   const { implementationMetadata, ...rest } = options
 
   return {
@@ -91,8 +99,8 @@ export function resolveDesktopAgentConfig(options: DesktopAgentOptions = {}): De
       rest.heartbeatIntervalMs ?? DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.heartbeatIntervalMs,
     heartbeatTimeoutMs:
       rest.heartbeatTimeoutMs ?? DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.heartbeatTimeoutMs,
-    implementationMetadata: mergeImplementationMetadata(
-      DEFAULT_SAIL_IMPLEMENTATION_METADATA,
+    desktopAgentMetadata: mergeImplementationMetadata(
+      DEFAULT_SAIL_DESKTOP_AGENT_METADATA,
       implementationMetadata,
     ),
   }

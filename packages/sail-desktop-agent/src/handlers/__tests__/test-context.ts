@@ -1,6 +1,6 @@
 import type { BrowserTypes } from "@finos/fdc3"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
-import { DEFAULT_SAIL_IMPLEMENTATION_METADATA } from "../../agent/default-config"
+import { DEFAULT_SAIL_DESKTOP_AGENT_METADATA } from "../../agent/default-config"
 import { consoleLogger } from "../../interfaces/logger"
 import type {
   DACPHandlerContext,
@@ -51,7 +51,7 @@ export function createDACPTestContext(options: {
     setState,
     logger: consoleLogger,
     implementationMetadata: {
-      ...DEFAULT_SAIL_IMPLEMENTATION_METADATA,
+      ...DEFAULT_SAIL_DESKTOP_AGENT_METADATA,
       provider: "test",
       providerVersion: "0.0.0",
     },

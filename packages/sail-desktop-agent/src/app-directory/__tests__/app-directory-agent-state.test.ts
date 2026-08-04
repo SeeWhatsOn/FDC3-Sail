@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test"
-import { DesktopAgent } from "../../agent/desktop-agent"
+import { SailDesktopAgent, type SailDesktopAgentOptions } from "../../agent/sail-desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { retrieveAllApps, retrieveApps, retrieveAppsById } from "../app-directory-queries"
 import { createInitialState } from "../../state/initial-state"
@@ -22,12 +22,12 @@ type DesktopAgentInternals = {
   state: AgentState
 }
 
-function asInternals(agent: DesktopAgent): DesktopAgentInternals {
-  return agent as DesktopAgent & DesktopAgentInternals
+function asInternals(agent: SailDesktopAgent): DesktopAgentInternals {
+  return agent as SailDesktopAgent & DesktopAgentInternals
 }
 
 function applyAgentStateUpdate(
-  agent: DesktopAgent,
+  agent: SailDesktopAgent,
   callback: (state: AgentState) => AgentState,
 ): void {
   const internal = asInternals(agent)
@@ -35,11 +35,16 @@ function applyAgentStateUpdate(
 }
 
 async function applyAgentStateUpdateAsync(
-  agent: DesktopAgent,
+  agent: SailDesktopAgent,
   callback: (state: AgentState) => Promise<AgentState>,
 ): Promise<void> {
   const internal = asInternals(agent)
   internal.state = await callback(agent.getState())
+}
+
+/** Never starts the transport — these tests only exercise state.appDirectory mutators. */
+function createAgent(options: SailDesktopAgentOptions = {}): SailDesktopAgent {
+  return new SailDesktopAgent(options)
 }
 
 describe("AgentState.appDirectory ownership contract", () => {
@@ -52,7 +57,7 @@ describe("AgentState.appDirectory ownership contract", () => {
   })
 
   it("DesktopAgent seeds config.apps into state.appDirectory.apps", () => {
-    const agent = new DesktopAgent({
+    const agent = createAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       apps: [mockApp1, mockApp2],
     })
@@ -63,7 +68,7 @@ describe("AgentState.appDirectory ownership contract", () => {
   })
 
   it("addApp mutator updates state.appDirectory.apps through DesktopAgent", () => {
-    const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
+    const agent = createAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
 
     applyAgentStateUpdate(agent, state => addApp(state, mockApp1))
 
@@ -73,7 +78,7 @@ describe("AgentState.appDirectory ownership contract", () => {
   })
 
   it("addApplications mutator updates state.appDirectory.apps", () => {
-    const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
+    const agent = createAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
 
     applyAgentStateUpdate(agent, state => addApplications(state, [mockApp1, mockApp2]))
 
@@ -83,7 +88,7 @@ describe("AgentState.appDirectory ownership contract", () => {
   })
 
   it("preserves addApplications duplicate appId policy on state.appDirectory.apps", () => {
-    const agent = new DesktopAgent({
+    const agent = createAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       apps: [mockApp1],
     })
@@ -97,7 +102,7 @@ describe("AgentState.appDirectory ownership contract", () => {
   })
 
   it("dedupes appIds case-insensitively and keeps the first entry", () => {
-    const agent = new DesktopAgent({
+    const agent = createAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       apps: [mockApp1],
     })
@@ -118,7 +123,7 @@ describe("AgentState.appDirectory ownership contract", () => {
   })
 
   it("addDirectoryUrl updates state.appDirectory.directoryUrls", () => {
-    const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
+    const agent = createAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
     const url = "https://example.com/v2/apps"
 
     applyAgentStateUpdate(agent, state => addDirectoryUrl(state, url))
@@ -128,7 +133,7 @@ describe("AgentState.appDirectory ownership contract", () => {
   })
 
   it("loadDirectoryIntoState updates state.appDirectory apps and directoryUrls", async () => {
-    const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
+    const agent = createAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
     const url = "https://example.com/v2/apps"
     const mockResponse = {
       ok: true,
@@ -146,7 +151,7 @@ describe("AgentState.appDirectory ownership contract", () => {
   })
 
   it("replaceDirectoriesInState clears and reloads state.appDirectory apps and directoryUrls", async () => {
-    const agent = new DesktopAgent({
+    const agent = createAgent({
       userChannels: DEFAULT_FDC3_USER_CHANNELS,
       apps: [mockApp1],
     })
@@ -167,7 +172,7 @@ describe("AgentState.appDirectory ownership contract", () => {
   })
 
   it("replaceDirectoriesInState merges apps from all directory URLs", async () => {
-    const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
+    const agent = createAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
     const url1 = "https://example.com/dir1/v2/apps"
     const url2 = "https://example.com/dir2/v2/apps"
     const url3 = "https://example.com/dir3/v2/apps"
@@ -191,7 +196,7 @@ describe("AgentState.appDirectory ownership contract", () => {
   })
 
   it("replaceDirectoriesInState keeps successful directories when one URL fails", async () => {
-    const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
+    const agent = createAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
     const urlOk1 = "https://example.com/ok1/v2/apps"
     const urlFail = "https://example.com/fail/v2/apps"
     const urlOk2 = "https://example.com/ok2/v2/apps"
@@ -217,7 +222,7 @@ describe("AgentState.appDirectory ownership contract", () => {
   })
 
   it("query helpers reflect state.appDirectory as the single source of truth", () => {
-    const agent = new DesktopAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
+    const agent = createAgent({ userChannels: DEFAULT_FDC3_USER_CHANNELS })
 
     applyAgentStateUpdate(agent, state => addApplications(state, [mockApp1, mockApp2, mockApp3]))
 

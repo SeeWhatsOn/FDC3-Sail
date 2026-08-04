@@ -115,6 +115,7 @@ describe("WCP inbound schema validation (strict)", () => {
         disconnectGracePeriod: 0,
       },
     })
+    agent.start()
     activeAgents.push(agent)
     return agent
   }

@@ -1,21 +1,17 @@
-import { DesktopAgent, type DesktopAgentOptions } from "../../src/agent/desktop-agent"
+import { SailDesktopAgent, type SailDesktopAgentOptions } from "../../src/agent/sail-desktop-agent"
 import { DacpTestAppConnection } from "./dacp-test-app-connection"
 
-/** Attach a DACP oracle app edge and start the agent for Vitest/Cucumber. */
-export function wireDacpTestAppConnection(
-  agent: DesktopAgent,
-  connection: DacpTestAppConnection = new DacpTestAppConnection(),
-): DacpTestAppConnection {
-  agent.attachAppConnection(connection)
-  agent.start()
-  return connection
-}
-
-export function createDesktopAgentWithTestConnection(options: DesktopAgentOptions = {}): {
-  agent: DesktopAgent
+export function createDesktopAgentWithTestConnection(
+  options: Omit<SailDesktopAgentOptions<DacpTestAppConnection>, "appConnection"> = {},
+): {
+  agent: SailDesktopAgent<DacpTestAppConnection>
   connection: DacpTestAppConnection
 } {
-  const agent = new DesktopAgent(options)
-  const connection = wireDacpTestAppConnection(agent)
+  const connection = new DacpTestAppConnection()
+  const agent = new SailDesktopAgent<DacpTestAppConnection>({
+    ...options,
+    appConnection: connection,
+  })
+  agent.start()
   return { agent, connection }
 }

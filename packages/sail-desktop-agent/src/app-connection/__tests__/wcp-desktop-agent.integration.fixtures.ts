@@ -2,7 +2,6 @@ import type { AppLauncher } from "../../host-contracts/app-launcher"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
 import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import type { SailDesktopAgentOptions } from "../../agent/sail-desktop-agent"
-import type { DesktopAgent } from "../../agent/desktop-agent"
 
 export const CHANNEL_ID = "fdc3.channel.1"
 export const HOST_LAUNCHER_INSTANCE_ID = "uuid-host-0"
@@ -28,7 +27,6 @@ export type TestAgentOptions = Pick<
   | "heartbeatIntervalMs"
   | "heartbeatTimeoutMs"
   | "openContextListenerTimeoutMs"
-  | "autoStart"
 > & {
   disconnectGracePeriod?: number
   resolveHostIdentifier?: NonNullable<
@@ -36,7 +34,7 @@ export type TestAgentOptions = Pick<
   >["resolveHostIdentifier"]
 }
 
-export function createTestAgent(options?: TestAgentOptions): DesktopAgent {
+export function createTestAgent(options?: TestAgentOptions): SailDesktopAgent {
   const agent = new SailDesktopAgent({
     userChannels: DEFAULT_FDC3_USER_CHANNELS,
     apps: [PORTFOLIO_APP, CHART_APP],
@@ -45,7 +43,6 @@ export function createTestAgent(options?: TestAgentOptions): DesktopAgent {
     heartbeatIntervalMs: options?.heartbeatIntervalMs,
     heartbeatTimeoutMs: options?.heartbeatTimeoutMs,
     openContextListenerTimeoutMs: options?.openContextListenerTimeoutMs,
-    autoStart: options?.autoStart,
     appConnectionOptions: {
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,
@@ -58,6 +55,7 @@ export function createTestAgent(options?: TestAgentOptions): DesktopAgent {
     },
   })
 
+  agent.start()
   return agent
 }
 

@@ -6,14 +6,9 @@
 
 import { expect, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
-import type { DesktopAgent } from "../../agent/desktop-agent"
 import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 
 export const TEST_ORIGIN = "https://example.com"
-
-function getTestConnector(agent: DesktopAgent): SailDesktopAgent["connector"] {
-  return (agent as SailDesktopAgent).connector
-}
 
 export type WcpConnectedApp = {
   connectionAttemptUuid: string
@@ -102,7 +97,7 @@ function captureAppMessagePort(
 }
 
 export async function connectWcpApp(
-  agent: DesktopAgent,
+  agent: SailDesktopAgent,
   options: {
     connectionAttemptUuid: string
     appId: string
@@ -125,7 +120,7 @@ export async function connectWcpApp(
     instanceUuid: reconnectInstanceUuid,
   } = options
   const tempInstanceId = `temp-${connectionAttemptUuid}`
-  const browserAppConnection = getTestConnector(agent)
+  const browserAppConnection = agent.connector
 
   const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl, {
     hostIdentifier,
@@ -195,7 +190,7 @@ export async function connectWcpApp(
  * `hostInstanceId` unless the test opts into `hostInstanceId`.
  */
 export async function connectWcpAppFirstConnect(
-  agent: DesktopAgent,
+  agent: SailDesktopAgent,
   options: {
     connectionAttemptUuid: string
     appId: string
@@ -227,7 +222,7 @@ export type WcpFirstConnectSession = {
  * to interleave with early DACP (e.g. addContextListener on the temp routing id).
  */
 export function beginWcpAppFirstConnect(
-  agent: DesktopAgent,
+  agent: SailDesktopAgent,
   options: {
     connectionAttemptUuid: string
     appId: string
@@ -238,7 +233,7 @@ export function beginWcpAppFirstConnect(
 ): WcpFirstConnectSession {
   const { connectionAttemptUuid, appId, identityUrl, hostIdentifier, sourceWindow } = options
   const tempInstanceId = `temp-${connectionAttemptUuid}`
-  const browserAppConnection = getTestConnector(agent)
+  const browserAppConnection = agent.connector
 
   const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl, {
     hostIdentifier,

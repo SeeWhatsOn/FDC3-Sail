@@ -6,7 +6,7 @@
 
 import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { DesktopAgent } from "../../agent/desktop-agent"
+import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import { AppInstanceState } from "../../state/types"
 import {
   clearAllHeartbeatTimersForTesting,
@@ -30,7 +30,7 @@ import {
 } from "./wcp-desktop-agent.integration.fixtures"
 
 describe("Option A instance lifecycle (WCP path)", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent[] = []
 
   afterEach(() => {
     clearAllHeartbeatTimersForTesting()

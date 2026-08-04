@@ -2,7 +2,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import type { AppLauncher } from "../host-contracts/app-launcher"
 import type { AgentState, StateSetter } from "../state/types"
 import type { Logger, LogPayloadDetail } from "../interfaces/logger"
-import type { DesktopAgentConfig } from "../agent/desktop-agent"
+import type { SailDesktopAgentMetadata } from "../agent/default-config"
 import type { DACPMessageType } from "../dacp/dacp-messages"
 import type { ValidationMode } from "../dacp/validate-dacp-message"
 import type { IntentResolutionCallback } from "./intent-resolution-callback"
@@ -125,7 +125,7 @@ export interface DACPHandlerContext {
   logPayloadDetail?: LogPayloadDetail
 
   /** Implementation metadata for the desktop agent */
-  implementationMetadata: DesktopAgentConfig["implementationMetadata"]
+  implementationMetadata: SailDesktopAgentMetadata
 
   /** Timeout (ms) to wait for a context listener after open-with-context */
   openContextListenerTimeoutMs: number
@@ -152,7 +152,7 @@ export interface DACPHandlerContext {
 
   /**
    * Unified instance teardown (FDC3 state + connection registry).
-   * Injected by {@link DesktopAgent} for browser and headless ingest paths.
+   * Injected by {@link SailDesktopAgent} for browser and headless ingest paths.
    */
   disconnectInstance?: (instanceId: string) => void
 

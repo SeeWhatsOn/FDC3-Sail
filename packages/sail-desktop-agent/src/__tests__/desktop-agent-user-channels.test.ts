@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import { DesktopAgent } from "../agent/desktop-agent"
+import { SailDesktopAgent } from "../agent/sail-desktop-agent"
+import type { AgentAppConnection } from "../app-connection/types"
 import { connectInstance, updateInstanceState } from "../state/mutators"
 import { getAllUserChannels } from "../state/selectors"
 import type { AgentState } from "../state/types"
@@ -48,13 +49,13 @@ type DesktopAgentInternals = {
   state: AgentState
 }
 
-function asInternals(agent: DesktopAgent): DesktopAgentInternals {
-  return agent as DesktopAgent & DesktopAgentInternals
+function asInternals(agent: SailDesktopAgent<AgentAppConnection>): DesktopAgentInternals {
+  return agent as SailDesktopAgent<AgentAppConnection> & DesktopAgentInternals
 }
 
 /** Same pattern as Cucumber `applyDesktopAgentStateUpdate` — mutates agent state like DACP setState. */
 function applyAgentStateUpdate(
-  agent: DesktopAgent,
+  agent: SailDesktopAgent<AgentAppConnection>,
   callback: (state: AgentState) => AgentState,
 ): void {
   const internal = asInternals(agent)
@@ -72,7 +73,9 @@ function seedConnectedInstance(state: AgentState, instanceId: string, appId: str
 
 describe("DesktopAgent user channel state", () => {
   it("seeds state.channels.user from constructor config at initialization", () => {
-    const agent = new DesktopAgent({ userChannels: CONFIGURED_USER_CHANNELS })
+    const agent = new SailDesktopAgent({
+      userChannels: CONFIGURED_USER_CHANNELS,
+    })
 
     const stateChannels = getAllUserChannels(agent.getState())
 
@@ -84,7 +87,9 @@ describe("DesktopAgent user channel state", () => {
   })
 
   it("getUserChannels returns channels from agent state not constructor config copy", () => {
-    const agent = new DesktopAgent({ userChannels: CONFIGURED_USER_CHANNELS })
+    const agent = new SailDesktopAgent({
+      userChannels: CONFIGURED_USER_CHANNELS,
+    })
 
     applyAgentStateUpdate(agent, state => ({
       ...state,
@@ -96,7 +101,9 @@ describe("DesktopAgent user channel state", () => {
 
     const expectedFromState = getAllUserChannels(agent.getState())
 
-    expect(sortChannelsById(agent.getUserChannels())).toEqual(sortChannelsById(expectedFromState))
+    expect(sortChannelsById(agent.channels.getUserChannels())).toEqual(
+      sortChannelsById(expectedFromState),
+    )
   })
 
   it("host getUserChannels stays aligned with DACP getUserChannelsResponse", async () => {
@@ -133,7 +140,7 @@ describe("DesktopAgent user channel state", () => {
     }
 
     expect(response.type).toBe("getUserChannelsResponse")
-    expect(sortChannelsById(agent.getUserChannels())).toEqual(
+    expect(sortChannelsById(agent.channels.getUserChannels())).toEqual(
       sortChannelsById(response.payload.userChannels),
     )
   })

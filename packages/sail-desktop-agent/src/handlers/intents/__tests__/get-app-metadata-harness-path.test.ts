@@ -2,9 +2,10 @@ import { afterEach, describe, expect, it } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 
 import type { DirectoryApp } from "../../../app-directory/types"
-import { DesktopAgent } from "../../../agent/desktop-agent"
+import type { SailDesktopAgent } from "../../../agent/sail-desktop-agent"
+import type { AgentAppConnection } from "../../../app-connection/types"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
-import { DEFAULT_SAIL_IMPLEMENTATION_METADATA } from "../../../agent/default-config"
+import { DEFAULT_SAIL_DESKTOP_AGENT_METADATA } from "../../../agent/default-config"
 import { connectInstance, updateInstanceState } from "../../../state/mutators"
 import { createInitialState } from "../../../state/initial-state"
 import { AppInstanceState } from "../../../state/types"
@@ -32,7 +33,7 @@ function wireVisibleAppMetadata(response: GetAppMetadataResponse): Record<string
 }
 
 describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
-  const activeAgents: DesktopAgent[] = []
+  const activeAgents: SailDesktopAgent<AgentAppConnection>[] = []
 
   afterEach(() => {
     for (const agent of activeAgents.splice(0)) {
@@ -54,7 +55,7 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
     const { agent, connection } = createDesktopAgentWithTestConnection({
       apps: [CONFORMANCE_APP],
       initialState,
-      implementationMetadata: DEFAULT_SAIL_IMPLEMENTATION_METADATA,
+      implementationMetadata: DEFAULT_SAIL_DESKTOP_AGENT_METADATA,
     })
     activeAgents.push(agent)
 
@@ -106,7 +107,7 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
     const { agent, connection } = createDesktopAgentWithTestConnection({
       apps: [CONFORMANCE_APP],
       initialState,
-      implementationMetadata: DEFAULT_SAIL_IMPLEMENTATION_METADATA,
+      implementationMetadata: DEFAULT_SAIL_DESKTOP_AGENT_METADATA,
     })
     activeAgents.push(agent)
 
@@ -150,9 +151,9 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
       apps: [CONFORMANCE_APP],
       initialState,
       implementationMetadata: {
-        ...DEFAULT_SAIL_IMPLEMENTATION_METADATA,
+        ...DEFAULT_SAIL_DESKTOP_AGENT_METADATA,
         optionalFeatures: {
-          ...DEFAULT_SAIL_IMPLEMENTATION_METADATA.optionalFeatures,
+          ...DEFAULT_SAIL_DESKTOP_AGENT_METADATA.optionalFeatures,
           DesktopAgentBridging: true,
         },
       },
@@ -181,6 +182,6 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
     expect(response).toBeDefined()
     const wireMetadata = wireVisibleAppMetadata(response!)
     expect(Object.keys(wireMetadata)).toContain("desktopAgent")
-    expect(wireMetadata.desktopAgent).toBe(DEFAULT_SAIL_IMPLEMENTATION_METADATA.provider)
+    expect(wireMetadata.desktopAgent).toBe(DEFAULT_SAIL_DESKTOP_AGENT_METADATA.provider)
   })
 })

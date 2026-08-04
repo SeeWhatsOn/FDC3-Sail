@@ -1,4 +1,4 @@
-import type { DesktopAgentConfig } from "../../agent/desktop-agent"
+import type { SailDesktopAgentMetadata } from "../../agent/default-config"
 import { isFdc3VersionAtLeast } from "../../agent/fdc3-version"
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
@@ -54,7 +54,7 @@ export function handleGetInfoRequest(
       }
     }
 
-    const resolvedImplementationMetadata: DesktopAgentConfig["implementationMetadata"] & {
+    const resolvedImplementationMetadata: SailDesktopAgentMetadata & {
       appMetadata?: BrowserTypes.AppMetadata
     } = {
       fdc3Version: implementationMetadata.fdc3Version,
@@ -250,9 +250,7 @@ export function handleFindInstancesRequest(
  * if `desktopAgent` is present while Bridging is not claimed
  * (SeeWhatsOn/FDC3-Sail#73). Only emit when DesktopAgentBridging is true.
  */
-function isDesktopAgentBridgingEnabled(
-  implementationMetadata: DesktopAgentConfig["implementationMetadata"],
-): boolean {
+function isDesktopAgentBridgingEnabled(implementationMetadata: SailDesktopAgentMetadata): boolean {
   return implementationMetadata.optionalFeatures.DesktopAgentBridging === true
 }
 

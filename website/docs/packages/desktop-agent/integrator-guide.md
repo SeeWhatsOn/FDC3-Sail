@@ -99,7 +99,7 @@ The following are **not** current adoption paths:
 | Cross-tab or cross-device channel sync | **Deferred** | Explicit sync/relay layer on top of browser-first DA — not by remoting the core agent |
 | Native desktop apps (native shell, C++ host) | **Future adapter** | WebSocket or platform-specific **app-connection** transport — native apps join the same channel graph; remoting the DA is not required |
 
-This package's own tests compose `DesktopAgent` and `attachAppConnection()` directly via internal source paths — both are `@internal` and are not part of the public `@finos/sail-desktop-agent` API. That is package-internal composition, not a public integration path. See [How to wire](#how-to-wire).
+This package's own tests inject a lighter test edge via the `appConnection` constructor option (`new SailDesktopAgent({ appConnection: testEdge })`) instead of standing up the real browser WCP transport — an internal test-only construction path, not a public integration path. See [How to wire](#how-to-wire).
 
 ### Host channel UI and `getState()`
 
@@ -150,6 +150,7 @@ const desktopAgent = new SailDesktopAgent({
   appLauncher,
   // appConnectionOptions omitted → intentResolverUrl/channelSelectorUrl false (host-owned UI)
 })
+desktopAgent.start() // construction only builds the object — start the app connection explicitly
 
 // Grouped host controllers — primary setup pattern for browser hosts
 const { intentResolver, channels, apps } = desktopAgent
@@ -205,7 +206,7 @@ await apps.open("portfolio-app", { context: instrumentContext })
 | Instance lifecycle | Recommended — tabs, cleanup | `apps.onConnect` / `onDisconnect` / `onHandshakeFailure`; host tab close via `apps.disconnect` |
 | App self-close | When supporting FDC3 v3.0 `fdc3.close()` | `AppLauncher.close` on the launcher you pass to the preset |
 
-`SailDesktopAgent` starts the browser app connection by default. Use `autoStart: false` only when you need to finish setup before the WCP listener is installed. Stop the agent with `desktopAgent.stop()` when the host shell tears down.
+`new SailDesktopAgent(...)` only builds the object — it does not attach `window` listeners. Call `desktopAgent.start()` once setup (catalog, controllers) is wired to install the WCP listener. Stop the agent with `desktopAgent.stop()` when the host shell tears down.
 
 > The `appLauncher` above implements the raw `AppLauncher` contract by hand, which is what this package
 > defines and expects. If you are building on `@finos/sail-platform` rather than this package alone,
@@ -604,18 +605,19 @@ Where does the Desktop Agent run?
 │    → Implement AppLauncher (iframes + instanceId on iframe name)
 │    → Wire host UI via intentResolver, channels, apps controllers
 │
-├─ Manual composition (package internals only — not part of the public API)
-│    → DesktopAgent and attachAppConnection() are @internal
-│    → Used by this package's own tests; SailDesktopAgent is the only supported entry point
-│
 └─ Server / worker / multi-tab / native host (not supported on v3-pre)
      → Deferred — see Server, worker, native, and multi-device paths (deferred) above
 ```
 
+`SailDesktopAgent` is the only entry point — there is no base class to compose manually. Its
+constructor takes an optional `appConnection` for injecting a lighter test edge in place of the
+real browser WCP transport; that option is how this package's own tests build agents, not a second
+public construction path.
+
 | Integrator goal | Entry point | Avoid unless advanced |
 |-----------------|-------------|------------------------|
-| Ship a browser desktop | `SailDesktopAgent` | `DesktopAgent` is package-internal — not a public entry point |
-| App connection + DA seam tests | `SailDesktopAgent` integration tests or a custom app connection | Duplicating WCP in app code |
+| Ship a browser desktop | `SailDesktopAgent` | — |
+| App connection + DA seam tests | `SailDesktopAgent` integration tests, or construct with a custom `appConnection` | Duplicating WCP in app code |
 | Remote or multi-device DA | — (not on v3-pre) | `createWCPClient` (removed) |
 
 **Canonical import:** `@finos/sail-desktop-agent`. There are no subpath exports — the app-connection internals are not part of the public API.
@@ -636,10 +638,10 @@ intentResolver.onRequest(showIntentResolver)
 channels.onAppChannelChange(updateChannelChrome)
 apps.onConnect(meta => mountTab(meta))
 
-// Auto-started by default — iframe apps connect via fdc3.getAgent()
+desktopAgent.start() // iframe apps connect via fdc3.getAgent() only after this
 ```
 
-Teardown: `desktopAgent.stop()`. Pass `autoStart: false` only if you must configure the agent before the app connection listens, then call `desktopAgent.start()` yourself.
+Teardown: `desktopAgent.stop()`. Construction never starts the agent — call `.start()` once host setup (catalog, controllers) is wired.
 
 ### Browser app connection
 

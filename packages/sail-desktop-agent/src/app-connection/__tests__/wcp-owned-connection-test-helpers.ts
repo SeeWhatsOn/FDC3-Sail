@@ -1,28 +1,15 @@
 /**
-
  * Target-architecture seams for DA-owned browser app connection tests.
-
  *
-
- * These helpers assert the collapsed model where DesktopAgent owns WCP listener
-
+ * These helpers assert the collapsed model where SailDesktopAgent owns WCP listener
  * lifecycle and per-app MessagePort routing via BrowserAppConnection.
-
  *
-
  * @vitest-environment jsdom
-
  */
-
 import { expect, vi } from "vite-plus/test"
-
 import type { BrowserTypes } from "@finos/fdc3"
-
-import type { DesktopAgent } from "../../agent/desktop-agent"
-
 import { BrowserAppConnection } from "../../app-connection/browser-app-connection"
-import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
-
+import type { SailDesktopAgent, SailDesktopAgentApps } from "../../agent/sail-desktop-agent"
 import {
   createMessageEvent,
   createWCP1Hello,
@@ -31,105 +18,52 @@ import {
   type WcpConnectedApp,
 } from "./wcp-edge-test-helpers"
 
-export type DaOwnedAppConnectionMetadata = {
-  instanceId: string
-
-  appId?: string
-
-  connectionAttemptUuid?: string
-}
-
-/** DesktopAgent-owned browser app connection surface (target public API). */
-
-export type DaOwnedAppConnectionSurface = {
-  getAppConnection: (instanceId: string) => DaOwnedAppConnectionMetadata | undefined
-
-  getAppConnections: () => DaOwnedAppConnectionMetadata[]
-}
-
-function getBrowserAppConnection(agent: DesktopAgent): BrowserAppConnection | undefined {
-  const connection = (agent as Partial<SailDesktopAgent>).connector
-  return connection instanceof BrowserAppConnection ? connection : undefined
-}
-
 /**
-
  * Assert the agent uses the collapsed browser architecture (DA-owned connection backend).
-
  */
-
-export function assertCollapsedBrowserArchitecture(agent: DesktopAgent): void {
-  const browserAppConnection = getBrowserAppConnection(agent)
-
-  expect(browserAppConnection).toBeInstanceOf(BrowserAppConnection)
+export function assertCollapsedBrowserArchitecture(agent: SailDesktopAgent): void {
+  expect(agent.connector).toBeInstanceOf(BrowserAppConnection)
 }
 
 /**
-
- * Require DesktopAgent-owned app connection APIs.
-
+ * Require SailDesktopAgent-owned app connection APIs (the real `apps` controller).
  */
-
-export function requireDaOwnedAppConnection(agent: DesktopAgent): DaOwnedAppConnectionSurface {
+export function requireDaOwnedAppConnection(agent: SailDesktopAgent): SailDesktopAgentApps {
   assertCollapsedBrowserArchitecture(agent)
-
-  const surface = agent as unknown as Partial<DaOwnedAppConnectionSurface>
-
-  expect(typeof surface.getAppConnection).toBe("function")
-
-  expect(typeof surface.getAppConnections).toBe("function")
-
-  return surface as DaOwnedAppConnectionSurface
+  const { apps } = agent
+  expect(typeof apps.getConnection).toBe("function")
+  expect(typeof apps.getConnections).toBe("function")
+  return apps
 }
 
 function captureAppMessagePort(connectionAttemptUuid: string, identityUrl: string): MessagePort {
   const postMessageSpy = vi.spyOn(window, "postMessage")
-
   window.dispatchEvent(createMessageEvent(createWCP1Hello(connectionAttemptUuid, identityUrl)))
-
   const calls = postMessageSpy.mock.calls as unknown as Array<
     [BrowserTypes.WebConnectionProtocol3Handshake, string, MessagePort[]]
   >
-
   expect(calls.length).toBeGreaterThan(0)
-
   const [handshakeMessage, targetOrigin, ports] = calls[0]
-
   expect(handshakeMessage.type).toBe("WCP3Handshake")
-
   expect(handshakeMessage.meta.connectionAttemptUuid).toBe(connectionAttemptUuid)
-
   expect(targetOrigin).toBe(TEST_ORIGIN)
-
   expect(ports).toEqual(expect.arrayContaining([expect.any(MessagePort)]))
-
   postMessageSpy.mockRestore()
-
   const appPort = ports[0]
-
   appPort.start()
-
   return appPort
 }
 
 /**
-
- * Complete WCP1-5 through DesktopAgent-owned browser app connection.
-
+ * Complete WCP1-5 through SailDesktopAgent-owned browser app connection.
  */
-
 export async function connectWcpAppViaDaOwnedConnection(
-  agent: DesktopAgent,
-
+  agent: SailDesktopAgent,
   options: {
     connectionAttemptUuid: string
-
     appId: string
-
     identityUrl: string
-
     hostInstanceId?: string
-
     instanceUuid?: string
   },
 ): Promise<WcpConnectedApp> {
@@ -141,7 +75,7 @@ export async function connectWcpAppViaDaOwnedConnection(
 
   const appPort = captureAppMessagePort(connectionAttemptUuid, identityUrl)
 
-  expect(connections.getAppConnection(tempInstanceId)).toBeDefined()
+  expect(connections.getConnection(tempInstanceId)).toBeDefined()
 
   const wcp5Response =
     new Promise<BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse>(resolve => {
@@ -152,20 +86,14 @@ export async function connectWcpAppViaDaOwnedConnection(
 
   const wcp4Message: BrowserTypes.WebConnectionProtocol4ValidateAppIdentity = {
     type: "WCP4ValidateAppIdentity",
-
     meta: {
       connectionAttemptUuid,
-
       timestamp: new Date(),
     },
-
     payload: {
       identityUrl,
-
       actualUrl: identityUrl,
-
       ...(hostInstanceId ? { instanceId: hostInstanceId } : {}),
-
       ...(instanceUuid ? { instanceUuid } : {}),
     },
   }
@@ -176,11 +104,9 @@ export async function connectWcpAppViaDaOwnedConnection(
 
   const resolvedWcp5 = await Promise.race([
     wcp5Response,
-
     new Promise<never>((_, reject) =>
       setTimeout(
         () => reject(new Error("Timed out waiting for WCP5ValidateAppIdentityResponse")),
-
         5000,
       ),
     ),
@@ -198,22 +124,16 @@ export async function connectWcpAppViaDaOwnedConnection(
   expect(validatedInstanceUuid).toBeTruthy()
 
   await vi.waitFor(() => {
-    expect(connections.getAppConnection(validatedInstanceId)).toBeDefined()
-
-    expect(connections.getAppConnection(tempInstanceId)).toBeUndefined()
+    expect(connections.getConnection(validatedInstanceId)).toBeDefined()
+    expect(connections.getConnection(tempInstanceId)).toBeUndefined()
   })
 
   return {
     connectionAttemptUuid,
-
     tempInstanceId,
-
     validatedInstanceId,
-
     appPort,
-
     appId,
-
     instanceUuid: validatedInstanceUuid,
   }
 }

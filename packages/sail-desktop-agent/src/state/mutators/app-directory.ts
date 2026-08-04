@@ -63,7 +63,7 @@ export function addDirectoryUrl(state: AgentState, url: string): AgentState {
     throw new Error(
       `Invalid directory URL: ${url}. ` +
         `Must be a valid http/https REST endpoint. ` +
-        `For file system operations, use utilities from @finos/sail-platform.`,
+        `Load directory files yourself and pass the apps via the "apps" option.`,
     )
   }
 
@@ -147,7 +147,7 @@ export async function replaceDirectoriesInState(
     throw new Error(
       `Invalid directory URLs provided: ${invalidUrls.join(", ")}. ` +
         `Must be valid http/https REST endpoints. ` +
-        `For file system operations, use utilities from @finos/sail-platform.`,
+        `Load directory files yourself and pass the apps via the "apps" option.`,
     )
   }
 

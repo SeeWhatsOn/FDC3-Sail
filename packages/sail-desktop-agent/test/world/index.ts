@@ -1,5 +1,5 @@
 import { World, setWorldConstructor, type IWorldOptions } from "@cucumber/cucumber"
-import { DesktopAgent } from "../../src/agent/desktop-agent"
+import { SailDesktopAgent } from "../../src/agent/sail-desktop-agent"
 import { DacpTestAppConnection } from "../support/dacp-test-app-connection"
 import { MockAppLauncher } from "../support/mock-app-launcher"
 import { MockIntentResolver } from "../support/mock-intent-resolver"
@@ -41,8 +41,8 @@ export interface TestProps {
  * - Direct access to state via getState() for assertions
  */
 export class CustomWorld extends World {
-  // The actual DesktopAgent instance being tested
-  desktopAgent!: DesktopAgent
+  // The actual Desktop Agent instance being tested
+  desktopAgent!: SailDesktopAgent<DacpTestAppConnection>
 
   // DACP oracle app edge (records outbound; receiveMessage drives inbound)
   mockTransport!: DacpTestAppConnection
@@ -98,8 +98,8 @@ export class CustomWorld extends World {
       this.enableIntentResolverCallback()
     }
 
-    // Create DesktopAgent with catalog seeded via config.apps (state.appDirectory.apps)
-    this.desktopAgent = new DesktopAgent({
+    // Create the agent with catalog seeded via config.apps (state.appDirectory.apps)
+    this.desktopAgent = new SailDesktopAgent({
       appLauncher: this.mockAppLauncher,
       apps,
       userChannels: channels,
@@ -112,8 +112,8 @@ export class CustomWorld extends World {
       heartbeatEnabled,
       heartbeatIntervalMs: heartbeatConfig?.intervalMs ?? 30_000,
       heartbeatTimeoutMs: heartbeatConfig?.timeoutMs ?? 60_000,
+      appConnection: this.mockTransport,
     })
-    this.desktopAgent.attachAppConnection(this.mockTransport)
 
     this.mockTransport.onHandshakeRoutingLinked = (handshakeRoutingId, instanceId) => {
       applyDesktopAgentStateUpdate(this.desktopAgent, state =>

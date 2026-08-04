@@ -2,7 +2,7 @@
  * Browser-resident FDC3 app connection listener.
  *
  * Owns WCP1–3 handshake (postMessage), per-instance MessagePorts, and WCP6 lifecycle.
- * DACP traffic is forwarded to {@link DesktopAgent} via {@link onAppMessage}.
+ * DACP traffic is forwarded to {@link SailDesktopAgent} via {@link onAppMessage}.
  */
 
 import { type Logger, type LogPayloadDetail, consoleLogger } from "../interfaces/logger"
@@ -110,7 +110,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
     this.setAgentState = access.setAgentState
   }
 
-  /** Wire unified instance teardown from {@link DesktopAgent.disconnectInstance}. */
+  /** Wire unified instance teardown from {@link SailDesktopAgent.disconnectInstance}. */
   setOnInstanceTeardown(handler: (instanceId: string) => void): void {
     this.onInstanceTeardown = handler
   }
