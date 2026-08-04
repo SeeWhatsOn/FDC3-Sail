@@ -2,68 +2,62 @@
 sidebar_position: 3
 ---
 
-# WCP4 origin allowlist
+# App admission and origin trust
 
-`@finos/sail-platform` ships one Sail-specific security control on top of the FDC3 WCP protocol: an
-optional origin allowlist enforced during WCP4 identity validation. This page states what it does, how
-to turn it on, and — honestly — that it does nothing unless a host configures it.
+An FDC3 host decides which browsing contexts may become apps. This page states what Sail enforces
+today, what it deliberately does not, and where a deployment has to make its own arrangements.
 
-## What it does `[implemented]`
+## What the Desktop Agent enforces `[implemented]`
 
-`createSailBrowserDesktopAgent`'s `allowedOrigins` option (`sail-browser-desktop-agent.ts:26`) wraps the
-agent's inbound message handler (`wireWcp4OriginAllowlist`, `wcp4-origin-allowlist.ts:63-102`). When a
-`WCP4ValidateAppIdentity` message arrives, the wrapper reads `meta.messageOrigin` off the message and,
-if it is not in the configured `allowedOrigins` list, responds with
-`WCP5ValidateAppIdentityFailedResponse` (`wcp4-origin-allowlist.ts:89-95`) instead of letting the
-message reach the Desktop Agent's own handlers — a spec-compliant rejection path, not a protocol
-extension. Standard FDC3 WCP4 checks (origin consistency between `WCP1Hello` and `WCP4`, App Directory
-identity match) still apply independently of this allowlist.
+Admission happens during **WCP4 identity validation**, in `@finos/sail-desktop-agent`
+(`app-connection/wcp/wcp-identity-validation.ts`). Two checks run, both required by the FDC3
+standard, and both fail closed:
 
-```typescript
-import { createSailBrowserDesktopAgent } from "@finos/sail-platform"
+**1. Origin consistency.** The origins of `identityUrl`, `actualUrl`, and the `WCP1Hello`
+`MessageEvent.origin` must all match. A mismatch — or a missing `WCP1Hello` origin — is rejected
+with `WCP5ValidateAppIdentityFailedResponse`. An app cannot claim to be served from one origin while
+connecting from another.
 
-const desktopAgent = createSailBrowserDesktopAgent({
-  appLauncher,
-  allowedOrigins: ["https://my-host.example"],
-})
-```
+**2. App Directory membership.** The connecting app must resolve to an entry in the agent's app
+directory (`wcp-identity-validation.ts:115`). An app the directory has never heard of is rejected.
 
-## It fails open by default
+This second check is the load-bearing one for deployment control: **the directory the agent is given
+is the set of apps that may connect**. A host that assembles that directory per user has already
+expressed an admission policy, without any additional API.
 
-The option is `readonly string[] | undefined`, and the source comment is explicit about the
-undefined case (`sail-browser-desktop-agent.ts:23-25`): *"When **undefined** (default), no additional
-origin allowlist is applied — only standard FDC3 WCP4 checks... apply."* There is no default allowlist
-and no warning when it is omitted. A host that never sets `allowedOrigins` gets exactly the same WCP4
-behaviour with or without this feature existing.
+## What Sail does not ship
 
-## It ships unwired in both example shells
+There is **no origin allowlist** in the product today. An earlier `allowedOrigins` option existed on
+a `sail-platform` factory that has since been removed; it was never set by any shell, so the check
+never ran in a running deployment.
 
-Neither shell in this repository sets `allowedOrigins` today (verified: no reference to it anywhere
-under `packages/sail-finance/src` or `packages/sail-one/src`). So as shipped, neither example UI
-applies this control — a reader copying either shell's construction call gets the fail-open default,
-not a worked example of the allowlist in use.
+The capability is recorded, not forgotten — see
+[`.cursor/plans/parked-wcp4-origin-allowlist.md`](https://github.com/finos/FDC3-Sail/blob/main/.cursor/plans/parked-wcp4-origin-allowlist.md),
+which preserves the implementation and the two things a reimplementation must get right (it must
+fail closed, and it must reconstruct `connectionAttemptUuid` from the `temp-` instance id during
+early handshake, or it will fail to reply to exactly the connections it is meant to reject).
 
-## It only exists on the low entry point
+If it returns, it belongs in `@finos/sail-desktop-agent` as agent configuration, beside the WCP4
+check above — not in a wrapper package that cannot see the wire. `@finos/sail-platform` holds
+workspaces, layouts and storage, and has no dependency on the agent at all.
 
-`wireWcp4OriginAllowlist` is called from `createSailBrowserDesktopAgent` only
-(`sail-browser-desktop-agent.ts:76-78`). `SailPlatform`'s constructor config has no equivalent option —
-see [Architecture Overview — Two entry points](./overview#two-entry-points). A host built on the high
-entry point (`SailPlatform`, what `sail-one` uses) has no way to configure this allowlist today; it
-would need to be added to `SailPlatform` or applied by the host directly against the agent it
-constructs.
+## What a deployment should do instead
 
-## Using it
+Restricting which origins may connect is, today, a job for the layers around the agent:
 
-Set `allowedOrigins` to the list of origins your deployment expects app iframes/windows to be served
-from. Debug logging for rejected connections is available via the existing `debug` flag
-(`wcp4-origin-allowlist.ts:82-87`), not a separate switch.
+- **Curate the app directory.** It is the admission list. Vet entries, and serve a per-user
+  projection of it if different users should see different apps.
+- **Set a Content-Security-Policy** on the host page — `frame-src` bounds which origins can be
+  framed at all, before WCP1 is ever sent.
+- **Serve over HTTPS**, so origin identity means something.
 
-This control is a deployment policy, not a substitute for standard web security practice (HTTPS,
-Content-Security-Policy, and vetting app directory entries) — it only narrows *which origins* may
-complete WCP4 identity validation.
+None of these are substitutes for each other, and none are substitutes for reviewing what you put in
+the directory.
 
 ## Related
 
-- [Architecture Overview — Two entry points](./overview#two-entry-points) — the two ways to construct a
-  Desktop Agent, and why this control lives on only one of them.
-- [@finos/sail-platform](../packages/platform/overview) — the package this control ships in.
+- [@finos/sail-desktop-agent](../packages/desktop-agent/overview) — where admission is enforced.
+- [Desktop Agent integrator guide](../packages/desktop-agent/integrator-guide) — supplying the app
+  directory a host admits from.
+- [@finos/sail-platform](../packages/platform/overview) — workspaces, layouts and storage; no FDC3,
+  no admission role.

@@ -1,5 +1,12 @@
 # Minimal Viable Delivery Plan: Website & Docs Blueprint
 
+> **Partly superseded by the 2026-08-04 `sail-platform` cull.** The docs this blueprint produced have
+> been rewritten: `sail-platform` no longer has "two entry points", host chrome, or a lifecycle — it
+> holds workspaces, layouts and storage with zero dependencies, and hosts construct
+> `SailDesktopAgent` directly. `architecture/security.md` is now "App admission and origin trust"
+> rather than a page about the (parked) WCP4 origin allowlist. The blueprint's *method* — status
+> markers, standalone package framing, one source of truth per claim — is unchanged and still applies.
+
 Status: planning
 Current slice: 0 (layering + middleware/observability decision) — decisions recorded; the description is
 **drafted** in `.cursor/plans/sail-platform-design.md`, rewritten 2026-08-03 as a **standalone package

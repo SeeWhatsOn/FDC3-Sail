@@ -1,7 +1,16 @@
 # Minimal Viable Delivery Plan: SailPlatform KISS entry
 
-Status: planning
-Current slice: (awaiting human "go" — no implementation yet)
+> **SUPERSEDED 2026-08-04 by the `sail-platform` cull — never implemented, and now moot.** This plan
+> proposed a simpler entry *onto* `SailPlatform`. `SailPlatform` has since been deleted: it was a
+> 260-line facade whose accessors passed straight through to `SailDesktopAgent`'s own grouped
+> controllers, with one internal caller. The simplest entry turned out to be no wrapper at all —
+> hosts call `new SailDesktopAgent({...})` directly.
+>
+> Kept as a record of the ergonomics complaint that motivated it, which was real. **Current surface:**
+> `packages/sail-platform/README.md`.
+
+Status: superseded — historical record (was: planning)
+Current slice: none — plan abandoned, not deferred
 Review/fix loops: 0
 
 ## Intent

@@ -327,7 +327,7 @@ createBrowserDesktopAgent({
 | Wire `intentResolverNeeded` manually when using the `IntentResolver` contract on presets | Pass `intentResolver` to `createBrowserDesktopAgent` |
 | Add `*ForTesting` methods to `DesktopAgent` in consumer code | Production APIs only |
 | Duplicate full App Directory tutorial here | `fdc3-expert` + `getState().appDirectory` + query exports above |
-| Document `SailPlatform` as part of this skill | Mention it exists in platform-api; stay package-only |
+| Document workspaces/layouts as part of this skill | Mention `@finos/sail-platform` exists; stay package-only |
 
 ---
 

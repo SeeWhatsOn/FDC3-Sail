@@ -1,6 +1,21 @@
 # `@finos/sail-platform` — Package Description (Slice 0 output)
 
-Status: **draft — awaiting maintainer source-check.** This is the sign-off gate for blueprint Slice 0.
+> **SUPERSEDED 2026-08-04 by the `sail-platform` cull.** Every API this document describes —
+> `SailPlatform`, `createSailBrowserDesktopAgent`, `SailAppLauncher`, `SailPlatformClient`,
+> `generateUuid`, the agent type re-exports — has been deleted. The package now holds **workspaces,
+> layouts and storage** with **zero dependencies**, and hosts construct `SailDesktopAgent` directly
+> from `@finos/sail-desktop-agent`.
+>
+> Kept as a point-in-time record of the "composition layer" framing and why it did not hold: that
+> framing was written around whatever happened to be in the package, and it conflicted with
+> `sail-platform-extensibility.md` §2, which assigns workspaces, layout, auth, entitlements and
+> config to this package. The cull resolved the conflict in favour of §2.
+>
+> **Current surface:** `packages/sail-platform/README.md` ·
+> `website/docs/packages/platform/overview.md`.
+
+Status: **superseded — historical record.** Was: draft awaiting maintainer source-check, the sign-off
+gate for blueprint Slice 0.
 
 **Framing rule (maintainer decision, 2026-08-03).** This describes `@finos/sail-platform` **as a standalone
 package**: what it is, what it does, why it needs to be what it is, and how to use it. It does **not**

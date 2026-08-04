@@ -1,5 +1,11 @@
 # Draft PR Readiness — Review Register
 
+> **Partly overtaken by the 2026-08-04 `sail-platform` cull.** Items about `SailPlatform`,
+> `createSailBrowserDesktopAgent`, `SailAppLauncher` and `SailPlatformClient` are moot — those APIs
+> are deleted. Register item 17 (make the WCP4 origin allowlist fail closed) is resolved by removal,
+> with the requirement preserved in `.cursor/plans/parked-wcp4-origin-allowlist.md` as an acceptance
+> criterion for any reimplementation.
+
 Standing oversight of what is good, bad, and unknown in the v3 work, measured against
 "could this be opened as a draft PR to `finos/FDC3-Sail`". A **review artifact, not a
 work order** — nothing here is committed work, and some of it may never be done.

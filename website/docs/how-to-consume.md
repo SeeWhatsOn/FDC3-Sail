@@ -15,12 +15,11 @@ something you can use today.
 Construct a Desktop Agent directly inside your own web application — your state management, your
 persistence, your UI — and let Sail supply the FDC3 engine and browser connection layer underneath it.
 
-Sail exposes **two supported entry points** for this: `createSailBrowserDesktopAgent` (agent only) and
-`SailPlatform` (agent plus host chrome, lifecycle callbacks, and pluggable persistence). Which one to
-reach for depends on how much scaffolding you want the package to own, not on which is more mature —
-both end at the same FDC3 engine. See the
-[Architecture Overview — Two entry points](./architecture/overview#two-entry-points) for the full
-decision rule and diagram; this page does not repeat it.
+Construct the FDC3 engine with `new SailDesktopAgent({...})` from `@finos/sail-desktop-agent`. If you
+also want workspaces, layouts, and pluggable persistence for your host's own state, add
+`@finos/sail-platform` — the two are peers you compose, not layers. See the
+[Architecture Overview — How the packages compose](./architecture/overview#how-the-packages-compose)
+for the join between them and the diagram; this page does not repeat it.
 
 **Start here:** [Getting Started](./getting-started).
 
@@ -35,9 +34,9 @@ starting point for your own. Sail ships two, and the difference between them is 
 - **`sail-one`** — a **domain-neutral** example for more general use: a tab-and-grid canvas with channel
   wiring.
 
-Both are real applications on the same engine — `sail-finance` composes `createSailBrowserDesktopAgent`
-directly, `sail-one` composes `SailPlatform`. Neither is more finished than the other; pick the one whose
-domain and layout are closer to what you need, and expect to customise. See
+Both are real applications on the same engine, each constructing `SailDesktopAgent` directly. Neither is
+more finished than the other; pick the one whose domain and layout are closer to what you need, and
+expect to customise. See
 [Architecture Overview](./architecture/overview#2-clear-package-ownership) for how the shells relate to
 the engine.
 

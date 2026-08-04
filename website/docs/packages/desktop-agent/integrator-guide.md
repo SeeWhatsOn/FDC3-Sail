@@ -85,7 +85,7 @@ export function destroyBrowserDesktopAgent() {
 }
 ```
 
-`SailPlatform` follows the same rule: construct **one** platform or agent handle per host page and reuse it for intent, channel, and app controllers.
+Construct **one** agent handle per host page and reuse it for intent, channel, and app controllers.
 
 ### Server, worker, native, and multi-device paths (deferred)
 
@@ -103,9 +103,9 @@ This package's own tests inject a lighter test edge via the `appConnection` cons
 
 ### Host channel UI and `getState()`
 
-Channel chrome must use **push events plus granular getters**, not full state snapshots. Prefer `channels.onAppChannelChange` / `channels.getAppChannelId` on `SailDesktopAgent`, or `SailPlatform.changeAppChannel` / `getAppUserChannel` when a host is built on `SailPlatform`. Do **not** poll or mutate `desktopAgent.getState()` for UI — that API is for tests and debugging only.
+Channel chrome must use **push events plus granular getters**, not full state snapshots. Use `channels.onAppChannelChange` / `channels.getAppChannelId` on `SailDesktopAgent`. Do **not** poll or mutate `desktopAgent.getState()` for UI — that API is for tests and debugging only.
 
-Details and platform vs preset APIs: [Channel selector — host shell UI](#channel-selector--host-shell-ui) and [Channel selection architecture](../../architecture/channel-selection.md).
+Details: [Channel selector — host shell UI](#channel-selector--host-shell-ui) and [Channel selection architecture](../../architecture/channel-selection.md).
 
 ## Host contract example
 
@@ -208,12 +208,11 @@ await apps.open("portfolio-app", { context: instrumentContext })
 
 `new SailDesktopAgent(...)` only builds the object — it does not attach `window` listeners. Call `desktopAgent.start()` once setup (catalog, controllers) is wired to install the WCP listener. Stop the agent with `desktopAgent.stop()` when the host shell tears down.
 
-> The `appLauncher` above implements the raw `AppLauncher` contract by hand, which is what this package
-> defines and expects. If you are building on `@finos/sail-platform` rather than this package alone,
-> prefer its supplied `SailAppLauncher` — give it `onLaunchApp`/`onCloseApp` callbacks and it generates
-> instance ids and implements this contract for you. Both `sail-finance` and `sail-one` construct a
-> `SailAppLauncher` rather than writing `AppLauncher` from scratch. See
-> [@finos/sail-platform — API surface](../platform/overview#api-surface).
+> The `appLauncher` above implements the `AppLauncher` contract directly, which is what this package
+> defines and expects — there is no wrapper class to learn. Both `sail-finance`
+> (`src/main.tsx`) and `sail-one` (`src/state/sail-host.ts`) implement it inline this way. Note that
+> `launch` mints the instance id when `request.app.instanceId` is absent, and the id you render with is
+> the id WCP4 later adopts.
 
 ### FDC3 boundary
 
@@ -274,7 +273,7 @@ FDC3 `getAgent()` supports more than one web mechanism. Sail's browser host impl
 | App in an iframe owned by the Sail host | Yes. This is the primary and tested browser path. | Set the iframe `name` to the host instance id and list the app URL in the app directory. |
 | App opened with `window.open` by the Sail host | Can work if the child keeps `window.opener` and the app directory identity matches. | Implement a window-based `AppLauncher`; this is not the default `sail-finance` launcher. |
 | App in a traditional preload-style container | `getAgent()` can return `window.fdc3` when the container injects it. | This is a different FDC3 web interface. `SailDesktopAgent` does not currently install `window.fdc3` into the host page. |
-| React component rendered in the same top-level page as the Sail host | No, not as a separate standard FDC3 app. There is no parent/opener for proxy discovery, and no Sail preload object is installed. | Treat it as host UI and use `SailPlatform` / `SailDesktopAgent` host APIs, or put it in an iframe/window. |
+| React component rendered in the same top-level page as the Sail host | No, not as a separate standard FDC3 app. There is no parent/opener for proxy discovery, and no Sail preload object is installed. | Treat it as host UI and use the `SailDesktopAgent` host APIs, or put it in an iframe/window. |
 
 This is the key difference for teams coming from preload-style desktop agents: in the browser-resident model, independent apps usually need independent browsing contexts. Same-page components can still participate in the product UI, but they are not separate FDC3 app instances through `@finos/fdc3` unless Sail later provides a dedicated top-level adapter.
 
@@ -303,15 +302,15 @@ Host code supplies the app directory and launches the app. App code should not i
 
 ### Same-page components
 
-If your "app" is a React component rendered inside the same page that created `SailPlatform` or `SailDesktopAgent`, it is part of the host shell. Use the host APIs already available in that process:
+If your "app" is a React component rendered inside the same page that created `SailDesktopAgent`, it is part of the host shell. Use the host APIs already available in that process:
 
 ```typescript
-const platform = new SailPlatform({ appLauncher, intentResolver })
-platform.start()
+const agent = new SailDesktopAgent({ appLauncher, intentResolver })
+agent.start()
 
-const channels = platform.getUserChannels()
-const currentChannel = platform.getAppUserChannel(instanceId)
-await platform.changeAppChannel(instanceId, "fdc3.channel.1")
+const userChannels = agent.channels.getUserChannels()
+const currentChannel = agent.channels.getAppChannelId(instanceId)
+await agent.channels.changeAppChannel(instanceId, "fdc3.channel.1")
 ```
 
 If you need those components to behave like independent FDC3 apps with their own identity, listeners, channel membership, and lifecycle, launch each one in an iframe or child window. A future Sail component adapter could provide a direct in-page API, but that would be a Sail-specific integration path rather than the standard `@finos/fdc3` `getAgent()` discovery path.
@@ -422,24 +421,15 @@ channelButton.onclick = () => {
 }
 ```
 
-With **`SailPlatform`** (wraps the same engine path):
+Keep toolbar state in sync with the push model — do not poll `getState()`:
 
 ```typescript
-const platform = new SailPlatform({ appLauncher, intentResolver })
-platform.start()
-
-// In a SailPlatform-based host's channel UI component:
-const channels = platform.getUserChannels()
-const currentId = platform.getAppUserChannel(instanceId)
-await platform.changeAppChannel(instanceId, channelId) // or null to leave
-
-// Keep toolbar state in sync (push model — do not poll getState())
-platform.connector.on("channelChanged", (id, channelId) => {
-  updateTabChrome(id, channelId)
+const unsubscribe = agent.channels.onAppChannelChange(({ instanceId, channelId }) => {
+  updateTabChrome(instanceId, channelId)
 })
 ```
 
-`ChannelControl` in `host-contracts/` describes the **picker contract** (`selectChannel(request)`); wire your toolbar to call `channels.changeAppChannel` (or `platform.changeAppChannel`) with the chosen channel id. Sail web (`sail-finance`) uses `channels.changeAppChannel` on the `SailDesktopAgent` handle plus connector push events (`connection-store.ts` subscribes; `ChannelSelector.tsx` reads from the store, not `getState()`) — a `SailPlatform`-based host would call `platform.changeAppChannel` instead.
+`ChannelControl` in `host-contracts/` describes the **picker contract** (`selectChannel(request)`); wire your toolbar to call `channels.changeAppChannel` with the chosen channel id. Sail web (`sail-finance`) uses `channels.changeAppChannel` on the `SailDesktopAgent` handle plus push events (`connection-store.ts` subscribes; `ChannelSelector.tsx` reads from the store, not `getState()`).
 
 **Injected channel iframe (uncommon):**
 
@@ -453,7 +443,7 @@ new SailDesktopAgent({
 #### End-to-end with Sail web (`sail-finance`)
 
 ```text
-createSailBrowserDesktopAgent({ appLauncher, ... })
+new SailDesktopAgent({ appLauncher, ... }).start()
   → SailDesktopAgent (browser app connection starts with the agent)
   → SailDesktopAgentProvider wires stores to agent events
   → <IntentResolverDialog /> listens via intent-resolver-store
@@ -523,7 +513,7 @@ These behaviours stay within FDC3 MUSTs but are host conventions supported by th
 
 FDC3 2.2 defines [`heartbeatEvent`](https://fdc3.finos.org/docs/api/specs/desktopAgentCommunicationProtocol#checking-apps-are-alive) / [`heartbeatAcknowledgment`](https://fdc3.finos.org/docs/api/specs/desktopAgentCommunicationProtocol#checking-apps-are-alive) as an optional **Desktop Agent** liveness mechanism — “periodically or on demand,” depending on how the app is connected. Apps respond when the DA sends a heartbeat; there is **no** `getAgent()` parameter to disable it from the app side.
 
-Sail exposes heartbeat as **host-level configuration** on `DesktopAgent` / `SailDesktopAgent` / `SailPlatform`. Settings apply to **every** connected instance for that agent — not per app or per entry in the app directory.
+Sail exposes heartbeat as **host-level configuration** on `SailDesktopAgent`. Settings apply to **every** connected instance for that agent — not per app or per entry in the app directory.
 
 | Option | Default | Purpose |
 |--------|---------|---------|

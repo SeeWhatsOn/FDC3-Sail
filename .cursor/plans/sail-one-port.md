@@ -1,5 +1,11 @@
 # sail-one: port brief
 
+> **Partly superseded by the 2026-08-04 `sail-platform` cull.** The port landed, but the wiring
+> described here changed: `sail-host.ts` now constructs `SailDesktopAgent` directly and implements
+> its own `AppLauncher` inline (no `SailPlatform`, no `SailAppLauncher`), and `client-state.ts`
+> persists through `createLocalStorage` (no `SailPlatformClient`). The shell's *behaviour* is
+> unchanged. Read API names below as history — current shape is in `packages/sail-one/README.md`.
+
 Self-contained handoff for building the second Sail shell, `sail-one`, by porting the UI from
 branch `wip/v2.2`. Written to be actionable without prior conversation context.
 

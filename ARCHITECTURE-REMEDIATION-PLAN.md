@@ -1,5 +1,15 @@
 # Architecture Remediation Plan
 
+> **Partly remediated by deletion, 2026-08-04.** The `sail-platform` cull removed `SailPlatform`,
+> `createSailBrowserDesktopAgent`, `SailAppLauncher`, `SailPlatformClient` and `generateUuid`, and cut
+> the package's agent re-exports and both its dependencies. Findings about the composition layer,
+> duplicate entry points, and the platform's agent coupling are resolved — by removal rather than by
+> repair. Item 4 (WCP4 origin allowlist, "no threat model documented") is resolved the same way: the
+> control is parked in `.cursor/plans/parked-wcp4-origin-allowlist.md`, and
+> `website/docs/architecture/security.md` now documents what the agent actually enforces.
+>
+> Findings scoped to `@finos/sail-desktop-agent` are untouched and still open.
+
 **Status:** open · **Raised:** 2026-07-30 · **Branch reviewed:** `wip/v3-local` @ `14f7bbf60`
 **Scope:** `@finos/sail-desktop-agent`, `@finos/sail-platform`, `website/docs`
 **Companion:** [architecture review diagrams](https://claude.ai/code/artifact/cfb9c66d-a3d7-400d-8cec-0b2ea2b4f6d5)

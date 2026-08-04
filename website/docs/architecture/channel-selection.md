@@ -13,10 +13,10 @@ For **one agent per browsing context** and why host chrome must not poll `getSta
 | Layer | Responsibility |
 |-------|----------------|
 | **`@finos/sail-desktop-agent`** | FDC3 engine: DACP handlers, agent state, WCP routing, events to apps. Stays **protocol-pure** — no Sail UI, no “chrome” concepts. |
-| **`@finos/sail-platform`** | Host integration: `SailPlatform`, lifecycle, **channel APIs for parent UI**, browser app connection events, optional `ChannelSelector` callback. |
+| **`@finos/sail-platform`** | No role here. It holds workspaces, layouts and storage; channels are FDC3 and belong to the agent. |
 | **`@finos/sail-finance`** (example host) | React chrome (`ChannelSelector`), connection store, tiles around iframes. |
 
-**Principle:** Parent chrome does not mutate Desktop Agent state directly. It calls **platform APIs**; the agent updates state through the same DACP handlers apps use.
+**Principle:** Parent chrome does not mutate Desktop Agent state directly. It calls the agent's **`channels` controller**; the agent updates state through the same DACP handlers apps use.
 
 ## Pattern A — Host-controlled channel UI (Sail default)
 
@@ -38,11 +38,7 @@ For **one agent per browsing context** and why host chrome must not poll `getSta
 
 ### Set (join / leave) on behalf of an instance
 
-**Browser-ready** hosts call **`channels.changeAppChannel(instanceId, channelId | null)`** on the `SailDesktopAgent` handle.
-
-**Sail platform** hosts call **`SailPlatform.changeAppChannel(instanceId, channelId | null)`**.
-
-Both paths:
+Hosts call **`channels.changeAppChannel(instanceId, channelId | null)`** on the `SailDesktopAgent` handle. There is one path:
 
 1. Send a typed **`joinUserChannelRequest`** or **`leaveCurrentChannelRequest`** with `meta.source.instanceId` set to that app.
 2. Desktop Agent handlers update `instance.currentUserChannel`.
@@ -53,11 +49,11 @@ This is “on behalf of the app” in **identity** (source instance id), not “
 
 ### Get (read) for chrome
 
-| What chrome needs | SailDesktopAgent API | SailPlatform API | Notes |
-|-------------------|-------------------|------------------|--------|
-| List of user channels | `channels.getUserChannels()` | `platform.getUserChannels()` | Reads agent state (not per-app DACP). |
-| Current channel for a tile | `channels.getAppChannelId(instanceId)` or `channels.getAppChannel(instanceId)` | `platform.getAppUserChannel(instanceId)` | No DACP round-trip. |
-| Event-driven mirror | `channels.onAppChannelChange(listener)` | `onChannelChanged` → connection store | Push model — do not poll `getState()`. |
+| What chrome needs | SailDesktopAgent API | Notes |
+|-------------------|----------------------|--------|
+| List of user channels | `channels.getUserChannels()` | Reads agent state (not per-app DACP). |
+| Current channel for a tile | `channels.getAppChannelId(instanceId)` or `channels.getAppChannel(instanceId)` | No DACP round-trip. |
+| Event-driven mirror | `channels.onAppChannelChange(listener)` | Push model — do not poll `getState()`. |
 
 Apps still use **`fdc3.getCurrentChannel()`** inside the iframe over MessagePort — that is the app’s own DACP `getCurrentChannelRequest`.
 
@@ -65,8 +61,7 @@ Apps still use **`fdc3.getCurrentChannel()`** inside the iframe over MessagePort
 
 | Consumer | Listen to |
 |----------|-----------|
-| **Host chrome (SailDesktopAgent)** | `channels.onAppChannelChange` on the agent handle |
-| **Host chrome (Sail platform)** | `SailPlatform` config `onChannelChanged`, or a store fed by those events |
+| **Host chrome** | `channels.onAppChannelChange` on the agent handle, or a store fed by it |
 | **App iframe** | `fdc3.addEventListener("userChannelChanged", …)` (FDC3 2.2) |
 
 Both reflect the same agent state change; the host does not need to poke the iframe DOM.
@@ -87,32 +82,29 @@ Both reflect the same agent state change; the host does not need to poke the ifr
 
 ## What not to do
 
-- **Raw DACP impersonation** (`sendDACPMessageOnBehalfOf`, private `handleMessage`) — bypasses WCP validation; use typed **`channels.changeAppChannel`** on `SailDesktopAgent` or **`SailPlatform.changeAppChannel`** instead.
+- **Raw DACP impersonation** (`sendDACPMessageOnBehalfOf`, private `handleMessage`) — bypasses WCP validation; use typed **`channels.changeAppChannel`** on `SailDesktopAgent` instead.
 - **Chrome writing agent state without DACP handlers** — breaks conformance and app event delivery.
 
-## Platform and preset API surface
+## Channel API surface
 
 ```typescript
-// Browser-ready SailDesktopAgent handle
 const { channels } = desktopAgent
+
 await channels.changeAppChannel(instanceId, "fdc3.channel.1")
 await channels.changeAppChannel(instanceId, null) // leave
+
 const channelList = channels.getUserChannels()
 const channelId = channels.getAppChannelId(instanceId)
-channels.onAppChannelChange(({ instanceId, channelId }) => { ... })
 
-// Sail platform — reference stack wrapper
-await platform.changeAppChannel(instanceId, "fdc3.channel.1")
-await platform.changeAppChannel(instanceId, null)
-const platformChannels = platform.getUserChannels()
-const platformChannelId = platform.getAppUserChannel(instanceId)
-platform.start({ onChannelChanged: (instanceId, channelId) => { ... } })
+const unsubscribe = channels.onAppChannelChange(({ instanceId, channelId }) => { ... })
 ```
 
-Embedders using **`SailDesktopAgent`** directly should use **`channels.*`**, not raw connector delivery or `getAppUserChannelId` alone. **`SailPlatform`** remains the reference stack for workspace and layout.
+Use **`channels.*`**, not raw connector delivery or `getAppUserChannelId` alone. Channel state is
+FDC3 state and lives in the agent — `@finos/sail-platform` stores which tab a panel sits in, which is
+a different question from which channel its app has joined.
 
 ## Related work
 
 - Integrator singleton + channel reactivity: [Desktop Agent integrator guide](../packages/desktop-agent/integrator-guide.md#one-desktop-agent-per-context)
 - Architecture overview: [Overview](./overview.md) (Sail-controlled UI)
-- Platform API: [@finos/sail-platform](../packages/platform/overview)
+- Workspaces and layouts: [@finos/sail-platform](../packages/platform/overview)

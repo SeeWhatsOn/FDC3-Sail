@@ -1,5 +1,12 @@
 # Website Docs — Defect Register
 
+> **Partly resolved-by-deletion, 2026-08-04.** Several entries here describe defects in docs for APIs
+> that no longer exist (`SailPlatform`, `createSailBrowserDesktopAgent`, `SailAppLauncher`,
+> `SailPlatformClient`). Those pages were rewritten in the `sail-platform` cull, so the entries are
+> closed — but not because the documented behaviour was fixed. Item **G4** (WCP4 origin allowlist,
+> "fails open and ships unwired") was resolved by removing the control: see
+> `.cursor/plans/parked-wcp4-origin-allowlist.md`.
+
 Companion to `.cursor/plans/website-docs-blueprint.md`. This is the working material for slice 1
 (truth pass) and slice 3 (package pages).
 

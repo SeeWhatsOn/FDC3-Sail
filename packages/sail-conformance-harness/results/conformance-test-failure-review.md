@@ -13,7 +13,7 @@ Attribution matrix for the FINOS FDC3 conformance toolbox against `@finos/sail-c
 
 Removed from repo (2026-06): `conformance-report.txt` and `conformance-report-v2.txt` — early dumps from the full **sail-finance** stack (`:3000`), not comparable to harness clean-room runs.
 
-The harness exercises **browser WCP + `@finos/sail-desktop-agent`** only (no `SailPlatform`). In-repo BDD uses `MockTransport` — documented in `website/docs/packages/desktop-agent/conformance.md` (**104** `@conformance2.2` scenarios, **2** `@conformance3.0` in `close.feature`).
+The harness exercises **browser WCP + `@finos/sail-desktop-agent`** only (no workspace layer). In-repo BDD uses `MockTransport` — documented in `website/docs/packages/desktop-agent/conformance.md` (**104** `@conformance2.2` scenarios, **2** `@conformance3.0` in `close.feature`).
 
 ## Harness progression (v3 → v5)
 

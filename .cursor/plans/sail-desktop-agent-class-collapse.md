@@ -1,5 +1,11 @@
 # sail-desktop-agent — collapse `DesktopAgent` / `SailDesktopAgent` into one class
 
+> **Note (2026-08-04 `sail-platform` cull).** This plan's own work is done and stands. Its references
+> to `sail-platform` are stale: `SailPlatform` and `createSailBrowserDesktopAgent` are deleted, so the
+> "two entry points" this collapse had to keep working are now one — `new SailDesktopAgent({...})`.
+> The WCP4 origin allowlist discussed here is parked, not deleted: see
+> `.cursor/plans/parked-wcp4-origin-allowlist.md`.
+
 **Status:** all slices landed (uncommitted) — 1, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6.
 **Branch base:** `wip/v3-local`
 **Version context:** `3.0.0-pre.1.0` — pre-release, never published to npm (`npm view` 404 for both

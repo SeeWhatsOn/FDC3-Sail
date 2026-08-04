@@ -1,5 +1,17 @@
 # sail-platform: extensibility direction & decisions
 
+> **Still current in its direction; some code references are stale (2026-08-04 cull).** §2's decision
+> stands and was the basis for the cull: the SDA does FDC3 and only FDC3, everything else is
+> `sail-platform`'s job, and nothing extensible gets built until a written requirement demands it.
+>
+> What changed underneath: `SailPlatform`, `createSailBrowserDesktopAgent`,
+> `SailBrowserDesktopAgentConfig`, `SailAppLauncher`, `SailPlatformClient` and
+> `wireWcp4OriginAllowlist` are **deleted**. `sail-platform` now holds workspaces, layouts and
+> storage with zero dependencies — the first of the §2 responsibilities to actually land. The
+> `allowedOrigins` discussion around §7 refers to removed code; see
+> `.cursor/plans/parked-wcp4-origin-allowlist.md`. Auth, entitlements and telemetry remain unbuilt,
+> exactly as §2 intends.
+
 **Status:** direction + decision record. **Not** a work order — nothing here auto-executes.
 **Provenance:** design exploration hardened by 5 rounds of adversarial (Socratic) review against the
 actual codebase. Claims are grounded in files cited inline; where something was *not* verified it is

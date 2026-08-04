@@ -1,5 +1,11 @@
 # Plan: FDC3 host (A) then toolbox profile (B)
 
+> **Note (2026-08-04 `sail-platform` cull).** `createSailBrowserDesktopAgent` and `SailAppLauncher`
+> are deleted. Hosts call `new SailDesktopAgent({...})` and implement `AppLauncher` directly — the
+> `launch` + iframe `name` = instanceId rule below is unchanged, it just lives in the host's own
+> launcher now. The B slice's `forceNewWindow` / close-API expansion is host-kit work, not
+> `sail-platform` work.
+
 Status: A done (committed)
 Current slice: parked — B when toolbox scores needed again
 

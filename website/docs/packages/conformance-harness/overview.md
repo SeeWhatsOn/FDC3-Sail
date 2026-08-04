@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # @finos/sail-conformance-harness
 
-Minimal React host that wires **only** `@finos/sail-desktop-agent` to run the [FINOS FDC3 conformance toolbox](https://fdc3.finos.org/toolbox/fdc3-conformance/) live in a browser. Use as a diagnostic clean room compared to the full Sail stack (no `SailPlatform`, no shell UI). This is a different conformance signal from the Cucumber BDD scenarios documented on the [Desktop Agent conformance traceability](../desktop-agent/conformance) page — that suite runs against `MockTransport`; this harness runs the toolbox against a real browser and WCP.
+Minimal React host that wires **only** `@finos/sail-desktop-agent` to run the [FINOS FDC3 conformance toolbox](https://fdc3.finos.org/toolbox/fdc3-conformance/) live in a browser. Use as a diagnostic clean room compared to the full Sail stack (no workspace layer, no shell UI). This is a different conformance signal from the Cucumber BDD scenarios documented on the [Desktop Agent conformance traceability](../desktop-agent/conformance) page — that suite runs against `MockTransport`; this harness runs the toolbox against a real browser and WCP.
 
 **Location:** `packages/sail-conformance-harness/`
 
@@ -30,7 +30,7 @@ npm run typecheck -w @finos/sail-conformance-harness
 
 ## Architecture
 
-- **`SailDesktopAgent`** — local DA + WCP browser app connection (no `SailPlatform`)
+- **`SailDesktopAgent`** — local DA + WCP browser app connection, nothing above it
 - **App directory** — `packages/sail-conformance-harness/conformance-appd.json` via the `apps` option (sail-finance dev merges the same fixture)
 - **Intent resolution** — `intentResolver` host controller with programmatic handler selection
 - **Instance identity** — iframe `name` must equal `instanceId` for WCP4 correlation

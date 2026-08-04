@@ -41,9 +41,9 @@ cannot round-trip a `Map` on its own.
   corresponding FDC3 app instance (`agent.apps.disconnect(instanceId)`, `:186`) via the connection store
   below — closing a Dockview panel is what tears down its Desktop Agent connection.
 - **Reconcile the panel list** (`:224-299`): a separate effect diffs the store's `panels` array against
-  Dockview's own `api.panels` and adds/removes Dockview panels to match — this is what lets
-  `SailAppLauncher`'s `onLaunchApp` callback (which only touches the workspace store, see
-  [package overview — construction and state](./overview#construction-and-state--the-low-entry-point))
+  Dockview's own `api.panels` and adds/removes Dockview panels to match — this is what lets the shell's
+  `AppLauncher.launch` (which only touches the workspace store, see
+  [package overview — construction and state](./overview#construction-and-state))
   cause a new Dockview panel to appear without calling the Dockview API directly.
 
 ## The popout relay shell
@@ -82,7 +82,7 @@ contributes no FDC3 state of its own. It is a message relay, not a second agent.
 
 ## The wider Zustand store family
 
-`src/stores/` holds seven store modules. Not all of them are wired into the running app:
+`src/stores/` holds six store modules. Not all of them are wired into the running app:
 
 | Store | Wired into components? | Role |
 |---|---|---|
@@ -91,13 +91,16 @@ contributes no FDC3 state of its own. It is a message relay, not a second agent.
 | `app-directory-store.ts` | Yes (`createAppDirectoryStore(agent)`, via context) | Mirrors `agent.apps.getAll()` / `agent.apps.addDirectory()` for the app-directory UI. |
 | `intent-resolver-store.ts` | Yes (`IntentResolverDialog.tsx`, via context) | Mirrors `agent.intentResolver` pending requests for the intent-picker dialog. |
 | `ui-store.ts` | Yes (several components) | Small, agent-independent UI toggle: which quick-access panel (app directory vs workspace directory) is open. |
-| `panel-store.ts` | **No** — referenced only by its own unit test (`__tests__/stores/panel-store.test.ts`) and re-exported from `stores/index.ts` | Defines a flatter `Panel[]`/`activeTabId` model, distinct from `workspace-store.ts`'s nested one. Not constructed or read from any component today. |
 | `fdc3-store.ts` | **No** — referenced only by its own unit test (`__tests__/stores/fdc3-store.test.ts`) | A `Map<panelId, Window>` registry. Not constructed or read from any component today. |
 
-`panel-store.ts` and `fdc3-store.ts` are real, tested code — they are just not part of the live
-component tree as it exists today. Treat any doc or code sample built around them as unverified against
-the running app until something actually consumes `createPanelStore` or `createFDC3Store` outside a
-test file.
+`fdc3-store.ts` is real, tested code — it is just not part of the live component tree as it exists
+today. Treat any doc or code sample built around it as unverified against the running app until
+something actually consumes `createFDC3Store` outside a test file.
+
+A seventh module, `panel-store.ts`, was **removed**: it defined a flatter `Panel[]`/`activeTabId`
+model duplicating `workspace-store.ts`'s nested one, and nothing outside its own test and an unused
+`stores/index.ts` barrel referenced it. It was the "dead second workspace model" flagged in
+`.cursor/plans/sail-platform-extensibility.md` §6.
 
 ## Related
 

@@ -1,5 +1,12 @@
 # FDC3 Sail Production Readiness Review
 
+> **Note (2026-08-04):** Security finding #2 — "make the WCP4 origin allowlist fail closed" — was
+> resolved by **removing** the control, not by hardening it. It was never wired by any shell, so it
+> never ran. The capability and the fail-closed requirement are preserved in
+> `.cursor/plans/parked-wcp4-origin-allowlist.md`; what the agent enforces today is documented in
+> `website/docs/architecture/security.md`. The `sail-finance` iframe `sandbox` half of that finding is
+> unaffected and still open.
+
 *Review date: **2026-07-28** · Branch: `wip/v3-local` @ `4dddd88f7` · Supersedes the 2026-07-07 review (written against `chore/collapse-browser-app-connection-into-desktop-agent`).*
 
 > **Scope note:** diagnosis only. No implementation code was changed. Every finding below was re-verified against the tree at `4dddd88f7` on the date above; findings carried forward from the previous review were individually re-checked rather than assumed.

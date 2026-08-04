@@ -1,7 +1,7 @@
 # @finos/sail-one
 
 The tab-and-grid Sail shell, ported from `packages/sail-web` on FINOS `wip/v2.2` and
-rewired onto `@finos/sail-platform` and the current `@finos/sail-desktop-agent`.
+rewired onto the current `@finos/sail-desktop-agent` and `@finos/sail-platform`.
 
 `sail-one` and `sail-finance` are sibling shells. Neither imports the other — the
 boundary is enforced by `no-restricted-imports` in `.oxlintrc.json`. Anything shared
@@ -18,20 +18,20 @@ npm run dev:one                    # agent + platform watch builds alongside the
 
 | Module                | Role                                                                     |
 | --------------------- | ------------------------------------------------------------------------ |
-| `sail-host.ts`        | Owns the `SailPlatform` instance; the only file that talks to the agent.  |
-| `client-state.ts`     | Shell state (tabs, panels, directories, custom apps), persisted via `SailPlatformClient`. |
+| `sail-host.ts`        | Owns the `SailDesktopAgent` instance and the shell's `AppLauncher`; the only file that talks to the agent. |
+| `client-state.ts`     | Shell state (tabs, panels, directories, custom apps), persisted through a `SailStorage`. |
 | `default-app-state.ts`| Window/iframe bookkeeping and the user's hosting choice for a launch.     |
 
-State is stored through `SailPlatformClient`'s config API (localStorage backend,
-`sail_one_` prefix) rather than raw `localStorage`, so the backend is swappable
-without touching the shell. Because that API is async, `ClientState.load()` must be
-awaited before the first render — see `src/index.tsx`.
+State is stored through `createLocalStorage({ keyPrefix: "sail_one_" })` from
+`@finos/sail-platform` rather than raw `localStorage`, so the backing store is swappable —
+including for a remote one — without touching the shell. Because that API is async,
+`ClientState.load()` must be awaited before the first render — see `src/index.tsx`.
 
 ## Conversion notes
 
 **App launches are agent-owned.** The old host minted instance ids and told the agent
-via `registerPendingLaunch`. Now `apps.open()` drives `SailAppLauncher`, which mints the
-id and calls back into the shell to create the panel or window. `SailHost` queues the
+via `registerPendingLaunch`. Now `apps.open()` calls the shell's own `AppLauncher`, which
+mints the id and creates the panel or window. `SailHost` queues the
 user's hosting choice (`Frame` vs `Tab`) so the callback knows where to put it; a launch
 arriving from another app's `fdc3.open()` has no queued choice and defaults to `Frame`.
 
@@ -70,8 +70,8 @@ delete-vs-hide is a Sail product decision.
 **`embeddable-ui/` is carried but not wired.** `html/ui/channel-selector.html` and
 `intent-resolver.html` implement the FDC3 injected-UI protocol
 (`Fdc3UserInterfaceHello` → `Fdc3UserInterfaceHandshake`, then `Restyle` / `Channels` /
-`ChannelSelected` / `Resolve` / `ResolveAction`). `SailPlatform` currently hardcodes
-`getIntentResolverUrl: () => false` and `getChannelSelectorUrl: () => false`, so nothing
+`ChannelSelected` / `Resolve` / `ResolveAction`). The agent defaults
+`getIntentResolverUrl` and `getChannelSelectorUrl` to `() => false`, so nothing
 loads them today.
 
 They exist for the case the spec calls out directly: "a DA may not have the ability to
