@@ -38,7 +38,11 @@ import {
   type AppConnectionMetadata,
 } from "../app-connection/browser-app-connection"
 import { DEFAULT_INTENT_RESOLUTION_TIMEOUT_MS } from "../app-connection/wcp/wcp-types"
-import { createHostIntentResolver, type IntentResolverUIMethods } from "../host-contracts"
+import {
+  createHostIntentResolver,
+  type IntentResolver,
+  type IntentResolverUIMethods,
+} from "../host-contracts"
 import {
   changeAppChannel,
   createAppsController,
@@ -169,11 +173,34 @@ export class SailDesktopAgent<
         logPayloadDetail: this.logPayloadDetail,
       })) as TEdge
 
-    // Only wire DACP intent-resolution requests to a host-resolver UI when the routing edge
-    // actually provides that capability (declared on BrowserAppConnectionSurface, optional on
-    // AgentAppConnection). Real browser edge: present, wired. Minimal test edges
-    // (DacpTestAppConnection): absent — left unset, so raiseIntent auto-selects the first
-    // handler. Derived from the edge's real capability, not from whether an edge was injected.
+    this.bindEdgeCallbacks()
+    const controllers = this.buildControllers(providedIntentResolver, localOptions)
+    this.intentResolver = controllers.intentResolver
+    this.channels = controllers.channels
+    this.apps = controllers.apps
+
+    if (localOptions.appDirectories && localOptions.appDirectories.length > 0) {
+      this.directoriesLoaded = Promise.all(
+        localOptions.appDirectories.map(url =>
+          this.addAppDirectory(url).catch(err => {
+            this.logger.error(
+              `[SailDesktopAgent] Failed to load app directory ${url}:`,
+              err instanceof Error ? err : new Error(String(err)),
+            )
+          }),
+        ),
+      ).then(() => undefined)
+    } else {
+      this.directoriesLoaded = Promise.resolve()
+    }
+  }
+
+  /**
+   * Wire edge → agent callbacks after `appConnection` is assigned.
+   * Intent-resolution wiring only when the edge declares that capability (browser: yes;
+   * minimal test edges: no — raiseIntent auto-selects the first handler).
+   */
+  private bindEdgeCallbacks(): void {
     if (typeof this.appConnection.requestIntentResolution === "function") {
       const conn = this.appConnection
       this.requestIntentResolution = request => conn.requestIntentResolution!(request)
@@ -182,7 +209,7 @@ export class SailDesktopAgent<
     this.appConnection.bindAgentState?.({
       getAgentState: () => this.getState(),
       setAgentState: callback => {
-        this.updateState(callback)
+        this.setState(callback)
       },
     })
 
@@ -193,7 +220,15 @@ export class SailDesktopAgent<
     this.appConnection.setOnAgentDisconnect?.(() => {
       this.handleDisconnect()
     })
+  }
 
+  /**
+   * Build grouped host controllers and wire intent-resolver / lifecycle listeners on the edge.
+   */
+  private buildControllers(
+    providedIntentResolver: IntentResolver | undefined,
+    localOptions: Omit<SailDesktopAgentOptions<TEdge>, "intentResolver">,
+  ): SailDesktopAgentHostControllers {
     const wcpIntentResolutionTimeout =
       localOptions.appConnectionOptions?.intentResolutionTimeout ??
       DEFAULT_INTENT_RESOLUTION_TIMEOUT_MS
@@ -205,8 +240,8 @@ export class SailDesktopAgent<
       })
     const resolverUI = hasIntentResolverUI(hostIntentResolver) ? hostIntentResolver : undefined
 
-    this.intentResolver = createIntentResolverController(resolverUI)
-    this.channels = createChannelsController(
+    const intentResolver = createIntentResolverController(resolverUI)
+    const channels = createChannelsController(
       {
         getUserChannels: () => this.getUserChannels(),
         getAppChannelId: instanceId => this.getAppUserChannelId(instanceId),
@@ -225,7 +260,7 @@ export class SailDesktopAgent<
       },
       this.appConnection,
     )
-    this.apps = createAppsController(
+    const apps = createAppsController(
       {
         add: app => this.addApp(app),
         addAll: apps => this.addApps(apps),
@@ -245,20 +280,7 @@ export class SailDesktopAgent<
     wireIntentResolver(this.appConnection, hostIntentResolver, this.logger)
     wireLifecycleCallbacks(this.appConnection, this.logger, localOptions)
 
-    if (localOptions.appDirectories && localOptions.appDirectories.length > 0) {
-      this.directoriesLoaded = Promise.all(
-        localOptions.appDirectories.map(url =>
-          this.addAppDirectory(url).catch(err => {
-            this.logger.error(
-              `[SailDesktopAgent] Failed to load app directory ${url}:`,
-              err instanceof Error ? err : new Error(String(err)),
-            )
-          }),
-        ),
-      ).then(() => undefined)
-    } else {
-      this.directoriesLoaded = Promise.resolve()
-    }
+    return { intentResolver, channels, apps }
   }
 
   /**
@@ -269,13 +291,10 @@ export class SailDesktopAgent<
       throw new Error("DesktopAgent is already started")
     }
 
-    this.appConnection?.start()
-
-    if (this.appConnection) {
-      this.appConnection.onAppMessage(message => {
-        void this.handleMessage(message)
-      })
-    }
+    this.appConnection.start()
+    this.appConnection.onAppMessage(message => {
+      void this.handleMessage(message)
+    })
 
     this.isStarted = true
   }
@@ -288,7 +307,7 @@ export class SailDesktopAgent<
       return
     }
 
-    this.appConnection?.stop()
+    this.appConnection.stop()
     this.isStarted = false
   }
 
@@ -390,10 +409,6 @@ export class SailDesktopAgent<
 
   private createHandlerContext(instanceId: string): DACPHandlerContext {
     const conn = this.appConnection
-
-    const setState: StateSetter = callback => {
-      this.state = callback(this.state)
-    }
     const responses = createDacpResponseDispatcherFromDelivery(conn, message =>
       conn.connectionRegistry.sendToAppInstance(message),
     )
@@ -402,7 +417,7 @@ export class SailDesktopAgent<
       responses,
       instanceId,
       getState: () => this.getState(),
-      setState,
+      setState: callback => this.setState(callback),
       appLauncher: this.appLauncher,
       requestIntentResolution: this.requestIntentResolution,
       validation: this.validation,
@@ -423,7 +438,7 @@ export class SailDesktopAgent<
     return this.state
   }
 
-  private updateState(callback: Parameters<StateSetter>[0]): void {
+  private setState(callback: Parameters<StateSetter>[0]): void {
     this.state = callback(this.state)
   }
 
@@ -506,16 +521,16 @@ export class SailDesktopAgent<
   }
 
   private getAppConnection(instanceId: string): AppConnectionMetadata | undefined {
-    return this.appConnection?.getConnection(instanceId)
+    return this.appConnection.getConnection(instanceId)
   }
 
   private getAppConnections(): AppConnectionMetadata[] {
-    return this.appConnection?.getConnections() ?? []
+    return this.appConnection.getConnections()
   }
 
   disconnectInstance(instanceId: string): void {
     cleanupDACPHandlers(this.createHandlerContext(instanceId))
-    this.appConnection?.pruneAppConnection(instanceId)
+    this.appConnection.pruneAppConnection(instanceId)
   }
 
   exportState(): string {
