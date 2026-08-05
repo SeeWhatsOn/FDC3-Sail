@@ -33,7 +33,7 @@ function seedConnectedInstance(onChannel?: string) {
   state = connectInstance(state, {
     instanceId: INSTANCE_ID,
     appId: APP_ID,
-    metadata: { appId: APP_ID, name: APP_ID },
+    metadata: { name: APP_ID },
   })
   state = updateInstanceState(state, INSTANCE_ID, AppInstanceState.CONNECTED)
   if (onChannel) {

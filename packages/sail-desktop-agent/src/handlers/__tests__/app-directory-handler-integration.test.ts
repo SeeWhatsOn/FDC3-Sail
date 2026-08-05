@@ -33,7 +33,7 @@ function createConnectedCallerState() {
   state = connectInstance(state, {
     instanceId: "a1",
     appId: "portfolioApp",
-    metadata: { appId: "portfolioApp", name: "portfolioApp" },
+    metadata: { name: "portfolioApp" },
   })
   state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
   return state

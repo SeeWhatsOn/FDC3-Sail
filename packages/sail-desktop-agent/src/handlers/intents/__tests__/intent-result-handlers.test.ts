@@ -49,12 +49,12 @@ function setupPendingIntentContext() {
   state = connectInstance(state, {
     instanceId: BASE.sourceInstanceId,
     appId: BASE.sourceAppId,
-    metadata: { appId: BASE.sourceAppId, name: BASE.sourceAppId },
+    metadata: { name: BASE.sourceAppId },
   })
   state = connectInstance(state, {
     instanceId: BASE.targetInstanceId,
     appId: BASE.targetAppId,
-    metadata: { appId: BASE.targetAppId, name: BASE.targetAppId },
+    metadata: { name: BASE.targetAppId },
   })
   state = updateInstanceState(state, BASE.sourceInstanceId, AppInstanceState.CONNECTED)
   state = updateInstanceState(state, BASE.targetInstanceId, AppInstanceState.CONNECTED)

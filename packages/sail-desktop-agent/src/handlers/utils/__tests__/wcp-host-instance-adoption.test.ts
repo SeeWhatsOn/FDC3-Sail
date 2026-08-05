@@ -16,7 +16,7 @@ function createStateWithPendingInstances(instanceIds: string[]) {
     state = connectInstance(state, {
       instanceId,
       appId: MOCK_APP_ID,
-      metadata: { appId: MOCK_APP_ID, name: MOCK_APP_ID },
+      metadata: { name: MOCK_APP_ID },
     })
   }
   return state

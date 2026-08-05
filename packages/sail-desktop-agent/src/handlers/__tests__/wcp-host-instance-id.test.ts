@@ -51,7 +51,7 @@ function createAgentWithSourceInstance(options?: { openContextListenerTimeoutMs?
     connectInstance(initialState, {
       instanceId: SOURCE_INSTANCE_ID,
       appId: PORTFOLIO_APP.appId,
-      metadata: { appId: PORTFOLIO_APP.appId, name: PORTFOLIO_APP.appId },
+      metadata: { name: PORTFOLIO_APP.appId },
     }),
     SOURCE_INSTANCE_ID,
     AppInstanceState.CONNECTED,
@@ -196,12 +196,12 @@ describe("host-assigned instanceId at WCP4", () => {
         connectInstance(initialState, {
           instanceId: SOURCE_INSTANCE_ID,
           appId: PORTFOLIO_APP.appId,
-          metadata: { appId: PORTFOLIO_APP.appId, name: PORTFOLIO_APP.appId },
+          metadata: { name: PORTFOLIO_APP.appId },
         }),
         {
           instanceId: HOST_INSTANCE_ID,
           appId: CHART_APP.appId,
-          metadata: { appId: CHART_APP.appId, name: CHART_APP.appId },
+          metadata: { name: CHART_APP.appId },
         },
       ),
       SOURCE_INSTANCE_ID,
@@ -234,7 +234,7 @@ describe("host-assigned instanceId at WCP4", () => {
     const stateWithInstances = connectInstance(initialState, {
       instanceId: HOST_INSTANCE_ID,
       appId: CHART_APP.appId,
-      metadata: { appId: CHART_APP.appId, name: CHART_APP.appId },
+      metadata: { name: CHART_APP.appId },
     })
 
     const { agent, connection } = createDesktopAgentWithTestConnection({

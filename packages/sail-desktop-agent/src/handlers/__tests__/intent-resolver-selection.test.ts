@@ -32,7 +32,7 @@ function connectAppInstance(
   let nextState = connectInstance(state, {
     appId,
     instanceId,
-    metadata: { appId, title },
+    metadata: { title },
   })
   nextState = updateInstanceState(nextState, instanceId, AppInstanceState.CONNECTED)
   return nextState

@@ -21,7 +21,7 @@ function seedConnectedInstance(agent: SailDesktopAgent, instanceId: string, appI
   let state = connectInstance(agent.getState(), {
     instanceId,
     appId,
-    metadata: { appId, name: appId },
+    metadata: { name: appId },
   })
   state = updateInstanceState(state, instanceId, AppInstanceState.CONNECTED)
   internal.state = state

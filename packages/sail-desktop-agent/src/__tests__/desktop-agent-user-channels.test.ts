@@ -66,7 +66,7 @@ function seedConnectedInstance(state: AgentState, instanceId: string, appId: str
   const next = connectInstance(state, {
     instanceId,
     appId,
-    metadata: { appId, name: appId },
+    metadata: { name: appId },
   })
   return updateInstanceState(next, instanceId, AppInstanceState.CONNECTED)
 }

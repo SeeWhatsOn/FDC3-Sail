@@ -157,7 +157,12 @@ export interface DesktopAgentOpenOptions {
 export interface DesktopAgentAppInstance {
   appId: string
   instanceId: string
-  status: "pending" | "connected"
+  /**
+   * Derived from {@link AppInstanceState} rather than restated, so the two can't drift.
+   * Stays a string union (not the enum itself) because hosts compare it to string
+   * literals — e.g. `sail-one`'s `SailHost.getAppInstanceState`.
+   */
+  status: `${AppInstanceState}`
   currentUserChannel?: string | null
 }
 
@@ -175,7 +180,7 @@ export function mapToDesktopAgentAppInstance(instance: AppInstance): DesktopAgen
   return {
     appId: instance.appId,
     instanceId: instance.instanceId,
-    status: instance.state === AppInstanceState.CONNECTED ? "connected" : "pending",
+    status: instance.state,
     currentUserChannel: instance.currentUserChannel,
   }
 }

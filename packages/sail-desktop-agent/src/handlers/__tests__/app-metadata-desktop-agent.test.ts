@@ -31,7 +31,7 @@ function createConnectedCallerState() {
   state = connectInstance(state, {
     instanceId: "a1",
     appId: "portfolioApp",
-    metadata: { appId: "portfolioApp", name: "portfolioApp" },
+    metadata: { name: "portfolioApp" },
   })
   state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
   return state
@@ -116,7 +116,7 @@ describe("app directory vs runtime instance separation", () => {
     state = connectInstance(state, {
       instanceId: "chart-456",
       appId: "chartApp",
-      metadata: { appId: "chartApp", name: "chartApp" },
+      metadata: { name: "chartApp" },
     })
     state = updateInstanceState(state, "chart-456", AppInstanceState.CONNECTED)
     state = withCatalogApps(state, [chartApp])

@@ -98,7 +98,6 @@ async function connectTestAppInstance(
         instanceId,
         appId,
         metadata: {
-          appId,
           name: appId,
         },
       }),
@@ -184,7 +183,7 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
         connectInstance(currentState, {
           instanceId: uuid,
           appId: fallbackAppId,
-          metadata: { appId: fallbackAppId, name: fallbackAppId },
+          metadata: { name: fallbackAppId },
         }),
       )
     }
@@ -193,7 +192,7 @@ When("{string} sends validate", async function (this: CustomWorld, uuid: string)
         connectInstance(currentState, {
           instanceId: uuid,
           appId,
-          metadata: { appId, name: appId },
+          metadata: { name: appId },
         }),
       )
     }

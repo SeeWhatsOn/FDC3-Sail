@@ -81,7 +81,7 @@ describe("startHeartbeat disconnect alignment", () => {
     state = connectInstance(state, {
       instanceId: validatedInstanceId,
       appId: "TestApp",
-      metadata: { appId: "TestApp", name: "TestApp" },
+      metadata: { name: "TestApp" },
     })
     state = updateInstanceState(state, validatedInstanceId, AppInstanceState.CONNECTED)
 

@@ -29,12 +29,12 @@ describe("handleBroadcastRequest stale instance routing", () => {
     state = connectInstance(state, {
       instanceId: validatedInstanceId,
       appId: "Conformance1",
-      metadata: { appId: "Conformance1", name: "Conformance1" },
+      metadata: { name: "Conformance1" },
     })
     state = connectInstance(state, {
       instanceId: listenerInstanceId,
       appId: "MockAppId",
-      metadata: { appId: "MockAppId", name: "MockAppId" },
+      metadata: { name: "MockAppId" },
     })
     state = updateInstanceState(state, validatedInstanceId, AppInstanceState.CONNECTED)
     state = updateInstanceState(state, listenerInstanceId, AppInstanceState.CONNECTED)
@@ -108,13 +108,13 @@ describe("handleBroadcastRequest stale instance routing", () => {
     state = connectInstance(state, {
       instanceId: connectedSenderId,
       appId,
-      metadata: { appId, name: appId },
+      metadata: { name: appId },
     })
     state = updateInstanceState(state, connectedSenderId, AppInstanceState.CONNECTED)
     state = connectInstance(state, {
       instanceId: pendingTargetId,
       appId,
-      metadata: { appId, name: appId },
+      metadata: { name: appId },
     })
     state = createAppChannel(state, appControlChannelId)
     state = addPendingOpenWithContext(state, pendingTargetId, {
@@ -178,12 +178,12 @@ describe("handleBroadcastRequest stale instance routing", () => {
     state = connectInstance(state, {
       instanceId: sourceInstanceId,
       appId: "Conformance1",
-      metadata: { appId: "Conformance1", name: "Conformance1" },
+      metadata: { name: "Conformance1" },
     })
     state = connectInstance(state, {
       instanceId: targetInstanceId,
       appId,
-      metadata: { appId, name: appId },
+      metadata: { name: appId },
     })
     state = updateInstanceState(state, sourceInstanceId, AppInstanceState.CONNECTED)
     state = updateInstanceState(state, targetInstanceId, AppInstanceState.CONNECTED)

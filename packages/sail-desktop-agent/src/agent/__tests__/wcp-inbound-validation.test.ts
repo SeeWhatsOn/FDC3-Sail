@@ -81,7 +81,7 @@ describe("WCP inbound schema validation (strict)", () => {
       const withInstance = connectInstance(state, {
         instanceId,
         appId: "test-app",
-        metadata: { appId: "test-app", name: "Test App" },
+        metadata: { name: "Test App" },
       })
       return updateInstanceState(withInstance, instanceId, AppInstanceState.CONNECTED)
     })

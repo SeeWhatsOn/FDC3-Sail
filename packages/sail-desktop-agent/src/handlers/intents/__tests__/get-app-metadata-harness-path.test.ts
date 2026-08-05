@@ -46,7 +46,7 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
       connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
         instanceId: "caller-1",
         appId: "conformance1",
-        metadata: { appId: "conformance1", name: "conformance1" },
+        metadata: { name: "conformance1" },
       }),
       "caller-1",
       AppInstanceState.CONNECTED,
@@ -90,12 +90,12 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
     initialState = connectInstance(initialState, {
       instanceId: "caller-1",
       appId: "conformance1",
-      metadata: { appId: "conformance1", name: "conformance1" },
+      metadata: { name: "conformance1" },
     })
     initialState = connectInstance(initialState, {
       instanceId: "intent-a-instance",
       appId: CONFORMANCE_APP.appId,
-      metadata: { appId: CONFORMANCE_APP.appId, name: CONFORMANCE_APP.appId },
+      metadata: { name: CONFORMANCE_APP.appId },
     })
     initialState = updateInstanceState(initialState, "caller-1", AppInstanceState.CONNECTED)
     initialState = updateInstanceState(
@@ -141,7 +141,7 @@ describe("getAppMetadata harness-equivalent DesktopAgent path", () => {
       connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
         instanceId: "caller-1",
         appId: "conformance1",
-        metadata: { appId: "conformance1", name: "conformance1" },
+        metadata: { name: "conformance1" },
       }),
       "caller-1",
       AppInstanceState.CONNECTED,

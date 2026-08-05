@@ -21,7 +21,7 @@ function connectListenerInstance(instanceId: string) {
   state = connectInstance(state, {
     instanceId,
     appId: "PortfolioApp",
-    metadata: { appId: "PortfolioApp", name: "PortfolioApp" },
+    metadata: { name: "PortfolioApp" },
   })
   return updateInstanceState(state, instanceId, AppInstanceState.CONNECTED)
 }

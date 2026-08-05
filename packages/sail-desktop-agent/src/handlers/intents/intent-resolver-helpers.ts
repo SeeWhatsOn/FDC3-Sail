@@ -65,7 +65,7 @@ function appToMetadata(
 ): AppMetadata {
   const intentDef = app?.interop?.intents?.listensFor?.[intentName]
   const resultType = typeof intentDef?.resultType === "string" ? intentDef.resultType : undefined
-  const instanceMetadata = instance?.instanceMetadata ?? instance?.metadata.instanceMetadata
+  const instanceMetadata = instance?.instanceMetadata
 
   return {
     appId,

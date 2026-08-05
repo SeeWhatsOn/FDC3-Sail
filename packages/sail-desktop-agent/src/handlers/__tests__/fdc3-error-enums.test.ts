@@ -28,7 +28,7 @@ function createConnectedHandlerContext(instanceId: string) {
   state = connectInstance(state, {
     instanceId,
     appId: "TestApp",
-    metadata: { appId: "TestApp", name: "TestApp" },
+    metadata: { name: "TestApp" },
   })
   state = updateInstanceState(state, instanceId, AppInstanceState.CONNECTED)
 

@@ -163,7 +163,7 @@ describe("state-owned app directory intent discovery contract", () => {
     state = connectInstance(state, {
       instanceId: "running-instance",
       appId: "IntentAppAId",
-      metadata: { appId: "IntentAppAId", name: "IntentAppA" },
+      metadata: { name: "IntentAppA" },
     })
     state = updateInstanceState(state, "running-instance", AppInstanceState.CONNECTED)
     state = registerIntentListener(state, {
@@ -208,7 +208,7 @@ describe("state-owned app directory intent discovery contract", () => {
     state = connectInstance(state, {
       instanceId: "a1",
       appId: "TestApp",
-      metadata: { appId: "TestApp", name: "TestApp" },
+      metadata: { name: "TestApp" },
     })
     state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
 

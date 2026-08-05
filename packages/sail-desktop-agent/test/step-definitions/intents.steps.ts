@@ -54,7 +54,6 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
             instanceId,
             appId: meta.source.appId,
             metadata: {
-              appId: meta.source.appId,
               name: meta.source.appId,
             },
           }),

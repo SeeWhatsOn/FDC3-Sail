@@ -20,7 +20,7 @@ describe("handleAddIntentListener intent conflict (FDC3 3.0)", () => {
     state = connectInstance(state, {
       instanceId,
       appId: "App1",
-      metadata: { appId: "App1", name: "App1" },
+      metadata: { name: "App1" },
     })
     state = updateInstanceState(state, instanceId, AppInstanceState.CONNECTED)
 

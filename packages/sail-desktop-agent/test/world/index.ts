@@ -130,7 +130,7 @@ export class CustomWorld extends World {
         connectInstance(state, {
           instanceId,
           appId,
-          metadata: { appId, name: appId },
+          metadata: { name: appId },
         }),
       )
     }

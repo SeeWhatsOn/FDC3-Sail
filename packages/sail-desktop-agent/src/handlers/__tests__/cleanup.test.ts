@@ -89,7 +89,7 @@ function connectTestInstance(instanceId: string): AgentState {
   state = connectInstance(state, {
     instanceId,
     appId: "TestApp",
-    metadata: { appId: "TestApp", name: "TestApp" },
+    metadata: { name: "TestApp" },
   })
   return updateInstanceState(state, instanceId, AppInstanceState.CONNECTED)
 }
@@ -123,12 +123,12 @@ describe("cleanupDACPHandlers", () => {
     state = connectInstance(state, {
       instanceId: "a1",
       appId: "App1",
-      metadata: { appId: "App1", name: "App1" },
+      metadata: { name: "App1" },
     })
     state = connectInstance(state, {
       instanceId: "l1",
       appId: "portfolioApp",
-      metadata: { appId: "portfolioApp", name: "portfolioApp" },
+      metadata: { name: "portfolioApp" },
     })
     state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
     state = updateInstanceState(state, "l1", AppInstanceState.CONNECTED)
@@ -167,12 +167,12 @@ describe("cleanupDACPHandlers", () => {
     state = connectInstance(state, {
       instanceId: "a1",
       appId: "App1",
-      metadata: { appId: "App1", name: "App1" },
+      metadata: { name: "App1" },
     })
     state = connectInstance(state, {
       instanceId: "l1",
       appId: "portfolioApp",
-      metadata: { appId: "portfolioApp", name: "portfolioApp" },
+      metadata: { name: "portfolioApp" },
     })
     state = addPendingIntent(state, {
       requestId: "req-target-disconnect",
@@ -201,12 +201,12 @@ describe("cleanupDACPHandlers", () => {
     state = connectInstance(state, {
       instanceId: "a1",
       appId: "portfolioApp",
-      metadata: { appId: "portfolioApp", name: "portfolioApp" },
+      metadata: { name: "portfolioApp" },
     })
     state = connectInstance(state, {
       instanceId: "uuid-0",
       appId: "chartApp",
-      metadata: { appId: "chartApp", name: "chartApp" },
+      metadata: { name: "chartApp" },
     })
     state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
     state = updateInstanceState(state, "uuid-0", AppInstanceState.CONNECTED)
@@ -272,12 +272,12 @@ describe("cleanupDACPHandlers", () => {
     state = connectInstance(state, {
       instanceId: "a1",
       appId: "launcherApp",
-      metadata: { appId: "launcherApp", name: "launcherApp" },
+      metadata: { name: "launcherApp" },
     })
     state = connectInstance(state, {
       instanceId: "uuid-0",
       appId: "chartApp",
-      metadata: { appId: "chartApp", name: "chartApp" },
+      metadata: { name: "chartApp" },
     })
     state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
     state = updateInstanceState(state, "uuid-0", AppInstanceState.CONNECTED)
@@ -343,7 +343,7 @@ describe("cleanupDACPHandlers", () => {
     state = connectInstance(state, {
       instanceId: "a1",
       appId: "launcherApp",
-      metadata: { appId: "launcherApp", name: "launcherApp" },
+      metadata: { name: "launcherApp" },
     })
     state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
 

@@ -5,7 +5,7 @@
  */
 
 import type { Context, BrowserTypes } from "@finos/fdc3"
-import type { AgentState, PrivateChannel, StoredContext } from "../types"
+import type { AgentState, PrivateChannelState, StoredContext } from "../types"
 
 type Channel = BrowserTypes.Channel
 
@@ -23,9 +23,9 @@ export const getAllAppChannels = (state: AgentState): Channel[] => Object.values
 export const getPrivateChannel = (
   state: AgentState,
   channelId: string,
-): PrivateChannel | undefined => state.channels.private[channelId]
+): PrivateChannelState | undefined => state.channels.private[channelId]
 
-export const getAllPrivateChannels = (state: AgentState): PrivateChannel[] =>
+export const getAllPrivateChannels = (state: AgentState): PrivateChannelState[] =>
   Object.values(state.channels.private)
 
 export const getChannelContext = (

@@ -26,7 +26,7 @@ describe("resolveDacpHandlerInstanceId", () => {
     const initialState = connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
       instanceId: hostInstanceId,
       appId: CHART_APP_ID,
-      metadata: { appId: CHART_APP_ID, name: CHART_APP_ID },
+      metadata: { name: CHART_APP_ID },
     })
 
     const { context } = createDACPTestContext({
@@ -55,7 +55,7 @@ describe("resolveDacpHandlerInstanceId", () => {
     const initialState = connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
       instanceId: validatedInstanceId,
       appId: CHART_APP_ID,
-      metadata: { appId: CHART_APP_ID, name: CHART_APP_ID },
+      metadata: { name: CHART_APP_ID },
     })
     const stateWithLink = linkHandshakeRoutingId(
       initialState,
@@ -89,7 +89,7 @@ describe("resolveDacpHandlerInstanceId", () => {
       connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
         instanceId: liveInstanceId,
         appId: claimedAppId,
-        metadata: { appId: claimedAppId, name: claimedAppId },
+        metadata: { name: claimedAppId },
       }),
       liveInstanceId,
       AppInstanceState.CONNECTED,
@@ -123,7 +123,7 @@ describe("resolveDacpHandlerInstanceId", () => {
       connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
         instanceId: victimInstanceId,
         appId: victimAppId,
-        metadata: { appId: victimAppId, name: victimAppId },
+        metadata: { name: victimAppId },
       }),
       victimInstanceId,
       AppInstanceState.CONNECTED,
@@ -171,7 +171,7 @@ describe("resolveDacpHandlerInstanceId", () => {
       connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
         instanceId: hostInstanceId,
         appId: CHART_APP_ID,
-        metadata: { appId: CHART_APP_ID, name: CHART_APP_ID },
+        metadata: { name: CHART_APP_ID },
       }),
       hostInstanceId,
       {
@@ -223,7 +223,7 @@ describe("resolveDacpHandlerInstanceId", () => {
       connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
         instanceId: connectedSenderId,
         appId,
-        metadata: { appId, name: appId },
+        metadata: { name: appId },
       }),
       connectedSenderId,
       AppInstanceState.CONNECTED,
@@ -232,7 +232,7 @@ describe("resolveDacpHandlerInstanceId", () => {
       connectInstance(withConnected, {
         instanceId: pendingTargetId,
         appId,
-        metadata: { appId, name: appId },
+        metadata: { name: appId },
       }),
       pendingTargetId,
       {
@@ -271,7 +271,7 @@ describe("resolveDacpHandlerInstanceId", () => {
       connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
         instanceId: "live-conformance-one",
         appId,
-        metadata: { appId, name: appId },
+        metadata: { name: appId },
       }),
       "live-conformance-one",
       AppInstanceState.CONNECTED,
@@ -280,7 +280,7 @@ describe("resolveDacpHandlerInstanceId", () => {
       connectInstance(withFirst, {
         instanceId: "live-conformance-two",
         appId,
-        metadata: { appId, name: appId },
+        metadata: { name: appId },
       }),
       "live-conformance-two",
       AppInstanceState.CONNECTED,

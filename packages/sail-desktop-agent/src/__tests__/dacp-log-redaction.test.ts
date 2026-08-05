@@ -59,7 +59,7 @@ function createConnectedRaiseIntentContext(options: {
   state = connectInstance(state, {
     instanceId,
     appId: "SourceApp",
-    metadata: { appId: "SourceApp", name: "SourceApp" },
+    metadata: { name: "SourceApp" },
   })
   state = updateInstanceState(state, instanceId, AppInstanceState.CONNECTED)
 

@@ -5,9 +5,9 @@
  */
 
 import { produce } from "immer"
-import type { AgentState, EventListener } from "../types"
+import type { AgentState, AgentEventListener } from "../types"
 
-export const addEventListener = (state: AgentState, listener: EventListener): AgentState => {
+export const addEventListener = (state: AgentState, listener: AgentEventListener): AgentState => {
   return produce(state, draft => {
     draft.events.listeners[listener.listenerId] = listener
 

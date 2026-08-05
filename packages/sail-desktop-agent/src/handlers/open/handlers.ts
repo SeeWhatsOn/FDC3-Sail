@@ -156,7 +156,6 @@ export async function handleOpenRequest(
           instanceId: launchedInstanceId,
           appId: appMetadata.appId,
           metadata: {
-            appId: appMetadata.appId,
             name: appMetadata.name,
             title: appMetadata.title,
             description: appMetadata.description,

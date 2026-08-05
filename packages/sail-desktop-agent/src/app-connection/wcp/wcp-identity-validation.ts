@@ -311,7 +311,6 @@ function createAppInstance(
       instanceId,
       appId: appMetadata.appId,
       metadata: {
-        appId: appMetadata.appId,
         name: appMetadata.name,
         title: appMetadata.title,
         description: appMetadata.description,

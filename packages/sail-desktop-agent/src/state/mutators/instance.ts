@@ -5,8 +5,7 @@
  */
 
 import { produce } from "immer"
-import type { AppMetadata } from "@finos/fdc3"
-import type { AgentState, AppInstance } from "../types"
+import type { AgentState, AppInstance, AppInstanceMetadata } from "../types"
 import { AppInstanceState } from "../types"
 
 export const connectInstance = (
@@ -14,7 +13,7 @@ export const connectInstance = (
   params: {
     instanceId: string
     appId: string
-    metadata: AppMetadata
+    metadata: AppInstanceMetadata
     instanceMetadata?: AppInstance["instanceMetadata"]
   },
 ): AgentState => {

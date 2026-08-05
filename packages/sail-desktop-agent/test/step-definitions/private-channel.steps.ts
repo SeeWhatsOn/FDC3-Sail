@@ -33,7 +33,6 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
           instanceId,
           appId: meta.source.appId,
           metadata: {
-            appId: meta.source.appId,
             name: meta.source.appId,
           },
         }),
@@ -56,9 +55,7 @@ Given(
   function (this: CustomWorld, app: string, channelId: string) {
     const instanceId = ensureAppInstance(this, app)
     const resolvedChannelId = handleResolve(channelId, this) ?? channelId
-    this.updateState(state =>
-      connectInstanceToPrivateChannel(state, resolvedChannelId, instanceId),
-    )
+    this.updateState(state => connectInstanceToPrivateChannel(state, resolvedChannelId, instanceId))
   },
 )
 

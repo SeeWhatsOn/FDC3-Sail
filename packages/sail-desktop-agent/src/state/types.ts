@@ -33,6 +33,27 @@ export type InstanceContextListener = {
 }
 
 /**
+ * Instance-disambiguation fields — the FDC3 `AppMetadata.instanceMetadata` slot.
+ *
+ * Not derived from {@link AppMetadata} because FDC3 types that slot with an `any` index
+ * signature; `unknown` keeps host-supplied extras honest at the read site.
+ */
+export interface InstanceMetadata {
+  title?: string
+  parentInstanceId?: string
+  [key: string]: unknown
+}
+
+/**
+ * Directory-sourced descriptive metadata for an instance.
+ *
+ * Identity (`appId` / `instanceId`) lives on {@link AppInstance} itself and instance
+ * disambiguation in {@link AppInstance.instanceMetadata}, so those slots are omitted here
+ * rather than stored a second time with nothing keeping the two copies in sync.
+ */
+export type AppInstanceMetadata = Omit<AppMetadata, "appId" | "instanceId" | "instanceMetadata">
+
+/**
  * Core FDC3 app instance information
  */
 export interface AppInstance {
@@ -42,8 +63,8 @@ export interface AppInstance {
   /** FDC3 app identifier */
   appId: string
 
-  /** App metadata from directory */
-  metadata: AppMetadata
+  /** Descriptive app metadata from directory (identity omitted — see {@link AppInstanceMetadata}) */
+  metadata: AppInstanceMetadata
 
   /** Current connection state */
   state: AppInstanceState
@@ -64,11 +85,7 @@ export interface AppInstance {
   privateChannels: string[]
 
   /** Instance-specific metadata */
-  instanceMetadata?: {
-    title?: string
-    parentInstanceId?: string
-    [key: string]: unknown
-  }
+  instanceMetadata?: InstanceMetadata
 }
 
 // ============================================================================
@@ -155,13 +172,13 @@ export interface StoredContext {
 }
 
 /**
- * Private Channel metadata (internal registry representation)
- * This tracks the server-side state of a private channel
+ * Private channel registry entry — the agent-side state of a private channel.
+ *
+ * Named `PrivateChannelState`, not `PrivateChannel`, so it never shadows the app-facing
+ * `PrivateChannel` interface from `@finos/fdc3`. `id` and `displayMetadata` are inherited
+ * from {@link BrowserTypes.Channel}; only `type` is restated, to narrow it.
  */
-export interface PrivateChannel extends BrowserTypes.Channel {
-  /** Unique channel ID */
-  id: string
-
+export interface PrivateChannelState extends BrowserTypes.Channel {
   /** Type is always 'private' */
   type: "private"
 
@@ -178,58 +195,44 @@ export interface PrivateChannel extends BrowserTypes.Channel {
   connectedInstances: string[]
 
   /** Context listeners registered on this channel */
-  contextListeners: Record<string, ContextListener>
+  contextListeners: Record<string, PrivateChannelContextListener>
 
-  /** Event listeners for addContextListener events */
-  addContextListenerListeners: Record<string, AddContextListenerListener>
+  /** Event listeners for `addContextListener` events ({@link BrowserTypes.PrivateChannelEventType}) */
+  addContextListenerListeners: Record<string, PrivateChannelListener>
 
-  /** Event listeners for unsubscribe callbacks */
-  unsubscribeListeners: Record<string, UnsubscribeListener>
+  /** Event listeners for `unsubscribe` events */
+  unsubscribeListeners: Record<string, PrivateChannelListener>
 
-  /** Disconnect listeners for onDisconnect callbacks */
-  disconnectListeners: Record<string, DisconnectListener>
+  /** Event listeners for `disconnect` events */
+  disconnectListeners: Record<string, PrivateChannelListener>
 
   /**
    * FDC3 2.2: PrivateChannel.addEventListener(null, handler) — one listener receives
    * add-context-listener, unsubscribe, and disconnect lifecycle events.
    */
-  lifecycleCatchAllListeners: Record<string, AddContextListenerListener>
+  lifecycleCatchAllListeners: Record<string, PrivateChannelListener>
 
   /** Last context broadcast per context type */
   lastContextByType: Record<string, Context>
 }
 
 /**
- * Context listener on a private channel
+ * A listener registered on a private channel: which instance owns which listener id.
+ *
+ * One shape for every {@link BrowserTypes.PrivateChannelEventType} — `addContextListener`,
+ * `unsubscribe` and `disconnect` all record exactly this. Which event a registration is for
+ * is carried by the field it lives in on {@link PrivateChannelState}, not by its type.
  */
-interface ContextListener {
+export interface PrivateChannelListener {
   listenerId: string
   instanceId: string
+}
+
+/**
+ * Context listener on a private channel.
+ */
+export interface PrivateChannelContextListener extends PrivateChannelListener {
   contextType: string | null // null means all types
-}
-
-/**
- * Event listener for addContextListener on private channels
- */
-interface AddContextListenerListener {
-  listenerId: string
-  instanceId: string
-}
-
-/**
- * Unsubscribe listener for private channels
- */
-interface UnsubscribeListener {
-  listenerId: string
-  instanceId: string
-}
-
-/**
- * Disconnect listener for private channels
- */
-interface DisconnectListener {
-  listenerId: string
-  instanceId: string
 }
 
 // ============================================================================
@@ -237,9 +240,14 @@ interface DisconnectListener {
 // ============================================================================
 
 /**
- * Event listener registration
+ * DA-level event listener registration (`fdc3.addEventListener`).
+ *
+ * Named `AgentEventListener`, not `EventListener`, so it never shadows the DOM global of
+ * that name. `eventType` stays a plain `string` rather than `FDC3EventTypes`: handlers
+ * normalize the spec's variants to `"channelChanged"` and use an `"all"` sentinel for
+ * `addEventListener(null)` — see `ALL_DA_EVENT_TYPES`.
  */
-export interface EventListener {
+export interface AgentEventListener {
   listenerId: string
   instanceId: string
   eventType: string
@@ -315,7 +323,7 @@ export interface AgentState {
     /** App channels (dynamically created) keyed by channelId */
     app: Record<string, BrowserTypes.Channel>
     /** Private channels keyed by channelId */
-    private: Record<string, PrivateChannel>
+    private: Record<string, PrivateChannelState>
     /** Stored contexts: channelId -> contextType -> StoredContext */
     contexts: Record<string, Record<string, StoredContext>>
   }
@@ -323,7 +331,7 @@ export interface AgentState {
   /** Event-related state */
   events: {
     /** Event listeners keyed by listenerId */
-    listeners: Record<string, EventListener>
+    listeners: Record<string, AgentEventListener>
     /** Index: eventType -> listenerIds */
     byEventType: Record<string, string[]>
   }

@@ -497,10 +497,7 @@ export class SailDesktopAgent<
     this.state = connectInstance(this.state, {
       instanceId: params.instanceId,
       appId: params.appId,
-      metadata: {
-        appId: params.appId,
-        name: params.appId,
-      },
+      metadata: { name: params.appId },
     })
   }
 

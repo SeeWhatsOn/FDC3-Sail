@@ -57,7 +57,7 @@ describe("AppInstance state hardening contract", () => {
     const state = connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
       instanceId: "contract-instance",
       appId: "ContractApp",
-      metadata: { appId: "ContractApp", name: "ContractApp" },
+      metadata: { name: "ContractApp" },
     })
 
     const instance = state.instances["contract-instance"]
