@@ -14,6 +14,12 @@ export interface WCPHandshakeContext extends WCPRoutingContext {
   options: Required<AppConnectionOptions>
   /** Host-configured payload detail for MessagePortTransport logs. */
   logPayloadDetail: LogPayloadDetail
+  /**
+   * FDC3 version advertised in WCP3Handshake. Threaded from the agent's
+   * `implementationMetadata.fdc3Version` — the single source of truth, shared with WCP5,
+   * `getInfo` and `closeRequest` gating.
+   */
+  fdc3Version: string
 }
 
 /**
@@ -87,7 +93,7 @@ export function handleWCP1Hello(
       timestamp: new Date().toISOString(),
     },
     payload: {
-      fdc3Version: context.options.fdc3Version,
+      fdc3Version: context.fdc3Version,
       intentResolverUrl: context.options.getIntentResolverUrl(instanceId) ?? false,
       channelSelectorUrl: context.options.getChannelSelectorUrl(instanceId) ?? false,
     },

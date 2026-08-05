@@ -166,7 +166,6 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
       // Sail host UI is wired externally (no injected resolver/selector iframes).
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,
-      fdc3Version,
       resolveHostIdentifier: source => popupWatcher.findInstanceIdForPopup(source),
     },
     logPayloadDetail: debug ? "full" : "metadata",

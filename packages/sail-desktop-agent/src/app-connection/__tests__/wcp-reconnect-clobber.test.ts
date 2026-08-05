@@ -55,7 +55,6 @@ function createUnitConnectionContext(options?: {
       channelSelectorUrl: false,
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,
-      fdc3Version: "2.2",
       handshakeTimeout: 5000,
       disconnectGracePeriod: options?.disconnectGracePeriod ?? 2000,
       intentResolutionTimeout: 60000,

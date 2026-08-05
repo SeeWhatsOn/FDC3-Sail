@@ -70,7 +70,6 @@ describe("SailDesktopAgent lifecycle", () => {
       appConnectionOptions: {
         getIntentResolverUrl: () => false,
         getChannelSelectorUrl: () => false,
-        fdc3Version: "2.2",
       },
     })
     activeAgents.push(firstAgent)
@@ -82,7 +81,6 @@ describe("SailDesktopAgent lifecycle", () => {
       appConnectionOptions: {
         getIntentResolverUrl: () => false,
         getChannelSelectorUrl: () => false,
-        fdc3Version: "2.2",
       },
     })
     activeAgents.push(secondAgent)

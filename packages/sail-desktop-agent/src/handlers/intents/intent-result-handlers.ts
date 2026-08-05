@@ -81,7 +81,7 @@ export function handleIntentResultRequest(
       throw new Error(`No pending intent found for request: ${originalRequestId}`)
     }
 
-    const resolvedInstanceId = resolveDacpHandlerInstanceId(message, context)
+    const resolvedInstanceId = resolveDacpHandlerInstanceId(context)
     if (pendingIntent.targetInstanceId !== resolvedInstanceId) {
       throw new Error(
         `Intent result from wrong instance. Expected ${pendingIntent.targetInstanceId}, got ${resolvedInstanceId}`,

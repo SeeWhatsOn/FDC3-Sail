@@ -32,7 +32,7 @@ describe("createHarnessBootstrap", () => {
     try {
       expect(constructorSpy).toHaveBeenCalledOnce()
       expect(capturedOptions?.heartbeatEnabled).toBe(false)
-      expect(capturedOptions?.appConnectionOptions?.fdc3Version).toBe(HARNESS_FDC3_TARGET_VERSION)
+      expect(capturedOptions?.implementationMetadata?.fdc3Version).toBe(HARNESS_FDC3_TARGET_VERSION)
       // Assert against the constructed agent rather than re-running the internal merge.
       expect(bootstrap.desktopAgent.getImplementationMetadata().fdc3Version).toBe(
         HARNESS_FDC3_TARGET_VERSION,

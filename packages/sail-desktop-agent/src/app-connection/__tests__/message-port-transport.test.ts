@@ -58,7 +58,6 @@ function createMinimalWCPContext(): AppConnectionContext {
       channelSelectorUrl: false,
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,
-      fdc3Version: "2.2",
       handshakeTimeout: 5000,
       disconnectGracePeriod: 2000,
       intentResolutionTimeout: 60000,

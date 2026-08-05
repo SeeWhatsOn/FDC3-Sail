@@ -9,11 +9,21 @@ import { afterEach, describe, expect, it } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
-import { connectWcpApp, TEST_ORIGIN } from "./wcp-edge-test-helpers"
+import {
+  connectWcpApp,
+  createAddContextListenerMessage,
+  createBroadcastMessage,
+  createJoinUserChannelMessage,
+  INSTRUMENT_CONTEXT,
+  postDacpOnPort,
+  TEST_ORIGIN,
+  waitForPortMessage,
+} from "./wcp-edge-test-helpers"
 import { createTestAgent, PORTFOLIO_APP } from "./wcp-desktop-agent.integration.fixtures"
 
 const HOSTILE_ORIGIN = "https://evil.example"
 const HOSTILE_APP_ID = "hostile-spoofed-app"
+const CHANNEL_ID = "fdc3.channel.1"
 
 /**
  * Private on BrowserAppConnection — accessed only so these tests can assert the
@@ -97,6 +107,67 @@ describe("enrichMessageWithSource trusted metadata", () => {
     expect(meta.source?.instanceId).toBe(connected.validatedInstanceId)
     expect(meta.source?.appId).not.toBe(HOSTILE_APP_ID)
     expect(meta.source?.appId).toBe(stored?.appId)
+  })
+
+  it("attributes a broadcast to the sending port, not an app-claimed meta.hostInstanceId", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+
+    const victim = await connectWcpApp(agent, {
+      connectionAttemptUuid: "host-instance-victim-uuid",
+      appId: PORTFOLIO_APP.appId,
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+    const attacker = await connectWcpApp(agent, {
+      connectionAttemptUuid: "host-instance-attacker-uuid",
+      appId: PORTFOLIO_APP.appId,
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+    expect(victim.validatedInstanceId).not.toBe(attacker.validatedInstanceId)
+
+    // Victim listens on the channel both apps join, so it observes the attribution.
+    await postDacpOnPort(
+      victim.appPort,
+      createJoinUserChannelMessage(victim.validatedInstanceId, victim.appId, CHANNEL_ID),
+    )
+    await postDacpOnPort(
+      victim.appPort,
+      createAddContextListenerMessage(
+        victim.validatedInstanceId,
+        victim.appId,
+        CHANNEL_ID,
+        INSTRUMENT_CONTEXT.type,
+      ),
+    )
+    await postDacpOnPort(
+      attacker.appPort,
+      createJoinUserChannelMessage(attacker.validatedInstanceId, attacker.appId, CHANNEL_ID),
+    )
+
+    const deliveredPromise = waitForPortMessage<BrowserTypes.BroadcastEvent>(
+      victim.appPort,
+      data => (data as { type?: string })?.type === "broadcastEvent",
+    )
+
+    // The attacker names the victim — an instance that really does exist in state,
+    // which is what `resolveDacpHandlerInstanceId` checked before the field was removed.
+    const spoofed = createBroadcastMessage(
+      attacker.validatedInstanceId,
+      attacker.appId,
+      CHANNEL_ID,
+      INSTRUMENT_CONTEXT,
+    )
+    ;(spoofed.meta as unknown as Record<string, unknown>).hostInstanceId =
+      victim.validatedInstanceId
+
+    await postDacpOnPort(attacker.appPort, spoofed)
+    const delivered = await deliveredPromise
+
+    // Goes through bridgeAppPort -> validation -> enrich -> resolveDacpHandlerInstanceId.
+    // Fails if the field is re-added anywhere in that chain, not just at the strip.
+    const originatingApp = delivered.payload.originatingApp
+    expect(originatingApp?.instanceId).toBe(attacker.validatedInstanceId)
+    expect(originatingApp?.instanceId).not.toBe(victim.validatedInstanceId)
   })
 
   it("drops app-supplied messageOrigin when the connection has no stored origin", async () => {

@@ -41,7 +41,7 @@ export function handleBroadcastRequest(
   context: DACPHandlerContext,
 ): void {
   const { responses, getState, setState, logger } = context
-  const instanceId = resolveDacpHandlerInstanceId(message, context)
+  const instanceId = resolveDacpHandlerInstanceId(context)
   const handlerContext = { ...context, instanceId }
 
   try {
@@ -154,7 +154,7 @@ export function handleAddContextListener(
   context: DACPHandlerContext,
 ): void {
   const { responses, getState, setState, logger } = context
-  const instanceId = resolveDacpHandlerInstanceId(message, context)
+  const instanceId = resolveDacpHandlerInstanceId(context)
 
   try {
     const { channelId, contextType: payloadContextType } = message.payload
@@ -276,7 +276,7 @@ export function handleContextListenerUnsubscribe(
   context: DACPHandlerContext,
 ): void {
   const { responses, getState, setState, logger } = context
-  const instanceId = resolveDacpHandlerInstanceId(message, context)
+  const instanceId = resolveDacpHandlerInstanceId(context)
 
   try {
     const { listenerUUID } = message.payload

@@ -2,31 +2,24 @@ import { resolveLinkedInstanceId } from "../../state/selectors/wcp-handshake-rou
 import type { DACPHandlerContext } from "../types"
 import { getInstance } from "../../state/selectors"
 
-type MessageWithDacpInstanceMeta = {
-  meta?: {
-    hostInstanceId?: string
-    source?: { appId?: string; instanceId?: string }
-  }
-}
-
 /**
  * Resolve the agent instance bucket for DACP handlers during WCP handshake.
  *
- * Prefer an explicit host launcher id, then a registered MessagePort-routed id,
- * then the WCP5 handshake-routing link. Never guess identity from app-supplied
- * `meta.source.appId`.
+ * Prefer the registered MessagePort-routed id, then the WCP5 handshake-routing
+ * link. Never guess identity from app-supplied meta.
+ *
+ * Identity is deliberately derived only from what the DA itself registered. An
+ * earlier tier read `meta.hostInstanceId` — removed, because that field is
+ * app-authored on the wire and let any app act as another live instance
+ * (`closeRequest` reaches `appLauncher.close`). It is stripped at the trust
+ * boundary (`BrowserAppConnection.enrichMessageWithSource`), but resolving from
+ * it here would silently re-open the hole for any future edge that does not run
+ * that strip. Host-assigned ids belong in the WCP4 payload, where WCP4 adoption
+ * already handles them (`wcp-host-instance-adoption.ts`).
  */
-export function resolveDacpHandlerInstanceId(
-  message: MessageWithDacpInstanceMeta,
-  context: DACPHandlerContext,
-): string {
+export function resolveDacpHandlerInstanceId(context: DACPHandlerContext): string {
   const { instanceId, getState } = context
   const state = getState()
-  const hostInstanceId = message.meta?.hostInstanceId
-
-  if (hostInstanceId && getInstance(state, hostInstanceId)) {
-    return hostInstanceId
-  }
 
   // Prefer the MessagePort-routed instance when it is already registered. Pending
   // open-with-context targets are for a *different* instance awaiting a listener;

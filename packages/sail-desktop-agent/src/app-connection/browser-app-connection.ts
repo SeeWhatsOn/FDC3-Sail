@@ -49,11 +49,21 @@ import { AppConnectionRegistry } from "./app-connection-registry"
 export type { AppConnectionMetadata, AppConnectionOptions } from "./wcp/wcp-types"
 export type { AppConnectionEvents } from "./app-connection-events"
 
-/** Browser edge options: WCP handshake config plus DesktopAgent validation mode. */
+/**
+ * Browser edge options: host-settable WCP handshake config plus values threaded from
+ * {@link SailDesktopAgent} — validation mode, log payload detail, and the advertised FDC3 version.
+ */
 type BrowserAppConnectionOptions = AppConnectionOptions & {
   validation?: ValidationMode
   /** How much DACP/WCP payload to include in MessagePortTransport debug logs. */
   logPayloadDetail?: LogPayloadDetail
+  /**
+   * FDC3 version to advertise in WCP3Handshake. Threaded from the agent's
+   * `implementationMetadata.fdc3Version` so WCP3, WCP5, `getInfo` and `closeRequest` gating
+   * all read one setting. Not part of {@link AppConnectionOptions} — hosts set the version on
+   * `implementationMetadata`, not here.
+   */
+  fdc3Version: string
 }
 
 export class BrowserAppConnection extends AppConnectionEventEmitter {
@@ -62,6 +72,8 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
   private options: Required<AppConnectionOptions>
   private validation: ValidationMode
   private logPayloadDetail: LogPayloadDetail
+  /** Agent-threaded `implementationMetadata.fdc3Version`, advertised in WCP3Handshake. */
+  private fdc3Version: string
   private isStarted = false
   private appMessageHandler?: AppMessageHandler
   private boundHandleWindowMessage = this.handleWindowMessage.bind(this)
@@ -76,30 +88,30 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
   private setAgentState?: StateSetter
   private onInstanceTeardown?: (instanceId: string) => void
 
-  constructor(options?: BrowserAppConnectionOptions) {
+  constructor(options: BrowserAppConnectionOptions) {
     super()
-    const logger: Logger = options?.logger ?? consoleLogger
-    const intentResolverUrl = options?.intentResolverUrl ?? false
-    const channelSelectorUrl = options?.channelSelectorUrl ?? false
-    this.validation = options?.validation ?? "warn"
-    this.logPayloadDetail = options?.logPayloadDetail ?? "metadata"
+    const logger: Logger = options.logger ?? consoleLogger
+    const intentResolverUrl = options.intentResolverUrl ?? false
+    const channelSelectorUrl = options.channelSelectorUrl ?? false
+    this.validation = options.validation ?? "warn"
+    this.logPayloadDetail = options.logPayloadDetail ?? "metadata"
+    this.fdc3Version = options.fdc3Version
     this.options = {
       intentResolverUrl,
       channelSelectorUrl,
       getIntentResolverUrl:
-        options?.getIntentResolverUrl ??
-        (options?.intentResolverUrl !== undefined ? () => intentResolverUrl : () => false),
+        options.getIntentResolverUrl ??
+        (options.intentResolverUrl !== undefined ? () => intentResolverUrl : () => false),
       getChannelSelectorUrl:
-        options?.getChannelSelectorUrl ??
-        (options?.channelSelectorUrl !== undefined ? () => channelSelectorUrl : () => false),
-      fdc3Version: options?.fdc3Version ?? "2.2",
-      handshakeTimeout: options?.handshakeTimeout ?? 5000,
-      disconnectGracePeriod: options?.disconnectGracePeriod ?? 2000,
+        options.getChannelSelectorUrl ??
+        (options.channelSelectorUrl !== undefined ? () => channelSelectorUrl : () => false),
+      handshakeTimeout: options.handshakeTimeout ?? 5000,
+      disconnectGracePeriod: options.disconnectGracePeriod ?? 2000,
       intentResolutionTimeout:
-        options?.intentResolutionTimeout ?? DEFAULT_INTENT_RESOLUTION_TIMEOUT_MS,
-      debug: options?.debug ?? false,
+        options.intentResolutionTimeout ?? DEFAULT_INTENT_RESOLUTION_TIMEOUT_MS,
+      debug: options.debug ?? false,
       logger,
-      resolveHostIdentifier: options?.resolveHostIdentifier ?? (() => undefined),
+      resolveHostIdentifier: options.resolveHostIdentifier ?? (() => undefined),
     }
 
     this.connectionRegistry = new AppConnectionRegistry({
@@ -198,9 +210,12 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
     const trustedAppId = storedConnection?.appId
 
     // Strip app-authored identity fields before spreading — DA determines source/origin.
+    // `hostInstanceId` is included: handlers resolve identity from it, so an app that
+    // supplies its own could act as any other live instance.
     const {
       source: _appSource,
       messageOrigin: _appMessageOrigin,
+      hostInstanceId: _appHostInstanceId,
       ...safeMetaRest
     } = (currentMeta ?? {}) as Record<string, unknown>
 
@@ -364,6 +379,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
       ...this.getRoutingContext(),
       options: this.options,
       logPayloadDetail: this.logPayloadDetail,
+      fdc3Version: this.fdc3Version,
     }
   }
 }

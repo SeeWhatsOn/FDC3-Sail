@@ -113,12 +113,6 @@ export interface AppConnectionOptions {
   getChannelSelectorUrl?: (instanceId: string) => WcpInjectedUiUrl | undefined
 
   /**
-   * FDC3 version to advertise in WCP3Handshake.
-   * Defaults to "2.2"
-   */
-  fdc3Version?: string
-
-  /**
    * Timeout for WCP handshake completion (ms).
    * Defaults to 5000ms.
    */

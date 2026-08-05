@@ -405,7 +405,7 @@ export async function handleCloseRequest(
   context: DACPHandlerContext,
 ): Promise<void> {
   const { responses, appLauncher, logger, getState, implementationMetadata } = context
-  const targetInstanceId = resolveDacpHandlerInstanceId(message, context)
+  const targetInstanceId = resolveDacpHandlerInstanceId(context)
 
   // FDC3 3.0 behavior: closeRequest is only supported when the agent advertises 3.0.
   if (!isFdc3VersionAtLeast(implementationMetadata.fdc3Version, "3.0")) {

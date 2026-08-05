@@ -20,32 +20,28 @@ afterEach(() => {
 })
 
 describe("resolveDacpHandlerInstanceId", () => {
-  it("routes temp WCP connection id to host launcher placeholder instance", () => {
-    const hostInstanceId = "launcher-instance-id"
-    const tempInstanceId = "temp-wcp-handshake"
-    const initialState = connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
-      instanceId: hostInstanceId,
+  it("ignores app-authored meta.hostInstanceId naming another live instance", () => {
+    const victimInstanceId = "victim-instance-id"
+    const attackerInstanceId = "attacker-instance-id"
+    const withVictim = connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
+      instanceId: victimInstanceId,
+      appId: CHART_APP_ID,
+      metadata: { name: CHART_APP_ID },
+    })
+    const initialState = connectInstance(withVictim, {
+      instanceId: attackerInstanceId,
       appId: CHART_APP_ID,
       metadata: { name: CHART_APP_ID },
     })
 
     const { context } = createDACPTestContext({
-      instanceId: tempInstanceId,
+      instanceId: attackerInstanceId,
       initialState,
     })
 
-    const message = {
-      type: "addContextListenerRequest",
-      meta: {
-        requestUuid: "listener-1",
-        timestamp: new Date(),
-        hostInstanceId,
-        source: { appId: CHART_APP_ID, instanceId: tempInstanceId },
-      },
-      payload: { channelId: null, contextType: "*" },
-    } as BrowserTypes.AddContextListenerRequest
-
-    expect(resolveDacpHandlerInstanceId(message, context)).toBe(hostInstanceId)
+    // Even if the strip at the trust boundary were bypassed, identity must come
+    // from the registered port-derived id — never from message meta.
+    expect(resolveDacpHandlerInstanceId(context)).toBe(attackerInstanceId)
   })
 
   it("routes handshake routing id to validated instanceId after WCP4 handshake mapping", () => {
@@ -68,17 +64,7 @@ describe("resolveDacpHandlerInstanceId", () => {
       initialState: stateWithLink,
     })
 
-    const message = {
-      type: "addContextListenerRequest",
-      meta: {
-        requestUuid: "listener-2",
-        timestamp: new Date(),
-        source: { appId: CHART_APP_ID, instanceId: handshakeRoutingId },
-      },
-      payload: { channelId: null, contextType: "fdc3.instrument" },
-    } as BrowserTypes.AddContextListenerRequest
-
-    expect(resolveDacpHandlerInstanceId(message, context)).toBe(validatedInstanceId)
+    expect(resolveDacpHandlerInstanceId(context)).toBe(validatedInstanceId)
   })
 
   it("does not rebind an unregistered routing id to another app's sole connected instance", () => {
@@ -100,17 +86,7 @@ describe("resolveDacpHandlerInstanceId", () => {
       initialState,
     })
 
-    const message = {
-      type: "addContextListenerRequest",
-      meta: {
-        requestUuid: "listener-stale-source",
-        timestamp: new Date(),
-        source: { appId: claimedAppId, instanceId: unregisteredRoutingId },
-      },
-      payload: { channelId: "app-control", contextType: "windowClosed" },
-    } as BrowserTypes.AddContextListenerRequest
-
-    const resolved = resolveDacpHandlerInstanceId(message, context)
+    const resolved = resolveDacpHandlerInstanceId(context)
     expect(resolved).not.toBe(liveInstanceId)
     expect(resolved).toBe(unregisteredRoutingId)
   })
@@ -134,74 +110,10 @@ describe("resolveDacpHandlerInstanceId", () => {
       initialState,
     })
 
-    const message = {
-      type: "broadcastRequest",
-      meta: {
-        requestUuid: "spoofed-appid-broadcast",
-        timestamp: new Date(),
-        source: { appId: victimAppId, instanceId: attackerRoutingId },
-      },
-      payload: {
-        channelId: "app-control",
-        context: { type: "windowClosed", testId: "spoof-1" },
-      },
-    } as BrowserTypes.BroadcastRequest
-
-    const resolved = resolveDacpHandlerInstanceId(message, context)
+    const resolved = resolveDacpHandlerInstanceId(context)
     expect(resolved).not.toBe(victimInstanceId)
     expect(resolved).toBe(attackerRoutingId)
   })
-  it("routes to host launcher pending bucket when open-with-context is pending there", () => {
-    const hostInstanceId = "launcher-instance-id"
-    const tempRoutedInstanceId = "temp-wcp-not-in-registry"
-    const openRequest = {
-      type: "openRequest",
-      meta: {
-        requestUuid: "open-req-pending-host",
-        timestamp: new Date(),
-        source: { appId: "portfolioApp", instanceId: "source-1" },
-      },
-      payload: {
-        app: { appId: CHART_APP_ID, instanceId: hostInstanceId },
-        context: { type: "fdc3.instrument", id: { ticker: "AAPL" } },
-      },
-    } as BrowserTypes.OpenRequest
-
-    const initialState = addPendingOpenWithContext(
-      connectInstance(createInitialState(DEFAULT_FDC3_USER_CHANNELS), {
-        instanceId: hostInstanceId,
-        appId: CHART_APP_ID,
-        metadata: { name: CHART_APP_ID },
-      }),
-      hostInstanceId,
-      {
-        message: openRequest,
-        appIdentifier: { appId: CHART_APP_ID, instanceId: hostInstanceId },
-        launchContext: openRequest.payload.context!,
-        sourceInstanceId: "source-1",
-      },
-    )
-
-    const { context } = createDACPTestContext({
-      instanceId: tempRoutedInstanceId,
-      initialState,
-    })
-
-    // Explicit host launcher id — do not guess the pending bucket from message source.appId.
-    const message = {
-      type: "addContextListenerRequest",
-      meta: {
-        requestUuid: "listener-pending-host",
-        timestamp: new Date(),
-        hostInstanceId,
-        source: { appId: CHART_APP_ID, instanceId: tempRoutedInstanceId },
-      },
-      payload: { channelId: null, contextType: "fdc3.instrument" },
-    } as BrowserTypes.AddContextListenerRequest
-
-    expect(resolveDacpHandlerInstanceId(message, context)).toBe(hostInstanceId)
-  })
-
   it("keeps the connected sender when another instance has pending open-with-context", () => {
     const connectedSenderId = "connected-mock-instance"
     const pendingTargetId = "pending-mock-launch"
@@ -248,20 +160,7 @@ describe("resolveDacpHandlerInstanceId", () => {
       initialState,
     })
 
-    const message = {
-      type: "broadcastRequest",
-      meta: {
-        requestUuid: "window-closed-broadcast",
-        timestamp: new Date(),
-        source: { appId, instanceId: connectedSenderId },
-      },
-      payload: {
-        channelId: "app-control",
-        context: { type: "windowClosed", testId: "teardown-1" },
-      },
-    } as BrowserTypes.BroadcastRequest
-
-    expect(resolveDacpHandlerInstanceId(message, context)).toBe(connectedSenderId)
+    expect(resolveDacpHandlerInstanceId(context)).toBe(connectedSenderId)
   })
 
   it("does not guess a stale source id when multiple connected instances share the appId", () => {
@@ -291,16 +190,6 @@ describe("resolveDacpHandlerInstanceId", () => {
       initialState,
     })
 
-    const message = {
-      type: "addContextListenerRequest",
-      meta: {
-        requestUuid: "listener-ambiguous-stale-source",
-        timestamp: new Date(),
-        source: { appId, instanceId: staleInstanceId },
-      },
-      payload: { channelId: "app-control", contextType: "windowClosed" },
-    } as BrowserTypes.AddContextListenerRequest
-
-    expect(resolveDacpHandlerInstanceId(message, context)).toBe(staleInstanceId)
+    expect(resolveDacpHandlerInstanceId(context)).toBe(staleInstanceId)
   })
 })

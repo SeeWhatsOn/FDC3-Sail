@@ -38,7 +38,6 @@ function createAgentWithHostLogger(
     appConnectionOptions: {
       getIntentResolverUrl: () => false,
       getChannelSelectorUrl: () => false,
-      fdc3Version: "2.2",
       handshakeTimeout: 30_000,
     },
   })
