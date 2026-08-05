@@ -24,7 +24,7 @@ import {
 } from "../state/mutators/app-directory"
 import { retrieveAllApps, retrieveAppsById } from "../app-directory/app-directory-queries"
 import type { BrowserTypes } from "@finos/fdc3"
-import type { AgentState, StateSetter } from "../state/types"
+import type { AgentState, RunningAppIdentifier, StateSetter } from "../state/types"
 import { createInitialState, createStateWithOverrides } from "../state/initial-state"
 import { consoleLogger, type Logger, type LogPayloadDetail } from "../logging/logger"
 import { resolveDesktopAgentConfig, type SailDesktopAgentMetadata } from "./default-config"
@@ -489,7 +489,7 @@ export class SailDesktopAgent<
     return instance ? mapToDesktopAgentAppInstance(instance) : undefined
   }
 
-  registerPendingHostInstance(params: { appId: string; instanceId: string }): void {
+  registerPendingHostInstance(params: RunningAppIdentifier): void {
     if (getInstance(this.state, params.instanceId)) {
       return
     }

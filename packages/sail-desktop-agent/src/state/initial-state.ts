@@ -7,13 +7,11 @@
 import type { AgentState } from "./types"
 import type { BrowserTypes } from "@finos/fdc3"
 
-type Channel = BrowserTypes.Channel
-
 /**
  * Creates the initial agent state with default values.
  * @param userChannels - Custom user channels (required - DesktopAgent provides defaults)
  */
-export function createInitialState(userChannels: Channel[]): AgentState {
+export function createInitialState(userChannels: BrowserTypes.Channel[]): AgentState {
   const channels = userChannels
 
   return {
@@ -53,7 +51,7 @@ export function createInitialState(userChannels: Channel[]): AgentState {
  */
 export function createStateWithOverrides(
   overrides: Partial<AgentState>,
-  userChannels: Channel[],
+  userChannels: BrowserTypes.Channel[],
 ): AgentState {
   return deepMerge(createInitialState(userChannels), overrides)
 }

@@ -4,7 +4,7 @@
  * Helpers for building appIntent payloads for resolver responses.
  */
 
-import type { AppMetadata } from "@finos/fdc3"
+import type { AppIdentifier, AppMetadata } from "@finos/fdc3"
 import type { DirectoryApp } from "../../app-directory/types"
 import type { AgentState, AppDirectoryState } from "../../state/types"
 import { retrieveAllApps, retrieveAppsById } from "../../app-directory/app-directory-queries"
@@ -15,11 +15,15 @@ import {
   getInstance,
   getInstancesByAppId,
 } from "../../state/selectors"
-import { isContextTypeCompatible, isResultTypeCompatible } from "./intent-helpers"
+import {
+  isContextTypeCompatible,
+  isResultTypeCompatible,
+  type AppIntentLike,
+} from "./intent-helpers"
 
 export function findMatchingIntentResolutionChoice(
   choices: IntentResolutionChoice[],
-  selectedHandler: { appId: string; instanceId?: string },
+  selectedHandler: AppIdentifier,
   selectedIntent?: string,
 ): IntentResolutionChoice | undefined {
   return choices.find(choice => {
@@ -92,10 +96,7 @@ export function createResolverAppIntent(
   intentName: string,
   contextType?: string,
   resultType?: string,
-): {
-  intent: { name: string; displayName?: string }
-  apps: AppMetadata[]
-} {
+): AppIntentLike<AppMetadata> {
   const apps: AppMetadata[] = []
   let runningListeners = getActiveListenersForIntent(state, intentName)
   if (contextType) {

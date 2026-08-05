@@ -7,12 +7,7 @@ import type { Logger } from "../logging/logger"
 import type { MessagePortTransport } from "./message-port"
 import type { AppConnectionMetadata } from "./wcp/wcp-types"
 import { isAgentMessage } from "./wcp/wcp-types"
-import type { AppConnectionEvents } from "./app-connection-events"
-
-type EmitFunction = <EventName extends keyof AppConnectionEvents>(
-  event: EventName,
-  ...args: Parameters<AppConnectionEvents[EventName]>
-) => void
+import type { EmitFunction } from "./app-connection-events"
 
 export interface AppConnectionRegistryCallbacks {
   emit: EmitFunction

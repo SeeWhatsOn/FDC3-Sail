@@ -6,13 +6,21 @@
  * arrays instead of Sets).
  */
 
-import type { AppMetadata, Context } from "@finos/fdc3"
+import type { AppIdentifier, AppMetadata, Context } from "@finos/fdc3"
 import type { BrowserTypes } from "@finos/fdc3"
 import type { DirectoryApp } from "../app-directory/types"
 
 // ============================================================================
 // APP INSTANCE TYPES
 // ============================================================================
+
+/**
+ * An {@link AppIdentifier} for a *running* instance, so `instanceId` is always known.
+ *
+ * FDC3 leaves `instanceId` optional because the same type addresses both an app and one of
+ * its instances; anywhere Sail has already resolved an instance, use this instead.
+ */
+export type RunningAppIdentifier = AppIdentifier & { readonly instanceId: string }
 
 /**
  * FDC3 App Instance connection states

@@ -7,9 +7,7 @@
 
 import type { BrowserTypes } from "@finos/fdc3"
 
-type Channel = BrowserTypes.Channel
-
-export const DEFAULT_FDC3_USER_CHANNELS: Channel[] = [
+export const DEFAULT_FDC3_USER_CHANNELS: BrowserTypes.Channel[] = [
   {
     id: "fdc3.channel.1",
     type: "user",

@@ -4,7 +4,7 @@
  * Factory functions for creating DACP protocol messages following the FDC3 specification.
  */
 
-import type { BrowserTypes } from "@finos/fdc3"
+import type { AppIdentifier, BrowserTypes } from "@finos/fdc3"
 
 type DACPResponseType = BrowserTypes.ResponseMessageType
 
@@ -15,20 +15,17 @@ export interface DACPRequestLike {
   }
 }
 
-type OriginatingAppPayload = {
-  appId: string
-  instanceId?: string
-  desktopAgent?: string
-}
+/** FDC3 ContextMetadata plus the ISO `meta.timestamp` DACP events carry. */
+type TimestampedContextMetadata = { source: AppIdentifier; timestamp: string }
 
 /**
  * FDC3 ContextMetadata shape for DACP event payloads (source + ISO timestamp).
  * Mirrors `originatingApp` and event `meta.timestamp` for listener-side metadata.
  */
 function buildContextMetadataFromOriginatingApp(
-  originatingApp: OriginatingAppPayload,
+  originatingApp: AppIdentifier,
   timestamp: string,
-): { source: { appId: string; instanceId?: string }; timestamp: string } {
+): TimestampedContextMetadata {
   return {
     source: {
       appId: originatingApp.appId,
@@ -43,7 +40,7 @@ function attachContextMetadataWhenPresent(
   timestamp: string,
   appMetadata?: Record<string, unknown>,
 ): void {
-  const originatingApp = payload.originatingApp as OriginatingAppPayload | undefined
+  const originatingApp = payload.originatingApp as AppIdentifier | undefined
   if (!originatingApp?.appId) {
     return
   }
@@ -56,9 +53,9 @@ function attachContextMetadataWhenPresent(
  * onto DA-generated ContextMetadata on broadcast events.
  */
 export function mergeBroadcastAppMetadata(
-  baseMetadata: ReturnType<typeof buildContextMetadataFromOriginatingApp>,
+  baseMetadata: TimestampedContextMetadata,
   appMetadata?: Record<string, unknown>,
-): ReturnType<typeof buildContextMetadataFromOriginatingApp> & Record<string, unknown> {
+): TimestampedContextMetadata & Record<string, unknown> {
   if (!appMetadata) {
     return baseMetadata
   }
@@ -157,7 +154,7 @@ export function createIntentEvent(
   intent: string,
   context: unknown,
   requestUuid: string,
-  originatingApp: { appId: string; instanceId?: string; desktopAgent?: string },
+  originatingApp: AppIdentifier,
 ): BrowserTypes.IntentEvent {
   const timestamp = new Date().toISOString()
   const normalizedOriginatingApp = {

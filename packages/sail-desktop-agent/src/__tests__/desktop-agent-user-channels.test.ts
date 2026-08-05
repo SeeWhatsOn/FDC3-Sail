@@ -9,9 +9,7 @@ import { AppInstanceState } from "../state/types"
 import { createDacpRequestMeta } from "../handlers/__tests__/test-context"
 import { createDesktopAgentWithTestConnection } from "../../test/support/desktop-agent-test-harness"
 
-type Channel = BrowserTypes.Channel
-
-const CONFIGURED_USER_CHANNELS: Channel[] = [
+const CONFIGURED_USER_CHANNELS: BrowserTypes.Channel[] = [
   {
     id: "config.channel.1",
     type: "user",
@@ -30,7 +28,7 @@ const CONFIGURED_USER_CHANNELS: Channel[] = [
   },
 ]
 
-const RUNTIME_USER_CHANNELS: Record<string, Channel> = {
+const RUNTIME_USER_CHANNELS: Record<string, BrowserTypes.Channel> = {
   "runtime.channel.1": {
     id: "runtime.channel.1",
     type: "user",
@@ -41,7 +39,7 @@ const RUNTIME_USER_CHANNELS: Record<string, Channel> = {
   },
 }
 
-function sortChannelsById(channels: Channel[]): Channel[] {
+function sortChannelsById(channels: BrowserTypes.Channel[]): BrowserTypes.Channel[] {
   return [...channels].sort((left, right) => left.id.localeCompare(right.id))
 }
 
@@ -136,7 +134,7 @@ describe("DesktopAgent user channel state", () => {
 
     const response = connection.sentMessages.at(-1) as {
       type: string
-      payload: { userChannels: Channel[] }
+      payload: { userChannels: BrowserTypes.Channel[] }
     }
 
     expect(response.type).toBe("getUserChannelsResponse")

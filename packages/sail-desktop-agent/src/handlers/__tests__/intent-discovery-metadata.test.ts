@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test"
 import { MockTransport } from "../../__tests__/utils/mock-transport"
 import type { DirectoryApp } from "../../app-directory/types"
 import { retrieveIntents } from "../../app-directory/app-directory-queries"
+import { expectAppDirectoryOnState } from "../../app-directory/__tests__/app-directory-test-fixtures"
 import { addApplications } from "../../state/mutators/app-directory"
 import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
@@ -126,19 +127,6 @@ describe("intent discovery metadata from app directory", () => {
     })
   })
 })
-
-type AppDirectorySlice = {
-  apps: DirectoryApp[]
-  directoryUrls: string[]
-}
-
-function expectAppDirectoryOnState(state: AgentState): AppDirectorySlice {
-  expect(state).toHaveProperty("appDirectory")
-  const slice = (state as AgentState & { appDirectory: AppDirectorySlice }).appDirectory
-  expect(Array.isArray(slice.apps)).toBe(true)
-  expect(Array.isArray(slice.directoryUrls)).toBe(true)
-  return slice
-}
 
 const launchOnlyApp: DirectoryApp = {
   appId: "LaunchOnlyApp",

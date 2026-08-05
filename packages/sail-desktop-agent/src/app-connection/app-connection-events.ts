@@ -22,3 +22,9 @@ export interface AppConnectionEvents {
   /** Fired when host-owned intent resolver UI is needed for ambiguous intent delivery. */
   intentResolverNeeded: (payload: HostIntentResolverPayload) => void
 }
+
+/** Emits any {@link AppConnectionEvents} event with that event's own argument types. */
+export type EmitFunction = <EventName extends keyof AppConnectionEvents>(
+  event: EventName,
+  ...args: Parameters<AppConnectionEvents[EventName]>
+) => void

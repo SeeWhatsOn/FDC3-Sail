@@ -7,18 +7,21 @@
 import type { Context, BrowserTypes } from "@finos/fdc3"
 import type { AgentState, PrivateChannelState, StoredContext } from "../types"
 
-type Channel = BrowserTypes.Channel
+export const getUserChannel = (
+  state: AgentState,
+  channelId: string,
+): BrowserTypes.Channel | undefined => state.channels.user[channelId]
 
-export const getUserChannel = (state: AgentState, channelId: string): Channel | undefined =>
-  state.channels.user[channelId]
-
-export const getAllUserChannels = (state: AgentState): Channel[] =>
+export const getAllUserChannels = (state: AgentState): BrowserTypes.Channel[] =>
   Object.values(state.channels.user)
 
-export const getAppChannel = (state: AgentState, channelId: string): Channel | undefined =>
-  state.channels.app[channelId]
+export const getAppChannel = (
+  state: AgentState,
+  channelId: string,
+): BrowserTypes.Channel | undefined => state.channels.app[channelId]
 
-export const getAllAppChannels = (state: AgentState): Channel[] => Object.values(state.channels.app)
+export const getAllAppChannels = (state: AgentState): BrowserTypes.Channel[] =>
+  Object.values(state.channels.app)
 
 export const getPrivateChannel = (
   state: AgentState,

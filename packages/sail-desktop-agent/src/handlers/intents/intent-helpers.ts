@@ -5,7 +5,7 @@
  * Extracted to reduce file size of intent-handlers.ts.
  */
 
-import type { Context } from "@finos/fdc3"
+import type { AppIdentifier, AppMetadata, Context, IntentMetadata } from "@finos/fdc3"
 import type { AgentState, IntentListener, AppDirectoryState } from "../../state/types"
 import type { DACPHandlerContext } from "../types"
 import { getInstance, getActiveListenersForIntent } from "../../state/selectors"
@@ -17,11 +17,20 @@ import {
 } from "../../app-directory/app-directory-queries"
 import { isIntentListenerReady } from "./intent-delivery-helpers"
 
-/** AppIntent shape returned on raiseIntent* wire responses when the host resolver UI is not wired. */
-export type ResolverWireAppIntent = {
-  intent: { name: string; displayName?: string }
-  apps: unknown[]
+/**
+ * FDC3 `AppIntent` with the `apps` element type left open, so each call site can narrow to the
+ * app metadata subset it actually produces (wire response, resolver payload, discovery result).
+ */
+export type AppIntentLike<TApp> = {
+  intent: Pick<IntentMetadata, "name" | "displayName">
+  apps: TApp[]
 }
+
+/** The `AppMetadata` subset findIntent* discovery responses carry per app. */
+export type DiscoveredAppMetadata = Pick<AppMetadata, "appId" | "name" | "version" | "instanceId">
+
+/** AppIntent shape returned on raiseIntent* wire responses when the host resolver UI is not wired. */
+export type ResolverWireAppIntent = AppIntentLike<unknown>
 
 /**
  * FDC3 raiseIntent* wire responses surface `intent.name` as `intent.displayName`
@@ -124,8 +133,8 @@ export function findIntentHandlers(
   request: {
     intent: string
     context: Context
-    target?: { appId: string; instanceId?: string }
-    source?: { appId: string; instanceId?: string }
+    target?: AppIdentifier
+    source?: AppIdentifier
   },
 ): {
   runningListeners: IntentListener[]
@@ -223,18 +232,9 @@ export function createAppIntents(
   intentName: string,
   contextType?: string,
   resultType?: string,
-): Array<{
-  intent: { name: string; displayName?: string }
-  apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }>
-}> {
+): Array<AppIntentLike<DiscoveredAppMetadata>> {
   const allApps = retrieveAllApps(catalog)
-  const appIntentsMap = new Map<
-    string,
-    {
-      intent: { name: string; displayName?: string }
-      apps: Array<{ appId: string; name?: string; version?: string; instanceId?: string }>
-    }
-  >()
+  const appIntentsMap = new Map<string, AppIntentLike<DiscoveredAppMetadata>>()
 
   // Get running listeners for this intent
   let runningListeners = getActiveListenersForIntent(state, intentName)
@@ -354,7 +354,7 @@ export function findIntentsByContext(
   _state: AgentState,
   catalog: AppDirectoryState,
   contextType: string,
-): Array<{ name: string; displayName?: string }> {
+): Array<Pick<IntentMetadata, "name" | "displayName">> {
   const orderedIntentNames: string[] = []
   const intentNameSet = new Set<string>()
   const displayNameByIntent = new Map<string, string>()

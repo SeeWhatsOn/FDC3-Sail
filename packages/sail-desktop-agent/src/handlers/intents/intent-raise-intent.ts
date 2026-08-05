@@ -1,7 +1,7 @@
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
-import type { BrowserTypes, Context } from "@finos/fdc3"
+import type { AppIdentifier, BrowserTypes, Context } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
 import {
   NoAppsFoundError,
@@ -80,9 +80,7 @@ export async function handleRaiseIntentRequest(
         : {}),
     })
 
-    const targetApp: { appId: string; instanceId?: string } | undefined = normalizeTargetApp(
-      payload.app,
-    )
+    const targetApp: AppIdentifier | undefined = normalizeTargetApp(payload.app)
     validateRequestedTargetAvailability(context, targetApp)
 
     const source = getInstance(getState(), instanceId)

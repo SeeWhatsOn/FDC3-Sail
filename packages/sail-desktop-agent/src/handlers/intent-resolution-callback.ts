@@ -2,6 +2,7 @@ import type { Context } from "@finos/fdc3"
 import type {
   HostIntentResolverChoice,
   HostIntentResolverHandler,
+  HostIntentResolverPayload,
   HostIntentResolverResponse,
 } from "../host-contracts/intent-resolver"
 
@@ -21,22 +22,12 @@ export type IntentResolutionChoice = HostIntentResolverChoice
 
 /**
  * Request payload for host-provided intent resolution.
+ *
+ * The host payload, narrowed: the Desktop Agent has already validated the context, so this
+ * side of the boundary types it as {@link Context} rather than `unknown`.
  */
-export interface IntentResolutionRequest {
-  /** Unique request ID for correlation. */
-  requestId: string
-
-  /** Intent name being raised. */
-  intent: string
-
-  /** Context being passed with intent. */
+export type IntentResolutionRequest = Omit<HostIntentResolverPayload, "context"> & {
   context: Context
-
-  /** Available handlers to choose from. */
-  handlers: IntentHandlerOption[]
-
-  /** Available intent/app choices; may contain multiple intents for raiseIntentForContext. */
-  choices?: IntentResolutionChoice[]
 }
 
 /** Response from host-provided intent resolution. */

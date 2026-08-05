@@ -11,15 +11,6 @@ import type { IntentResolutionCallback } from "./intent-resolution-callback"
 // ============================================================================
 
 /**
- * Base structure for all DACP messages
- * Messages are validated by the router before being passed to handlers
- */
-export type DACPMessage =
-  | BrowserTypes.AppRequestMessage
-  | BrowserTypes.AgentResponseMessage
-  | BrowserTypes.AgentEventMessage
-
-/**
  * DACP wire `type` string unions from FDC3 BrowserTypes.
  */
 type DACPMessageType =

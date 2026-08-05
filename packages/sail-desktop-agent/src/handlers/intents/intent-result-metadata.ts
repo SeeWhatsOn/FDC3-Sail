@@ -1,8 +1,9 @@
-import type { BrowserTypes, Context } from "@finos/fdc3"
+import type { BrowserTypes, Context, ContextMetadata } from "@finos/fdc3"
+import type { RunningAppIdentifier } from "../../state/types"
 
 /** DA-generated + optional app-provided fields for IntentResolution.getResultMetadata(). */
 export type IntentResultContextMetadata = {
-  source: { appId: string; instanceId: string }
+  source: RunningAppIdentifier
   timestamp: string
   traceId: string
   signature?: string
@@ -20,10 +21,7 @@ export type AppProvidedIntentContextMetadata = AppProvidedResultMetadata & {
   antiReplay?: string
 }
 
-type IntentEventBaseMetadata = {
-  source: { appId: string; instanceId?: string }
-  timestamp: string
-}
+type IntentEventBaseMetadata = ContextMetadata & { timestamp: string }
 
 function isAppProvidedMetadata(value: unknown): value is AppProvidedResultMetadata {
   if (typeof value !== "object" || value === null) {

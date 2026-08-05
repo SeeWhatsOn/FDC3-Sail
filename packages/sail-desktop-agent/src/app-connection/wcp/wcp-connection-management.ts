@@ -2,7 +2,7 @@ import type { AppConnectionMetadata, AppConnectionOptions } from "./wcp-types"
 import type { Logger } from "../../logging/logger"
 import type { AgentState, StateSetter } from "../../state/types"
 import type { AppConnectionRegistry } from "../app-connection-registry"
-import type { AppConnectionEvents } from "../app-connection-events"
+import type { EmitFunction } from "../app-connection-events"
 import type { WebConnectionProtocolMessage } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import {
   linkHandshakeRoutingId,
@@ -44,11 +44,6 @@ function cancelPendingDisconnect(context: AppConnectionContext, instanceId: stri
   context.pendingDisconnects.delete(instanceId)
   return true
 }
-
-type EmitFunction = <EventName extends keyof AppConnectionEvents>(
-  event: EventName,
-  ...args: Parameters<AppConnectionEvents[EventName]>
-) => void
 
 export interface AppConnectionContext {
   connectionRegistry: AppConnectionRegistry

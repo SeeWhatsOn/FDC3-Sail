@@ -96,8 +96,14 @@ export interface IntentDefinition {
   customConfig?: Record<string, unknown>
 }
 
-/** Intent that an application can handle (includes name for standalone use) */
-export interface AppIntent extends IntentDefinition {
+/**
+ * Intent that an application can handle, per its App Directory record (includes name for
+ * standalone use).
+ *
+ * Deliberately not named `AppIntent`: FDC3 exports its own `AppIntent`, the *runtime*
+ * `{ intent, apps }` result of `findIntent`, which is a different thing.
+ */
+export interface DirectoryAppIntent extends IntentDefinition {
   /** The name of the intent */
   name: string
 }
@@ -186,7 +192,7 @@ export interface DirectoryData {
 }
 
 /** Intent with app association (used internally by directory lookups) */
-export interface DirectoryIntent extends AppIntent {
+export interface DirectoryIntent extends DirectoryAppIntent {
   /** The name of the intent */
   intentName: string
   /** The app that handles this intent */

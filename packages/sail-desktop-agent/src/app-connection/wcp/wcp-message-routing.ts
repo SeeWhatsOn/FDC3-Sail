@@ -7,7 +7,7 @@ import type { AppMessageHandler } from "../types"
 import type { AppConnectionRegistry } from "../app-connection-registry"
 import { isAppMessage } from "./wcp-types"
 import type { Logger } from "../../logging/logger"
-import type { AppConnectionEvents } from "../app-connection-events"
+import type { EmitFunction } from "../app-connection-events"
 import { applyInboundValidationPolicy, type ValidationMode } from "../../dacp/validate-dacp-message"
 
 export interface WCPRoutingContext {
@@ -16,10 +16,7 @@ export interface WCPRoutingContext {
   logger: Logger
   /** Same ValidationMode as DesktopAgent — applied to raw MessagePort messages. */
   validation: ValidationMode
-  emit: <EventName extends keyof AppConnectionEvents>(
-    event: EventName,
-    ...args: Parameters<AppConnectionEvents[EventName]>
-  ) => void
+  emit: EmitFunction
   enrichMessageWithSource: (
     message: AppRequestMessage | WebConnectionProtocolMessage,
     instanceId: string,

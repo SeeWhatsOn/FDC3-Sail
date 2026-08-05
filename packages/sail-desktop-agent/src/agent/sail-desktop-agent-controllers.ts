@@ -77,31 +77,6 @@ export interface SailDesktopAgentHostControllers {
   apps: SailDesktopAgentApps
 }
 
-/** Backing operations `createChannelsController` wraps (kept private on the class). */
-export interface ChannelsControllerBacking {
-  getUserChannels(): BrowserTypes.Channel[]
-  getAppChannelId(instanceId: string): string | null
-  changeAppChannel(instanceId: string, channelId: string | null): Promise<void>
-}
-
-/** Backing operations `createAppsController` wraps (kept private on the class). */
-export interface AppsControllerBacking {
-  add(app: DirectoryApp): void
-  addAll(apps: DirectoryApp[]): void
-  addDirectory(url: string): Promise<void>
-  remove(appId: string): void
-  getAll(): DirectoryApp[]
-  getById(appId: string): DirectoryApp | undefined
-  open(
-    app: string | BrowserTypes.AppIdentifier,
-    options?: DesktopAgentOpenOptions,
-  ): Promise<BrowserTypes.AppIdentifier>
-  getInstances(): DesktopAgentAppInstance[]
-  getInstance(instanceId: string): DesktopAgentAppInstance | undefined
-  getConnections(): AppConnectionMetadata[]
-  getConnection(instanceId: string): AppConnectionMetadata | undefined
-}
-
 export function resolveUserChannelById(
   userChannels: BrowserTypes.Channel[],
   channelId: string | null,
@@ -264,18 +239,18 @@ export function changeAppChannel(
   })
 }
 
+/**
+ * Wraps the agent's own channel operations with the two members it cannot supply itself:
+ * `getAppChannel` (derived) and `onAppChannelChange` (`appConnection` event wiring).
+ */
 export function createChannelsController(
-  backing: ChannelsControllerBacking,
+  backing: Omit<SailDesktopAgentChannels, "getAppChannel" | "onAppChannelChange">,
   appConnection: AgentAppConnection,
 ): SailDesktopAgentChannels {
   return {
-    getUserChannels: () => backing.getUserChannels(),
-    getAppChannelId: instanceId => backing.getAppChannelId(instanceId),
-    getAppChannel: instanceId => {
-      const channelId = backing.getAppChannelId(instanceId)
-      return resolveUserChannelById(backing.getUserChannels(), channelId)
-    },
-    changeAppChannel: (instanceId, channelId) => backing.changeAppChannel(instanceId, channelId),
+    ...backing,
+    getAppChannel: instanceId =>
+      resolveUserChannelById(backing.getUserChannels(), backing.getAppChannelId(instanceId)),
     onAppChannelChange: listener => {
       const handler = (instanceId: string, channelId: string | null) => {
         listener({
@@ -292,28 +267,19 @@ export function createChannelsController(
   }
 }
 
+/**
+ * Wraps the agent's own app-directory and instance operations with the four members it cannot
+ * supply itself — all of which are `appConnection` lifecycle wiring.
+ */
 export function createAppsController(
-  backing: AppsControllerBacking,
+  backing: Omit<
+    SailDesktopAgentApps,
+    "disconnect" | "onConnect" | "onDisconnect" | "onHandshakeFailure"
+  >,
   appConnection: AgentAppConnection,
 ): SailDesktopAgentApps {
   return {
-    add: app => {
-      backing.add(app)
-    },
-    addAll: apps => {
-      backing.addAll(apps)
-    },
-    addDirectory: url => backing.addDirectory(url),
-    remove: appId => {
-      backing.remove(appId)
-    },
-    getAll: () => backing.getAll(),
-    getById: appId => backing.getById(appId),
-    open: (app, openOptions) => backing.open(app, openOptions),
-    getInstances: () => backing.getInstances(),
-    getInstance: instanceId => backing.getInstance(instanceId),
-    getConnections: () => backing.getConnections(),
-    getConnection: instanceId => backing.getConnection(instanceId),
+    ...backing,
     disconnect: instanceId => {
       // Prefer the graceful host-initiated disconnect (sends WCP6Goodbye) when the edge
       // supports it; fall back to the plain teardown every AgentAppConnection provides.
