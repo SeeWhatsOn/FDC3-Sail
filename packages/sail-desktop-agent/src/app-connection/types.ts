@@ -66,30 +66,3 @@ export interface AgentAppConnection {
   ): Promise<HostIntentResolverResponse>
   resolveIntentSelection?(response: HostIntentResolverResponse): void
 }
-
-/**
- * Browser-resident FDC3 app connection (WCP listener + MessagePort registry).
- * Owned by {@link SailDesktopAgent} — hosts configure policy, not plumbing.
- */
-export interface BrowserAppConnectionSurface extends AgentAppConnection {
-  bindAgentState(access: { getAgentState: () => AgentState; setAgentState: StateSetter }): void
-  disconnectAppByInstanceId(instanceId: string): void
-  on<EventName extends keyof AppConnectionEvents>(
-    event: EventName,
-    handler: AppConnectionEvents[EventName],
-  ): void
-  off<EventName extends keyof AppConnectionEvents>(
-    event: EventName,
-    handler: AppConnectionEvents[EventName],
-  ): void
-  /**
-   * Host launcher id when `window.name` was cleared before WCP1.
-   * Used by WCP4 / DACP to re-resolve and persist {@link AppConnectionMetadata.hostIdentifier}.
-   */
-  resolveHostIdentifierForSource?(source: Window): string | undefined
-  requestIntentResolution(
-    payload: HostIntentResolverPayload,
-    timeoutMs?: number,
-  ): Promise<HostIntentResolverResponse>
-  resolveIntentSelection(response: HostIntentResolverResponse): void
-}
