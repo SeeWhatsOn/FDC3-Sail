@@ -4,7 +4,7 @@
  * `implementationMetadata.fdc3Version` is the source of truth for advertised support.
  */
 
-export type ParsedFdc3Version = {
+type ParsedFdc3Version = {
   major: number
   minor: number
 }

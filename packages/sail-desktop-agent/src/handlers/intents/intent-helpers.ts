@@ -27,16 +27,13 @@ export type AppIntentLike<TApp> = {
 }
 
 /** The `AppMetadata` subset findIntent* discovery responses carry per app. */
-export type DiscoveredAppMetadata = Pick<AppMetadata, "appId" | "name" | "version" | "instanceId">
-
-/** AppIntent shape returned on raiseIntent* wire responses when the host resolver UI is not wired. */
-export type ResolverWireAppIntent = AppIntentLike<unknown>
+type DiscoveredAppMetadata = Pick<AppMetadata, "appId" | "name" | "version" | "instanceId">
 
 /**
  * FDC3 raiseIntent* wire responses surface `intent.name` as `intent.displayName`
  * on the wire, even when App Directory metadata carries a human-readable label.
  */
-export function appIntentForWireResponse<T extends ResolverWireAppIntent>(appIntent: T): T {
+export function appIntentForWireResponse<T extends AppIntentLike<unknown>>(appIntent: T): T {
   return {
     ...appIntent,
     intent: { name: appIntent.intent.name, displayName: appIntent.intent.name },

@@ -1,12 +1,12 @@
 import type { AppConnectionMetadata, AppConnectionOptions } from "./wcp-types"
 
-export type WcpHostIdentifierResolver = Pick<AppConnectionOptions, "resolveHostIdentifier">
+type WcpHostIdentifierResolver = Pick<AppConnectionOptions, "resolveHostIdentifier">
 
 /**
  * Duck-typed connection owner used by DACP handlers that only know
  * {@link import("../../handlers/types").DacpResponseDispatcher.connectionOwner}.
  */
-export type AppConnectionHostLookup = {
+type AppConnectionHostLookup = {
   getConnection(instanceId: string): AppConnectionMetadata | undefined
   resolveHostIdentifierForSource?(source: Window): string | undefined
 }

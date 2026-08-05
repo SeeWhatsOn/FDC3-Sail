@@ -16,7 +16,7 @@ type MessageHandler = (message: unknown) => void | Promise<void>
 /** Handler for port disconnect. */
 type DisconnectHandler = () => void
 
-export interface MessagePortTransportOptions {
+interface MessagePortTransportOptions {
   logger?: Logger
   logPayloadDetail?: LogPayloadDetail
 }

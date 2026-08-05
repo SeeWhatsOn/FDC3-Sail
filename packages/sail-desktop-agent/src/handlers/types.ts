@@ -11,24 +11,6 @@ import type { IntentResolutionCallback } from "./intent-resolution-callback"
 // ============================================================================
 
 /**
- * DACP wire `type` string unions from FDC3 BrowserTypes.
- */
-type DACPMessageType =
-  | BrowserTypes.RequestMessageType
-  | BrowserTypes.ResponseMessageType
-  | BrowserTypes.EventMessageType
-
-/**
- * WCP message type union from the FDC3 schema definitions.
- */
-export type WCPMessageType = BrowserTypes.WebConnectionProtocolMessage["type"]
-
-/**
- * Combined DACP + WCP message types for validation/routing.
- */
-export type MessageType = DACPMessageType | WCPMessageType
-
-/**
  * Entry for tracking pending intent promise state.
  * Stored per-agent to prevent cross-agent interference.
  */

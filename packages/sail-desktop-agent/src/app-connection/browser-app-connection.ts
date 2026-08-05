@@ -50,7 +50,7 @@ export type { AppConnectionMetadata, AppConnectionOptions } from "./wcp/wcp-type
 export type { AppConnectionEvents } from "./app-connection-events"
 
 /** Browser edge options: WCP handshake config plus DesktopAgent validation mode. */
-export type BrowserAppConnectionOptions = AppConnectionOptions & {
+type BrowserAppConnectionOptions = AppConnectionOptions & {
   validation?: ValidationMode
   /** How much DACP/WCP payload to include in MessagePortTransport debug logs. */
   logPayloadDetail?: LogPayloadDetail

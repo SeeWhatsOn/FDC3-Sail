@@ -29,7 +29,11 @@ import type {
 import type { Logger } from "../logging/logger"
 import { getInstance, getUserChannel } from "../state/selectors"
 import type { AgentState } from "../state/types"
-import type { DesktopAgentAppInstance, DesktopAgentOpenOptions } from "./sail-desktop-agent-types"
+import type {
+  DesktopAgentAppInstance,
+  DesktopAgentOpenOptions,
+  SailDesktopAgentOptions,
+} from "./sail-desktop-agent-types"
 
 export interface AppChannelChangeEvent {
   instanceId: string
@@ -144,7 +148,7 @@ export function createIntentResolverController(
 }
 
 /** Backing operations {@link changeAppUserChannel} / {@link changeAppChannel} wrap. */
-export interface ChannelOperationsBacking {
+interface ChannelOperationsBacking {
   getState: () => AgentState
   createHandlerContext: (instanceId: string) => DACPHandlerContext
   getUserChannels: () => BrowserTypes.Channel[]
@@ -364,18 +368,14 @@ export function wireIntentResolver(
   })
 }
 
-/** Lifecycle callbacks a shell can opt into via `SailDesktopAgentOptions`. */
-export interface LifecycleCallbackOptions {
-  onAppConnected?: (metadata: AppConnectionMetadata) => void
-  onAppDisconnected?: (instanceId: string) => void
-  onHandshakeFailed?: (error: Error, connectionAttemptUuid: string) => void
-}
-
 /** Wires `appConnection` connection-lifecycle events to shell-supplied option callbacks. */
 export function wireLifecycleCallbacks(
   appConnection: AgentAppConnection,
   logger: Logger,
-  options: LifecycleCallbackOptions,
+  options: Pick<
+    SailDesktopAgentOptions,
+    "onAppConnected" | "onAppDisconnected" | "onHandshakeFailed"
+  >,
 ): void {
   appConnection.on?.("appConnected", metadata => {
     logger.info(`[SailDesktopAgent] App connected: ${metadata.appId} (${metadata.instanceId})`)

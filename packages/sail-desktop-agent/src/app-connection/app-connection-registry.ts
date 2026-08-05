@@ -9,7 +9,7 @@ import type { AppConnectionMetadata } from "./wcp/wcp-types"
 import { isAgentMessage } from "./wcp/wcp-types"
 import type { EmitFunction } from "./app-connection-events"
 
-export interface AppConnectionRegistryCallbacks {
+interface AppConnectionRegistryCallbacks {
   emit: EmitFunction
   logger: Logger
   updateConnectionMetadata: (

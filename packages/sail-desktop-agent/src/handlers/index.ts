@@ -4,7 +4,7 @@ import { DACP_TIMEOUTS } from "../dacp/dacp-constants"
 import { DACPProcessingError, DACPTimeoutError } from "../dacp/dacp-errors"
 import { applyInboundValidationPolicy } from "../dacp/validate-dacp-message"
 import type { Logger, LogPayloadDetail } from "../logging/logger"
-import { type DACPHandlerContext, type MessageType } from "./types"
+import { type DACPHandlerContext } from "./types"
 import { sendDACPErrorResponse } from "./utils/dacp-response-utils"
 
 // Import all DACP handlers
@@ -30,7 +30,7 @@ export async function routeDACPMessage(
     logger.info("DACP: Routing message", extractDACPMessageLogMetadata(message))
 
     // Extract message type for routing
-    const messageType = (message as { type?: MessageType })?.type
+    const messageType = (message as { type?: string })?.type
 
     if (applyInboundValidationPolicy(message, { logger, validation }) === "rejected") {
       sendErrorResponseIfRequestLike(

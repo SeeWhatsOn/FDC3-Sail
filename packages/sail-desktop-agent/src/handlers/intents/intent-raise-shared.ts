@@ -1,8 +1,8 @@
-import type { Context } from "@finos/fdc3"
+import type { AppIdentifier, Context } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
 import { addPendingIntent, resolvePendingIntent } from "../../state/mutators"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
-import { AppInstanceState } from "../../state/types"
+import { AppInstanceState, type PendingIntent } from "../../state/types"
 import {
   FDC3ResolveError,
   NoAppsFoundError,
@@ -20,20 +20,6 @@ import {
 import { shouldWaitForIntentListenerBeforeDelivery } from "./intent-helpers"
 import { launchAppAndWaitForInstance } from "./intent-launch-helpers"
 
-type RegisterPendingIntentStateOptions = {
-  requestId: string
-  intentName: string
-  context: Context
-  sourceInstanceId: string
-  targetInstanceId: string
-  targetAppId: string
-}
-
-type NormalizedTargetApp = {
-  appId: string
-  instanceId?: string
-}
-
 type ResolveAppTargetInstanceOptions = {
   appId: string
   validatedContext: Context
@@ -42,7 +28,7 @@ type ResolveAppTargetInstanceOptions = {
   forceLaunch?: boolean
 }
 
-export function normalizeTargetApp(target: unknown): NormalizedTargetApp | undefined {
+export function normalizeTargetApp(target: unknown): AppIdentifier | undefined {
   if (!target) {
     return undefined
   }
@@ -68,7 +54,7 @@ export function normalizeTargetApp(target: unknown): NormalizedTargetApp | undef
 
 export function validateRequestedTargetAvailability(
   context: DACPHandlerContext,
-  targetApp: NormalizedTargetApp | undefined,
+  targetApp: AppIdentifier | undefined,
 ): void {
   if (!targetApp) {
     return
@@ -146,7 +132,7 @@ export function registerPendingIntentPromise(
 
 export function registerPendingIntentState(
   context: DACPHandlerContext,
-  options: RegisterPendingIntentStateOptions,
+  options: Omit<PendingIntent, "raisedAt">,
 ): void {
   context.setState(state => addPendingIntent(state, options))
 }
