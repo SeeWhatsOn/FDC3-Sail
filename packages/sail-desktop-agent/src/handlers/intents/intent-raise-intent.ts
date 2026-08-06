@@ -40,7 +40,9 @@ export async function handleRaiseIntentRequest(
   try {
     const payload = message.payload
 
-    if (payload.context !== undefined && !isValidContext(payload.context)) {
+    // `RaiseIntentRequestPayload.context` is required, so a missing context is malformed —
+    // do not short-circuit on `undefined`. Matches `handleRaiseIntentForContextRequest`.
+    if (!isValidContext(payload.context)) {
       sendDACPErrorResponse({
         message,
         errorType: ResolveError.MalformedContext,
@@ -51,14 +53,16 @@ export async function handleRaiseIntentRequest(
       return
     }
 
-    const contextPayload = payload.context as Record<string, unknown>
+    const validatedContext: Context = payload.context
+    const contextPayload = validatedContext as Record<string, unknown>
     logger.info("DACP: Processing raise intent request", {
       type: message.type,
       intent: payload.intent,
       requestUuid: message.meta.requestUuid,
-      contextType: contextPayload?.type,
-      contextKeys: contextPayload ? Object.keys(contextPayload) : [],
-      hasName: typeof contextPayload?.name === "string",
+      contextType: validatedContext.type,
+      contextKeys: Object.keys(contextPayload),
+      hasId: !!validatedContext.id,
+      hasName: typeof contextPayload.name === "string",
     })
 
     if (resolvedLogPayloadDetail === "full") {
@@ -66,19 +70,6 @@ export async function handleRaiseIntentRequest(
         contextPayload: JSON.stringify(contextPayload),
       })
     }
-
-    const validatedContext: Context = payload.context
-
-    const validatedContextRecord = validatedContext as Record<string, unknown>
-    logger.debug("DACP: Context validated successfully", {
-      contextType: validatedContext.type,
-      hasId: !!validatedContext.id,
-      hasName: typeof validatedContextRecord.name === "string",
-      contextKeys: Object.keys(validatedContextRecord),
-      ...(resolvedLogPayloadDetail === "full"
-        ? { validatedContext: JSON.stringify(validatedContextRecord) }
-        : {}),
-    })
 
     const targetApp: AppIdentifier | undefined = normalizeTargetApp(payload.app)
     validateRequestedTargetAvailability(context, targetApp)

@@ -17,6 +17,7 @@ import { handleJoinUserChannelRequest } from "../channels/handlers"
 import { handleCreatePrivateChannelRequest } from "../private-channels/handlers"
 import { handleOpenRequest } from "../open/handlers"
 import { handleAddIntentListener } from "../intents/intent-listener-handlers"
+import { handleRaiseIntentRequest } from "../intents/intent-raise-intent"
 
 type ErrorResponseMessage = {
   type: string
@@ -166,6 +167,46 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
           withResponseDispatcher(context, transport),
         )
         expect(getLastErrorPayload(transport).error).toBe(ResolveError.TargetInstanceUnavailable)
+      },
+    },
+    {
+      // `RaiseIntentRequestPayload.context` is required by the schema, so a missing context is
+      // malformed. It must not skip validation and reach the `Context` cast downstream.
+      name: "raiseIntentRequest with missing context",
+      expectedError: ResolveError.MalformedContext,
+      invoke: async () => {
+        const { context, transport } = createConnectedHandlerContext("a1")
+        await handleRaiseIntentRequest(
+          {
+            type: "raiseIntentRequest",
+            meta: createDacpRequestMeta("raise-intent-missing-context"),
+            payload: {
+              intent: "ViewChart",
+              context: undefined as unknown as Context,
+            },
+          },
+          context,
+        )
+        expect(getLastErrorPayload(transport).error).toBe(ResolveError.MalformedContext)
+      },
+    },
+    {
+      name: "raiseIntentRequest with invalid context",
+      expectedError: ResolveError.MalformedContext,
+      invoke: async () => {
+        const { context, transport } = createConnectedHandlerContext("a1")
+        await handleRaiseIntentRequest(
+          {
+            type: "raiseIntentRequest",
+            meta: createDacpRequestMeta("raise-intent-malformed-context"),
+            payload: {
+              intent: "ViewChart",
+              context: { bogus: true } as unknown as Context,
+            },
+          },
+          context,
+        )
+        expect(getLastErrorPayload(transport).error).toBe(ResolveError.MalformedContext)
       },
     },
   ]

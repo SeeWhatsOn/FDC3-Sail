@@ -1,8 +1,8 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent defect fixes
 
-Status: **implementing** — slice 3 verified + reviewed and committed; slice 4 in progress
-Current slice: 4. Slices 1–3 complete.
-Review/fix loops: 1 on slice 1 (review + fix, both clean). Slice 2 failures: 0. Slice 3 failures: 0
+Status: **done** — all four slices verified + reviewed
+Current slice: none. Slices 1–4 complete.
+Review/fix loops: 1 on slice 1 (review + fix, both clean). Slice 2 failures: 0. Slice 3 failures: 0. Slice 4 failures: 0
 
 ## Verify Commands
 
@@ -110,7 +110,7 @@ All verified against `node_modules/@finos/fdc3-schema/dist/generated/api/Browser
 - [x] 1 strip `meta.hostInstanceId` + AGENTS.md: **verified** (main-agent review; fresh-context security review not run — see Review Notes)
 - [x] 2 collapse `fdc3Version`: **verified** (main-agent review, per the Review Plan)
 - [x] 3 off-schema payloads + `ListenerError`: **verified** (main-agent review; its one finding parked by user decision — failures: 0)
-- [ ] 4 `raiseIntent` context: not started
+- [x] 4 `raiseIntent` context: **verified** (main-agent review, per the Review Plan — no Required findings)
 
 ## Verification Notes
 
@@ -149,7 +149,28 @@ All verified against `node_modules/@finos/fdc3-schema/dist/generated/api/Browser
 
 **Plan correction (step 7).** The plan predicted the only BDD impact was `event-listeners.feature:78,84`. It missed three rows that assert `privateChannelOnDisconnectEvent`'s `msg.payload.contextType` = `{null}`: `private-channel.feature:48,79` and `disconnect-cleanup.feature:68`. They need **no edit** — `testing-utils.ts:130` resolves `{null}` to `expect(actual).toBeFalsy()`, which accepts `undefined`. Consequence worth recording: those rows passed before *and* after, so **they do not guard the deletion**.
 
+**Slice 4** (2026-08-06)
+
+- `npx tsc --noEmit` (package): exit 0 · `npx vp lint .`: exit 0
+- `npx vp test run` (package): exit 0 — **334 passed / 51 files** (+2 tests, no new file)
+- `npx cucumber-js`: exit 0 — **154 scenarios, 1461 steps, all passed**
+- **Prove-It check:** with `payload.context !== undefined &&` restored, the missing-context case **failed** with `expected 'IntentDeliveryFailed' to be 'MalformedContext'`. That is exactly the defect the slice describes — the undefined context skipped validation, hit the `Context` cast, and the resulting `TypeError` was swallowed into a generic error by the enclosing `catch`. Real regression test, and it names the wrong-error symptom rather than just asserting shape.
+- **Schema confirmed:** `RaiseIntentRequestPayload:3349-3353` marks `context: Context` **required** — so rejecting `undefined` is the conforming behaviour, not a tightening.
+- **Blast radius checked:** every `raiseIntentRequest` producer in the monorepo is inside `sail-desktop-agent` (its own Vitest files and `test/step-definitions/intents.steps.ts`). No `sail-finance`, `sail-one`, or harness caller raises an intent without a context, so no consumer starts getting `MalformedContext` where it used to succeed.
+
 ## Review Notes
+
+### Main-agent review of slice 4 — run 2026-08-06
+
+**Both edits are net deletions.** The handler loses 27 lines and gains 13: one condition dropped, one duplicate log block removed. `2 files changed, +50 −18`, and 41 of those insertions are the two test cases. No park-list item leaked in.
+
+**The log dedupe lost nothing.** The deleted `"DACP: Context validated successfully"` block carried `hasId` (moved into the surviving `logger.info`) and a `full`-detail `validatedContext: JSON.stringify(...)` — which was the *same object* the surviving `full` branch already logs as `contextPayload`. Verified `dacp-log-redaction.test.ts` still passes, so nothing asserted on the deleted message.
+
+**The `as Record<string, unknown>` cast stays, and that is correct.** `isValidContext` narrows to `Context`, which has no `name`, so reading `contextPayload.name` still needs the cast. The unsafe cast the slice set out to remove was the *different* one — `const validatedContext: Context = payload.context` on an unnarrowed value. That is now a safe post-guard assignment.
+
+**Matches its stated reference implementation.** `if (!isValidContext(payload.context))` is now identical to `intent-raise-intent-for-context.ts:116`. Left alone deliberately: `open/handlers.ts:108` and `intent-discovery-handlers.ts:23` keep their `!== undefined` short-circuit, because `context` is genuinely **optional** on `openRequest` and `findIntentRequest`. The audit was right to name only `raiseIntent`.
+
+**No Required findings. No Follow-up.**
 
 ### Main-agent review of slice 3 — run 2026-08-06
 
