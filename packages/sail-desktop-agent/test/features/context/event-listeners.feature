@@ -11,7 +11,7 @@ Feature: Desktop Agent Event Listeners
     When "appId: App1, instanceId: a1" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
     And "appId: App2, instanceId: a2" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
-      | msg.matches_type         | to.instanceId | msg.payload.newChannelId |
+      | msg.matches_type         | to.instanceId | msg.payload.currentChannelId |
       | addEventListenerResponse | a1            | {null}                   |
       | channelChangedEvent      | a1            | fdc3.channel.1           |
       | joinUserChannelResponse  | a2            | {null}                   |
@@ -20,7 +20,7 @@ Feature: Desktop Agent Event Listeners
     When "appId: App1, instanceId: a1" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
     And "appId: App1, instanceId: a1" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
-      | msg.matches_type         | to.instanceId | msg.payload.newChannelId |
+      | msg.matches_type         | to.instanceId | msg.payload.currentChannelId |
       | addEventListenerResponse | a1            | {null}                   |
       | channelChangedEvent      | a1            | fdc3.channel.1           |
       | joinUserChannelResponse  | a1            | {null}                   |
@@ -30,7 +30,7 @@ Feature: Desktop Agent Event Listeners
     And "appId: App1, instanceId: a1" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     And "appId: App1, instanceId: a1" leaves the current user channel [fdc3.leaveCurrentChannel]
     Then messaging will have outgoing posts
-      | msg.matches_type            | to.instanceId | msg.payload.newChannelId |
+      | msg.matches_type            | to.instanceId | msg.payload.currentChannelId |
       | addEventListenerResponse    | a1            | {null}                   |
       | channelChangedEvent         | a1            | fdc3.channel.1           |
       | joinUserChannelResponse     | a1            | {null}                   |
@@ -52,7 +52,7 @@ Feature: Desktop Agent Event Listeners
     And "appId: App2, instanceId: a2" adds an event listener for "userChannelChanged" [fdc3.addEventListener]
     And "appId: App1, instanceId: a1" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     Then messaging will have outgoing posts
-      | msg.matches_type         | to.instanceId | msg.payload.newChannelId |
+      | msg.matches_type         | to.instanceId | msg.payload.currentChannelId |
       | addEventListenerResponse | a1            | {null}                   |
       | addEventListenerResponse | a2            | {null}                   |
       | channelChangedEvent      | a1            | fdc3.channel.1           |
@@ -64,7 +64,7 @@ Feature: Desktop Agent Event Listeners
     And "appId: App2, instanceId: a2" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     And "appId: App2, instanceId: a2" leaves the current user channel [fdc3.leaveCurrentChannel]
     Then messaging will have outgoing posts
-      | msg.matches_type            | to.instanceId | msg.payload.newChannelId |
+      | msg.matches_type            | to.instanceId | msg.payload.currentChannelId |
       | addEventListenerResponse    | a1            | {null}                   |
       | channelChangedEvent         | a1            | fdc3.channel.1           |
       | joinUserChannelResponse     | a2            | {null}                   |

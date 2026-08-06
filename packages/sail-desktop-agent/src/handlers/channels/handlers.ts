@@ -390,11 +390,11 @@ function notifyChannelChanged(
       .map(listener => listener.instanceId),
   )
 
-  // `ChannelChangedEventPayload` defines only these two fields; `newChannelId` is deprecated but
-  // schema-valid, so both are sent for clients that read either.
+  // `ChannelChangedEventPayload` is an `anyOf` of two mutually exclusive branches — `{newChannelId}`
+  // (deprecated) and `{currentChannelId}` — each with `additionalProperties: false`. Sending both
+  // fails both branches, so only the current field is emitted.
   const channelChangedEvent = createDACPEvent("channelChangedEvent", {
     currentChannelId: channelId,
-    newChannelId: channelId,
   })
 
   subscriberInstanceIds.forEach(subscriberInstanceId => {

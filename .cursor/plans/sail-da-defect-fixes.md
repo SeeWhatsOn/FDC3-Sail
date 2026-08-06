@@ -65,7 +65,7 @@ All verified against `node_modules/@finos/fdc3-schema/dist/generated/api/Browser
 
 | Fix | Site | Change |
 |---|---|---|
-| `channelChangedEvent` | `handlers/channels/handlers.ts:393-399` | Add `currentChannelId`; **drop** non-schema `channelId` and `identity`. Keep `newChannelId` — it is deprecated but schema-valid (`ChannelChangedEventPayload:1106`) and the integration test at `wcp-desktop-agent.integration.test.ts:1188` asserts it |
+| `channelChangedEvent` | `handlers/channels/handlers.ts:393-399` | Send **only** `currentChannelId`; **drop** non-schema `channelId` and `identity` **and** deprecated `newChannelId`. ~~Keep `newChannelId`~~ — **corrected 2026-08-06**, see "Slice 3 correction" below |
 | PC `onDisconnect` | `handlers/private-channels/handlers.ts:472-476` | Drop `contextType` and `instanceId`. Schema defines **only** `privateChannelId` |
 | `heartbeatEvent` | `handlers/heartbeat/handlers.ts:38` | Drop `eventId`. `HeartbeatEventPayload` is `{}` |
 | `"ListenerError"` | `handlers/events/handlers.ts:31,49,80,109,125` | **DECIDED 2026-08-05: carve-out.** Keep the code; record it in `AGENTS.md` alongside the existing `ListenerNotFound` note as a deliberate conformance choice. No code change at the 5 sites |
@@ -148,6 +148,32 @@ All verified against `node_modules/@finos/fdc3-schema/dist/generated/api/Browser
 - **Reader grep, as the plan required:** `payload.eventId` — zero hits monorepo-wide outside the write site. `payload.contextType` — hits are all unrelated inbound requests (`channels/handlers.ts:226,230` on `broadcastRequest`/`getCurrentContext`, `intent-listener-handlers.ts:58`), none on the disconnect event. `payload.channelId` — one hit, the test helper at `wcp-desktop-agent.integration.test.ts:109`, which already fell back to `newChannelId`; updated to read `currentChannelId`.
 
 **Plan correction (step 7).** The plan predicted the only BDD impact was `event-listeners.feature:78,84`. It missed three rows that assert `privateChannelOnDisconnectEvent`'s `msg.payload.contextType` = `{null}`: `private-channel.feature:48,79` and `disconnect-cleanup.feature:68`. They need **no edit** — `testing-utils.ts:130` resolves `{null}` to `expect(actual).toBeFalsy()`, which accepts `undefined`. Consequence worth recording: those rows passed before *and* after, so **they do not guard the deletion**.
+
+**Slice 3 correction — `channelChangedEvent` was still off-schema after the slice** (2026-08-06, found by `/fdc3-expert` review)
+
+The slice shipped **both** `currentChannelId` and `newChannelId`. That payload is **invalid**. `ChannelChangedEventPayload` in the JSON Schema is an `anyOf` of two **mutually exclusive** branches, each with `additionalProperties: false`:
+
+- `{ newChannelId }` — `required`, `deprecated: true`
+- `{ currentChannelId }` — `required`
+
+Sending both fails branch 1 (`currentChannelId` is an additional property) *and* branch 2 (`newChannelId` is). Confirmed with `ajv` against `@finos/fdc3-schema@2.2.3`:
+
+| Payload | Result |
+|---|---|
+| `{currentChannelId, newChannelId}` — as shipped by slice 3 | **INVALID** |
+| `{currentChannelId}` | VALID |
+| `{newChannelId}` | VALID |
+
+**Why the slice missed it — the authority was wrong.** Slice 3 verified against `BrowserTypes.d.ts`, which renders the payload as `{newChannelId?: null|string; currentChannelId?: null|string}`. That is quicktype **flattening the `anyOf` into two optional fields**, which loses the mutual exclusion entirely. The generated `.d.ts` cannot express this constraint. **Verify event payloads against `dist/schemas/api/*.schema.json`, not the generated types.**
+
+**Fix:** `handlers/channels/handlers.ts:396` now emits `currentChannelId` only. Knock-on edits: the integration-test helper at `:104,109` (dropped the `newChannelId` fallback), assertions at `:1188,1232` swapped to `not.toHaveProperty("newChannelId")`, and 5 BDD table headers in `event-listeners.feature` renamed `msg.payload.newChannelId` → `msg.payload.currentChannelId`.
+
+- `npx tsc --noEmit` exit 0 · `npx vp lint .` exit 0 · `npx vp fmt --check .` exit 0 (183 files)
+- `npx vp test run`: **334 passed / 51 files** · `npx cucumber-js`: **154 scenarios, 1461 steps, all passed**
+- `sail-conformance-harness`: `npx tsc --noEmit` exit 0 · `npx vp test run` **69 passed / 14 files**
+- **Prove-It:** re-adding `newChannelId: channelId` fails **2 tests** — `expected { …(2) } to not have property "newChannelId"` and `expected { currentChannelId: null, …(1) } to not have property "newChannelId"`. The fix now has a guard in both the join and leave directions.
+
+**Also confirmed by the same review (no code change):** `"ListenerError"` is **off-schema, not merely undocumented**. `payload.error` on listener responses is `common.schema.json#/$defs/ErrorMessages` = `oneOf` the five FDC3 error enums; `"ListenerError"` is in none of them, so a response-validating client rejects it. The 2026-08-05 carve-out decision stands, but record it as a **schema violation**. Legal alternatives in 2.2.3 if it is ever revisited: `ChannelError.InvalidArguments` or `ApiTimeout`.
 
 **Slice 4** (2026-08-06)
 
@@ -263,5 +289,7 @@ Everything in the audit's park list. Named here so it does not creep in:
 ## Known Limitations
 
 - **`createDACPEvent` is untyped** (`payload: Record<string, unknown>`), so no off-schema payload field is caught by `tsc`. Slice 3 fixed the three known offenders; it did not close the class. A typed overload per event type would, and is not in this plan's scope.
+- **Generated `BrowserTypes.d.ts` is not a sufficient schema authority.** It flattens JSON Schema `anyOf` into optional fields, silently dropping mutual-exclusion constraints — that is how the `channelChangedEvent` payload stayed invalid through slice 3 *and* its review. Validate against `dist/schemas/api/*.schema.json`. Nothing in the test suite runs `ajv` against the real schemas; adding that would close the whole class and is not in this plan's scope.
+- **`"ListenerError"` violates the response schema**, not just the docs. Deliberate carve-out — see the Slice 3 correction note.
 - **The PC `onDisconnect` and `heartbeatEvent` deletions have no regression test.** Accepted per the plan's "Not testing" line — both are unread fields — but a re-add would pass CI silently.
 - **`channelChangedEvent` fans out to all listeners without saying whose channel changed.** Pre-existing; slice 3 made it observable by removing the non-schema `identity`. Awaiting a user decision — see Review Notes.
