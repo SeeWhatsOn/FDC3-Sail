@@ -1,6 +1,6 @@
 ---
 name: minimal-viable-delivery
-description: Runs lightweight end-to-end delivery from intent refinement through plan, implementation, risk-based testing, verification, and review. Use when building a minimal viable feature or fix, breaking vague work into deliverable slices, avoiding over-engineering, or looping on review until the result is simple, correct, and good enough to continue from.
+description: Runs lightweight end-to-end delivery from intent refinement through plan, implementation, risk-based testing, verification, and review, with coding, testing, and review isolated in separate subagents. Use when building a minimal viable feature or fix, breaking vague work into deliverable slices, avoiding over-engineering, or looping on review until the result is simple, correct, and good enough to continue from.
 ---
 
 # Minimal Viable Delivery
@@ -32,29 +32,49 @@ Example: "Resume `.cursor/plans/add-import-flow.md` and continue the next slice.
 Read this section first. It and the MVP Quality Floor are the mechanism; steps 0-11 are their detail.
 
 ```text
-Clarify intent
-  -> define minimal viable outcome
-  -> plan useful slices + bind the verify command
-  -> choose risk-based tests
-  -> implement one slice
-  -> verify
-  -> review against the plan
-  -> fix or adjust
-  -> continue, stop, or ask the user
+Clarify intent                                    [main]
+  -> define minimal viable outcome                [main + explorer]
+  -> plan useful slices + bind the verify command [main]
+  -> choose risk-based tests                      [main]
+  -> implement one slice                          [coder]
+  -> write/verify tests                           [tester]
+  -> verify                                       [main runs the command]
+  -> review against the plan                      [reviewer]
+  -> fix or adjust                                [coder]
+  -> continue, stop, or ask the user              [main]
 ```
+
+### Role separation
+
+Coding, testing, and review are **three separate subagents with three separate contexts**. This is the point of the loop, not an optimization. An agent that wrote code cannot be trusted to judge it, and tests written by the implementer test what was built rather than what was asked for.
+
+| Role | Owns | Must never also be |
+|---|---|---|
+| **main** | User intent, the plan file, gates, running verify commands, the final decision | — |
+| **coder** | Code edits for one slice | tester, reviewer |
+| **tester** | Test design and test code, written from the plan's acceptance criteria | coder |
+| **reviewer** | Plan-bound review of the slice diff | coder, tester |
+
+Hard rules:
+
+- **Never reuse one subagent across two roles**, in one slice or across slices. A fresh context per role is the isolation.
+- **The tester is briefed from the plan, not from the diff.** Give it the slice's Goal and Acceptance, not the implementation, unless it is verifying an existing failure.
+- **The reviewer never edits.** It returns findings; the coder applies them.
+- **The main agent never writes slice code.** If it catches itself editing implementation files, that is a skipped gate — see step 10 for the only exemption.
 
 ### Gates
 
 These phases each emit one artifact. Do not enter a phase until the previous phase's artifact exists.
 
-| Phase | Artifact it emits | Gate it opens |
-|---|---|---|
-| 1. Clarify intent | Restate block the user confirmed | No plan from ambiguous intent |
-| 2-3. Minimal outcome | Reuse findings, chosen code shape | No slices before knowing what already exists |
-| 4-6. Plan | Slice list, each with a literal verify command | No edits without an approved plan |
-| 8.1-8.3 Implement | One slice's diff | No second slice while the first is unverified |
-| 8.4 Verify | Command plus exit status under Verification Notes | No review of an unverified slice |
-| 9. Review | Findings split Required / Follow-up / Ignore for MVP | No "done" while a Required is open |
+| Phase | Owner | Artifact it emits | Gate it opens |
+|---|---|---|---|
+| 1. Clarify intent | main | Restate block the user confirmed | No plan from ambiguous intent |
+| 2-3. Minimal outcome | main + explorer | Reuse findings, chosen code shape | No slices before knowing what already exists |
+| 4-6. Plan | main | Slice list, each with a literal verify command | No edits without an approved plan |
+| 8.1-8.3 Implement | **coder** | One slice's diff | No second slice while the first is unverified |
+| 8.3b Tests | **tester** | Test files, plus what it declined to test and why | No verify on a slice whose risk-planned tests do not exist |
+| 8.4 Verify | main | Command plus exit status under Verification Notes | No review of an unverified slice |
+| 9. Review | **reviewer** | Findings split Required / Follow-up / Ignore for MVP | No "done" while a Required is open |
 
 Steps 7, 10, and 11 are support, not gates: persist, delegate, and decide as needed.
 
@@ -235,11 +255,15 @@ Current slice: <number or title>
 - Manual/runtime:
 - Not testing:
 
-## Review Plan
+## Agent Roles
 
-- Main-agent checks:
-- Fresh-context review:
-- Resolved agent types: <exact names available this session, per step 10>
+Resolved against the agent types available this session, per step 10.
+
+- coder: <exact agent type name>
+- tester: <exact agent type name, or "none — no risk-planned tests">
+- reviewer: <exact agent type name>
+- security reviewer: <exact agent type name, or "not applicable">
+- explorer: <exact agent type name, or "not needed">
 
 ## Risks
 
@@ -279,18 +303,18 @@ Keep it short. If it grows large, split the work or switch to a fuller planning/
 
 ### 8. Implement One Slice
 
-When the user approves the plan:
+When the user approves the plan, the main agent runs one slice as an orchestration, not as its own edit session:
 
-1. Implement one slice at a time, under the plan's stated Simplicity Bias policy — the repo's own minimality skill if it named one, otherwise the defaults in step 3.
-2. Keep each change focused, and reversible by a mechanism rather than by intention: work on a branch by default, and commit per passing slice when the user has asked for commits. "Reversible" with neither a branch nor a commit is a claim, not a rollback.
-3. Write or update only the tests justified by the risk plan.
-4. Run that slice's `Verify:` command and record it with its exit status under Verification Notes. A slice with no recorded exit status is unverified.
-5. Stop and simplify if the code starts needing speculative abstractions.
+1. **Set up rollback first.** Work on a branch by default; commit per passing slice when the user has asked for commits. "Reversible" with neither a branch nor a commit is a claim, not a rollback.
+2. **Dispatch the coder subagent** with one slice only, under the plan's stated Simplicity Bias policy — the repo's own minimality skill if it named one, otherwise the defaults in step 3. Brief it per step 10.
+3. **Dispatch the tester subagent** for the tests the risk plan justified. Brief it from the slice's Goal and Acceptance. It writes tests only; it does not fix implementation code.
+4. **Run that slice's `Verify:` command yourself** and record it with its exit status under Verification Notes. A slice with no recorded exit status is unverified. Do not accept a subagent's claim that tests pass — the exit status you observed is the artifact.
+5. **On failure, send the failure back to the coder**, not to whoever is convenient. Increment the slice counter per the loop rule.
 6. Note useful follow-up improvements without building them unless the user asks.
 
-Keep implementation in the main agent by default. The main agent owns user intent, the plan, code edits, ordinary test runs, and obvious fixes.
+Steps 2 and 3 may run in either order. Prefer tester-first when the slice is a bug fix, so the reproduction fails before the fix exists.
 
-If the implementation starts adding polish, abstractions, dependencies, broad tests, or extra files, pause and ask: "Is this required for MVP, or should it be a follow-up?"
+If a subagent's diff starts adding polish, abstractions, dependencies, broad tests, or extra files, do not merge it forward — send it back with the scope cut, or pause and ask the user: "Is this required for MVP, or should it be a follow-up?"
 
 ### 9. Verify And Review
 
@@ -304,7 +328,7 @@ After each non-trivial slice, review the result against the approved plan:
 - Are there missing tests only where bugs, boundaries, or brittle logic make them useful?
 - Are follow-up improvements better left as follow-up instead of included now?
 
-Route the review to a subagent per the table in step 10 when the change is non-trivial. Review must be plan-bound: do not request production hardening, broad refactors, extra abstraction, or coverage increases unless they are required to meet the plan or prevent a real bug.
+Route the review to a **fresh reviewer subagent** per step 10. The main agent does not review the slice itself — it read the plan, argued for the approach, and dispatched the coder, so it is not a fresh context. Review must be plan-bound: do not request production hardening, broad refactors, extra abstraction, or coverage increases unless they are required to meet the plan or prevent a real bug.
 
 Categorize review findings as:
 
@@ -312,22 +336,35 @@ Categorize review findings as:
 - Follow-up: useful improvement, polish, hardening, or refactor that should not block the MVP slice.
 - Ignore for MVP: valid preference or optional idea that would expand scope without improving this delivery.
 
-When briefing a review subagent, give it the plan, the diff, the verification already run, and those three category definitions verbatim. Reviews that come back in other shapes cannot drive the loop.
+Brief the reviewer per the table in step 10, and give it those three category definitions verbatim.
 
-### 10. Use Subagents Selectively
+### 10. Dispatch The Role Subagents
 
-Default to the main agent. Spawn a fresh-context subagent when independence is worth the overhead:
+Every non-trivial slice uses at least a **coder** and a **reviewer**, plus a **tester** whenever the risk plan calls for tests. These are separate agents. Do not collapse them to save a round trip.
 
-| Situation | Agent role | Typical type |
+| Role | When | Typical type |
 |---|---|---|
-| "What already exists?" in step 2, spanning many files | Read-only search, returns the conclusion | read-only explorer |
-| Non-trivial change, cross-boundary behavior, concurrency, data loss risk, or a slice that already failed once | Plan-bound code review | code reviewer |
-| Non-trivial test design, flaky failures, integration-heavy checks, runtime verification, or tests that should be written without implementation bias | Test design and verification | test engineer |
-| Auth, permissions, secrets, user input, external data, payments, destructive actions, sensitive storage | Security review | security auditor |
+| **explorer** | "What already exists?" in step 2 spans many files or unknown naming conventions | read-only search agent |
+| **coder** | Every slice that edits code | general-purpose |
+| **tester** | The risk plan named a unit, integration, or runtime check for this slice | test engineer |
+| **reviewer** | Every non-trivial slice, and always after a slice failure | code reviewer |
+| **security reviewer** | Auth, permissions, secrets, user input, external data, payments, destructive actions, sensitive storage | security auditor |
 
-Agent type names differ between setups. Resolve each role against the agent types actually available in the current session and use the exact name; fall back to a general-purpose agent carrying the role's focus in its prompt when no specialist exists. Do not name a skill where an agent type is required — they are different things.
+Security review is **in addition to** the ordinary reviewer, not a substitute for it.
 
-Do not spawn subagents for tiny, obvious slices. When using a subagent, pass the approved plan, the changed files, the verification already run with its exit status, and the exact review focus.
+**Resolving type names.** Agent type names differ between setups. Resolve each role against the agent types actually available in the current session and use the exact name; fall back to a general-purpose agent carrying the role's focus in its prompt when no specialist exists. Record the resolved names in the plan's Review Plan section so a resumed session reuses the same mapping. Do not name a skill where an agent type is required — they are different things.
+
+**Briefing.** Every subagent gets a written brief. Give each role exactly this and no more:
+
+| Role | Gets | Does not get |
+|---|---|---|
+| coder | Plan intent, this slice's Goal / Acceptance / Likely files, Simplicity Bias, prior review findings marked Required | Other slices, follow-up ideas |
+| tester | Plan intent, this slice's Goal / Acceptance, the Test Plan row, the literal verify command | The implementation diff (except when reproducing a known bug) |
+| reviewer | The approved plan, the slice diff, the verify command with the exit status you observed, and the three finding categories from step 9 verbatim | Permission to edit files |
+
+A review that comes back in a shape other than Required / Follow-up / Ignore for MVP cannot drive the loop — send it back rather than reinterpreting it yourself.
+
+**The only exemption.** A slice that is a single obvious edit in one file, with no risk-planned test, may be done by the main agent directly. Say so in the plan's Slice Checkpoints line when you take it. If you take the exemption twice in a row, you have mis-sliced the work — go back to step 4.
 
 ### 11. Loop Or Stop
 
@@ -349,6 +386,10 @@ When finishing or pausing, report what the plan file already holds: completed sl
 
 Patterns to catch mid-flight, when you have stopped re-reading the steps above:
 
+- One context wrote the code, wrote the tests, and passed the review. That is not a loop, it is a single opinion in three costumes.
+- Reviewing your own slice because "the diff is small and I already know what it does" — that is exactly the reasoning the fresh context exists to defeat.
+- Handing the tester the diff and asking it to "write tests for this". It then tests what was built, not what the plan asked for.
+- Reporting a slice verified on a subagent's word instead of an exit status you observed.
 - Skipping tests for brittle logic, concurrency, storage, security, or cross-boundary behavior.
 - Letting "minimal" justify known correctness, security, data integrity, or accessibility failures.
 - Accepting "scalable", "robust", or "clean" as goals without asking what they mean for this task.
@@ -363,6 +404,7 @@ Before implementation, the gates are the check: every plan section down to Risks
 Before calling the delivery done, confirm:
 
 - [ ] Implemented slices meet the approved plan.
+- [ ] Every non-trivial slice was coded, tested, and reviewed by three separate contexts — or took the step 10 exemption and said so.
 - [ ] Every slice has a recorded verify command and exit status, or a documented limitation explaining why not.
 - [ ] Review findings are resolved, deferred with reason, or returned to the user.
 - [ ] Follow-up improvements were not silently folded into MVP scope.
