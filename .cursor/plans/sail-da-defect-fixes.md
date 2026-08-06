@@ -158,6 +158,8 @@ All verified against `node_modules/@finos/fdc3-schema/dist/generated/api/Browser
 - **Schema confirmed:** `RaiseIntentRequestPayload:3349-3353` marks `context: Context` **required** — so rejecting `undefined` is the conforming behaviour, not a tightening.
 - **Blast radius checked:** every `raiseIntentRequest` producer in the monorepo is inside `sail-desktop-agent` (its own Vitest files and `test/step-definitions/intents.steps.ts`). No `sail-finance`, `sail-one`, or harness caller raises an intent without a context, so no consumer starts getting `MalformedContext` where it used to succeed.
 
+**Downstream consumer check, slices 3 + 4 together** (2026-08-06) — not required by the plan, run because `sail-conformance-harness` is the only end-to-end consumer of the changed payloads: `npx tsc --noEmit` exit 0 · `npx vp test run` exit 0, **69 passed / 14 files**.
+
 ## Review Notes
 
 ### Main-agent review of slice 4 — run 2026-08-06
