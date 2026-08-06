@@ -34,9 +34,8 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
   setState(state => startHeartbeatTransform(state, instanceId))
 
   const sendHeartbeat = () => {
-    const heartbeatEvent = createDACPEvent("heartbeatEvent", {
-      eventId: crypto.randomUUID(),
-    })
+    // `HeartbeatEventPayload` is empty; correlation is carried by `meta.eventUuid`.
+    const heartbeatEvent = createDACPEvent("heartbeatEvent")
 
     // Add routing metadata
     const heartbeatEventWithRouting = {

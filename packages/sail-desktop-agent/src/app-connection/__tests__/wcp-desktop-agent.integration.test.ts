@@ -101,12 +101,12 @@ function waitForChannelChangedEvent(
   return waitForPortMessage<BrowserTypes.ChannelChangedEvent>(appPort, data => {
     const message = data as {
       type?: string
-      payload?: { channelId?: string | null; newChannelId?: string | null }
+      payload?: { currentChannelId?: string | null; newChannelId?: string | null }
     }
     if (message.type !== "channelChangedEvent") {
       return false
     }
-    const channelId = message.payload?.channelId ?? message.payload?.newChannelId ?? null
+    const channelId = message.payload?.currentChannelId ?? message.payload?.newChannelId ?? null
     return channelId === expectedChannelId
   })
 }
@@ -1185,7 +1185,11 @@ describe("browser channels controller (WCP integration)", () => {
     const channelChangedEvent = await channelChangedPromise
 
     expect(channelChangedEvent.type).toBe("channelChangedEvent")
+    expect(channelChangedEvent.payload.currentChannelId).toBe(CHANNEL_ID)
     expect(channelChangedEvent.payload.newChannelId).toBe(CHANNEL_ID)
+    // `ChannelChangedEventPayload` defines neither field — a strict client rejects them.
+    expect(channelChangedEvent.payload).not.toHaveProperty("channelId")
+    expect(channelChangedEvent.payload).not.toHaveProperty("identity")
     expect(channels.getAppChannelId(app.validatedInstanceId)).toBe(CHANNEL_ID)
     expect(channels.getAppChannel(app.validatedInstanceId)).toMatchObject({
       id: CHANNEL_ID,
@@ -1225,6 +1229,7 @@ describe("browser channels controller (WCP integration)", () => {
     const leaveEvent = await leavePromise
 
     expect(leaveEvent.type).toBe("channelChangedEvent")
+    expect(leaveEvent.payload.currentChannelId).toBeNull()
     expect(leaveEvent.payload.newChannelId).toBeNull()
     expect(channels.getAppChannelId(app.validatedInstanceId)).toBeNull()
     expect(channels.getAppChannel(app.validatedInstanceId)).toBeNull()

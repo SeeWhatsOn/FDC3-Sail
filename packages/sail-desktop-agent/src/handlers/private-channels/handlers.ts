@@ -469,10 +469,9 @@ function notifyPrivateChannelDisconnectInternal(
       return
     }
 
+    // `PrivateChannelOnDisconnectEventPayload` defines only `privateChannelId`.
     const disconnectEvent = createDACPEvent("privateChannelOnDisconnectEvent", {
       privateChannelId: channel.id,
-      contextType: null,
-      instanceId: sourceInstanceId,
     })
 
     const disconnectEventWithRouting = {

@@ -1,8 +1,8 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent defect fixes
 
-Status: **slice 2 verified + reviewed** — stop point, slices 3–4 not started
-Current slice: 2 **complete**. Slices 3–4 not started.
-Review/fix loops: 1 on slice 1 (review + fix, both clean). Slice 2 failures: 0
+Status: **implementing** — slice 3 verified + reviewed and committed; slice 4 in progress
+Current slice: 4. Slices 1–3 complete.
+Review/fix loops: 1 on slice 1 (review + fix, both clean). Slice 2 failures: 0. Slice 3 failures: 0
 
 ## Verify Commands
 
@@ -109,7 +109,7 @@ All verified against `node_modules/@finos/fdc3-schema/dist/generated/api/Browser
 
 - [x] 1 strip `meta.hostInstanceId` + AGENTS.md: **verified** (main-agent review; fresh-context security review not run — see Review Notes)
 - [x] 2 collapse `fdc3Version`: **verified** (main-agent review, per the Review Plan)
-- [ ] 3 off-schema payloads + `ListenerError`: not started
+- [x] 3 off-schema payloads + `ListenerError`: **verified** (main-agent review; its one finding parked by user decision — failures: 0)
 - [ ] 4 `raiseIntent` context: not started
 
 ## Verification Notes
@@ -130,7 +130,50 @@ All verified against `node_modules/@finos/fdc3-schema/dist/generated/api/Browser
 - `sail-conformance-harness`: `npx tsc --noEmit` clean · `npx vp test run` **69 passed / 14 files**
 - **Prove-It check:** with the threading mutated to a literal `"2.2"` at `sail-desktop-agent.ts:159`, the new test **failed** with `expected "2.2" to be "3.0"` on the WCP3 assertion while WCP5 still reported `3.0` — i.e. it reproduces the exact divergence this slice closes, not a tautology.
 
+**Slice 3** (2026-08-06)
+
+- `npx tsc --noEmit` (package): exit 0 · `npx vp lint .`: exit 0 · `npx vp fmt --check .`: exit 0 (183 files)
+- `npx vp test run` (package): exit 0 — **332 passed / 51 files** (unchanged count; assertions added to an existing test, no new file)
+- `npx cucumber-js`: exit 0 — **154 scenarios, 1461 steps, all passed**
+- **Prove-It check — both directions, on `wcp-desktop-agent.integration.test.ts`:**
+
+  | Mutation | Result |
+  |---|---|
+  | Full pre-fix payload restored (`channelId` + `identity`, no `currentChannelId`) | **2 tests fail** — `expected undefined to be 'fdc3.channel.1'` and `expected undefined to be null` |
+  | `identity` re-added, `currentChannelId` kept | **1 test fails** — `expected { …(3) } to not have property "identity"` |
+
+  So the assertions guard the added field *and* the removed fields independently, not just one side.
+
+- **Schema re-verified directly** against `node_modules/@finos/fdc3-schema/dist/generated/api/BrowserTypes.d.ts`: `ChannelChangedEventPayload:1101` = `{newChannelId?, currentChannelId?}`; `PrivateChannelOnDisconnectEventPayload:3088` = `{privateChannelId}`; `HeartbeatEventPayload:2480` = `{}`.
+- **Reader grep, as the plan required:** `payload.eventId` — zero hits monorepo-wide outside the write site. `payload.contextType` — hits are all unrelated inbound requests (`channels/handlers.ts:226,230` on `broadcastRequest`/`getCurrentContext`, `intent-listener-handlers.ts:58`), none on the disconnect event. `payload.channelId` — one hit, the test helper at `wcp-desktop-agent.integration.test.ts:109`, which already fell back to `newChannelId`; updated to read `currentChannelId`.
+
+**Plan correction (step 7).** The plan predicted the only BDD impact was `event-listeners.feature:78,84`. It missed three rows that assert `privateChannelOnDisconnectEvent`'s `msg.payload.contextType` = `{null}`: `private-channel.feature:48,79` and `disconnect-cleanup.feature:68`. They need **no edit** — `testing-utils.ts:130` resolves `{null}` to `expect(actual).toBeFalsy()`, which accepts `undefined`. Consequence worth recording: those rows passed before *and* after, so **they do not guard the deletion**.
+
 ## Review Notes
+
+### Main-agent review of slice 3 — run 2026-08-06
+
+**All three payload edits are correct and minimal.** Field deletions plus one addition at three existing call sites. No new validation layer, no new options, no abstraction — the plan's Simplicity Bias held. Diff is 6 files / +18 / −16, contains only slice 3 plus this plan file and the `AGENTS.md` note the slice called for. No park-list item leaked in.
+
+**`createDACPEvent` gives no type safety.** Its signature is `(eventType, payload: Record<string, unknown>)` (`dacp/dacp-message-creators.ts:126-128`), so `tsc` cannot catch an off-schema field — this whole defect class is invisible to the compiler. Green typecheck is *no evidence* for this slice. Recorded as a standing note in `AGENTS.md` so the next author checks the schema by hand.
+
+**Two of the three fixes have no regression guard.** Per the plan's "Not testing" line, accepted — but state it plainly rather than imply coverage:
+
+| Fix | Guard |
+|---|---|
+| `channelChangedEvent` | **Guarded both directions**, Prove-It'd above |
+| PC `onDisconnect` | **None.** The 3 Cucumber `{null}` rows pass either way (`toBeFalsy()`) |
+| `heartbeatEvent.eventId` | **None.** Zero tests assert heartbeat payload shape |
+
+Re-adding either dropped field would go unnoticed. Low consequence (unread fields), so Follow-up, not Required.
+
+**Required — decision needed from the user: dropping `identity` removes the only disambiguator from a fan-out event.** `notifyChannelChanged` (`channels/handlers.ts:367-412`) sends `channelChangedEvent` to **every** instance holding a `channelChanged` or catch-all listener, not just the instance whose channel changed. `event-listeners.feature:50-59` pins this: App1 joins `fdc3.channel.1` and **a2 also receives** `channelChangedEvent` with that channel id. `:62-71` is starker — a1 receives events describing a2's join *and* leave.
+
+Before this slice, the non-schema `identity` let a receiver tell whose change it was. Now it cannot, and `currentChannelId` reads as "*your* current channel" per the schema's own wording (`BrowserTypes.d.ts:1108`) — so a conforming a2 concludes it joined a channel it never joined.
+
+The information loss is introduced by this slice; the underlying fan-out is **pre-existing** (the deprecated, schema-valid `newChannelId` was already misleading the same way). The fix — notify only the instance whose channel changed — is a real behaviour change that would rewrite those 2 BDD scenarios, and the plan's Constraint says "No behaviour change beyond the defects."
+
+**Resolved 2026-08-06: user chose to park it** as its own defect rather than expand slice 3. Slice 3 stays a pure schema fix. See Parked Follow-ups.
 
 ### Main-agent review of slice 2 — run 2026-08-05
 
@@ -189,9 +232,13 @@ So the test guards the end-to-end property, not the destructure. It would catch 
 
 ## Parked Follow-ups
 
+**New, found during slice 3 (2026-08-06) — `channelChangedEvent` fan-out has no subject.** `notifyChannelChanged` (`handlers/channels/handlers.ts:367-412`) notifies every instance with a `channelChanged` or catch-all listener, and the schema-legal payload (`{currentChannelId?, newChannelId?}`) carries no app identity — so a receiver cannot tell whether the event describes its own channel change or another app's. `event-listeners.feature:50-59` and `:62-71` pin the current fan-out. Likely fix: notify only the instance whose channel changed, and rewrite those 2 scenarios. Parked by user decision rather than folded into slice 3, because it is a behaviour change and slice 3's Constraint forbids one. Also revisit the two doc comments that describe the fan-out as intended: `handlers/types.ts:141` and `agent/sail-desktop-agent-controllers.ts:164`.
+
 Everything in the audit's park list. Named here so it does not creep in:
 `ChannelControl` decision; 28 catch-block dedupe; 14 hand-rolled `meta.destination` sites; three-identity-store invariants; `recentlyDisconnected` removal (takes the anti-restore guard tests with it); bulk app-directory impossible-guard deletion (remote JSON — weakest class); WCP1/2/3/6 + heartbeat BDD coverage and the orphaned heartbeat `Given`; `setOnAgentDisconnect` removal (needs a Cucumber shutdown replacement first); `TEdge` generic; constructor `initialState`; 31 zero-caller exports; intent-resolver type unification; `channelSelector` website doc bug.
 
 ## Known Limitations
 
-- _(none yet)_
+- **`createDACPEvent` is untyped** (`payload: Record<string, unknown>`), so no off-schema payload field is caught by `tsc`. Slice 3 fixed the three known offenders; it did not close the class. A typed overload per event type would, and is not in this plan's scope.
+- **The PC `onDisconnect` and `heartbeatEvent` deletions have no regression test.** Accepted per the plan's "Not testing" line — both are unread fields — but a re-add would pass CI silently.
+- **`channelChangedEvent` fans out to all listeners without saying whose channel changed.** Pre-existing; slice 3 made it observable by removing the non-schema `identity`. Awaiting a user decision — see Review Notes.
