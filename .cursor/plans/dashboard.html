@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sail plans — staleness dashboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --plane: #f9f9f7;
+    --ink-1: #0b0b0b;
+    --ink-2: #52514e;
+    --ink-muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --hairline: rgba(11,11,11,0.10);
+    --track: #eeeee9;
+
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+
+    --good: #0ca30c;
+    --warning: #fab219;
+    --serious: #ec835a;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --plane: #0d0d0d;
+      --ink-1: #ffffff;
+      --ink-2: #c3c2b7;
+      --ink-muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --hairline: rgba(255,255,255,0.10);
+      --track: #252523;
+
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --plane: #0d0d0d;
+    --ink-1: #ffffff;
+    --ink-2: #c3c2b7;
+    --ink-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --hairline: rgba(255,255,255,0.10);
+    --track: #252523;
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--plane);
+    color: var(--ink-1);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  header.page { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between; margin-bottom: 8px; }
+  h1 { font-size: 26px; line-height: 1.2; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-2); font-size: 13.5px; margin: 0; }
+  .sub code { font-size: 12.5px; background: var(--track); padding: 1px 5px; border-radius: 4px; }
+
+  button.themetoggle {
+    font: inherit; font-size: 13px; color: var(--ink-2);
+    background: var(--surface-1); border: 1px solid var(--hairline);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  }
+  button.themetoggle:hover { color: var(--ink-1); }
+
+  section { margin-top: 26px; }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px 22px;
+  }
+  h2 { font-size: 16px; margin: 0 0 2px; letter-spacing: -0.005em; }
+  .note { color: var(--ink-2); font-size: 13px; margin: 0 0 18px; }
+  .note strong { color: var(--ink-1); font-weight: 600; }
+
+  .banner {
+    background: var(--surface-1); border: 1px solid var(--hairline);
+    border-left: 3px solid var(--warning); border-radius: 10px;
+    padding: 13px 16px; font-size: 13.5px; color: var(--ink-2);
+  }
+  .banner b { color: var(--ink-1); }
+  .banner code { font-size: 12.5px; background: var(--track); padding: 1px 5px; border-radius: 4px; }
+
+  /* ---- stat tiles ---- */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(166px, 1fr)); gap: 12px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--hairline); border-radius: 12px; padding: 16px 18px; }
+  .tile .k { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); margin-bottom: 6px; }
+  .tile .v { font-size: 34px; line-height: 1; font-weight: 600; letter-spacing: -0.02em; }
+  .tile .v .delta { font-size: 14px; font-weight: 500; margin-left: 7px; letter-spacing: 0; }
+  .tile .d { font-size: 12.5px; color: var(--ink-2); margin-top: 7px; }
+
+  /* ---- dumbbell ---- */
+  .chartbox { width: 100%; overflow-x: auto; }
+  svg.chart { display: block; width: 100%; height: auto; }
+  svg.dumb { min-width: 560px; }
+
+  /* ---- ranked bars ---- */
+  .bars { display: grid; grid-template-columns: minmax(120px, 250px) 1fr auto; gap: 5px 14px; align-items: center; }
+  .bars .name { font-size: 13px; color: var(--ink-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bars .name .st { color: var(--ink-muted); font-size: 11.5px; }
+  .track { background: var(--track); border-radius: 4px; height: 14px; }
+  .fill { height: 14px; border-radius: 0 4px 4px 0; min-width: 3px; }
+  .bars .val { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bars .val .band { color: var(--ink-muted); }
+
+  /* ---- execution plan ---- */
+  .gridbox { overflow-x: auto; padding-bottom: 4px; }
+  .wavegrid { display: grid; grid-template-columns: 176px repeat(4, minmax(196px, 1fr)); gap: 8px; min-width: 940px; }
+  .wavegrid .wh { padding: 0 2px 8px; border-bottom: 1px solid var(--axis); }
+  .wavegrid .wh .t { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--ink-1); }
+  .wavegrid .wh .d { font-size: 11.5px; color: var(--ink-muted); margin-top: 2px; }
+  .wavegrid .tl { font-size: 12px; color: var(--ink-2); padding: 10px 8px 0 0; border-right: 1px solid var(--grid); line-height: 1.35; }
+  .wavegrid .tl b { display: block; color: var(--ink-1); font-weight: 600; font-size: 12.5px; }
+  .wavegrid .cell { display: flex; flex-direction: column; gap: 7px; padding: 8px 0; min-height: 34px; }
+
+  .unit { border: 1px solid var(--hairline); border-radius: 9px; padding: 9px 11px; background: var(--plane); border-left: 3px solid var(--axis); }
+  .unit.cp { border-left-color: var(--series-1); }
+  .unit .uh { display: flex; align-items: baseline; gap: 7px; }
+  .unit .uid { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; color: var(--ink-muted); }
+  .unit .ut { font-size: 12.5px; color: var(--ink-1); line-height: 1.3; margin-top: 3px; }
+  .unit .um { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 9px; margin-top: 6px; font-size: 11px; color: var(--ink-muted); }
+  .unit .um .rk { display: inline-flex; align-items: center; gap: 4px; }
+  .unit .um .rk .dot { width: 7px; height: 7px; border-radius: 999px; }
+  .unit .sz { font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .unit .dep { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .unit .gate { color: var(--critical); }
+
+  .callouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 18px; }
+  .callout { border: 1px solid var(--hairline); border-radius: 10px; padding: 13px 15px; background: var(--plane); }
+  .callout h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); margin: 0 0 6px; font-weight: 600; }
+  .callout .big { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; color: var(--ink-1); margin-bottom: 4px; }
+  .callout p { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+  .callout .chain { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .callout .chain span { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: var(--ink-1); background: var(--track); border-radius: 5px; padding: 2px 7px; }
+  .callout .chain i { color: var(--ink-muted); font-style: normal; }
+
+  .warns { margin-top: 16px; display: flex; flex-direction: column; gap: 7px; }
+  .warn { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; color: var(--ink-2); border: 1px solid var(--hairline); border-left: 3px solid var(--serious); border-radius: 8px; padding: 9px 12px; background: var(--plane); }
+  .warn b { color: var(--ink-1); font-weight: 600; }
+  .warn code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; background: var(--track); padding: 1px 5px; border-radius: 4px; }
+
+  /* ---- lifecycle board ---- */
+  .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 14px; }
+  .col h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 3px; display: flex; align-items: center; gap: 7px; color: var(--ink-1); font-weight: 600; }
+  .col h3 .sw { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+  .col h3 b { color: var(--ink-muted); font-weight: 600; font-variant-numeric: tabular-nums; margin-left: auto; }
+  .col .colnote { font-size: 11.5px; color: var(--ink-muted); margin: 0 0 10px; }
+  .col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .col li { border: 1px solid var(--hairline); border-radius: 9px; padding: 9px 11px; background: var(--plane); }
+  .col li .n { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; color: var(--ink-1); word-break: break-word; }
+  .col li .m { font-size: 11.5px; color: var(--ink-muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
+
+  /* ---- stacked distribution ---- */
+  .stack { display: flex; gap: 2px; height: 26px; margin-bottom: 12px; }
+  .stack > div { border-radius: 3px; min-width: 6px; }
+  .stack > div:first-child { border-radius: 4px 3px 3px 4px; }
+  .stack > div:last-child { border-radius: 3px 4px 4px 3px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+  .legend .li { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-2); }
+  .legend .sw { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .legend .li b { color: var(--ink-1); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ---- table ---- */
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .controls label { font-size: 12px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  select, input[type=search] {
+    font: inherit; font-size: 13px; color: var(--ink-1);
+    background: var(--surface-1); border: 1px solid var(--hairline);
+    border-radius: 8px; padding: 6px 10px;
+  }
+  .tablebox { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 940px; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  thead th { color: var(--ink-muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; cursor: pointer; white-space: nowrap; border-bottom: 1px solid var(--axis); }
+  thead th:hover { color: var(--ink-1); }
+  thead th .arrow { opacity: 0.5; font-size: 10px; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr.plan { cursor: pointer; }
+  tr.plan:hover td { background: var(--track); }
+  tr.plan.arch .fname { color: var(--ink-muted); }
+  .fname { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: var(--ink-1); }
+  .ptitle { color: var(--ink-2); font-size: 12px; margin-top: 2px; }
+
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--hairline); background: var(--track); color: var(--ink-2); white-space: nowrap; }
+  .pill .dot { width: 7px; height: 7px; border-radius: 999px; flex: none; }
+
+  .meter { display: flex; align-items: center; gap: 8px; }
+  .meter .mt { width: 58px; height: 8px; background: var(--track); border-radius: 4px; overflow: hidden; flex: none; }
+  .meter .mf { height: 8px; border-radius: 0 4px 4px 0; background: var(--series-1); }
+
+  tr.detail td { background: var(--plane); border-bottom: 1px solid var(--axis); }
+  .det { display: grid; grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); gap: 18px; padding: 4px 2px 8px; }
+  .det h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); margin: 0 0 6px; font-weight: 600; }
+  .det ul { margin: 0; padding-left: 17px; color: var(--ink-2); }
+  .det li { margin-bottom: 3px; }
+  .det .miss { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; color: var(--serious); }
+  .det p { margin: 0; color: var(--ink-2); }
+
+  .tip {
+    position: fixed; pointer-events: none; opacity: 0; transition: opacity 90ms;
+    background: var(--surface-1); color: var(--ink-1);
+    border: 1px solid var(--hairline); border-radius: 8px;
+    padding: 8px 10px; font-size: 12.5px; line-height: 1.45;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.16); max-width: 290px; z-index: 50;
+  }
+  .tip b { display: block; margin-bottom: 3px; }
+  .tip .m { color: var(--ink-2); }
+
+  footer { margin-top: 34px; color: var(--ink-muted); font-size: 12.5px; }
+  @media print { .themetoggle, .controls { display: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <div>
+    <h1>Sail plans — staleness dashboard</h1>
+    <p class="sub">18 plan files in <code>.cursor/plans/</code> · cleanup pass run 2026-08-07 on <code>wip/v3-local</code></p>
+  </div>
+  <button class="themetoggle" id="themebtn" type="button">Toggle theme</button>
+</header>
+
+<section class="banner">
+  <b>Cleanup pass landed 2026-08-07.</b> 4 superseded plans moved to <code>archive/</code>, 49 defect-register rows closed out,
+  ~20 dead file:line references repointed. The staleness that remains is in the <em>work</em>, not the docs.
+</section>
+
+<section class="tiles" id="tiles"></section>
+
+<section class="card">
+  <h2>Execution plan — what to run, in what order</h2>
+  <p class="note">21 work units across 9 tracks. <strong>A wave is an ordering; a track is an owner.</strong> Everything inside one wave is parallel-safe — disjoint files, no shared decisions. Rows are tracks: one lane, one owner, end to end.</p>
+  <div class="gridbox"><div class="wavegrid" id="wavegrid"></div></div>
+  <div class="legend" id="risklegend" style="margin-top:16px"></div>
+  <div class="callouts" id="callouts"></div>
+  <div class="warns" id="warns"></div>
+</section>
+
+<section class="card">
+  <h2>Work units</h2>
+  <p class="note">Click a row for the files it touches and why it exists. Sort by wave to get a running order, by size to find the quick wins.</p>
+  <div class="controls">
+    <label for="uwave">Wave</label>
+    <select id="uwave"><option value="">all</option></select>
+    <label for="utrack">Track</label>
+    <select id="utrack"><option value="">all</option></select>
+    <label for="urisk">Risk</label>
+    <select id="urisk"><option value="">all</option></select>
+    <label for="usize">Size</label>
+    <select id="usize"><option value="">all</option></select>
+  </div>
+  <div class="tablebox">
+    <table>
+      <thead><tr id="uthead"></tr></thead>
+      <tbody id="utbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Staleness before → after the cleanup</h2>
+  <p class="note">Every plan that was drifting has been rebased, closed out, or archived. Grey dot = before, coloured dot = now.</p>
+  <div class="chartbox"><svg class="chart dumb" id="dumb" role="img" aria-label="Before and after staleness score for each plan"></svg></div>
+  <div class="legend" id="bandlegend" style="margin-top:14px"></div>
+</section>
+
+<section class="card">
+  <h2>Where the remaining work is</h2>
+  <p class="note">Open, unchecked items per live plan. <strong>This is the actual backlog now</strong> — the docs are current, the tasks are not done.</p>
+  <div class="bars" id="bars"></div>
+</section>
+
+<section class="card">
+  <h2>Lifecycle board</h2>
+  <p class="note">What to do with each file. <strong>Done</strong> plans are the next archive batch — they were left in place because this pass only archived the named four.</p>
+  <div class="board" id="board"></div>
+</section>
+
+<section class="card">
+  <h2>Status mix</h2>
+  <p class="note">What each plan claims to be, verified against the tree and git history.</p>
+  <div class="stack" id="statusstack"></div>
+  <div class="legend" id="statuslegend"></div>
+</section>
+
+<section class="card">
+  <h2>All plans</h2>
+  <p class="note">Click a row for evidence, reasoning, and missing paths. Click a column header to sort.</p>
+  <div class="controls">
+    <label for="floc">Location</label>
+    <select id="floc"><option value="">all</option></select>
+    <label for="fstatus">Status</label>
+    <select id="fstatus"><option value="">all</option></select>
+    <label for="ftheme">Theme</label>
+    <select id="ftheme"><option value="">all</option></select>
+    <label for="frec">Action</label>
+    <select id="frec"><option value="">all</option></select>
+    <input type="search" id="fq" placeholder="filter by name…" style="margin-left:auto;min-width:180px">
+  </div>
+  <div class="tablebox">
+    <table>
+      <thead><tr id="thead"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  Snapshot generated 2026-08-07 after the cleanup pass. Staleness scores are judgements, not measurements — regenerate after landing work.
+</footer>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+/* before = staleness at the 2026-08-07 pre-cleanup audit; null = file did not exist then */
+const PLANS = [
+{"file":"agent-observability-seam.md","location":"plans","status":"active","staleness":0,"before":35,"completionPct":0,"openItems":5,"doneItems":0,"recommendation":"keep","recommendationReason":"Valid unstarted design, now rebased onto current file structure; ready for slice 1.","theme":"desktop-agent","referencedPathsMissing":[],"lastTouched":"2026-08-07","sizeKb":23.8,"title":"Agent Observability Seam","purpose":"Design for a typed AgentEvent stream so hosts can observe completed FDC3 operations","confidence":"high","supersededBy":null,"evidence":["All ~20 file:line refs repointed and re-verified against current tree","0 of 5 slice checkboxes checked — never started"]},
+{"file":"draft-pr-readiness.md","location":"plans","status":"active","staleness":0,"before":55,"completionPct":22,"openItems":25,"doneItems":7,"recommendation":"update","recommendationReason":"Standing review register, now current; re-verify again before the next PR push.","theme":"other","referencedPathsMissing":["packages/sail-ui","packages/sail-one/html"],"lastTouched":"2026-08-07","sizeKb":51.1,"title":"Draft PR Readiness — Review Register","purpose":"Tracks what blocks opening a draft PR to finos/FDC3-Sail across 32 assessed areas","confidence":"high","supersededBy":null,"evidence":["All 32 items individually re-verified against a903cffba","Ran lint / typecheck / build / test directly rather than trusting the doc","sail-one build still fails — packages/sail-one/html entrypoint missing"]},
+{"file":"parked-context-interception.md","location":"plans","status":"parked","staleness":2,"before":5,"completionPct":0,"openItems":0,"doneItems":0,"recommendation":"keep","recommendationReason":"Deliberately parked idea, not a work order; no open tasks to lose.","theme":"desktop-agent","referencedPathsMissing":[],"lastTouched":"2026-07-30","sizeKb":2.3,"title":"Parked: context interception","purpose":"Records why PII redaction / policy interception was deferred until a real adopter needs it","confidence":"medium","supersededBy":null,"evidence":["Explicit 'parked idea — not planned, not scheduled' status","Revisit trigger stated and still unmet"]},
+{"file":"parked-wcp4-origin-allowlist.md","location":"plans","status":"parked","staleness":1,"before":5,"completionPct":0,"openItems":0,"doneItems":0,"recommendation":"keep","recommendationReason":"Active reference target from four other plans for the removed allowlist control.","theme":"desktop-agent","referencedPathsMissing":[],"lastTouched":"2026-08-04","sizeKb":5.3,"title":"Parked: WCP4 origin allowlist","purpose":"Preserves the fail-closed requirement for the removed origin-allowlist control","confidence":"high","supersededBy":null,"evidence":["wcp4-origin-allowlist.ts confirmed absent from packages/sail-platform/src","Cited by draft-pr-readiness, class-collapse, defect register, surface-reduction"]},
+{"file":"reusable-browser-host-kit.md","location":"plans","status":"parked","staleness":2,"before":20,"completionPct":100,"openItems":0,"doneItems":1,"recommendation":"keep","recommendationReason":"A-scope done and committed; B-scope deliberately parked until toolbox scores matter again.","theme":"shells","referencedPathsMissing":[],"lastTouched":"2026-08-04","sizeKb":4.4,"title":"FDC3 host (A) then toolbox profile (B)","purpose":"Splits what any UI needs for FDC3 from FINOS-toolbox-only extras","confidence":"medium","supersededBy":null,"evidence":["'A committed: 1c2e75a68' with browser-smoke verification notes","'Rolled back' section correctly frames browser-host/ as removed by design"]},
+{"file":"sail-da-defect-fixes.md","location":"plans","status":"done","staleness":2,"before":5,"completionPct":100,"openItems":0,"doneItems":4,"recommendation":"archive","recommendationReason":"All four slices verified and reviewed; next archive batch, not touched by this pass.","theme":"desktop-agent","referencedPathsMissing":[],"lastTouched":"2026-08-06","sizeKb":34.1,"title":"sail-desktop-agent defect fixes","purpose":"Four wire-protocol defect fixes for the desktop agent, landed 2026-08-05/06","confidence":"medium","supersededBy":null,"evidence":["Header reads 'Status: done — all four slices verified + reviewed'","channelChangedEvent fan-out follow-up parked by explicit user decision"]},
+{"file":"sail-da-test-suite-realignment.md","location":"plans","status":"active","staleness":0,"before":null,"completionPct":0,"openItems":6,"doneItems":0,"recommendation":"keep","recommendationReason":"New and actively being worked — appeared mid-session from a concurrent session, slice 1 approved.","theme":"desktop-agent","referencedPathsMissing":[],"lastTouched":"2026-08-07","sizeKb":18.6,"title":"sail-desktop-agent test-suite realignment","purpose":"Fixes invented DACP error codes and tightens the Cucumber suite's schema-validation signal","confidence":"low","supersededBy":null,"evidence":["Authored by a concurrent session, not by the cleanup pass","Not read in depth — confirmed live and coherent only"]},
+{"file":"sail-desktop-agent-audit-2026-08.md","location":"plans","status":"done","staleness":3,"before":15,"completionPct":100,"openItems":0,"doneItems":1,"recommendation":"keep","recommendationReason":"Evidence register still cited by the defect-fixes and test-realignment plans; keep as a live citation target.","theme":"desktop-agent","referencedPathsMissing":[],"lastTouched":"2026-08-05","sizeKb":44.6,"title":"sail-desktop-agent audit findings (2026-08-05)","purpose":"Four read-only passes cataloguing API pollution, dead code, and impossible-state gaps","confidence":"medium","supersededBy":null,"evidence":["Self-revised in place (Revision 2) with corrections already recorded","Its §10 backlog fed sail-da-test-suite-realignment.md"]},
+{"file":"sail-desktop-agent-class-collapse.md","location":"plans","status":"done","staleness":3,"before":5,"completionPct":100,"openItems":0,"doneItems":8,"recommendation":"archive","recommendationReason":"All slices landed and self-annotated for cull staleness; next archive batch.","theme":"desktop-agent","referencedPathsMissing":["packages/sail-desktop-agent/src/agent/desktop-agent.ts (historical, annotated)","packages/sail-platform/src/sail-platform.ts (historical, annotated)"],"lastTouched":"2026-08-04","sizeKb":59.4,"title":"Collapse DesktopAgent / SailDesktopAgent into one class","purpose":"Merges the base and browser-ready agent classes into one; already-landed record","confidence":"high","supersededBy":null,"evidence":["Header carries a 2026-08-04 note flagging its own stale sail-platform references","agent/desktop-agent.ts confirmed gone; only sail-desktop-agent.ts remains"]},
+{"file":"sail-desktop-agent-feature-decisions.md","location":"plans","status":"active","staleness":2,"before":10,"completionPct":100,"openItems":0,"doneItems":1,"recommendation":"keep","recommendationReason":"Short decision record with every cited path verified to still exist.","theme":"desktop-agent","referencedPathsMissing":[],"lastTouched":"2026-08-05","sizeKb":3.8,"title":"sail-desktop-agent feature decisions","purpose":"Open register on whether the unused ChannelControl host-callback seam is kept or deleted","confidence":"high","supersededBy":null,"evidence":["All 7 cited packages/ paths confirmed to exist","host-contracts/channel-control.ts still has zero call sites"]},
+{"file":"sail-desktop-agent-review-remediation.md","location":"plans","status":"done","staleness":2,"before":5,"completionPct":100,"openItems":0,"doneItems":12,"recommendation":"archive","recommendationReason":"All 12 slices landed with commit hashes; next archive batch.","theme":"desktop-agent","referencedPathsMissing":[],"lastTouched":"2026-08-05","sizeKb":56.3,"title":"sail-desktop-agent Review Remediation","purpose":"Fixes 15 review-flagged defects across validation, identity, private channels, and cleanup","confidence":"high","supersededBy":null,"evidence":["Header reads 'Status: done'; all 12 checkpoint rows [x] with commit hashes","Parked follow-ups explicitly recorded, not silently dropped"]},
+{"file":"sail-desktop-agent-surface-reduction.md","location":"plans","status":"done","staleness":1,"before":5,"completionPct":100,"openItems":0,"doneItems":3,"recommendation":"archive","recommendationReason":"All three phases landed and stale citations now annotated; next archive batch.","theme":"desktop-agent","referencedPathsMissing":["packages/sail-ui (real, tracked in draft-pr-readiness #28)","packages/sail-platform/src/sail-platform.ts (historical, annotated)","packages/sail-desktop-agent/src/agent/desktop-agent.ts (historical, annotated)"],"lastTouched":"2026-08-07","sizeKb":18.3,"title":"Surface reduction & architecture realignment","purpose":"Removes the unused pluggable-transport abstraction and cuts the public export surface","confidence":"high","supersededBy":null,"evidence":["Header reads 'Status: implemented — all three phases landed'","2026-08-07 annotation added separating historical citations from real dangling paths"]},
+{"file":"sail-platform-extensibility.md","location":"plans","status":"active","staleness":2,"before":25,"completionPct":100,"openItems":0,"doneItems":1,"recommendation":"keep","recommendationReason":"Its §2 decision is still current and was the basis for the cull; already self-annotated.","theme":"platform","referencedPathsMissing":[],"lastTouched":"2026-08-04","sizeKb":20.5,"title":"sail-platform: extensibility direction & decisions","purpose":"Decision record for what sail-platform owns long-term: workspaces, layouts, auth, telemetry","confidence":"high","supersededBy":null,"evidence":["Header carries its own 2026-08-04 cull note","workspace-store.ts citation confirmed to still exist"]},
+{"file":"website-docs-blueprint.md","location":"plans","status":"active","staleness":0,"before":20,"completionPct":89,"openItems":5,"doneItems":8,"recommendation":"keep","recommendationReason":"Only slice 6 (CI guardrails) remains; header now reflects reality and carries the 4 surviving doc defects.","theme":"website-docs","referencedPathsMissing":[],"lastTouched":"2026-08-07","sizeKb":52.6,"title":"Website & Docs Blueprint","purpose":"Master plan for making website/docs the accurate, audience-organised face of the Sail packages","confidence":"high","supersededBy":null,"evidence":["8 of 9 sub-slices [x]; only slice 6 open","Stale 'Status: planning' header replaced with the real state","New Open doc defects section holds the 4 live rows from the closed register"]},
+{"file":"website-docs-defect-register.md","location":"archive","status":"superseded","staleness":0,"before":70,"completionPct":100,"openItems":0,"doneItems":49,"recommendation":"keep","recommendationReason":"Closed record; 1 live row plus 3 new findings moved into website-docs-blueprint.md.","theme":"website-docs","referencedPathsMissing":[],"lastTouched":"2026-08-07","sizeKb":31.9,"title":"Website Docs — Defect Register","purpose":"Catalog of ~50 docs-vs-code defects across website/docs pages, now closed out","confidence":"high","supersededBy":"website-docs-blueprint.md","evidence":["Final resolution pass covers every A/B/C/D/E/G row with an individual verdict","49 of 50 rows were already resolved — mostly by deletion, not by doc fixes"]},
+{"file":"sail-platform-design.md","location":"archive","status":"superseded","staleness":0,"before":90,"completionPct":100,"openItems":0,"doneItems":0,"recommendation":"keep","recommendationReason":"Package description for APIs deleted entirely in the sail-platform cull; no open tasks ever existed.","theme":"platform","referencedPathsMissing":["packages/sail-platform/src/sail-platform.ts (deleted)","packages/sail-platform/src/sail-browser-desktop-agent.ts (deleted)"],"lastTouched":"2026-08-07","sizeKb":17.9,"title":"@finos/sail-platform — Package Description","purpose":"Historical description of the pre-cull sail-platform composition-layer design","confidence":"high","supersededBy":"packages/sail-platform/README.md","evidence":["src/index.ts now exports only createWorkspaceStore and storage helpers","ARCHIVED header added pointing readers at the package README"]},
+{"file":"sail-platform-kiss-entry.md","location":"archive","status":"superseded","staleness":0,"before":95,"completionPct":0,"openItems":0,"doneItems":0,"recommendation":"keep","recommendationReason":"Never implemented, and the SailPlatform class it targeted is now deleted.","theme":"platform","referencedPathsMissing":["packages/sail-platform-api (never existed under that name)"],"lastTouched":"2026-08-07","sizeKb":8.7,"title":"SailPlatform KISS entry","purpose":"Proposed a callback-based entry onto SailPlatform; superseded before any slice landed","confidence":"high","supersededBy":"packages/sail-platform/README.md","evidence":["Both slice checkboxes unchecked; header already called it moot","2 dangling proposals resolved in place before archiving"]},
+{"file":"sail-one-port.md","location":"archive","status":"superseded","staleness":0,"before":60,"completionPct":100,"openItems":0,"doneItems":1,"recommendation":"keep","recommendationReason":"Port landed; its one open decision was mooted by a later refactor, real gaps tracked elsewhere.","theme":"shells","referencedPathsMissing":["packages/sail-web (source branch, not this tree)"],"lastTouched":"2026-08-07","sizeKb":17.7,"title":"sail-one: port brief","purpose":"Handoff brief for porting the sail-one shell UI from wip/v2.2; now historical","confidence":"high","supersededBy":"packages/sail-one/README.md","evidence":["packages/sail-one/src has 18 .tsx files across every area this brief scoped","Remaining real gaps live in sail-one/README.md and draft-pr-readiness #27"]}
+];
+
+/* Work units derived 2026-08-07 from the open items in the live plans.
+   dependsOn is strict: B depends on A only if B needs a decision/API A produces,
+   or B edits the same source files as A and would conflict. */
+const UNITS = [
+{"id":"u1","title":"Sync branch with upstream FDC3-Sail main","plan":"draft-pr-readiness.md","planItems":"item 0","track":"Upstream sync & history","wave":1,"size":"L","risk":"high","dependsOn":[],"gate":null,"touchedFiles":[".github/workflows/ci.yml","repo-wide — 22 upstream commits, merge-base 07347d448"],"why":"Reframes the whole register; several findings are artifacts of being unsynced, and ci.yml has a real content conflict."},
+{"id":"u3","title":"Repo hygiene: license, gitattributes, strip internal docs","plan":"draft-pr-readiness.md","planItems":"items 3, 7, 8, 23, 31","track":"PR hygiene & housekeeping","wave":1,"size":"M","risk":"low","dependsOn":[],"gate":null,"touchedFiles":["LICENSE","NOTICE",".gitattributes (new)","ARCHITECTURE-REMEDIATION-PLAN.md (delete)","FDC3-SAIL-REVIEW.md (delete)",".claude/**",".cursor/** (except plans)","AGENTS.md"],"why":"Five cheap independent blockers: mismatched LICENSE/NOTICE copyright, two internal scratch docs at repo root, no CRLF enforcement, ~1MB of agent config in the diff."},
+{"id":"u21","title":"Move the four completed plans to archive/","plan":"housekeeping","planItems":"sail-da-defect-fixes, class-collapse, review-remediation, surface-reduction","track":"PR hygiene & housekeeping","wave":1,"size":"S","risk":"low","dependsOn":[],"gate":null,"touchedFiles":[".cursor/plans/*.md",".cursor/plans/archive/"],"why":"Four done plans still sit in plans/. Same treatment as the last archive batch: ARCHIVED header, then move."},
+{"id":"u4","title":"Resolve toolchain, PR-shape, release, scope decisions","plan":"draft-pr-readiness.md","planItems":"items 1, 2, 13, 25 (+ decision half of 11)","track":"Product & scope decisions","wave":1,"size":"S","risk":"medium","dependsOn":[],"gate":null,"touchedFiles":[".cursor/plans/draft-pr-readiness.md"],"why":"Five conversations with no dependent code: keep/revert vite-plus+oxlint, draft-PR framing, whether release machinery ships, one vs two demo shells."},
+{"id":"u20","title":"Decide: keep or delete the unused ChannelControl seam","plan":"sail-desktop-agent-feature-decisions.md","planItems":"item 1 (only open item)","track":"Product & scope decisions","wave":1,"size":"S","risk":"low","dependsOn":[],"gate":null,"touchedFiles":["packages/sail-desktop-agent/src/host-contracts/channel-control.ts","packages/sail-desktop-agent/src/host-contracts/index.ts"],"why":"Zero implementations and zero call sites anywhere in the tree; nothing else depends on this decision. Standalone and low-stakes."},
+{"id":"u6","title":"Fix small stale doc references","plan":"draft-pr-readiness.md + website-docs-blueprint.md","planItems":"items 6, 21; blueprint open defects 1-4","track":"Docs truth & accuracy","wave":1,"size":"M","risk":"low","dependsOn":[],"gate":null,"touchedFiles":["README.md","website/docs/development.md","website/docs/architecture/overview.md","website/docs/packages/desktop-agent/composition.md","website/docs/intro.md","website/docs/architecture/deployment-targets.md"],"why":"Four badges pinned to v3-pre, development.md still names ESLint/Prettier, four stale references survive the cull. All small and verified-false."},
+{"id":"u10","title":"Retire invented DACP error codes, narrow event type","plan":"sail-da-test-suite-realignment.md","planItems":"slices 1, 3","track":"DA test-suite realignment","wave":1,"size":"S","risk":"medium","dependsOn":[],"gate":null,"touchedFiles":["packages/sail-desktop-agent/src/errors/fdc3-errors.ts","packages/sail-desktop-agent/src/handlers/events/handlers.ts","test/features/context/event-listeners.feature","test/features/channels/private-channel.feature"],"why":"Fixes two wire-invalid values a strict FDC3 client would reject. Slice 3 needs slice 1's InvalidArguments value, so they ship as one unit."},
+{"id":"u11","title":"Rename intent-result wire field to resultMetadata","plan":"sail-da-test-suite-realignment.md","planItems":"slice 2","track":"DA test-suite realignment","wave":1,"size":"S","risk":"low","dependsOn":[],"gate":null,"touchedFiles":["packages/sail-desktop-agent/src/handlers/intents/intent-result-handlers.ts","test/features/intents/intent-result.feature","test/features/intents/intent-result-metadata.feature"],"why":"Zero external consumers of this field, grepped across the harness, sail-finance and sail-one. Safe independent rename."},
+{"id":"u12","title":"Repair two vacuous tests with Prove-It","plan":"sail-da-test-suite-realignment.md","planItems":"slice 4","track":"DA test-suite realignment","wave":1,"size":"S","risk":"low","dependsOn":[],"gate":null,"touchedFiles":["src/app-connection/__tests__/wcp-reconnect-clobber.test.ts","src/app-directory/__tests__/app-directory-queries.test.ts"],"why":"Two tests that currently cannot fail. Test-only change, no source edits, fully independent of the wire-behaviour slices."},
+{"id":"u14","title":"Build the AgentEvent union and generalise notify","plan":"agent-observability-seam.md","planItems":"slice 1","track":"Agent observability seam","wave":1,"size":"M","risk":"medium","dependsOn":[],"gate":null,"touchedFiles":["src/observability/agent-events.ts (new)","src/app-connection/app-connection-events.ts","src/handlers/types.ts","src/agent/sail-desktop-agent.ts","src/handlers/channels/handlers.ts","src/index.ts"],"why":"Foundation every other observability slice needs. Migrating notifyChannelMembershipChanged's live consumer (changeAppChannel's 10s waiter) is the one place this touches working behaviour."},
+{"id":"u2","title":"Fix sail-one build, CI build step, dangling configs","plan":"draft-pr-readiness.md","planItems":"items 9, 10, 12, 28","track":"Build & CI correctness","wave":2,"size":"L","risk":"medium","dependsOn":["u1"],"gate":null,"touchedFiles":["packages/sail-one/vite.config.ts","packages/sail-one/html/index.html (new)",".github/workflows/ci.yml","tsconfig.json","packages/sail-finance/tsconfig.json","package.json",".changeset/config.json"],"why":"Confirmed: sail-one/html/ does not exist so globSync returns [] and rolldown errors INVALID_OPTION; root tsconfig.json:8 points at ./packages/sail-ui which does not exist. Until this lands nothing in the register can be trusted."},
+{"id":"u5","title":"Replace or fix the demo app directory content","plan":"draft-pr-readiness.md","planItems":"item 11 (execution)","track":"Product & scope decisions","wave":2,"size":"L","risk":"medium","dependsOn":["u4"],"gate":null,"touchedFiles":["packages/sail-finance/fixtures/default-app-directory.json","packages/sail-finance/src/main.tsx"],"why":"All nine current entries carry publisher EW and point at localhost services that do not exist here — every demo app fails on open."},
+{"id":"u9","title":"Squash commit history before opening the PR","plan":"draft-pr-readiness.md","planItems":"item 29","track":"Upstream sync & history","wave":2,"size":"L","risk":"high","dependsOn":["u1"],"gate":"Run last of all draft-PR units — redoing it wastes the work.","touchedFiles":["git history rewrite — no specific source files"],"why":"Cursor Agent as a commit author, 9 Claude-Session trailers and an author-identity split are the most visible tells on GitHub's Commits tab."},
+{"id":"u8","title":"Desktop-agent + sail-finance code-quality cleanup","plan":"draft-pr-readiness.md","planItems":"items 18 (3-5), 20, 30","track":"Desktop-agent code quality","wave":2,"size":"L","risk":"medium","dependsOn":["u10"],"gate":null,"touchedFiles":["src/app-connection/wcp/wcp-identity-validation.ts","src/app-connection/wcp/private-channel.ts","src/errors/fdc3-errors.ts","packages/sail-finance/src/stores/*.ts","packages/sail-finance/src/main.tsx"],"why":"245-line handleWcp4ValidateAppIdentity, real drift risk in private-channel.ts, 77 divider comments, 2 false-premise guards, 35 console.log calls where a Logger already exists."},
+{"id":"u15","title":"Emit observability events at in-scope sites","plan":"agent-observability-seam.md","planItems":"slice 2","track":"Agent observability seam","wave":2,"size":"M","risk":"low","dependsOn":["u14"],"gate":null,"touchedFiles":["src/handlers/intents/intent-delivery-helpers.ts","src/handlers/intents/intent-result-handlers.ts","src/handlers/intents/intent-raise-intent.ts","src/handlers/utils/open-with-context.ts","src/app-connection/wcp/wcp-identity-validation.ts","src/handlers/private-channels/handlers.ts"],"why":"Six emit sites need no new plumbing — everything is already in scope. Includes the zero-cost guard test that must be kept permanently."},
+{"id":"u16","title":"Emit broadcast.delivered across all five paths","plan":"agent-observability-seam.md","planItems":"slice 3","track":"Agent observability seam","wave":2,"size":"M","risk":"medium","dependsOn":["u14"],"gate":null,"touchedFiles":["src/handlers/broadcast/handlers.ts"],"why":"Its own slice because a missed path silently drops deliveries from the audit trail with nothing failing. Five paths emit a byte-identical wire message; only a typed event can tell them apart."},
+{"id":"u13","title":"Schema-validation BDD gate, retag dead steps","plan":"sail-da-test-suite-realignment.md","planItems":"slices 5, 6","track":"DA test-suite realignment","wave":2,"size":"L","risk":"high","dependsOn":["u10","u11","u12"],"gate":"Plan-mandated human gate: do not start until you review the slice 1-4 results and release it.","touchedFiles":["test/step-definitions/*.steps.ts","test/world/index.ts","test/support/hooks.ts","test/features/**/*.feature","test/support/testing-utils.ts"],"why":"The plan's largest, sprawl-prone slice — part A can reveal that production code needs to move."},
+{"id":"u7","title":"Write the PR description and v2→v3 regression notes","plan":"draft-pr-readiness.md","planItems":"items 24, 27","track":"PR narrative","wave":3,"size":"M","risk":"low","dependsOn":["u2","u4","u5"],"gate":null,"touchedFiles":["GitHub PR body — no repo file"],"why":"Needs real test/build numbers (u2), the resolved decisions (u4) and the demo-app outcome (u5) to state honestly what is deferred."},
+{"id":"u17","title":"Wire the wire-invisible signals","plan":"agent-observability-seam.md","planItems":"slice 4","track":"Agent observability seam","wave":3,"size":"L","risk":"medium","dependsOn":["u14","u15"],"gate":null,"touchedFiles":["src/handlers/channels/handlers.ts","src/handlers/intents/intent-result-handlers.ts","src/handlers/private-channels/handlers.ts","src/app-connection/wcp/wcp-connection-management.ts"],"why":"channel.left, disconnect and grants. Shares intent-result-handlers.ts with u15 and channels/handlers.ts with u14, so both must land first."},
+{"id":"u19","title":"Add snippet-compile and link-check guardrails to CI","plan":"website-docs-blueprint.md","planItems":"slice 6","track":"Build & CI correctness","wave":3,"size":"M","risk":"low","dependsOn":["u2"],"gate":null,"touchedFiles":["package.json",".github/workflows/ci.yml","website/ (new script)"],"why":"Last remaining slice of a near-complete plan; would have caught the new DesktopAgent() sample that could not compile. Shares ci.yml with u2."},
+{"id":"u18","title":"Add optional DisconnectReason to the four callers","plan":"agent-observability-seam.md","planItems":"slice 5","track":"Agent observability seam","wave":4,"size":"S","risk":"low","dependsOn":["u17"],"gate":null,"touchedFiles":["src/app-connection/wcp/wcp-connection-management.ts","4 disconnect call sites"],"why":"Last and separable — everything before it already ships a useful trail. Stays optional: a wrong reason in an audit log is worse than a missing one."},
+];
+
+const TRACK_ORDER = ["Upstream sync & history","Build & CI correctness","Product & scope decisions","DA test-suite realignment","Agent observability seam","Desktop-agent code quality","Docs truth & accuracy","PR hygiene & housekeeping","PR narrative"];
+const TRACK_OWNER = {
+  "Upstream sync & history": "one person owning git history end to end",
+  "Build & CI correctness": "whoever owns the toolchain and CI gates",
+  "Product & scope decisions": "maintainer conversation, then execution",
+  "DA test-suite realignment": "the approved test-suite delivery",
+  "Agent observability seam": "one agent running all 5 slices end to end",
+  "Desktop-agent code quality": "a focused cleanup pass",
+  "Docs truth & accuracy": "docs-focused contributor",
+  "PR hygiene & housekeeping": "any contributor, quick pass",
+  "PR narrative": "whoever assembles the PR, last of all",
+};
+const WAVE_NOTE = {
+  1: "no dependencies — start all of these now",
+  2: "each depends only on a wave-1 unit",
+  3: "needs wave-2 outputs to be honest",
+  4: "tail — after the seam is plumbed",
+};
+const CRITICAL_PATH = ["u14", "u15", "u17", "u18"];
+const RISKS = { low: { vr: "--good", icon: "●" }, medium: { vr: "--warning", icon: "◐" }, high: { vr: "--critical", icon: "▲" } };
+const SOFT_CONFLICTS = [
+  { t: "u5 and u8 both edit <code>packages/sail-finance/src/main.tsx</code>", d: "Same wave, not a formal dependency. Coordinate by hand or land u8 first." },
+  { t: "u8 and u15 both edit <code>wcp-identity-validation.ts</code>", d: "Same wave, different reasons — u8 splits the 245-line handler, u15 adds an emit. Sequence them." },
+  { t: "u13 is gated on your review, not on completion", d: "The plan requires a human read of the slice 1-4 results before slices 5-6 begin." },
+  { t: "u1's file footprint is repo-wide and unknown up front", d: "Treat it as a solo lane even though wave 1 places it alongside other units." },
+];
+
+const TODAY = new Date("2026-08-07T00:00:00Z");
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+const BANDS = [
+  { key: "fresh", label: "Fresh",  icon: "●", max: 19,  vr: "--good",     hint: "current" },
+  { key: "aging", label: "Aging",  icon: "◐", max: 49,  vr: "--warning",  hint: "refs drifting" },
+  { key: "stale", label: "Stale",  icon: "◑", max: 79,  vr: "--serious",  hint: "diverged from the tree" },
+  { key: "dead",  label: "Dead",   icon: "○", max: 100, vr: "--critical", hint: "describes deleted code" },
+];
+const bandOf = s => BANDS.find(b => s <= b.max);
+
+const RECS = {
+  keep:    { label: "Keep",    vr: "--series-1" },
+  update:  { label: "Update",  vr: "--series-2" },
+  archive: { label: "Archive", vr: "--series-3" },
+  merge:   { label: "Merge",   vr: "--series-3" },
+};
+const STATUS_ORDER = ["active", "done", "parked", "superseded", "stale", "unknown"];
+const STATUS_TONE = { active: "--series-1", done: "--good", parked: "--ink-muted", superseded: "--critical", stale: "--serious", unknown: "--axis" };
+
+const ageDays = p => Math.round((TODAY - new Date(p.lastTouched + "T00:00:00Z")) / 86400000);
+const shortName = f => f.replace(/\.md$/, "");
+const live = () => PLANS.filter(p => p.location === "plans");
+
+/* ------------------------------ tooltip ------------------------------ */
+const tip = document.getElementById("tip");
+function showTip(html, ev) {
+  tip.innerHTML = html;
+  tip.style.opacity = "1";
+  const r = tip.getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - 14;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const hideTip = () => { tip.style.opacity = "0"; };
+function bindTip(el, html) {
+  el.addEventListener("mousemove", e => showTip(html, e));
+  el.addEventListener("mouseleave", hideTip);
+}
+
+/* ------------------------------ tiles ------------------------------ */
+function renderTiles() {
+  const L = live(), A = PLANS.filter(p => p.location === "archive");
+  const openTotal = L.reduce((a, p) => a + p.openItems, 0);
+  const wasStale = PLANS.filter(p => p.before !== null && p.before >= 50).length;
+  const nowStale = PLANS.filter(p => p.staleness >= 50).length;
+  const nextArchive = L.filter(p => p.recommendation === "archive");
+  const realMissing = L.reduce((a, p) => a + p.referencedPathsMissing.filter(m => !/historical|annotated/i.test(m)).length, 0);
+  const kb = PLANS.reduce((a, p) => a + p.sizeKb, 0);
+
+  const w1 = UNITS.filter(u => u.wave === 1).length;
+  const bigOnes = UNITS.filter(u => u.size === "L").length;
+  const tiles = [
+    { k: "Work units", v: UNITS.length, d: UNITS.length + " units across 9 tracks, 4 waves" },
+    { k: "Startable now", v: w1, d: "wave 1 — all parallel-safe, no dependencies" },
+    { k: "Big units", v: bigOnes, d: bigOnes + " sized L · " + UNITS.filter(u => u.size === "S").length + " quick wins sized S" },
+    { k: "Open items", v: openTotal, d: "unchecked tasks across live plans" },
+    { k: "Live plans", v: L.length, d: A.length + " archived · " + kb.toFixed(0) + " KB total" },
+    { k: "Stale or worse", v: nowStale, delta: "↓ " + wasStale, dv: "--good", d: "was " + wasStale + " before the cleanup pass" },
+    { k: "Next archive batch", v: nextArchive.length, d: "done plans still sitting in plans/ (unit u21)" },
+    { k: "Real dead paths", v: realMissing, d: "cited paths that are genuine defects" },
+  ];
+  document.getElementById("tiles").innerHTML = tiles.map(t =>
+    `<div class="tile"><div class="k">${t.k}</div><div class="v">${t.v}` +
+    (t.delta ? `<span class="delta" style="color:var(${t.dv})">${t.delta}</span>` : "") +
+    `</div><div class="d">${t.d}</div></div>`
+  ).join("");
+}
+
+/* ---------------------- before → after dumbbell ---------------------- */
+function renderDumbbell() {
+  const rows = [...PLANS].sort((a, b) => (b.before ?? -1) - (a.before ?? -1));
+  const M = { t: 26, r: 118, b: 34, l: 232 };
+  const rowH = 25, pw = 300;
+  const W = M.l + pw + M.r, H = M.t + rows.length * rowH + M.b;
+  const x = v => M.l + (v / 100) * pw;
+  const y = i => M.t + i * rowH + rowH / 2;
+  const g = css("--grid"), ax = css("--axis"), mu = css("--ink-muted"), s2 = css("--ink-2"), sf = css("--surface-1");
+  let s = "";
+
+  for (let v = 0; v <= 100; v += 25) {
+    s += `<line x1="${x(v)}" x2="${x(v)}" y1="${M.t - 6}" y2="${M.t + rows.length * rowH}" stroke="${g}" stroke-width="1"/>`;
+    s += `<text x="${x(v)}" y="${M.t - 12}" text-anchor="middle" font-size="11" fill="${mu}" style="font-variant-numeric:tabular-nums">${v}</text>`;
+  }
+  s += `<line x1="${x(0)}" x2="${x(0)}" y1="${M.t - 6}" y2="${M.t + rows.length * rowH}" stroke="${ax}" stroke-width="1"/>`;
+  s += `<text x="${x(50)}" y="${H - 10}" text-anchor="middle" font-size="12" fill="${s2}">staleness score</text>`;
+
+  rows.forEach((p, i) => {
+    const yy = y(i), b = bandOf(p.staleness), after = css(b.vr);
+    const arch = p.location === "archive";
+    s += `<text x="${M.l - 12}" y="${yy + 4}" text-anchor="end" font-size="11.5" fill="${arch ? mu : css("--ink-1")}">${shortName(p.file)}</text>`;
+    if (p.before !== null) {
+      s += `<line x1="${x(Math.min(p.before, p.staleness))}" x2="${x(Math.max(p.before, p.staleness))}" y1="${yy}" y2="${yy}" stroke="${ax}" stroke-width="2" stroke-linecap="round"/>`;
+      s += `<circle cx="${x(p.before)}" cy="${yy}" r="4.5" fill="${mu}" stroke="${sf}" stroke-width="2"/>`;
+    }
+    s += `<g class="glyph" data-i="${i}"><circle cx="${x(p.staleness)}" cy="${yy}" r="5.5" fill="${after}" stroke="${sf}" stroke-width="2"/></g>`;
+    const tag = arch ? "archived" : (p.before === null ? "new" : b.label.toLowerCase());
+    s += `<text x="${M.l + pw + 12}" y="${yy + 4}" font-size="11" fill="${mu}" style="font-variant-numeric:tabular-nums">${p.staleness} · ${tag}</text>`;
+  });
+
+  const sv = document.getElementById("dumb");
+  sv.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  sv.innerHTML = s;
+  sv.querySelectorAll(".glyph").forEach(el => {
+    const p = rows[+el.dataset.i];
+    bindTip(el, `<b>${shortName(p.file)}</b><span class="m">staleness ${p.before === null ? "new file" : p.before + " → " + p.staleness}<br>${p.location === "archive" ? "moved to archive/" : p.status + " · " + p.completionPct + "% complete · " + p.openItems + " open"}<br>${p.purpose}</span>`);
+  });
+
+  document.getElementById("bandlegend").innerHTML =
+    `<span class="li"><span class="sw" style="background:var(--ink-muted)"></span>before the pass</span>` +
+    BANDS.map(b => {
+      const n = PLANS.filter(p => bandOf(p.staleness).key === b.key).length;
+      return n ? `<span class="li"><span class="sw" style="background:var(${b.vr})"></span>${b.icon} ${b.label} now <b>${n}</b></span>` : "";
+    }).join("");
+}
+
+/* --------------------- open items ranked bars --------------------- */
+function renderBars() {
+  const rows = live().filter(p => p.openItems > 0).sort((a, b) => b.openItems - a.openItems);
+  const max = Math.max(...rows.map(p => p.openItems));
+  const el = document.getElementById("bars");
+  el.innerHTML = rows.map(p =>
+    `<div class="name" title="${p.file}">${shortName(p.file)} <span class="st">· ${p.theme}</span></div>` +
+    `<div class="track" data-file="${p.file}"><div class="fill" style="width:${(p.openItems / max) * 100}%;background:var(--series-1)"></div></div>` +
+    `<div class="val">${p.openItems} <span class="band">open · ${p.completionPct}% done</span></div>`
+  ).join("");
+  el.querySelectorAll(".track").forEach(t => {
+    const p = PLANS.find(x => x.file === t.dataset.file);
+    bindTip(t, `<b>${shortName(p.file)}</b><span class="m">${p.openItems} open · ${p.doneItems} done · ${p.completionPct}% complete<br>${p.purpose}</span>`);
+  });
+}
+
+/* ------------------------ execution plan ------------------------ */
+const unitCard = u => {
+  const r = RISKS[u.risk], cp = CRITICAL_PATH.includes(u.id);
+  return `<div class="unit${cp ? " cp" : ""}" data-u="${u.id}">
+    <div class="uh"><span class="uid">${u.id}</span><span class="sz">${u.size}</span></div>
+    <div class="ut">${u.title}</div>
+    <div class="um">
+      <span class="rk"><span class="dot" style="background:var(${r.vr})"></span>${r.icon} ${u.risk}</span>
+      ${u.dependsOn.length ? `<span class="dep">after ${u.dependsOn.join(", ")}</span>` : ""}
+      ${cp ? `<span style="color:var(--series-1)">critical path</span>` : ""}
+      ${u.gate ? `<span class="gate">◆ gated</span>` : ""}
+    </div>
+  </div>`;
+};
+
+function renderWaveGrid() {
+  const waves = [1, 2, 3, 4];
+  let h = `<div class="wh"></div>` + waves.map(w =>
+    `<div class="wh"><div class="t">Wave ${w} · ${UNITS.filter(u => u.wave === w).length} units</div><div class="d">${WAVE_NOTE[w]}</div></div>`
+  ).join("");
+
+  TRACK_ORDER.forEach(tr => {
+    const inTrack = UNITS.filter(u => u.track === tr);
+    if (!inTrack.length) return;
+    h += `<div class="tl"><b>${tr}</b>${TRACK_OWNER[tr]}</div>`;
+    h += waves.map(w => `<div class="cell">${inTrack.filter(u => u.wave === w).map(unitCard).join("")}</div>`).join("");
+  });
+  const el = document.getElementById("wavegrid");
+  el.innerHTML = h;
+
+  el.querySelectorAll(".unit").forEach(c => {
+    const u = UNITS.find(x => x.id === c.dataset.u);
+    bindTip(c, `<b>${u.id} · ${u.title}</b><span class="m">${u.plan} — ${u.planItems}<br>${u.size} · ${u.risk} risk · wave ${u.wave}<br><br>${u.why}${u.gate ? "<br><br>◆ " + u.gate : ""}</span>`);
+  });
+
+  document.getElementById("risklegend").innerHTML =
+    Object.entries(RISKS).map(([k, r]) => {
+      const n = UNITS.filter(u => u.risk === k).length;
+      return `<span class="li"><span class="sw" style="background:var(${r.vr})"></span>${r.icon} ${k} risk <b>${n}</b></span>`;
+    }).join("") +
+    `<span class="li"><span class="sw" style="background:var(--series-1)"></span>critical path <b>${CRITICAL_PATH.length}</b></span>` +
+    `<span class="li" style="color:var(--critical)">◆ human gate <b style="color:var(--critical)">${UNITS.filter(u => u.gate).length}</b></span>`;
+
+  const unb = UNITS.find(u => u.id === "u1"), rk = UNITS.find(u => u.id === "u9");
+  const downstream = id => UNITS.filter(u => u.dependsOn.includes(id)).length;
+  document.getElementById("callouts").innerHTML = `
+    <div class="callout"><h4>Start here — biggest unblocker</h4>
+      <div class="big">u1 · ${unb.title}</div>
+      <p>The register's own top blocker. It invalidates several findings as merge artifacts and unblocks ${downstream("u1")} downstream units, including the build fix and the final squash.</p></div>
+    <div class="callout"><h4>Biggest risk</h4>
+      <div class="big">u9 · ${rk.title}</div>
+      <p>Hard to undo cleanly and must not be redone. Do it after u1's sync and after every other draft-PR unit has landed, or you throw the work away.</p></div>
+    <div class="callout"><h4>Critical path</h4>
+      <div class="chain">${CRITICAL_PATH.map((id, i) => `${i ? "<i>→</i>" : ""}<span>${id}</span>`).join("")}</div>
+      <p style="margin-top:7px">The observability seam is the only 4-deep chain. Nothing else runs more than 2 units deep, so this lane sets the floor on wall-clock time.</p></div>`;
+
+  document.getElementById("warns").innerHTML = SOFT_CONFLICTS.map(w =>
+    `<div class="warn"><span>⚠</span><span><b>${w.t}</b> — ${w.d}</span></div>`).join("");
+}
+
+/* -------------------------- units table -------------------------- */
+const UCOLS = [
+  { k: "wave", t: "Wave", sort: (a, b) => a.wave - b.wave || a.id.localeCompare(b.id, undefined, { numeric: true }) },
+  { k: "id", t: "Unit", sort: (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }) },
+  { k: "track", t: "Track", sort: (a, b) => TRACK_ORDER.indexOf(a.track) - TRACK_ORDER.indexOf(b.track) || a.wave - b.wave },
+  { k: "size", t: "Size", sort: (a, b) => "SML".indexOf(b.size) - "SML".indexOf(a.size) },
+  { k: "risk", t: "Risk", sort: (a, b) => ["high", "medium", "low"].indexOf(a.risk) - ["high", "medium", "low"].indexOf(b.risk) },
+  { k: "dependsOn", t: "After", sort: (a, b) => a.dependsOn.length - b.dependsOn.length },
+  { k: "plan", t: "Source plan", sort: (a, b) => a.plan.localeCompare(b.plan) },
+];
+let uSortKey = "wave";
+const uOpened = new Set();
+
+function fillUSelect(id, fn) {
+  const el = document.getElementById(id);
+  [...new Set(UNITS.map(fn))].sort().forEach(v => {
+    const o = document.createElement("option"); o.value = v; o.textContent = v; el.appendChild(o);
+  });
+  el.addEventListener("change", renderUnits);
+}
+
+function renderUnits() {
+  const col = UCOLS.find(c => c.k === uSortKey);
+  const rows = UNITS.filter(u =>
+    (!uwave.value || String(u.wave) === uwave.value) &&
+    (!utrack.value || u.track === utrack.value) &&
+    (!urisk.value || u.risk === urisk.value) &&
+    (!usize.value || u.size === usize.value)).sort(col.sort);
+
+  document.getElementById("uthead").innerHTML = UCOLS.map(c =>
+    `<th data-k="${c.k}">${c.t}${c.k === uSortKey ? ' <span class="arrow">▼</span>' : ""}</th>`).join("");
+  document.querySelectorAll("#uthead th").forEach(th =>
+    th.addEventListener("click", () => { uSortKey = th.dataset.k; renderUnits(); }));
+
+  document.getElementById("utbody").innerHTML = rows.map(u => {
+    const r = RISKS[u.risk], cp = CRITICAL_PATH.includes(u.id);
+    const blocks = UNITS.filter(x => x.dependsOn.includes(u.id)).map(x => x.id);
+    const det = uOpened.has(u.id) ? `<tr class="detail"><td colspan="${UCOLS.length}"><div class="det">
+        <div><h4>Why</h4><p>${u.why}</p>${u.gate ? `<p style="margin-top:8px;color:var(--critical)">◆ ${u.gate}</p>` : ""}</div>
+        <div><h4>Touches</h4><ul>${u.touchedFiles.map(f => `<li class="miss" style="color:var(--ink-2)">${f}</li>`).join("")}</ul></div>
+        <div><h4>Graph</h4>
+          <p>Covers <strong>${u.planItems}</strong></p>
+          <p style="margin-top:6px">After: ${u.dependsOn.length ? u.dependsOn.join(", ") : "nothing — wave 1"}</p>
+          <p style="margin-top:6px">Unblocks: ${blocks.length ? blocks.join(", ") : "nothing downstream"}</p></div>
+      </div></td></tr>` : "";
+    return `<tr class="plan" data-u="${u.id}">
+      <td class="num"><span class="pill">wave ${u.wave}</span></td>
+      <td><div class="fname">${u.id}${cp ? ' <span style="color:var(--series-1)">◂</span>' : ""}</div><div class="ptitle">${u.title}</div></td>
+      <td>${u.track}</td>
+      <td class="num"><strong>${u.size}</strong></td>
+      <td><span class="pill"><span class="dot" style="background:var(${r.vr})"></span>${r.icon} ${u.risk}</span></td>
+      <td class="num">${u.dependsOn.length ? `<span class="fname">${u.dependsOn.join(", ")}</span>` : "—"}</td>
+      <td><div class="fname" style="font-size:11.5px">${u.plan}</div><div class="ptitle">${u.planItems}</div></td>
+    </tr>${det}`;
+  }).join("");
+
+  document.querySelectorAll("#utbody tr.plan").forEach(tr => tr.addEventListener("click", () => {
+    const id = tr.dataset.u;
+    uOpened.has(id) ? uOpened.delete(id) : uOpened.add(id);
+    renderUnits();
+  }));
+}
+
+/* ------------------------- lifecycle board ------------------------- */
+function renderBoard() {
+  const cols = [
+    { t: "Work to do", tone: "--series-1", note: "open items, actively in play",
+      set: live().filter(p => p.status === "active" && p.openItems > 0) },
+    { t: "Ready to archive", tone: "--good", note: "landed; move to archive/ next",
+      set: live().filter(p => p.recommendation === "archive") },
+    { t: "Reference / parked", tone: "--ink-muted", note: "no tasks; cited by other plans",
+      set: live().filter(p => p.recommendation !== "archive" && p.openItems === 0 && p.status !== "active") },
+    { t: "Archived", tone: "--critical", note: "history only — do not work from",
+      set: PLANS.filter(p => p.location === "archive") },
+  ];
+  const rest = live().filter(p => !cols.slice(0, 3).some(c => c.set.includes(p)));
+  cols[2].set = cols[2].set.concat(rest);
+
+  document.getElementById("board").innerHTML = cols.map(c =>
+    `<div class="col"><h3><span class="sw" style="background:var(${c.tone})"></span>${c.t}<b>${c.set.length}</b></h3>` +
+    `<p class="colnote">${c.note}</p><ul>` +
+    c.set.map(p => `<li><div class="n">${shortName(p.file)}</div><div class="m">${
+      p.openItems ? p.openItems + " open · " : ""}${p.completionPct}% · ${p.lastTouched}</div></li>`).join("") +
+    `</ul></div>`
+  ).join("");
+}
+
+/* -------------------------- status stack -------------------------- */
+function renderStatus() {
+  const groups = STATUS_ORDER.map(st => ({ st, n: PLANS.filter(p => p.status === st).length })).filter(x => x.n > 0);
+  const total = PLANS.length;
+  document.getElementById("statusstack").innerHTML = groups.map(({ st, n }) =>
+    `<div data-st="${st}" style="flex:${n};background:var(${STATUS_TONE[st]})"></div>`).join("");
+  document.getElementById("statuslegend").innerHTML = groups.map(({ st, n }) =>
+    `<span class="li"><span class="sw" style="background:var(${STATUS_TONE[st]})"></span>${st} <b>${n}</b> <span style="color:var(--ink-muted)">${Math.round(n / total * 100)}%</span></span>`).join("");
+  document.querySelectorAll("#statusstack > div").forEach(el => {
+    const st = el.dataset.st;
+    bindTip(el, `<b>${st}</b><span class="m">${PLANS.filter(p => p.status === st).map(p => shortName(p.file)).join("<br>")}</span>`);
+  });
+}
+
+/* ----------------------------- table ----------------------------- */
+const COLS = [
+  { k: "file", t: "Plan", sort: (a, b) => a.file.localeCompare(b.file) },
+  { k: "location", t: "Where", sort: (a, b) => a.location.localeCompare(b.location) },
+  { k: "status", t: "Status", sort: (a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) },
+  { k: "staleness", t: "Staleness", sort: (a, b) => b.staleness - a.staleness || (b.before ?? 0) - (a.before ?? 0) },
+  { k: "completionPct", t: "Complete", sort: (a, b) => b.completionPct - a.completionPct },
+  { k: "openItems", t: "Open", sort: (a, b) => b.openItems - a.openItems },
+  { k: "lastTouched", t: "Last touched", sort: (a, b) => a.lastTouched < b.lastTouched ? 1 : -1 },
+  { k: "sizeKb", t: "Size", sort: (a, b) => b.sizeKb - a.sizeKb },
+  { k: "theme", t: "Theme", sort: (a, b) => a.theme.localeCompare(b.theme) },
+  { k: "recommendation", t: "Action", sort: (a, b) => a.recommendation.localeCompare(b.recommendation) },
+];
+let sortKey = "openItems";
+const opened = new Set();
+
+function fillSelect(id, key) {
+  const el = document.getElementById(id);
+  [...new Set(PLANS.map(p => p[key]))].sort().forEach(v => {
+    const o = document.createElement("option"); o.value = v; o.textContent = v; el.appendChild(o);
+  });
+  el.addEventListener("change", renderTable);
+}
+
+function renderTable() {
+  const fl = floc.value, fs = fstatus.value, ft = ftheme.value, fr = frec.value, q = fq.value.toLowerCase().trim();
+  const col = COLS.find(c => c.k === sortKey);
+  const rows = PLANS
+    .filter(p => (!fl || p.location === fl) && (!fs || p.status === fs) && (!ft || p.theme === ft) && (!fr || p.recommendation === fr) &&
+      (!q || p.file.toLowerCase().includes(q) || p.title.toLowerCase().includes(q)))
+    .sort(col.sort);
+
+  document.getElementById("thead").innerHTML = COLS.map(c =>
+    `<th data-k="${c.k}">${c.t}${c.k === sortKey ? ' <span class="arrow">▼</span>' : ""}</th>`).join("");
+  document.querySelectorAll("#thead th").forEach(th =>
+    th.addEventListener("click", () => { sortKey = th.dataset.k; renderTable(); }));
+
+  document.getElementById("tbody").innerHTML = rows.map(p => {
+    const b = bandOf(p.staleness), r = RECS[p.recommendation];
+    const drop = p.before !== null && p.before !== p.staleness
+      ? `<div class="ptitle">was ${p.before}</div>` : "";
+    const det = opened.has(p.file) ? `<tr class="detail"><td colspan="${COLS.length}"><div class="det">
+        <div><h4>Evidence</h4><ul>${p.evidence.map(e => `<li>${e}</li>`).join("")}</ul></div>
+        <div><h4>Why this action</h4><p>${p.recommendationReason}</p>
+          ${p.supersededBy ? `<p style="margin-top:8px">Superseded by <span class="fname">${p.supersededBy}</span></p>` : ""}
+          <p style="margin-top:8px;color:var(--ink-muted)">confidence ${p.confidence} · ${p.doneItems} done / ${p.openItems} open · ${ageDays(p)}d since last touch</p></div>
+        <div><h4>Referenced paths missing</h4>${p.referencedPathsMissing.length
+          ? `<ul>${p.referencedPathsMissing.map(m => `<li class="miss">${m}</li>`).join("")}</ul>`
+          : `<p style="color:var(--ink-muted)">none — all cited paths exist</p>`}</div>
+      </div></td></tr>` : "";
+    return `<tr class="plan${p.location === "archive" ? " arch" : ""}" data-file="${p.file}">
+      <td><div class="fname">${shortName(p.file)}</div><div class="ptitle">${p.title}</div></td>
+      <td>${p.location === "archive" ? '<span class="pill">archive/</span>' : '<span class="pill">plans/</span>'}</td>
+      <td><span class="pill"><span class="dot" style="background:var(${STATUS_TONE[p.status]})"></span>${p.status}</span></td>
+      <td class="num"><span class="pill"><span class="dot" style="background:var(${b.vr})"></span>${b.icon} ${p.staleness} ${b.label}</span>${drop}</td>
+      <td class="num"><div class="meter"><div class="mt"><div class="mf" style="width:${p.completionPct}%"></div></div><span>${p.completionPct}%</span></div></td>
+      <td class="num">${p.openItems || "—"}</td>
+      <td class="num">${p.lastTouched}<div class="ptitle">${ageDays(p)}d ago</div></td>
+      <td class="num">${p.sizeKb.toFixed(1)} KB</td>
+      <td>${p.theme}</td>
+      <td><span class="pill"><span class="dot" style="background:var(${r.vr})"></span>${r.label}</span></td>
+    </tr>${det}`;
+  }).join("");
+
+  document.querySelectorAll("tr.plan").forEach(tr => tr.addEventListener("click", () => {
+    const f = tr.dataset.file;
+    opened.has(f) ? opened.delete(f) : opened.add(f);
+    renderTable();
+  }));
+}
+
+/* ------------------------------ boot ------------------------------ */
+document.getElementById("themebtn").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const sysDark = matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", cur ? (cur === "dark" ? "light" : "dark") : (sysDark ? "light" : "dark"));
+  renderDumbbell();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderDumbbell);
+
+fillSelect("floc", "location");
+fillSelect("fstatus", "status");
+fillSelect("ftheme", "theme");
+fillSelect("frec", "recommendation");
+document.getElementById("fq").addEventListener("input", renderTable);
+
+fillUSelect("uwave", u => u.wave);
+fillUSelect("utrack", u => u.track);
+fillUSelect("urisk", u => u.risk);
+fillUSelect("usize", u => u.size);
+
+renderTiles();
+renderWaveGrid();
+renderUnits();
+renderDumbbell();
+renderBars();
+renderBoard();
+renderStatus();
+renderTable();
+</script>
+</body>
+</html>

@@ -1,5 +1,14 @@
 # Minimal Viable Delivery Plan: Agent Observability Seam
 
+> **Rebased 2026-08-07 on the post-class-collapse structure. Still unstarted (slice 1 not begun).**
+> The desktop-agent class-collapse (`4b64c6bea`) deleted `src/agent/desktop-agent.ts` and merged the
+> base `DesktopAgent` class into `src/agent/sail-desktop-agent.ts`; separately, the handler tree grew
+> a `handlers/` root (`intents/`, `broadcast/`, `channels/`, `private-channels/`, `utils/` all moved
+> under it) and `wcp/*` moved under `app-connection/wcp/`. Every file:line reference below has been
+> re-pointed at the current tree and re-verified to exist. The design itself — the union, the widened
+> event map, the five-broadcast-path trap, the disconnect-appId trap — is unaffected; none of it
+> depended on the old class split.
+
 Status: planning
 Current slice: 1
 Review/fix loops: 0
@@ -9,10 +18,11 @@ operations — built by **widening machinery the agent already has**, not by add
 parallel event system. `@finos/sail-platform` maps it to OpenTelemetry. The agent
 takes no OTEL dependency.
 
-**Do not interleave with `.cursor/plans/sail-desktop-agent-review-remediation.md`** —
-it is nearly complete and edits `channels/handlers.ts`,
-`wcp-connection-management.ts` and `intent-result-handlers.ts`, all of which this
-plan also touches. Land that first.
+~~Do not interleave with `.cursor/plans/sail-desktop-agent-review-remediation.md`~~ —
+**that plan is now `done` (all 11 slices landed), so this constraint is moot.** It edited
+`handlers/channels/handlers.ts`, `app-connection/wcp/wcp-connection-management.ts` and
+`handlers/intents/intent-result-handlers.ts`, all of which this plan also touches, but there is
+nothing left in flight to collide with.
 
 ---
 
@@ -65,9 +75,9 @@ The agent already has this seam twice over. This plan uses it rather than buildi
 | Already exists | Where |
 |---|---|
 | A typed event map with 5 members | `app-connection/app-connection-events.ts` |
-| An emitter with `on`/`off`/`emit` and per-handler `try/catch` | `wcp/app-connection-event-emitter.ts` |
-| Public host subscription in controller shape | `sail-desktop-agent.ts` — `apps.onConnect`, `channels.onAppChannelChange` |
-| **A typed semantic event emitted from a DACP handler** | `DACPHandlerContext.notifyChannelMembershipChanged`, injected at `desktop-agent.ts:370`, called at `channels/handlers.ts:427` under the comment *"Typed host-chrome path"* |
+| An emitter with `on`/`off`/`emit` and per-handler `try/catch` | `app-connection/wcp/app-connection-event-emitter.ts` |
+| Public host subscription in controller shape | `agent/sail-desktop-agent.ts` — `apps.onConnect`, `channels.onAppChannelChange` |
+| **A typed semantic event emitted from a DACP handler** | `DACPHandlerContext.notifyChannelMembershipChanged`, injected at `agent/sail-desktop-agent.ts:420`, called at `handlers/channels/handlers.ts:425` under the comment *"Typed host-chrome path"* |
 
 That last row is this design, already shipped, for exactly one event. The work is to
 generalise it.
@@ -156,7 +166,7 @@ sequenceDiagram
 
 - **Reuse:** `AppConnectionEvents` + `AppConnectionEventEmitter` (already has the
   per-handler `try/catch` a host sink needs). The `notifyChannelMembershipChanged`
-  injection pattern at `desktop-agent.ts:370`. `meta.requestUuid` as the correlation
+  injection pattern at `agent/sail-desktop-agent.ts:420`. `meta.requestUuid` as the correlation
   attribute — already on every inbound message.
 - **Avoid:** a second emitter, a subscriber registry, async emit, queues, batching,
   a builder or factory per event. `AgentEvent` is a plain discriminated union of
@@ -235,7 +245,7 @@ agentEvent: (event: AgentEvent) => void
 // handlers/types.ts — generalises notifyChannelMembershipChanged
 notify?: (event: AgentEvent) => void
 
-// agent/desktop-agent.ts, createHandlerContext — same bind pattern already present
+// agent/sail-desktop-agent.ts, createHandlerContext — same bind pattern already present
 notify: conn.notifyAgentEvent?.bind(conn),
 ```
 
@@ -306,11 +316,11 @@ a subset silently drops deliveries from the audit trail and nothing fails.
 
 ```mermaid
 flowchart LR
-  R1["broadcastRequest"] --> P1["notifyContextListeners<br/>broadcast/handlers.ts:443"]
-  R1 --> P2["notifyPrivateChannelContextListeners<br/>broadcast/handlers.ts:569"]
-  R2["addContextListener"] --> P3["deliverCurrentContextToListener<br/>broadcast/handlers.ts:514"]
-  R3["joinUserChannel"] --> P4["deliverCurrentContextToInstanceListeners<br/>channels/handlers.ts:363"]
-  R4["fdc3.open with context"] --> P5["deliverOpenWithContext<br/>utils/open-with-context.ts:261"]
+  R1["broadcastRequest"] --> P1["notifyContextListeners<br/>handlers/broadcast/handlers.ts:442"]
+  R1 --> P2["notifyPrivateChannelContextListeners<br/>handlers/broadcast/handlers.ts:568"]
+  R2["addContextListener"] --> P3["deliverCurrentContextToListener<br/>handlers/broadcast/handlers.ts:513"]
+  R3["joinUserChannel"] --> P4["deliverCurrentContextToInstanceListeners<br/>handlers/channels/handlers.ts:363"]
+  R4["fdc3.open with context"] --> P5["deliverOpenWithContext<br/>handlers/utils/open-with-context.ts:261"]
 
   P1 --> S["responses.sendOutbound<br/>identical broadcastEvent shape"]
   P2 --> S
@@ -323,14 +333,15 @@ Paths 3, 4 and 5 do **not** receive `requestUuid` — they replay context from a
 earlier, finished request. Mark them `trigger: "replay" | "openWithContext"` with no
 correlation id. Do not invent one.
 
-**Trap 2 — do NOT reuse the `traceId` at `intent-result-metadata.ts:79`.** Minted at
+**Trap 2 — do NOT reuse the `traceId` at `handlers/intents/intent-result-metadata.ts:77`.** Minted at
 the **result** so it cannot correlate raise→result; never read back anywhere; a
 36-char UUID where OTEL TraceId is 32 hex; and can be generated twice for one result.
 Use `meta.requestUuid`. Do not add trace generation to the agent — that is how the
 OTEL dependency creeps in.
 
-**Trap 3 — `appDisconnected` loses `appId`.** `wcp-connection-management.ts:186`
-deletes the connection two lines before `:188` emits. Capture before the delete.
+**Trap 3 — `appDisconnected` loses `appId`.** `app-connection/wcp/wcp-connection-management.ts:181`
+deletes the connection two lines before `:183` emits (`context.emit("appDisconnected", instanceId)` —
+`instanceId` only, no `appId`). Capture before the delete.
 
 **Trap 4 — `notifyChannelMembershipChanged` has a live consumer.**
 `SailDesktopAgent.changeAppChannel` awaits the resulting `channelChanged` connector
@@ -358,8 +369,8 @@ migration of the one existing consumer. **Zero new emit sites.**
    `SailDesktopAgent` using the existing controller pattern (`apps.onConnect` shape).
 3. Replace `notifyChannelMembershipChanged` on `DACPHandlerContext` with
    `notify?: (event: AgentEvent) => void`; update the injection at
-   `desktop-agent.ts:370`.
-4. **Migrate the call site** at `channels/handlers.ts:427` to emit
+   `agent/sail-desktop-agent.ts:420`.
+4. **Migrate the call site** at `handlers/channels/handlers.ts:425` to emit
    `channel.joined` / `channel.left`, and update `changeAppChannel`'s waiter to
    resolve off the new event. Trap 4.
 
@@ -377,8 +388,8 @@ npx vitest run src/handlers/channels src/agent --root packages/sail-desktop-agen
 
 **Likely files:** `src/observability/agent-events.ts` (new),
 `src/app-connection/app-connection-events.ts`, `src/handlers/types.ts`,
-`src/agent/desktop-agent.ts`, `src/agent/sail-desktop-agent.ts`,
-`src/handlers/channels/handlers.ts`, `src/index.ts`
+`src/agent/sail-desktop-agent.ts` (single class now — owns both the injection at `:420` and
+`createHandlerContext`), `src/handlers/channels/handlers.ts`, `src/index.ts`
 
 ---
 
@@ -389,12 +400,12 @@ belongs in slice 4.
 
 | Event | Site |
 |---|---|
-| `intent.delivered` | `intents/intent-delivery-helpers.ts:105-112` |
-| `intent.result` | `intents/intent-result-handlers.ts:189-201` |
-| `intent.raised` + `intent.resolved` | `intents/intent-raise-intent.ts:155-174` — captures both **offered** and **chosen** |
-| `open.contextDelivered` | `utils/open-with-context.ts:234-272` |
-| `app.connected` | `wcp/wcp-identity-validation.ts:259` — takes `DACPHandlerContext`, so already in scope |
-| `privateChannel.created` | `private-channels/handlers.ts:53` |
+| `intent.delivered` | `handlers/intents/intent-delivery-helpers.ts:105-112` |
+| `intent.result` | `handlers/intents/intent-result-handlers.ts:189-201` |
+| `intent.raised` + `intent.resolved` | `handlers/intents/intent-raise-intent.ts:155-174` — captures both **offered** and **chosen** |
+| `open.contextDelivered` | `handlers/utils/open-with-context.ts:234-272` |
+| `app.connected` | `app-connection/wcp/wcp-identity-validation.ts:259` — takes `DACPHandlerContext`, so already in scope |
+| `privateChannel.created` | `handlers/private-channels/handlers.ts:52` |
 
 **Acceptance:** each fires once per operation. With `notify` undefined these paths
 are byte-identical to today.
@@ -418,7 +429,7 @@ omits replayed context forever.
 **What to do:** thread `requestUuid` into `notifyContextListeners` and
 `notifyPrivateChannelContextListeners` (the caller already has it). Emit at all five
 sites, tagged `trigger` and `channelKind`. Emit **inside** the per-target loop after
-`sendOutbound` — the `catch` at `broadcast/handlers.ts:459` must emit
+`sendOutbound` — the `catch` at `handlers/broadcast/handlers.ts:458` must emit
 `broadcast.deliveryFailed`, never `delivered`.
 
 **Acceptance:** N listeners ⇒ N events. A throw emits `deliveryFailed`, not
@@ -433,9 +444,9 @@ are what a naive implementation misses.
 
 | Signal | Gap to close |
 |---|---|
-| `channel.left` names the channel left | `channels/handlers.ts:156` never calls `getInstance` on the leave path — read `currentUserChannel` **before** the mutation |
-| `privateChannel.granted` | thread `requestId` + target identity into `grantPrivateChannelToIntentSource` (`intent-result-handlers.ts:37-60`) |
-| `privateChannel.disconnected` on teardown | `removeInstancePrivateChannels` (`private-channels/handlers.ts:312`) doesn't destructure `logger` — add `notify` too |
+| `channel.left` names the channel left | `handlers/channels/handlers.ts:156` never calls `getInstance` on the leave path — read `currentUserChannel` **before** the mutation |
+| `privateChannel.granted` | thread `requestId` + target identity into `grantPrivateChannelToIntentSource` (`handlers/intents/intent-result-handlers.ts:37-60`) |
+| `privateChannel.disconnected` on teardown | `removeInstancePrivateChannels` (`handlers/private-channels/handlers.ts:310`) doesn't destructure `logger` — add `notify` too |
 | `app.disconnected` carries `appId` | emit before `connections.delete` (trap 3) |
 | reaching the disconnect site | `disconnectApp` takes `AppConnectionContext`, **not** `DACPHandlerContext` — unlike `app.connected` in slice 2. Either thread `notify` onto that context, or emit from the agent-side teardown choke point where both the context and `appId` exist. **Verify the agent-side point covers all four disconnect routes before choosing.** |
 
@@ -536,11 +547,13 @@ document handshake-timeout as untested — **do not** write a 30-second test.
   optional: the logger was only being asked to carry audit because no event seam
   existed. With one, `Logger` stays plain diagnostics and the host maps it to OTEL
   Logs if it wants a single pipeline.
-- Dead `daTraceId` at `intent-result-metadata.ts:79` — generated, never read.
+- Dead `daTraceId` at `handlers/intents/intent-result-metadata.ts:77` — generated, never read.
   Deleting it is separate and trivially safe; not folded in here because this plan's
   position is that it must not be used.
-- The three `consoleLogger` bypass sites (`app-connection-event-emitter.ts:37`,
-  `wcp-intent-resolver.ts:41`, dead `wcp-event-emitter.ts:54`).
+- The `consoleLogger` bypass sites (`app-connection/wcp/app-connection-event-emitter.ts:50`,
+  `app-connection/wcp/wcp-intent-resolver.ts:41`). **Re-verified 2026-08-07:** the third file this
+  bullet named, `wcp-event-emitter.ts` (a dead duplicate of `AppConnectionEventEmitter`), has since
+  been deleted outright — nothing to do there anymore.
 - Cross-app causal correlation beyond `requestUuid`.
 - A host-side "act as an app" API for in-process services. Deliberately absent — an
   AI acting through a host backdoor would bypass the audit trail watching everyone

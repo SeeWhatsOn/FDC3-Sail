@@ -7,12 +7,13 @@
 > rather than a page about the (parked) WCP4 origin allowlist. The blueprint's *method* — status
 > markers, standalone package framing, one source of truth per claim — is unchanged and still applies.
 
-Status: planning
-Current slice: 0 (layering + middleware/observability decision) — decisions recorded; the description is
-**drafted** in `.cursor/plans/sail-platform-design.md`, rewritten 2026-08-03 as a **standalone package
-description** (see the framing rule below). **The only thing left for slice 0 is the maintainer
-source-check** (that doc's §9, now 4 items). Slice 1 (truth pass) is **committed** (`ffdd94f5b`).
+Status: **near-complete.** Slices 0–5 are done (see Slice Checkpoints). Only **slice 6** (snippet +
+link guardrails in CI) remains open. Slice 0's maintainer source-check is separately tracked as
+non-blocking in the Verification Notes for slice 0; it has not stopped slices 1–5 from landing.
+Current slice: 6 (CI snippet/link guardrails) — the only remaining slice.
 Review/fix loops: 0
+Last re-verified: 2026-08-07 — see "Open doc defects" below for the small set of new/surviving
+defects found while closing out `.cursor/plans/archive/website-docs-defect-register.md`.
 Updated 2026-07-31 (`06476be62`): `sail-one` landed as a real `SailPlatform` consumer. This resolves the
 "middle layer with zero consumers" premise and reframes slice 0 from a green-field design session to
 documenting **two supported entry points** (`createSailBrowserDesktopAgent` vs `SailPlatform`). See
@@ -524,6 +525,22 @@ Docs, so "tests" means mechanical checks. Risk-based, not exhaustive.
   fixes only the false validation mechanism. Resist the rest.
 
 ---
+
+## Open doc defects (carried from the defect register)
+
+**Added 2026-08-07**, closing out `.cursor/plans/website-docs-defect-register.md` (now
+`.cursor/plans/archive/website-docs-defect-register.md`). Of ~50 rows in that register, all but
+one were resolved by the slices below — either the API was deleted in the 2026-08-04
+`sail-platform` cull, or the page was already rewritten. The rows below are what survives, plus
+new defects found while re-verifying the register. All four are small, targeted fixes — good
+material for whoever picks up slice 6, or a quick standalone truth-pass commit before it.
+
+| # | Page:line | What's wrong |
+|---|---|---|
+| 1 | `website/docs/architecture/overview.md:37-38`; `website/docs/packages/desktop-agent/composition.md:56,62-63,104` | Both still say `SailDesktopAgent` "extends `DesktopAgent`" and cite `agent/desktop-agent.ts` as the base-class file. The desktop-agent class-collapse (`4b64c6bea`) deleted that file and folded the base class into `SailDesktopAgent` — there is no separate class to extend anymore. `packages/sail-desktop-agent/src/agent/` now holds only `sail-desktop-agent.ts`, `sail-desktop-agent-controllers.ts`, `sail-desktop-agent-types.ts`, `fdc3-version.ts`, `default-config.ts` |
+| 2 | `website/docs/intro.md:79`; `website/docs/architecture/deployment-targets.md:12` | Both link to `./architecture/overview#two-entry-points` — that heading doesn't exist. `architecture/overview.md` has "## How the packages compose" instead. Broken internal anchor |
+| 3 | `website/docs/intro.md:77` | Says `@finos/sail-platform` gives the Desktop Agent "a lifecycle, and a place for host chrome to bind to" — stale, pre-cull. `architecture/overview.md:207` (`[implemented]`) states the platform has **no dependency on the agent** and owns no lifecycle; it's workspaces/layouts/storage only |
+| 4 | `README.md:40` | Describes `packages/sail-platform` as "Composition layer — host UI seams, pluggable storage, lifecycle" — same stale pre-cull description, contradicted by the package's own current README ("Workspaces, layouts and storage… nothing else") |
 
 ## Slice Checkpoints
 

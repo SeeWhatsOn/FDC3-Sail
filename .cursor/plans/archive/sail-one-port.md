@@ -1,5 +1,22 @@
 # sail-one: port brief
 
+> **ARCHIVED 2026-08-07.** Moved to `.cursor/plans/archive/`. The port landed —
+> `packages/sail-one/src` has 18 `.tsx` files across all the areas this brief scoped. The one open
+> question this doc left unresolved, §3's **"fork you must decide first"** (adopt `SailPlatform` or
+> follow `sail-finance`'s lower-level pattern), is moot: the 2026-08-04 `sail-platform` cull deleted
+> the `SailPlatform` class entirely, so neither option survived — both shells now construct
+> `SailDesktopAgent` directly (`sail-one/src/state/sail-host.ts`). §9's three product decisions
+> were all answered by the code that shipped: the channel rail/tabs UI was **kept**
+> (`src/tabs/tabs.tsx`), `config/custom-apps.tsx` was **kept**, and native-app WebSocket
+> connection instructions were **kept** in `src/appd/appd.tsx` even though the server-side bridge
+> was never ported — that specific gap is not lost, it is tracked live as
+> `.cursor/plans/draft-pr-readiness.md` item 27 ("Native non-browser app bridging"). The real,
+> current list of interim gaps lives in `packages/sail-one/README.md`'s "Known gaps" section
+> (structural channel/directory edits restart the agent, directory removal is all-or-nothing,
+> `embeddable-ui/` carried but unwired, `NotResponding` unreachable) — read that, not this file, for
+> what's actually still rough. Nothing here needed carrying forward beyond what's already tracked in
+> those two places.
+
 > **Partly superseded by the 2026-08-04 `sail-platform` cull.** The port landed, but the wiring
 > described here changed: `sail-host.ts` now constructs `SailDesktopAgent` directly and implements
 > its own `AppLauncher` inline (no `SailPlatform`, no `SailAppLauncher`), and `client-state.ts`

@@ -1,5 +1,16 @@
 # Website Docs — Defect Register
 
+> **ARCHIVED 2026-08-07.** Every row in this register has been re-verified against `wip/v3-local`
+> HEAD (`a903cffba`). Of ~50 rows, all but one are resolved — most **by deletion** (the
+> `sail-platform` cull removed the APIs the defect was about) or **by fix** (the page was rewritten
+> and no longer makes the claim). See "Final resolution pass" below for the row-by-row evidence.
+> The rows that were still genuinely live, plus four new defects found during this pass (broken
+> `#two-entry-points` anchors, two stale pre-cull package descriptions, and a stale "extends
+> `DesktopAgent`" claim surviving the class-collapse refactor), moved to
+> `.cursor/plans/website-docs-blueprint.md`, new section **"Open doc defects (carried from the
+> defect register)."** Nothing else in this file needs further action — it is a closed record, not
+> a queue.
+
 > **Partly resolved-by-deletion, 2026-08-04.** Several entries here describe defects in docs for APIs
 > that no longer exist (`SailPlatform`, `createSailBrowserDesktopAgent`, `SailAppLauncher`,
 > `SailPlatformClient`). Those pages were rewritten in the `sail-platform` cull, so the entries are
@@ -270,3 +281,82 @@ citing.
 
 OSS hygiene, different surface: stale CoC project name (D-8), boilerplate `SECURITY.md` routing
 vulnerabilities to public issues (D-9), `AGENTS.md` branch references (D-10).
+
+---
+
+## Final resolution pass — 2026-08-07
+
+Re-verified against `wip/v3-local` @ `a903cffba` (current tip). `RESOLVED-BY-FIX` = the page was
+rewritten and the claim is gone. `RESOLVED-BY-DELETION` = the API/mechanism the row was about no
+longer exists, so the claim is moot regardless of page wording. `STILL-LIVE` = carried forward to
+the blueprint.
+
+| # | Verdict | Evidence |
+|---|---|---|
+| A1 | RESOLVED-BY-FIX | `packages/sail-finance/overview.md:22` — "Constructs its Desktop Agent with `new SailDesktopAgent({...})` directly" |
+| A2 | RESOLVED-BY-FIX | `packages/sail-finance/overview.md:40-47` — correctly describes Zustand `persist` + `localStorage`, contrasts with sail-one |
+| A3 | RESOLVED-BY-FIX | No middleware/launcher-wrapper diagram remains; `architecture/overview.md:106-130` draws "peers not layers" |
+| A4 | RESOLVED-BY-FIX | No page calls `SailDesktopAgentContext.tsx` a "platform provider" |
+| A5 | RESOLVED-BY-FIX | `grep -rc "three-layer\|Layer 2" website/docs` → 0 |
+| A6 | RESOLVED-BY-FIX | No "Layer 2: Platform SDK" text anywhere |
+| A7 | RESOLVED-BY-FIX | "Three-layer architecture" — zero hits repo-wide |
+| A8 | RESOLVED-BY-FIX | `architecture/channel-selection.md:41` matches `ChannelSelector.tsx:57` |
+| A9 | RESOLVED-BY-FIX | `packages/sail-finance/overview.md:53` cites `agent.channels.changeAppChannel` directly |
+| A10 | RESOLVED-BY-DELETION | `SailPlatform.start()` doesn't exist; `getting-started.md:98` shows `new SailDesktopAgent(...)` |
+| A11 | RESOLVED-BY-FIX | `run-sail.md:75` states persistence "does not go through `@finos/sail-platform`" |
+| A12 | RESOLVED-BY-DELETION | Only one entry point exists now — "two entry points" premise is moot |
+| A13 | RESOLVED-BY-DELETION | `SailPlatform.start()` gone; `architecture/overview.md:135` correctly states `SailDesktopAgent.start()`/`.stop()` are synchronous |
+| B1 | RESOLVED-BY-DELETION | `DesktopAgent` class deleted entirely; `grep -rn "new DesktopAgent" website/` → 0 |
+| B2 | RESOLVED-BY-DELETION | `attachAppConnection` — zero hits in docs or `packages/sail-desktop-agent/src/` |
+| B3 | RESOLVED-BY-FIX | `MockTransport` correctly framed as internal Cucumber tooling |
+| B4 | RESOLVED-BY-FIX | Only one adoption path shown; no manual-composition second entry |
+| B5 | **STILL-LIVE → moved to blueprint** | `architecture/overview.md:37-38` and `composition.md:56,62-63,104` still say `SailDesktopAgent` "extends `DesktopAgent`" and cite `agent/desktop-agent.ts`; that file/class no longer exists after the class-collapse (`4b64c6bea`) — a new, different false claim, not the original one |
+| B6 | RESOLVED-BY-DELETION | `packages/platform/overview.md` fully rewritten; no `DesktopAgent` re-export claim |
+| B7 | RESOLVED-BY-DELETION | No `validateDACPMessage`/`safeParseDACPMessage` claim; `grep` repo-wide → 0 |
+| C1 | RESOLVED-BY-FIX | `getting-started.md:65` — "not yet published... Once published:" framing |
+| C2 | RESOLVED-BY-FIX | No "from npm" live claim remains |
+| C3 | RESOLVED-BY-FIX | `development.md:211` — "not yet published — see the root README status" |
+| C4 | RESOLVED-BY-FIX | README is a stub; `development.md:213-238` correctly describes Changesets |
+| C5 | RESOLVED-BY-FIX | `intro.md:73`, `run-sail.md:68`, `README.md:85` all say "not yet ready for production use" |
+| D1 | RESOLVED-BY-FIX | `dev:harness` gone everywhere; `dev:conformance` used consistently |
+| D2 | RESOLVED-BY-FIX | `sail-server/` not in `development.md` tree listing |
+| D3 | RESOLVED-BY-FIX | No `plans/work-items/` reference remains |
+| D4 | RESOLVED-BY-FIX | Correctly names 3 processes, matches `package.json:13` |
+| D5 | RESOLVED-BY-FIX | No Socket.IO in Key Technologies list |
+| D6 | RESOLVED-BY-FIX | No `generate:schemas` reference remains |
+| D7 | RESOLVED-BY-FIX | README reduced to stub; Zod/validation section removed |
+| D8 | RESOLVED-BY-FIX | `integrator-guide.md:579` correctly cites `app-connection/message-port.ts` |
+| D9 | RESOLVED-BY-FIX | `development.md:157` lists `lint:boundaries` |
+| D10 | RESOLVED-BY-FIX | `conformance-harness/overview` now in `sidebars.ts:34` |
+| E (all rows) | RESOLVED-BY-FIX | `conformance.md` now generated from `test/features/`; correct file names and counts (154 total / 136 `@fdc3_2.2` / 18 `@fdc3_3.0`-only); baseline stated as unmeasured |
+| G1 | RESOLVED-BY-FIX | `packages/sail-theme/overview.md` exists, in sidebar |
+| G2 | RESOLVED-BY-DELETION | Both entry points collapsed into one construction path — documented |
+| G3 | RESOLVED-BY-FIX | `architecture/overview.md:171-175` documents `AppLauncher` as the host seam both shells implement inline |
+| G4 | RESOLVED-BY-DELETION | Allowlist code deleted; `architecture/security.md` rewritten to state this; see `.cursor/plans/parked-wcp4-origin-allowlist.md` |
+| G5 | RESOLVED-BY-FIX | `packages/sail-finance/panel-architecture.md` covers Dockview + popout relay + Zustand stores |
+| G6 | RESOLVED-BY-FIX | `packages/platform/overview.md:219-233` documents both persistence stories |
+| G7 | RESOLVED-BY-FIX | All 6 `@fdc3_3.0`-only files documented, 18 scenarios |
+| G8 | RESOLVED-BY-FIX | `@fdc3_2.0` tag fully explained in `conformance.md:85-88` |
+| G9 | RESOLVED-BY-FIX | `toolbox-local`/`VITE_CONFORMANCE_TOOLBOX` documented, marked `[implemented]` |
+| G10 | RESOLVED-BY-FIX | `architecture/overview.md:241-251` cites `lint:boundaries`/`.oxlintrc.json` |
+| G11 | RESOLVED-BY-FIX | "One Desktop Agent per browsing context `[implemented]`" is its own section |
+| G12 | RESOLVED-BY-FIX | `packages/sail-finance/overview.md:73-76` documents the cross-package import exception |
+| G13 | RESOLVED-BY-DELETION | `SailPlatformClient` gone; sail-one now documented using `createLocalStorage`/`SailStorage` |
+| G14 | RESOLVED-BY-DELETION | `platform.workspaces/layouts/sailConfig` gone; replaced by `createWorkspaceStore`, `[implemented]` |
+| G15 | RESOLVED-BY-DELETION | `SailPlatform` class (and its buggy JSDoc) deleted outright |
+
+**New defects found during this pass, not in the original register** — all moved to the blueprint:
+
+1. `intro.md:79` and `architecture/deployment-targets.md:12` link to
+   `./architecture/overview#two-entry-points` — that heading no longer exists (`overview.md` now
+   has "## How the packages compose", not "two entry points"). Broken internal anchor.
+2. `intro.md:77` still describes `@finos/sail-platform` as giving the agent "a lifecycle, and a
+   place for host chrome to bind to" — stale; `architecture/overview.md:207` states the platform
+   has **no dependency on the agent** and owns no lifecycle.
+3. `README.md:40` still describes `packages/sail-platform` as "Composition layer — host UI seams,
+   pluggable storage, lifecycle" — same stale pre-cull description, contradicted by the platform's
+   own current README.
+
+Verified by direct `Read`/`Grep` against the current tree during this cleanup pass (not just the
+agent that first surveyed it): B5's two citations, the `#two-entry-points` anchor, `intro.md:77`,
+and `README.md:40` were independently re-confirmed.

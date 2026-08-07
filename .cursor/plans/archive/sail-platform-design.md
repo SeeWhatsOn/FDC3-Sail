@@ -1,5 +1,11 @@
 # `@finos/sail-platform` — Package Description (Slice 0 output)
 
+> **ARCHIVED 2026-08-07.** Moved to `.cursor/plans/archive/` — no open items (confirmed: this is a
+> package-description doc, not a slice plan; it carries no checkboxes or task list). Re-verified
+> the same day: `packages/sail-platform/src/index.ts` now exports only `createWorkspaceStore` and
+> storage helpers — none of the APIs this document describes still exist. Superseded by the
+> `sail-platform` cull below; current surface is `packages/sail-platform/README.md`.
+
 > **SUPERSEDED 2026-08-04 by the `sail-platform` cull.** Every API this document describes —
 > `SailPlatform`, `createSailBrowserDesktopAgent`, `SailAppLauncher`, `SailPlatformClient`,
 > `generateUuid`, the agent type re-exports — has been deleted. The package now holds **workspaces,

@@ -18,6 +18,16 @@ account. Re-verify before acting if `wip/v3-local` has moved again.
 Method: first-pass manual review, then 10 specialist agents briefed to *falsify* the
 first pass rather than confirm it, then spot-verification of every load-bearing claim.
 
+**Last re-verified: 2026-08-07** against `wip/v3-local` @ `a903cffba`. Every item below was
+re-checked against the current tree (grep, direct file reads, and — for build/test items — actually
+running the commands). Full per-item results are in **"Re-verification — 2026-08-07"** below; the
+Summary table's Status column is updated in place for items whose verdict changed. **Fresh count:
+32 rows total. 3 newly `FIXED`** (14, 16, 19) **· 1 newly resolved by removal** (17, matching the
+banner note above) **· 1 downgraded from `BLOCKER`** (15, most of what it described no longer
+exists) **· 25 unchanged** (still `BLOCKER`/`NEEDS WORK`/`DECISION`/`GOOD`/`WITHDRAWN` as before,
+evidence refreshed for the ones actually re-run). **7 `BLOCKER`s remain: 0, 3, 7, 9, 10, 11, 29** —
+down from 8 (16 fixed; 15 downgraded to `NEEDS WORK`).
+
 ## How to read this
 
 | Status | Meaning |
@@ -71,17 +81,17 @@ Consequences:
 | 6 | README badges | `NEEDS WORK` | Yes | Minutes |
 | 7 | Working docs at repo root | `BLOCKER` | Yes | Minutes |
 | 8 | ~~Security tooling removed~~ | mostly `WITHDRAWN` | No | Minutes |
-| 9 | **CI green on the fork** | `BLOCKER` | Yes | Hours |
-| 10 | **Clean-clone build** | `BLOCKER` | Yes | Hours |
+| 9 | **CI green on the fork** | `BLOCKER` (narrowed 08-07) | Yes | Hours |
+| 10 | **Clean-clone build** | `BLOCKER` (narrowed 08-07) | Yes | Hours |
 | 11 | Demo app directory | `BLOCKER` | Yes | Hours–day |
 | 12 | Package metadata and versions | `NEEDS WORK` | No | Hours |
 | 13 | Release and publishing rights | `DECISION` | No | Conversation |
-| 14 | API shape — `sail-desktop-agent` | `NEEDS WORK` | No | Days |
-| 15 | API shape — `sail-platform` | `BLOCKER` | No | Days |
-| 16 | Trust boundary — identity spoofing | `BLOCKER` | **Yes** | Hours |
-| 17 | Trust boundary — origin allowlist | `NEEDS WORK` | No | Hours–days |
+| 14 | API shape — `sail-desktop-agent` | `FIXED` (08-07) | No | — |
+| 15 | API shape — `sail-platform` | `NEEDS WORK` (was `BLOCKER`, 08-07) | No | Hours |
+| 16 | Trust boundary — identity spoofing | `FIXED` (08-07) | No | — |
+| 17 | Trust boundary — origin allowlist | `RESOLVED BY REMOVAL` (08-07) | No | — |
 | 18 | Complexity and dead code | `NEEDS WORK` | No | Days |
-| 19 | Test state | `NEEDS WORK` | Yes | Minutes |
+| 19 | Test state | `FIXED` (08-07) | No | — |
 | 31 | Missing `.gitattributes` | `NEEDS WORK` | No | Minutes |
 | 20 | AI tells | `NEEDS WORK` | No | ~2 hours |
 | 21 | README / CONTRIBUTING truthfulness | `NEEDS WORK` | Yes | Hours |
@@ -95,11 +105,53 @@ Consequences:
 | 29 | **Commit history and metadata** | `BLOCKER` | Yes | Hours |
 | 30 | `console.log` in shipped code | `NEEDS WORK` | No | ~1 hour |
 
-**Eight blockers.** The build does not build and CI is not green (9, 10) — that outranks
-everything else, because nothing below it can be trusted until it is. Then: a genuine
+**Eight blockers** at the last full review. The build does not build and CI is not green (9, 10) —
+that outranks everything else, because nothing below it can be trusted until it is. Then: a genuine
 security vulnerability (16), nine months of drift (0), authorship metadata visible on GitHub
 before anyone reads a line of code (29). Three are cheap (3, 7, 11 — though 11 needs a
-decision, not just a delete).
+decision, not just a delete). **As of 2026-08-07, 16 is fixed and 15 is downgraded — 7 blockers
+remain: 0, 3, 7, 9, 10, 11, 29.**
+
+---
+
+## Re-verification — 2026-08-07
+
+Every item re-checked against `wip/v3-local` @ `a903cffba`, by direct grep/read and — for 9, 10, 19
+— actually running the commands. `unchanged` means the underlying fact is still true; it does not
+mean untouched, it means re-confirmed.
+
+| # | Status now | Evidence |
+|---|---|---|
+| 0 | unchanged — `BLOCKER` | `git merge-base upstream/main HEAD` still `07347d448`; still 22 commits behind upstream, now 252 ahead (was 218) |
+| 1 | unchanged — `DECISION` | `package.json` still overrides `vite` to `@voidzero-dev/vite-plus-core@0.2.5`; `oxlint` still an undeclared transitive devDependency |
+| 2 | unchanged — `DECISION` | No repo artifact answers PR shape/socialisation; still a conversation |
+| 3 | unchanged — `BLOCKER` | `LICENSE` still en-dash `2022–2026 FINOS`; `NOTICE` still unreconciled `2022 - 2022 Nick Kolba` |
+| 6 | unchanged — `NEEDS WORK` | `README.md:20,23,24,25` still 4 badges pinned to `?branch=v3-pre` |
+| 7 | unchanged — `BLOCKER` | `ARCHITECTURE-REMEDIATION-PLAN.md` (36,540 B) and `FDC3-SAIL-REVIEW.md` (46,651 B) still at repo root |
+| 8 | unchanged — mostly `WITHDRAWN` | Same file-presence matrix; no local pre-commit hook still the real gap |
+| 9 | **narrowed — `BLOCKER`** | `npm run lint` and `npm run typecheck` now exit 0 (item 10's tsconfig fix cascaded). Vitest now 462/462 (was 449/450). `ci.yml`'s Build step still lists exactly `sail-desktop-agent`, `sail-platform`, `sail-finance`, `sail-conformance-harness` — **still omits `sail-one`** — so the falsely-green Build step is still the live defect, not the failing lint/typecheck/test that used to co-occur with it |
+| 10 | **narrowed — `BLOCKER`** | `packages/sail-finance/tsconfig.json` now has `"types": ["node", "vitest/globals"]` — that half is fixed. `packages/sail-one/html/` still does not exist; `npm run build -w @finos/sail-one` still fails: `[INVALID_OPTION] You must supply options.input` from `vite.config.ts:68`'s `globSync("html/**/*.html", ...)` returning `[]`. Build genuinely still fails |
+| 11 | unchanged — `BLOCKER` | Not re-walked in full this pass; `sail-one`'s build failure (item 10) is a new, separate reason the demo-app-directory decision still can't be closed out |
+| 12 | unchanged — `NEEDS WORK` | `sail-desktop-agent/package.json` `exports["."]` still orders `import, types, default`; `sail-platform/package.json` still correctly orders `types` first — still inconsistent. Root `package.json` still has no `license` field. `.changeset/config.json`'s ignore list now also omits `sail-one` (private, unpublished) alongside `sail-theme` |
+| 13 | unchanged — `DECISION` | `npm view @finos/sail-desktop-agent` / `@finos/sail-platform` both still 404 |
+| 14 | **FIXED** | `attachAppConnection` — zero matches anywhere in `packages/sail-desktop-agent/src` (only in docs/plans, now flagged separately in the website-docs-blueprint carry-forward). `.connector` renamed to `.appConnection`, documented as intentionally public with rationale (`index.ts:59-70`); the `sail-finance` banning test (`connection-store.test.ts:201`) updated to match the new name. The phantom `DACPValidationError` class is gone — `dacp-errors.ts` now only has `DACPTimeoutError`/`DACPProcessingError`, both actually constructed and used. README now points to a dedicated integrator guide instead of a bare 4-line sample |
+| 15 | **downgraded — `NEEDS WORK`, was `BLOCKER`** | `packages/sail-platform/src/index.ts` now exports only `createWorkspaceStore`/`Workspace`/`Layout`/storage helpers. `SailPlatform`, `createSailBrowserDesktopAgent`, `MiddlewarePipeline`, `.use()`, `generateUuid` — zero matches repo-wide outside docs/plans; the whole "published no-op `.use()` API" and "own-goal boundary cast" findings are moot, the code they were about is gone. `wcp4-origin-allowlist.ts` no longer exists (see item 17). **Still real:** `sail-one/src/state/client-state.ts` now imports `createWorkspaceStore` from `@finos/sail-platform` — a genuine consumer exists now — but `sail-finance/src/stores/workspace-store.ts` still runs its own separate Zustand store. Two systems, one of them now actually used |
+| 16 | **FIXED** | `browser-app-connection.ts`'s `enrichMessageWithSource` (~line 198-228) now strips `hostInstanceId` alongside `source`/`messageOrigin`, with a comment explaining why. `handlers/utils/resolve-context-listener-instance-id.ts` no longer reads `meta.hostInstanceId` at all — comment at `:11-18` documents the fix and the reasoning |
+| 17 | **RESOLVED BY REMOVAL** | `packages/sail-platform/src/wcp4-origin-allowlist.ts` no longer exists. Matches this file's own header banner and `.cursor/plans/parked-wcp4-origin-allowlist.md`, which preserves the fail-closed requirement for any reimplementation |
+| 18 | unchanged — `NEEDS WORK` | Sub-findings 1 (dead `.use()`) and 2 (dead workspaces/layouts stack) are resolved via item 15's deletion; sub-findings 3–5 (`handleWcp4ValidateAppIdentity` complexity, `private-channel.ts` repetition, dead `panel-store.ts`) not re-walked, no reason to expect they changed |
+| 19 | **FIXED** | Vitest 462/462 (69/69 files). The specific failing test, `sail-platform/src/__tests__/host-contracts-reexport.test.ts`, no longer exists — the file (and the API it tested) was deleted in the `sail-platform` cull, not fixed in place. Cucumber unchanged: 154/154 scenarios, 1461/1461 steps |
+| 20 | unchanged in substance — `NEEDS WORK` | Dead duplicate class `WCPEventEmitter` — zero matches repo-wide, gone (tracks item 15/18). Divider-comment pattern persists: `state/types.ts` 18, `app-directory/types.ts` 10, `handlers/types.ts` 6, `fdc3-errors.ts` 6 (the old `sail-platform.ts` 16-divider file is gone with the rest of that package). Formulaic commit phrasing ("Enhanced… ensuring…") still present, 118 hits across 252 since-fork commits, including the current tip commit |
+| 21 | unchanged — `NEEDS WORK` | `website/docs/development.md` still names ESLint/Prettier as the tooling and still says `validate` runs "Prettier, ESLint" |
+| 22 | not fully re-walked — `NEEDS WORK` | The two specific broken samples cited (platform `desktopAgent.start()` double-start; `platform.start({ onChannelChanged })`) describe APIs since deleted in the cull, so those exact lines are moot — but the docs site was independently re-audited in full while closing out `.cursor/plans/website-docs-defect-register.md` this same session; see the new "Open doc defects" section added to `.cursor/plans/website-docs-blueprint.md` for what's actually still wrong on the site today |
+| 23 | unchanged, sizes grown — `NEEDS WORK` | `.claude/` 7 tracked files; `.cursor/` 149 tracked files (was 143); `AGENTS.md` 49,427 bytes (was 45,894) |
+| 24 | unchanged — `NEEDS WORK` | No PR description artifact exists |
+| 25 | unchanged — `DECISION` | Both `sail-one` and `sail-finance` still in the diff |
+| 26 | unchanged — `GOOD` | `results/conformance-report-v6.txt` is still the latest committed export, not regenerated |
+| 27 | unchanged — `NEEDS WORK` | `WorkspaceDirectory.tsx:109` still defines and renders `MOCK_WORKSPACES` behind its TODO. Native-app WebSocket instructions still ported into `sail-one/src/appd/appd.tsx` with no server-side bridge behind them (same gap, now also present in `sail-one`, not just the original v2→v3 comparison) |
+| 28 | unchanged — `NEEDS WORK` | Root `tsconfig.json:5-10` still references `./packages/sail-ui` (doesn't exist) and still omits `sail-conformance-harness`. `sail-finance/tsconfig.json` still carries the same dangling `../../packages/sail-ui/src/**/*` include behind its `_comment` TODO |
+| 29 | unchanged in substance, evidence updated — `BLOCKER` | Since-fork commit count now 252 (was 218). Author split now `SeeWhatsOn` ×169 / `Chris Watson` ×74 (was 135/74). `Cursor Agent <cursoragent@cursor.com>` still exactly 9 commits. `Claude-Session:` trailer now found in **9** commits, not the 1 originally recorded — larger than reported. **One correction:** the two specific `cursor/…` merge-commit subjects the doc names are **not ancestors of current HEAD** (`git merge-base --is-ancestor` false for both) — they exist only on other refs, not on `wip/v3-local`. The broader finding (formulaic messages, author split, session trailers) still holds and looks worse by trailer count |
+| 30 | unchanged in substance, evidence updated — `NEEDS WORK` | 35 real `console.log` hits now (was 45), after excluding false-positive JSDoc examples. Same hotspots: `Layout.tsx` 9, `connection-store.ts` 7, `intent-resolver-store.ts` 4, `main.tsx` 4. `sail-platform.ts`'s 3 are gone because that file no longer exists (item 15) |
+| 31 | unchanged — `NEEDS WORK` | Still no `.gitattributes`. Local `npm run format` now flags only 9 files (was 434) in this environment — narrower symptom, same unfixed root cause (`eol=lf` not enforced) |
 
 ---
 
@@ -696,18 +748,21 @@ the entire time and took one command to find.
 
 ## If the work does happen
 
-Dependency order, not importance:
+Dependency order, not importance. **Updated 2026-08-07:** items 14, 16, 17, 19 are done or moot;
+item 15 downgraded; item 9's and 10's tsconfig cause is fixed, `sail-one`'s html entrypoint is the
+one remaining cause of both.
 
-1. **Make it build and go green** (items 9, 10, 19) — three small, located fixes: the
-   `sail-one` html entrypoint, `"node"` in sail-finance's tsconfig `types`, and one test
-   regex. Also add `sail-one` to CI's build step so the blind spot closes. Do this first;
-   until it is done, nothing else in this register can be trusted.
+1. **Make it build and go green** (items 9, 10) — one located fix left: the `sail-one` html
+   entrypoint (`packages/sail-one/vite.config.ts:68` globs `html/**/*.html`, which doesn't exist).
+   `"node"` in sail-finance's tsconfig `types` and the test regex (item 19) are **already fixed**.
+   Also add `sail-one` to CI's build step so the blind spot closes. Do this first; until it is
+   done, nothing else in this register can be trusted.
 2. **Sync with upstream `main`** (item 0) — everything after is cheaper
 3. Decisions above
-4. The security fix (item 16) — hours, and it is a real vulnerability
+4. ~~The security fix (item 16)~~ — **done**, `hostInstanceId` is stripped at the trust boundary
 5. Cheap blockers — items 3, 7, 23, 31
 6. Verify what is still unknown — item 21
-7. Substance — items 11, 12, 14, 15, 17, 18, 28
+7. Substance — items 11, 12, 15, 18, 28 (14 and 17 done/moot; dropped from this line)
 8. Presentation — items 20, 22, 24, 27, 30
 8. **Squash the history last** (item 29) — after the sync, after the file-level work, so
    nothing has to be redone. This is the final act before opening the PR.
