@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sail plans — staleness dashboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --plane: #f9f9f7;
+    --ink-1: #0b0b0b;
+    --ink-2: #52514e;
+    --ink-muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --hairline: rgba(11,11,11,0.10);
+    --track: #eeeee9;
+
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+
+    --good: #0ca30c;
+    --warning: #fab219;
+    --serious: #ec835a;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --plane: #0d0d0d;
+      --ink-1: #ffffff;
+      --ink-2: #c3c2b7;
+      --ink-muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --hairline: rgba(255,255,255,0.10);
+      --track: #252523;
+
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --plane: #0d0d0d;
+    --ink-1: #ffffff;
+    --ink-2: #c3c2b7;
+    --ink-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --hairline: rgba(255,255,255,0.10);
+    --track: #252523;
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--plane);
+    color: var(--ink-1);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  header.page { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between; margin-bottom: 8px; }
+  h1 { font-size: 26px; line-height: 1.2; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-2); font-size: 13.5px; margin: 0; }
+  .sub code { font-size: 12.5px; background: var(--track); padding: 1px 5px; border-radius: 4px; }
+
+  button.themetoggle {
+    font: inherit; font-size: 13px; color: var(--ink-2);
+    background: var(--surface-1); border: 1px solid var(--hairline);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  }
+  button.themetoggle:hover { color: var(--ink-1); }
+
+  section { margin-top: 28px; }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px 22px;
+  }
+  h2 { font-size: 16px; margin: 0 0 2px; letter-spacing: -0.005em; }
+  .note { color: var(--ink-2); font-size: 13px; margin: 0 0 18px; }
+
+  /* ---- stat tiles ---- */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 12px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--hairline); border-radius: 12px; padding: 16px 18px; }
+  .tile .k { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); margin-bottom: 6px; }
+  .tile .v { font-size: 34px; line-height: 1; font-weight: 600; letter-spacing: -0.02em; }
+  .tile .d { font-size: 12.5px; color: var(--ink-2); margin-top: 7px; }
+
+  /* ---- ranked bars ---- */
+  .bars { display: grid; grid-template-columns: minmax(120px, 260px) 1fr auto; gap: 4px 14px; align-items: center; }
+  .bars .name { font-size: 13px; color: var(--ink-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bars .name .st { color: var(--ink-muted); font-size: 11.5px; }
+  .track { background: var(--track); border-radius: 4px; height: 14px; position: relative; }
+  .fill { height: 14px; border-radius: 0 4px 4px 0; min-width: 3px; }
+  .bars .val { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bars .val .band { color: var(--ink-muted); }
+  .barrow { display: contents; cursor: default; }
+
+  /* ---- stacked distribution ---- */
+  .stack { display: flex; gap: 2px; height: 26px; margin-bottom: 12px; }
+  .stack > div { border-radius: 3px; min-width: 6px; }
+  .stack > div:first-child { border-radius: 4px 3px 3px 4px; }
+  .stack > div:last-child { border-radius: 3px 4px 4px 3px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+  .legend .li { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-2); }
+  .legend .sw { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .legend .li b { color: var(--ink-1); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ---- scatter ---- */
+  .chartbox { width: 100%; overflow-x: auto; }
+  svg.scatter { display: block; width: 100%; height: auto; min-width: 520px; }
+  .glyph { cursor: default; }
+
+  /* ---- table ---- */
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .controls label { font-size: 12px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  select, input[type=search] {
+    font: inherit; font-size: 13px; color: var(--ink-1);
+    background: var(--surface-1); border: 1px solid var(--hairline);
+    border-radius: 8px; padding: 6px 10px;
+  }
+  .tablebox { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 900px; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  thead th { color: var(--ink-muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; cursor: pointer; white-space: nowrap; border-bottom: 1px solid var(--axis); }
+  thead th:hover { color: var(--ink-1); }
+  thead th .arrow { opacity: 0.5; font-size: 10px; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr.plan { cursor: pointer; }
+  tr.plan:hover td { background: var(--track); }
+  .fname { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: var(--ink-1); }
+  .ptitle { color: var(--ink-2); font-size: 12px; margin-top: 2px; }
+
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--hairline); background: var(--track); color: var(--ink-2); white-space: nowrap; }
+  .pill .dot { width: 7px; height: 7px; border-radius: 999px; flex: none; }
+
+  .meter { display: flex; align-items: center; gap: 8px; }
+  .meter .mt { width: 62px; height: 8px; background: var(--track); border-radius: 4px; overflow: hidden; flex: none; }
+  .meter .mf { height: 8px; border-radius: 0 4px 4px 0; background: var(--series-1); }
+
+  tr.detail td { background: var(--plane); border-bottom: 1px solid var(--axis); }
+  .det { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; padding: 4px 2px 8px; }
+  .det h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); margin: 0 0 6px; font-weight: 600; }
+  .det ul { margin: 0; padding-left: 17px; color: var(--ink-2); }
+  .det li { margin-bottom: 3px; }
+  .det .miss { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; color: var(--critical); }
+  .det p { margin: 0; color: var(--ink-2); }
+
+  .tip {
+    position: fixed; pointer-events: none; opacity: 0; transition: opacity 90ms;
+    background: var(--surface-1); color: var(--ink-1);
+    border: 1px solid var(--hairline); border-radius: 8px;
+    padding: 8px 10px; font-size: 12.5px; line-height: 1.45;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.16); max-width: 280px; z-index: 50;
+  }
+  .tip b { display: block; margin-bottom: 3px; }
+  .tip .m { color: var(--ink-2); }
+
+  footer { margin-top: 34px; color: var(--ink-muted); font-size: 12.5px; }
+  @media print { .themetoggle, .controls { display: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <div>
+    <h1>Sail plans — staleness dashboard</h1>
+    <p class="sub">17 plan files in <code>.cursor/plans/</code> · audited 2026-08-07 against branch <code>wip/v3-local</code></p>
+  </div>
+  <button class="themetoggle" id="themebtn" type="button">Toggle theme</button>
+</header>
+
+<section class="tiles" id="tiles"></section>
+
+<section class="card">
+  <h2>Staleness by plan</h2>
+  <p class="note">0 = current and being worked. 100 = describes a world that no longer exists.</p>
+  <div class="bars" id="bars"></div>
+  <div class="legend" id="bandlegend" style="margin-top:16px"></div>
+</section>
+
+<section class="card">
+  <h2>Where the plans sit</h2>
+  <p class="note">Completion against staleness. Bottom-right is the danger zone: barely started, badly out of date.</p>
+  <div class="chartbox"><svg class="scatter" id="scatter" viewBox="0 0 680 420" role="img" aria-label="Scatter plot of plan completion against staleness"></svg></div>
+  <div class="legend" id="reclegend" style="margin-top:6px"></div>
+</section>
+
+<section class="card">
+  <h2>Status mix</h2>
+  <p class="note">What each plan claims to be, verified against the tree and git history.</p>
+  <div class="stack" id="statusstack"></div>
+  <div class="legend" id="statuslegend"></div>
+</section>
+
+<section class="card">
+  <h2>All plans</h2>
+  <p class="note">Click a row for evidence and missing paths. Click a column header to sort.</p>
+  <div class="controls">
+    <label for="fstatus">Status</label>
+    <select id="fstatus"><option value="">all</option></select>
+    <label for="ftheme">Theme</label>
+    <select id="ftheme"><option value="">all</option></select>
+    <label for="frec">Action</label>
+    <select id="frec"><option value="">all</option></select>
+    <input type="search" id="fq" placeholder="filter by name…" style="margin-left:auto;min-width:180px">
+  </div>
+  <div class="tablebox">
+    <table>
+      <thead><tr id="thead"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  Point-in-time snapshot generated 2026-08-07. Regenerate after landing work — staleness scores are judgements, not measurements.
+</footer>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+const PLANS = [
+{"file":"agent-observability-seam.md","title":"Agent Observability Seam","purpose":"Add a typed AgentEvent stream for completed FDC3 operations, mapped to OTEL by sail-platform.","lastCommit":"2026-07-30","commitCount":1,"sizeKb":22.34,"status":"active","staleness":35,"confidence":"medium","completionPct":0,"openItems":5,"doneItems":0,"evidence":["No src/observability/agent-events.ts exists yet — slice 1 never started","Blocking prerequisite (class-collapse) is now done, so this is unblocked but still not begun","Plan cites desktop-agent.ts:370, which class-collapse deleted — file:line refs are stale"],"supersededBy":null,"recommendation":"update","recommendationReason":"Valid, unstarted design; refresh file/line references against the post-class-collapse single-class structure before starting slice 1.","theme":"desktop-agent","referencedPathsMissing":["packages/sail-desktop-agent/src/agent/desktop-agent.ts"]},
+{"file":"draft-pr-readiness.md","title":"Draft PR Readiness — Review Register","purpose":"Standing review of blockers to opening a draft PR of v3 work upstream to finos/FDC3-Sail.","lastCommit":"2026-08-04","commitCount":2,"sizeKb":40.98,"status":"active","staleness":55,"confidence":"medium","completionPct":20,"openItems":24,"doneItems":6,"evidence":["Item 16 security vuln (hostInstanceId spoofing) already fixed by sail-da-defect-fixes.md slice 1","Item 10 sail-finance tsconfig now has 'node' in types array (fix applied)","packages/sail-one/html still missing — item 10's build failure likely still present","Item 28 tsconfig.json still references nonexistent ./packages/sail-ui"],"supersededBy":null,"recommendation":"update","recommendationReason":"Explicitly a re-verify-before-acting review artifact that is now several days and many commits stale; needs a fresh pass.","theme":"other","referencedPathsMissing":[]},
+{"file":"parked-context-interception.md","title":"Parked: context interception (PII redaction / policy)","purpose":"Records the decision to defer a DACP middleware/interception seam until a real adopter needs one.","lastCommit":"2026-07-30","commitCount":1,"sizeKb":2.34,"status":"parked","staleness":5,"confidence":"high","completionPct":0,"openItems":0,"doneItems":0,"evidence":["Explicitly 'Status: parked idea — not planned, not scheduled'","Trigger to revisit clearly stated and still unmet","Related root docs (ARCHITECTURE-REMEDIATION-PLAN.md) still exist at referenced path"],"supersededBy":null,"recommendation":"keep","recommendationReason":"Short, self-contained decision record with a clear revisit trigger; nothing to update.","theme":"desktop-agent","referencedPathsMissing":[]},
+{"file":"parked-wcp4-origin-allowlist.md","title":"Parked: WCP4 origin allowlist","purpose":"Documents the removed origin-allowlist security control and the criteria for a correct reimplementation.","lastCommit":"2026-08-04","commitCount":1,"sizeKb":5.30,"status":"parked","staleness":5,"confidence":"high","completionPct":0,"openItems":0,"doneItems":0,"evidence":["wcp4-origin-allowlist.ts confirmed absent from packages/sail-platform/src","Cross-referenced as still-parked by class-collapse.md and draft-pr-readiness.md","Trigger to revisit (named adopter with origin-trust need) not yet met"],"supersededBy":null,"recommendation":"keep","recommendationReason":"Accurate historical/decision record for a deliberately removed control.","theme":"desktop-agent","referencedPathsMissing":[]},
+{"file":"reusable-browser-host-kit.md","title":"FDC3 host (A) then toolbox profile (B)","purpose":"Splits Desktop Agent host requirements into 'any UI' (A, done) versus FINOS toolbox extras (B, parked).","lastCommit":"2026-08-04","commitCount":4,"sizeKb":4.41,"status":"parked","staleness":20,"confidence":"high","completionPct":70,"openItems":1,"doneItems":1,"evidence":["Header note already flags createSailBrowserDesktopAgent/SailAppLauncher as deleted by the cull","'A committed: 1c2e75a68' with browser-smoke verification notes","'Current slice: parked — B when toolbox scores needed again'","Filename does not match its own H1 — worth a rename"],"supersededBy":null,"recommendation":"keep","recommendationReason":"Part A is done and self-documented; part B remains a legitimate, explicitly parked follow-up.","theme":"desktop-agent","referencedPathsMissing":["packages/sail-platform/src/browser-host/"]},
+{"file":"sail-da-defect-fixes.md","title":"sail-desktop-agent defect fixes","purpose":"Fix four verified DA defects: identity spoofing, dual fdc3Version sources, off-schema payloads, raiseIntent cast.","lastCommit":"2026-08-06","commitCount":5,"sizeKb":34.12,"status":"done","staleness":5,"confidence":"high","completionPct":100,"openItems":0,"doneItems":4,"evidence":["Status: done — all four slices verified + reviewed, commit-level notes through 2026-08-06","channelChangedEvent fan-out issue found during review was explicitly parked by user decision","Vitest/Cucumber green counts recorded after every slice"],"supersededBy":null,"recommendation":"keep","recommendationReason":"Complete, well-verified record; keep as the authoritative history of these fixes.","theme":"desktop-agent","referencedPathsMissing":[]},
+{"file":"sail-desktop-agent-audit-2026-08.md","title":"sail-desktop-agent — audit findings","purpose":"Four-pass audit cataloguing dead code, test-shaped API, and FDC3 conformance gaps in sail-desktop-agent.","lastCommit":"2026-08-05","commitCount":1,"sizeKb":44.63,"status":"active","staleness":15,"confidence":"high","completionPct":25,"openItems":4,"doneItems":4,"evidence":["Top 4 risks (hostInstanceId, fdc3Version, off-schema payloads) resolved via sail-da-defect-fixes.md","§10 cleanup backlog (~900 LOC: zero-caller exports, intent-resolver types, missing BDD) not started","ChannelControl question it references is still open in sail-desktop-agent-feature-decisions.md"],"supersededBy":null,"recommendation":"keep","recommendationReason":"Still the authoritative evidence base; its §10 backlog is real unstarted work, not stale content.","theme":"desktop-agent","referencedPathsMissing":[]},
+{"file":"sail-desktop-agent-class-collapse.md","title":"Collapse DesktopAgent / SailDesktopAgent into one class","purpose":"Merge the DesktopAgent base class and SailDesktopAgent subclass into a single class with explicit start().","lastCommit":"2026-08-04","commitCount":3,"sizeKb":59.38,"status":"done","staleness":5,"confidence":"high","completionPct":100,"openItems":0,"doneItems":9,"evidence":["All checkpoints 1, 2.0–2.6 marked [x] with verification notes","Verified in repo: src/agent/desktop-agent.ts gone, only sail-desktop-agent.ts remains","tsconfig.json confirmed to have stripInternal: true, matching slice 2.5"],"supersededBy":null,"recommendation":"keep","recommendationReason":"Fully landed and independently verified against current source.","theme":"desktop-agent","referencedPathsMissing":[]},
+{"file":"sail-desktop-agent-feature-decisions.md","title":"sail-desktop-agent — feature decisions to explore","purpose":"Open register asking whether the unused ChannelControl host-callback seam should be kept or deleted.","lastCommit":"2026-08-05","commitCount":1,"sizeKb":3.79,"status":"active","staleness":10,"confidence":"high","completionPct":0,"openItems":1,"doneItems":0,"evidence":["host-contracts/channel-control.ts still exists, still zero implementations/call sites","Explicitly 'Status: open register — items are questions, not agreed work'","Question referenced but not resolved by the audit or defect-fixes plans"],"supersededBy":null,"recommendation":"keep","recommendationReason":"Small, accurate, genuinely open question register.","theme":"desktop-agent","referencedPathsMissing":[]},
+{"file":"sail-desktop-agent-review-remediation.md","title":"sail-desktop-agent Review Remediation","purpose":"Fix 15 numbered findings plus nits from a whole-package security/correctness review of the DA.","lastCommit":"2026-07-30","commitCount":12,"sizeKb":56.30,"status":"done","staleness":5,"confidence":"high","completionPct":100,"openItems":0,"doneItems":14,"evidence":["Status: done, all slices 0–11 checked off with landed commit hashes","Referenced as 'done, no open overlap' by the later class-collapse plan","Parked follow-ups (intent-resolution chain review) explicitly recorded, not silently dropped"],"supersededBy":null,"recommendation":"keep","recommendationReason":"Complete, heavily verified remediation record; authoritative history for these fixes.","theme":"desktop-agent","referencedPathsMissing":[]},
+{"file":"sail-desktop-agent-surface-reduction.md","title":"Surface reduction & architecture realignment","purpose":"Cut the DA's public export surface (Transport, /browser subpath, root exports) and add built-in DACP validation.","lastCommit":"2026-08-04","commitCount":2,"sizeKb":17.22,"status":"done","staleness":5,"confidence":"high","completionPct":100,"openItems":0,"doneItems":3,"evidence":["Status: implemented — all three phases landed, with an 'Outcome' section giving verification numbers","152/152 Cucumber scenarios recorded passing post-change","validation:'warn' default confirmed live in current agent/default-config.ts"],"supersededBy":null,"recommendation":"keep","recommendationReason":"Landed and verified; superseded in detail (but not contradicted) by the later class-collapse plan.","theme":"desktop-agent","referencedPathsMissing":[]},
+{"file":"sail-one-port.md","title":"sail-one: port brief","purpose":"Handoff brief for porting the v2.2 sail-web UI into a new shadcn/Radix-based sail-one shell.","lastCommit":"2026-08-04","commitCount":2,"sizeKb":16.27,"status":"superseded","staleness":60,"confidence":"high","completionPct":90,"openItems":1,"doneItems":10,"evidence":["packages/sail-one/src now has 18 .tsx files across appd/config/frame/grid — the port landed","website-docs-blueprint.md explicitly calls this doc's 'no code written' status stale","Commit 06476be62 'feat(sail-one): add sail-web shell converted onto sail-platform'"],"supersededBy":null,"recommendation":"archive","recommendationReason":"Its own header already flags it as superseded by the landed port and the sail-platform cull; history only.","theme":"shells","referencedPathsMissing":["packages/sail-platform/src/services/app-launcher/sail-app-launcher.ts","packages/sail-platform/src/client/sail-platform-client.ts"]},
+{"file":"sail-platform-design.md","title":"@finos/sail-platform — Package Description","purpose":"Standalone description of sail-platform as a two-entry-point composition layer, written before the cull.","lastCommit":"2026-08-04","commitCount":5,"sizeKb":17.44,"status":"superseded","staleness":90,"confidence":"high","completionPct":0,"openItems":0,"doneItems":0,"evidence":["Top note: 'SUPERSEDED 2026-08-04 by the sail-platform cull'","src has no SailPlatform / createSailBrowserDesktopAgent / SailPlatformClient anymore","Doc itself points readers to packages/sail-platform/README.md as the current surface"],"supersededBy":null,"recommendation":"archive","recommendationReason":"Entirely describes deleted APIs; kept only as a point-in-time record per its own framing note.","theme":"platform","referencedPathsMissing":["packages/sail-platform/src/sail-platform.ts","packages/sail-platform/src/sail-browser-desktop-agent.ts","packages/sail-platform/src/client/sail-platform-client.ts"]},
+{"file":"sail-platform-extensibility.md","title":"sail-platform: extensibility direction & decisions","purpose":"Decision record: keep the DA FDC3-only, build no extensibility platform until a written requirement demands it.","lastCommit":"2026-08-04","commitCount":3,"sizeKb":20.46,"status":"active","staleness":25,"confidence":"high","completionPct":100,"openItems":0,"doneItems":0,"evidence":["Top note: 'Still current in its direction; some code references are stale (2026-08-04 cull)'","'Build nothing yet, fix defects' framing matches the landing recorded elsewhere","MiddlewarePipeline deletion it describes is independently confirmed"],"supersededBy":null,"recommendation":"keep","recommendationReason":"Direction and negative decisions still govern current work; only illustrative code refs need updating.","theme":"platform","referencedPathsMissing":[]},
+{"file":"sail-platform-kiss-entry.md","title":"SailPlatform KISS entry","purpose":"Proposed a simpler callback-based constructor wrapper on SailPlatform for embedding hosts; never built.","lastCommit":"2026-08-04","commitCount":2,"sizeKb":8.35,"status":"superseded","staleness":95,"confidence":"high","completionPct":0,"openItems":0,"doneItems":0,"evidence":["Top note: 'SUPERSEDED 2026-08-04 by the sail-platform cull — never implemented, and now moot'","Status line self-declares 'superseded — historical record (was: planning)'","SailPlatform class it would have wrapped is confirmed deleted from the codebase"],"supersededBy":null,"recommendation":"archive","recommendationReason":"Self-declared dead plan for a now-deleted API; keep only as motivation history.","theme":"platform","referencedPathsMissing":["packages/sail-platform-api/src/sail-platform.ts"]},
+{"file":"website-docs-blueprint.md","title":"Website & Docs Blueprint","purpose":"Rewrite the Docusaurus site into an audience-organized, accuracy-marked (implemented/planned) source of truth.","lastCommit":"2026-08-04","commitCount":10,"sizeKb":50.38,"status":"active","staleness":20,"confidence":"high","completionPct":90,"openItems":1,"doneItems":8,"evidence":["Slice checkpoints 0,1,2,2b,3,4,4b,5 all [x]; only slice 6 (CI snippet/link guardrails) unchecked","Top note: partly superseded by the cull, but its method (status markers) still applies","Header 'Status: planning' is itself stale text given 8 of 9 slices are done"],"supersededBy":null,"recommendation":"update","recommendationReason":"Nearly complete; fix the stale 'planning' header and land the one remaining CI-guardrails slice.","theme":"website-docs","referencedPathsMissing":[]},
+{"file":"website-docs-defect-register.md","title":"Website Docs — Defect Register","purpose":"Catalogues 40+ page:line documentation defects that fed the blueprint's truth-pass and package-page slices.","lastCommit":"2026-08-04","commitCount":4,"sizeKb":24.15,"status":"superseded","staleness":70,"confidence":"medium","completionPct":60,"openItems":10,"doneItems":30,"evidence":["Top note: 'Partly resolved-by-deletion' — many rows describe docs for now-deleted APIs","Companion blueprint's truth-pass (slice 1) and package-pages (slice 3) are both marked done","Register warns it was 'not re-verified against the newer tree' since 2026-07-31"],"supersededBy":"website-docs-blueprint.md","recommendation":"archive","recommendationReason":"Working material largely consumed by the near-complete blueprint; remaining rows need re-verification.","theme":"website-docs","referencedPathsMissing":["packages/sail-platform/src/wcp4-origin-allowlist.ts"]}
+];
+
+const TODAY = new Date("2026-08-07T00:00:00Z");
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+const BANDS = [
+  { key: "fresh",  label: "Fresh",  icon: "●", max: 19,  vr: "--good",     hint: "current" },
+  { key: "aging",  label: "Aging",  icon: "◐", max: 49,  vr: "--warning",  hint: "refs drifting" },
+  { key: "stale",  label: "Stale",  icon: "◑", max: 79,  vr: "--serious",  hint: "diverged from the tree" },
+  { key: "dead",   label: "Dead",   icon: "○", max: 100, vr: "--critical", hint: "describes deleted code" },
+];
+const bandOf = s => BANDS.find(b => s <= b.max);
+
+const RECS = [
+  { key: "keep",    label: "Keep",    vr: "--series-1", shape: "circle" },
+  { key: "update",  label: "Update",  vr: "--series-2", shape: "square" },
+  { key: "archive", label: "Archive", vr: "--series-3", shape: "triangle" },
+];
+const recOf = k => RECS.find(r => r.key === k) || RECS[0];
+
+const STATUS_ORDER = ["done", "active", "parked", "superseded", "stale", "unknown"];
+
+const ageDays = p => Math.round((TODAY - new Date(p.lastCommit + "T00:00:00Z")) / 86400000);
+const shortName = f => f.replace(/\.md$/, "");
+
+/* ------------------------------ tooltip ------------------------------ */
+const tip = document.getElementById("tip");
+function showTip(html, ev) {
+  tip.innerHTML = html;
+  tip.style.opacity = "1";
+  const r = tip.getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - 14;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const hideTip = () => { tip.style.opacity = "0"; };
+function bindTip(el, html) {
+  el.addEventListener("mousemove", e => showTip(html, e));
+  el.addEventListener("mouseleave", hideTip);
+}
+
+/* ------------------------------ tiles ------------------------------ */
+function renderTiles() {
+  const n = PLANS.length;
+  const rot = PLANS.filter(p => p.staleness >= 50);
+  const arch = PLANS.filter(p => p.recommendation === "archive");
+  const upd = PLANS.filter(p => p.recommendation === "update");
+  const missing = PLANS.reduce((a, p) => a + p.referencedPathsMissing.length, 0);
+  const open = PLANS.reduce((a, p) => a + p.openItems, 0);
+  const tiles = [
+    { k: "Plan files", v: n, d: PLANS.reduce((a,p)=>a+p.sizeKb,0).toFixed(0) + " KB of markdown" },
+    { k: "Stale or worse", v: rot.length, d: "staleness ≥ 50 — " + rot.map(p=>shortName(p.file)).slice(0,2).join(", ") + (rot.length>2?", …":"") },
+    { k: "Archive now", v: arch.length, d: "describe deleted or landed work" },
+    { k: "Need a refresh", v: upd.length, d: "still valid, references drifted" },
+    { k: "Dead path refs", v: missing, d: "file paths cited that no longer exist" },
+    { k: "Open items", v: open, d: "unchecked tasks across all plans" },
+  ];
+  document.getElementById("tiles").innerHTML = tiles.map(t =>
+    `<div class="tile"><div class="k">${t.k}</div><div class="v">${t.v}</div><div class="d">${t.d}</div></div>`
+  ).join("");
+}
+
+/* --------------------------- ranked bars --------------------------- */
+function renderBars() {
+  const rows = [...PLANS].sort((a, b) => b.staleness - a.staleness);
+  document.getElementById("bars").innerHTML = rows.map(p => {
+    const b = bandOf(p.staleness);
+    return `<div class="name" title="${p.file}">${shortName(p.file)} <span class="st">· ${p.status}</span></div>` +
+      `<div class="track" data-file="${p.file}"><div class="fill" style="width:${p.staleness}%;background:var(${b.vr})"></div></div>` +
+      `<div class="val">${p.staleness} <span class="band">${b.icon} ${b.label}</span></div>`;
+  }).join("");
+
+  document.querySelectorAll("#bars .track").forEach(el => {
+    const p = PLANS.find(x => x.file === el.dataset.file);
+    const b = bandOf(p.staleness);
+    bindTip(el, `<b>${shortName(p.file)}</b><span class="m">${b.label} · staleness ${p.staleness} · ${p.completionPct}% complete<br>last touched ${p.lastCommit} (${ageDays(p)}d ago)<br>${p.purpose}</span>`);
+  });
+
+  const counts = BANDS.map(b => ({ b, n: PLANS.filter(p => bandOf(p.staleness).key === b.key).length }));
+  document.getElementById("bandlegend").innerHTML = counts.map(({ b, n }) =>
+    `<span class="li"><span class="sw" style="background:var(${b.vr})"></span>${b.icon} ${b.label} <b>${n}</b> <span style="color:var(--ink-muted)">${b.hint}</span></span>`
+  ).join("");
+}
+
+/* ----------------------------- scatter ----------------------------- */
+function renderScatter() {
+  const W = 680, H = 420, M = { t: 18, r: 130, b: 46, l: 52 };
+  const pw = W - M.l - M.r, ph = H - M.t - M.b;
+  const x = v => M.l + (v / 100) * pw;
+  const y = v => M.t + ph - (v / 100) * ph;
+  const g = css("--grid"), ax = css("--axis"), mu = css("--ink-muted"), s2 = css("--ink-2"), sf = css("--surface-1");
+  let s = "";
+
+  // danger quadrant wash
+  s += `<rect x="${x(50)}" y="${y(50)}" width="${x(100)-x(50)}" height="${y(0)-y(50)}" fill="${css("--critical")}" opacity="0.06"/>`;
+  s += `<text x="${x(97)}" y="${y(4)}" text-anchor="end" font-size="11" fill="${mu}">stale &amp; unfinished</text>`;
+
+  for (let v = 0; v <= 100; v += 25) {
+    s += `<line x1="${M.l}" x2="${M.l+pw}" y1="${y(v)}" y2="${y(v)}" stroke="${g}" stroke-width="1"/>`;
+    s += `<line y1="${M.t}" y2="${M.t+ph}" x1="${x(v)}" x2="${x(v)}" stroke="${g}" stroke-width="1"/>`;
+    s += `<text x="${M.l-9}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="${mu}" style="font-variant-numeric:tabular-nums">${v}</text>`;
+    s += `<text x="${x(v)}" y="${M.t+ph+18}" text-anchor="middle" font-size="11" fill="${mu}" style="font-variant-numeric:tabular-nums">${v}</text>`;
+  }
+  s += `<line x1="${M.l}" x2="${M.l+pw}" y1="${y(0)}" y2="${y(0)}" stroke="${ax}" stroke-width="1"/>`;
+  s += `<line x1="${M.l}" x2="${M.l}" y1="${M.t}" y2="${M.t+ph}" stroke="${ax}" stroke-width="1"/>`;
+  s += `<text x="${M.l+pw/2}" y="${H-10}" text-anchor="middle" font-size="12" fill="${s2}">staleness →</text>`;
+  s += `<text transform="translate(14,${M.t+ph/2}) rotate(-90)" text-anchor="middle" font-size="12" fill="${s2}">completion %</text>`;
+
+  // jitter identical coordinates apart so no mark hides another
+  const seen = new Map();
+  const pts = PLANS.map(p => {
+    const k = p.staleness + ":" + p.completionPct;
+    const i = seen.get(k) || 0; seen.set(k, i + 1);
+    const ang = i * 1.9, rad = i === 0 ? 0 : 7 + i * 2.2;
+    return { p, cx: x(p.staleness) + Math.cos(ang) * rad, cy: y(p.completionPct) + Math.sin(ang) * rad };
+  });
+
+  pts.forEach(({ p, cx, cy }, i) => {
+    const r = recOf(p.recommendation), c = css(r.vr), R = 6.5;
+    let mark;
+    if (r.shape === "circle") mark = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="${c}" stroke="${sf}" stroke-width="2"/>`;
+    else if (r.shape === "square") mark = `<rect x="${cx-R}" y="${cy-R}" width="${R*2}" height="${R*2}" rx="1.5" fill="${c}" stroke="${sf}" stroke-width="2"/>`;
+    else mark = `<polygon points="${cx},${cy-R-1} ${cx+R+1},${cy+R-1} ${cx-R-1},${cy+R-1}" fill="${c}" stroke="${sf}" stroke-width="2"/>`;
+    s += `<g class="glyph" data-i="${i}">${mark}</g>`;
+  });
+
+  // direct-label only the four corner-defining plans
+  const labelled = ["sail-platform-kiss-entry.md", "sail-platform-design.md", "sail-one-port.md", "draft-pr-readiness.md", "agent-observability-seam.md"];
+  pts.filter(pt => labelled.includes(pt.p.file)).forEach(({ p, cx, cy }) => {
+    const right = cx < M.l + pw * 0.72;
+    s += `<text x="${right ? cx + 11 : cx - 11}" y="${cy + 4}" text-anchor="${right ? "start" : "end"}" font-size="11" fill="${s2}">${shortName(p.file)}</text>`;
+  });
+
+  const sv = document.getElementById("scatter");
+  sv.innerHTML = s;
+  sv.querySelectorAll(".glyph").forEach(el => {
+    const { p } = pts[+el.dataset.i];
+    bindTip(el, `<b>${shortName(p.file)}</b><span class="m">${p.completionPct}% complete · staleness ${p.staleness}<br>action: <strong>${p.recommendation}</strong><br>${p.recommendationReason}</span>`);
+  });
+
+  document.getElementById("reclegend").innerHTML = RECS.map(r => {
+    const n = PLANS.filter(p => p.recommendation === r.key).length;
+    const gl = r.shape === "circle" ? "border-radius:999px" : r.shape === "square" ? "border-radius:2px" : "border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%)";
+    return `<span class="li"><span class="sw" style="background:var(${r.vr});${gl}"></span>${r.label} <b>${n}</b></span>`;
+  }).join("");
+}
+
+/* -------------------------- status stack -------------------------- */
+function renderStatus() {
+  const groups = STATUS_ORDER
+    .map(st => ({ st, n: PLANS.filter(p => p.status === st).length }))
+    .filter(x => x.n > 0);
+  const total = PLANS.length;
+  // status here is a lifecycle state, so it takes the reserved status ramp by health
+  const tone = { done: "--good", active: "--series-1", parked: "--ink-muted", superseded: "--critical", stale: "--serious", unknown: "--axis" };
+  document.getElementById("statusstack").innerHTML = groups.map(({ st, n }) =>
+    `<div data-st="${st}" style="flex:${n};background:var(${tone[st]})"></div>`
+  ).join("");
+  document.getElementById("statuslegend").innerHTML = groups.map(({ st, n }) =>
+    `<span class="li"><span class="sw" style="background:var(${tone[st]})"></span>${st} <b>${n}</b> <span style="color:var(--ink-muted)">${Math.round(n/total*100)}%</span></span>`
+  ).join("");
+  document.querySelectorAll("#statusstack > div").forEach(el => {
+    const st = el.dataset.st;
+    const names = PLANS.filter(p => p.status === st).map(p => shortName(p.file)).join("<br>");
+    bindTip(el, `<b>${st}</b><span class="m">${names}</span>`);
+  });
+}
+
+/* ----------------------------- table ----------------------------- */
+const COLS = [
+  { k: "file", t: "Plan", sort: (a,b) => a.file.localeCompare(b.file) },
+  { k: "status", t: "Status", sort: (a,b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) },
+  { k: "staleness", t: "Staleness", num: true, sort: (a,b) => b.staleness - a.staleness },
+  { k: "completionPct", t: "Complete", num: true, sort: (a,b) => b.completionPct - a.completionPct },
+  { k: "openItems", t: "Open", num: true, sort: (a,b) => b.openItems - a.openItems },
+  { k: "lastCommit", t: "Last touched", num: true, sort: (a,b) => a.lastCommit < b.lastCommit ? 1 : -1 },
+  { k: "sizeKb", t: "Size", num: true, sort: (a,b) => b.sizeKb - a.sizeKb },
+  { k: "theme", t: "Theme", sort: (a,b) => a.theme.localeCompare(b.theme) },
+  { k: "recommendation", t: "Action", sort: (a,b) => a.recommendation.localeCompare(b.recommendation) },
+];
+let sortKey = "staleness", open = new Set();
+
+function fillSelect(id, key) {
+  const el = document.getElementById(id);
+  [...new Set(PLANS.map(p => p[key]))].sort().forEach(v => {
+    const o = document.createElement("option"); o.value = v; o.textContent = v; el.appendChild(o);
+  });
+  el.addEventListener("change", renderTable);
+}
+
+function renderTable() {
+  const fs = fstatus.value, ft = ftheme.value, fr = frec.value, q = fq.value.toLowerCase().trim();
+  const col = COLS.find(c => c.k === sortKey);
+  const rows = PLANS
+    .filter(p => (!fs || p.status === fs) && (!ft || p.theme === ft) && (!fr || p.recommendation === fr) &&
+                 (!q || p.file.toLowerCase().includes(q) || p.title.toLowerCase().includes(q)))
+    .sort(col.sort);
+
+  document.getElementById("thead").innerHTML = COLS.map(c =>
+    `<th data-k="${c.k}">${c.t}${c.k === sortKey ? ' <span class="arrow">▼</span>' : ""}</th>`
+  ).join("");
+  document.querySelectorAll("#thead th").forEach(th =>
+    th.addEventListener("click", () => { sortKey = th.dataset.k; renderTable(); }));
+
+  document.getElementById("tbody").innerHTML = rows.map(p => {
+    const b = bandOf(p.staleness), r = recOf(p.recommendation);
+    const det = open.has(p.file) ? `<tr class="detail"><td colspan="${COLS.length}"><div class="det">
+        <div><h4>Evidence</h4><ul>${p.evidence.map(e => `<li>${e}</li>`).join("")}</ul></div>
+        <div><h4>Why this action</h4><p>${p.recommendationReason}</p>
+          ${p.supersededBy ? `<p style="margin-top:8px">Superseded by <span class="fname">${p.supersededBy}</span></p>` : ""}
+          <p style="margin-top:8px;color:var(--ink-muted)">${p.commitCount} commit${p.commitCount===1?"":"s"} · confidence ${p.confidence} · ${p.doneItems} done / ${p.openItems} open</p></div>
+        <div><h4>Referenced paths missing</h4>${p.referencedPathsMissing.length
+          ? `<ul>${p.referencedPathsMissing.map(m => `<li class="miss">${m}</li>`).join("")}</ul>`
+          : `<p style="color:var(--ink-muted)">none — all cited paths still exist</p>`}</div>
+      </div></td></tr>` : "";
+    return `<tr class="plan" data-file="${p.file}">
+      <td><div class="fname">${shortName(p.file)}</div><div class="ptitle">${p.title}</div></td>
+      <td><span class="pill">${p.status}</span></td>
+      <td class="num"><span class="pill"><span class="dot" style="background:var(${b.vr})"></span>${b.icon} ${p.staleness} ${b.label}</span></td>
+      <td class="num"><div class="meter"><div class="mt"><div class="mf" style="width:${p.completionPct}%"></div></div><span>${p.completionPct}%</span></div></td>
+      <td class="num">${p.openItems || "—"}</td>
+      <td class="num">${p.lastCommit}<div class="ptitle">${ageDays(p)}d ago</div></td>
+      <td class="num">${p.sizeKb.toFixed(1)} KB</td>
+      <td>${p.theme}</td>
+      <td><span class="pill"><span class="dot" style="background:var(${r.vr})"></span>${r.label}</span></td>
+    </tr>${det}`;
+  }).join("");
+
+  document.querySelectorAll("tr.plan").forEach(tr => tr.addEventListener("click", () => {
+    const f = tr.dataset.file;
+    open.has(f) ? open.delete(f) : open.add(f);
+    renderTable();
+  }));
+}
+
+/* ------------------------------ boot ------------------------------ */
+document.getElementById("themebtn").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const sysDark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const next = cur ? (cur === "dark" ? "light" : "dark") : (sysDark ? "light" : "dark");
+  document.documentElement.setAttribute("data-theme", next);
+  renderScatter();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderScatter);
+
+fillSelect("fstatus", "status");
+fillSelect("ftheme", "theme");
+fillSelect("frec", "recommendation");
+document.getElementById("fq").addEventListener("input", renderTable);
+
+renderTiles();
+renderBars();
+renderScatter();
+renderStatus();
+renderTable();
+</script>
+</body>
+</html>

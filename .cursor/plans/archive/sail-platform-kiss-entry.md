@@ -1,5 +1,10 @@
 # Minimal Viable Delivery Plan: SailPlatform KISS entry
 
+> **ARCHIVED 2026-08-07.** Moved to `.cursor/plans/archive/`. The two unchecked "Slice Checkpoints"
+> below (`[ ]` Slice 1, `[ ]` Slice 2) are not live open work — the plan was never implemented and
+> the header below already marks it superseded/moot; the checkboxes are simply an artifact of a
+> plan that stopped before its first checkpoint. Nothing to carry forward.
+
 > **SUPERSEDED 2026-08-04 by the `sail-platform` cull — never implemented, and now moot.** This plan
 > proposed a simpler entry *onto* `SailPlatform`. `SailPlatform` has since been deleted: it was a
 > 260-line facade whose accessors passed straight through to `SailDesktopAgent`'s own grouped

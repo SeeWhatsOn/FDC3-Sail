@@ -1,5 +1,14 @@
 # Minimal Viable Delivery Plan: Agent Observability Seam
 
+> **Rebased 2026-08-07 on the post-class-collapse structure. Still unstarted (slice 1 not begun).**
+> The desktop-agent class-collapse (`4b64c6bea`) deleted `src/agent/desktop-agent.ts` and merged the
+> base `DesktopAgent` class into `src/agent/sail-desktop-agent.ts`; separately, the handler tree grew
+> a `handlers/` root (`intents/`, `broadcast/`, `channels/`, `private-channels/`, `utils/` all moved
+> under it) and `wcp/*` moved under `app-connection/wcp/`. Every file:line reference below has been
+> re-pointed at the current tree and re-verified to exist. The design itself — the union, the widened
+> event map, the five-broadcast-path trap, the disconnect-appId trap — is unaffected; none of it
+> depended on the old class split.
+
 Status: planning
 Current slice: 1
 Review/fix loops: 0
@@ -66,8 +75,8 @@ The agent already has this seam twice over. This plan uses it rather than buildi
 |---|---|
 | A typed event map with 5 members | `app-connection/app-connection-events.ts` |
 | An emitter with `on`/`off`/`emit` and per-handler `try/catch` | `wcp/app-connection-event-emitter.ts` |
-| Public host subscription in controller shape | `sail-desktop-agent.ts` — `apps.onConnect`, `channels.onAppChannelChange` |
-| **A typed semantic event emitted from a DACP handler** | `DACPHandlerContext.notifyChannelMembershipChanged`, injected at `desktop-agent.ts:370`, called at `channels/handlers.ts:427` under the comment *"Typed host-chrome path"* |
+| Public host subscription in controller shape | `agent/sail-desktop-agent.ts` — `apps.onConnect`, `channels.onAppChannelChange` |
+| **A typed semantic event emitted from a DACP handler** | `DACPHandlerContext.notifyChannelMembershipChanged`, injected at `agent/sail-desktop-agent.ts:420`, called at `handlers/channels/handlers.ts:425` under the comment *"Typed host-chrome path"* |
 
 That last row is this design, already shipped, for exactly one event. The work is to
 generalise it.
@@ -156,7 +165,7 @@ sequenceDiagram
 
 - **Reuse:** `AppConnectionEvents` + `AppConnectionEventEmitter` (already has the
   per-handler `try/catch` a host sink needs). The `notifyChannelMembershipChanged`
-  injection pattern at `desktop-agent.ts:370`. `meta.requestUuid` as the correlation
+  injection pattern at `agent/sail-desktop-agent.ts:420`. `meta.requestUuid` as the correlation
   attribute — already on every inbound message.
 - **Avoid:** a second emitter, a subscriber registry, async emit, queues, batching,
   a builder or factory per event. `AgentEvent` is a plain discriminated union of
@@ -235,7 +244,7 @@ agentEvent: (event: AgentEvent) => void
 // handlers/types.ts — generalises notifyChannelMembershipChanged
 notify?: (event: AgentEvent) => void
 
-// agent/desktop-agent.ts, createHandlerContext — same bind pattern already present
+// agent/sail-desktop-agent.ts, createHandlerContext — same bind pattern already present
 notify: conn.notifyAgentEvent?.bind(conn),
 ```
 
@@ -306,11 +315,11 @@ a subset silently drops deliveries from the audit trail and nothing fails.
 
 ```mermaid
 flowchart LR
-  R1["broadcastRequest"] --> P1["notifyContextListeners<br/>broadcast/handlers.ts:443"]
-  R1 --> P2["notifyPrivateChannelContextListeners<br/>broadcast/handlers.ts:569"]
-  R2["addContextListener"] --> P3["deliverCurrentContextToListener<br/>broadcast/handlers.ts:514"]
-  R3["joinUserChannel"] --> P4["deliverCurrentContextToInstanceListeners<br/>channels/handlers.ts:363"]
-  R4["fdc3.open with context"] --> P5["deliverOpenWithContext<br/>utils/open-with-context.ts:261"]
+  R1["broadcastRequest"] --> P1["notifyContextListeners<br/>handlers/broadcast/handlers.ts:442"]
+  R1 --> P2["notifyPrivateChannelContextListeners<br/>handlers/broadcast/handlers.ts:568"]
+  R2["addContextListener"] --> P3["deliverCurrentContextToListener<br/>handlers/broadcast/handlers.ts:513"]
+  R3["joinUserChannel"] --> P4["deliverCurrentContextToInstanceListeners<br/>handlers/channels/handlers.ts:363"]
+  R4["fdc3.open with context"] --> P5["deliverOpenWithContext<br/>handlers/utils/open-with-context.ts:261"]
 
   P1 --> S["responses.sendOutbound<br/>identical broadcastEvent shape"]
   P2 --> S
@@ -323,14 +332,15 @@ Paths 3, 4 and 5 do **not** receive `requestUuid` — they replay context from a
 earlier, finished request. Mark them `trigger: "replay" | "openWithContext"` with no
 correlation id. Do not invent one.
 
-**Trap 2 — do NOT reuse the `traceId` at `intent-result-metadata.ts:79`.** Minted at
+**Trap 2 — do NOT reuse the `traceId` at `handlers/intents/intent-result-metadata.ts:77`.** Minted at
 the **result** so it cannot correlate raise→result; never read back anywhere; a
 36-char UUID where OTEL TraceId is 32 hex; and can be generated twice for one result.
 Use `meta.requestUuid`. Do not add trace generation to the agent — that is how the
 OTEL dependency creeps in.
 
-**Trap 3 — `appDisconnected` loses `appId`.** `wcp-connection-management.ts:186`
-deletes the connection two lines before `:188` emits. Capture before the delete.
+**Trap 3 — `appDisconnected` loses `appId`.** `app-connection/wcp/wcp-connection-management.ts:181`
+deletes the connection two lines before `:183` emits (`context.emit("appDisconnected", instanceId)` —
+`instanceId` only, no `appId`). Capture before the delete.
 
 **Trap 4 — `notifyChannelMembershipChanged` has a live consumer.**
 `SailDesktopAgent.changeAppChannel` awaits the resulting `channelChanged` connector
@@ -358,8 +368,8 @@ migration of the one existing consumer. **Zero new emit sites.**
    `SailDesktopAgent` using the existing controller pattern (`apps.onConnect` shape).
 3. Replace `notifyChannelMembershipChanged` on `DACPHandlerContext` with
    `notify?: (event: AgentEvent) => void`; update the injection at
-   `desktop-agent.ts:370`.
-4. **Migrate the call site** at `channels/handlers.ts:427` to emit
+   `agent/sail-desktop-agent.ts:420`.
+4. **Migrate the call site** at `handlers/channels/handlers.ts:425` to emit
    `channel.joined` / `channel.left`, and update `changeAppChannel`'s waiter to
    resolve off the new event. Trap 4.
 
