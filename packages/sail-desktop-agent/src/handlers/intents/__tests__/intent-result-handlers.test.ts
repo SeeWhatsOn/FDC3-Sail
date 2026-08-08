@@ -19,7 +19,7 @@ type RaiseIntentResultResponse = BrowserTypes.AgentResponseMessage & {
   type: "raiseIntentResultResponse"
   payload: {
     intentResult?: BrowserTypes.IntentResult
-    metadata?: IntentResultContextMetadata
+    resultMetadata?: IntentResultContextMetadata
     error?: string
   }
   meta: BrowserTypes.AgentResponseMessageMeta & {
@@ -130,7 +130,7 @@ describe("handleIntentResultRequest", () => {
     expect(response).toBeDefined()
     expect(response?.meta.destination?.instanceId).toBe(BASE.sourceInstanceId)
 
-    const metadata = response!.payload.metadata
+    const metadata = response!.payload.resultMetadata
     expect(metadata).toBeDefined()
     expect(metadata!.source).toEqual({
       appId: BASE.targetAppId,

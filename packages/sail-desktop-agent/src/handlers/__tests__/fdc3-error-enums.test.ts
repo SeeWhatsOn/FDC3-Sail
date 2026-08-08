@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test"
-import type { Context } from "@finos/fdc3"
-import { ChannelError, OpenError, ResolveError } from "@finos/fdc3"
+import type { BrowserTypes, Context } from "@finos/fdc3"
+import { BridgingError, ChannelError, OpenError, ResolveError, ResultError } from "@finos/fdc3"
 import { MockTransport } from "../../__tests__/utils/mock-transport"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { AppInstanceState } from "../../state/types"
@@ -18,6 +18,12 @@ import { handleCreatePrivateChannelRequest } from "../private-channels/handlers"
 import { handleOpenRequest } from "../open/handlers"
 import { handleAddIntentListener } from "../intents/intent-listener-handlers"
 import { handleRaiseIntentRequest } from "../intents/intent-raise-intent"
+import { handleAddEventListenerRequest } from "../events/handlers"
+
+/** Cast a non-schema string into the closed `'USER_CHANNEL_CHANGED' | null` union to exercise the runtime guard. */
+function asEventListenerType(value: string): BrowserTypes.AddEventListenerRequestPayload["type"] {
+  return value as BrowserTypes.AddEventListenerRequestPayload["type"]
+}
 
 type ErrorResponseMessage = {
   type: string
@@ -42,6 +48,20 @@ function getLastErrorPayload(transport: MockTransport): ErrorResponseMessage["pa
   const last = transport.getLastMessage() as ErrorResponseMessage
   return last.payload
 }
+
+/**
+ * Every member of `ResponsePayloadError` — the closed 24-string-literal DACP wire union in
+ * `@finos/fdc3-schema` — is a value of one of these five runtime enums. `AgentError` is
+ * deliberately excluded: its `AgentNotFound` / `ErrorOnConnect` / `InvalidFailover` values
+ * describe `getAgent()` connection failures and are not part of the DACP wire union.
+ */
+const DACP_WIRE_ERROR_VALUES: ReadonlySet<string> = new Set<string>([
+  ...Object.values(OpenError),
+  ...Object.values(ResolveError),
+  ...Object.values(ResultError),
+  ...Object.values(ChannelError),
+  ...Object.values(BridgingError),
+])
 
 describe("DACP handler error responses use @finos/fdc3 enum values", () => {
   const cases: Array<{
@@ -105,7 +125,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
     },
     {
       name: "contextListenerUnsubscribe for unknown listener",
-      expectedError: "ListenerNotFound",
+      expectedError: ChannelError.InvalidArguments,
       invoke: () => {
         const { context, transport } = createConnectedHandlerContext("a1")
         handleContextListenerUnsubscribe(
@@ -116,7 +136,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
           },
           context,
         )
-        expect(getLastErrorPayload(transport).error).toBe("ListenerNotFound")
+        expect(getLastErrorPayload(transport).error).toBe(ChannelError.InvalidArguments)
       },
     },
     {
@@ -209,9 +229,52 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
         expect(getLastErrorPayload(transport).error).toBe(ResolveError.MalformedContext)
       },
     },
+    {
+      // `AddEventListenerRequestPayload.type` is the closed union `'USER_CHANNEL_CHANGED' | null`.
+      // "userChannelChanged" was a non-schema alias the agent used to accept; it must now be rejected.
+      name: "addEventListenerRequest with the non-schema alias userChannelChanged",
+      expectedError: ChannelError.InvalidArguments,
+      invoke: () => {
+        const { context, transport } = createConnectedHandlerContext("a1")
+        handleAddEventListenerRequest(
+          {
+            type: "addEventListenerRequest",
+            meta: createDacpRequestMeta("add-event-listener-camel-alias"),
+            payload: { type: asEventListenerType("userChannelChanged") },
+          },
+          context,
+        )
+        expect(getLastErrorPayload(transport).error).toBe(ChannelError.InvalidArguments)
+      },
+    },
+    {
+      // "channelChanged" is the agent's internal listener-map key, never a wire value.
+      name: "addEventListenerRequest with the non-schema alias channelChanged",
+      expectedError: ChannelError.InvalidArguments,
+      invoke: () => {
+        const { context, transport } = createConnectedHandlerContext("a1")
+        handleAddEventListenerRequest(
+          {
+            type: "addEventListenerRequest",
+            meta: createDacpRequestMeta("add-event-listener-internal-key-alias"),
+            payload: { type: asEventListenerType("channelChanged") },
+          },
+          context,
+        )
+        expect(getLastErrorPayload(transport).error).toBe(ChannelError.InvalidArguments)
+      },
+    },
   ]
 
   it.each(cases)("$name returns $expectedError", async ({ invoke }) => {
     await invoke()
+  })
+
+  it("expects only error values that exist in the @finos/fdc3 error enums", () => {
+    const inventedValues = cases
+      .filter(({ expectedError }) => !DACP_WIRE_ERROR_VALUES.has(expectedError))
+      .map(({ name, expectedError }) => `${name} -> "${expectedError}"`)
+
+    expect(inventedValues).toEqual([])
   })
 })

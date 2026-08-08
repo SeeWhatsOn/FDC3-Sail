@@ -252,7 +252,7 @@ export interface PrivateChannelContextListener extends PrivateChannelListener {
  *
  * Named `AgentEventListener`, not `EventListener`, so it never shadows the DOM global of
  * that name. `eventType` stays a plain `string` rather than `FDC3EventTypes`: handlers
- * normalize the spec's variants to `"channelChanged"` and use an `"all"` sentinel for
+ * normalize `"USER_CHANNEL_CHANGED"` to `"channelChanged"` and use an `"all"` sentinel for
  * `addEventListener(null)` — see `ALL_DA_EVENT_TYPES`.
  */
 export interface AgentEventListener {

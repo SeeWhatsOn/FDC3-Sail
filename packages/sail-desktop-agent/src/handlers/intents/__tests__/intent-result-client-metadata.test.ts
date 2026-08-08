@@ -22,7 +22,7 @@ type RaiseIntentResultResponse = BrowserTypes.AgentResponseMessage & {
     intentResult?: BrowserTypes.IntentResult & {
       metadata?: IntentResultContextMetadata
     }
-    metadata?: IntentResultContextMetadata
+    resultMetadata?: IntentResultContextMetadata
     error?: string
   }
   meta: BrowserTypes.AgentResponseMessageMeta & {
@@ -248,9 +248,9 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
         (message as { type: string }).type === "raiseIntentResultResponse",
     )
     expect(response).toBeDefined()
-    expect(response!.payload.metadata).toBeDefined()
+    expect(response!.payload.resultMetadata).toBeDefined()
     expect(response!.payload.intentResult?.metadata).toBeDefined()
-    expect(response!.payload.metadata).not.toBe(response!.payload.intentResult?.metadata)
+    expect(response!.payload.resultMetadata).not.toBe(response!.payload.intentResult?.metadata)
     expect(readClientGetResultMetadata(response!)?.traceId).toEqual(expect.any(String))
     expect(resolve).toHaveBeenCalledOnce()
   })

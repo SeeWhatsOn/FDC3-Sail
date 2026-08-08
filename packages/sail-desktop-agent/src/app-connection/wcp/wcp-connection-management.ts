@@ -142,7 +142,6 @@ export function disconnectAppByInstanceId(context: AppConnectionContext, instanc
     try {
       const goodbyeMessage: WebConnectionProtocolMessage = {
         type: "WCP6Goodbye",
-        payload: undefined,
         meta: {
           timestamp: new Date(),
         },

@@ -191,7 +191,7 @@ export function handleIntentResultRequest(
         "raiseIntentResultResponse",
         {
           intentResult: intentResultForClient,
-          metadata: payloadMetadata,
+          resultMetadata: payloadMetadata,
         },
       )
       sendDACPResponse({

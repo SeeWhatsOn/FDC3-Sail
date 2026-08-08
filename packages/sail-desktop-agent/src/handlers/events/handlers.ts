@@ -29,7 +29,7 @@ export function handleAddEventListenerRequest(
 
     if (!instance) {
       throw new FDC3ChannelError(
-        "ListenerError" as ChannelError,
+        ChannelError.InvalidArguments,
         `Instance ${instanceId} not found for adding event listener`,
       )
     }
@@ -37,16 +37,17 @@ export function handleAddEventListenerRequest(
     const { type: eventType } = message.payload
 
     // FDC3 2.2: null/undefined type means subscribe to all DA-level events
-    const validEventTypes = ["channelChanged", "USER_CHANNEL_CHANGED", "userChannelChanged"]
+    // Only the schema's closed union is accepted: "USER_CHANNEL_CHANGED" | null
+    const validEventTypes = ["USER_CHANNEL_CHANGED"]
     let normalizedEventType: string
     if (eventType === null || eventType === undefined) {
       normalizedEventType = ALL_DA_EVENT_TYPES
     } else if (validEventTypes.includes(eventType)) {
-      // Normalize all variants to "channelChanged" so listeners receive the same events
+      // Internal listener-map key (not a wire value)
       normalizedEventType = "channelChanged"
     } else {
       throw new FDC3ChannelError(
-        "ListenerError" as ChannelError,
+        ChannelError.InvalidArguments,
         `Unsupported event type: ${eventType}`,
       )
     }
@@ -77,7 +78,7 @@ export function handleAddEventListenerRequest(
     logger.error("DACP: Add event listener failed", error)
 
     const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ("ListenerError" as ChannelError)
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.InvalidArguments
     const errorMessage = error instanceof Error ? error.message : "Failed to add event listener"
 
     sendDACPErrorResponse({
@@ -106,7 +107,7 @@ export function handleEventListenerUnsubscribeRequest(
     const listener = getState().events.listeners[listenerUUID]
     if (!listener) {
       throw new FDC3ChannelError(
-        "ListenerError" as ChannelError,
+        ChannelError.InvalidArguments,
         `Event listener ${listenerUUID} not found`,
       )
     }
@@ -122,7 +123,7 @@ export function handleEventListenerUnsubscribeRequest(
     logger.error("DACP: Event listener unsubscribe failed", error)
 
     const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ("ListenerError" as ChannelError)
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.InvalidArguments
     const errorMessage =
       error instanceof Error ? error.message : "Failed to unsubscribe event listener"
 

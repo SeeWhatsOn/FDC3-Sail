@@ -115,7 +115,7 @@ export function buildIntentResultWirePayload(
   return { wireIntentResult: {}, resultMetadata: baseMetadata, isContextWithMetadata: false }
 }
 
-/** Shallow copy so payload.metadata and intentResult.metadata are distinct for transport clone. */
+/** Shallow copy so payload.resultMetadata and intentResult.metadata are distinct for transport clone. */
 export function cloneIntentResultContextMetadata(
   metadata: IntentResultContextMetadata,
 ): IntentResultContextMetadata {

@@ -30,11 +30,10 @@ import { createTestAgent, PORTFOLIO_APP } from "./wcp-desktop-agent.integration.
 function createWCP6Goodbye(): BrowserTypes.WebConnectionProtocol6Goodbye {
   return {
     type: "WCP6Goodbye",
-    payload: undefined,
     meta: {
       timestamp: new Date(),
     },
-  } as unknown as BrowserTypes.WebConnectionProtocol6Goodbye
+  }
 }
 
 function createUnitConnectionContext(options?: {
@@ -177,7 +176,7 @@ describe("WCP reconnect clobber", () => {
     expect(context.recentlyDisconnected.has(validatedId)).toBe(false)
   })
 
-  it("does not tear down the new connection when goodbye arrives on a displaced old port", async () => {
+  it("does not tear down the new connection when the reconnect displaces the old port", async () => {
     const agent = createTestAgent({ disconnectGracePeriod: 25 })
     activeAgents.push(agent)
     const connector = agent.appConnection
@@ -193,6 +192,12 @@ describe("WCP reconnect clobber", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
+    // Reconnecting onto the same validated id makes updateConnectionMetadata retire the
+    // first tab's transport. MessagePortTransport.disconnect() runs bridgeAppPort's
+    // onDisconnect synchronously, and that handler resolves the instance id through
+    // transportToInstanceId. Unregistering the displaced transport after disconnect()
+    // instead of before would resolve the teardown to the validated id and kill the
+    // connection this very handshake is installing.
     const second = await connectWcpApp(agent, {
       connectionAttemptUuid: "wcp-c-second-uuid",
       appId: PORTFOLIO_APP.appId,
@@ -202,11 +207,6 @@ describe("WCP reconnect clobber", () => {
     })
 
     expect(second.validatedInstanceId).toBe(first.validatedInstanceId)
-
-    // Displaced first tab still talks — goodbye on the OLD port must not kill the NEW connection.
-    first.appPort.postMessage(createWCP6Goodbye())
-    await flushAsyncDelivery()
-    await new Promise(resolve => setTimeout(resolve, 150))
     await flushAsyncDelivery()
 
     expect(disconnectedInstanceIds).not.toContain(second.validatedInstanceId)

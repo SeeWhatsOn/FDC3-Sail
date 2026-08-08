@@ -32,7 +32,17 @@ export async function routeDACPMessage(
     // Extract message type for routing
     const messageType = (message as { type?: string })?.type
 
-    if (applyInboundValidationPolicy(message, { logger, validation }) === "rejected") {
+    // Messages reaching this DACP edge may already have been raw-validated and enriched by
+    // BrowserAppConnection.enrichMessageWithSource (see wcp-message-routing.ts), which stamps a
+    // schema-illegal meta.messageOrigin. This is also the only validation gate for edges that
+    // skip BrowserAppConnection entirely (e.g. the DACP test harness), where messages stay raw
+    // and never carry messageOrigin — so stripping it here is a no-op there and a correction here.
+    if (
+      applyInboundValidationPolicy(stripMessageOriginForValidation(message), {
+        logger,
+        validation,
+      }) === "rejected"
+    ) {
       sendErrorResponseIfRequestLike(
         message,
         context,
@@ -83,6 +93,28 @@ export async function routeDACPMessage(
       )
     }
   }
+}
+
+/**
+ * Strips `meta.messageOrigin` before validation. `BrowserAppConnection.enrichMessageWithSource`
+ * stamps this field onto DACP messages after they were already validated raw (see
+ * wcp-message-routing.ts); it is not part of the DACP wire schema (`additionalProperties: false`
+ * on `meta`), so re-validating an enriched message here would fail every request from a
+ * fully-connected app. Only this field is stripped — `meta.source`, also added by enrichment, is
+ * schema-legal and stays.
+ */
+function stripMessageOriginForValidation(message: unknown): unknown {
+  if (typeof message !== "object" || message === null) {
+    return message
+  }
+
+  const meta = (message as { meta?: unknown }).meta
+  if (typeof meta !== "object" || meta === null || !("messageOrigin" in meta)) {
+    return message
+  }
+
+  const { messageOrigin: _messageOrigin, ...restMeta } = meta as Record<string, unknown>
+  return { ...(message as Record<string, unknown>), meta: restMeta }
 }
 
 /**

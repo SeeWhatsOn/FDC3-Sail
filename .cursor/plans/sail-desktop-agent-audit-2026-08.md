@@ -116,7 +116,7 @@ This is the finding that matters most.
 | Feature | Line | Code asserted | Status |
 |---|---|---|---|
 | `test/features/context/event-listeners.feature` | **78, 84** | `ListenerError` | **Invented.** Not in `@finos/fdc3` `ChannelError`. This is the one to fix |
-| `test/features/channels/private-channel.feature` | **130, 140** | `ListenerNotFound` | **Sanctioned** by `AGENTS.md:63`. Not a defect — leave it |
+| `test/features/channels/private-channel.feature` | **130, 140** | `ListenerNotFound` | ~~**Sanctioned** by `AGENTS.md:63`~~ — **superseded 2026-08-07.** The carve-out was reopened; the value is now `ChannelError.InvalidArguments` (`sail-da-test-suite-realignment.md` slice 1) |
 
 The original doc cited `62,74` and `122,133` and implied both were locking in defects. Wrong on both counts.
 
@@ -340,7 +340,7 @@ All 27 `BrowserTypes` request types have handlers (`handlers/index.ts:137-181`) 
 |---|---|---|---|
 | `broadcast` | full | `handlers/broadcast/handlers.ts:39` | — |
 | `addContextListener` | full | `handlers/broadcast/handlers.ts:152` | — |
-| `contextListenerUnsubscribe` | partial | `handlers/broadcast/handlers.ts:274`; `errors/fdc3-errors.ts:177` | returns `"ListenerNotFound"`, not in `ChannelError` 2.2/3.0 — **`AGENTS.md:63` records this as a deliberate choice, not a defect** |
+| `contextListenerUnsubscribe` | partial | `handlers/broadcast/handlers.ts:274`; `errors/fdc3-errors.ts:177` | ~~returns `"ListenerNotFound"`, not in `ChannelError` 2.2/3.0 — `AGENTS.md:63` records this as a deliberate choice~~ — **superseded 2026-08-07:** now returns `ChannelError.InvalidArguments` |
 | `joinUserChannel` / `leaveCurrentChannel` / `getUserChannels` | full | `handlers/channels/handlers.ts:94/148/179` | — |
 | `getCurrentChannel` | full | `handlers/channels/handlers.ts:27` | fabricates `{id, type:"user"}` at `:57-60` when id absent, instead of `null` |
 | `getOrCreateChannel` | full | `handlers/channels/handlers.ts:257` | `AccessDenied` on user-channel id (`:273`) and private-channel id (`:279`) — satisfies the normative MUST |
@@ -387,7 +387,7 @@ Every deletion above was required to state its cost. These were checked and clea
 | `pendingIntentPromises`, timeout registries | `agent/sail-desktop-agent.ts:90` and registries | Timer handles and promise resolvers are non-serializable; `AgentState` is deliberately JSON-serializable. Accepted limitation, Slice 9/#14 |
 | `AppConnectionRegistry.deliverWcp5Success` temp→validated rekey | `app-connection/app-connection-registry.ts:87-110` | The one place the handshake port is rekeyed; without it every app stays under `temp-*` |
 | App channels not replaying prior context | `handlers/broadcast/handlers.ts:245-253` | Not a gap — documented decision at `test/features/channels/app-channels.feature:155-158` |
-| `ListenerNotFound` error code | `errors/fdc3-errors.ts:177` | Off-schema **on purpose** per `AGENTS.md:63` |
+| `ListenerNotFound` error code | `errors/fdc3-errors.ts:177` | ~~Off-schema **on purpose** per `AGENTS.md:63`~~ — **superseded 2026-08-07:** replaced by `ChannelError.InvalidArguments` |
 | `InstanceMetadata` / `AppInstanceMetadata` | `state/types.ts:44-61` | Restate FDC3 shapes, but the file documents why (`unknown` over `any`) |
 | `registerPendingHostInstance` | — | Real product caller at `sail-finance/src/components/layout-grid/panel-templates/FDC3IframePanel.tsx:55` |
 | `AppConnectionEventEmitter` | — | `BrowserAppConnection` extends it and emits `appConnected`/`handshakeFailed`/`channelChanged` |

@@ -127,7 +127,7 @@ Feature: Relaying Private Channel Broadcast messages
     Then messaging will have outgoing posts
       | msg.type                           | to.appId | to.instanceId | msg.payload.error |
       | contextListenerUnsubscribeResponse | App2     | a2            | {null}            |
-      | contextListenerUnsubscribeResponse | App2     | a2            | ListenerNotFound  |
+      | contextListenerUnsubscribeResponse | App2     | a2            | InvalidArguments  |
 
   @fdc3_2.0
   Scenario: Can't unsubscribe an someone else's listener
@@ -137,4 +137,4 @@ Feature: Relaying Private Channel Broadcast messages
     Then messaging will have outgoing posts
       | msg.type                           | to.appId | to.instanceId | msg.payload.error |
       | addContextListenerResponse         | App2     | a2            | {null}            |
-      | contextListenerUnsubscribeResponse | App1     | a1            | ListenerNotFound  |
+      | contextListenerUnsubscribeResponse | App1     | a1            | InvalidArguments  |

@@ -16,7 +16,7 @@ Feature: Intent result metadata (FDC3 3.0)
     When "appId: App1, instanceId: a1" raises an intent for "ViewPortfolio" with contextType "fdc3.portfolio" on app "appId: PortfolioApp, instanceId: l1" with requestUuid "META-V0" [fdc3.raiseIntent]
     And "appId: PortfolioApp, instanceId: l1" sends a intentResultRequest with eventUuid "{lastIntentEventUuid}" and void contents and raiseIntentUuid "META-V0" [IntentResolution.getResult]
     Then messaging will have outgoing posts
-      | msg.matches_type          | to.instanceId | msg.payload.metadata.source.appId | msg.payload.metadata.timestamp | msg.payload.intentResult.metadata.traceId |
+      | msg.matches_type          | to.instanceId | msg.payload.resultMetadata.source.appId | msg.payload.resultMetadata.timestamp | msg.payload.intentResult.metadata.traceId |
       | raiseIntentResultResponse | a1            | PortfolioApp                      | ISO8601-timestamp-required     | MUST-BE-NON-EMPTY                         |
 
   Scenario: Context intent result exposes DA metadata for getResultMetadata
