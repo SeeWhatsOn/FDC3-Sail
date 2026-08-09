@@ -31,7 +31,7 @@ Feature: Relaying Private Channel Broadcast messages
       | broadcastEvent             | {channel1Id}          | AAPL                          | fdc3.instrument          | App2     | a2            |
       | broadcastResponse          | {null}                | {null}                        | {null}                   | App1     | a1            |
 
-  @fdc3_2.0
+  @fdc3_2.2
   Scenario: Null lifecycle listener receives addContextListener unsubscribe and disconnect events
     Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds a catch-all private channel event listener on "{channel1Id}" [PrivateChannel.addEventListener]
@@ -66,7 +66,7 @@ Feature: Relaying Private Channel Broadcast messages
       | privateChannelOnUnsubscribeEvent   | {channel1Id}                 | fdc3.instrument         | App2     | a2            |
       | contextListenerUnsubscribeResponse | {null}                       | {null}                  | App1     | a1            |
 
-  @fdc3_2.0
+  @fdc3_2.2
   Scenario: Disconnecting from a channel sends unsubscribe and disconnect messages
     Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds an "disconnect" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
