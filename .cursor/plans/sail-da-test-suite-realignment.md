@@ -1,17 +1,24 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent test-suite realignment
 
-Status: blocked — **human gate.** Slices 1–4 are complete, verified, and reviewed. Slices 5 and 6 need explicit release.
-Current slice: 5 (not started)
+Status: **all six slices done.** Slice 5 landed with its central conclusion **reversed** — see below.
+Current slice: none. Remaining work is listed under "Open after slice 6".
 
-**Approved 2026-08-07: slices 1–4 only.** Slices 5 and 6 are behind a **human gate** — do not start either
-until the user has reviewed the results of slices 1–4 and explicitly released them. Slice 5's design
-question (does `DacpTestAppConnection` need the enrichment `BrowserAppConnection` does?) is the reason
-for the gate, and it gets answered with the user, not inside a slice.
+**Gate released 2026-08-08 by user direction**, and slices 5–6 were worked that session. The gate's
+design question — does `DacpTestAppConnection` need the enrichment `BrowserAppConnection` does? —
+was answered **no**: it needs the same *seams* (pending registries keyed the way the browser edge
+keys them), not the same enrichment. Production was not moved.
+
+**Slice 5's premise did not survive.** It assumed the endpoint was `validation: "strict"` as the
+default, with a short allowlist. The evidence said otherwise: `strict` makes Sail **less**
+FDC3-conformant, because the schema gate pre-empts handlers that produce the spec's specific errors
+(`MalformedContext`, `InvalidArguments`, `NoChannelFound`) and returns a generic `MalformedMessage`
+instead. **Recommendation: keep `warn` as the default.** Full reasoning in "Slice 5 — outcome".
 
 Working branch: `fix/da-test-suite-realignment` (worktree `.claude/worktrees/da-test-realignment`).
 
 Source: test-suite audit run 2026-08-07 (features vs FDC3 spec, step definitions, unit tests).
 Baseline at plan time: **154 Cucumber scenarios, 334 Vitest tests / 51 files, all green.**
+Current: **154 Cucumber scenarios / 1460 steps, 344 Vitest tests / 53 files, all green.**
 
 ## Prior art that constrains this plan
 
@@ -128,6 +135,35 @@ The biggest slice, and the one that can sprawl. It has two halves; land the harn
 - **Likely files:** 4 step-definition files, `test/world/index.ts`, `test/support/hooks.ts`.
 - **Stop condition:** if part A's WCP4 change requires production code to move, **stop and check in**. That is the "BDD enters below the security seam" gap, which is a design call, not this slice.
 
+#### Slice 5 — outcome (2026-08-08). Part A done and exceeded; **part B deliberately not built.**
+
+**Part A — done, and the count was wrong in both directions.**
+
+- The WCP4 row said 160 and named `messageOrigin` / `wcpSourceWindow` together. Correct — but an early bisect during the work misread its own output and named `wcpSourceWindow` as the *sole* offender. Removing it alone left the count **unmoved at 160/24**, because `ConnectionStepMeta` is `additionalProperties: false` over `{connectionAttemptUuid, timestamp}` and **both** fields violate it. Fixed in two passes. **WCP4: 184 → 0.**
+- The fix is the seam, not enrichment: `DacpTestAppConnection.receiveMessage(message, wcp4Inputs?)` writes the window and origin into pending registries keyed `temp-${connectionAttemptUuid}` — the same key `takePendingWcpSourceWindow` reads with. The `?? messageMeta?.wcpSourceWindow` fallback at `wcp-identity-validation.ts:73` is **deleted**; production no longer reads a field only tests wrote.
+- The step's site list in the table above was incomplete. A repo-wide search found **14** sites in `desktop-agent-wcp-routing.test.ts` (not 4), plus `cleanup.test.ts` and `harness-instance-correlation.harness.ts`.
+- `app: null` → key omitted: **2 sites**, both `intents.steps.ts:313,333` (the table said 13 warnings, which was the warning count, not the site count).
+- `channelId: null`: resolved differently — ruled a **product bug**, not a fixture bug. See "Out-of-plan fixes" below.
+
+**Part B — the gate was not built, on purpose.** Its design (fail the run on any non-allowlisted schema warning) presumed those warnings were all fixture noise. Three of the categories are not:
+
+| Category | Why an allowlist entry would be wrong |
+|---|---|
+| `MalformedContext` (×6), `InvalidArguments` (×1), `NoChannelFound` (×1) | A malformed context **is** a schema violation. Under `strict` the gate answers `MalformedMessage` and FDC3's specific error never reaches the client. Allowlisting hides a conformance regression |
+| `addIntentListenerRequest.contextType` (×2) | 3.0 field Sail deliberately supports; rejected regardless of declared `fdc3Version`, because `@finos/fdc3-schema` is pinned to 2.2 |
+| `intentResultRequest.payload.intentResult` as `null` / `{error}` (×2) | **Sail's own invented wire vocabulary.** 2.2's `IntentResult` is `{context?, channel?}`, `additionalProperties: false` — no way to express "no result" or "handler rejected" |
+
+The last two are product decisions about Sail's wire protocol, not test debt. Building the gate would have frozen them as "deliberate" without anyone deciding they were.
+
+**Four options tested before concluding** (`ajv` prototype against the raw schemas, throwaway, deleted):
+
+- **A — keep `warn`. Recommended.** Handlers already produce spec-correct errors; the `meta.hostInstanceId` spoof is separately mitigated by `enrichMessageWithSource` stripping the field regardless of mode.
+- **B — map message type → FDC3 error.** **Wrong.** `broadcastRequest` alone fails three distinct ways, cleanly separated by `instancePath`: `/payload/context` (required), `/payload` (required — the `channelId` case), `/meta/requestUuid` (type). A blanket mapping is wrong in two of three.
+- **C — failure-detail-aware errors via `ajv`.** Technically capable, but needs `ajv` and `@finos/fdc3-context` as new explicit deps and a second schema representation alongside the quicktype validators — and still does not fix the 3.0 / `intentResult` gap.
+- **D — validate then dispatch anyway.** Non-option. `INBOUND_VALIDATORS` is already 1:1 with handled types, so this is `warn` with extra steps.
+
+**`ajv` trap, recorded:** a bare `import Ajv from "ajv"` in this monorepo resolves to a hoisted **v6.15.0** from build tooling. v6 reports `dataPath`, not `instancePath`, so every error silently prints an empty path. No package.json lists `ajv` directly.
+
 ### 6. Tidying: retags, order-independent assertions, dead steps
 
 - **Goal:** The feature files say what version each scenario belongs to, and no step definition exists that nothing calls.
@@ -138,6 +174,23 @@ The biggest slice, and the one that can sprawl. It has two halves; land the harn
 - **Acceptance:** Scenario count unchanged (or −1 if the duplicate is deleted — say which). Every remaining step definition is referenced by at least one feature.
 - **Verify:** `npx cucumber-js` and `npx cucumber-js --profile fdc3-2.0`
 - **Likely files:** 5 features, 3 step-definition files, `testing-utils.ts`.
+
+#### Slice 6 — outcome (2026-08-08). Retagging done and scoped up; **dead steps and ordered assertions not done.**
+
+The retag turned out to rest on a broken foundation, so it grew:
+
+- **The version profiles selected instead of accumulating.** `fdc3-2.2` was `tags: "@fdc3_2.2 and not @failing"` — but FDC3 is cumulative, so a 2.2 agent must pass 2.0 + 2.1 + 2.2. Rewritten to OR upward, and `fdc3-2.1` added so the ladder is complete.
+- **Version tags sat on feature-file headers and scenarios inherit them.** Eleven files carried `@fdc3_2.2 @fdc3_3.0` together, so every scenario in them counted as both — which is why `--profile fdc3-2.2` still ran 3.0-only scenarios. All 17 file-level version tags removed; tags now live on scenarios only.
+- **38 previously-untagged scenarios placed** by introduced-version, via the `fdc3-expert` skill: 9 → `@fdc3_2.0`, 10 → `@fdc3_2.2` (`DesktopAgent.addEventListener` / `PrivateChannel.addEventListener` are 2.2 per the FDC3 CHANGELOG), 19 → `@fdc3_3.0`.
+- **4 scenarios in `intent-result.feature` were mistagged `@fdc3_2.0`** while asserting `resultMetadata` / `ContextMetadata.timestamp` — 3.0-only fields. Retagged to `@fdc3_3.0`.
+- **`private-channel.feature:35,69`** retagged `@fdc3_2.0` → `@fdc3_2.2` as the slice specified (they use `PrivateChannel.addEventListener`).
+- **New guard:** `scripts/check-fdc3-tag-coverage.mjs`, wired into `test:cucumber` and `validate`. An untagged scenario matches no version profile and silently never runs — worse than a failing test. The guard asserts the top profile's dry-run count equals the default's. Proven: stripping one tag gives `fdc3-3.0 (153) != default (154)`, exit 1.
+
+**Profile counts after:** `fdc3-2.0` 119 · `fdc3-2.1` 119 · `fdc3-2.2` 131 · `fdc3-3.0` 154 · default 154.
+
+**Not done, still open:** `raise-intent.feature:45-49` retag-or-delete; `@fdc3_3.0` still on `intent-metadata-performance.feature`; the order-independent assertion swaps in `find-intent.feature:142-152` and `raise-intent-with-context.feature:68-89`; all the dead-step deletions and the unused `matchData`.
+
+**Convention question left open:** the guard created `packages/sail-desktop-agent/scripts/`, the only per-package `scripts/` dir in the repo (there is no root one either). Keep, relocate, or inline — undecided, and it adds two cucumber dry-runs to `validate`.
 
 ## Test Plan
 
@@ -175,8 +228,26 @@ Slice 6 is a candidate for the step 10 single-agent exemption **only** if it red
 - [x] 2 `resultMetadata` rename: **reviewed** — coded, reviewed by separate contexts; no tester (plan budgeted no new tests) (failures: 1)
 - [x] 3 narrow event type: **reviewed** — coded, tested, reviewed by three separate contexts (failures: 0)
 - [x] 4 repair the two vacuous tests: **reviewed** — tested and reviewed by two separate contexts; no coder (test-only slice, no production change) (failures: 0)
-- [ ] 5 schema-validation gate in BDD: **BLOCKED — human gate.** Not started (failures: 0)
-- [ ] 6 retags + dead steps: **BLOCKED — human gate.** Not started (failures: 0)
+- [x] 5 schema-validation gate in BDD: **part A done and exceeded; part B deliberately not built.** See "Slice 5 — outcome" (failures: 0)
+- [x] 6 retags + dead steps: **retagging done and scoped up; dead steps and ordered assertions NOT done.** See "Slice 6 — outcome" (failures: 0)
+
+## Out-of-plan fixes (2026-08-08)
+
+Six defects found while working slices 5–6. None were in the audit or any slice; each was fixed
+against its own evidence and guarded by a test proven to fail without the fix.
+
+| # | Defect | Fix | Evidence |
+|---|---|---|---|
+| 1 | **Double validation.** `routeDACPMessage` validated messages *after* `enrichMessageWithSource` stamped Sail's own `meta.messageOrigin` on. That field is illegal in DACP `meta`, so the gate reported a false failure for **every message from every connected app** | `handlers/index.ts:35` strips `messageOrigin` from a copy before validating; the object dispatched to handlers is untouched | Vitest schema warnings **97 → 35**. Probed: `+meta.source` → valid, `+meta.messageOrigin` → invalid |
+| 2 | **`WCP6Goodbye` sent off-schema** — `payload: undefined`; an own key counts against `additionalProperties: false`. Outbound, so Sail never validated it; visible to any conformant client | `wcp-connection-management.ts:143` omits the key. No cast needed — `payload` was optional on the type all along | Regression test asserts on the **real** outbound message off the MessagePort |
+| 3 | **`HANDLER_MAP` untyped**, `closeRequest` wired but absent from `INBOUND_VALIDATORS` and `AppRequestMessage` — unvalidated in every mode including `strict` | Typed `{ [K in RoutableMessageType]: HandlerFor<K> }`; `closeRequest` named in an explicit `ExtensionRequestMessage` with the gap documented in place | Invented key → `TS2353`; missing handler → `TS2741`. Both re-proven independently |
+| 4 | **FDC3 3.0 field reads were ungated** — `contextType` and `payload.metadata` were read unconditionally while only the *downstream behaviour* was gated on `fdc3Version >= 3.0` | Gate moved up to the read, so at 2.2 the fields are ignored and traffic stays schema-clean | Regression tests cover **both** 2.2 and 3.0 |
+| 5 | **`broadcastRequest` accepted a missing `channelId`**, falling back to `currentUserChannel`. The 2.2 schema requires it | Fallback removed, `channelId` required. **User ruled this a bug, not an extension** | Probed: omitted → invalid, `null` → invalid |
+| 6 | **`vi.useFakeTimers()` breaks the vendor validator.** It replaces global `Date`; the generated validator does `typ === Date` by reference identity captured at module load, so *any* message validated under fake timers fails with "Expected function but got string" | Scoped the fake to timers only in the 2 blocking tests | Found independently by two agents. **Latent elsewhere** — other files using `vi.useFakeTimers()` may have the same issue |
+
+**Note on #4:** gating the read fixes Sail's *behaviour* at 2.2. It does **not** reduce the schema
+warnings, and cannot — validation runs on the raw wire message before any handler, so it sees the
+field regardless of what the handler would do with it.
 
 ## Verification Notes
 
@@ -281,7 +352,7 @@ Every entry is a command plus the exit status observed by the main agent, not a 
 - **`have outgoing posts` only inspects the last N messages.** A spurious message earlier in a scenario is invisible unless the scenario also asserts `have N posts`; roughly half do not.
 - **Missing spec coverage** the audit listed: private-channel broadcast after `disconnect()`, `PrivateChannel.getCurrentContext()`, `ResultError.ApiTimeout`, `ResolveError.ResolverUnavailable` / `ResolverTimeout`, `OpenError.ResolverUnavailable` / `DesktopAgentNotFound`, and DA `traceId` precedence at the wire level.
 - **`intent-metadata-performance.feature` is not a spec test.** Its 500 ms / 100 ms budgets sit ~1000× above in-memory transport latency, so it cannot fail — but it could flake on loaded CI. Slice 6 only untags it; rehoming it to a bench suite is separate.
-- **Sail's own outbound `WCP6Goodbye` is off-schema.** Found during slice 4, sits **squarely on this plan's stated Outcome**, and was not in the audit. `wcp/wcp-connection-management.ts:143-149` sends `{type:"WCP6Goodbye", payload: undefined, meta:{timestamp}}`. The reviewer ran the generated validator directly: that shape returns **`false`**; dropping the `payload` key returns **`true`**. Cause: `WCP6Goodbye.schema.json` sets `additionalProperties: false` over `{type, meta}`, and an own `payload` key counts even when its value is `undefined`. `timestamp: Date` is fine. **Size: one line.** Two test files copy the bad shape (`wcp-reconnect-clobber.test.ts:33`, `wcp-temp-id-teardown.test.ts:42`); two sibling integration tests already use the valid `{type, meta:{timestamp}}` form, so the in-repo precedent exists. **This one should probably be its own slice before slice 5** — slice 5's gate will surface it as a warning that is a real defect, not an allowlist entry.
+- **~~Sail's own outbound `WCP6Goodbye` is off-schema.~~ FIXED 2026-08-08** — see Out-of-plan fixes #2. Original entry kept below for its analysis, which was correct. Found during slice 4, sits **squarely on this plan's stated Outcome**, and was not in the audit. `wcp/wcp-connection-management.ts:143-149` sends `{type:"WCP6Goodbye", payload: undefined, meta:{timestamp}}`. The reviewer ran the generated validator directly: that shape returns **`false`**; dropping the `payload` key returns **`true`**. Cause: `WCP6Goodbye.schema.json` sets `additionalProperties: false` over `{type, meta}`, and an own `payload` key counts even when its value is `undefined`. `timestamp: Date` is fine. **Size: one line.** Two test files copy the bad shape (`wcp-reconnect-clobber.test.ts:33`, `wcp-temp-id-teardown.test.ts:42`); two sibling integration tests already use the valid `{type, meta:{timestamp}}` form, so the in-repo precedent exists. **This one should probably be its own slice before slice 5** — slice 5's gate will surface it as a warning that is a real defect, not an allowlist entry.
 - **`wcp-temp-id-teardown.test.ts:33-38` has a docblock that is factually wrong and describes a live trap.** It calls the shape "Schema-valid WCP6Goodbye" and then explains that "a malformed goodbye here would be dropped for the wrong reason and the test would 'pass' without ever arming the temp-keyed grace timer." That is exactly what will happen the moment `validation: "strict"` or slice 5's gate lands — `bridgeAppPort:58-65` rejects before the WCP6 early-return at `:67`. It survives today only because `warn` is the default. Same class of defect as slice 4 itself.
 - **Slice 3 review follow-ups (not blocking):** `undefined` is still accepted as "subscribe to all" at `events/handlers.ts:43` even though the closed union is `'USER_CHANNEL_CHANGED' | null` — a non-TS client sending `payload: {}` gets a subscribe-to-all listener rather than `InvalidArguments`. `validEventTypes` (`:41`) is untyped `string[]`; typing it `readonly BrowserTypes.AddEventListenerRequestPayload["type"][]` would move the guard from runtime to **tsc**.
 - **Slice 2 review follow-ups (not blocking):** no unit test asserts the *absence* of `payload.metadata` on `raiseIntentResultResponse` — `expect(response!.payload).not.toHaveProperty("metadata")` in `intent-result-handlers.test.ts:133` and `intent-result-client-metadata.test.ts:251` would make the "never `metadata`" half of the Acceptance a real assertion instead of relying on `{null}`/`toBeFalsy()`. `intent-result-handlers.ts` also uses three names for one value in its locals — `resultMetadata` (`:97,113`), `metadata` (`:167,176`), and the pure alias `payloadMetadata` (`:180`). The `intent-result.feature` tables are now 15 columns wide with 12 `{null}` cells per scenario; the real fix for that is the parked `matchData` work, not more columns.
@@ -295,3 +366,21 @@ Every entry is a command plus the exit status observed by the main agent, not a 
 - **`raiseIntentResultResponse.resultMetadata` is still off the pinned 2.2 schema** — exactly as `metadata` was. The rename aligns Sail's wire with its own internal naming and the FDC3 3.0 draft; it does not make the payload schema-valid. That is the draft question parked in Risks.
 
 - Slice 5 leaves the structural gap open: Cucumber talks to `DacpTestAppConnection`, so `BrowserAppConnection`'s origin-stripping and trusted-source stamping stay covered by unit tests alone. This plan makes the harness stop *faking* that seam; it does not make the BDD suite cross it.
+- **`validation: "strict"` is not shippable as a default, and that is now a finding rather than a to-do.** Under `--profile fdc3-2.2` with `strict`, 12 scenarios still fail; under the default profile, 17. None are versioning problems. They are the error-semantics conflict (the gate answers `MalformedMessage` where FDC3 wants a specific error) plus two features Sail supports that 2.2 cannot express. **The prerequisite for `strict` is not better error-picking — it is deciding what Sail does about wire shapes the pinned schema has no vocabulary for.**
+- **`validEventTypes` should stay.** Slice 3 parked "typing it moves the guard from runtime to tsc", and this delivery originally expected `strict` to make the runtime guard redundant. The opposite is true: the hand-rolled check is the **only** thing producing the spec-correct `InvalidArguments`, because the schema gate can only say `MalformedMessage`. Typing it against the generated union is still a small win; removing it would be a regression.
+
+## Open after slice 6
+
+Ordered by whether a human decision is needed.
+
+**Needs a product decision:**
+
+- **`intentResultRequest.payload.intentResult` as `null` / `{error}`.** Sail's invented vocabulary for "no result" / "handler rejected"; 2.2's `IntentResult` is `{context?, channel?}` with `additionalProperties: false`. Same class as the `ListenerNotFound` codes slice 1 retired. This is the real blocker for `strict` ever being recommendable.
+- **`scripts/` directory convention** — see Slice 6 outcome.
+
+**Mechanical, no decision needed:**
+
+- The "Dynamic registrations" step definitions send `contextType`, putting a 3.0 field into 2.x scenarios (2 scenarios).
+- Slice 6's unfinished half: dead-step deletions, unused `matchData`, order-independent assertion swaps, `raise-intent.feature:45-49`, `intent-metadata-performance.feature` untag.
+- `vi.useFakeTimers()` latent in files beyond the 2 fixed (Out-of-plan fixes #6).
+- `events/handlers.ts:43` accepts `undefined` as subscribe-to-all though the union is `'USER_CHANNEL_CHANGED' | null`.
