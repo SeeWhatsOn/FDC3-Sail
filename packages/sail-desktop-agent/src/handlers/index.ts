@@ -1,4 +1,4 @@
-import { BridgingError } from "@finos/fdc3"
+import { BridgingError, type BrowserTypes } from "@finos/fdc3"
 
 import { DACP_TIMEOUTS } from "../dacp/dacp-constants"
 import { DACPProcessingError, DACPTimeoutError } from "../dacp/dacp-errors"
@@ -161,12 +161,42 @@ async function handleDACPMessage(
 }
 
 /**
- * Handler registry - maps message types to handler functions.
- * Module-level so the map is not reallocated on every DACP message.
+ * Message types this router accepts beyond the FDC3 2.2 `AppRequestMessage` schema union.
+ *
+ * `closeRequest` is an FDC3 3.0 forward-port (see `open/handlers.ts`'s `CloseRequestMessage` and
+ * `handleCloseRequest`, which gates it behind `fdc3Version >= "3.0"`). It has no generated 2.2
+ * schema validator, so it is also absent from `INBOUND_VALIDATORS` in
+ * `dacp/validate-dacp-message.ts` and goes unvalidated even in `strict` mode. Listed here by name
+ * so that gap is a documented, visible decision rather than a silent fall-through.
+ */
+type ExtensionRequestMessage = appHandlers.CloseRequestMessage
+
+/** Every message type this router can dispatch: the 2.2 union plus the extensions above. */
+type RoutableRequestMessage = BrowserTypes.AppRequestMessage | ExtensionRequestMessage
+type RoutableMessageType = RoutableRequestMessage["type"]
+
+/** Handler for one specific message type, narrowed to that type's own request shape. */
+type HandlerFor<K extends RoutableMessageType> = (
+  message: Extract<RoutableRequestMessage, { type: K }>,
+  context: DACPHandlerContext,
+) => void | Promise<void>
+
+/**
+ * Erased handler shape used once a handler has been looked up by a runtime (not statically known)
+ * message type. `HANDLER_MAP` itself stays precisely typed per key via `HandlerFor`.
  */
 type RoutedHandler = (message: unknown, context: DACPHandlerContext) => void | Promise<void>
 
-const HANDLER_MAP = {
+/**
+ * Handler registry - maps message types to handler functions.
+ * Module-level so the map is not reallocated on every DACP message.
+ *
+ * Typed as `{ [K in RoutableMessageType]: HandlerFor<K> }`: every member of
+ * `RoutableMessageType` must have an entry (a required handler removed from this object is a
+ * compile error), and every key must be a member of `RoutableMessageType` (a typo'd or invented
+ * key is a compile error too).
+ */
+const HANDLER_MAP: { [K in RoutableMessageType]: HandlerFor<K> } = {
   // Context handlers
   broadcastRequest: contextHandlers.handleBroadcastRequest,
   addContextListenerRequest: contextHandlers.handleAddContextListener,
@@ -212,8 +242,20 @@ const HANDLER_MAP = {
   heartbeatAcknowledgementRequest: heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,
 }
 
+/** Type guard so a runtime `string` can be used to index `HANDLER_MAP`. */
+function isRoutableMessageType(messageType: string): messageType is RoutableMessageType {
+  return Object.prototype.hasOwnProperty.call(HANDLER_MAP, messageType)
+}
+
 function getHandlerForMessageType(messageType: string): RoutedHandler | null {
-  return (HANDLER_MAP as Record<string, RoutedHandler>)[messageType] || null
+  if (!isRoutableMessageType(messageType)) {
+    return null
+  }
+
+  // HANDLER_MAP[messageType] is HandlerFor<K> for the specific K matched above; erasing to the
+  // general RoutedHandler shape is exactly the point where a runtime-selected handler meets a
+  // runtime (not statically typed) message — see the RoutedHandler doc comment.
+  return HANDLER_MAP[messageType] as RoutedHandler
 }
 
 export { cleanupDACPHandlers } from "./cleanup"

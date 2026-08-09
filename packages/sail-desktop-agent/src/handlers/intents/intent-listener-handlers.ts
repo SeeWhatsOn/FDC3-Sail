@@ -55,9 +55,18 @@ export function handleAddIntentListener(
       )
     }
 
-    const contextTypes = normalizeIntentListenerContextTypes(payload.contextType)
+    // FDC3 3.0 addIntentListenerWithContext: `payload.contextType` must not be read at all at
+    // 2.2 — the 2.2 JSON Schema has `additionalProperties: false`, so a 3.0 field on the wire
+    // would otherwise be silently honoured even though the message fails schema validation.
+    const supportsIntentListenerContext = isFdc3VersionAtLeast(
+      implementationMetadata.fdc3Version,
+      "3.0",
+    )
+    const contextTypes = supportsIntentListenerContext
+      ? normalizeIntentListenerContextTypes(payload.contextType)
+      : []
 
-    if (isFdc3VersionAtLeast(implementationMetadata.fdc3Version, "3.0")) {
+    if (supportsIntentListenerContext) {
       const conflict = findConflictingIntentListener(
         getListenersForInstance(getState(), instanceId),
         payload.intent,

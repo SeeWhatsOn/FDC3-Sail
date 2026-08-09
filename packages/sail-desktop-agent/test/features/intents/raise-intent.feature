@@ -1,4 +1,3 @@
-@fdc3_2.2 @fdc3_3.0
 Feature: Raising Intents
 
   Background:
@@ -42,6 +41,7 @@ Feature: Raising Intents
       | intentEvent         | fdc3.instrument          | uniqueIntent       | App1                             | a1                                    | {null}                              | c1            | uniqueIntentApp | {null}                                    |
       | raiseIntentResponse | {null}                   | {null}             | {null}                           | {null}                                | uniqueIntent                        | a1            | App1            | uniqueIntentApp                           |
 
+  @fdc3_3.0
   Scenario: Intent Event Includes ContextMetadata With Source And Timestamp
     When "appId: App1, instanceId: a1" raises an intent for "uniqueIntent" with contextType "fdc3.instrument" [fdc3.raiseIntent]
     Then messaging will include outgoing posts
@@ -163,6 +163,7 @@ Feature: Raising Intents
       | msg.matches_type    | msg.payload.error       | to.instanceId |
       | raiseIntentResponse | UserCancelledResolution | a1            |
 
+  @fdc3_2.0
   Scenario: Raising An Intent With Malformed Context Returns MalformedContext
     When "appId: App1, instanceId: a1" raises an intent for "ViewChart" with contextType "fdc3.malformed" [fdc3.raiseIntent]
     Then messaging will have outgoing posts

@@ -34,23 +34,29 @@ import {
 import { notifyContextListenerAdded } from "../utils/open-with-context"
 import { resolveDacpHandlerInstanceId } from "../utils/resolve-context-listener-instance-id"
 import { isValidContext } from "../utils/context-validation"
+import { isFdc3VersionAtLeast } from "../../agent/fdc3-version"
 
 /** Handles DACP broadcastRequest (validation runs at the router). */
 export function handleBroadcastRequest(
   message: BrowserTypes.BroadcastRequest,
   context: DACPHandlerContext,
 ): void {
-  const { responses, getState, setState, logger } = context
+  const { responses, getState, setState, logger, implementationMetadata } = context
   const instanceId = resolveDacpHandlerInstanceId(context)
   const handlerContext = { ...context, instanceId }
 
   try {
-    const { channelId: payloadChannelId, context: broadcastContext } = message.payload
+    const { channelId, context: broadcastContext } = message.payload
     const broadcastPayload = message.payload as BrowserTypes.BroadcastRequest["payload"] & {
       /** FDC3 3.0: optional app-provided ContextMetadata fields on broadcast. */
       metadata?: Record<string, unknown>
     }
-    const broadcastAppMetadata = broadcastPayload.metadata
+    // Must not be read at all at 2.2 — the 2.2 JSON Schema has `additionalProperties: false`,
+    // so a 3.0 field on the wire would otherwise be silently honoured even though the message
+    // fails schema validation.
+    const broadcastAppMetadata = isFdc3VersionAtLeast(implementationMetadata.fdc3Version, "3.0")
+      ? broadcastPayload.metadata
+      : undefined
 
     if (!isValidContext(broadcastContext)) {
       sendDACPErrorResponse({
@@ -69,12 +75,13 @@ export function handleBroadcastRequest(
       throw new Error("Instance not found")
     }
 
-    const channelId = payloadChannelId ?? instance.currentUserChannel
+    // The 2.2 (and 3.0) schema requires `channelId` on broadcastRequest.payload — the FDC3
+    // client resolves the current user channel and includes it on the wire itself, so a
+    // missing `channelId` here is a malformed message, not a legitimate "not joined" case.
+    // Only reachable under `validation: "warn"`, which dispatches non-conformant messages
+    // anyway; under `strict` this message is rejected before the handler runs.
     if (!channelId) {
-      // No channel specified and app not joined - no-op per spec
-      const response = createDACPSuccessResponse(message, "broadcastResponse")
-      sendDACPResponse({ response, instanceId, responses })
-      return
+      throw new NoChannelFoundError("broadcastRequest.payload.channelId is required")
     }
 
     const userChannel = getUserChannel(state, channelId)
@@ -84,7 +91,7 @@ export function handleBroadcastRequest(
       throw new NoChannelFoundError(`Channel ${channelId} does not exist`)
     }
 
-    if (userChannel && instance.currentUserChannel !== channelId && !payloadChannelId) {
+    if (userChannel && instance.currentUserChannel !== channelId && !channelId) {
       // No-op for DesktopAgent.broadcast when not joined to a user channel.
       const response = createDACPSuccessResponse(message, "broadcastResponse")
       sendDACPResponse({ response, instanceId, responses })

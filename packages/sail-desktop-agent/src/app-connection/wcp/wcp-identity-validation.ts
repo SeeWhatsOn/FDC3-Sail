@@ -23,6 +23,7 @@ import { AppInstanceState } from "../../state/types"
 import type { DirectoryApp } from "../../app-directory/types"
 import { getInstanceIdentityMap, type InstanceIdentityRecord } from "./instance-identity-registry"
 import { takePendingWcpSourceWindow } from "./pending-source-window"
+import { takePendingWcpMessageOrigin } from "./pending-wcp4-message-origin"
 import { findBestAppMatchByIdentityUrl } from "../../handlers/utils/wcp-identity-url-matching"
 import {
   reconcileOrphanPendingHostInstances,
@@ -64,13 +65,17 @@ export function handleWcp4ValidateAppIdentity(message: unknown, context: DACPHan
     const actualOrigin = new URL(actualUrl).origin
     const messageMeta = (
       message as {
-        meta?: { messageOrigin?: string; wcpSourceWindow?: unknown }
+        meta?: { messageOrigin?: string }
       }
     ).meta
-    const messageOrigin = messageMeta?.messageOrigin
-    const sourceWindow =
-      takePendingWcpSourceWindow(responses.connectionOwner, context.instanceId) ??
-      messageMeta?.wcpSourceWindow
+    // Browser edge: already stamped onto message.meta by enrichMessageWithSource (schema-valid
+    // there since isBrowserEnrichedWcp4 skips the raw-message validation gate). DACP test edge:
+    // not legal on the wire message, so it arrives via the same pending-registry seam as
+    // sourceWindow instead — see pending-wcp4-message-origin.ts.
+    const messageOrigin =
+      messageMeta?.messageOrigin ??
+      takePendingWcpMessageOrigin(responses.connectionOwner, context.instanceId)
+    const sourceWindow = takePendingWcpSourceWindow(responses.connectionOwner, context.instanceId)
     const hostIdentifier = resolveWcpHandshakeHostIdentifier(
       responses.connectionOwner,
       context.instanceId,

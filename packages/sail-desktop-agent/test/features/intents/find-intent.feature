@@ -1,4 +1,3 @@
-@fdc3_2.2 @fdc3_3.0
 Feature: Find Intent API
 
   Background:
@@ -177,12 +176,14 @@ Feature: Find Intent API
       | msg.matches_type             | msg.payload.appIntents.length | msg.payload.appIntents[0].intent.name | to.instanceId |
       | findIntentsByContextResponse | 2                             | StreamChart                           | a1            |
 
+  @fdc3_2.0
   Scenario: Find Intent With Malformed Context Returns MalformedContext
     When "appId: App1, instanceId: a1" finds intents with intent "ViewChart" and contextType "fdc3.malformed" and result type "{empty}" [fdc3.findIntent]
     Then messaging will have outgoing posts
       | msg.matches_type   | msg.payload.error | to.instanceId |
       | findIntentResponse | MalformedContext  | a1            |
 
+  @fdc3_2.0
   Scenario: Find Intents By Context With Malformed Context Returns MalformedContext
     When "appId: App1, instanceId: a1" finds intents with contextType "fdc3.malformed" and result type "{empty}" [fdc3.findIntentsByContext]
     Then messaging will have outgoing posts

@@ -424,11 +424,10 @@ describe("heartbeat cleanup on disconnect", () => {
       meta: {
         connectionAttemptUuid: "heartbeat-disconnect-uuid",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(wcp4Message)
+    await connection.receiveMessage(wcp4Message, { messageOrigin: "https://example.com" })
 
     const wcp5Response = connection.sentMessages.find(
       message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse",
@@ -516,11 +515,10 @@ describe("heartbeat cleanup on disconnect", () => {
       meta: {
         connectionAttemptUuid,
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(wcp4Message)
+    await connection.receiveMessage(wcp4Message, { messageOrigin: "https://example.com" })
 
     const wcp5Response = connection.sentMessages.find(
       message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse",
@@ -552,11 +550,10 @@ describe("heartbeat cleanup on disconnect", () => {
       meta: {
         connectionAttemptUuid: "transport-disconnect-uuid",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(wcp4Message)
+    await connection.receiveMessage(wcp4Message, { messageOrigin: "https://example.com" })
 
     const wcp5Response = connection.sentMessages.find(
       message => (message as { type?: string }).type === "WCP5ValidateAppIdentityResponse",

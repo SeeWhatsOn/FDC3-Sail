@@ -1,4 +1,3 @@
-@fdc3_2.2 @fdc3_3.0
 Feature: User channels
 
   Background:
@@ -14,6 +13,7 @@ Feature: User channels
       | msg.payload.userChannels[0].id | msg.payload.userChannels[1].id | msg.payload.userChannels[2].id | msg.payload.userChannels[3].id | msg.payload.userChannels[4].id | msg.payload.userChannels[5].id | msg.payload.userChannels[6].id | msg.payload.userChannels[7].id | msg.payload.userChannels[0].type | to.instanceId | msg.matches_type        |
       | fdc3.channel.1                 | fdc3.channel.2                 | fdc3.channel.3                 | fdc3.channel.4                 | fdc3.channel.5                 | fdc3.channel.6                 | fdc3.channel.7                 | fdc3.channel.8                 | user                             | a1            | getUserChannelsResponse |
 
+  @fdc3_2.0
   Scenario: User channels include displayMetadata for all predefined channels
     When "appId: App1, instanceId: a1" gets the list of user channels [fdc3.getUserChannels]
     Then messaging will have outgoing posts
@@ -198,17 +198,15 @@ Feature: User channels
       | getCurrentChannelResponse | a1            | fdc3.channel.1         |
 
   @fdc3_2.0
-  Scenario: Default broadcast still uses joined user channel after app channel listener registration
+  Scenario: Broadcast without channel id is rejected as malformed, not routed to the joined user channel
     When "appId: App1, instanceId: a1" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     And "appId: App2, instanceId: a2" joins user channel "fdc3.channel.1" [fdc3.joinUserChannel]
     And "appId: App2, instanceId: a2" adds a context listener on "fdc3.channel.1" with type "fdc3.instrument" [fdc3.addContextListener]
-    And "appId: App1, instanceId: a1" creates or gets an app channel called "workflow" [fdc3.getOrCreateChannel]
-    And "appId: App1, instanceId: a1" adds a context listener on "workflow" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" without channel id [fdc3.broadcast]
-    Then messaging will include outgoing posts
-      | msg.matches_type  | to.instanceId | msg.payload.channelId | msg.payload.context.type |
-      | broadcastEvent    | a2            | fdc3.channel.1        | fdc3.instrument          |
-      | broadcastResponse | a1            | {null}                | {null}                   |
+    Then messaging will have outgoing posts
+      | msg.matches_type  | to.instanceId | msg.payload.error |
+      | broadcastResponse | a1            | NoChannelFound     |
+    And messaging will have 0 posts matching type "broadcastEvent"
 
   @fdc3_2.0
   Scenario: App channel explicit broadcast still reaches listeners while joined to a user channel

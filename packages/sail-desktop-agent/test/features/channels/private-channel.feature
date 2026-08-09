@@ -1,4 +1,3 @@
-@fdc3_2.2 @fdc3_3.0
 Feature: Relaying Private Channel Broadcast messages
 
   Background:
@@ -48,6 +47,7 @@ Feature: Relaying Private Channel Broadcast messages
       | privateChannelOnDisconnectEvent         | App2     | a2            | {channel1Id}                 | {null}                  |
       | privateChannelDisconnectResponse        | App1     | a1            | {null}                       | {null}                  |
 
+  @fdc3_2.2
   Scenario: Event Listener created for addContextListener and unsubscribe
     Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds an "addContextListener" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
@@ -79,6 +79,7 @@ Feature: Relaying Private Channel Broadcast messages
       | privateChannelOnDisconnectEvent  | {channel1Id}                 | {null}                  | App2     | a2            |
       | privateChannelDisconnectResponse | {null}                       | {null}                  | App1     | a1            |
 
+  @fdc3_2.2
   Scenario: addContextListener Event Listener add and removed, shouldn't fire when addContextListener called.
     Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds an "addContextListener" event listener on "{channel1Id}" [PrivateChannel.addEventListener]

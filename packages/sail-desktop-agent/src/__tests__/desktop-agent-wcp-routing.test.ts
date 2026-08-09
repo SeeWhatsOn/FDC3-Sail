@@ -35,11 +35,10 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "test-uuid",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(message)
+    await connection.receiveMessage(message, { messageOrigin: "https://example.com" })
 
     expect(connection.sentMessages).toHaveLength(1)
     const response = connection.sentMessages.at(-1) as {
@@ -78,11 +77,10 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "test-uuid",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://malicious.example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(message)
+    await connection.receiveMessage(message, { messageOrigin: "https://malicious.example.com" })
 
     expect(connection.sentMessages).toHaveLength(1)
     const response = connection.sentMessages.at(-1) as {
@@ -117,11 +115,10 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "unknown-reconnect-uuid",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(message)
+    await connection.receiveMessage(message, { messageOrigin: "https://example.com" })
 
     const response = connection.sentMessages.at(-1) as {
       type: string
@@ -155,11 +152,10 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "identity-url-priority-uuid",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(message)
+    await connection.receiveMessage(message, { messageOrigin: "https://example.com" })
 
     const response = connection.sentMessages.at(-1) as {
       type: string
@@ -190,11 +186,10 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "component-match-uuid",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(message)
+    await connection.receiveMessage(message, { messageOrigin: "https://example.com" })
 
     const response = connection.sentMessages.at(-1) as {
       type: string
@@ -233,11 +228,10 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "app-a-connect-uuid",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(firstMessage)
+    await connection.receiveMessage(firstMessage, { messageOrigin: "https://example.com" })
 
     const firstResponse = connection.sentMessages.at(-1) as {
       type: string
@@ -260,11 +254,12 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "app-b-reconnect-uuid",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(reconnectWithDifferentAppMessage)
+    await connection.receiveMessage(reconnectWithDifferentAppMessage, {
+      messageOrigin: "https://example.com",
+    })
 
     const secondResponse = connection.sentMessages.at(-1) as {
       type: string
@@ -297,11 +292,10 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "initial-connect-uuid",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(firstMessage)
+    await connection.receiveMessage(firstMessage, { messageOrigin: "https://example.com" })
 
     const firstResponse = connection.sentMessages.at(-1) as {
       type: string
@@ -322,11 +316,10 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "bad-reconnect-uuid",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(badReconnectMessage)
+    await connection.receiveMessage(badReconnectMessage, { messageOrigin: "https://example.com" })
 
     const secondResponse = connection.sentMessages.at(-1) as {
       type: string
@@ -358,11 +351,10 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "distinct-id-uuid-connect",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(message)
+    await connection.receiveMessage(message, { messageOrigin: "https://example.com" })
 
     const response = connection.sentMessages.at(-1) as {
       type: string
@@ -397,12 +389,13 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "same-window-initial",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
-        wcpSourceWindow: sourceWindowRef,
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(firstMessage)
+    await connection.receiveMessage(firstMessage, {
+      sourceWindow: sourceWindowRef,
+      messageOrigin: "https://example.com",
+    })
 
     const firstResponse = connection.sentMessages.at(-1) as {
       type: string
@@ -426,12 +419,13 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "same-window-reconnect",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
-        wcpSourceWindow: sourceWindowRef,
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(reconnectMessage)
+    await connection.receiveMessage(reconnectMessage, {
+      sourceWindow: sourceWindowRef,
+      messageOrigin: "https://example.com",
+    })
 
     const secondResponse = connection.sentMessages.at(-1) as {
       type: string
@@ -466,12 +460,13 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "window-mismatch-initial",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
-        wcpSourceWindow: firstWindowRef,
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(firstMessage)
+    await connection.receiveMessage(firstMessage, {
+      sourceWindow: firstWindowRef,
+      messageOrigin: "https://example.com",
+    })
 
     const firstResponse = connection.sentMessages.at(-1) as {
       type: string
@@ -493,12 +488,13 @@ describe("DesktopAgent WCP routing", () => {
       meta: {
         connectionAttemptUuid: "window-mismatch-reconnect",
         timestamp: new Date().toISOString(),
-        messageOrigin: "https://example.com",
-        wcpSourceWindow: secondWindowRef,
       },
     } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
 
-    await connection.receiveMessage(reconnectMessage)
+    await connection.receiveMessage(reconnectMessage, {
+      sourceWindow: secondWindowRef,
+      messageOrigin: "https://example.com",
+    })
 
     const secondResponse = connection.sentMessages.at(-1) as {
       type: string

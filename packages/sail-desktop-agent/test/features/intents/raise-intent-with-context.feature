@@ -1,4 +1,3 @@
-@fdc3_2.2 @fdc3_3.0
 Feature: Raising Intents For Context
 
   Background:
@@ -96,6 +95,7 @@ Feature: Raising Intents For Context
       | msg.matches_type              | msg.payload.error       | to.instanceId |
       | raiseIntentForContextResponse | UserCancelledResolution | a1            |
 
+  @fdc3_2.0
   Scenario: Raising An Intent For Context With Malformed Context Returns MalformedContext
     When "appId: App1, instanceId: a1" raises an intent with contextType "fdc3.malformed" [fdc3.raiseIntentForContext]
     Then messaging will have outgoing posts

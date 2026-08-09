@@ -180,20 +180,22 @@ async function completeWcp4Handshake(
     claimedInstanceId: string
   },
 ): Promise<string> {
-  await connection.receiveMessage({
-    type: "WCP4ValidateAppIdentity",
-    meta: {
-      connectionAttemptUuid: params.connectionAttemptUuid,
-      timestamp: new Date().toISOString(),
-      messageOrigin: new URL(params.appUrl).origin,
+  await connection.receiveMessage(
+    {
+      type: "WCP4ValidateAppIdentity",
+      meta: {
+        connectionAttemptUuid: params.connectionAttemptUuid,
+        timestamp: new Date().toISOString(),
+      },
+      payload: {
+        instanceId: params.claimedInstanceId,
+        instanceUuid: params.claimedInstanceId,
+        identityUrl: params.appUrl,
+        actualUrl: params.appUrl,
+      },
     },
-    payload: {
-      instanceId: params.claimedInstanceId,
-      instanceUuid: params.claimedInstanceId,
-      identityUrl: params.appUrl,
-      actualUrl: params.appUrl,
-    },
-  })
+    { messageOrigin: new URL(params.appUrl).origin },
+  )
 
   return readWcp5InstanceId(connection)
 }
