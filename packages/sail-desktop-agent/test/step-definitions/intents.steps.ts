@@ -310,7 +310,7 @@ function raise(
     payload: {
       intent: handleResolve(intentName, cw),
       context: contextMap[contextType],
-      app: dest ? destMeta!.source : null,
+      ...(dest ? { app: destMeta!.source } : {}),
     },
   } as RaiseIntentRequest
   return message
@@ -330,7 +330,7 @@ function raiseWithContext(
     },
     payload: {
       context: contextMap[contextType],
-      app: dest ? destMeta!.source : null,
+      ...(dest ? { app: destMeta!.source } : {}),
     },
   } as RaiseIntentForContextRequest
   return message
