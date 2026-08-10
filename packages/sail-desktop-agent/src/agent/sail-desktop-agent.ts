@@ -84,6 +84,7 @@ export class SailDesktopAgent<
   private isStarted: boolean = false
   private implementationMetadata: SailDesktopAgentMetadata
   private openContextListenerTimeoutMs: number
+  private pendingIntentTimeoutMs: number
   private heartbeatEnabled: boolean
   private heartbeatIntervalMs: number
   private heartbeatTimeoutMs: number
@@ -126,6 +127,7 @@ export class SailDesktopAgent<
 
     this.implementationMetadata = config.desktopAgentMetadata
     this.openContextListenerTimeoutMs = config.openContextListenerTimeoutMs
+    this.pendingIntentTimeoutMs = config.pendingIntentTimeoutMs
     this.heartbeatEnabled = config.heartbeatEnabled
     this.heartbeatIntervalMs = config.heartbeatIntervalMs
     this.heartbeatTimeoutMs = config.heartbeatTimeoutMs
@@ -412,6 +414,7 @@ export class SailDesktopAgent<
       logPayloadDetail: this.logPayloadDetail,
       implementationMetadata: this.implementationMetadata,
       openContextListenerTimeoutMs: this.openContextListenerTimeoutMs,
+      pendingIntentTimeoutMs: this.pendingIntentTimeoutMs,
       heartbeatEnabled: this.heartbeatEnabled,
       heartbeatIntervalMs: this.heartbeatIntervalMs,
       heartbeatTimeoutMs: this.heartbeatTimeoutMs,

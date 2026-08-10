@@ -25,6 +25,7 @@ export function createHandlerContextForWorld(
     logger: consoleLogger,
     implementationMetadata: agent.getImplementationMetadata(),
     openContextListenerTimeoutMs: 2000,
+    pendingIntentTimeoutMs: 2000,
     heartbeatEnabled: true,
     heartbeatIntervalMs: 500,
     heartbeatTimeoutMs: 2000,

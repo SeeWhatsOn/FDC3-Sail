@@ -56,6 +56,7 @@ export function createDACPTestContext(options: {
       providerVersion: "0.0.0",
     },
     openContextListenerTimeoutMs: 2000,
+    pendingIntentTimeoutMs: 2000,
     heartbeatEnabled: true,
     heartbeatIntervalMs: 500,
     heartbeatTimeoutMs: 2000,

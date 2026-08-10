@@ -67,6 +67,8 @@ interface SailDesktopAgentBaseOptions {
   implementationMetadata?: Partial<SailDesktopAgentMetadata>
 
   openContextListenerTimeoutMs?: number
+  /** Milliseconds to keep a raised intent pending before giving up on a result. @defaultValue `90000` */
+  pendingIntentTimeoutMs?: number
   /**
    * When `true`, the agent sends DACP `heartbeatEvent` messages for liveness after WCP5.
    * FDC3 2.2 leaves this as a Desktop Agent policy (apps cannot opt out via `getAgent()`).
@@ -142,6 +144,7 @@ export interface SailDesktopAgentConfig {
   initialState?: Partial<AgentState>
   desktopAgentMetadata: SailDesktopAgentMetadata
   openContextListenerTimeoutMs: number
+  pendingIntentTimeoutMs: number
   heartbeatEnabled: boolean
   heartbeatIntervalMs: number
   heartbeatTimeoutMs: number

@@ -110,6 +110,9 @@ export interface DACPHandlerContext {
   /** Timeout (ms) to wait for a context listener after open-with-context */
   openContextListenerTimeoutMs: number
 
+  /** Timeout (ms) to keep a raised intent pending before giving up on a result */
+  pendingIntentTimeoutMs: number
+
   /**
    * When `true`, send DACP heartbeat events for connected instances (Desktop Agent policy).
    *

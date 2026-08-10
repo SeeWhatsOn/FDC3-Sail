@@ -160,18 +160,14 @@ export function schedulePendingIntentDelivery(
   }
 }
 
-export function attachPendingIntentTimeout(
-  context: DACPHandlerContext,
-  requestId: string,
-  timeoutMs = 30000,
-): void {
+export function attachPendingIntentTimeout(context: DACPHandlerContext, requestId: string): void {
   const timeoutHandle = setTimeout(() => {
     releasePendingIntentTimeoutHandle(timeoutHandle)
     if (context.pendingIntentPromises.has(requestId)) {
       context.pendingIntentPromises.delete(requestId)
       context.setState(state => resolvePendingIntent(state, requestId))
     }
-  }, timeoutMs)
+  }, context.pendingIntentTimeoutMs)
   registerPendingIntentTimeoutHandle(timeoutHandle)
 
   const promiseData = context.pendingIntentPromises.get(requestId)
