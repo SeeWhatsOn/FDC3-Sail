@@ -95,24 +95,29 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
       promiseData.reject(new Error(`Intent cancelled - ${disconnectRole} instance disconnected`))
       resolvedContext.pendingIntentPromises.delete(pending.requestId)
     }
-    // Terminal raiseIntentResultResponse so IntentResolution.getResult() settles (same as open-with-context AppTimeout on disconnect).
-    try {
-      const response = createDACPErrorResponse(
-        { type: "raiseIntentRequest", meta: { requestUuid: pending.requestId } },
-        ResultError.ApiTimeout,
-        "raiseIntentResultResponse",
-      )
-      sendDACPResponse({
-        response,
-        instanceId: pending.sourceInstanceId,
-        responses: resolvedContext.responses,
-      })
-    } catch (error) {
-      logger.warn("Failed to send pending-intent timeout response on disconnect", {
-        requestId: pending.requestId,
-        sourceInstanceId: pending.sourceInstanceId,
-        error: error instanceof Error ? error.message : String(error),
-      })
+    // Terminal raiseIntentResultResponse so IntentResolution.getResult() settles (same as
+    // open-with-context AppTimeout on disconnect). Only when the *target* is the one going away:
+    // the response is addressed to the raiser, so if the raiser is itself the disconnecting
+    // instance there is nobody left to settle and this would post to a closed instance.
+    if (pending.sourceInstanceId !== instanceId) {
+      try {
+        const response = createDACPErrorResponse(
+          { type: "raiseIntentRequest", meta: { requestUuid: pending.requestId } },
+          ResultError.ApiTimeout,
+          "raiseIntentResultResponse",
+        )
+        sendDACPResponse({
+          response,
+          instanceId: pending.sourceInstanceId,
+          responses: resolvedContext.responses,
+        })
+      } catch (error) {
+        logger.warn("Failed to send pending-intent timeout response on disconnect", {
+          requestId: pending.requestId,
+          sourceInstanceId: pending.sourceInstanceId,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
     }
     setState(state => resolvePendingIntent(state, pending.requestId))
   })
