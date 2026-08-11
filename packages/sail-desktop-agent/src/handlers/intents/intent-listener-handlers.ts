@@ -7,7 +7,6 @@
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
-import { resolveDacpHandlerInstanceId } from "../utils/resolve-context-listener-instance-id"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
 import {
@@ -121,8 +120,7 @@ export function handleIntentListenerUnsubscribe(
   message: BrowserTypes.IntentListenerUnsubscribeRequest,
   context: DACPHandlerContext,
 ): void {
-  const { responses, getState, setState, logger } = context
-  const instanceId = resolveDacpHandlerInstanceId(context)
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const { listenerUUID } = message.payload

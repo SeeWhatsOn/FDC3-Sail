@@ -16,9 +16,17 @@ import { AppInstanceState } from "../../state/types"
 import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
 import { withResponseDispatcher } from "./test-context"
 import { handleAddContextListener, handleBroadcastRequest } from "../broadcast/handlers"
+import { routeDACPMessage } from "../index"
 
 describe("handleBroadcastRequest stale instance routing", () => {
-  it("resolves handshake routing id to the validated connected instance via wcpHandshakeRouting", () => {
+  /**
+   * Must go through `routeDACPMessage`, not `handleBroadcastRequest` directly. Instance-id
+   * resolution lives at the router (`index.ts` stamps `resolveDacpHandlerInstanceId` onto the
+   * context before dispatch); handler bodies no longer resolve. A direct call therefore hands the
+   * handler the raw wire id and stops exercising the real path — which is exactly the behaviour
+   * this test exists to guard. Do not "simplify" it back to a direct handler call.
+   */
+  it("resolves handshake routing id to the validated connected instance via wcpHandshakeRouting", async () => {
     const transport = new MockTransport()
     const handshakeRoutingId = "stale-conformance-instance"
     const validatedInstanceId = "live-conformance-instance"
@@ -53,7 +61,7 @@ describe("handleBroadcastRequest stale instance routing", () => {
       initialState: state,
     })
 
-    handleBroadcastRequest(
+    await routeDACPMessage(
       {
         type: "broadcastRequest",
         meta: createDacpRequestMeta("broadcast-close-window", {
@@ -83,6 +91,13 @@ describe("handleBroadcastRequest stale instance routing", () => {
     expect(broadcastEvent?.meta?.destination?.instanceId).toBe(listenerInstanceId)
   })
 
+  /**
+   * The two tests below still call handlers directly, and that is fine — but note what they do and
+   * do not cover. Since instance-id resolution moved to `routeDACPMessage`, a direct handler call
+   * no longer exercises resolution at all. Both use ids that are already registered, so raw and
+   * resolved are identical and the distinction does not arise; they assert response/event routing
+   * and ordering, not id resolution. Only the first test in this file guards resolution.
+   */
   it("returns broadcastResponse to the connected sender when another instance has pending open", () => {
     const transport = new MockTransport()
     const connectedSenderId = "connected-mock-instance"

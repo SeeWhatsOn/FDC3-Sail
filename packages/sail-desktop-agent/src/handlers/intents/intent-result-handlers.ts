@@ -22,7 +22,6 @@ import {
   cloneIntentResultContextMetadata,
 } from "./intent-result-metadata"
 import { clearPendingIntentTimeoutHandle } from "./intent-pending-timeout-registry"
-import { resolveDacpHandlerInstanceId } from "../utils/resolve-context-listener-instance-id"
 
 function isHandlerRejection(intentResult: unknown): boolean {
   return (
@@ -81,10 +80,9 @@ export function handleIntentResultRequest(
       throw new Error(`No pending intent found for request: ${originalRequestId}`)
     }
 
-    const resolvedInstanceId = resolveDacpHandlerInstanceId(context)
-    if (pendingIntent.targetInstanceId !== resolvedInstanceId) {
+    if (pendingIntent.targetInstanceId !== instanceId) {
       throw new Error(
-        `Intent result from wrong instance. Expected ${pendingIntent.targetInstanceId}, got ${resolvedInstanceId}`,
+        `Intent result from wrong instance. Expected ${pendingIntent.targetInstanceId}, got ${instanceId}`,
       )
     }
 

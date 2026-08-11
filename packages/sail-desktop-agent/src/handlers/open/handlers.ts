@@ -17,7 +17,6 @@ import { getInstance, getInstancesByAppId } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
 import { registerOpenWithContext } from "../utils/open-with-context"
 import { isValidContext } from "../utils/context-validation"
-import { resolveDacpHandlerInstanceId } from "../utils/resolve-context-listener-instance-id"
 import { teardownInstance } from "../cleanup"
 
 /**
@@ -404,8 +403,14 @@ export async function handleCloseRequest(
   message: CloseRequestMessage,
   context: DACPHandlerContext,
 ): Promise<void> {
-  const { responses, appLauncher, logger, getState, implementationMetadata } = context
-  const targetInstanceId = resolveDacpHandlerInstanceId(context)
+  const {
+    responses,
+    appLauncher,
+    logger,
+    getState,
+    implementationMetadata,
+    instanceId: targetInstanceId,
+  } = context
 
   // FDC3 3.0 behavior: closeRequest is only supported when the agent advertises 3.0.
   if (!isFdc3VersionAtLeast(implementationMetadata.fdc3Version, "3.0")) {
@@ -433,7 +438,7 @@ export async function handleCloseRequest(
 
     await appLauncher.close(targetInstanceId)
 
-    teardownInstance({ ...context, instanceId: targetInstanceId }, targetInstanceId)
+    teardownInstance(context, targetInstanceId)
   } catch (error) {
     logger.error("DACP: closeRequest failed", error)
     sendDACPErrorResponse({

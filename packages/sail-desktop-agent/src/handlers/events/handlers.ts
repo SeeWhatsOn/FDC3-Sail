@@ -1,7 +1,6 @@
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
-import { resolveDacpHandlerInstanceId } from "../utils/resolve-context-listener-instance-id"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
 import { FDC3ChannelError } from "../../errors/fdc3-errors"
@@ -99,8 +98,7 @@ export function handleEventListenerUnsubscribeRequest(
   message: BrowserTypes.EventListenerUnsubscribeRequest,
   context: DACPHandlerContext,
 ): void {
-  const { responses, getState, setState, logger } = context
-  const instanceId = resolveDacpHandlerInstanceId(context)
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const { listenerUUID } = message.payload

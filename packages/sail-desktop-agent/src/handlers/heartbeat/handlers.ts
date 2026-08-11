@@ -54,8 +54,9 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
 
   const onTimeout = () => {
     logger.warn("Instance failed heartbeat check, removing", { instanceId })
-    // WCP4 validation runs under a temp connection context; heartbeat is keyed by the real instanceId.
-    teardownInstance({ ...context, instanceId }, instanceId)
+    // WCP4 validation runs under a temp connection context; heartbeat is keyed by the real
+    // instanceId, which `teardownInstance` stamps onto the context for us.
+    teardownInstance(context, instanceId)
   }
 
   // Send an initial heartbeat immediately for short test intervals.

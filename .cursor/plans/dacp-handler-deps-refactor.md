@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: DACP handler deps refactor
 
-Status: planning
-Current slice: 1 — not started (decisions D1–D3 resolved)
+Status: implementing
+Current slice: 1 complete — next is slice 2 (rename to `DacpHandlerDeps`)
 
 Worktree: `.claude/worktrees/handler-deps-refactor` · branch `refactor/dacp-handler-deps` · based on `fix/da-test-suite-realignment` (**not** `main` — main is 261 commits behind and does not contain this handler code).
 
@@ -66,6 +66,25 @@ And there are **two** resolvers with genuinely different rules, not one:
 They are not interchangeable: cleanup deliberately keys off heartbeats so it can tear down an instance whose FDC3 state is already gone. So resolving in the router alone would fix entry 1 and leave 2–5 as they are, and collapsing the two resolvers would be a behaviour change nobody asked for.
 
 **Revised approach for slice 1:** resolve at *each* entry point with *that entry point's* resolver, and delete resolution from handler bodies. `cleanupDACPHandlers` already does exactly this internally (`cleanup.ts:67`) — the slice generalises the pattern it already demonstrates.
+
+---
+
+## Explorer map (slice 1) — the problem is larger than the review found
+
+The `Explore` agent enumerated every construction site and every read. Corrections to the numbers above:
+
+- **12 entry points, not 5.** The 5 in the table are the `createHandlerContext` callers; there are 7 more where a context is *derived* by spreading: `cleanup.ts:70` and `:165`, `heartbeat/handlers.ts:58`, `broadcast/handlers.ts:46`, `open/handlers.ts:436`, plus `sail-desktop-agent-controllers.ts:177`.
+- **17 uses are authorization decisions, not routing** — and **9 of them read the id raw**, including every private-channel membership gate (`private-channels/handlers.ts:103`, `:171`, `:261`, `:315`).
+
+### Three latent bugs this slice must decide about
+
+These already exist on `main`. Slice 1 either fixes them or must consciously preserve them.
+
+1. **Cross-resolver disagreement on close (Chain A).** `handleCloseRequest` resolves with `resolveDacpHandlerInstanceId` (`open/handlers.ts:408`), calls `appLauncher.close()` on that id (`:434`), then hands it to `teardownInstance` → `cleanupDACPHandlers`, which **re-resolves it with `resolveCleanupInstanceId`** (`cleanup.ts:72`). The two resolvers key off different things (registered instance vs active heartbeat), so **the instance that gets closed is not guaranteed to be the instance that gets torn down.**
+2. **Register-raw / unsubscribe-resolved asymmetry.** Listeners are *registered* under the raw id (`events/handlers.ts:61`, `intent-listener-handlers.ts:90`) but *unsubscribed* under the resolved id (`:110`, `:133` — the ownership checks added by `8a62fd386`). When raw ≠ resolved, an app can register a listener it can never unsubscribe.
+3. **Two ids live at once.** `handleIntentResultRequest` holds raw `instanceId` (`intent-result-handlers.ts:66`) for response routing and resolved `resolvedInstanceId` (`:84`) for its ownership gate, in the same function.
+
+Bug 2 is the one that argues hardest for this slice: resolving once at the entry point makes register and unsubscribe agree **by construction**.
 
 ---
 
@@ -184,7 +203,13 @@ The last two are **load-bearing for access control**. Slice 1 must preserve thos
 
 ## Slice Checkpoints
 
-- [ ] 1 Authoritative instanceId: not started (failures: 0)
+- [x] 1 Authoritative instanceId: **verified | reviewed | done** (failures: 0)
+  - explorer (`Explore`) — mapped 12 entry points, 17 authorization uses, 3 latent bugs ✔
+  - tester (`agent-skills:test-engineer`) — characterization tests, re-pointed through the router after the coder found they bypassed it; 20 tests total ✔
+  - coder (`general-purpose`) — resolution moved to `routeDACPMessage`, 8 handler-body calls deleted ✔
+  - reviewer (`agent-skills:code-reviewer`) — approve after one comment fix; Required resolved ✔
+  - security reviewer (`agent-skills:security-auditor`) — safe to land; Required (tautological test) resolved ✔
+  - Three separate contexts throughout; no agent reused across roles. Main agent took the step-10 exemption **once**, for the one-condition `cleanup.ts` fix committed separately as `20515fdbf`.
 - [ ] 2 Rename to DacpHandlerDeps: not started (failures: 0)
 - [ ] 3 Required DacpHandlerConfig: not started (failures: 0)
 - [ ] 4 deps-last argument order: not started (failures: 0)
@@ -210,11 +235,87 @@ The last two are **load-bearing for access control**. Slice 1 must preserve thos
 
 - `npx vp test run src/handlers` (package) -> exit 0, **24 files / 121 tests passed**
 
+**Correction — the recorded Cucumber baseline above was wrong.** It was measured from the *worktree root* of `da-test-realignment`, not the package directory. Re-measured at `3fd0f3b3c` with a clean tree, `npx cucumber-js` was **exit 1, 1 scenario failing** (`disconnect-cleanup.feature:30`). Confirmed by a controlled comparison: identical failure with and without slice 1's changes at the same commit, so it was **not** caused by slice 1. Root cause was a defect in `8a62fd386`, fixed in `20515fdbf` — see Known Limitations.
+
+**Slice 1 — verified by the main agent, not taken from a subagent report:**
+
+| Command | Where | Result |
+|---|---|---|
+| `npx tsc --noEmit` | package | exit 0 |
+| `npx vp lint .` | package | exit 0 — 0 errors (2 pre-existing in `packages/sail-finance/vite.config.ts`, missing `@tailwindcss/vite`, unrelated) |
+| `npx vp test run src/handlers` | package | exit 0 — **26 files / 140 tests** (from 24/121: +2 files, +19 tests) |
+| `npx vp test run` | package | exit 0 — **57 files / 373 tests** |
+| `npx cucumber-js` | package | exit 0 — **154 scenarios / 1460 steps** |
+
+Intermediate states worth keeping, because they are the behavioural delta:
+
+- With slice 1 applied and the characterization tests still calling handlers **directly**: 4 failures. All four were harness artifacts — they relied on the handler body self-resolving, which is exactly what the slice deletes. Not production deltas.
+- Re-pointed through `routeDACPMessage`, **9 of 14 verdicts flipped**. That is the real delta. See the slice 1 outcome section.
+
 ## Review Notes
 
-- Required:
-- Follow-up:
-- Ignore for MVP:
+### Slice 1 — security audit (`agent-skills:security-auditor`)
+
+**Verdict: safe to land.** One Required finding, and it was against a test, not the production change.
+
+The claim under test — *"the handshake link is written by the DA on WCP5 success and cannot be authored by an app"* — is **half true**. The link **target** (validated instanceId) cannot be influenced by an app; verified across three vectors (chosen uuid, reconnect, WCP4/WCP5 race). Reconnect is blocked by `canReuseInstanceIdentity` comparing `sourceWindow` by **object identity**, which an in-page attacker cannot forge. But the link **key** is `temp-${connectionAttemptUuid}`, taken verbatim from the app's WCP1Hello with no uniqueness check and no format validation (`wcp1-3-handshake.ts:55`).
+
+**Residual risk (question B) is provable, not a race.** At WCP5 success `connections.delete("temp-U")` frees the key, but the `temp-U → V` link survives for V's **entire lifetime** — `clearHandshakeRoutingIdsForInstance` filters by link *target*, never by key (`wcp-handshake-routing.ts:32`). Any later WCP1Hello reusing uuid `U` resolves to V. The only barrier is knowing V's `connectionAttemptUuid`, which the audit traced as **not observable cross-origin** and is 122 bits from `crypto.randomUUID`. Not practically exploitable — but the routing id is now effectively a **bearer capability**.
+
+**What bounds the whole risk:** outside the handshake window the resolver returns the registered instance before ever consulting the link table, so raw == resolved and the change is a **pure no-op**. In the browser edge the widened branch is close to unreachable for legitimate traffic — `updateConnectionMetadata` rekeys the port to `V` *synchronously, before* the link is written. The widened path is load-bearing for the test/conformance harness and stale-id teardown, not the browser hot path.
+
+Also confirmed: `handleCloseRequest` is behaviourally identical (one app still cannot close another), and the slice **fixes** the Chain A close/teardown divergence as a side effect. Private-channel deletion on creator disconnect is FDC3-correct lifecycle, not a bug.
+
+- **Required (resolved):** `handshake-window-instance-id.test.ts:239` asserted a tautology — `routeDACPMessage` never reads `meta.source`, so the "spoofed" field was inert and the test would pass with the resolver deleted. It duplicated `:211`. **Deleted**, replaced by a comment pointing at the real coverage: `wcp-trusted-metadata.test.ts`, test *"attributes a broadcast to the sending port, not an app-claimed meta.hostInstanceId"* (verified to exist). The genuine boundary is `enrichMessageWithSource` at `browser-app-connection.ts:225-228`, one layer above the router.
+- **Follow-up:** validate `connectionAttemptUuid` is UUID-shaped and reject one colliding with a live link — ~3 lines, closes question B outright. **Highest-value next hardening item.**
+- **Follow-up:** add `clearHandshakeRoutingId(state, routingId)` so links can be cleared by key as well as by value; today's safety rests on an unwritten ordering invariant.
+- **Follow-up:** `handleWindowMessage` (`browser-app-connection.ts:184`) accepts WCP1Hello from any origin. Pre-existing, not introduced here.
+- **Follow-up:** reword the `routeDACPMessage` doc comment — it says "during the WCP handshake window", but the link outlives the handshake by the linked instance's full lifetime.
+- **Follow-up:** note in the slice summary that response routing now addresses the resolved id for ~22 handlers. A fix in the browser edge; a visible change in the harness. Characterized at `handshake-window-instance-id.test.ts:442`.
+- **Ignore for MVP:** `DacpTestAppConnection.receiveMessage` bypasses `enrichMessageWithSource`, so the test edge feeds caller-authored `meta.source` to `extractInstanceId`. Test-only, trusted author, and the conformance harness uses the real `BrowserAppConnection`.
+
+**Praised:** the seam-guard test (`handshake-window-instance-id.test.ts:304`) that deliberately calls a handler directly so it fails if anyone reintroduces per-handler resolution — "the one test in that file that proves exactly what it says".
+
+### Slice 1 — code review (`agent-skills:code-reviewer`)
+
+**Verdict: approve after one comment fix.** All five acceptance criteria met. The reviewer re-verified the mechanics independently rather than accepting the coder's reasoning — including that deleting `{ ...context, instanceId }` at `open:436` / `heartbeat:58` is genuinely a no-op (both `teardownInstance` branches use only the explicit argument), that both resolvers are absent from the diff, that WCP4 keeps its unresolved `temp-` id, that `index.ts:39` is the only non-test `resolveDacpHandlerInstanceId` call in `src/`, that no handler reads `meta.source` behind the router's back, and that nothing from slices 2–4 leaked in.
+
+- **Required (dispatched):** `handlers/index.ts:29-31` — the router doc comment lists two off-router exceptions and closes "Neither goes through this router." There is a **third**: `changeAppUserChannel` (`sail-desktop-agent-controllers.ts:177`) builds a context from a host-supplied id and calls `handleJoinUserChannelRequest` / `handleLeaveCurrentChannelRequest` directly. The comment's promise that `instanceId` is "authoritative for every handler body downstream" is therefore false on that path. Comment-only fix.
+- **Follow-up (dispatched):** `intent-result-handlers.ts:126` response routing flipped raw → resolved with no test pinning it. Correct — the port map is re-keyed to the validated id at `wcp-connection-management.ts:252-261`, so the response is now delivered where it was previously dropped — but unguarded.
+- **Follow-up:** `broadcast-stale-instance.test.ts` cases 2 and 3 still call handlers directly and no longer assert anything about resolution. Fine for MVP; a note in the file is enough.
+- **Ignore for MVP:** `handlerContext` at `broadcast/handlers.ts:358, 482, 521` is **not** a half-state — those helpers take `context: Context` (FDC3) as a sibling parameter, so the name is doing real work. Slice 2 retires it.
+- **Ignore for MVP:** coverage for the other handler families that newly resolve. The reviewer hand-checked `open/handlers.ts`: every `context.instanceId` read there is the **caller**, never the target — targets come from `payload.app.instanceId`, so no launch or close can be redirected.
+
+### Latent bug found, not fixed here
+
+`agent.channels.changeAppChannel(handshakeRoutingId, …)` on the host controller path: `joinUserChannel` no-ops on the unregistered id, the handler still returns a **success** `joinUserChannelResponse`, no `channelChanged` fires, and the caller's promise dies on `channelChangeTimeoutMs` instead of erroring. **Pre-existing and outside slice 1** — recorded here so it is not lost.
+
+---
+
+## Slice 1 outcome — the behavioural delta
+
+Measured by re-pointing the characterization tests through `routeDACPMessage`. **9 of 14 verdicts flipped**; the scenario throughout is a `temp-` routing id handshake-linked to a registered, connected instance (`VALIDATED_ID`).
+
+| Handler | Before (raw id) | After (resolved id) |
+|---|---|---|
+| `createPrivateChannelRequest` | error `CreationFailed` | channel created, owned by `VALIDATED_ID` |
+| private-channel add listener | `AccessDenied` | **GRANTED** |
+| private-channel disconnect | `AccessDenied` | **GRANTED** — channel deleted (creator + sole member; FDC3-correct lifecycle) |
+| private-channel unsubscribe | `InvalidArguments` | **GRANTED** |
+| `getCurrentChannelRequest` | `channel: null` | `fdc3.channel.1` |
+| `joinUserChannelRequest` | success response, **silent no-op** | actually moves `VALIDATED_ID` |
+| `getInfoRequest` | `appMetadata` absent | `appMetadata.instanceId === VALIDATED_ID` |
+| `findIntentRequest` | destination = temp id | destination = `VALIDATED_ID` |
+| `addIntentListenerRequest` | `TargetInstanceUnavailable` | registers under `VALIDATED_ID` |
+| unregistered, **unlinked** port id | `AccessDenied` | `AccessDenied` — **unchanged** |
+
+Three of those are live bug fixes, not refactor fallout: `joinUserChannelRequest` returning success while doing nothing, `getCurrentChannelRequest` reporting `null` for an instance that is on a channel, and the register-raw / unsubscribe-resolved asymmetry (plan bug 2) which is now **impossible by construction**. Plan bug 1 (Chain A close/teardown divergence) is also resolved as a side effect, since `context.instanceId` and `targetInstanceId` are now the same field rather than two independent resolutions.
+
+The last row is the important negative result: an id that is neither registered nor linked is still denied. The widening applies only to ids the DA itself linked.
+
+### D1 narrowed — recorded as a decision
+
+D1 said "resolve at *each* entry point with *that entry point's* resolver". Slice 1 implements **entry point 1 only** (`routeDACPMessage`). WCP4 and `cleanupDACPHandlers` are deliberately excluded by criteria 4 and 5. The **host controller path (`sail-desktop-agent-controllers.ts:177`) is simply not covered** — it keeps its host-supplied id unresolved. That is a narrowing of D1, accepted for this slice, and the latent bug above is its consequence.
 
 ## Parked Follow-ups
 
@@ -224,4 +325,13 @@ The last two are **load-bearing for access control**. Slice 1 must preserve thos
 
 ## Known Limitations
 
-- None yet.
+- **`sail-finance/vite.config.ts` has 2 pre-existing lint errors** (`TS2307` missing `@tailwindcss/vite`, `TS2578` unused `@ts-expect-error`). Unrelated to this work, not fixed here. They mean `npx vp lint .` from the worktree root exits 1 even on a clean tree — lint from the package directory.
+- **`npx vp fmt --check .` fails on ~190 files** — pre-existing repo-wide formatting drift, unrelated. Not in any verify command for this plan.
+- **Root `tsconfig.json` references a non-existent `packages/sail-ui`** (`TS6053`), so `tsc --noEmit` must be run from the package directory.
+
+## Incidental fixes made during slice 1
+
+Neither is part of slice 1; both are committed separately so the slice diff stays clean.
+
+- **`20515fdbf`** — `cleanupDACPHandlers` sent the terminal `raiseIntentResultResponse` to `pending.sourceInstanceId` even when the source instance was the one disconnecting, posting to a just-closed instance for a promise nobody awaits. Introduced by `8a62fd386`. Now sends only when the *target* is the one going away, which is the case that defect was about. This is what turned Cucumber green (`disconnect-cleanup.feature:30`).
+- **Vite+ hook config** — `core.hooksPath` was absolute and `.vite-hooks/` was missing in this worktree, so pre-commit hooks silently no-opped. Recorded in AGENTS.md (`cf2450f5e`) along with the fact that `vp lint` is oxlint + `oxlint-tsgolint`, so a clean `tsc --noEmit` does not imply lint passes — the gap that let 16 lint errors through in `8a62fd386`.

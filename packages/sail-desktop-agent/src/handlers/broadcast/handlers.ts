@@ -32,7 +32,6 @@ import {
   notifyPrivateChannelUnsubscribe,
 } from "../private-channels/handlers"
 import { notifyContextListenerAdded } from "../utils/open-with-context"
-import { resolveDacpHandlerInstanceId } from "../utils/resolve-context-listener-instance-id"
 import { isValidContext } from "../utils/context-validation"
 import { isFdc3VersionAtLeast } from "../../agent/fdc3-version"
 
@@ -41,9 +40,7 @@ export function handleBroadcastRequest(
   message: BrowserTypes.BroadcastRequest,
   context: DACPHandlerContext,
 ): void {
-  const { responses, getState, setState, logger, implementationMetadata } = context
-  const instanceId = resolveDacpHandlerInstanceId(context)
-  const handlerContext = { ...context, instanceId }
+  const { responses, instanceId, getState, setState, logger, implementationMetadata } = context
 
   try {
     const { channelId, context: broadcastContext } = message.payload
@@ -122,11 +119,11 @@ export function handleBroadcastRequest(
       notifyPrivateChannelContextListeners(
         channelId,
         broadcastContext,
-        handlerContext,
+        context,
         broadcastAppMetadata,
       )
     } else {
-      notifyContextListeners(channelId, broadcastContext, handlerContext, broadcastAppMetadata)
+      notifyContextListeners(channelId, broadcastContext, context, broadcastAppMetadata)
     }
 
     const response = createDACPSuccessResponse(message, "broadcastResponse")
@@ -160,8 +157,7 @@ export function handleAddContextListener(
   message: BrowserTypes.AddContextListenerRequest,
   context: DACPHandlerContext,
 ): void {
-  const { responses, getState, setState, logger } = context
-  const instanceId = resolveDacpHandlerInstanceId(context)
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const { channelId, contextType: payloadContextType } = message.payload
@@ -282,8 +278,7 @@ export function handleContextListenerUnsubscribe(
   message: BrowserTypes.ContextListenerUnsubscribeRequest,
   context: DACPHandlerContext,
 ): void {
-  const { responses, getState, setState, logger } = context
-  const instanceId = resolveDacpHandlerInstanceId(context)
+  const { responses, instanceId, getState, setState, logger } = context
 
   try {
     const { listenerUUID } = message.payload

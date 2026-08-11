@@ -6,6 +6,7 @@ import { applyInboundValidationPolicy } from "../dacp/validate-dacp-message"
 import type { Logger, LogPayloadDetail } from "../logging/logger"
 import { type DACPHandlerContext } from "./types"
 import { sendDACPErrorResponse } from "./utils/dacp-response-utils"
+import { resolveDacpHandlerInstanceId } from "./utils/resolve-context-listener-instance-id"
 
 // Import all DACP handlers
 import * as contextHandlers from "./broadcast/handlers"
@@ -17,12 +18,31 @@ import * as privateChannelHandlers from "./private-channels/handlers"
 import * as heartbeatHandlers from "./heartbeat/handlers"
 
 /**
- * Routes DACP messages to appropriate handlers
+ * Routes DACP messages to appropriate handlers.
+ *
+ * The single resolution point for the DACP instance id: `inboundContext.instanceId` is whatever
+ * the wire said (`meta.source.instanceId`), which can be a MessagePort/temp routing id rather than
+ * the registered instance. Not only during the handshake: a `temp-` link is cleared by target, never
+ * by key, so it survives for the whole lifetime of the linked instance. Resolving here — and only
+ * here — makes `context.instanceId` authoritative for every handler reached **through this router**,
+ * which is every inbound app message, so those handlers never choose between raw and resolved.
+ *
+ * Three entry points deliberately bypass it, which is why this is not done in
+ * `createHandlerContext`:
+ * - WCP4 identity validation keeps its unresolved `temp-${connectionAttemptUuid}` id.
+ * - `cleanupDACPHandlers` resolves with its own heartbeat-keyed rule (see {@link cleanupDACPHandlers}).
+ * - `changeAppUserChannel` (`agent/sail-desktop-agent-controllers.ts`) calls the join/leave handlers
+ *   directly with a **host-supplied** id — not wire-derived, so it is a separate entry point under
+ *   the refactor plan's D1 and stays unresolved. A handler reached that way gets the raw id.
  */
 export async function routeDACPMessage(
   message: unknown,
-  context: DACPHandlerContext,
+  inboundContext: DACPHandlerContext,
 ): Promise<void> {
+  const context: DACPHandlerContext = {
+    ...inboundContext,
+    instanceId: resolveDacpHandlerInstanceId(inboundContext),
+  }
   const { logger, validation, logPayloadDetail } = context
   const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
   try {
