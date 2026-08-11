@@ -1,7 +1,21 @@
 # Minimal Viable Delivery Plan: DACP handler deps refactor
 
 Status: implementing
-Current slice: 1 complete — next is slice 2 (rename to `DacpHandlerDeps`)
+Current slice: **Collapse `pendingIntentPromises`** (replaces slice 4). Slice 2 renamed and deferred; slice 3 pending.
+
+> ### Decisions taken 2026-08-12, after two independent discovery agents
+>
+> **Do not restructure the parameter.** "18 fields, seven kinds" counts the *declaration*. At use sites it is already narrow — the median handler reads **4 of 18**, no function reads more than 7, and five fields (`getState`, `responses`, `instanceId`, `logger`, `setState`) carry **87% of all reads**, with a 3.9× cliff after them. Grouping into `config` / `host` sub-objects would add a hop at ~41 destructure sites and 22 test files to tidy a declaration nobody reads. It also breaks the flat-spread idiom, which is load-bearing in **production** (`routeDACPMessage`, `cleanupInstanceDacpState`, `teardownInstance` all do `{ ...context, instanceId }`), not just in tests. Factory/closure and class variants rejected: ~300 edits, and a class contradicts AGENTS.md's "one class, `SailDesktopAgent`".
+>
+> **Name: `DACPHandlerParams` / `params`** — user decision, explicitly provisional ("can rename later"). `deps` was rejected as too abbreviated. Recorded honestly: `params` has **32 existing occurrences across 6 files**, all meaning "*this* function's options bag", so it is measurably worse on greppability than `deps` (1 hit). `agentApi` and `agent` were ruled out — the first collides with FDC3's `DesktopAgent` and implies a user-facing surface, the second has 719 hits. `env` (1 hit) and `backing` (18, one file, and the only candidate with precedent in this package for this exact shape) remain the strongest alternatives if the name is revisited.
+>
+> **Slice 4 (deps-last ordering) is CUT** — pure aesthetics, ~20 signatures plus every call site, no behaviour change. One item survives it: `schedulePendingIntentDelivery`'s two adjacent positional booleans are a real transposition hazard and are a one-file fix on their own.
+>
+> **The real defect is lifetime, not width** — see Parked Follow-ups. Four long-lived timers capture a request-scoped object; `startHeartbeat` holds one in a `setInterval` for the instance's whole life, so its captured `instanceId` is the WCP4 `temp-…` id forever.
+
+> Slice 2 scope note: `DACPHandlerContext` is **not** exported from `src/index.ts` — it is internal to the package, so this rename breaks no public API and needs no deprecation alias. 48 files reference it or `createDACPTestContext`.
+>
+> Per the Test Plan, slice 2 gets **no new tests** — `tsc --noEmit` is the proof, and the existing 373 unit tests plus 154 Cucumber scenarios must come out at identical counts. A changed count means it was not a pure rename.
 
 Worktree: `.claude/worktrees/handler-deps-refactor` · branch `refactor/dacp-handler-deps` · based on `fix/da-test-suite-realignment` (**not** `main` — main is 261 commits behind and does not contain this handler code).
 
@@ -127,7 +141,24 @@ Bug 2 is the one that argues hardest for this slice: resolving once at the entry
 - **Verify:** `npx tsc --noEmit && npx vp test run && npx cucumber-js`
 - **Likely files:** `handlers/types.ts`, `agent/sail-desktop-agent.ts`, `handlers/__tests__/test-context.ts`, the 3 fallback sites.
 
-### 4. Normalise argument order to deps-last
+### 4. ~~Normalise argument order to deps-last~~ — **CUT**, replaced by the collapse below
+
+### 4′. Collapse `pendingIntentPromises`
+
+- **Goal:** delete a parallel store that exists to hold non-serializable promise handles which no longer exist. `PendingIntentPromiseEntry.resolve` / `.reject` are written **only** at `intent-raise-shared.ts:128` as `() => {}` and are never replaced, so `intent-result-handlers.ts:115` and `instance-teardown.ts:95` call no-ops in production. Real settlement happens by wire response — which is why defect #1 needed `20515fdbf` at all.
+- **Where each field goes:**
+  - `resolve`, `reject` → **deleted**. Also deletes three tautological assertions that check a callback the test itself supplied (`instance-teardown.test.ts` ×2, `intent-result-handlers.test.ts` ×1) — the same family the slice 1 security auditor already caught.
+  - `delivered`, `requestType` → onto `PendingIntent` in `AgentState`. Both are plain serializable data, both keyed by the same `requestId`, and both maps are already populated adjacently in the same call sequence.
+  - `timeoutHandle`, `deliveryTimeoutHandle` → stay out of Immer state; already tracked in `intent-pending-timeout-registry.ts`.
+- **The risk, stated plainly:** `delivered` is currently mutated **through a captured reference** (`intent-delivery-helpers.ts:135`, `:179`) while `setState` **replaces the tree**. Moving it into `AgentState` changes the mutation semantics. `:179` writes unconditionally, whereas the block needing the state entry is guarded by `if (pendingIntent)` at `:170` — under a state-backed `delivered` that write has nowhere to land once the entry is resolved. The `requestType` read at `:161` also happens *before* the state lookup at `:169`, so an ordering change is needed.
+- **Acceptance:**
+  - `PendingIntentPromiseEntry` and the `pendingIntentPromises` field are gone from `handlers/types.ts` and from the context.
+  - No production code calls a no-op callback.
+  - `state.intents.pending[requestId]` carries `delivered` and `requestType`.
+  - The four tests that construct their own `Map` to assert on it are converted to assert on state instead, not deleted.
+  - Behaviour unchanged: identical Cucumber count, and the intent settlement paths from `8a62fd386` / `20515fdbf` still work.
+- **Verify:** `npx tsc --noEmit && npx vp lint . && npx vp test run && npx cucumber-js` — run **sequentially, not in parallel** (see the flake note in Parked Follow-ups).
+- **Likely files:** `handlers/types.ts`, `state/types.ts`, `state/mutators/intent.ts`, `handlers/intents/intent-raise-shared.ts`, `handlers/intents/intent-delivery-helpers.ts`, `handlers/intents/intent-result-handlers.ts`, `handlers/instance-teardown.ts`, `agent/sail-desktop-agent.ts`, `handlers/__tests__/test-context.ts`, plus 4 test files.
 
 - **Goal:** one rule — `deps` is always the last parameter — so call sites are recognised rather than read.
 - **Acceptance:**
@@ -154,6 +185,15 @@ Risk is concentrated almost entirely in slice 1. Slices 2 and 4 are compiler-che
 ## Agent Roles
 
 Resolved against the agent types available this session.
+
+**Model policy (set 2026-08-12).** None of these agent definitions declare a `model:`, so with the `model` parameter omitted they silently **inherit the parent session model** — every subagent through slice 1 ran on Opus 5. From here the model is chosen per dispatch:
+
+| Work | Model | Why |
+|---|---|---|
+| Mechanical sweeps — the `DacpHandlerParams` rename, straightforward test scaffolding | `sonnet` | Compiler-checked, low judgement |
+| Adversarial and subtle — security audit, code review, and any slice with non-obvious semantics | `opus` | This is where the reasoning earned its keep in slice 1 |
+
+The `pendingIntentPromises` collapse stays on **opus** throughout: it is not mechanical (a captured-reference mutation meeting `setState` tree replacement), and weak test design already produced two false-positive suites this delivery — tests that passed for the wrong reason.
 
 - **coder:** `general-purpose`
 - **tester:** `agent-skills:test-engineer`
@@ -318,6 +358,9 @@ The last row is the important negative result: an id that is neither registered 
 D1 said "resolve at *each* entry point with *that entry point's* resolver". Slice 1 implements **entry point 1 only** (`routeDACPMessage`). WCP4 and `cleanupDACPHandlers` are deliberately excluded by criteria 4 and 5. The **host controller path (`sail-desktop-agent-controllers.ts:177`) is simply not covered** — it keeps its host-supplied id unresolved. That is a narrowing of D1, accepted for this slice, and the latent bug above is its consequence.
 
 ## Parked Follow-ups
+
+- **`getHandlerForMessageType` is a per-message closure, contradicting its own rationale.** `handlers/index.ts:186` still says the registry is "Module-level so the map is not reallocated on every DACP message", but `d334d5aa0` moved the lookup function to `:91`, inside `routeDACPMessage`, so it is re-created on every inbound message. **Not a perf issue** — one arrow-function allocation per message is negligible next to `createHandlerContext`'s 18 fields and 5 closures, which is itself parked as not-a-perf-problem. It is a *documentation inconsistency*: the code and the stated reason disagree. Fix by moving the function back to module scope (3 lines, no behaviour change) rather than by weakening the comment. **Deferred by user decision — not a now issue.**
+- **A flaky unit test exists but is unidentified.** One run of `npx vp test run` at `1d0b4d5c7` failed 1 of 373; two immediately following runs passed clean on the same commit. That run reported `environment 288.67s` against a normal ~31s, and it was launched concurrently with `npx tsc --noEmit`, so resource contention is the likely cause. **Working rule: a single failure does not count until it reproduces on an otherwise-quiet machine.** Do not run Vitest in parallel with other heavy commands.
 
 - `createHandlerContext` allocates 18 fields, 5 closures and a fresh dispatcher per inbound message when only `instanceId` varies. Not a performance problem at DACP message rates — parked deliberately, not forgotten.
 - `DACPHandlerContext` vs neighbouring `DacpResponseDispatcher` / `DacpOutboundMessage` casing drift is fixed incidentally by slice 2; no separate sweep planned for other `DACP*` identifiers.
