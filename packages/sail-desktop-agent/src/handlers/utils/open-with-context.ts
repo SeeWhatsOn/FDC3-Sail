@@ -142,7 +142,7 @@ function clearPendingTimeout(requestUuid: string): void {
 
 /**
  * Clears all open-with-context pending entries and module timeouts when the
- * target instance disconnects (invoked from cleanupDACPHandlers).
+ * target instance disconnects (invoked from cleanupInstanceDacpState).
  */
 export function clearPendingOpenWithContextForInstance(
   targetInstanceId: string,

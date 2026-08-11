@@ -17,7 +17,7 @@ import { getInstance, getInstancesByAppId } from "../../state/selectors"
 import { connectInstance } from "../../state/mutators"
 import { registerOpenWithContext } from "../utils/open-with-context"
 import { isValidContext } from "../utils/context-validation"
-import { teardownInstance } from "../cleanup"
+import { teardownInstance } from "../instance-teardown"
 
 /**
  * Handles getInfoRequest to return implementation metadata.

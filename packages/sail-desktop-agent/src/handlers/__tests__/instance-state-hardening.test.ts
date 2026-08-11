@@ -9,7 +9,7 @@ import {
   getInstancesWithIntentListener,
 } from "../../state/selectors"
 import { AppInstanceState } from "../../state/types"
-import { cleanupDACPHandlers } from "../cleanup"
+import { cleanupInstanceDacpState } from "../instance-teardown"
 import { handleAddIntentListener } from "../intents/intent-listener-handlers"
 import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
 import { withResponseDispatcher } from "./test-context"
@@ -82,7 +82,7 @@ describe("instance state hardening — disconnected instance presence", () => {
 
     expect(getInstance(getState(), instanceId)).toBeDefined()
 
-    cleanupDACPHandlers(context)
+    cleanupInstanceDacpState(context)
 
     expect(getInstance(getState(), instanceId)).toBeUndefined()
     expect(getState().instances[instanceId]).toBeUndefined()

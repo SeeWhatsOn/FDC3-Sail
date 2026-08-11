@@ -28,7 +28,7 @@ import {
   createDacpRequestMeta,
   withResponseDispatcher,
 } from "../../__tests__/test-context"
-import { cleanupDACPHandlers } from "../../cleanup"
+import { cleanupInstanceDacpState } from "../../instance-teardown"
 import { clearAllPendingIntentTimeoutsForTesting } from "../intent-pending-timeout-registry"
 import { handleRaiseIntentRequest } from "../intent-raise-intent"
 import { handleRaiseIntentForContextRequest } from "../intent-raise-intent-for-context"
@@ -194,7 +194,7 @@ describe("handleRaiseIntentRequest: abandoned pending intent settlement", () => 
     // Simulate the target instance disconnecting mid-flight: reuse the already-wired
     // context/transport (same pattern as the pending open-with-context disconnect cases in
     // src/handlers/__tests__/cleanup.test.ts), only swapping instanceId to the disconnecting side.
-    cleanupDACPHandlers({ ...context, instanceId: TARGET_ID })
+    cleanupInstanceDacpState({ ...context, instanceId: TARGET_ID })
 
     expectTerminalRaiseIntentResultResponse(transport, getState, requestUuid)
   })
@@ -233,7 +233,7 @@ describe("handleRaiseIntentForContextRequest: abandoned pending intent settlemen
     expect(initialResponse?.payload?.error).toBeUndefined()
     expect(getState().intents.pending[requestUuid]).toBeDefined()
 
-    cleanupDACPHandlers({ ...context, instanceId: TARGET_ID })
+    cleanupInstanceDacpState({ ...context, instanceId: TARGET_ID })
 
     expectTerminalRaiseIntentResultResponse(transport, getState, requestUuid)
   })

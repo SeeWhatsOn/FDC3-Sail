@@ -9,7 +9,7 @@
 
 import type { AppLauncher } from "../host-contracts/app-launcher"
 import { routeDACPMessage } from "../handlers"
-import { cleanupDACPHandlers } from "../handlers/cleanup"
+import { cleanupInstanceDacpState } from "../handlers/instance-teardown"
 import { handleWcp4ValidateAppIdentity } from "../app-connection/wcp/wcp-identity-validation"
 import { createDacpResponseDispatcherFromDelivery } from "../handlers/utils/dacp-response-utils"
 import type { DACPHandlerContext, PendingIntentPromiseEntry } from "../handlers/types"
@@ -380,7 +380,7 @@ export class SailDesktopAgent<
           this.logger.warn("[WCP] Missing instanceId, cannot route message", { messageType })
           return
         }
-        cleanupDACPHandlers(this.createHandlerContext(instanceId))
+        cleanupInstanceDacpState(this.createHandlerContext(instanceId))
         return
       }
       default:
@@ -392,7 +392,7 @@ export class SailDesktopAgent<
     const allInstances = Object.values(this.state.instances)
     for (const instance of allInstances) {
       const context = this.createHandlerContext(instance.instanceId)
-      cleanupDACPHandlers(context)
+      cleanupInstanceDacpState(context)
     }
   }
 
@@ -516,7 +516,7 @@ export class SailDesktopAgent<
   }
 
   disconnectInstance(instanceId: string): void {
-    cleanupDACPHandlers(this.createHandlerContext(instanceId))
+    cleanupInstanceDacpState(this.createHandlerContext(instanceId))
     this.appConnection.pruneAppConnection(instanceId)
   }
 

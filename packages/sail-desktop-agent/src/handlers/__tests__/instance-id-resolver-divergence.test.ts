@@ -3,15 +3,15 @@
  *
  *   - `resolveDacpHandlerInstanceId` (utils/resolve-context-listener-instance-id.ts)
  *       registered instance -> handshake link (only if the linked id is a registered instance) -> input
- *   - `resolveCleanupInstanceId` (cleanup.ts, module-private)
+ *   - `resolveTeardownInstanceId` (instance-teardown.ts, module-private)
  *       active heartbeat -> `temp-`-prefixed handshake link -> input
  *
  * Cleanup deliberately keys off heartbeats so it can tear down an instance whose FDC3 state is
  * already gone, and it only follows `temp-`-prefixed links. Unifying the two would be a behaviour
  * change nobody asked for.
  *
- * `resolveCleanupInstanceId` is not exported, so these tests observe its decision through the
- * effect `cleanupDACPHandlers` has on state — which is the only way it is observable in production
+ * `resolveTeardownInstanceId` is not exported, so these tests observe its decision through the
+ * effect `cleanupInstanceDacpState` has on state — which is the only way it is observable in production
  * anyway. Each test constructs a state where the two resolvers disagree, in opposite directions,
  * so replacing either one with the other flips an assertion.
  */
@@ -23,7 +23,7 @@ import { createInitialState } from "../../state/initial-state"
 import { connectInstance, startHeartbeat, updateInstanceState } from "../../state/mutators"
 import { linkHandshakeRoutingId } from "../../state/mutators/wcp-handshake-routing"
 import { AppInstanceState } from "../../state/types"
-import { cleanupDACPHandlers } from "../cleanup"
+import { cleanupInstanceDacpState } from "../instance-teardown"
 import { clearAllHeartbeatTimersForTesting } from "../heartbeat/runtime"
 import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../utils/open-with-context"
 import { resolveDacpHandlerInstanceId } from "../utils/resolve-context-listener-instance-id"
@@ -34,9 +34,9 @@ const HEARTBEAT_ONLY_ID = "heartbeat-only-instance"
 /** Registered in `state.instances` but has no heartbeat. */
 const REGISTERED_ONLY_ID = "registered-only-instance"
 const APP_ID = "ChartApp"
-/** `temp-` prefixed: `resolveCleanupInstanceId` will follow this link. */
+/** `temp-` prefixed: `resolveTeardownInstanceId` will follow this link. */
 const TEMP_ROUTING_ID = "temp-connection-attempt"
-/** Not `temp-` prefixed: `resolveCleanupInstanceId` will NOT follow this link. */
+/** Not `temp-` prefixed: `resolveTeardownInstanceId` will NOT follow this link. */
 const PORT_ROUTING_ID = "port-routing-link"
 
 afterEach(() => {
@@ -60,7 +60,7 @@ describe("resolveDacpHandlerInstanceId and cleanup's resolver decide differently
     expect(resolveDacpHandlerInstanceId(wiredContext)).toBe(TEMP_ROUTING_ID)
     expect(getState().heartbeats[HEARTBEAT_ONLY_ID]).toBeDefined()
 
-    cleanupDACPHandlers(wiredContext)
+    cleanupInstanceDacpState(wiredContext)
 
     // Cleanup DID follow the link — proof that it resolved to HEARTBEAT_ONLY_ID and stopped its
     // heartbeat. If cleanup used `resolveDacpHandlerInstanceId` it would have resolved to
@@ -87,7 +87,7 @@ describe("resolveDacpHandlerInstanceId and cleanup's resolver decide differently
     // The DACP resolver follows the link: the linked id IS a registered instance.
     expect(resolveDacpHandlerInstanceId(wiredContext)).toBe(REGISTERED_ONLY_ID)
 
-    cleanupDACPHandlers(wiredContext)
+    cleanupInstanceDacpState(wiredContext)
 
     // Cleanup did NOT follow it — the routing id lacks the `temp-` prefix, so cleanup resolved to
     // PORT_ROUTING_ID, found no cleanup work, and returned early. If the resolvers were unified,

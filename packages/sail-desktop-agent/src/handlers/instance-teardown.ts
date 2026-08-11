@@ -20,7 +20,7 @@ import { clearPendingIntentTimeoutHandle } from "./intents/intent-pending-timeou
  * WCP4 validation runs under a temp connection id while heartbeat and instance state
  * use the validated WCP5 instanceId (see wcp-handlers startHeartbeat call).
  */
-function resolveCleanupInstanceId(context: DACPHandlerContext): string {
+function resolveTeardownInstanceId(context: DACPHandlerContext): string {
   const { instanceId, getState } = context
   const state = getState()
 
@@ -43,7 +43,7 @@ function resolveCleanupInstanceId(context: DACPHandlerContext): string {
   return instanceId
 }
 
-function instanceHasCleanupWork(state: AgentState, instanceId: string): boolean {
+function instanceHasTeardownWork(state: AgentState, instanceId: string): boolean {
   if (state.instances[instanceId] || state.heartbeats[instanceId]) {
     return true
   }
@@ -62,23 +62,24 @@ function instanceHasCleanupWork(state: AgentState, instanceId: string): boolean 
 }
 
 /**
- * Cleanup when a DACP connection is closed, heartbeat times out, or the app sends WCP6Goodbye.
- * Kept in a leaf module so callers (heartbeat handlers, app connection teardown, desktop-agent) do not
- * import the DACP router `index.ts`, avoiding circular module graphs.
+ * Tear down DACP-owned agent state for a disconnected instance (WCP6Goodbye, heartbeat
+ * timeout, or `disconnectInstance`). Peer entry point to `routeDACPMessage` — not a router
+ * helper. Kept in a leaf module so callers do not import the DACP router `index.ts`,
+ * avoiding circular module graphs.
  */
-export function cleanupDACPHandlers(context: DACPHandlerContext): void {
+export function cleanupInstanceDacpState(context: DACPHandlerContext): void {
   const resolvedContext = {
     ...context,
-    instanceId: resolveCleanupInstanceId(context),
+    instanceId: resolveTeardownInstanceId(context),
   }
   const { instanceId, getState, setState, logger } = resolvedContext
 
-  if (!instanceHasCleanupWork(getState(), instanceId)) {
-    logger.debug("Skipping cleanup for already-removed instance", { instanceId })
+  if (!instanceHasTeardownWork(getState(), instanceId)) {
+    logger.debug("Skipping teardown for already-removed instance", { instanceId })
     return
   }
 
-  logger.info("Cleaning up DACP handlers for instance", { instanceId })
+  logger.info("Tearing down DACP state for instance", { instanceId })
 
   // Cancel any pending intents involving this instance (as source or target)
   const state = getState()
@@ -156,16 +157,16 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
 
   pruneInstanceIdentity(resolvedContext.responses.connectionOwner, instanceId)
 
-  logger.info("DACP handlers cleanup completed", { instanceId })
+  logger.info("DACP instance teardown completed", { instanceId })
 }
 
 /**
- * Unified instance teardown when available; DACP-only cleanup for headless ingest tests.
+ * Unified instance teardown when available; DACP-only state cleanup for headless ingest tests.
  */
 export function teardownInstance(context: DACPHandlerContext, instanceId: string): void {
   if (context.disconnectInstance) {
     context.disconnectInstance(instanceId)
     return
   }
-  cleanupDACPHandlers({ ...context, instanceId })
+  cleanupInstanceDacpState({ ...context, instanceId })
 }

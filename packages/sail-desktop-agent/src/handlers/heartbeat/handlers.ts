@@ -7,7 +7,7 @@ import {
   acknowledgeHeartbeat,
   updateHeartbeatSent,
 } from "../../state/mutators"
-import { teardownInstance } from "../cleanup"
+import { teardownInstance } from "../instance-teardown"
 import { stopHeartbeat, setHeartbeatTimer, clearHeartbeatTimer } from "./runtime"
 import { linkHandshakeRoutingId } from "../../state/mutators/wcp-handshake-routing"
 

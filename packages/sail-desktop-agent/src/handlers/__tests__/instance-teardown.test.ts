@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { OpenError } from "@finos/fdc3"
-import { cleanupDACPHandlers } from "../cleanup"
+import { cleanupInstanceDacpState } from "../instance-teardown"
 import { startHeartbeat } from "../heartbeat/handlers"
 import {
   clearAllHeartbeatTimersForTesting,
@@ -107,7 +107,7 @@ function expectHeartbeatFullyCleared(getState: () => AgentState, instanceId: str
   expect(getState().heartbeats[instanceId]).toBeUndefined()
 }
 
-describe("cleanupDACPHandlers", () => {
+describe("cleanupInstanceDacpState", () => {
   it("clears pending intents and promise state when the raising instance disconnects", () => {
     const pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
     const reject = vi.fn()
@@ -147,7 +147,7 @@ describe("cleanupDACPHandlers", () => {
       initialState: state,
     })
 
-    cleanupDACPHandlers(context)
+    cleanupInstanceDacpState(context)
 
     expect(Object.keys(getState().intents.pending)).toHaveLength(0)
     expect(pendingIntentPromises.has("req-source-disconnect")).toBe(false)
@@ -189,7 +189,7 @@ describe("cleanupDACPHandlers", () => {
       initialState: state,
     })
 
-    cleanupDACPHandlers(context)
+    cleanupInstanceDacpState(context)
 
     expect(Object.keys(getState().intents.pending)).toHaveLength(0)
     expect(pendingIntentPromises.has("req-target-disconnect")).toBe(false)
@@ -246,7 +246,7 @@ describe("cleanupDACPHandlers", () => {
     expect(getState().open.pendingWithContext["uuid-0"]?.length).toBe(1)
     expect(getPendingOpenWithContextTimeoutCount()).toBe(1)
 
-    cleanupDACPHandlers({ ...contextWithTransport, instanceId: "uuid-0" })
+    cleanupInstanceDacpState({ ...contextWithTransport, instanceId: "uuid-0" })
 
     expect(getState().open.pendingWithContext["uuid-0"]).toBeUndefined()
     expect(getPendingOpenWithContextTimeoutCount()).toBe(0)
@@ -317,7 +317,7 @@ describe("cleanupDACPHandlers", () => {
     expect(getState().open.pendingWithContext["uuid-0"]?.length).toBe(1)
     expect(getPendingOpenWithContextTimeoutCount()).toBe(1)
 
-    cleanupDACPHandlers(contextWithTransport)
+    cleanupInstanceDacpState(contextWithTransport)
 
     expect(getState().open.pendingWithContext["uuid-0"]).toBeUndefined()
     expect(getPendingOpenWithContextTimeoutCount()).toBe(0)
@@ -354,7 +354,7 @@ describe("cleanupDACPHandlers", () => {
     })
     const contextWithTransport = withResponseDispatcher(context, transport)
 
-    cleanupDACPHandlers(contextWithTransport)
+    cleanupInstanceDacpState(contextWithTransport)
 
     const openResponses = transport.sentMessages.filter(message => {
       const typed = message as { type?: string }
@@ -365,7 +365,7 @@ describe("cleanupDACPHandlers", () => {
 })
 
 describe("heartbeat cleanup on disconnect", () => {
-  it("cleanupDACPHandlers clears active heartbeat interval and state entry", () => {
+  it("cleanupInstanceDacpState clears active heartbeat interval and state entry", () => {
     const instanceId = "instance-cleanup-dacp"
     const initialState = connectTestInstance(instanceId)
     const { context, getState } = createHeartbeatTestContext({ instanceId, initialState })
@@ -374,12 +374,12 @@ describe("heartbeat cleanup on disconnect", () => {
     expect(getActiveHeartbeatTimerCount()).toBe(1)
     expect(getState().heartbeats[instanceId]).toBeDefined()
 
-    cleanupDACPHandlers(context)
+    cleanupInstanceDacpState(context)
 
     expectHeartbeatFullyCleared(getState, instanceId)
   })
 
-  it("cleanupDACPHandlers clears active heartbeat interval and state entry (WCP6 teardown path)", () => {
+  it("cleanupInstanceDacpState clears active heartbeat interval and state entry (WCP6 teardown path)", () => {
     const instanceId = "instance-wcp6-goodbye"
     const initialState = connectTestInstance(instanceId)
     const { context, getState } = createHeartbeatTestContext({ instanceId, initialState })
@@ -388,7 +388,7 @@ describe("heartbeat cleanup on disconnect", () => {
     expect(getActiveHeartbeatTimerCount()).toBe(1)
     expect(getState().heartbeats[instanceId]).toBeDefined()
 
-    cleanupDACPHandlers(context)
+    cleanupInstanceDacpState(context)
 
     expectHeartbeatFullyCleared(getState, instanceId)
   })
@@ -456,7 +456,7 @@ describe("heartbeat cleanup on disconnect", () => {
     expect(getActiveHeartbeatTimerCount()).toBe(1)
     expect(getState().heartbeats[validatedInstanceId]).toBeDefined()
 
-    cleanupDACPHandlers(context)
+    cleanupInstanceDacpState(context)
 
     expectHeartbeatFullyCleared(getState, validatedInstanceId)
   })
@@ -480,7 +480,7 @@ describe("heartbeat cleanup on disconnect", () => {
     expectHeartbeatFullyCleared(getState, validatedInstanceId)
   })
 
-  it("cleanupDACPHandlers clears heartbeat when invoked with WCP4 temp context id", () => {
+  it("cleanupInstanceDacpState clears heartbeat when invoked with WCP4 temp context id", () => {
     const tempInstanceId = "temp-wcp4-direct-cleanup"
     const validatedInstanceId = "validated-wcp5-direct-cleanup"
     const initialState = connectTestInstance(validatedInstanceId)
@@ -493,7 +493,7 @@ describe("heartbeat cleanup on disconnect", () => {
     expect(getActiveHeartbeatTimerCount()).toBe(1)
     expect(getState().heartbeats[validatedInstanceId]).toBeDefined()
 
-    cleanupDACPHandlers(context)
+    cleanupInstanceDacpState(context)
 
     expectHeartbeatFullyCleared(getState, validatedInstanceId)
   })
@@ -588,19 +588,19 @@ describe("heartbeat cleanup on disconnect", () => {
     startHeartbeat(conformanceInstanceId, conformanceContext)
     expect(getActiveHeartbeatTimerCount()).toBe(2)
 
-    cleanupDACPHandlers(mockContext)
+    cleanupInstanceDacpState(mockContext)
     expect(getState().instances[closedMockInstanceId]).toBeUndefined()
     expect(getState().instances[conformanceInstanceId]).toBeDefined()
     expect(getActiveHeartbeatTimerCount()).toBe(1)
 
-    cleanupDACPHandlers(mockContext)
+    cleanupInstanceDacpState(mockContext)
 
     expect(getState().instances[conformanceInstanceId]).toBeDefined()
     expect(getState().heartbeats[conformanceInstanceId]).toBeDefined()
     expect(getActiveHeartbeatTimerCount()).toBe(1)
   })
 
-  it("cleanupDACPHandlers removes validated instance state when invoked with WCP4 temp context after WCP5 link without heartbeat", () => {
+  it("cleanupInstanceDacpState removes validated instance state when invoked with WCP4 temp context after WCP5 link without heartbeat", () => {
     const tempInstanceId = "temp-wcp5-no-heartbeat-cleanup"
     const validatedInstanceId = "validated-wcp5-no-heartbeat-cleanup"
     let initialState = connectTestInstance(validatedInstanceId)
@@ -614,12 +614,12 @@ describe("heartbeat cleanup on disconnect", () => {
     expect(getState().instances[validatedInstanceId]).toBeDefined()
     expect(getActiveHeartbeatTimerCount()).toBe(0)
 
-    cleanupDACPHandlers(context)
+    cleanupInstanceDacpState(context)
 
     expect(getState().instances[validatedInstanceId]).toBeUndefined()
   })
 
-  it("cleanupDACPHandlers clears only the targeted heartbeat when multiple instances are connected and WCP4 temp context is used", () => {
+  it("cleanupInstanceDacpState clears only the targeted heartbeat when multiple instances are connected and WCP4 temp context is used", () => {
     const tempInstanceId = "temp-wcp4-multi"
     const validatedInstanceId = "validated-wcp5-multi"
     const otherInstanceId = "other-connected-instance"
@@ -641,7 +641,7 @@ describe("heartbeat cleanup on disconnect", () => {
     startHeartbeat(otherInstanceId, otherContext)
     expect(getActiveHeartbeatTimerCount()).toBe(2)
 
-    cleanupDACPHandlers(targetContext)
+    cleanupInstanceDacpState(targetContext)
 
     expect(getActiveHeartbeatTimerCount()).toBe(1)
     expect(getTargetState().heartbeats[validatedInstanceId]).toBeUndefined()
