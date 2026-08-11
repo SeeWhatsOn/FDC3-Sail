@@ -39,7 +39,7 @@ export type { SailDesktopAgentMetadata } from "./agent/default-config"
  * `userChannels: [...DEFAULT_FDC3_USER_CHANNELS, ...myChannels]`. Omit the option
  * entirely to get exactly this set.
  */
-export { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
+export { DEFAULT_FDC3_USER_CHANNELS } from "./agent/default-user-channels"
 
 // Host contracts — implement these to integrate a shell
 export * from "./host-contracts/index"

@@ -7,7 +7,7 @@ import {
 } from "../../../state/mutators"
 import { AppInstanceState } from "../../../state/types"
 import { createInitialState } from "../../../state/initial-state"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../../agent/default-user-channels"
 import { createDACPTestContext } from "../../__tests__/test-context"
 import { resolveDacpHandlerInstanceId } from "../resolve-context-listener-instance-id"
 import { linkHandshakeRoutingId } from "../../../state/mutators/wcp-handshake-routing"

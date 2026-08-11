@@ -12,7 +12,7 @@ import {
   flushAsyncDelivery,
 } from "../../app-connection/__tests__/wcp-edge-test-helpers"
 import { PORTFOLIO_APP } from "../../app-connection/__tests__/wcp-desktop-agent.integration.fixtures"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../default-user-channels"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { AppInstanceState } from "../../state/types"

@@ -5,7 +5,7 @@ import { connectInstance, updateInstanceState } from "../../state/mutators/insta
 import { addApp } from "../../state/mutators/app-directory"
 import { registerIntentListener } from "../../state/mutators/intent"
 import { createInitialState } from "../../state/initial-state"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { AppInstanceState } from "../../state/types"
 import type {
   IntentResolutionRequest,

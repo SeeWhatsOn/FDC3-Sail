@@ -7,7 +7,7 @@ import type {
   DacpTestAppConnection,
   Wcp4TestInputs,
 } from "../../../test/support/dacp-test-app-connection"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { AppInstanceState } from "../../state/types"
 import { createInitialState } from "../../state/initial-state"

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test"
 import { connectInstance } from "../../../state/mutators"
 import { createInitialState } from "../../../state/initial-state"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../../agent/default-user-channels"
 import type { InstanceIdentityRecord } from "../../../app-connection/wcp/instance-identity-registry"
 import { tryAdoptHostPreRegisteredInstance } from "../wcp-host-instance-adoption"
 

@@ -1,5 +1,5 @@
 import type { AppLauncher } from "../../host-contracts/app-launcher"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import type { SailDesktopAgentOptions } from "../../agent/sail-desktop-agent-types"
 

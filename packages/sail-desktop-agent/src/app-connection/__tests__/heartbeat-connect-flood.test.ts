@@ -6,7 +6,7 @@
 
 import { describe, it, expect, afterEach } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import {
   getActiveHeartbeatTimerCount,
   clearAllHeartbeatTimersForTesting,

@@ -7,7 +7,7 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 
 import { createCapturingLogger } from "../../__tests__/utils/capturing-logger"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../default-user-channels"
 import { SailDesktopAgent } from "../sail-desktop-agent"
 
 const FAILING_DIRECTORY_URL = "https://example.com/constructor-reject/apps"

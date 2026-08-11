@@ -1,5 +1,5 @@
 import type { BrowserTypes } from "@finos/fdc3"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { DEFAULT_SAIL_DESKTOP_AGENT_METADATA } from "../../agent/default-config"
 import { consoleLogger } from "../../logging/logger"
 import type {

@@ -24,7 +24,7 @@ import { connectInstance, addPendingIntent, updateInstanceState } from "../../st
 import { AppInstanceState, type AgentState } from "../../state/types"
 import { createInitialState } from "../../state/initial-state"
 import type { PendingIntentPromiseEntry } from "../types"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { createDACPTestContext } from "./test-context"
 import { withResponseDispatcher } from "./test-context"
 import { createDesktopAgentWithTestConnection } from "../../../test/support/desktop-agent-test-harness"

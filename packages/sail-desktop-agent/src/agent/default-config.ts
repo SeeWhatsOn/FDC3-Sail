@@ -9,7 +9,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import pkg from "../../package.json"
 import { DACP_TIMEOUTS } from "../dacp/dacp-constants"
 import type { SailDesktopAgentConfig, SailDesktopAgentOptions } from "./sail-desktop-agent-types"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
 import type { AgentAppConnection } from "../app-connection/types"
 
 export type { ValidationMode } from "../dacp/validate-dacp-message"

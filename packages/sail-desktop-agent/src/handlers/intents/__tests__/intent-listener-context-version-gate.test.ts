@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 
 import { MockTransport } from "../../../__tests__/utils/mock-transport"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../../agent/default-user-channels"
 import { createInitialState } from "../../../state/initial-state"
 import { connectInstance, updateInstanceState } from "../../../state/mutators"
 import { AppInstanceState } from "../../../state/types"
