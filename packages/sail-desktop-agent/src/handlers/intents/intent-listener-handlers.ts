@@ -7,6 +7,7 @@
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
 import { type DACPHandlerContext } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
+import { resolveDacpHandlerInstanceId } from "../utils/resolve-context-listener-instance-id"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
 import {
@@ -120,7 +121,8 @@ export function handleIntentListenerUnsubscribe(
   message: BrowserTypes.IntentListenerUnsubscribeRequest,
   context: DACPHandlerContext,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, getState, setState, logger } = context
+  const instanceId = resolveDacpHandlerInstanceId(context)
 
   try {
     const { listenerUUID } = message.payload
@@ -128,7 +130,7 @@ export function handleIntentListenerUnsubscribe(
     // Check if listener exists before removing
     const state = getState()
     const listener = state.intents.listeners[listenerUUID]
-    if (!listener) {
+    if (!listener || listener.instanceId !== instanceId) {
       throw new TargetInstanceUnavailableError(`Intent listener ${listenerUUID} not found`)
     }
 

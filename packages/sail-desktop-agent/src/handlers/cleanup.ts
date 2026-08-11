@@ -1,3 +1,5 @@
+import { ResultError } from "@finos/fdc3"
+import { createDACPErrorResponse } from "../dacp/dacp-message-creators"
 import { resolvePendingIntent, removeListenersForInstance, removeInstance } from "../state/mutators"
 import { type DACPHandlerContext } from "./types"
 import * as eventHandlers from "./events/handlers"
@@ -9,6 +11,7 @@ import {
   clearPendingOpenWithContextForInstance,
   clearPendingOpenWithContextForSourceInstance,
 } from "./utils/open-with-context"
+import { sendDACPResponse } from "./utils/dacp-response-utils"
 import { pruneInstanceIdentity } from "../app-connection/wcp/instance-identity-registry"
 import type { AgentState } from "../state/types"
 import { clearPendingIntentTimeoutHandle } from "./intents/intent-pending-timeout-registry"
@@ -91,6 +94,25 @@ export function cleanupDACPHandlers(context: DACPHandlerContext): void {
       const disconnectRole = pending.sourceInstanceId === instanceId ? "source" : "target"
       promiseData.reject(new Error(`Intent cancelled - ${disconnectRole} instance disconnected`))
       resolvedContext.pendingIntentPromises.delete(pending.requestId)
+    }
+    // Terminal raiseIntentResultResponse so IntentResolution.getResult() settles (same as open-with-context AppTimeout on disconnect).
+    try {
+      const response = createDACPErrorResponse(
+        { type: "raiseIntentRequest", meta: { requestUuid: pending.requestId } },
+        ResultError.ApiTimeout,
+        "raiseIntentResultResponse",
+      )
+      sendDACPResponse({
+        response,
+        instanceId: pending.sourceInstanceId,
+        responses: resolvedContext.responses,
+      })
+    } catch (error) {
+      logger.warn("Failed to send pending-intent timeout response on disconnect", {
+        requestId: pending.requestId,
+        sourceInstanceId: pending.sourceInstanceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
     setState(state => resolvePendingIntent(state, pending.requestId))
   })
