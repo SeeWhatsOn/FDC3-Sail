@@ -21,7 +21,7 @@ import {
   attachIntentResultClientMetadata,
   cloneIntentResultContextMetadata,
 } from "./intent-result-metadata"
-import { clearPendingIntentTimeoutHandle } from "./intent-pending-timeout-registry"
+import { clearPendingIntentTimeouts } from "./intent-pending-timeout-registry"
 
 function isHandlerRejection(intentResult: unknown): boolean {
   return (
@@ -90,31 +90,7 @@ export function handleIntentResultRequest(
     const sourceInstanceId = pendingIntent.sourceInstanceId
     const resultTimestamp = new Date().toISOString()
 
-    const promiseData = context.pendingIntentPromises.get(originalRequestId)
-    let wireIntentResult: BrowserTypes.IntentResult = intentResult
-    let resultMetadata:
-      | ReturnType<typeof buildIntentResultWirePayload>["resultMetadata"]
-      | undefined = undefined
-    let isContextWithMetadata = false
-
-    if (promiseData) {
-      clearPendingIntentTimeoutHandle(promiseData.timeoutHandle)
-
-      if (intentResult !== null && !isHandlerRejection(intentResult)) {
-        const normalized = buildIntentResultWirePayload(
-          intentResult,
-          pendingIntent.targetAppId,
-          pendingIntent.targetInstanceId,
-          resultTimestamp,
-        )
-        wireIntentResult = normalized.wireIntentResult
-        resultMetadata = normalized.resultMetadata
-        isContextWithMetadata = normalized.isContextWithMetadata
-      }
-
-      promiseData.resolve(wireIntentResult)
-      context.pendingIntentPromises.delete(originalRequestId)
-    }
+    clearPendingIntentTimeouts(originalRequestId)
 
     setState(state => resolvePendingIntent(state, originalRequestId))
 
@@ -162,26 +138,20 @@ export function handleIntentResultRequest(
         responses,
       })
     } else {
-      let metadata = resultMetadata
-      let contextWithMetadataFlag = isContextWithMetadata
-      if (!metadata) {
-        const built = buildIntentResultWirePayload(
+      const { wireIntentResult, resultMetadata, isContextWithMetadata } =
+        buildIntentResultWirePayload(
           intentResult,
           pendingIntent.targetAppId,
           pendingIntent.targetInstanceId,
           resultTimestamp,
         )
-        metadata = built.resultMetadata
-        contextWithMetadataFlag = built.isContextWithMetadata
-      }
-
-      const payloadMetadata = metadata
+      const payloadMetadata = resultMetadata
       const clientMetadata = cloneIntentResultContextMetadata(payloadMetadata)
 
       const intentResultForClient = attachIntentResultClientMetadata(
         wireIntentResult,
         clientMetadata,
-        contextWithMetadataFlag,
+        isContextWithMetadata,
       )
 
       const resultResponse = createDACPSuccessResponse(

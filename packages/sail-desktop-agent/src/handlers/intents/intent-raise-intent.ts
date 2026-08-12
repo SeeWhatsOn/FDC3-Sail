@@ -23,7 +23,6 @@ import {
   cleanupPendingIntentRequest,
   mapIntentRaiseErrorToResolveError,
   normalizeTargetApp,
-  registerPendingIntentPromise,
   registerPendingIntentState,
   resolveAppTargetInstance,
   schedulePendingIntentDelivery,
@@ -191,13 +190,10 @@ export async function handleRaiseIntentRequest(
 
     const requestId = message.meta.requestUuid
 
-    registerPendingIntentPromise(context, requestId, "raiseIntentRequest")
-
     const targetInstance = getInstance(getState(), targetInstanceId)
     const resolvedTargetAppId =
       targetInstance?.appId ?? targetAppId ?? resolverSelectedAppId ?? source.appId
 
-    // Keep pending intent in both runtime map (timeouts/delivery state) and serializable state (routing/result lifecycle).
     registerPendingIntentState(context, {
       requestId,
       intentName: payload.intent,
@@ -205,6 +201,7 @@ export async function handleRaiseIntentRequest(
       sourceInstanceId: instanceId,
       targetInstanceId,
       targetAppId: resolvedTargetAppId,
+      requestType: "raiseIntentRequest",
     })
 
     // Newly launched apps may not have registered listeners yet, so queue delivery until ready.
@@ -219,7 +216,7 @@ export async function handleRaiseIntentRequest(
     attachPendingIntentTimeout(context, requestId)
   } catch (error) {
     const requestId = message.meta.requestUuid
-    cleanupPendingIntentRequest(context, requestId)
+    cleanupPendingIntentRequest(requestId)
 
     const payload = message.payload
     const contextPayload = payload?.context as Record<string, unknown> | undefined

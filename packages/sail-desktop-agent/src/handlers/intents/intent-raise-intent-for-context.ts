@@ -27,7 +27,6 @@ import {
   cleanupPendingIntentRequest,
   mapIntentRaiseErrorToResolveError,
   normalizeTargetApp,
-  registerPendingIntentPromise,
   registerPendingIntentState,
   resolveAppTargetInstance,
   schedulePendingIntentDelivery,
@@ -85,7 +84,6 @@ function finalizeRaiseIntentForContextDelivery(
   explicitTargetInstanceId: boolean,
 ): void {
   const requestId = message.meta.requestUuid
-  registerPendingIntentPromise(context, requestId, "raiseIntentForContextRequest")
   registerPendingIntentState(context, {
     requestId,
     intentName,
@@ -93,6 +91,7 @@ function finalizeRaiseIntentForContextDelivery(
     sourceInstanceId,
     targetInstanceId,
     targetAppId,
+    requestType: "raiseIntentForContextRequest",
   })
   schedulePendingIntentDelivery(
     context,
@@ -286,7 +285,7 @@ export async function handleRaiseIntentForContextRequest(
     )
   } catch (error) {
     const requestId = message.meta.requestUuid
-    cleanupPendingIntentRequest(context, requestId)
+    cleanupPendingIntentRequest(requestId)
 
     logger.error("DACP: Raise intent for context request failed", error)
 

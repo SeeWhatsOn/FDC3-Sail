@@ -23,7 +23,11 @@ import {
 import { connectInstance, addPendingIntent, updateInstanceState } from "../../state/mutators"
 import { AppInstanceState, type AgentState } from "../../state/types"
 import { createInitialState } from "../../state/initial-state"
-import type { PendingIntentPromiseEntry } from "../types"
+import {
+  clearAllPendingIntentTimeoutsForTesting,
+  getActivePendingIntentTimeoutCount,
+  registerPendingIntentTimeout,
+} from "../intents/intent-pending-timeout-registry"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { createDACPTestContext } from "./test-context"
 import { withResponseDispatcher } from "./test-context"
@@ -41,6 +45,7 @@ const TEST_WCP_DIRECTORY_APP = {
 afterEach(() => {
   clearAllPendingOpenWithContextTimeoutsForTesting()
   clearAllHeartbeatTimersForTesting()
+  clearAllPendingIntentTimeoutsForTesting()
   vi.useRealTimers()
 })
 
@@ -108,16 +113,9 @@ function expectHeartbeatFullyCleared(getState: () => AgentState, instanceId: str
 }
 
 describe("cleanupInstanceDacpState", () => {
-  it("clears pending intents and promise state when the raising instance disconnects", () => {
-    const pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
-    const reject = vi.fn()
+  it("clears pending intents and their timeouts when the raising instance disconnects", () => {
     const timeoutHandle = setTimeout(() => {}, 60_000)
-    pendingIntentPromises.set("req-source-disconnect", {
-      resolve: vi.fn(),
-      reject,
-      timeoutHandle,
-      requestType: "raiseIntentRequest",
-    })
+    registerPendingIntentTimeout("req-source-disconnect", "raise", timeoutHandle)
 
     let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     state = connectInstance(state, {
@@ -139,30 +137,21 @@ describe("cleanupInstanceDacpState", () => {
       sourceInstanceId: "a1",
       targetInstanceId: "l1",
       targetAppId: "portfolioApp",
+      requestType: "raiseIntentRequest",
     })
 
     const { context, getState } = createDACPTestContext({
       instanceId: "a1",
-      pendingIntentPromises,
       initialState: state,
     })
 
     cleanupInstanceDacpState(context)
 
     expect(Object.keys(getState().intents.pending)).toHaveLength(0)
-    expect(pendingIntentPromises.has("req-source-disconnect")).toBe(false)
-    expect(reject).toHaveBeenCalledOnce()
+    expect(getActivePendingIntentTimeoutCount()).toBe(0)
   })
 
   it("clears pending intents when the target instance disconnects", () => {
-    const pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
-    const reject = vi.fn()
-    pendingIntentPromises.set("req-target-disconnect", {
-      resolve: vi.fn(),
-      reject,
-      requestType: "raiseIntentRequest",
-    })
-
     let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
     state = connectInstance(state, {
       instanceId: "a1",
@@ -181,19 +170,18 @@ describe("cleanupInstanceDacpState", () => {
       sourceInstanceId: "a1",
       targetInstanceId: "l1",
       targetAppId: "portfolioApp",
+      requestType: "raiseIntentRequest",
     })
 
     const { context, getState } = createDACPTestContext({
       instanceId: "l1",
-      pendingIntentPromises,
       initialState: state,
     })
 
     cleanupInstanceDacpState(context)
 
     expect(Object.keys(getState().intents.pending)).toHaveLength(0)
-    expect(pendingIntentPromises.has("req-target-disconnect")).toBe(false)
-    expect(reject).toHaveBeenCalledOnce()
+    expect(getActivePendingIntentTimeoutCount()).toBe(0)
   })
 
   it("sends AppTimeout openResponse to source when the target instance disconnects during pending open", () => {

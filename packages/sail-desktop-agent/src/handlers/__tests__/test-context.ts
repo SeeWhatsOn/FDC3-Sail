@@ -2,11 +2,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { DEFAULT_SAIL_DESKTOP_AGENT_METADATA } from "../../agent/default-config"
 import { consoleLogger } from "../../logging/logger"
-import type {
-  DACPHandlerContext,
-  DacpResponseDispatcher,
-  PendingIntentPromiseEntry,
-} from "../types"
+import type { DACPHandlerContext, DacpResponseDispatcher } from "../types"
 import { createInitialState } from "../../state/initial-state"
 import type { AgentState, StateSetter } from "../../state/types"
 import type { Transport } from "../../../test/support/transport"
@@ -17,11 +13,7 @@ export { createDacpResponseDispatcher } from "../../../test/support/transport"
 /** Shared agent state for contexts created with the same initialState reference (multi-connection tests). */
 const sharedStateByInitialSnapshot = new WeakMap<AgentState, AgentState>()
 
-export function createDACPTestContext(options: {
-  instanceId: string
-  pendingIntentPromises?: Map<string, PendingIntentPromiseEntry>
-  initialState?: AgentState
-}): {
+export function createDACPTestContext(options: { instanceId: string; initialState?: AgentState }): {
   context: DACPHandlerContext
   getState: () => AgentState
 } {
@@ -60,8 +52,6 @@ export function createDACPTestContext(options: {
     heartbeatEnabled: true,
     heartbeatIntervalMs: 500,
     heartbeatTimeoutMs: 2000,
-    pendingIntentPromises:
-      options.pendingIntentPromises ?? new Map<string, PendingIntentPromiseEntry>(),
   }
 
   return { context, getState: readState }

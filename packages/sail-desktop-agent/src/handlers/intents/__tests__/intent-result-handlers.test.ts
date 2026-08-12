@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vite-plus/test"
+import { describe, expect, it } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 
 import { MockTransport } from "../../../__tests__/utils/mock-transport"
@@ -11,7 +11,6 @@ import {
   createDacpRequestMeta,
   withResponseDispatcher,
 } from "../../__tests__/test-context"
-import type { PendingIntentPromiseEntry } from "../../types"
 import { handleIntentResultRequest } from "../intent-result-handlers"
 import type { IntentResultContextMetadata } from "../intent-result-metadata"
 
@@ -37,14 +36,6 @@ const BASE = {
 } as const
 
 function setupPendingIntentContext() {
-  const pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
-  const resolve = vi.fn()
-  pendingIntentPromises.set(BASE.requestId, {
-    resolve,
-    reject: vi.fn(),
-    requestType: "raiseIntentRequest",
-  })
-
   let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
   state = connectInstance(state, {
     instanceId: BASE.sourceInstanceId,
@@ -65,11 +56,11 @@ function setupPendingIntentContext() {
     sourceInstanceId: BASE.sourceInstanceId,
     targetInstanceId: BASE.targetInstanceId,
     targetAppId: BASE.targetAppId,
+    requestType: "raiseIntentRequest",
   })
 
-  const { context } = createDACPTestContext({
+  const { context, getState } = createDACPTestContext({
     instanceId: BASE.handlerInstanceId,
-    pendingIntentPromises,
     initialState: state,
   })
 
@@ -77,7 +68,7 @@ function setupPendingIntentContext() {
   return {
     context: withResponseDispatcher(context, transport),
     transport,
-    resolve,
+    getState,
   }
 }
 
@@ -108,7 +99,7 @@ describe("handleIntentResultRequest", () => {
       intentResult: {},
     },
   ])("sends raiseIntentResultResponse with DA metadata for $name", ({ intentResult }) => {
-    const { context, transport, resolve } = setupPendingIntentContext()
+    const { context, transport, getState } = setupPendingIntentContext()
 
     handleIntentResultRequest(
       {
@@ -140,6 +131,7 @@ describe("handleIntentResultRequest", () => {
     expect(Number.isNaN(Date.parse(metadata!.timestamp))).toBe(false)
     expect(metadata!.traceId).toEqual(expect.any(String))
     expect(metadata!.traceId.length).toBeGreaterThan(0)
-    expect(resolve).toHaveBeenCalledOnce()
+    // The result settles the request: the pending intent leaves state.
+    expect(getState().intents.pending[BASE.requestId]).toBeUndefined()
   })
 })

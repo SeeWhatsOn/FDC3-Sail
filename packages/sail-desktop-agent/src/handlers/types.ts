@@ -7,29 +7,6 @@ import type { ValidationMode } from "../dacp/validate-dacp-message"
 import type { IntentResolutionCallback } from "./intent-resolution-callback"
 
 // ============================================================================
-// MESSAGE TYPES
-// ============================================================================
-
-/**
- * Entry for tracking pending intent promise state.
- * Stored per-agent to prevent cross-agent interference.
- */
-export type IntentRequestType = "raiseIntentRequest" | "raiseIntentForContextRequest"
-
-/**
- * Entry for tracking pending intent promise state.
- * Stored per-agent to prevent cross-agent interference.
- */
-export interface PendingIntentPromiseEntry {
-  resolve: (result: unknown) => void
-  reject: (error: Error) => void
-  timeoutHandle?: ReturnType<typeof setTimeout>
-  deliveryTimeoutHandle?: ReturnType<typeof setTimeout>
-  delivered?: boolean
-  requestType?: IntentRequestType
-}
-
-// ============================================================================
 // DACP RESPONSE DISPATCHER
 // ============================================================================
 
@@ -125,13 +102,6 @@ export interface DACPHandlerContext {
 
   /** Heartbeat timeout (ms) before considering an app unresponsive */
   heartbeatTimeoutMs: number
-
-  /**
-   * Per-agent storage for pending intent promises.
-   * This Map is scoped to this agent instance to prevent cross-agent state bleed.
-   * Key: requestId, Value: promise handlers and timeout state
-   */
-  pendingIntentPromises: Map<string, PendingIntentPromiseEntry>
 
   /**
    * Unified instance teardown (FDC3 state + connection registry).

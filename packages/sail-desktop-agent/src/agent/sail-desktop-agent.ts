@@ -12,7 +12,7 @@ import { routeDACPMessage } from "../handlers"
 import { cleanupInstanceDacpState } from "../handlers/instance-teardown"
 import { handleWcp4ValidateAppIdentity } from "../app-connection/wcp/wcp-identity-validation"
 import { createDacpResponseDispatcherFromDelivery } from "../handlers/utils/dacp-response-utils"
-import type { DACPHandlerContext, PendingIntentPromiseEntry } from "../handlers/types"
+import type { DACPHandlerContext } from "../handlers/types"
 import { applyInboundValidationPolicy, type ValidationMode } from "../dacp/validate-dacp-message"
 import type { IntentResolutionCallback } from "../handlers/intent-resolution-callback"
 import type { DirectoryApp } from "../app-directory/types"
@@ -88,7 +88,6 @@ export class SailDesktopAgent<
   private heartbeatEnabled: boolean
   private heartbeatIntervalMs: number
   private heartbeatTimeoutMs: number
-  private pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
   /**
    * Inbound DACP/WCP routing edge. Defaults to a fresh {@link BrowserAppConnection}
    * (constructor is inert — no `window`, no listeners); tests may inject via the
@@ -418,7 +417,6 @@ export class SailDesktopAgent<
       heartbeatEnabled: this.heartbeatEnabled,
       heartbeatIntervalMs: this.heartbeatIntervalMs,
       heartbeatTimeoutMs: this.heartbeatTimeoutMs,
-      pendingIntentPromises: this.pendingIntentPromises,
       disconnectInstance: instanceId => this.disconnectInstance(instanceId),
       notifyChannelMembershipChanged: conn.notifyChannelMembershipChanged?.bind(conn),
     }

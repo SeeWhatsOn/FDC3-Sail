@@ -12,7 +12,6 @@ import {
   createDacpRequestMeta,
   withResponseDispatcher,
 } from "../../__tests__/test-context"
-import type { PendingIntentPromiseEntry } from "../../types"
 import { handleIntentResultRequest } from "../intent-result-handlers"
 import type { IntentResultContextMetadata } from "../intent-result-metadata"
 
@@ -40,14 +39,6 @@ const BASE = {
 } as const
 
 function setupPendingIntentContext() {
-  const pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
-  const resolve = vi.fn()
-  pendingIntentPromises.set(BASE.requestId, {
-    resolve,
-    reject: vi.fn(),
-    requestType: "raiseIntentRequest",
-  })
-
   let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
   state = connectInstance(state, {
     instanceId: BASE.sourceInstanceId,
@@ -68,11 +59,11 @@ function setupPendingIntentContext() {
     sourceInstanceId: BASE.sourceInstanceId,
     targetInstanceId: BASE.targetInstanceId,
     targetAppId: BASE.targetAppId,
+    requestType: "raiseIntentRequest",
   })
 
-  const { context } = createDACPTestContext({
+  const { context, getState } = createDACPTestContext({
     instanceId: BASE.handlerInstanceId,
-    pendingIntentPromises,
     initialState: state,
   })
 
@@ -80,7 +71,7 @@ function setupPendingIntentContext() {
   return {
     context: withResponseDispatcher(context, transport),
     transport,
-    resolve,
+    getState,
   }
 }
 
@@ -123,7 +114,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
   ])(
     "$toolboxScenario exposes non-empty intentResult.metadata for client getResultMetadata()",
     ({ intentResult }) => {
-      const { context, transport, resolve } = setupPendingIntentContext()
+      const { context, transport, getState } = setupPendingIntentContext()
 
       handleIntentResultRequest(
         {
@@ -160,8 +151,8 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
       }
       expect(traceId.length).toBeGreaterThan(0)
 
-      expect(resolve).toHaveBeenCalledOnce()
-      expect(resolve.mock.calls[0]?.[0]).not.toHaveProperty("metadata")
+      // The result settles the request: the pending intent leaves state.
+      expect(getState().intents.pending[BASE.requestId]).toBeUndefined()
     },
   )
 
@@ -169,7 +160,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
     const contextPayload = { type: "testContextY", id: { value: "1" } }
     const appSignature = "conformance-signature"
     const appCustom = { conformanceKey: "value" }
-    const { context, transport, resolve } = setupPendingIntentContext()
+    const { context, transport, getState } = setupPendingIntentContext()
 
     handleIntentResultRequest(
       {
@@ -197,7 +188,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
     const response = findRaiseIntentResultResponse(transport)
     expect(response).toBeDefined()
     expect(response?.payload.intentResult).toEqual({ context: contextPayload })
-    expect(resolve).toHaveBeenCalledWith({ context: contextPayload })
+    expect(getState().intents.pending[BASE.requestId]).toBeUndefined()
 
     const clientMetadata = readClientGetResultMetadata(response!)
     expect(clientMetadata?.signature).toBe(appSignature)
@@ -213,7 +204,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
   })
 
   it("raiseIntentResultResponse clones through InMemoryTransport without circular metadata refs", async () => {
-    const { context, resolve } = setupPendingIntentContext()
+    const { context, getState } = setupPendingIntentContext()
     const [daTransport, peerTransport] = createInMemoryTransportPair()
     const received: unknown[] = []
     peerTransport.onMessage(message => {
@@ -252,6 +243,6 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
     expect(response!.payload.intentResult?.metadata).toBeDefined()
     expect(response!.payload.resultMetadata).not.toBe(response!.payload.intentResult?.metadata)
     expect(readClientGetResultMetadata(response!)?.traceId).toEqual(expect.any(String))
-    expect(resolve).toHaveBeenCalledOnce()
+    expect(getState().intents.pending[BASE.requestId]).toBeUndefined()
   })
 })

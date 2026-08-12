@@ -93,6 +93,14 @@ export const updatePendingIntentTarget = (
   })
 }
 
+export const markPendingIntentDelivered = (state: AgentState, requestId: string): AgentState => {
+  if (!state.intents.pending[requestId]) return state
+
+  return produce(state, draft => {
+    draft.intents.pending[requestId].delivered = true
+  })
+}
+
 export const resolvePendingIntent = (state: AgentState, requestId: string): AgentState => {
   if (!state.intents.pending[requestId]) return state
 

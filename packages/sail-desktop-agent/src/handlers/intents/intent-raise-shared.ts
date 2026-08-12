@@ -12,12 +12,12 @@ import {
 } from "../../errors/fdc3-errors"
 import { attemptIntentDelivery, queueIntentDelivery } from "./intent-delivery-helpers"
 import { retrieveAppsById } from "../../app-directory/app-directory-queries"
-import type { DACPHandlerContext, IntentRequestType } from "../types"
+import type { DACPHandlerContext } from "../types"
 import { sendDACPResponse } from "../utils/dacp-response-utils"
 import {
-  clearPendingIntentTimeoutHandle,
-  registerPendingIntentTimeoutHandle,
-  releasePendingIntentTimeoutHandle,
+  clearPendingIntentTimeouts,
+  registerPendingIntentTimeout,
+  releasePendingIntentTimeout,
 } from "./intent-pending-timeout-registry"
 import { shouldWaitForIntentListenerBeforeDelivery } from "./intent-helpers"
 import { launchAppAndWaitForInstance } from "./intent-launch-helpers"
@@ -120,18 +120,6 @@ export async function resolveAppTargetInstance(
   return { targetInstanceId, targetInstanceIsLaunched: true }
 }
 
-export function registerPendingIntentPromise(
-  context: DACPHandlerContext,
-  requestId: string,
-  requestType: IntentRequestType,
-): void {
-  context.pendingIntentPromises.set(requestId, {
-    resolve: () => {},
-    reject: () => {},
-    requestType,
-  })
-}
-
 export function registerPendingIntentState(
   context: DACPHandlerContext,
   options: Omit<PendingIntent, "raisedAt">,
@@ -164,43 +152,29 @@ export function schedulePendingIntentDelivery(
 
 export function attachPendingIntentTimeout(context: DACPHandlerContext, requestId: string): void {
   const timeoutHandle = setTimeout(() => {
-    releasePendingIntentTimeoutHandle(timeoutHandle)
-    if (context.pendingIntentPromises.has(requestId)) {
-      const pendingIntent = getPendingIntent(context.getState(), requestId)
-      context.pendingIntentPromises.delete(requestId)
-      context.setState(state => resolvePendingIntent(state, requestId))
-      // Terminal raiseIntentResultResponse so IntentResolution.getResult() settles.
-      if (pendingIntent) {
-        const response = createDACPErrorResponse(
-          { type: "raiseIntentRequest", meta: { requestUuid: requestId } },
-          ResultError.ApiTimeout,
-          "raiseIntentResultResponse",
-        )
-        sendDACPResponse({
-          response,
-          instanceId: pendingIntent.sourceInstanceId,
-          responses: context.responses,
-        })
-      }
+    releasePendingIntentTimeout(requestId, "raise")
+    const pendingIntent = getPendingIntent(context.getState(), requestId)
+    if (!pendingIntent) {
+      return
     }
+    context.setState(state => resolvePendingIntent(state, requestId))
+    // Terminal raiseIntentResultResponse so IntentResolution.getResult() settles.
+    const response = createDACPErrorResponse(
+      { type: "raiseIntentRequest", meta: { requestUuid: requestId } },
+      ResultError.ApiTimeout,
+      "raiseIntentResultResponse",
+    )
+    sendDACPResponse({
+      response,
+      instanceId: pendingIntent.sourceInstanceId,
+      responses: context.responses,
+    })
   }, context.pendingIntentTimeoutMs)
-  registerPendingIntentTimeoutHandle(timeoutHandle)
-
-  const promiseData = context.pendingIntentPromises.get(requestId)
-  if (promiseData) {
-    promiseData.timeoutHandle = timeoutHandle
-  }
+  registerPendingIntentTimeout(requestId, "raise", timeoutHandle)
 }
 
-export function cleanupPendingIntentRequest(context: DACPHandlerContext, requestId: string): void {
-  const pendingEntry = context.pendingIntentPromises.get(requestId)
-  if (!pendingEntry) {
-    return
-  }
-
-  clearPendingIntentTimeoutHandle(pendingEntry.timeoutHandle)
-  clearPendingIntentTimeoutHandle(pendingEntry.deliveryTimeoutHandle)
-  context.pendingIntentPromises.delete(requestId)
+export function cleanupPendingIntentRequest(requestId: string): void {
+  clearPendingIntentTimeouts(requestId)
 }
 
 export function mapIntentRaiseErrorToResolveError(error: unknown): ResolveError {

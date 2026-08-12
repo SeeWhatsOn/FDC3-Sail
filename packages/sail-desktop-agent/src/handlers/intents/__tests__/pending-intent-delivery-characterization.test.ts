@@ -1,16 +1,12 @@
 /**
  * Characterization tests for pending-intent delivery and settlement.
  *
- * Written *before* slice 4' collapses `DACPHandlerContext.pendingIntentPromises` into
- * `AgentState`. They assert what the code does **today**, including where today's behaviour looks
- * wrong; every such case is marked `// CHARACTERIZATION:` so the post-collapse failing set is
- * exactly the intended delta and nothing else.
- *
- * The behaviour under the microscope: `delivered` is mutated through a **captured reference** to a
- * `Map` entry (`intent-delivery-helpers.ts:135`, `:179`) while `setState` **replaces** the state
- * tree. The captured entry outlives its own `Map.delete`, so the delivery-timeout callback still
- * reads `delivered` and `requestType` off an object no other code can reach. Moving `delivered`
- * and `requestType` into `state.intents.pending[requestId]` changes that.
+ * Written *before* `DACPHandlerContext.pendingIntentPromises` was collapsed into `AgentState`,
+ * then updated with the collapse. `delivered` and `requestType` used to live on a `Map` entry
+ * mutated through a **captured reference** while `setState` **replaced** the state tree, so the
+ * two stores could disagree; both now live on `state.intents.pending[requestId]` and cannot.
+ * Timeout handles are the only per-request state left outside Immer, in
+ * `intent-pending-timeout-registry.ts`.
  *
  * Timers: real `setTimeout` with Vitest fake timers (`vi.useFakeTimers`), same choice as
  * `pending-intent-settlement.test.ts`. Fake timers are what make the *ordering* between the
@@ -190,9 +186,9 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
     expect(messagesOfType(transport, "intentEvent")).toHaveLength(0)
     expect(getState().intents.pending[requestUuid]).toBeDefined()
 
-    // t=1000 — pendingIntentTimeoutMs elapses first. `attachPendingIntentTimeout` deletes the
-    // pendingIntentPromises entry, resolves the pending intent out of state, and settles the
-    // raiser with a terminal raiseIntentResultResponse. It does NOT clear deliveryTimeoutHandle.
+    // t=1000 — pendingIntentTimeoutMs elapses first. `attachPendingIntentTimeout` resolves the
+    // pending intent out of state and settles the raiser with a terminal
+    // raiseIntentResultResponse. It does NOT clear the delivery timeout.
     await vi.advanceTimersByTimeAsync(1000)
 
     const settlement = messagesOfType(transport, "raiseIntentResultResponse")
@@ -207,16 +203,11 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
     const messageCountAfterSettlement = transport.sentMessages.length
 
     // t=5000 — the delivery timeout now fires against a state tree with no pending entry.
-    // CHARACTERIZATION: the `if (deliveryEntry.delivered)` guard at intent-delivery-helpers.ts:158
-    // does NOT stop it (the captured entry is still `delivered === undefined`), the error response
-    // at :162 IS constructed, but `getPendingIntent` at :169 returns undefined so the
-    // `if (pendingIntent)` guard at :170 suppresses both the send and the setState. The final
-    // `deliveryEntry.delivered = true` at :179 then writes to a Map entry that was deleted at
-    // t=1000 — an object no other code can reach. Net effect today: a silent no-op.
-    // Not a double-delivery, and not a throw.
+    // `getPendingIntent` returns undefined so the callback returns before building or sending
+    // anything. Net effect: a silent no-op. Not a double-delivery, and not a throw.
     await vi.advanceTimersByTimeAsync(4000)
 
-    // Proof the callback ran rather than being cancelled: `releasePendingIntentTimeoutHandle` is
+    // Proof the callback ran rather than being cancelled: `releasePendingIntentTimeout` is
     // the first statement inside it, so a zero count here means the body executed.
     expect(getActivePendingIntentTimeoutCount()).toBe(0)
     expect(transport.sentMessages).toHaveLength(messageCountAfterSettlement)
@@ -240,8 +231,8 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
     await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), context)
     expect(getState().intents.pending[requestUuid]).toBeDefined()
 
-    // t=1000 — the delivery timeout wins the race. `requestType` is read off the captured entry at
-    // :161 (before the state lookup at :169), so the response type is raiseIntentResponse.
+    // t=1000 — the delivery timeout wins the race. `requestType` is read off the state entry,
+    // so the response type is raiseIntentResponse.
     await vi.advanceTimersByTimeAsync(1000)
 
     const failures = messagesOfType(transport, "raiseIntentResponse")
@@ -257,10 +248,9 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
 
     const messageCountAfterDeliveryTimeout = transport.sentMessages.length
 
-    // t=5000 — the pending-intent timeout still fires (the delivery-timeout path never deletes the
-    // pendingIntentPromises entry, so `has(requestId)` at intent-raise-shared.ts:168 is still
-    // true), but `getPendingIntent` is now undefined so no second terminal response is sent.
-    // CHARACTERIZATION: exactly one settlement reaches the raiser, never two.
+    // t=5000 — the pending-intent timeout still fires (the delivery-timeout path does not cancel
+    // it), but `getPendingIntent` is now undefined so no second terminal response is sent.
+    // Exactly one settlement reaches the raiser, never two.
     await vi.advanceTimersByTimeAsync(4000)
 
     expect(getActivePendingIntentTimeoutCount()).toBe(0)
@@ -285,7 +275,7 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
 
     await vi.advanceTimersByTimeAsync(1000)
 
-    // `registerPendingIntentPromise` stored requestType "raiseIntentForContextRequest", and the
+    // `registerPendingIntentState` stored requestType "raiseIntentForContextRequest", and the
     // delivery-timeout callback maps it through `getResponseTypeForRequest`.
     const failures = messagesOfType(transport, "raiseIntentForContextResponse")
     expect(failures).toHaveLength(1)
@@ -319,8 +309,8 @@ describe("attemptIntentDelivery: the delivered flag", () => {
 
     const messageCountAfterDelivery = transport.sentMessages.length
 
-    // The `deliveryEntry?.delivered` early return at intent-delivery-helpers.ts:53 is what makes
-    // this a no-op; it returns true (meaning "nothing left to do"), not false.
+    // The `pendingIntent.delivered` early return in `attemptIntentDelivery` is what makes this a
+    // no-op; it returns true (meaning "nothing left to do"), not false.
     expect(attemptIntentDelivery(context, requestUuid, false)).toBe(true)
     expect(transport.sentMessages).toHaveLength(messageCountAfterDelivery)
   })
@@ -332,14 +322,13 @@ describe("attemptIntentDelivery: the delivered flag", () => {
     expect(transport.sentMessages).toHaveLength(0)
   })
 
-  // CHARACTERIZATION: `delivered` lives only on the pendingIntentPromises entry, so a pending
-  // intent that exists in state with no Map entry has NO double-delivery guard at all — every call
-  // re-sends the intentEvent and a fresh success raiseIntentResponse. This asymmetry is only
-  // reachable because the two stores are populated independently; once `delivered` moves onto
-  // `state.intents.pending[requestId]` the two can no longer disagree.
-  it("re-sends on every call when the pending intent exists in state but has no pendingIntentPromises entry", () => {
+  // `delivered` now lives on `state.intents.pending[requestId]`, so a pending intent added
+  // straight to state is guarded exactly like one raised through `handleRaiseIntentRequest`.
+  // Before the collapse this re-sent on every call, because the guard lived on a separate Map
+  // entry that this path never created.
+  it("delivers once for a pending intent added directly to state", () => {
     const requestUuid = "state-only-pending-intent"
-    const { context, transport } = setupScenario({
+    const { context, transport, getState } = setupScenario({
       withTargetListener: true,
       targetConnected: true,
     })
@@ -356,17 +345,19 @@ describe("attemptIntentDelivery: the delivered flag", () => {
     )
 
     expect(attemptIntentDelivery(context, requestUuid, false)).toBe(true)
+    expect(getState().intents.pending[requestUuid]?.delivered).toBe(true)
+
     expect(attemptIntentDelivery(context, requestUuid, false)).toBe(true)
 
-    expect(messagesOfType(transport, "intentEvent")).toHaveLength(2)
-    expect(messagesOfType(transport, "raiseIntentResponse")).toHaveLength(2)
+    expect(messagesOfType(transport, "intentEvent")).toHaveLength(1)
+    expect(messagesOfType(transport, "raiseIntentResponse")).toHaveLength(1)
   })
 
-  // CHARACTERIZATION: `queueIntentDelivery` bails at intent-delivery-helpers.ts:147 when there is
-  // no Map entry — it neither attempts delivery nor arms a delivery timeout, even though the
-  // pending intent is present in state and the target has no listener. The raiser is left with no
-  // response from this path at all.
-  it("arms no delivery timeout and sends nothing when there is no pendingIntentPromises entry", () => {
+  // `queueIntentDelivery` keys off the state entry now, so a pending intent added directly to
+  // state gets the same queued treatment as a raised one: no listener on the target means no
+  // send, and a delivery timeout is armed to settle the raiser. Before the collapse this bailed
+  // out entirely because there was no Map entry, leaving the raiser with no response at all.
+  it("arms a delivery timeout for a pending intent added directly to state", () => {
     const requestUuid = "queue-without-entry"
     const { context, transport } = setupScenario()
 
@@ -383,7 +374,7 @@ describe("attemptIntentDelivery: the delivered flag", () => {
 
     queueIntentDelivery(context, requestUuid, true)
 
-    expect(getActivePendingIntentTimeoutCount()).toBe(0)
+    expect(getActivePendingIntentTimeoutCount()).toBe(1)
     expect(transport.sentMessages).toHaveLength(0)
   })
 })
@@ -402,7 +393,7 @@ describe("deliverPendingIntentsForListener", () => {
     const messageCountAfterDelivery = transport.sentMessages.length
 
     // A second listener registration for the same intent re-runs the sweep from the target's
-    // perspective. The `deliveryEntry?.delivered` check at intent-delivery-helpers.ts:201 is the
+    // perspective. The `pending.delivered` check in `deliverPendingIntentsForListener` is the
     // only thing stopping a duplicate intentEvent.
     deliverPendingIntentsForListener({ ...context, instanceId: TARGET_ID }, INTENT_NAME)
 
@@ -440,8 +431,8 @@ describe("deliverPendingIntentsForListener", () => {
 
     const messageCountAfterDelivery = transport.sentMessages.length
 
-    // Successful delivery clears deliveryTimeoutHandle at intent-delivery-helpers.ts:131-133, so
-    // the delivery timeout never fires and never sends a contradicting IntentDeliveryFailed.
+    // Successful delivery clears the "delivery" timeout, so it never fires and never sends a
+    // contradicting IntentDeliveryFailed.
     await vi.advanceTimersByTimeAsync(5000)
 
     expect(transport.sentMessages).toHaveLength(messageCountAfterDelivery)
@@ -506,8 +497,8 @@ describe("cleanupInstanceDacpState: pending-intent settlement on disconnect", ()
 
     cleanupInstanceDacpState({ ...context, instanceId: TARGET_ID })
 
-    // `cleanupInstanceDacpState` clears both handles off the Map entry before deleting it, so no
-    // pending-intent timer survives the teardown.
+    // `cleanupInstanceDacpState` clears both timeouts for the request, so no pending-intent timer
+    // survives the teardown.
     expect(getActivePendingIntentTimeoutCount()).toBe(0)
     expect(messagesOfType(transport, "raiseIntentResultResponse")).toHaveLength(1)
     expect(getState().intents.pending[requestUuid]).toBeUndefined()

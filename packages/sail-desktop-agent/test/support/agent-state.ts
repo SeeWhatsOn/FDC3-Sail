@@ -7,13 +7,11 @@
 
 import type { SailDesktopAgent } from "../../src/agent/sail-desktop-agent"
 import type { AgentAppConnection } from "../../src/app-connection/types"
-import type { PendingIntentPromiseEntry } from "../../src/handlers/types"
 import type { AgentState } from "../../src/state/types"
 
 /** Runtime shape of DesktopAgent private fields used only in tests. */
 type DesktopAgentInternals = {
   state: AgentState
-  pendingIntentPromises: Map<string, PendingIntentPromiseEntry>
 }
 
 /**
@@ -33,13 +31,4 @@ export function applyDesktopAgentStateUpdate(
 ): void {
   const internal = asInternals(agent)
   internal.state = callback(internal.state)
-}
-
-/**
- * Pending-intent promise map owned by the agent (for building handler contexts in steps).
- */
-export function getDesktopAgentPendingIntentPromises(
-  agent: SailDesktopAgent<AgentAppConnection>,
-): Map<string, PendingIntentPromiseEntry> {
-  return asInternals(agent).pendingIntentPromises
 }

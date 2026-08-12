@@ -14,7 +14,7 @@ import {
 import { sendDACPResponse } from "./utils/dacp-response-utils"
 import { pruneInstanceIdentity } from "../app-connection/wcp/instance-identity-registry"
 import type { AgentState } from "../state/types"
-import { clearPendingIntentTimeoutHandle } from "./intents/intent-pending-timeout-registry"
+import { clearPendingIntentTimeouts } from "./intents/intent-pending-timeout-registry"
 
 /**
  * WCP4 validation runs under a temp connection id while heartbeat and instance state
@@ -87,15 +87,7 @@ export function cleanupInstanceDacpState(context: DACPHandlerContext): void {
     p => p.targetInstanceId === instanceId || p.sourceInstanceId === instanceId,
   )
   pendingIntents.forEach(pending => {
-    // Reject promise if it exists (from intent-helpers Map)
-    const promiseData = resolvedContext.pendingIntentPromises.get(pending.requestId)
-    if (promiseData) {
-      clearPendingIntentTimeoutHandle(promiseData.timeoutHandle)
-      clearPendingIntentTimeoutHandle(promiseData.deliveryTimeoutHandle)
-      const disconnectRole = pending.sourceInstanceId === instanceId ? "source" : "target"
-      promiseData.reject(new Error(`Intent cancelled - ${disconnectRole} instance disconnected`))
-      resolvedContext.pendingIntentPromises.delete(pending.requestId)
-    }
+    clearPendingIntentTimeouts(pending.requestId)
     // Terminal raiseIntentResultResponse so IntentResolution.getResult() settles (same as
     // open-with-context AppTimeout on disconnect). Only when the *target* is the one going away:
     // the response is addressed to the raiser, so if the raiser is itself the disconnecting

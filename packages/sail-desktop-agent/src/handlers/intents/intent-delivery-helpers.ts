@@ -6,17 +6,21 @@ import {
 } from "../../dacp/dacp-message-creators"
 import { sendDACPResponse } from "../utils/dacp-response-utils"
 import { getInstance, getListenersForInstance, getPendingIntent } from "../../state/selectors"
-import { resolvePendingIntent, updatePendingIntentTarget } from "../../state/mutators"
-import type { DACPHandlerContext, IntentRequestType } from "../types"
-import { AppInstanceState } from "../../state/types"
+import {
+  markPendingIntentDelivered,
+  resolvePendingIntent,
+  updatePendingIntentTarget,
+} from "../../state/mutators"
+import type { DACPHandlerContext } from "../types"
+import { AppInstanceState, type IntentRequestType } from "../../state/types"
 import {
   extractAppProvidedIntentContextMetadata,
   mergeIntentEventContextMetadata,
 } from "./intent-result-metadata"
 import {
-  clearPendingIntentTimeoutHandle,
-  registerPendingIntentTimeoutHandle,
-  releasePendingIntentTimeoutHandle,
+  clearPendingIntentTimeout,
+  registerPendingIntentTimeout,
+  releasePendingIntentTimeout,
 } from "./intent-pending-timeout-registry"
 
 type IntentResponseType = "raiseIntentResponse" | "raiseIntentForContextResponse"
@@ -49,8 +53,7 @@ export function attemptIntentDelivery(
     return true
   }
 
-  const deliveryEntry = context.pendingIntentPromises.get(requestId)
-  if (deliveryEntry?.delivered) {
+  if (pendingIntent.delivered) {
     return true
   }
 
@@ -111,7 +114,7 @@ export function attemptIntentDelivery(
     },
   })
 
-  const requestType = deliveryEntry?.requestType ?? "raiseIntentRequest"
+  const requestType = pendingIntent.requestType ?? "raiseIntentRequest"
   const response = createDACPSuccessResponse(
     { type: requestType, meta: { requestUuid: requestId } },
     getResponseTypeForRequest(requestType),
@@ -128,12 +131,8 @@ export function attemptIntentDelivery(
 
   sendDACPResponse({ response, instanceId: pendingIntent.sourceInstanceId, responses })
 
-  if (deliveryEntry?.deliveryTimeoutHandle) {
-    clearPendingIntentTimeoutHandle(deliveryEntry.deliveryTimeoutHandle)
-  }
-  if (deliveryEntry) {
-    deliveryEntry.delivered = true
-  }
+  clearPendingIntentTimeout(requestId, "delivery")
+  context.setState(state => markPendingIntentDelivered(state, requestId))
 
   return true
 }
@@ -143,8 +142,7 @@ export function queueIntentDelivery(
   requestId: string,
   requireListener: boolean,
 ): void {
-  const deliveryEntry = context.pendingIntentPromises.get(requestId)
-  if (!deliveryEntry) {
+  if (!getPendingIntent(context.getState(), requestId)) {
     return
   }
 
@@ -154,11 +152,16 @@ export function queueIntentDelivery(
   }
 
   const timeoutHandle = setTimeout(() => {
-    releasePendingIntentTimeoutHandle(timeoutHandle)
-    if (deliveryEntry.delivered) {
+    releasePendingIntentTimeout(requestId, "delivery")
+
+    // `requestType` now comes off the state entry, so the lookup must come first. Safe: the
+    // response was only ever sent inside the `if (pendingIntent)` guard anyway.
+    const pendingIntent = getPendingIntent(context.getState(), requestId)
+    if (!pendingIntent || pendingIntent.delivered) {
       return
     }
-    const requestType = deliveryEntry.requestType ?? "raiseIntentRequest"
+
+    const requestType = pendingIntent.requestType ?? "raiseIntentRequest"
     const response = createDACPErrorResponse(
       { type: requestType, meta: { requestUuid: requestId } },
       ResolveError.IntentDeliveryFailed,
@@ -166,21 +169,14 @@ export function queueIntentDelivery(
       "Intent listener not registered within timeout",
     )
 
-    const pendingIntent = getPendingIntent(context.getState(), requestId)
-    if (pendingIntent) {
-      sendDACPResponse({
-        response,
-        instanceId: pendingIntent.sourceInstanceId,
-        responses: context.responses,
-      })
-      context.setState(state => resolvePendingIntent(state, requestId))
-    }
-
-    deliveryEntry.delivered = true
+    sendDACPResponse({
+      response,
+      instanceId: pendingIntent.sourceInstanceId,
+      responses: context.responses,
+    })
+    context.setState(state => resolvePendingIntent(state, requestId))
   }, context.openContextListenerTimeoutMs)
-  registerPendingIntentTimeoutHandle(timeoutHandle)
-
-  deliveryEntry.deliveryTimeoutHandle = timeoutHandle
+  registerPendingIntentTimeout(requestId, "delivery", timeoutHandle)
 }
 
 export function deliverPendingIntentsForListener(
@@ -197,8 +193,7 @@ export function deliverPendingIntentsForListener(
   )
 
   pendingIntents.forEach(pending => {
-    const deliveryEntry = context.pendingIntentPromises.get(pending.requestId)
-    if (deliveryEntry?.delivered) {
+    if (pending.delivered) {
       return
     }
 
