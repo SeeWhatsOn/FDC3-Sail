@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: DACP handler deps refactor
 
 Status: implementing
-Current slice: **none in flight.** Slice 1 done (`dc2db03c1`), slice 4′ done (`b3f1f3c79`), slice 2 done (`a9a43d64a` + `948d38e88`). **Slice 3 (required `DacpHandlerConfig`) is the last one left.** Note it should now be named `DACPHandlerConfig` to match `DACPHandlerParams`.
+**All slices complete.** Slice 1 `dc2db03c1`, slice 4′ `b3f1f3c79`, slice 2 `a9a43d64a` + `948d38e88`, slice 3 `ba99fc25f`. Slice 4 was cut. Gates held at 385 vitest / 154 cucumber scenarios / 1460 steps / clean lint + tsc through every one. Remaining work is in **Parked Follow-ups** — none of it blocking.
 
 > ### Decisions taken 2026-08-12, after two independent discovery agents
 >
@@ -140,7 +140,17 @@ Bug 2 is the one that argues hardest for this slice: resolving once at the entry
 - **`resolvedContextType` in `broadcast/handlers.ts` is not one of them** — it is an FDC3 context *type* string. So is every `context:` key in a wire payload, which is a DACP schema field name and cannot move.
 - **A reported test failure was misattributed.** The Sonnet run blamed `wcp-host-logger-threading.test.ts` on uncommitted edits in the working tree. It passes in isolation and in the full re-run; it is the known transport-logging flake already recorded under Parked Follow-ups. Worth remembering that a subagent's failure attribution needs checking, not just its pass claim.
 
-### 3. Extract a required `DacpHandlerConfig`
+### 3. ~~Extract a required `DacpHandlerConfig`~~ — **DONE as two `?` marks** (`ba99fc25f`)
+
+The extraction was never needed. The structural review had already ruled out regrouping the bundle, and the real defect was narrower than the slice assumed: `resolveDesktopAgentConfig` already resolves every default once, and `SailDesktopAgentConfig` already types them required. Only `DACPHandlerParams` re-declared two of them optional, which is what forced the three `?? "metadata"` sites into existence.
+
+Making `validation` and `logPayloadDetail` required deleted all four fallbacks and one local test type (`LoggingAwareHandlerContext`, an intersection whose sole job was widening `logPayloadDetail` back to optional). Net −3 lines across 7 files.
+
+**Why a destructuring default (`const { logPayloadDetail = "metadata" } = params`) would have been the same bug:** it is still a second place the default lives, so it drifts from `DEFAULT_SAIL_DESKTOP_AGENT_CONFIG` identically. Parameter defaults belong on public entry points whose callers may legitimately omit the value. These handlers have one caller, which always has it. **Default once, at the boundary where user input enters.**
+
+`createDACPTestParams` supplies both from `DEFAULT_SAIL_DESKTOP_AGENT_CONFIG` rather than restating literals, keeping one owner. AGENTS.md line 145 already banned handler-level `??` fallbacks — the code had been violating its own documented rule.
+
+#### Original plan text, for the record
 
 - **Goal:** config stops being optional, so defaults are resolved once at construction instead of three times at point of use.
 - **Acceptance:**
