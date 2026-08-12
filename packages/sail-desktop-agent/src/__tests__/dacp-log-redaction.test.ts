@@ -23,12 +23,6 @@ import { clearAllHeartbeatTimersForTesting } from "../handlers/heartbeat/runtime
 
 type LogPayloadDetail = "metadata" | "full"
 
-type LoggingAwareOptions = {
-  logPayloadDetail?: LogPayloadDetail
-}
-
-type LoggingAwareHandlerContext = DACPHandlerParams & LoggingAwareOptions
-
 const SENSITIVE_CONTEXT = {
   type: "fdc3.instrument",
   accountNumber: SENSITIVE_MARKER,
@@ -52,8 +46,8 @@ function createSensitiveRaiseIntentMessage(instanceId: string): BrowserTypes.Rai
 function createConnectedRaiseIntentContext(options: {
   instanceId?: string
   logger: ReturnType<typeof createCapturingLogger>
-  logPayloadDetail?: LogPayloadDetail
-}): LoggingAwareHandlerContext {
+  logPayloadDetail: LogPayloadDetail
+}): DACPHandlerParams {
   const instanceId = options.instanceId ?? "source-instance"
   let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
   state = connectInstance(state, {

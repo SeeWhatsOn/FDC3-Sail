@@ -1,6 +1,9 @@
 import type { BrowserTypes } from "@finos/fdc3"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
-import { DEFAULT_SAIL_DESKTOP_AGENT_METADATA } from "../../agent/default-config"
+import {
+  DEFAULT_SAIL_DESKTOP_AGENT_CONFIG,
+  DEFAULT_SAIL_DESKTOP_AGENT_METADATA,
+} from "../../agent/default-config"
 import { consoleLogger } from "../../logging/logger"
 import type { DACPHandlerParams, DacpResponseDispatcher } from "../types"
 import { createInitialState } from "../../state/initial-state"
@@ -42,6 +45,9 @@ export function createDACPTestParams(options: { instanceId: string; initialState
     getState: readState,
     setState,
     logger: consoleLogger,
+    // Taken from the real defaults, not re-stated, so there stays exactly one owner.
+    validation: DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.validation,
+    logPayloadDetail: DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.logPayloadDetail,
     implementationMetadata: {
       ...DEFAULT_SAIL_DESKTOP_AGENT_METADATA,
       provider: "test",

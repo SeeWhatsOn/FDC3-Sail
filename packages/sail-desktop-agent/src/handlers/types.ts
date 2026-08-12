@@ -68,18 +68,18 @@ export interface DACPHandlerParams {
 
   /**
    * How inbound messages failing FDC3 schema validation are treated.
-   * Defaults to `'warn'` when omitted (e.g. isolated handler tests).
+   * Resolved once by `resolveDesktopAgentConfig`; never absent here.
    */
-  validation?: ValidationMode
+  validation: ValidationMode
 
   /** Logger instance */
   logger: Logger
 
   /**
    * How much message/context detail structured logs include.
-   * Defaults to `'metadata'` when omitted (e.g. isolated handler tests).
+   * Resolved once by `resolveDesktopAgentConfig`; never absent here.
    */
-  logPayloadDetail?: LogPayloadDetail
+  logPayloadDetail: LogPayloadDetail
 
   /** Implementation metadata for the desktop agent */
   implementationMetadata: SailDesktopAgentMetadata

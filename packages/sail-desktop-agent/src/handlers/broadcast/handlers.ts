@@ -352,7 +352,6 @@ function notifyContextListeners(
   appMetadata?: Record<string, unknown>,
 ): void {
   const { getState, logger, logPayloadDetail } = params
-  const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
   const state = getState()
   const userChannel = getUserChannel(state, channelId)
   const appChannel = getAppChannel(state, channelId)
@@ -427,7 +426,7 @@ function notifyContextListeners(
         eventUuid: broadcastEvent.meta.eventUuid,
       })
 
-      if (resolvedLogPayloadDetail === "full") {
+      if (logPayloadDetail === "full") {
         logger.debug("DACP: Sending broadcast event to listener (full payload)", {
           targetInstanceId: instance.instanceId,
           broadcastEventPayload: JSON.stringify(broadcastEvent.payload),

@@ -34,7 +34,6 @@ export async function handleRaiseIntentRequest(
   params: DACPHandlerParams,
 ): Promise<void> {
   const { responses, instanceId, getState, logger, logPayloadDetail } = params
-  const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
 
   try {
     const payload = message.payload
@@ -64,7 +63,7 @@ export async function handleRaiseIntentRequest(
       hasName: typeof contextPayload.name === "string",
     })
 
-    if (resolvedLogPayloadDetail === "full") {
+    if (logPayloadDetail === "full") {
       logger.debug("DACP: Processing raise intent request (full payload)", {
         contextPayload: JSON.stringify(contextPayload),
       })

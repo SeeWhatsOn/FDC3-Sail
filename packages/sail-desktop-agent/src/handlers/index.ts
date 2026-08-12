@@ -45,9 +45,8 @@ export async function routeDACPMessage(
     instanceId: resolveDacpHandlerInstanceId(inboundContext),
   }
   const { logger, validation, logPayloadDetail } = params
-  const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
   try {
-    logIncomingDacpMessage(message, logger, resolvedLogPayloadDetail)
+    logIncomingDacpMessage(message, logger, logPayloadDetail)
     logger.info("DACP: Routing message", extractDACPMessageLogMetadata(message))
 
     // Extract message type for routing
