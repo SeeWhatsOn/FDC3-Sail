@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: DACP handler deps refactor
 
 Status: implementing
-Current slice: **none in flight.** Slice 1 done (`dc2db03c1`), slice 4′ done (`b3f1f3c79`). Next up: slice 2 (rename `DACPHandlerContext` → `DACPHandlerParams`, on **sonnet** — mechanical) then slice 3 (required `DacpHandlerConfig`).
+Current slice: **none in flight.** Slice 1 done (`dc2db03c1`), slice 4′ done (`b3f1f3c79`), slice 2 done (`a9a43d64a` + `948d38e88`). **Slice 3 (required `DacpHandlerConfig`) is the last one left.** Note it should now be named `DACPHandlerConfig` to match `DACPHandlerParams`.
 
 > ### Decisions taken 2026-08-12, after two independent discovery agents
 >
@@ -118,7 +118,7 @@ Bug 2 is the one that argues hardest for this slice: resolving once at the entry
 - **Verify:** `npx tsc --noEmit && npx vp test run && npx cucumber-js`
 - **Likely files:** `handlers/index.ts`, `agent/sail-desktop-agent.ts`, `handlers/broadcast/handlers.ts`, `handlers/events/handlers.ts`, `handlers/open/handlers.ts`, `handlers/intents/intent-listener-handlers.ts`, `handlers/intents/intent-result-handlers.ts`, `handlers/cleanup.ts`, `handlers/heartbeat/handlers.ts`
 
-### 2. Rename `DACPHandlerContext` → `DACPHandlerParams`, `context` → `params`
+### 2. Rename `DACPHandlerContext` → `DACPHandlerParams`, `context` → `params` — **DONE** (`a9a43d64a` src, `948d38e88` tests)
 
 - **Goal:** end the name collision. `context` becomes free to mean an FDC3 `Context` everywhere. Name chosen by the user over `deps` (hard to grep — plain substring search hits `dependencies`) and over `agentApi` (collides with FDC3's `DesktopAgent`, and "API" overclaims an internal plumbing bundle). `Params` is deliberately generic because the thing genuinely is a grab-bag; a precise-sounding name would overclaim.
 - **Scope, measured:** 108 occurrences of `DACPHandlerContext` across 27 files.
@@ -132,6 +132,13 @@ Bug 2 is the one that argues hardest for this slice: resolving once at the entry
 - **Verify:** `npx tsc --noEmit && npx vp lint . && npx vp test run && npx cucumber-js` — sequentially.
 - **Likely files:** all 27 files matching `DACPHandlerContext`, plus `handlers/__tests__/test-context.ts` (`createDACPTestContext`).
 - **Model:** sonnet. This one genuinely is mechanical.
+
+#### 2 outcome — two commits, both perfectly symmetric diffs (332/332 then 364/364)
+
+- **It took two passes because the first stopped at the `src` boundary.** The type was renamed everywhere, but `createDACPTestContext` still returned a property called `context` holding a `DACPHandlerParams`, so all 24 test files re-bound `context` to the handler bundle — the same collision, one layer down. The factory is now `createDACPTestParams` in `handlers/__tests__/test-params.ts` and returns `params`. Five per-file test helpers wrapping the same bundle went with it.
+- **Three production names still said `Context` while holding `DACPHandlerParams`:** `createHandlerContext` → `createHandlerParams` (`sail-desktop-agent.ts`, `sail-desktop-agent-controllers.ts`) and `resolvedContext` → `resolvedParams` (`instance-teardown.ts`). Renaming only the type would have left the confusion in the names that produce it.
+- **`resolvedContextType` in `broadcast/handlers.ts` is not one of them** — it is an FDC3 context *type* string. So is every `context:` key in a wire payload, which is a DACP schema field name and cannot move.
+- **A reported test failure was misattributed.** The Sonnet run blamed `wcp-host-logger-threading.test.ts` on uncommitted edits in the working tree. It passes in isolation and in the full re-run; it is the known transport-logging flake already recorded under Parked Follow-ups. Worth remembering that a subagent's failure attribution needs checking, not just its pass claim.
 
 ### 3. Extract a required `DacpHandlerConfig`
 
