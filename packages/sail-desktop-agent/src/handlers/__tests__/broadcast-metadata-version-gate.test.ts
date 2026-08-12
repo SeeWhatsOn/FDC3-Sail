@@ -11,11 +11,7 @@ import {
   updateInstanceState,
 } from "../../state/mutators"
 import { AppInstanceState } from "../../state/types"
-import {
-  createDACPTestContext,
-  createDacpRequestMeta,
-  withResponseDispatcher,
-} from "./test-context"
+import { createDACPTestParams, createDacpRequestMeta, withResponseDispatcher } from "./test-params"
 import { handleBroadcastRequest } from "../broadcast/handlers"
 
 type BroadcastRequest = BrowserTypes.BroadcastRequest
@@ -44,11 +40,11 @@ function contextForVersion(fdc3Version: string) {
   state = addContextListener(state, listenerId, "listener-1", "fdc3.instrument", CHANNEL_ID)
 
   const transport = new MockTransport()
-  const { context } = createDACPTestContext({ instanceId: senderId, initialState: state })
+  const { params: baseParams } = createDACPTestParams({ instanceId: senderId, initialState: state })
   const params = {
-    ...withResponseDispatcher(context, transport),
+    ...withResponseDispatcher(baseParams, transport),
     implementationMetadata: {
-      ...context.implementationMetadata,
+      ...baseParams.implementationMetadata,
       fdc3Version,
     },
   }

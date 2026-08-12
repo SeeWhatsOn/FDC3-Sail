@@ -68,11 +68,11 @@ function instanceHasTeardownWork(state: AgentState, instanceId: string): boolean
  * avoiding circular module graphs.
  */
 export function cleanupInstanceDacpState(params: DACPHandlerParams): void {
-  const resolvedContext = {
+  const resolvedParams = {
     ...params,
     instanceId: resolveTeardownInstanceId(params),
   }
-  const { instanceId, getState, setState, logger } = resolvedContext
+  const { instanceId, getState, setState, logger } = resolvedParams
 
   if (!instanceHasTeardownWork(getState(), instanceId)) {
     logger.debug("Skipping teardown for already-removed instance", { instanceId })
@@ -102,7 +102,7 @@ export function cleanupInstanceDacpState(params: DACPHandlerParams): void {
         sendDACPResponse({
           response,
           instanceId: pending.sourceInstanceId,
-          responses: resolvedContext.responses,
+          responses: resolvedParams.responses,
         })
       } catch (error) {
         logger.warn("Failed to send pending-intent timeout response on disconnect", {
@@ -120,8 +120,8 @@ export function cleanupInstanceDacpState(params: DACPHandlerParams): void {
     })
   }
 
-  clearPendingOpenWithContextForInstance(instanceId, resolvedContext)
-  clearPendingOpenWithContextForSourceInstance(instanceId, resolvedContext)
+  clearPendingOpenWithContextForInstance(instanceId, resolvedParams)
+  clearPendingOpenWithContextForSourceInstance(instanceId, resolvedParams)
 
   // Remove event listeners
   eventHandlers.removeInstanceEventListeners(instanceId, setState)
@@ -129,7 +129,7 @@ export function cleanupInstanceDacpState(params: DACPHandlerParams): void {
 
   // Remove private channels
   const removedPrivateChannels =
-    privateChannelHandlers.removeInstancePrivateChannels(resolvedContext)
+    privateChannelHandlers.removeInstancePrivateChannels(resolvedParams)
   if (removedPrivateChannels > 0) {
     logger.info(`Removed ${removedPrivateChannels} private channels for disconnected instance`, {
       instanceId,
@@ -147,7 +147,7 @@ export function cleanupInstanceDacpState(params: DACPHandlerParams): void {
   // Remove instance from state
   setState(state => removeInstance(state, instanceId))
 
-  pruneInstanceIdentity(resolvedContext.responses.connectionOwner, instanceId)
+  pruneInstanceIdentity(resolvedParams.responses.connectionOwner, instanceId)
 
   logger.info("DACP instance teardown completed", { instanceId })
 }

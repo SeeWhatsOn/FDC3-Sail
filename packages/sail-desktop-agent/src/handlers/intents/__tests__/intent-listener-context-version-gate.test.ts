@@ -7,10 +7,10 @@ import { createInitialState } from "../../../state/initial-state"
 import { connectInstance, updateInstanceState } from "../../../state/mutators"
 import { AppInstanceState } from "../../../state/types"
 import {
-  createDACPTestContext,
+  createDACPTestParams,
   createDacpRequestMeta,
   withResponseDispatcher,
-} from "../../__tests__/test-context"
+} from "../../__tests__/test-params"
 import { handleAddIntentListener } from "../intent-listener-handlers"
 
 type AddIntentListenerRequest = BrowserTypes.AddIntentListenerRequest
@@ -26,11 +26,11 @@ function contextForVersion(fdc3Version: string) {
   state = updateInstanceState(state, instanceId, AppInstanceState.CONNECTED)
 
   const transport = new MockTransport()
-  const { context, getState } = createDACPTestContext({ instanceId, initialState: state })
+  const { params: baseParams, getState } = createDACPTestParams({ instanceId, initialState: state })
   const params = {
-    ...withResponseDispatcher(context, transport),
+    ...withResponseDispatcher(baseParams, transport),
     implementationMetadata: {
-      ...context.implementationMetadata,
+      ...baseParams.implementationMetadata,
       fdc3Version,
     },
   }

@@ -7,7 +7,7 @@
  * dispatches via `HANDLER_MAP`. `routeDACPMessage` is also — since the handler-deps refactor —
  * the single point where the wire id is resolved:
  *
- *     const context = { ...inboundContext, instanceId: resolveDacpHandlerInstanceId(inboundContext) }
+ *     const params = { ...inboundContext, instanceId: resolveDacpHandlerInstanceId(inboundContext) }
  *
  * So a test that calls `handleX(msg, ctx)` directly feeds the handler a RAW wire id regardless of
  * what production does, and cannot observe the behaviour these tests exist to measure. Every test
@@ -42,11 +42,7 @@ import { routeDACPMessage } from "../index"
 import { clearAllHeartbeatTimersForTesting } from "../heartbeat/runtime"
 import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../utils/open-with-context"
 import { handlePrivateChannelAddContextListenerRequest } from "../private-channels/handlers"
-import {
-  createDACPTestContext,
-  createDacpRequestMeta,
-  withResponseDispatcher,
-} from "./test-context"
+import { createDACPTestParams, createDacpRequestMeta, withResponseDispatcher } from "./test-params"
 
 /** The validated WCP5 instance — registered in `state.instances`, connected. */
 const VALIDATED_ID = "validated-wcp5-instance"
@@ -96,10 +92,10 @@ function handshakeWindowState(): AgentState {
   return state
 }
 
-/** A handler context stamped with the raw wire `instanceId`, exactly as the router receives it. */
+/** A handler params stamped with the raw wire `instanceId`, exactly as the router receives it. */
 function contextFor(instanceId: string, state: AgentState, transport: MockTransport) {
-  const { context, getState } = createDACPTestContext({ instanceId, initialState: state })
-  return { context: withResponseDispatcher(context, transport), getState }
+  const { params, getState } = createDACPTestParams({ instanceId, initialState: state })
+  return { params: withResponseDispatcher(params, transport), getState }
 }
 
 function lastMessage(transport: MockTransport): WireMessage {
@@ -119,7 +115,7 @@ function stateWithPrivateChannel(): AgentState {
 describe("private-channels access control through routeDACPMessage", () => {
   it("GRANTS a linked temp- id the addEventListener gate on the linked instance's channel", async () => {
     const transport = new MockTransport()
-    const { context, getState } = contextFor(
+    const { params, getState } = contextFor(
       HANDSHAKE_ROUTING_ID,
       stateWithPrivateChannel(),
       transport,
@@ -134,7 +130,7 @@ describe("private-channels access control through routeDACPMessage", () => {
         }),
         payload: { privateChannelId: PRIVATE_CHANNEL_ID, listenerType: "addContextListener" },
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -150,7 +146,7 @@ describe("private-channels access control through routeDACPMessage", () => {
 
   it("GRANTS a linked temp- id the disconnect gate, tearing down the linked instance's channel", async () => {
     const transport = new MockTransport()
-    const { context, getState } = contextFor(
+    const { params, getState } = contextFor(
       HANDSHAKE_ROUTING_ID,
       stateWithPrivateChannel(),
       transport,
@@ -165,7 +161,7 @@ describe("private-channels access control through routeDACPMessage", () => {
         }),
         payload: { channelId: PRIVATE_CHANNEL_ID },
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -187,7 +183,7 @@ describe("private-channels access control through routeDACPMessage", () => {
       listenerUUID,
       VALIDATED_ID,
     )
-    const { context, getState } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
+    const { params, getState } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
 
     await routeDACPMessage(
       {
@@ -198,7 +194,7 @@ describe("private-channels access control through routeDACPMessage", () => {
         }),
         payload: { listenerUUID },
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -214,7 +210,7 @@ describe("private-channels access control through routeDACPMessage", () => {
 
   it("DENIES an unregistered, unlinked MessagePort id at the addEventListener gate", async () => {
     const transport = new MockTransport()
-    const { context, getState } = contextFor(
+    const { params, getState } = contextFor(
       UNREGISTERED_PORT_ID,
       stateWithPrivateChannel(),
       transport,
@@ -229,7 +225,7 @@ describe("private-channels access control through routeDACPMessage", () => {
         }),
         payload: { privateChannelId: PRIVATE_CHANNEL_ID, listenerType: "addContextListener" },
       },
-      context,
+      params,
     )
 
     // With no registration and no handshake link the resolver returns its input unchanged, so the
@@ -247,7 +243,7 @@ describe("private-channels access control through routeDACPMessage", () => {
    * would still pass with the resolver deleted.
    *
    * That boundary is one layer up. `SailDesktopAgent.extractInstanceId` DOES read
-   * `meta.source.instanceId` to build the context, and the defence is
+   * `meta.source.instanceId` to build the params, and the defence is
    * `BrowserAppConnection.enrichMessageWithSource` discarding the app's `source` / `messageOrigin`
    * / `hostInstanceId` and overwriting `source` with the port-derived identity. That is covered by
    * `src/app-connection/__tests__/wcp-trusted-metadata.test.ts` — see "attributes a broadcast to
@@ -256,11 +252,7 @@ describe("private-channels access control through routeDACPMessage", () => {
 
   it("creates a private channel owned by the linked instance when routed under a temp- id", async () => {
     const transport = new MockTransport()
-    const { context, getState } = contextFor(
-      HANDSHAKE_ROUTING_ID,
-      handshakeWindowState(),
-      transport,
-    )
+    const { params, getState } = contextFor(HANDSHAKE_ROUTING_ID, handshakeWindowState(), transport)
 
     await routeDACPMessage(
       {
@@ -271,7 +263,7 @@ describe("private-channels access control through routeDACPMessage", () => {
         }),
         payload: {},
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -293,7 +285,7 @@ describe("private-channels access control through routeDACPMessage", () => {
    */
   it("denies a linked temp- id when the handler is called directly, proving the handler body does not resolve", () => {
     const transport = new MockTransport()
-    const { context, getState } = contextFor(
+    const { params, getState } = contextFor(
       HANDSHAKE_ROUTING_ID,
       stateWithPrivateChannel(),
       transport,
@@ -308,7 +300,7 @@ describe("private-channels access control through routeDACPMessage", () => {
         }),
         payload: { privateChannelId: PRIVATE_CHANNEL_ID, listenerType: "addContextListener" },
       },
-      context,
+      params,
     )
 
     expect(lastMessage(transport).payload?.error).toBe(ChannelError.AccessDenied)
@@ -322,7 +314,7 @@ describe("channels handlers through routeDACPMessage", () => {
   it("reports the linked instance's current channel for a linked temp- id", async () => {
     const transport = new MockTransport()
     const state = joinUserChannel(handshakeWindowState(), VALIDATED_ID, JOINED_CHANNEL_ID)
-    const { context } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
+    const { params } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
 
     await routeDACPMessage(
       {
@@ -333,7 +325,7 @@ describe("channels handlers through routeDACPMessage", () => {
         }),
         payload: {},
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -345,7 +337,7 @@ describe("channels handlers through routeDACPMessage", () => {
   it("moves the linked instance when joinUserChannelRequest arrives under a linked temp- id", async () => {
     const transport = new MockTransport()
     const state = joinUserChannel(handshakeWindowState(), VALIDATED_ID, JOINED_CHANNEL_ID)
-    const { context, getState } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
+    const { params, getState } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
 
     await routeDACPMessage(
       {
@@ -356,7 +348,7 @@ describe("channels handlers through routeDACPMessage", () => {
         }),
         payload: { channelId: OTHER_CHANNEL_ID },
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -371,7 +363,7 @@ describe("channels handlers through routeDACPMessage", () => {
 describe("open handlers through routeDACPMessage", () => {
   it("returns appMetadata for the linked instance on getInfoRequest under a temp- id", async () => {
     const transport = new MockTransport()
-    const { context } = contextFor(HANDSHAKE_ROUTING_ID, handshakeWindowState(), transport)
+    const { params } = contextFor(HANDSHAKE_ROUTING_ID, handshakeWindowState(), transport)
 
     await routeDACPMessage(
       {
@@ -382,7 +374,7 @@ describe("open handlers through routeDACPMessage", () => {
         }),
         payload: {},
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -409,7 +401,7 @@ describe("intent-discovery handlers through routeDACPMessage", () => {
         },
       },
     })
-    const { context } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
+    const { params } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
 
     await routeDACPMessage(
       {
@@ -420,7 +412,7 @@ describe("intent-discovery handlers through routeDACPMessage", () => {
         }),
         payload: { intent: INTENT_NAME },
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -436,11 +428,7 @@ describe("intent-discovery handlers through routeDACPMessage", () => {
 describe("intent-listener handlers through routeDACPMessage: add and unsubscribe agree", () => {
   it("registers an intent listener against the linked instance when routed under a temp- id", async () => {
     const transport = new MockTransport()
-    const { context, getState } = contextFor(
-      HANDSHAKE_ROUTING_ID,
-      handshakeWindowState(),
-      transport,
-    )
+    const { params, getState } = contextFor(HANDSHAKE_ROUTING_ID, handshakeWindowState(), transport)
 
     await routeDACPMessage(
       {
@@ -451,7 +439,7 @@ describe("intent-listener handlers through routeDACPMessage: add and unsubscribe
         }),
         payload: { intent: INTENT_NAME },
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -473,7 +461,7 @@ describe("intent-listener handlers through routeDACPMessage: add and unsubscribe
       appId: APP_ID,
       contextTypes: [],
     })
-    const { context, getState } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
+    const { params, getState } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
 
     await routeDACPMessage(
       {
@@ -484,7 +472,7 @@ describe("intent-listener handlers through routeDACPMessage: add and unsubscribe
         }),
         payload: { listenerUUID },
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -523,7 +511,7 @@ describe("intent-result handlers through routeDACPMessage", () => {
       targetAppId: APP_ID,
     })
 
-    const { context } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
+    const { params } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
 
     await routeDACPMessage(
       {
@@ -538,7 +526,7 @@ describe("intent-result handlers through routeDACPMessage", () => {
           intentResult: { context: { type: "fdc3.instrument" } },
         },
       },
-      context,
+      params,
     )
 
     const intentResultResponse = (transport.sentMessages as WireMessage[]).find(
@@ -551,11 +539,7 @@ describe("intent-result handlers through routeDACPMessage", () => {
 describe("events handlers through routeDACPMessage: add and unsubscribe agree", () => {
   it("registers an event listener against the linked instance when routed under a temp- id", async () => {
     const transport = new MockTransport()
-    const { context, getState } = contextFor(
-      HANDSHAKE_ROUTING_ID,
-      handshakeWindowState(),
-      transport,
-    )
+    const { params, getState } = contextFor(HANDSHAKE_ROUTING_ID, handshakeWindowState(), transport)
 
     await routeDACPMessage(
       {
@@ -566,7 +550,7 @@ describe("events handlers through routeDACPMessage: add and unsubscribe agree", 
         }),
         payload: { type: "USER_CHANNEL_CHANGED" },
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -579,11 +563,7 @@ describe("events handlers through routeDACPMessage: add and unsubscribe agree", 
 
   it("lets a linked temp- id unsubscribe the linked instance's event listener", async () => {
     const transport = new MockTransport()
-    const { context, getState } = contextFor(
-      HANDSHAKE_ROUTING_ID,
-      handshakeWindowState(),
-      transport,
-    )
+    const { params, getState } = contextFor(HANDSHAKE_ROUTING_ID, handshakeWindowState(), transport)
 
     await routeDACPMessage(
       {
@@ -594,7 +574,7 @@ describe("events handlers through routeDACPMessage: add and unsubscribe agree", 
         }),
         payload: { type: "USER_CHANNEL_CHANGED" },
       },
-      context,
+      params,
     )
     const listenerUUID = lastMessage(transport).payload?.listenerUUID
     expect(listenerUUID).toBeDefined()
@@ -608,7 +588,7 @@ describe("events handlers through routeDACPMessage: add and unsubscribe agree", 
         }),
         payload: { listenerUUID: listenerUUID! },
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -622,11 +602,7 @@ describe("broadcast handlers through routeDACPMessage", () => {
   it("registers a context listener from a linked temp- id against the linked instance", async () => {
     const transport = new MockTransport()
     const requestUuid = "add-context-listener-routed"
-    const { context, getState } = contextFor(
-      HANDSHAKE_ROUTING_ID,
-      handshakeWindowState(),
-      transport,
-    )
+    const { params, getState } = contextFor(HANDSHAKE_ROUTING_ID, handshakeWindowState(), transport)
 
     await routeDACPMessage(
       {
@@ -637,7 +613,7 @@ describe("broadcast handlers through routeDACPMessage", () => {
         }),
         payload: { channelId: null, contextType: "fdc3.instrument" },
       },
-      context,
+      params,
     )
 
     const response = lastMessage(transport)
@@ -674,7 +650,7 @@ describe("broadcast handlers through routeDACPMessage", () => {
       appControlChannelId,
     )
 
-    const { context } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
+    const { params } = contextFor(HANDSHAKE_ROUTING_ID, state, transport)
 
     await routeDACPMessage(
       {
@@ -688,7 +664,7 @@ describe("broadcast handlers through routeDACPMessage", () => {
           context: { type: "closeWindow", testId: "close-1" },
         },
       },
-      context,
+      params,
     )
 
     const broadcastEvent = (transport.sentMessages as WireMessage[]).find(

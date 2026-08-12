@@ -18,11 +18,7 @@ import { createInitialState } from "../../state/initial-state"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { getEventListener, getIntentListener } from "../../state/selectors"
 import { AppInstanceState, type AgentState } from "../../state/types"
-import {
-  createDACPTestContext,
-  createDacpRequestMeta,
-  withResponseDispatcher,
-} from "./test-context"
+import { createDACPTestParams, createDacpRequestMeta, withResponseDispatcher } from "./test-params"
 import {
   handleAddEventListenerRequest,
   handleEventListenerUnsubscribeRequest,
@@ -60,10 +56,10 @@ function setupTwoConnectedInstances(): AgentState {
   return state
 }
 
-/** Two handler contexts sharing one state and one transport, differing only by instanceId. */
+/** Two handler params sharing one state and one transport, differing only by instanceId. */
 function contextFor(instanceId: string, state: AgentState, transport: MockTransport) {
-  const { context, getState } = createDACPTestContext({ instanceId, initialState: state })
-  return { context: withResponseDispatcher(context, transport), getState }
+  const { params, getState } = createDACPTestParams({ instanceId, initialState: state })
+  return { params: withResponseDispatcher(params, transport), getState }
 }
 
 function lastMessage(transport: MockTransport): WireMessage {
@@ -78,8 +74,8 @@ function lastMessage(transport: MockTransport): WireMessage {
 function setupEventListenerScenario() {
   const state = setupTwoConnectedInstances()
   const transport = new MockTransport()
-  const { context: ownerContext, getState } = contextFor(OWNER_ID, state, transport)
-  const { context: attackerContext } = contextFor(ATTACKER_ID, state, transport)
+  const { params: ownerContext, getState } = contextFor(OWNER_ID, state, transport)
+  const { params: attackerContext } = contextFor(ATTACKER_ID, state, transport)
 
   handleAddEventListenerRequest(
     {
@@ -101,8 +97,8 @@ function setupEventListenerScenario() {
 function setupIntentListenerScenario() {
   const state = setupTwoConnectedInstances()
   const transport = new MockTransport()
-  const { context: ownerContext, getState } = contextFor(OWNER_ID, state, transport)
-  const { context: attackerContext } = contextFor(ATTACKER_ID, state, transport)
+  const { params: ownerContext, getState } = contextFor(OWNER_ID, state, transport)
+  const { params: attackerContext } = contextFor(ATTACKER_ID, state, transport)
 
   handleAddIntentListener(
     {

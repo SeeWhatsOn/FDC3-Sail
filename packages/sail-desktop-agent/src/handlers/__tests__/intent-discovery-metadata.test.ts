@@ -11,11 +11,7 @@ import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { registerIntentListener } from "../../state/mutators/intent"
 import { createInitialState } from "../../state/initial-state"
 import { AppInstanceState, type AgentState } from "../../state/types"
-import {
-  createDACPTestContext,
-  createDacpRequestMeta,
-  withResponseDispatcher,
-} from "./test-context"
+import { createDACPTestParams, createDacpRequestMeta, withResponseDispatcher } from "./test-params"
 import { createAppIntents, findIntentsByContext } from "../intents/intent-helpers"
 import { handleFindIntentRequest } from "../intents/intent-discovery-handlers"
 
@@ -203,8 +199,8 @@ describe("state-owned app directory intent discovery contract", () => {
     state = withCatalogApps(state, agent.getState().appDirectory.apps)
 
     const transport = new MockTransport()
-    const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
-    const stateSlice = expectAppDirectoryOnState(context.getState())
+    const { params } = createDACPTestParams({ instanceId: "a1", initialState: state })
+    const stateSlice = expectAppDirectoryOnState(params.getState())
 
     handleFindIntentRequest(
       {
@@ -215,7 +211,7 @@ describe("state-owned app directory intent discovery contract", () => {
           context: { type: TEST_CONTEXT_X },
         },
       },
-      withResponseDispatcher(context, transport),
+      withResponseDispatcher(params, transport),
     )
 
     const response = getFindIntentResponse(transport)

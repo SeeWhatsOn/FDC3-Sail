@@ -9,7 +9,7 @@ import { DEFAULT_SAIL_DESKTOP_AGENT_METADATA } from "../../../agent/default-conf
 import { connectInstance, updateInstanceState } from "../../../state/mutators"
 import { createInitialState } from "../../../state/initial-state"
 import { AppInstanceState } from "../../../state/types"
-import { createDacpRequestMeta } from "../../__tests__/test-context"
+import { createDacpRequestMeta } from "../../__tests__/test-params"
 import { createDesktopAgentWithTestConnection } from "../../../../test/support/desktop-agent-test-harness"
 
 const CONFORMANCE_APP: DirectoryApp = {

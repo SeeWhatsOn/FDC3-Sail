@@ -8,10 +8,10 @@ import { createInitialState } from "../../../state/initial-state"
 import { addPendingIntent, connectInstance, updateInstanceState } from "../../../state/mutators"
 import { AppInstanceState } from "../../../state/types"
 import {
-  createDACPTestContext,
+  createDACPTestParams,
   createDacpRequestMeta,
   withResponseDispatcher,
-} from "../../__tests__/test-context"
+} from "../../__tests__/test-params"
 import { handleIntentResultRequest } from "../intent-result-handlers"
 import type { IntentResultContextMetadata } from "../intent-result-metadata"
 
@@ -62,14 +62,14 @@ function setupPendingIntentContext() {
     requestType: "raiseIntentRequest",
   })
 
-  const { context, getState } = createDACPTestContext({
+  const { params, getState } = createDACPTestParams({
     instanceId: BASE.handlerInstanceId,
     initialState: state,
   })
 
   const transport = new MockTransport()
   return {
-    context: withResponseDispatcher(context, transport),
+    params: withResponseDispatcher(params, transport),
     transport,
     getState,
   }
@@ -114,7 +114,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
   ])(
     "$toolboxScenario exposes non-empty intentResult.metadata for client getResultMetadata()",
     ({ intentResult }) => {
-      const { context, transport, getState } = setupPendingIntentContext()
+      const { params, transport, getState } = setupPendingIntentContext()
 
       handleIntentResultRequest(
         {
@@ -129,7 +129,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
             intentResult,
           },
         },
-        context,
+        params,
       )
 
       const response = findRaiseIntentResultResponse(transport)
@@ -160,7 +160,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
     const contextPayload = { type: "testContextY", id: { value: "1" } }
     const appSignature = "conformance-signature"
     const appCustom = { conformanceKey: "value" }
-    const { context, transport, getState } = setupPendingIntentContext()
+    const { params, transport, getState } = setupPendingIntentContext()
 
     handleIntentResultRequest(
       {
@@ -182,7 +182,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
           } as unknown as BrowserTypes.IntentResult,
         },
       },
-      context,
+      params,
     )
 
     const response = findRaiseIntentResultResponse(transport)
@@ -204,7 +204,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
   })
 
   it("raiseIntentResultResponse clones through InMemoryTransport without circular metadata refs", async () => {
-    const { context, getState } = setupPendingIntentContext()
+    const { params, getState } = setupPendingIntentContext()
     const [daTransport, peerTransport] = createInMemoryTransportPair()
     const received: unknown[] = []
     peerTransport.onMessage(message => {
@@ -224,7 +224,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
           intentResult: { context: { type: "testContextY", id: { value: "1" } } },
         },
       },
-      withResponseDispatcher(context, daTransport),
+      withResponseDispatcher(params, daTransport),
     )
 
     await vi.waitFor(() => {

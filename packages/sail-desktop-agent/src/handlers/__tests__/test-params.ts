@@ -13,8 +13,8 @@ export { createDacpResponseDispatcher } from "../../../test/support/transport"
 /** Shared agent state for contexts created with the same initialState reference (multi-connection tests). */
 const sharedStateByInitialSnapshot = new WeakMap<AgentState, AgentState>()
 
-export function createDACPTestContext(options: { instanceId: string; initialState?: AgentState }): {
-  context: DACPHandlerParams
+export function createDACPTestParams(options: { instanceId: string; initialState?: AgentState }): {
+  params: DACPHandlerParams
   getState: () => AgentState
 } {
   const initialSnapshot = options.initialState
@@ -54,7 +54,7 @@ export function createDACPTestContext(options: { instanceId: string; initialStat
     heartbeatTimeoutMs: 2000,
   }
 
-  return { context: params, getState: readState }
+  return { params, getState: readState }
 }
 
 /** Wire a delivery recorder into handler params for isolated DACP tests. */

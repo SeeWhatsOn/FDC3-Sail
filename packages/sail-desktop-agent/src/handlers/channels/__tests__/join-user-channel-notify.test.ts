@@ -17,10 +17,10 @@ import {
 } from "../../../state/mutators"
 import { AppInstanceState } from "../../../state/types"
 import {
-  createDACPTestContext,
+  createDACPTestParams,
   createDacpRequestMeta,
   withResponseDispatcher,
-} from "../../__tests__/test-context"
+} from "../../__tests__/test-params"
 import { handleJoinUserChannelRequest } from "../handlers"
 
 const CHANNEL_ID = "fdc3.channel.1"
@@ -54,7 +54,7 @@ describe("handleJoinUserChannelRequest channelChanged notify", () => {
   it("notifies host on redundant join (same channel already current)", () => {
     const transport = new MockTransport()
     const notifyChannelMembershipChanged = vi.fn()
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: INSTANCE_ID,
       initialState: seedConnectedInstance(CHANNEL_ID),
     })
@@ -62,7 +62,7 @@ describe("handleJoinUserChannelRequest channelChanged notify", () => {
     handleJoinUserChannelRequest(
       joinRequest(CHANNEL_ID),
       {
-        ...withResponseDispatcher(context, transport),
+        ...withResponseDispatcher(params, transport),
         notifyChannelMembershipChanged,
       },
       { hostInitiated: true },
@@ -75,7 +75,7 @@ describe("handleJoinUserChannelRequest channelChanged notify", () => {
   it("notifies host exactly once on a real channel change", () => {
     const transport = new MockTransport()
     const notifyChannelMembershipChanged = vi.fn()
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: INSTANCE_ID,
       initialState: seedConnectedInstance(CHANNEL_ID),
     })
@@ -83,7 +83,7 @@ describe("handleJoinUserChannelRequest channelChanged notify", () => {
     handleJoinUserChannelRequest(
       joinRequest(CHANNEL_ID_2),
       {
-        ...withResponseDispatcher(context, transport),
+        ...withResponseDispatcher(params, transport),
         notifyChannelMembershipChanged,
       },
       { hostInitiated: true },
@@ -104,14 +104,14 @@ describe("handleJoinUserChannelRequest channelChanged notify", () => {
       INSTANCE_ID,
     )
 
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: INSTANCE_ID,
       initialState: state,
     })
 
     handleJoinUserChannelRequest(
       joinRequest(CHANNEL_ID),
-      withResponseDispatcher(context, transport),
+      withResponseDispatcher(params, transport),
       { hostInitiated: true },
     )
 

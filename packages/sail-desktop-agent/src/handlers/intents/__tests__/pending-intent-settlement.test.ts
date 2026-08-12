@@ -24,10 +24,10 @@ import {
 } from "../../../state/mutators"
 import { AppInstanceState, type AgentState } from "../../../state/types"
 import {
-  createDACPTestContext,
+  createDACPTestParams,
   createDacpRequestMeta,
   withResponseDispatcher,
-} from "../../__tests__/test-context"
+} from "../../__tests__/test-params"
 import { cleanupInstanceDacpState } from "../../instance-teardown"
 import { clearAllPendingIntentTimeoutsForTesting } from "../intent-pending-timeout-registry"
 import { handleRaiseIntentRequest } from "../intent-raise-intent"
@@ -105,11 +105,11 @@ function setupPendingIntentScenario() {
   })
 
   const transport = new MockTransport()
-  const { context, getState } = createDACPTestContext({
+  const { params, getState } = createDACPTestParams({
     instanceId: RAISER_ID,
     initialState: state,
   })
-  return { context: withResponseDispatcher(context, transport), transport, getState }
+  return { params: withResponseDispatcher(params, transport), transport, getState }
 }
 
 function findMessagesOfType(transport: MockTransport, type: string): WireMessage[] {
@@ -166,9 +166,9 @@ describe("handleRaiseIntentRequest: abandoned pending intent settlement", () => 
   it("delivers a terminal raiseIntentResultResponse to the raiser when pendingIntentTimeoutMs elapses with no result", async () => {
     vi.useFakeTimers()
     const requestUuid = "raise-intent-timeout"
-    const { context, transport, getState } = setupPendingIntentScenario()
+    const { params, transport, getState } = setupPendingIntentScenario()
 
-    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), context)
+    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), params)
 
     // Sanity: the intent genuinely resolved to a target and is pending a result — otherwise the
     // assertions below would not be exercising the abandonment path at all.
@@ -176,16 +176,16 @@ describe("handleRaiseIntentRequest: abandoned pending intent settlement", () => 
     expect(initialResponse?.payload?.error).toBeUndefined()
     expect(getState().intents.pending[requestUuid]).toBeDefined()
 
-    await vi.advanceTimersByTimeAsync(context.pendingIntentTimeoutMs)
+    await vi.advanceTimersByTimeAsync(params.pendingIntentTimeoutMs)
 
     expectTerminalRaiseIntentResultResponse(transport, getState, requestUuid)
   })
 
   it("delivers a terminal raiseIntentResultResponse to the raiser when the target instance disconnects mid-flight", async () => {
     const requestUuid = "raise-intent-disconnect"
-    const { context, transport, getState } = setupPendingIntentScenario()
+    const { params, transport, getState } = setupPendingIntentScenario()
 
-    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), context)
+    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), params)
 
     const initialResponse = findMessagesOfType(transport, "raiseIntentResponse")[0]
     expect(initialResponse?.payload?.error).toBeUndefined()
@@ -194,7 +194,7 @@ describe("handleRaiseIntentRequest: abandoned pending intent settlement", () => 
     // Simulate the target instance disconnecting mid-flight: reuse the already-wired
     // context/transport (same pattern as the pending open-with-context disconnect cases in
     // src/handlers/__tests__/cleanup.test.ts), only swapping instanceId to the disconnecting side.
-    cleanupInstanceDacpState({ ...context, instanceId: TARGET_ID })
+    cleanupInstanceDacpState({ ...params, instanceId: TARGET_ID })
 
     expectTerminalRaiseIntentResultResponse(transport, getState, requestUuid)
   })
@@ -204,36 +204,30 @@ describe("handleRaiseIntentForContextRequest: abandoned pending intent settlemen
   it("delivers a terminal raiseIntentResultResponse to the raiser when pendingIntentTimeoutMs elapses with no result", async () => {
     vi.useFakeTimers()
     const requestUuid = "raise-intent-for-context-timeout"
-    const { context, transport, getState } = setupPendingIntentScenario()
+    const { params, transport, getState } = setupPendingIntentScenario()
 
-    await handleRaiseIntentForContextRequest(
-      buildRaiseIntentForContextRequest(requestUuid),
-      context,
-    )
+    await handleRaiseIntentForContextRequest(buildRaiseIntentForContextRequest(requestUuid), params)
 
     const initialResponse = findMessagesOfType(transport, "raiseIntentForContextResponse")[0]
     expect(initialResponse?.payload?.error).toBeUndefined()
     expect(getState().intents.pending[requestUuid]).toBeDefined()
 
-    await vi.advanceTimersByTimeAsync(context.pendingIntentTimeoutMs)
+    await vi.advanceTimersByTimeAsync(params.pendingIntentTimeoutMs)
 
     expectTerminalRaiseIntentResultResponse(transport, getState, requestUuid)
   })
 
   it("delivers a terminal raiseIntentResultResponse to the raiser when the target instance disconnects mid-flight", async () => {
     const requestUuid = "raise-intent-for-context-disconnect"
-    const { context, transport, getState } = setupPendingIntentScenario()
+    const { params, transport, getState } = setupPendingIntentScenario()
 
-    await handleRaiseIntentForContextRequest(
-      buildRaiseIntentForContextRequest(requestUuid),
-      context,
-    )
+    await handleRaiseIntentForContextRequest(buildRaiseIntentForContextRequest(requestUuid), params)
 
     const initialResponse = findMessagesOfType(transport, "raiseIntentForContextResponse")[0]
     expect(initialResponse?.payload?.error).toBeUndefined()
     expect(getState().intents.pending[requestUuid]).toBeDefined()
 
-    cleanupInstanceDacpState({ ...context, instanceId: TARGET_ID })
+    cleanupInstanceDacpState({ ...params, instanceId: TARGET_ID })
 
     expectTerminalRaiseIntentResultResponse(transport, getState, requestUuid)
   })

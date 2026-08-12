@@ -27,7 +27,7 @@ import { cleanupInstanceDacpState } from "../instance-teardown"
 import { clearAllHeartbeatTimersForTesting } from "../heartbeat/runtime"
 import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../utils/open-with-context"
 import { resolveDacpHandlerInstanceId } from "../utils/resolve-context-listener-instance-id"
-import { createDACPTestContext, withResponseDispatcher } from "./test-context"
+import { createDACPTestParams, withResponseDispatcher } from "./test-params"
 
 /** Has a heartbeat but was never registered in `state.instances`. */
 const HEARTBEAT_ONLY_ID = "heartbeat-only-instance"
@@ -50,11 +50,11 @@ describe("resolveDacpHandlerInstanceId and cleanup's resolver decide differently
     state = startHeartbeat(state, HEARTBEAT_ONLY_ID)
     state = linkHandshakeRoutingId(state, TEMP_ROUTING_ID, HEARTBEAT_ONLY_ID)
 
-    const { context, getState } = createDACPTestContext({
+    const { params, getState } = createDACPTestParams({
       instanceId: TEMP_ROUTING_ID,
       initialState: state,
     })
-    const wiredContext = withResponseDispatcher(context, new MockTransport())
+    const wiredContext = withResponseDispatcher(params, new MockTransport())
 
     // The DACP resolver refuses the link: the linked id is not a registered instance.
     expect(resolveDacpHandlerInstanceId(wiredContext)).toBe(TEMP_ROUTING_ID)
@@ -78,11 +78,11 @@ describe("resolveDacpHandlerInstanceId and cleanup's resolver decide differently
     state = updateInstanceState(state, REGISTERED_ONLY_ID, AppInstanceState.CONNECTED)
     state = linkHandshakeRoutingId(state, PORT_ROUTING_ID, REGISTERED_ONLY_ID)
 
-    const { context, getState } = createDACPTestContext({
+    const { params, getState } = createDACPTestParams({
       instanceId: PORT_ROUTING_ID,
       initialState: state,
     })
-    const wiredContext = withResponseDispatcher(context, new MockTransport())
+    const wiredContext = withResponseDispatcher(params, new MockTransport())
 
     // The DACP resolver follows the link: the linked id IS a registered instance.
     expect(resolveDacpHandlerInstanceId(wiredContext)).toBe(REGISTERED_ONLY_ID)

@@ -11,8 +11,8 @@ import {
 import { AppInstanceState } from "../../state/types"
 import { cleanupInstanceDacpState } from "../instance-teardown"
 import { handleAddIntentListener } from "../intents/intent-listener-handlers"
-import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
-import { withResponseDispatcher } from "./test-context"
+import { createDACPTestParams, createDacpRequestMeta } from "./test-params"
+import { withResponseDispatcher } from "./test-params"
 
 const INTENT_NAME = "ViewPortfolio"
 
@@ -31,7 +31,7 @@ function registerIntentViaDacp(
   initialState = connectListenerInstance(instanceId),
 ) {
   const transport = new MockTransport()
-  const { context, getState } = createDACPTestContext({ instanceId, initialState })
+  const { params, getState } = createDACPTestParams({ instanceId, initialState })
 
   handleAddIntentListener(
     {
@@ -39,7 +39,7 @@ function registerIntentViaDacp(
       meta: createDacpRequestMeta("add-intent-listener-hardening"),
       payload: { intent: INTENT_NAME },
     },
-    withResponseDispatcher(context, transport),
+    withResponseDispatcher(params, transport),
   )
 
   return { getState, transport }
@@ -78,11 +78,11 @@ describe("instance state hardening — disconnected instance presence", () => {
   it("removes disconnected instances from state instead of tombstoning them", () => {
     const instanceId = "disconnect-instance"
     const initialState = connectListenerInstance(instanceId)
-    const { context, getState } = createDACPTestContext({ instanceId, initialState })
+    const { params, getState } = createDACPTestParams({ instanceId, initialState })
 
     expect(getInstance(getState(), instanceId)).toBeDefined()
 
-    cleanupInstanceDacpState(context)
+    cleanupInstanceDacpState(params)
 
     expect(getInstance(getState(), instanceId)).toBeUndefined()
     expect(getState().instances[instanceId]).toBeUndefined()

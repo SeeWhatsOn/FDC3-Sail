@@ -6,8 +6,8 @@ import { createInitialState } from "../../state/initial-state"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { CloseError } from "../../errors/fdc3-errors"
 import { MockAppLauncher } from "../../../test/support/mock-app-launcher"
-import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
-import { withResponseDispatcher } from "./test-context"
+import { createDACPTestParams, createDacpRequestMeta } from "./test-params"
+import { withResponseDispatcher } from "./test-params"
 import { handleCloseRequest } from "../open/handlers"
 
 function createConnectedCloseContext(instanceId: string) {
@@ -21,14 +21,14 @@ function createConnectedCloseContext(instanceId: string) {
 
   const transport = new MockTransport()
   const appLauncher = new MockAppLauncher()
-  const { context, getState } = createDACPTestContext({ instanceId, initialState: state })
+  const { params, getState } = createDACPTestParams({ instanceId, initialState: state })
 
   return {
-    context: {
-      ...withResponseDispatcher(context, transport),
+    params: {
+      ...withResponseDispatcher(params, transport),
       appLauncher,
       implementationMetadata: {
-        ...context.implementationMetadata,
+        ...params.implementationMetadata,
         fdc3Version: "3.0",
       },
     },
@@ -41,7 +41,7 @@ function createConnectedCloseContext(instanceId: string) {
 
 describe("handleCloseRequest", () => {
   it("closes via AppLauncher and removes instance without sending success closeResponse", async () => {
-    const { context, transport, appLauncher, getState, instanceId } =
+    const { params, transport, appLauncher, getState, instanceId } =
       createConnectedCloseContext("close-me")
 
     await handleCloseRequest(
@@ -53,7 +53,7 @@ describe("handleCloseRequest", () => {
         }),
         payload: {},
       },
-      context,
+      params,
     )
 
     expect(appLauncher.getCloseHistory()).toEqual([instanceId])
@@ -62,7 +62,7 @@ describe("handleCloseRequest", () => {
   })
 
   it("returns ErrorOnClose when AppLauncher.close is not configured", async () => {
-    const { context, transport, instanceId } = createConnectedCloseContext("no-close-launcher")
+    const { params, transport, instanceId } = createConnectedCloseContext("no-close-launcher")
 
     await handleCloseRequest(
       {
@@ -73,7 +73,7 @@ describe("handleCloseRequest", () => {
         }),
         payload: {},
       },
-      { ...context, appLauncher: undefined },
+      { ...params, appLauncher: undefined },
     )
 
     const last = transport.getLastMessage() as {
@@ -85,7 +85,7 @@ describe("handleCloseRequest", () => {
   })
 
   it("returns ErrorOnClose when AppLauncher.close throws", async () => {
-    const { context, transport, appLauncher, instanceId } =
+    const { params, transport, appLauncher, instanceId } =
       createConnectedCloseContext("close-fails")
     appLauncher.setInstanceToFailOnClose(instanceId)
 
@@ -98,7 +98,7 @@ describe("handleCloseRequest", () => {
         }),
         payload: {},
       },
-      context,
+      params,
     )
 
     const last = transport.getLastMessage() as {
@@ -107,14 +107,14 @@ describe("handleCloseRequest", () => {
     }
     expect(last.type).toBe("closeResponse")
     expect(last.payload.error).toBe(CloseError.ErrorOnClose)
-    expect(context.getState().instances[instanceId]).toBeDefined()
+    expect(params.getState().instances[instanceId]).toBeDefined()
   })
 
   it("returns ErrorOnClose when instance is unknown", async () => {
     const transport = new MockTransport()
     const appLauncher = new MockAppLauncher()
     const missingInstanceId = "missing-instance"
-    const { context } = createDACPTestContext({ instanceId: missingInstanceId })
+    const { params } = createDACPTestParams({ instanceId: missingInstanceId })
 
     await handleCloseRequest(
       {
@@ -125,7 +125,7 @@ describe("handleCloseRequest", () => {
         }),
         payload: {},
       },
-      { ...withResponseDispatcher(context, transport), appLauncher },
+      { ...withResponseDispatcher(params, transport), appLauncher },
     )
 
     const last = transport.getLastMessage() as {
@@ -137,7 +137,7 @@ describe("handleCloseRequest", () => {
   })
 
   it("returns ErrorOnClose when agent advertises FDC3 2.2", async () => {
-    const { context, transport, appLauncher, instanceId } = createConnectedCloseContext("close-22")
+    const { params, transport, appLauncher, instanceId } = createConnectedCloseContext("close-22")
 
     await handleCloseRequest(
       {
@@ -149,9 +149,9 @@ describe("handleCloseRequest", () => {
         payload: {},
       },
       {
-        ...context,
+        ...params,
         implementationMetadata: {
-          ...context.implementationMetadata,
+          ...params.implementationMetadata,
           fdc3Version: "2.2",
         },
       },

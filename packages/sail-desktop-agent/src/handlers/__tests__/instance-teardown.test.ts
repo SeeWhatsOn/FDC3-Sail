@@ -29,8 +29,8 @@ import {
   registerPendingIntentTimeout,
 } from "../intents/intent-pending-timeout-registry"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
-import { createDACPTestContext } from "./test-context"
-import { withResponseDispatcher } from "./test-context"
+import { createDACPTestParams } from "./test-params"
+import { withResponseDispatcher } from "./test-params"
 import { createDesktopAgentWithTestConnection } from "../../../test/support/desktop-agent-test-harness"
 import { MockTransport } from "../../__tests__/utils/mock-transport"
 import { MockTransport as CucumberMockTransport } from "../../../test/support/mock-transport"
@@ -99,10 +99,10 @@ function connectTestInstance(instanceId: string): AgentState {
   return updateInstanceState(state, instanceId, AppInstanceState.CONNECTED)
 }
 
-function createHeartbeatTestContext(options: Parameters<typeof createDACPTestContext>[0]) {
-  const { context, getState } = createDACPTestContext(options)
+function createHeartbeatTestContext(options: Parameters<typeof createDACPTestParams>[0]) {
+  const { params, getState } = createDACPTestParams(options)
   return {
-    context: withResponseDispatcher(context, new MockTransport()),
+    params: withResponseDispatcher(params, new MockTransport()),
     getState,
   }
 }
@@ -140,12 +140,12 @@ describe("cleanupInstanceDacpState", () => {
       requestType: "raiseIntentRequest",
     })
 
-    const { context, getState } = createDACPTestContext({
+    const { params, getState } = createDACPTestParams({
       instanceId: "a1",
       initialState: state,
     })
 
-    cleanupInstanceDacpState(context)
+    cleanupInstanceDacpState(params)
 
     expect(Object.keys(getState().intents.pending)).toHaveLength(0)
     expect(getActivePendingIntentTimeoutCount()).toBe(0)
@@ -173,12 +173,12 @@ describe("cleanupInstanceDacpState", () => {
       requestType: "raiseIntentRequest",
     })
 
-    const { context, getState } = createDACPTestContext({
+    const { params, getState } = createDACPTestParams({
       instanceId: "l1",
       initialState: state,
     })
 
-    cleanupInstanceDacpState(context)
+    cleanupInstanceDacpState(params)
 
     expect(Object.keys(getState().intents.pending)).toHaveLength(0)
     expect(getActivePendingIntentTimeoutCount()).toBe(0)
@@ -200,11 +200,11 @@ describe("cleanupInstanceDacpState", () => {
     state = updateInstanceState(state, "uuid-0", AppInstanceState.CONNECTED)
 
     const transport = new MockTransport()
-    const { context, getState } = createDACPTestContext({
+    const { params, getState } = createDACPTestParams({
       instanceId: "a1",
       initialState: state,
     })
-    const contextWithTransport = withResponseDispatcher(context, transport)
+    const contextWithTransport = withResponseDispatcher(params, transport)
 
     const launchContext: Context = {
       type: "fdc3.instrument",
@@ -271,11 +271,11 @@ describe("cleanupInstanceDacpState", () => {
     state = updateInstanceState(state, "uuid-0", AppInstanceState.CONNECTED)
 
     const transport = new MockTransport()
-    const { context, getState } = createDACPTestContext({
+    const { params, getState } = createDACPTestParams({
       instanceId: "a1",
       initialState: state,
     })
-    const contextWithTransport = withResponseDispatcher(context, transport)
+    const contextWithTransport = withResponseDispatcher(params, transport)
 
     const launchContext: Context = {
       type: "fdc3.instrument",
@@ -336,11 +336,11 @@ describe("cleanupInstanceDacpState", () => {
     state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
 
     const transport = new MockTransport()
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: "a1",
       initialState: state,
     })
-    const contextWithTransport = withResponseDispatcher(context, transport)
+    const contextWithTransport = withResponseDispatcher(params, transport)
 
     cleanupInstanceDacpState(contextWithTransport)
 
@@ -356,13 +356,13 @@ describe("heartbeat cleanup on disconnect", () => {
   it("cleanupInstanceDacpState clears active heartbeat interval and state entry", () => {
     const instanceId = "instance-cleanup-dacp"
     const initialState = connectTestInstance(instanceId)
-    const { context, getState } = createHeartbeatTestContext({ instanceId, initialState })
+    const { params, getState } = createHeartbeatTestContext({ instanceId, initialState })
 
-    startHeartbeat(instanceId, context)
+    startHeartbeat(instanceId, params)
     expect(getActiveHeartbeatTimerCount()).toBe(1)
     expect(getState().heartbeats[instanceId]).toBeDefined()
 
-    cleanupInstanceDacpState(context)
+    cleanupInstanceDacpState(params)
 
     expectHeartbeatFullyCleared(getState, instanceId)
   })
@@ -370,13 +370,13 @@ describe("heartbeat cleanup on disconnect", () => {
   it("cleanupInstanceDacpState clears active heartbeat interval and state entry (WCP6 teardown path)", () => {
     const instanceId = "instance-wcp6-goodbye"
     const initialState = connectTestInstance(instanceId)
-    const { context, getState } = createHeartbeatTestContext({ instanceId, initialState })
+    const { params, getState } = createHeartbeatTestContext({ instanceId, initialState })
 
-    startHeartbeat(instanceId, context)
+    startHeartbeat(instanceId, params)
     expect(getActiveHeartbeatTimerCount()).toBe(1)
     expect(getState().heartbeats[instanceId]).toBeDefined()
 
-    cleanupInstanceDacpState(context)
+    cleanupInstanceDacpState(params)
 
     expectHeartbeatFullyCleared(getState, instanceId)
   })
@@ -385,9 +385,9 @@ describe("heartbeat cleanup on disconnect", () => {
     vi.useFakeTimers()
     const instanceId = "instance-heartbeat-timeout"
     const initialState = connectTestInstance(instanceId)
-    const { context, getState } = createHeartbeatTestContext({ instanceId, initialState })
+    const { params, getState } = createHeartbeatTestContext({ instanceId, initialState })
 
-    startHeartbeat(instanceId, context)
+    startHeartbeat(instanceId, params)
     expect(getActiveHeartbeatTimerCount()).toBe(1)
     expect(getState().heartbeats[instanceId]).toBeDefined()
 
@@ -435,16 +435,16 @@ describe("heartbeat cleanup on disconnect", () => {
     const tempInstanceId = "temp-wcp4-attempt"
     const validatedInstanceId = "validated-wcp5-instance"
     const initialState = connectTestInstance(validatedInstanceId)
-    const { context, getState } = createHeartbeatTestContext({
+    const { params, getState } = createHeartbeatTestContext({
       instanceId: tempInstanceId,
       initialState,
     })
 
-    startHeartbeat(validatedInstanceId, context)
+    startHeartbeat(validatedInstanceId, params)
     expect(getActiveHeartbeatTimerCount()).toBe(1)
     expect(getState().heartbeats[validatedInstanceId]).toBeDefined()
 
-    cleanupInstanceDacpState(context)
+    cleanupInstanceDacpState(params)
 
     expectHeartbeatFullyCleared(getState, validatedInstanceId)
   })
@@ -454,12 +454,12 @@ describe("heartbeat cleanup on disconnect", () => {
     const tempInstanceId = "temp-wcp4-timeout"
     const validatedInstanceId = "validated-wcp5-timeout"
     const initialState = connectTestInstance(validatedInstanceId)
-    const { context, getState } = createHeartbeatTestContext({
+    const { params, getState } = createHeartbeatTestContext({
       instanceId: tempInstanceId,
       initialState,
     })
 
-    startHeartbeat(validatedInstanceId, context)
+    startHeartbeat(validatedInstanceId, params)
     expect(getActiveHeartbeatTimerCount()).toBe(1)
     expect(getState().heartbeats[validatedInstanceId]).toBeDefined()
 
@@ -472,16 +472,16 @@ describe("heartbeat cleanup on disconnect", () => {
     const tempInstanceId = "temp-wcp4-direct-cleanup"
     const validatedInstanceId = "validated-wcp5-direct-cleanup"
     const initialState = connectTestInstance(validatedInstanceId)
-    const { context, getState } = createHeartbeatTestContext({
+    const { params, getState } = createHeartbeatTestContext({
       instanceId: tempInstanceId,
       initialState,
     })
 
-    startHeartbeat(validatedInstanceId, context)
+    startHeartbeat(validatedInstanceId, params)
     expect(getActiveHeartbeatTimerCount()).toBe(1)
     expect(getState().heartbeats[validatedInstanceId]).toBeDefined()
 
-    cleanupInstanceDacpState(context)
+    cleanupInstanceDacpState(params)
 
     expectHeartbeatFullyCleared(getState, validatedInstanceId)
   })
@@ -563,11 +563,11 @@ describe("heartbeat cleanup on disconnect", () => {
     state = connectTestInstance(conformanceInstanceId)
     state = updateInstanceState(state, conformanceInstanceId, AppInstanceState.CONNECTED)
 
-    const { context: mockContext, getState } = createHeartbeatTestContext({
+    const { params: mockContext, getState } = createHeartbeatTestContext({
       instanceId: closedMockInstanceId,
       initialState: state,
     })
-    const { context: conformanceContext } = createHeartbeatTestContext({
+    const { params: conformanceContext } = createHeartbeatTestContext({
       instanceId: conformanceInstanceId,
       initialState: state,
     })
@@ -594,7 +594,7 @@ describe("heartbeat cleanup on disconnect", () => {
     let initialState = connectTestInstance(validatedInstanceId)
     initialState = linkHandshakeRoutingId(initialState, tempInstanceId, validatedInstanceId)
 
-    const { context, getState } = createHeartbeatTestContext({
+    const { params, getState } = createHeartbeatTestContext({
       instanceId: tempInstanceId,
       initialState,
     })
@@ -602,7 +602,7 @@ describe("heartbeat cleanup on disconnect", () => {
     expect(getState().instances[validatedInstanceId]).toBeDefined()
     expect(getActiveHeartbeatTimerCount()).toBe(0)
 
-    cleanupInstanceDacpState(context)
+    cleanupInstanceDacpState(params)
 
     expect(getState().instances[validatedInstanceId]).toBeUndefined()
   })
@@ -616,11 +616,11 @@ describe("heartbeat cleanup on disconnect", () => {
     state = connectTestInstance(otherInstanceId)
     state = updateInstanceState(state, otherInstanceId, AppInstanceState.CONNECTED)
 
-    const { context: targetContext, getState: getTargetState } = createHeartbeatTestContext({
+    const { params: targetContext, getState: getTargetState } = createHeartbeatTestContext({
       instanceId: tempInstanceId,
       initialState: state,
     })
-    const { context: otherContext } = createHeartbeatTestContext({
+    const { params: otherContext } = createHeartbeatTestContext({
       instanceId: otherInstanceId,
       initialState: state,
     })

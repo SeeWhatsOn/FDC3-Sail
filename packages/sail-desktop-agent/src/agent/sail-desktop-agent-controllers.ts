@@ -150,7 +150,7 @@ export function createIntentResolverController(
 /** Backing operations {@link changeAppUserChannel} / {@link changeAppChannel} wrap. */
 interface ChannelOperationsBacking {
   getState: () => AgentState
-  createHandlerContext: (instanceId: string) => DACPHandlerParams
+  createHandlerParams: (instanceId: string) => DACPHandlerParams
   getUserChannels: () => BrowserTypes.Channel[]
   appConnection: AgentAppConnection
   channelChangeTimeoutMs: number
@@ -165,7 +165,7 @@ interface ChannelOperationsBacking {
  * so host UI can observe membership changes.
  */
 export function changeAppUserChannel(
-  backing: Pick<ChannelOperationsBacking, "getState" | "createHandlerContext">,
+  backing: Pick<ChannelOperationsBacking, "getState" | "createHandlerParams">,
   instanceId: string,
   channelId: string | null,
 ): void {
@@ -174,7 +174,7 @@ export function changeAppUserChannel(
     throw new NoChannelFoundError(`Channel ${channelId} does not exist`)
   }
 
-  const params = backing.createHandlerContext(instanceId)
+  const params = backing.createHandlerParams(instanceId)
   const requestUuid = crypto.randomUUID()
   const instance = getInstance(state, instanceId)
   const source: BrowserTypes.AppIdentifier = {

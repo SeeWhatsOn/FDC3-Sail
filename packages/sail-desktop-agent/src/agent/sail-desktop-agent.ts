@@ -236,7 +236,7 @@ export class SailDesktopAgent<
           changeAppChannel(
             {
               getState: () => this.state,
-              createHandlerContext: id => this.createHandlerContext(id),
+              createHandlerParams: id => this.createHandlerParams(id),
               getUserChannels: () => this.getUserChannels(),
               appConnection: this.appConnection,
               channelChangeTimeoutMs: this.channelChangeTimeoutMs,
@@ -324,7 +324,7 @@ export class SailDesktopAgent<
       return
     }
 
-    await routeDACPMessage(message, this.createHandlerContext(instanceId))
+    await routeDACPMessage(message, this.createHandlerParams(instanceId))
   }
 
   private extractInstanceId(message: unknown): string | null {
@@ -369,7 +369,7 @@ export class SailDesktopAgent<
         }
         handleWcp4ValidateAppIdentity(
           message,
-          this.createHandlerContext(`temp-${connectionAttemptUuid}`),
+          this.createHandlerParams(`temp-${connectionAttemptUuid}`),
         )
         return
       }
@@ -379,7 +379,7 @@ export class SailDesktopAgent<
           this.logger.warn("[WCP] Missing instanceId, cannot route message", { messageType })
           return
         }
-        cleanupInstanceDacpState(this.createHandlerContext(instanceId))
+        cleanupInstanceDacpState(this.createHandlerParams(instanceId))
         return
       }
       default:
@@ -390,12 +390,12 @@ export class SailDesktopAgent<
   private handleDisconnect(): void {
     const allInstances = Object.values(this.state.instances)
     for (const instance of allInstances) {
-      const params = this.createHandlerContext(instance.instanceId)
+      const params = this.createHandlerParams(instance.instanceId)
       cleanupInstanceDacpState(params)
     }
   }
 
-  private createHandlerContext(instanceId: string): DACPHandlerParams {
+  private createHandlerParams(instanceId: string): DACPHandlerParams {
     const conn = this.appConnection
     const responses = createDacpResponseDispatcherFromDelivery(conn, message =>
       conn.connectionRegistry.sendToAppInstance(message),
@@ -514,7 +514,7 @@ export class SailDesktopAgent<
   }
 
   disconnectInstance(instanceId: string): void {
-    cleanupInstanceDacpState(this.createHandlerContext(instanceId))
+    cleanupInstanceDacpState(this.createHandlerParams(instanceId))
     this.appConnection.pruneAppConnection(instanceId)
   }
 

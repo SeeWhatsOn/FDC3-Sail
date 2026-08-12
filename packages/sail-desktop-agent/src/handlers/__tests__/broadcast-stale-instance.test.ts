@@ -13,8 +13,8 @@ import {
 } from "../../state/mutators"
 import { linkHandshakeRoutingId } from "../../state/mutators/wcp-handshake-routing"
 import { AppInstanceState } from "../../state/types"
-import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
-import { withResponseDispatcher } from "./test-context"
+import { createDACPTestParams, createDacpRequestMeta } from "./test-params"
+import { withResponseDispatcher } from "./test-params"
 import { handleAddContextListener, handleBroadcastRequest } from "../broadcast/handlers"
 import { routeDACPMessage } from "../index"
 
@@ -56,7 +56,7 @@ describe("handleBroadcastRequest stale instance routing", () => {
     )
     state = linkHandshakeRoutingId(state, handshakeRoutingId, validatedInstanceId)
 
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: handshakeRoutingId,
       initialState: state,
     })
@@ -73,7 +73,7 @@ describe("handleBroadcastRequest stale instance routing", () => {
           context: { type: "closeWindow", testId: "close-1" },
         },
       },
-      withResponseDispatcher(context, transport),
+      withResponseDispatcher(params, transport),
     )
 
     const response = transport.getLastMessage() as { type: string; payload?: { error?: string } }
@@ -139,7 +139,7 @@ describe("handleBroadcastRequest stale instance routing", () => {
       sourceInstanceId: conformanceInstanceId,
     })
 
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: connectedSenderId,
       initialState: state,
     })
@@ -156,7 +156,7 @@ describe("handleBroadcastRequest stale instance routing", () => {
           context: { type: "windowClosed", testId: "teardown-1" },
         },
       },
-      withResponseDispatcher(context, transport),
+      withResponseDispatcher(params, transport),
     )
 
     const response = transport.getLastMessage() as {
@@ -209,7 +209,7 @@ describe("handleBroadcastRequest stale instance routing", () => {
       sourceInstanceId,
     })
 
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: targetInstanceId,
       initialState: state,
     })
@@ -226,7 +226,7 @@ describe("handleBroadcastRequest stale instance routing", () => {
           contextType: "fdc3.instrument",
         },
       },
-      withResponseDispatcher(context, transport),
+      withResponseDispatcher(params, transport),
     )
 
     const messages = transport.sentMessages as Array<{

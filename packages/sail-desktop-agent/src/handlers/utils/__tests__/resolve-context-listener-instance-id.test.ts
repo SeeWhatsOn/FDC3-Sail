@@ -8,7 +8,7 @@ import {
 import { AppInstanceState } from "../../../state/types"
 import { createInitialState } from "../../../state/initial-state"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../../agent/default-user-channels"
-import { createDACPTestContext } from "../../__tests__/test-context"
+import { createDACPTestParams } from "../../__tests__/test-params"
 import { resolveDacpHandlerInstanceId } from "../resolve-context-listener-instance-id"
 import { linkHandshakeRoutingId } from "../../../state/mutators/wcp-handshake-routing"
 import { clearAllHeartbeatTimersForTesting } from "../../heartbeat/runtime"
@@ -34,14 +34,14 @@ describe("resolveDacpHandlerInstanceId", () => {
       metadata: { name: CHART_APP_ID },
     })
 
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: attackerInstanceId,
       initialState,
     })
 
     // Even if the strip at the trust boundary were bypassed, identity must come
     // from the registered port-derived id — never from message meta.
-    expect(resolveDacpHandlerInstanceId(context)).toBe(attackerInstanceId)
+    expect(resolveDacpHandlerInstanceId(params)).toBe(attackerInstanceId)
   })
 
   it("routes handshake routing id to validated instanceId after WCP4 handshake mapping", () => {
@@ -59,12 +59,12 @@ describe("resolveDacpHandlerInstanceId", () => {
       validatedInstanceId,
     )
 
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: handshakeRoutingId,
       initialState: stateWithLink,
     })
 
-    expect(resolveDacpHandlerInstanceId(context)).toBe(validatedInstanceId)
+    expect(resolveDacpHandlerInstanceId(params)).toBe(validatedInstanceId)
   })
 
   it("does not rebind an unregistered routing id to another app's sole connected instance", () => {
@@ -81,12 +81,12 @@ describe("resolveDacpHandlerInstanceId", () => {
       AppInstanceState.CONNECTED,
     )
 
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: unregisteredRoutingId,
       initialState,
     })
 
-    const resolved = resolveDacpHandlerInstanceId(context)
+    const resolved = resolveDacpHandlerInstanceId(params)
     expect(resolved).not.toBe(liveInstanceId)
     expect(resolved).toBe(unregisteredRoutingId)
   })
@@ -105,12 +105,12 @@ describe("resolveDacpHandlerInstanceId", () => {
       AppInstanceState.CONNECTED,
     )
 
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: attackerRoutingId,
       initialState,
     })
 
-    const resolved = resolveDacpHandlerInstanceId(context)
+    const resolved = resolveDacpHandlerInstanceId(params)
     expect(resolved).not.toBe(victimInstanceId)
     expect(resolved).toBe(attackerRoutingId)
   })
@@ -155,12 +155,12 @@ describe("resolveDacpHandlerInstanceId", () => {
       },
     )
 
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: connectedSenderId,
       initialState,
     })
 
-    expect(resolveDacpHandlerInstanceId(context)).toBe(connectedSenderId)
+    expect(resolveDacpHandlerInstanceId(params)).toBe(connectedSenderId)
   })
 
   it("does not guess a stale source id when multiple connected instances share the appId", () => {
@@ -185,11 +185,11 @@ describe("resolveDacpHandlerInstanceId", () => {
       AppInstanceState.CONNECTED,
     )
 
-    const { context } = createDACPTestContext({
+    const { params } = createDACPTestParams({
       instanceId: staleInstanceId,
       initialState,
     })
 
-    expect(resolveDacpHandlerInstanceId(context)).toBe(staleInstanceId)
+    expect(resolveDacpHandlerInstanceId(params)).toBe(staleInstanceId)
   })
 })

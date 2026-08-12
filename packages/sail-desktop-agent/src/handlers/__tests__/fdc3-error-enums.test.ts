@@ -6,11 +6,7 @@ import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { AppInstanceState } from "../../state/types"
 import { createInitialState } from "../../state/initial-state"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
-import {
-  createDACPTestContext,
-  createDacpRequestMeta,
-  withResponseDispatcher,
-} from "./test-context"
+import { createDACPTestParams, createDacpRequestMeta, withResponseDispatcher } from "./test-params"
 import { handleBroadcastRequest } from "../broadcast/handlers"
 import { handleContextListenerUnsubscribe } from "../broadcast/handlers"
 import { handleJoinUserChannelRequest } from "../channels/handlers"
@@ -40,8 +36,8 @@ function createConnectedHandlerContext(instanceId: string) {
   state = updateInstanceState(state, instanceId, AppInstanceState.CONNECTED)
 
   const transport = new MockTransport()
-  const { context } = createDACPTestContext({ instanceId, initialState: state })
-  return { context: withResponseDispatcher(context, transport), transport }
+  const { params } = createDACPTestParams({ instanceId, initialState: state })
+  return { params: withResponseDispatcher(params, transport), transport }
 }
 
 function getLastErrorPayload(transport: MockTransport): ErrorResponseMessage["payload"] {
@@ -73,7 +69,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
       name: "broadcastRequest with invalid context",
       expectedError: ChannelError.MalformedContext,
       invoke: () => {
-        const { context, transport } = createConnectedHandlerContext("a1")
+        const { params, transport } = createConnectedHandlerContext("a1")
         handleBroadcastRequest(
           {
             type: "broadcastRequest",
@@ -83,7 +79,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
               context: { bogus: true } as unknown as Context,
             },
           },
-          context,
+          params,
         )
         expect(getLastErrorPayload(transport).error).toBe(ChannelError.MalformedContext)
       },
@@ -92,14 +88,14 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
       name: "joinUserChannelRequest for missing channel",
       expectedError: ChannelError.NoChannelFound,
       invoke: () => {
-        const { context, transport } = createConnectedHandlerContext("a1")
+        const { params, transport } = createConnectedHandlerContext("a1")
         handleJoinUserChannelRequest(
           {
             type: "joinUserChannelRequest",
             meta: createDacpRequestMeta("join-missing-channel"),
             payload: { channelId: "nonexistent-user-channel" },
           },
-          context,
+          params,
         )
         expect(getLastErrorPayload(transport).error).toBe(ChannelError.NoChannelFound)
       },
@@ -108,7 +104,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
       name: "broadcastRequest to missing channel",
       expectedError: ChannelError.NoChannelFound,
       invoke: () => {
-        const { context, transport } = createConnectedHandlerContext("a1")
+        const { params, transport } = createConnectedHandlerContext("a1")
         handleBroadcastRequest(
           {
             type: "broadcastRequest",
@@ -118,7 +114,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
               context: { type: "fdc3.instrument", id: { ticker: "AAPL" } },
             },
           },
-          context,
+          params,
         )
         expect(getLastErrorPayload(transport).error).toBe(ChannelError.NoChannelFound)
       },
@@ -127,14 +123,14 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
       name: "contextListenerUnsubscribe for unknown listener",
       expectedError: ChannelError.InvalidArguments,
       invoke: () => {
-        const { context, transport } = createConnectedHandlerContext("a1")
+        const { params, transport } = createConnectedHandlerContext("a1")
         handleContextListenerUnsubscribe(
           {
             type: "contextListenerUnsubscribeRequest",
             meta: createDacpRequestMeta("unsub-unknown-listener"),
             payload: { listenerUUID: "unknown-listener-uuid" },
           },
-          context,
+          params,
         )
         expect(getLastErrorPayload(transport).error).toBe(ChannelError.InvalidArguments)
       },
@@ -144,14 +140,14 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
       expectedError: ChannelError.CreationFailed,
       invoke: () => {
         const transport = new MockTransport()
-        const { context } = createDACPTestContext({ instanceId: "disconnected-instance" })
+        const { params } = createDACPTestParams({ instanceId: "disconnected-instance" })
         handleCreatePrivateChannelRequest(
           {
             type: "createPrivateChannelRequest",
             meta: createDacpRequestMeta("create-private-no-instance"),
             payload: {},
           },
-          withResponseDispatcher(context, transport),
+          withResponseDispatcher(params, transport),
         )
         expect(getLastErrorPayload(transport).error).toBe(ChannelError.CreationFailed)
       },
@@ -160,14 +156,14 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
       name: "openRequest without app launcher",
       expectedError: OpenError.ErrorOnLaunch,
       invoke: async () => {
-        const { context, transport } = createConnectedHandlerContext("a1")
+        const { params, transport } = createConnectedHandlerContext("a1")
         await handleOpenRequest(
           {
             type: "openRequest",
             meta: createDacpRequestMeta("open-no-launcher"),
             payload: { app: { appId: "SomeApp" } },
           },
-          context,
+          params,
         )
         expect(getLastErrorPayload(transport).error).toBe(OpenError.ErrorOnLaunch)
       },
@@ -177,14 +173,14 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
       expectedError: ResolveError.TargetInstanceUnavailable,
       invoke: () => {
         const transport = new MockTransport()
-        const { context } = createDACPTestContext({ instanceId: "missing-instance" })
+        const { params } = createDACPTestParams({ instanceId: "missing-instance" })
         handleAddIntentListener(
           {
             type: "addIntentListenerRequest",
             meta: createDacpRequestMeta("intent-listener-missing-instance"),
             payload: { intent: "ViewChart" },
           },
-          withResponseDispatcher(context, transport),
+          withResponseDispatcher(params, transport),
         )
         expect(getLastErrorPayload(transport).error).toBe(ResolveError.TargetInstanceUnavailable)
       },
@@ -195,7 +191,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
       name: "raiseIntentRequest with missing context",
       expectedError: ResolveError.MalformedContext,
       invoke: async () => {
-        const { context, transport } = createConnectedHandlerContext("a1")
+        const { params, transport } = createConnectedHandlerContext("a1")
         await handleRaiseIntentRequest(
           {
             type: "raiseIntentRequest",
@@ -205,7 +201,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
               context: undefined as unknown as Context,
             },
           },
-          context,
+          params,
         )
         expect(getLastErrorPayload(transport).error).toBe(ResolveError.MalformedContext)
       },
@@ -214,7 +210,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
       name: "raiseIntentRequest with invalid context",
       expectedError: ResolveError.MalformedContext,
       invoke: async () => {
-        const { context, transport } = createConnectedHandlerContext("a1")
+        const { params, transport } = createConnectedHandlerContext("a1")
         await handleRaiseIntentRequest(
           {
             type: "raiseIntentRequest",
@@ -224,7 +220,7 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
               context: { bogus: true } as unknown as Context,
             },
           },
-          context,
+          params,
         )
         expect(getLastErrorPayload(transport).error).toBe(ResolveError.MalformedContext)
       },
@@ -235,14 +231,14 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
       name: "addEventListenerRequest with the non-schema alias userChannelChanged",
       expectedError: ChannelError.InvalidArguments,
       invoke: () => {
-        const { context, transport } = createConnectedHandlerContext("a1")
+        const { params, transport } = createConnectedHandlerContext("a1")
         handleAddEventListenerRequest(
           {
             type: "addEventListenerRequest",
             meta: createDacpRequestMeta("add-event-listener-camel-alias"),
             payload: { type: asEventListenerType("userChannelChanged") },
           },
-          context,
+          params,
         )
         expect(getLastErrorPayload(transport).error).toBe(ChannelError.InvalidArguments)
       },
@@ -252,14 +248,14 @@ describe("DACP handler error responses use @finos/fdc3 enum values", () => {
       name: "addEventListenerRequest with the non-schema alias channelChanged",
       expectedError: ChannelError.InvalidArguments,
       invoke: () => {
-        const { context, transport } = createConnectedHandlerContext("a1")
+        const { params, transport } = createConnectedHandlerContext("a1")
         handleAddEventListenerRequest(
           {
             type: "addEventListenerRequest",
             meta: createDacpRequestMeta("add-event-listener-internal-key-alias"),
             payload: { type: asEventListenerType("channelChanged") },
           },
-          context,
+          params,
         )
         expect(getLastErrorPayload(transport).error).toBe(ChannelError.InvalidArguments)
       },

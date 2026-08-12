@@ -7,10 +7,10 @@ import { createInitialState } from "../../../state/initial-state"
 import { addPendingIntent, connectInstance, updateInstanceState } from "../../../state/mutators"
 import { AppInstanceState } from "../../../state/types"
 import {
-  createDACPTestContext,
+  createDACPTestParams,
   createDacpRequestMeta,
   withResponseDispatcher,
-} from "../../__tests__/test-context"
+} from "../../__tests__/test-params"
 import { handleIntentResultRequest } from "../intent-result-handlers"
 import type { IntentResultContextMetadata } from "../intent-result-metadata"
 
@@ -59,14 +59,14 @@ function setupPendingIntentContext() {
     requestType: "raiseIntentRequest",
   })
 
-  const { context, getState } = createDACPTestContext({
+  const { params, getState } = createDACPTestParams({
     instanceId: BASE.handlerInstanceId,
     initialState: state,
   })
 
   const transport = new MockTransport()
   return {
-    context: withResponseDispatcher(context, transport),
+    params: withResponseDispatcher(params, transport),
     transport,
     getState,
   }
@@ -99,7 +99,7 @@ describe("handleIntentResultRequest", () => {
       intentResult: {},
     },
   ])("sends raiseIntentResultResponse with DA metadata for $name", ({ intentResult }) => {
-    const { context, transport, getState } = setupPendingIntentContext()
+    const { params, transport, getState } = setupPendingIntentContext()
 
     handleIntentResultRequest(
       {
@@ -114,7 +114,7 @@ describe("handleIntentResultRequest", () => {
           intentResult,
         },
       },
-      context,
+      params,
     )
 
     const response = findRaiseIntentResultResponse(transport)

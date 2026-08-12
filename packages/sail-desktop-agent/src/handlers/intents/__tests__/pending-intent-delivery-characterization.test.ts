@@ -30,10 +30,10 @@ import {
 import { AppInstanceState, type AgentState } from "../../../state/types"
 import type { DACPHandlerParams } from "../../types"
 import {
-  createDACPTestContext,
+  createDACPTestParams,
   createDacpRequestMeta,
   withResponseDispatcher,
-} from "../../__tests__/test-context"
+} from "../../__tests__/test-params"
 import { cleanupInstanceDacpState } from "../../instance-teardown"
 import {
   attemptIntentDelivery,
@@ -84,7 +84,7 @@ function setupScenario(
     openContextListenerTimeoutMs?: number
     pendingIntentTimeoutMs?: number
   } = {},
-): { context: DACPHandlerParams; transport: MockTransport; getState: () => AgentState } {
+): { params: DACPHandlerParams; transport: MockTransport; getState: () => AgentState } {
   let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
   state = connectInstance(state, {
     instanceId: RAISER_ID,
@@ -124,16 +124,16 @@ function setupScenario(
   })
 
   const transport = new MockTransport()
-  const { context: baseContext, getState } = createDACPTestContext({
+  const { params: baseParams, getState } = createDACPTestParams({
     instanceId: RAISER_ID,
     initialState: state,
   })
-  const context: DACPHandlerParams = {
-    ...withResponseDispatcher(baseContext, transport),
+  const params: DACPHandlerParams = {
+    ...withResponseDispatcher(baseParams, transport),
     openContextListenerTimeoutMs: options.openContextListenerTimeoutMs ?? 2000,
     pendingIntentTimeoutMs: options.pendingIntentTimeoutMs ?? 2000,
   }
-  return { context, transport, getState }
+  return { params, transport, getState }
 }
 
 function messagesOfType(transport: MockTransport, type: string): WireMessage[] {
@@ -173,12 +173,12 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
   it("sends nothing and does not throw when the delivery timeout fires after the pending intent is already gone from state", async () => {
     vi.useFakeTimers()
     const requestUuid = "delivery-timeout-after-settlement"
-    const { context, transport, getState } = setupScenario({
+    const { params, transport, getState } = setupScenario({
       pendingIntentTimeoutMs: 1000,
       openContextListenerTimeoutMs: 5000,
     })
 
-    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), context)
+    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), params)
 
     // The queued path sends *nothing* to the raiser up front: `attemptIntentDelivery` returns
     // false before reaching any `sendDACPResponse`, so there is no early raiseIntentResponse.
@@ -223,12 +223,12 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
   it("settles the raiser with IntentDeliveryFailed when the delivery timeout fires while the pending intent is still in state", async () => {
     vi.useFakeTimers()
     const requestUuid = "delivery-timeout-before-settlement"
-    const { context, transport, getState } = setupScenario({
+    const { params, transport, getState } = setupScenario({
       openContextListenerTimeoutMs: 1000,
       pendingIntentTimeoutMs: 5000,
     })
 
-    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), context)
+    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), params)
     expect(getState().intents.pending[requestUuid]).toBeDefined()
 
     // t=1000 — the delivery timeout wins the race. `requestType` is read off the state entry,
@@ -262,15 +262,12 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
   it("uses raiseIntentForContextResponse on the delivery-timeout path for a raiseIntentForContextRequest", async () => {
     vi.useFakeTimers()
     const requestUuid = "for-context-delivery-timeout"
-    const { context, transport, getState } = setupScenario({
+    const { params, transport, getState } = setupScenario({
       openContextListenerTimeoutMs: 1000,
       pendingIntentTimeoutMs: 5000,
     })
 
-    await handleRaiseIntentForContextRequest(
-      buildRaiseIntentForContextRequest(requestUuid),
-      context,
-    )
+    await handleRaiseIntentForContextRequest(buildRaiseIntentForContextRequest(requestUuid), params)
     expect(getState().intents.pending[requestUuid]).toBeDefined()
 
     await vi.advanceTimersByTimeAsync(1000)
@@ -293,12 +290,12 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
 describe("attemptIntentDelivery: the delivered flag", () => {
   it("delivers once and re-sends nothing on a second attempt for the same request", async () => {
     const requestUuid = "deliver-once"
-    const { context, transport, getState } = setupScenario({
+    const { params, transport, getState } = setupScenario({
       withTargetListener: true,
       targetConnected: true,
     })
 
-    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), context)
+    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), params)
 
     const intentEvents = messagesOfType(transport, "intentEvent")
     expect(intentEvents).toHaveLength(1)
@@ -311,14 +308,14 @@ describe("attemptIntentDelivery: the delivered flag", () => {
 
     // The `pendingIntent.delivered` early return in `attemptIntentDelivery` is what makes this a
     // no-op; it returns true (meaning "nothing left to do"), not false.
-    expect(attemptIntentDelivery(context, requestUuid, false)).toBe(true)
+    expect(attemptIntentDelivery(params, requestUuid, false)).toBe(true)
     expect(transport.sentMessages).toHaveLength(messageCountAfterDelivery)
   })
 
   it("reports success without sending when the request has no pending intent in state", () => {
-    const { context, transport } = setupScenario({ targetConnected: true })
+    const { params, transport } = setupScenario({ targetConnected: true })
 
-    expect(attemptIntentDelivery(context, "no-such-request", false)).toBe(true)
+    expect(attemptIntentDelivery(params, "no-such-request", false)).toBe(true)
     expect(transport.sentMessages).toHaveLength(0)
   })
 
@@ -328,12 +325,12 @@ describe("attemptIntentDelivery: the delivered flag", () => {
   // entry that this path never created.
   it("delivers once for a pending intent added directly to state", () => {
     const requestUuid = "state-only-pending-intent"
-    const { context, transport, getState } = setupScenario({
+    const { params, transport, getState } = setupScenario({
       withTargetListener: true,
       targetConnected: true,
     })
 
-    context.setState(state =>
+    params.setState(state =>
       addPendingIntent(state, {
         requestId: requestUuid,
         intentName: INTENT_NAME,
@@ -344,10 +341,10 @@ describe("attemptIntentDelivery: the delivered flag", () => {
       }),
     )
 
-    expect(attemptIntentDelivery(context, requestUuid, false)).toBe(true)
+    expect(attemptIntentDelivery(params, requestUuid, false)).toBe(true)
     expect(getState().intents.pending[requestUuid]?.delivered).toBe(true)
 
-    expect(attemptIntentDelivery(context, requestUuid, false)).toBe(true)
+    expect(attemptIntentDelivery(params, requestUuid, false)).toBe(true)
 
     expect(messagesOfType(transport, "intentEvent")).toHaveLength(1)
     expect(messagesOfType(transport, "raiseIntentResponse")).toHaveLength(1)
@@ -359,9 +356,9 @@ describe("attemptIntentDelivery: the delivered flag", () => {
   // out entirely because there was no Map entry, leaving the raiser with no response at all.
   it("arms a delivery timeout for a pending intent added directly to state", () => {
     const requestUuid = "queue-without-entry"
-    const { context, transport } = setupScenario()
+    const { params, transport } = setupScenario()
 
-    context.setState(state =>
+    params.setState(state =>
       addPendingIntent(state, {
         requestId: requestUuid,
         intentName: INTENT_NAME,
@@ -372,7 +369,7 @@ describe("attemptIntentDelivery: the delivered flag", () => {
       }),
     )
 
-    queueIntentDelivery(context, requestUuid, true)
+    queueIntentDelivery(params, requestUuid, true)
 
     expect(getActivePendingIntentTimeoutCount()).toBe(1)
     expect(transport.sentMessages).toHaveLength(0)
@@ -382,12 +379,12 @@ describe("attemptIntentDelivery: the delivered flag", () => {
 describe("deliverPendingIntentsForListener", () => {
   it("skips a pending intent that was already delivered", async () => {
     const requestUuid = "already-delivered"
-    const { context, transport } = setupScenario({
+    const { params, transport } = setupScenario({
       withTargetListener: true,
       targetConnected: true,
     })
 
-    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), context)
+    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), params)
     expect(messagesOfType(transport, "intentEvent")).toHaveLength(1)
 
     const messageCountAfterDelivery = transport.sentMessages.length
@@ -395,7 +392,7 @@ describe("deliverPendingIntentsForListener", () => {
     // A second listener registration for the same intent re-runs the sweep from the target's
     // perspective. The `pending.delivered` check in `deliverPendingIntentsForListener` is the
     // only thing stopping a duplicate intentEvent.
-    deliverPendingIntentsForListener({ ...context, instanceId: TARGET_ID }, INTENT_NAME)
+    deliverPendingIntentsForListener({ ...params, instanceId: TARGET_ID }, INTENT_NAME)
 
     expect(transport.sentMessages).toHaveLength(messageCountAfterDelivery)
     expect(messagesOfType(transport, "intentEvent")).toHaveLength(1)
@@ -404,16 +401,16 @@ describe("deliverPendingIntentsForListener", () => {
   it("delivers a queued pending intent once the target registers its listener", async () => {
     vi.useFakeTimers()
     const requestUuid = "queued-then-listener"
-    const { context, transport, getState } = setupScenario({
+    const { params, transport, getState } = setupScenario({
       targetConnected: true,
       openContextListenerTimeoutMs: 5000,
       pendingIntentTimeoutMs: 60_000,
     })
 
-    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), context)
+    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), params)
     expect(messagesOfType(transport, "intentEvent")).toHaveLength(0)
 
-    context.setState(state =>
+    params.setState(state =>
       registerIntentListener(state, {
         listenerId: "late-listener-1",
         intentName: INTENT_NAME,
@@ -422,7 +419,7 @@ describe("deliverPendingIntentsForListener", () => {
         contextTypes: [CONTEXT_TYPE],
       }),
     )
-    deliverPendingIntentsForListener({ ...context, instanceId: TARGET_ID }, INTENT_NAME)
+    deliverPendingIntentsForListener({ ...params, instanceId: TARGET_ID }, INTENT_NAME)
 
     expect(messagesOfType(transport, "intentEvent")).toHaveLength(1)
     expect(messagesOfType(transport, "raiseIntentResponse")).toHaveLength(1)
@@ -447,15 +444,15 @@ describe("deliverPendingIntentsForListener", () => {
 describe("cleanupInstanceDacpState: pending-intent settlement on disconnect", () => {
   it("settles the raiser with a terminal raiseIntentResultResponse when the target disconnects mid-flight", async () => {
     const requestUuid = "target-disconnect-settles-raiser"
-    const { context, transport, getState } = setupScenario({
+    const { params, transport, getState } = setupScenario({
       withTargetListener: true,
       targetConnected: true,
     })
 
-    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), context)
+    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), params)
     expect(getState().intents.pending[requestUuid]).toBeDefined()
 
-    cleanupInstanceDacpState({ ...context, instanceId: TARGET_ID })
+    cleanupInstanceDacpState({ ...params, instanceId: TARGET_ID })
 
     const settlement = messagesOfType(transport, "raiseIntentResultResponse")
     expect(settlement).toHaveLength(1)
@@ -467,18 +464,18 @@ describe("cleanupInstanceDacpState: pending-intent settlement on disconnect", ()
 
   it("posts no terminal response when the raiser itself is the disconnecting instance", async () => {
     const requestUuid = "raiser-disconnect-posts-nothing"
-    const { context, transport, getState } = setupScenario({
+    const { params, transport, getState } = setupScenario({
       withTargetListener: true,
       targetConnected: true,
     })
 
-    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), context)
+    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), params)
     expect(getState().intents.pending[requestUuid]).toBeDefined()
 
     // 20515fdbf: the terminal response is addressed to `pending.sourceInstanceId`, so sending it
     // when the source is the one going away posts to a just-closed instance for a promise nobody
     // is awaiting. The guard is `pending.sourceInstanceId !== instanceId`.
-    cleanupInstanceDacpState({ ...context, instanceId: RAISER_ID })
+    cleanupInstanceDacpState({ ...params, instanceId: RAISER_ID })
 
     expect(messagesOfType(transport, "raiseIntentResultResponse")).toHaveLength(0)
     expect(getState().intents.pending[requestUuid]).toBeUndefined()
@@ -487,15 +484,15 @@ describe("cleanupInstanceDacpState: pending-intent settlement on disconnect", ()
   it("clears the armed delivery timeout when the target disconnects while delivery is still queued", async () => {
     vi.useFakeTimers()
     const requestUuid = "disconnect-while-queued"
-    const { context, transport, getState } = setupScenario({
+    const { params, transport, getState } = setupScenario({
       openContextListenerTimeoutMs: 5000,
       pendingIntentTimeoutMs: 60_000,
     })
 
-    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), context)
+    await handleRaiseIntentRequest(buildRaiseIntentRequest(requestUuid), params)
     expect(getActivePendingIntentTimeoutCount()).toBe(2)
 
-    cleanupInstanceDacpState({ ...context, instanceId: TARGET_ID })
+    cleanupInstanceDacpState({ ...params, instanceId: TARGET_ID })
 
     // `cleanupInstanceDacpState` clears both timeouts for the request, so no pending-intent timer
     // survives the teardown.
