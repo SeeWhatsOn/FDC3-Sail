@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: DACP handler deps refactor
 
 Status: implementing
-Current slice: **Collapse `pendingIntentPromises`** (replaces slice 4). Slice 2 renamed and deferred; slice 3 pending.
+Current slice: **none in flight.** Slice 1 done (`dc2db03c1`), slice 4′ done (`b3f1f3c79`). Next up: slice 2 (rename `DACPHandlerContext` → `DACPHandlerParams`, on **sonnet** — mechanical) then slice 3 (required `DacpHandlerConfig`).
 
 > ### Decisions taken 2026-08-12, after two independent discovery agents
 >
@@ -143,7 +143,7 @@ Bug 2 is the one that argues hardest for this slice: resolving once at the entry
 
 ### 4. ~~Normalise argument order to deps-last~~ — **CUT**, replaced by the collapse below
 
-### 4′. Collapse `pendingIntentPromises`
+### 4′. Collapse `pendingIntentPromises` — **DONE** (`b3f1f3c79`, characterization tests `6ae44e5b2`)
 
 - **Goal:** delete a parallel store that exists to hold non-serializable promise handles which no longer exist. `PendingIntentPromiseEntry.resolve` / `.reject` are written **only** at `intent-raise-shared.ts:128` as `() => {}` and are never replaced, so `intent-result-handlers.ts:115` and `instance-teardown.ts:95` call no-ops in production. Real settlement happens by wire response — which is why defect #1 needed `20515fdbf` at all.
 - **Where each field goes:**
@@ -160,13 +160,12 @@ Bug 2 is the one that argues hardest for this slice: resolving once at the entry
 - **Verify:** `npx tsc --noEmit && npx vp lint . && npx vp test run && npx cucumber-js` — run **sequentially, not in parallel** (see the flake note in Parked Follow-ups).
 - **Likely files:** `handlers/types.ts`, `state/types.ts`, `state/mutators/intent.ts`, `handlers/intents/intent-raise-shared.ts`, `handlers/intents/intent-delivery-helpers.ts`, `handlers/intents/intent-result-handlers.ts`, `handlers/instance-teardown.ts`, `agent/sail-desktop-agent.ts`, `handlers/__tests__/test-context.ts`, plus 4 test files.
 
-- **Goal:** one rule — `deps` is always the last parameter — so call sites are recognised rather than read.
-- **Acceptance:**
-  - `deps` is last in every signature that takes it. The ~20 helpers that currently lead with it move; the ones already last (`startHeartbeat`, `launchAppAndWaitForInstance`, `deliverCurrentContextToListener`, `notifyPrivateChannelUnsubscribe`) do not change.
-  - `schedulePendingIntentDelivery`'s two adjacent booleans become a named options object.
-  - No other 4+ positional-parameter helper in `handlers/intents` keeps adjacent same-typed parameters.
-- **Verify:** `npx tsc --noEmit && npx vp test run && npx cucumber-js`
-- **Likely files:** `handlers/intents/intent-raise-shared.ts`, `handlers/intents/intent-delivery-helpers.ts`, `handlers/cleanup.ts`, `handlers/heartbeat/handlers.ts`
+#### 4′ outcome — 18 files, −99 net; all four gates green (385 vitest, 154/1460 cucumber, lint and tsc silent)
+
+- **The plan's timer-handle assumption was wrong.** It said the handles "stay out of Immer state; already tracked in `intent-pending-timeout-registry.ts`". The registry held an **unkeyed `Set`** supporting only clear-everything for Cucumber teardown; every per-request clear (`cleanupPendingIntentRequest`, `instance-teardown.ts`, `intent-result-handlers.ts`, the delivery cancel on success) read the handles **off the map entry**. Deleting the map with the registry untouched was not possible. The registry is now keyed by `requestId` with a `"raise" | "delivery"` kind — the correct home for the only non-serializable part of a pending intent. `getActivePendingIntentTimeoutCount` and `clearAllPendingIntentTimeoutsForTesting` keep identical semantics, so `pending-intent-settlement.test.ts` and `test/support/hooks.ts` needed no change.
+- **The captured-reference risk resolved as predicted.** The `:179` write landed on an orphaned object once the entry left state, so it was already unobservable. `delivered` now goes through a `markPendingIntentDelivered` mutator. The `requestType` read moved after the state lookup; safe because the response it feeds was only ever sent inside the pre-existing `if (pendingIntent)` guard.
+- **Two knock-on fixes fell out** of the two stores no longer being able to disagree: `handleIntentResultRequest` now clears the **delivery** timeout as well as the raise one (a latent handle leak the tester flagged), and the result wire payload is built on the branch that sends it instead of being half-rebuilt when the map entry was absent.
+- **Two characterization tests flipped**, exactly as predicted, both under `attemptIntentDelivery: the delivered flag`. Both asserted the old divergence between the two stores; rewritten to assert delivery-once and timeout-armed against state. Five tautological `resolve`/`reject` assertions across `intent-result-client-metadata.test.ts` and `intent-result-handlers.test.ts` became state assertions.
 
 ---
 
