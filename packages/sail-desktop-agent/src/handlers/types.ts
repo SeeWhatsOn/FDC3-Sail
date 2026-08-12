@@ -38,13 +38,13 @@ export interface DacpResponseDispatcher {
 }
 
 // ============================================================================
-// DACP HANDLER CONTEXT
+// DACP HANDLER PARAMS
 // ============================================================================
 
 /**
- * Context passed to all DACP message handlers.
+ * Params passed to all DACP message handlers.
  */
-export interface DACPHandlerContext {
+export interface DACPHandlerParams {
   /** DACP response and event delivery for connected app instances */
   responses: DacpResponseDispatcher
 

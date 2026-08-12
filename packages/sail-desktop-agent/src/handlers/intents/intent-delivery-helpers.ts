@@ -11,7 +11,7 @@ import {
   resolvePendingIntent,
   updatePendingIntentTarget,
 } from "../../state/mutators"
-import type { DACPHandlerContext } from "../types"
+import type { DACPHandlerParams } from "../types"
 import { AppInstanceState, type IntentRequestType } from "../../state/types"
 import {
   extractAppProvidedIntentContextMetadata,
@@ -32,22 +32,22 @@ function getResponseTypeForRequest(requestType: IntentRequestType): IntentRespon
 }
 
 export function isIntentListenerReady(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   instanceId: string,
   intentName: string,
 ): boolean {
-  const listeners = getListenersForInstance(context.getState(), instanceId).filter(
+  const listeners = getListenersForInstance(params.getState(), instanceId).filter(
     listener => listener.intentName === intentName && listener.active,
   )
   return listeners.length > 0
 }
 
 export function attemptIntentDelivery(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   requestId: string,
   requireListener: boolean,
 ): boolean {
-  const { getState, responses, logger } = context
+  const { getState, responses, logger } = params
   const pendingIntent = getPendingIntent(getState(), requestId)
   if (!pendingIntent) {
     return true
@@ -59,7 +59,7 @@ export function attemptIntentDelivery(
 
   if (
     requireListener &&
-    !isIntentListenerReady(context, pendingIntent.targetInstanceId, pendingIntent.intentName)
+    !isIntentListenerReady(params, pendingIntent.targetInstanceId, pendingIntent.intentName)
   ) {
     return false
   }
@@ -132,21 +132,21 @@ export function attemptIntentDelivery(
   sendDACPResponse({ response, instanceId: pendingIntent.sourceInstanceId, responses })
 
   clearPendingIntentTimeout(requestId, "delivery")
-  context.setState(state => markPendingIntentDelivered(state, requestId))
+  params.setState(state => markPendingIntentDelivered(state, requestId))
 
   return true
 }
 
 export function queueIntentDelivery(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   requestId: string,
   requireListener: boolean,
 ): void {
-  if (!getPendingIntent(context.getState(), requestId)) {
+  if (!getPendingIntent(params.getState(), requestId)) {
     return
   }
 
-  const delivered = attemptIntentDelivery(context, requestId, requireListener)
+  const delivered = attemptIntentDelivery(params, requestId, requireListener)
   if (delivered) {
     return
   }
@@ -156,7 +156,7 @@ export function queueIntentDelivery(
 
     // `requestType` now comes off the state entry, so the lookup must come first. Safe: the
     // response was only ever sent inside the `if (pendingIntent)` guard anyway.
-    const pendingIntent = getPendingIntent(context.getState(), requestId)
+    const pendingIntent = getPendingIntent(params.getState(), requestId)
     if (!pendingIntent || pendingIntent.delivered) {
       return
     }
@@ -172,23 +172,23 @@ export function queueIntentDelivery(
     sendDACPResponse({
       response,
       instanceId: pendingIntent.sourceInstanceId,
-      responses: context.responses,
+      responses: params.responses,
     })
-    context.setState(state => resolvePendingIntent(state, requestId))
-  }, context.openContextListenerTimeoutMs)
+    params.setState(state => resolvePendingIntent(state, requestId))
+  }, params.openContextListenerTimeoutMs)
   registerPendingIntentTimeout(requestId, "delivery", timeoutHandle)
 }
 
 export function deliverPendingIntentsForListener(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   intentName: string,
 ): void {
-  const listenerInstance = getInstance(context.getState(), context.instanceId)
+  const listenerInstance = getInstance(params.getState(), params.instanceId)
   if (!listenerInstance) {
     return
   }
 
-  const pendingIntents = Object.values(context.getState().intents.pending).filter(
+  const pendingIntents = Object.values(params.getState().intents.pending).filter(
     pending => pending.targetAppId === listenerInstance.appId && pending.intentName === intentName,
   )
 
@@ -197,16 +197,16 @@ export function deliverPendingIntentsForListener(
       return
     }
 
-    if (pending.targetInstanceId !== context.instanceId) {
-      context.setState(state =>
+    if (pending.targetInstanceId !== params.instanceId) {
+      params.setState(state =>
         updatePendingIntentTarget(
           state,
           pending.requestId,
-          context.instanceId,
+          params.instanceId,
           listenerInstance.appId,
         ),
       )
     }
-    attemptIntentDelivery(context, pending.requestId, true)
+    attemptIntentDelivery(params, pending.requestId, true)
   })
 }

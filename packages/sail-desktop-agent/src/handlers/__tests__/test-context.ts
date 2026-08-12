@@ -2,7 +2,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { DEFAULT_SAIL_DESKTOP_AGENT_METADATA } from "../../agent/default-config"
 import { consoleLogger } from "../../logging/logger"
-import type { DACPHandlerContext, DacpResponseDispatcher } from "../types"
+import type { DACPHandlerParams, DacpResponseDispatcher } from "../types"
 import { createInitialState } from "../../state/initial-state"
 import type { AgentState, StateSetter } from "../../state/types"
 import type { Transport } from "../../../test/support/transport"
@@ -14,7 +14,7 @@ export { createDacpResponseDispatcher } from "../../../test/support/transport"
 const sharedStateByInitialSnapshot = new WeakMap<AgentState, AgentState>()
 
 export function createDACPTestContext(options: { instanceId: string; initialState?: AgentState }): {
-  context: DACPHandlerContext
+  context: DACPHandlerParams
   getState: () => AgentState
 } {
   const initialSnapshot = options.initialState
@@ -36,7 +36,7 @@ export function createDACPTestContext(options: { instanceId: string; initialStat
   }
 
   const edgeTransport = new InMemoryTransport()
-  const context: DACPHandlerContext = {
+  const params: DACPHandlerParams = {
     responses: createDacpResponseDispatcher(edgeTransport),
     instanceId: options.instanceId,
     getState: readState,
@@ -54,16 +54,16 @@ export function createDACPTestContext(options: { instanceId: string; initialStat
     heartbeatTimeoutMs: 2000,
   }
 
-  return { context, getState: readState }
+  return { context: params, getState: readState }
 }
 
-/** Wire a delivery recorder into handler context for isolated DACP tests. */
+/** Wire a delivery recorder into handler params for isolated DACP tests. */
 export function withResponseDispatcher(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   delivery: DacpResponseDispatcher | Transport,
-): DACPHandlerContext {
+): DACPHandlerParams {
   const responses = "sendToInstance" in delivery ? delivery : createDacpResponseDispatcher(delivery)
-  return { ...context, responses }
+  return { ...params, responses }
 }
 
 export function createDacpRequestMeta(

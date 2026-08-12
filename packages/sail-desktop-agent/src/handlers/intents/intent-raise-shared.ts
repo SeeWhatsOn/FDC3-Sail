@@ -12,7 +12,7 @@ import {
 } from "../../errors/fdc3-errors"
 import { attemptIntentDelivery, queueIntentDelivery } from "./intent-delivery-helpers"
 import { retrieveAppsById } from "../../app-directory/app-directory-queries"
-import type { DACPHandlerContext } from "../types"
+import type { DACPHandlerParams } from "../types"
 import { sendDACPResponse } from "../utils/dacp-response-utils"
 import {
   clearPendingIntentTimeouts,
@@ -55,14 +55,14 @@ export function normalizeTargetApp(target: unknown): AppIdentifier | undefined {
 }
 
 export function validateRequestedTargetAvailability(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   targetApp: AppIdentifier | undefined,
 ): void {
   if (!targetApp) {
     return
   }
 
-  const apps = retrieveAppsById(context.getState().appDirectory, targetApp.appId)
+  const apps = retrieveAppsById(params.getState().appDirectory, targetApp.appId)
   if (apps.length === 0) {
     throw new TargetAppUnavailableError(`App not found in directory: ${targetApp.appId}`)
   }
@@ -71,7 +71,7 @@ export function validateRequestedTargetAvailability(
     return
   }
 
-  const instance = getInstance(context.getState(), targetApp.instanceId)
+  const instance = getInstance(params.getState(), targetApp.instanceId)
   if (!instance) {
     throw new TargetInstanceUnavailableError(
       `Instance not found or terminated: ${targetApp.instanceId}`,
@@ -80,13 +80,13 @@ export function validateRequestedTargetAvailability(
 }
 
 export async function resolveAppTargetInstance(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   options: ResolveAppTargetInstanceOptions,
 ): Promise<{ targetInstanceId: string; targetInstanceIsLaunched: boolean }> {
   const { appId, validatedContext, preferredInstanceId, runningListenerInstanceId } = options
 
   if (preferredInstanceId) {
-    const instance = getInstance(context.getState(), preferredInstanceId)
+    const instance = getInstance(params.getState(), preferredInstanceId)
     if (instance) {
       return { targetInstanceId: instance.instanceId, targetInstanceIsLaunched: false }
     }
@@ -97,11 +97,11 @@ export async function resolveAppTargetInstance(
   }
 
   if (options.forceLaunch) {
-    const targetInstanceId = await launchAppAndWaitForInstance(appId, context, validatedContext)
+    const targetInstanceId = await launchAppAndWaitForInstance(appId, params, validatedContext)
     return { targetInstanceId, targetInstanceIsLaunched: true }
   }
 
-  const runningInstances = getInstancesByAppId(context.getState(), appId).filter(
+  const runningInstances = getInstancesByAppId(params.getState(), appId).filter(
     instance =>
       instance.state === AppInstanceState.CONNECTED || instance.state === AppInstanceState.PENDING,
   )
@@ -116,19 +116,19 @@ export async function resolveAppTargetInstance(
     return { targetInstanceId: targetInstance.instanceId, targetInstanceIsLaunched: false }
   }
 
-  const targetInstanceId = await launchAppAndWaitForInstance(appId, context, validatedContext)
+  const targetInstanceId = await launchAppAndWaitForInstance(appId, params, validatedContext)
   return { targetInstanceId, targetInstanceIsLaunched: true }
 }
 
 export function registerPendingIntentState(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   options: Omit<PendingIntent, "raisedAt">,
 ): void {
-  context.setState(state => addPendingIntent(state, options))
+  params.setState(state => addPendingIntent(state, options))
 }
 
 export function schedulePendingIntentDelivery(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   requestId: string,
   targetInstanceId: string,
   intentName: string,
@@ -136,7 +136,7 @@ export function schedulePendingIntentDelivery(
   explicitTargetInstanceId = false,
 ): void {
   const shouldWaitForListener = shouldWaitForIntentListenerBeforeDelivery(
-    context,
+    params,
     targetInstanceId,
     intentName,
     targetInstanceIsLaunched,
@@ -144,20 +144,20 @@ export function schedulePendingIntentDelivery(
   )
 
   if (shouldWaitForListener) {
-    queueIntentDelivery(context, requestId, true)
+    queueIntentDelivery(params, requestId, true)
   } else {
-    attemptIntentDelivery(context, requestId, false)
+    attemptIntentDelivery(params, requestId, false)
   }
 }
 
-export function attachPendingIntentTimeout(context: DACPHandlerContext, requestId: string): void {
+export function attachPendingIntentTimeout(params: DACPHandlerParams, requestId: string): void {
   const timeoutHandle = setTimeout(() => {
     releasePendingIntentTimeout(requestId, "raise")
-    const pendingIntent = getPendingIntent(context.getState(), requestId)
+    const pendingIntent = getPendingIntent(params.getState(), requestId)
     if (!pendingIntent) {
       return
     }
-    context.setState(state => resolvePendingIntent(state, requestId))
+    params.setState(state => resolvePendingIntent(state, requestId))
     // Terminal raiseIntentResultResponse so IntentResolution.getResult() settles.
     const response = createDACPErrorResponse(
       { type: "raiseIntentRequest", meta: { requestUuid: requestId } },
@@ -167,9 +167,9 @@ export function attachPendingIntentTimeout(context: DACPHandlerContext, requestI
     sendDACPResponse({
       response,
       instanceId: pendingIntent.sourceInstanceId,
-      responses: context.responses,
+      responses: params.responses,
     })
-  }, context.pendingIntentTimeoutMs)
+  }, params.pendingIntentTimeoutMs)
   registerPendingIntentTimeout(requestId, "raise", timeoutHandle)
 }
 

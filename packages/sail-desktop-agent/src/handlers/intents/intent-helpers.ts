@@ -7,7 +7,7 @@
 
 import type { AppIdentifier, AppMetadata, Context, IntentMetadata } from "@finos/fdc3"
 import type { AgentState, IntentListener, AppDirectoryState } from "../../state/types"
-import type { DACPHandlerContext } from "../types"
+import type { DACPHandlerParams } from "../types"
 import { getInstance, getActiveListenersForIntent } from "../../state/selectors"
 import { AppInstanceState } from "../../state/types"
 import {
@@ -45,7 +45,7 @@ export function appIntentForWireResponse<T extends AppIntentLike<unknown>>(appIn
  * Explicit instance targeting to a connected app delivers immediately.
  */
 export function shouldWaitForIntentListenerBeforeDelivery(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   targetInstanceId: string,
   intentName: string,
   targetInstanceIsLaunched: boolean,
@@ -55,12 +55,12 @@ export function shouldWaitForIntentListenerBeforeDelivery(
     return true
   }
   if (explicitTargetInstanceId) {
-    const instance = getInstance(context.getState(), targetInstanceId)
+    const instance = getInstance(params.getState(), targetInstanceId)
     if (instance?.state === AppInstanceState.CONNECTED) {
       return false
     }
   }
-  return !isIntentListenerReady(context, targetInstanceId, intentName)
+  return !isIntentListenerReady(params, targetInstanceId, intentName)
 }
 
 /**

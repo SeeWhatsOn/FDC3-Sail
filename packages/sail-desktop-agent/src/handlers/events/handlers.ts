@@ -1,5 +1,5 @@
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
-import { type DACPHandlerContext } from "../types"
+import { type DACPHandlerParams } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
@@ -20,9 +20,9 @@ export const ALL_DA_EVENT_TYPES = "all"
  */
 export function handleAddEventListenerRequest(
   message: BrowserTypes.AddEventListenerRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const instance = getInstance(getState(), instanceId)
@@ -96,9 +96,9 @@ export function handleAddEventListenerRequest(
  */
 export function handleEventListenerUnsubscribeRequest(
   message: BrowserTypes.EventListenerUnsubscribeRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const { listenerUUID } = message.payload

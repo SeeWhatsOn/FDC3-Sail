@@ -5,7 +5,7 @@
  */
 
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
-import { type DACPHandlerContext } from "../types"
+import { type DACPHandlerParams } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
@@ -41,9 +41,9 @@ function normalizeIntentListenerContextTypes(
 
 export function handleAddIntentListener(
   message: BrowserTypes.AddIntentListenerRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger, implementationMetadata } = context
+  const { responses, instanceId, getState, setState, logger, implementationMetadata } = params
 
   try {
     const payload = message.payload as AddIntentListenerPayload
@@ -98,7 +98,7 @@ export function handleAddIntentListener(
 
     sendDACPResponse({ response, instanceId, responses })
 
-    deliverPendingIntentsForListener(context, payload.intent)
+    deliverPendingIntentsForListener(params, payload.intent)
   } catch (error) {
     logger.error("DACP: Add intent listener failed", error)
 
@@ -118,9 +118,9 @@ export function handleAddIntentListener(
 
 export function handleIntentListenerUnsubscribe(
   message: BrowserTypes.IntentListenerUnsubscribeRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const { listenerUUID } = message.payload

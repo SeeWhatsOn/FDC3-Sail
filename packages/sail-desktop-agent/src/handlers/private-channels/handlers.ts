@@ -1,5 +1,5 @@
 import { createDACPSuccessResponse, createDACPEvent } from "../../dacp/dacp-message-creators"
-import type { DACPHandlerContext, DacpResponseDispatcher } from "../types"
+import type { DACPHandlerParams, DacpResponseDispatcher } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
@@ -30,9 +30,9 @@ import {
  */
 export function handleCreatePrivateChannelRequest(
   message: BrowserTypes.CreatePrivateChannelRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const instance = getInstance(getState(), instanceId)
@@ -87,9 +87,9 @@ export function handleCreatePrivateChannelRequest(
  */
 export function handlePrivateChannelDisconnectRequest(
   message: BrowserTypes.PrivateChannelDisconnectRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const { channelId } = message.payload
@@ -154,9 +154,9 @@ export function handlePrivateChannelDisconnectRequest(
  */
 export function handlePrivateChannelAddContextListenerRequest(
   message: BrowserTypes.PrivateChannelAddEventListenerRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const { privateChannelId, listenerType } = message.payload
@@ -237,9 +237,9 @@ export function handlePrivateChannelAddContextListenerRequest(
 
 export function handlePrivateChannelUnsubscribeEventListenerRequest(
   message: BrowserTypes.PrivateChannelUnsubscribeEventListenerRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const { listenerUUID } = message.payload
@@ -307,8 +307,8 @@ export function handlePrivateChannelUnsubscribeEventListenerRequest(
 /**
  * Remove all private channels for an instance (called on disconnect)
  */
-export function removeInstancePrivateChannels(context: DACPHandlerContext): number {
-  const { instanceId, getState, setState, responses } = context
+export function removeInstancePrivateChannels(params: DACPHandlerParams): number {
+  const { instanceId, getState, setState, responses } = params
   const state = getState()
   const privateChannels = Object.values(state.channels.private)
   const channelsToRemove = privateChannels.filter(channel =>
@@ -338,9 +338,9 @@ export function notifyPrivateChannelAddContextListener(
   channelId: string,
   sourceInstanceId: string,
   contextType: string | null,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { getState, responses } = context
+  const { getState, responses } = params
   const channel = getPrivateChannel(getState(), channelId)
   if (!channel) {
     return
@@ -389,9 +389,9 @@ export function notifyPrivateChannelUnsubscribe(
   listenerId: string,
   contextType: string | null,
   sourceInstanceId: string,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { getState, responses } = context
+  const { getState, responses } = params
   const channel = getPrivateChannel(getState(), channelId)
   if (!channel) {
     return

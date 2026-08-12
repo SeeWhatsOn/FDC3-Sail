@@ -27,7 +27,7 @@ function contextForVersion(fdc3Version: string) {
 
   const transport = new MockTransport()
   const { context, getState } = createDACPTestContext({ instanceId, initialState: state })
-  const handlerContext = {
+  const params = {
     ...withResponseDispatcher(context, transport),
     implementationMetadata: {
       ...context.implementationMetadata,
@@ -35,7 +35,7 @@ function contextForVersion(fdc3Version: string) {
     },
   }
 
-  return { handlerContext, getState, instanceId }
+  return { params, getState, instanceId }
 }
 
 /**
@@ -47,7 +47,7 @@ function contextForVersion(fdc3Version: string) {
  */
 describe("handleAddIntentListener payload.contextType version gate", () => {
   it("ignores payload.contextType at FDC3 2.2 -- listener is recorded unfiltered", () => {
-    const { handlerContext, getState, instanceId } = contextForVersion("2.2")
+    const { params, getState, instanceId } = contextForVersion("2.2")
 
     const message = {
       type: "addIntentListenerRequest",
@@ -55,7 +55,7 @@ describe("handleAddIntentListener payload.contextType version gate", () => {
       payload: { intent: "aTestingIntent1", contextType: "fdc3.instrument" },
     } as AddIntentListenerRequest
 
-    handleAddIntentListener(message, handlerContext)
+    handleAddIntentListener(message, params)
 
     const listeners = Object.values(getState().intents.listeners)
     expect(listeners).toHaveLength(1)
@@ -63,7 +63,7 @@ describe("handleAddIntentListener payload.contextType version gate", () => {
   })
 
   it("honors payload.contextType at FDC3 3.0", () => {
-    const { handlerContext, getState, instanceId } = contextForVersion("3.0")
+    const { params, getState, instanceId } = contextForVersion("3.0")
 
     const message = {
       type: "addIntentListenerRequest",
@@ -71,7 +71,7 @@ describe("handleAddIntentListener payload.contextType version gate", () => {
       payload: { intent: "aTestingIntent1", contextType: "fdc3.instrument" },
     } as AddIntentListenerRequest
 
-    handleAddIntentListener(message, handlerContext)
+    handleAddIntentListener(message, params)
 
     const listeners = Object.values(getState().intents.listeners)
     expect(listeners).toHaveLength(1)

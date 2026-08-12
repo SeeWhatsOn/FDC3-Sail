@@ -1,6 +1,6 @@
 import type { Context } from "@finos/fdc3"
 import { retrieveAppsById } from "../../app-directory/app-directory-queries"
-import type { DACPHandlerContext } from "../types"
+import type { DACPHandlerParams } from "../types"
 import { getInstance, getInstancesByAppId } from "../../state/selectors"
 import { AppInstanceState } from "../../state/types"
 
@@ -18,10 +18,10 @@ import { AppInstanceState } from "../../state/types"
  */
 export async function launchAppAndWaitForInstance(
   appId: string,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   validatedContext: unknown,
 ): Promise<string> {
-  const { appLauncher, getState, logger } = context
+  const { appLauncher, getState, logger } = params
 
   if (!appLauncher) {
     throw new Error("App launching not available - no AppLauncher configured")
@@ -69,7 +69,7 @@ export async function launchAppAndWaitForInstance(
   const startTime = Date.now()
 
   while (Date.now() - startTime < maxWaitTime) {
-    const currentState = context.getState()
+    const currentState = params.getState()
     const allInstances = getInstancesByAppId(currentState, appId)
     const elapsed = Date.now() - startTime
 
@@ -147,7 +147,7 @@ export async function launchAppAndWaitForInstance(
     await new Promise(resolve => setTimeout(resolve, checkInterval))
   }
 
-  const finalState = context.getState()
+  const finalState = params.getState()
   const finalInstances = getInstancesByAppId(finalState, appId)
   logger.error("DACP: Timeout waiting for new instance", {
     appId,

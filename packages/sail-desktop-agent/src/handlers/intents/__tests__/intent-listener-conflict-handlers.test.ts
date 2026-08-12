@@ -26,7 +26,7 @@ describe("handleAddIntentListener intent conflict (FDC3 3.0)", () => {
 
     const transport = new MockTransport()
     const { context } = createDACPTestContext({ instanceId, initialState: state })
-    const handlerContext = {
+    const params = {
       ...withResponseDispatcher(context, transport),
       implementationMetadata: {
         ...context.implementationMetadata,
@@ -40,8 +40,8 @@ describe("handleAddIntentListener intent conflict (FDC3 3.0)", () => {
       payload: { intent: "aTestingIntent1" },
     }
 
-    handleAddIntentListener(request, handlerContext)
-    handleAddIntentListener(request, handlerContext)
+    handleAddIntentListener(request, params)
+    handleAddIntentListener(request, params)
 
     const responses = transport.sentMessages
       .filter(

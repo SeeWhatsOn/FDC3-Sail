@@ -12,7 +12,7 @@ import { routeDACPMessage } from "../handlers"
 import { cleanupInstanceDacpState } from "../handlers/instance-teardown"
 import { handleWcp4ValidateAppIdentity } from "../app-connection/wcp/wcp-identity-validation"
 import { createDacpResponseDispatcherFromDelivery } from "../handlers/utils/dacp-response-utils"
-import type { DACPHandlerContext } from "../handlers/types"
+import type { DACPHandlerParams } from "../handlers/types"
 import { applyInboundValidationPolicy, type ValidationMode } from "../dacp/validate-dacp-message"
 import type { IntentResolutionCallback } from "../handlers/intent-resolution-callback"
 import type { DirectoryApp } from "../app-directory/types"
@@ -390,12 +390,12 @@ export class SailDesktopAgent<
   private handleDisconnect(): void {
     const allInstances = Object.values(this.state.instances)
     for (const instance of allInstances) {
-      const context = this.createHandlerContext(instance.instanceId)
-      cleanupInstanceDacpState(context)
+      const params = this.createHandlerContext(instance.instanceId)
+      cleanupInstanceDacpState(params)
     }
   }
 
-  private createHandlerContext(instanceId: string): DACPHandlerContext {
+  private createHandlerContext(instanceId: string): DACPHandlerParams {
     const conn = this.appConnection
     const responses = createDacpResponseDispatcherFromDelivery(conn, message =>
       conn.connectionRegistry.sendToAppInstance(message),

@@ -1,5 +1,5 @@
 import { createDACPSuccessResponse, createDACPEvent } from "../../dacp/dacp-message-creators"
-import { type DACPHandlerContext } from "../types"
+import { type DACPHandlerParams } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import { getEventListeners, ALL_DA_EVENT_TYPES } from "../events/handlers"
 import {
@@ -26,9 +26,9 @@ import {
  */
 export function handleGetCurrentChannelRequest(
   message: BrowserTypes.GetCurrentChannelRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, logger } = context
+  const { responses, instanceId, getState, logger } = params
 
   try {
     const instance = getInstance(getState(), instanceId)
@@ -93,10 +93,10 @@ type ChannelMembershipNotificationOptions = {
  */
 export function handleJoinUserChannelRequest(
   message: BrowserTypes.JoinUserChannelRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   options?: ChannelMembershipNotificationOptions,
 ): void {
-  const { responses, instanceId, getState, setState } = context
+  const { responses, instanceId, getState, setState } = params
 
   try {
     const { channelId } = message.payload
@@ -125,9 +125,9 @@ export function handleJoinUserChannelRequest(
     sendDACPResponse({ response, instanceId, responses })
 
     if (!wasAlreadyOnChannel) {
-      deliverCurrentContextToInstanceListeners(instanceId, channelId, context)
+      deliverCurrentContextToInstanceListeners(instanceId, channelId, params)
     }
-    notifyChannelChanged(instanceId, channelId, context, options)
+    notifyChannelChanged(instanceId, channelId, params, options)
   } catch (error) {
     const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to join user channel"
@@ -147,10 +147,10 @@ export function handleJoinUserChannelRequest(
  */
 export function handleLeaveCurrentChannelRequest(
   message: BrowserTypes.LeaveCurrentChannelRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   options?: ChannelMembershipNotificationOptions,
 ): void {
-  const { responses, instanceId, setState } = context
+  const { responses, instanceId, setState } = params
 
   try {
     setState(state => joinUserChannel(state, instanceId, null))
@@ -158,7 +158,7 @@ export function handleLeaveCurrentChannelRequest(
     const response = createDACPSuccessResponse(message, "leaveCurrentChannelResponse")
     sendDACPResponse({ response, instanceId, responses })
 
-    notifyChannelChanged(instanceId, null, context, options)
+    notifyChannelChanged(instanceId, null, params, options)
   } catch (error) {
     const errorType = error instanceof FDC3ChannelError ? error.errorType : ChannelError.ApiTimeout
     const errorMessage = error instanceof Error ? error.message : "Failed to leave current channel"
@@ -178,9 +178,9 @@ export function handleLeaveCurrentChannelRequest(
  */
 export function handleGetUserChannelsRequest(
   message: BrowserTypes.GetUserChannelsRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState } = context
+  const { responses, instanceId, getState } = params
 
   try {
     const userChannels = getAllUserChannels(getState())
@@ -208,9 +208,9 @@ export function handleGetUserChannelsRequest(
  */
 export function handleGetCurrentContextRequest(
   message: BrowserTypes.GetCurrentContextRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, logger } = context
+  const { responses, instanceId, getState, logger } = params
 
   try {
     const payload = message.payload
@@ -256,9 +256,9 @@ export function handleGetCurrentContextRequest(
  */
 export function handleGetOrCreateChannelRequest(
   message: BrowserTypes.GetOrCreateChannelRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const { channelId } = message.payload
@@ -316,9 +316,9 @@ export function handleGetOrCreateChannelRequest(
 function deliverCurrentContextToInstanceListeners(
   instanceId: string,
   channelId: string,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const state = context.getState()
+  const state = params.getState()
   const instance = getInstance(state, instanceId)
   if (!instance) {
     return
@@ -360,17 +360,17 @@ function deliverCurrentContextToInstanceListeners(
       },
     }
 
-    context.responses.sendOutbound(broadcastEventWithRouting)
+    params.responses.sendOutbound(broadcastEventWithRouting)
   })
 }
 
 function notifyChannelChanged(
   instanceId: string,
   channelId: string | null,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   options?: ChannelMembershipNotificationOptions,
 ): void {
-  const { responses, logger, getState } = context
+  const { responses, logger, getState } = params
   const instance = getInstance(getState(), instanceId)
   if (!instance) {
     logger.warn("No instance found for channel change notification", { instanceId })
@@ -378,8 +378,8 @@ function notifyChannelChanged(
   }
 
   const state = getState()
-  const channelListeners = getEventListeners("channelChanged", context.getState)
-  const allListeners = getEventListeners(ALL_DA_EVENT_TYPES, context.getState)
+  const channelListeners = getEventListeners("channelChanged", params.getState)
+  const allListeners = getEventListeners(ALL_DA_EVENT_TYPES, params.getState)
   const subscribers = [...new Set([...channelListeners, ...allListeners])]
   const subscriberInstanceIds = new Set(
     subscribers
@@ -422,7 +422,7 @@ function notifyChannelChanged(
   }
 
   // Typed host-chrome path — always emit so redundant joins and leave still resolve host waiters.
-  context.notifyChannelMembershipChanged?.(instanceId, channelId)
+  params.notifyChannelMembershipChanged?.(instanceId, channelId)
 
   logger.debug("Channel changed event broadcast", {
     instanceId,

@@ -1,5 +1,5 @@
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
-import { type DACPHandlerContext } from "../types"
+import { type DACPHandlerParams } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
@@ -61,11 +61,11 @@ function selectIntentCandidatesForContext(
 }
 
 function buildResolverAppIntents(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   intentCandidates: string[],
   contextType: string,
 ) {
-  const { getState } = context
+  const { getState } = params
   const catalog = getState().appDirectory
   return intentCandidates
     .map(intentName => createResolverAppIntent(getState(), catalog, intentName, contextType))
@@ -73,7 +73,7 @@ function buildResolverAppIntents(
 }
 
 function finalizeRaiseIntentForContextDelivery(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   message: BrowserTypes.RaiseIntentForContextRequest,
   sourceInstanceId: string,
   intentName: string,
@@ -84,7 +84,7 @@ function finalizeRaiseIntentForContextDelivery(
   explicitTargetInstanceId: boolean,
 ): void {
   const requestId = message.meta.requestUuid
-  registerPendingIntentState(context, {
+  registerPendingIntentState(params, {
     requestId,
     intentName,
     context: validatedContext,
@@ -94,21 +94,21 @@ function finalizeRaiseIntentForContextDelivery(
     requestType: "raiseIntentForContextRequest",
   })
   schedulePendingIntentDelivery(
-    context,
+    params,
     requestId,
     targetInstanceId,
     intentName,
     targetInstanceIsLaunched,
     explicitTargetInstanceId,
   )
-  attachPendingIntentTimeout(context, requestId)
+  attachPendingIntentTimeout(params, requestId)
 }
 
 export async function handleRaiseIntentForContextRequest(
   message: BrowserTypes.RaiseIntentForContextRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): Promise<void> {
-  const { responses, instanceId, getState, logger } = context
+  const { responses, instanceId, getState, logger } = params
 
   try {
     const payload = message.payload
@@ -125,7 +125,7 @@ export async function handleRaiseIntentForContextRequest(
     const validatedContext = payload.context
 
     const targetApp = normalizeTargetApp(payload.app)
-    validateRequestedTargetAvailability(context, targetApp)
+    validateRequestedTargetAvailability(params, targetApp)
 
     const source = getInstance(getState(), instanceId)
     if (!source) {
@@ -168,13 +168,13 @@ export async function handleRaiseIntentForContextRequest(
     let resolverSelectedAppId: string | undefined
 
     if (!targetApp && intentCandidates.length > 1) {
-      const appIntents = buildResolverAppIntents(context, intentCandidates, validatedContext.type)
+      const appIntents = buildResolverAppIntents(params, intentCandidates, validatedContext.type)
 
       if (appIntents.length === 0) {
         throw new NoAppsFoundError(`No apps found to handle context type: ${validatedContext.type}`)
       }
 
-      if (context.requestIntentResolution) {
+      if (params.requestIntentResolution) {
         const choices = appIntents.flatMap(appIntent =>
           appsToIntentHandlerOptions(getState(), appIntent.apps).map(handler => ({
             intent: appIntent.intent,
@@ -189,7 +189,7 @@ export async function handleRaiseIntentForContextRequest(
         }
 
         const requestId = message.meta.requestUuid
-        const resolution = await context.requestIntentResolution({
+        const resolution = await params.requestIntentResolution({
           requestId,
           intent: choices[0].intent.name,
           context: validatedContext,
@@ -213,7 +213,7 @@ export async function handleRaiseIntentForContextRequest(
         selectedIntent = selectedChoice.intent.name
         const selectedTarget = selectedChoice.handler
         resolverSelectedAppId = selectedTarget.appId
-        const resolvedTarget = await resolveAppTargetInstance(context, {
+        const resolvedTarget = await resolveAppTargetInstance(params, {
           appId: selectedTarget.appId,
           validatedContext,
           preferredInstanceId: selectedTarget.instanceId,
@@ -243,7 +243,7 @@ export async function handleRaiseIntentForContextRequest(
         const runningListener = handlers.runningListeners.find(
           listener => listener.appId === targetAppId,
         )
-        const resolvedTarget = await resolveAppTargetInstance(context, {
+        const resolvedTarget = await resolveAppTargetInstance(params, {
           appId: targetAppId,
           validatedContext,
           runningListenerInstanceId: runningListener?.instanceId,
@@ -256,7 +256,7 @@ export async function handleRaiseIntentForContextRequest(
         targetInstanceIsLaunched = true
         targetInstanceId = await launchAppAndWaitForInstance(
           handlers.availableApps[0].appId,
-          context,
+          params,
           validatedContext,
         )
       } else {
@@ -273,7 +273,7 @@ export async function handleRaiseIntentForContextRequest(
       targetInstance?.appId ?? targetAppId ?? resolverSelectedAppId ?? source.appId
 
     finalizeRaiseIntentForContextDelivery(
-      context,
+      params,
       message,
       instanceId,
       selectedIntent,

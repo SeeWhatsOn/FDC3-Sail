@@ -1,7 +1,7 @@
 import { ResultError } from "@finos/fdc3"
 import { createDACPErrorResponse } from "../dacp/dacp-message-creators"
 import { resolvePendingIntent, removeListenersForInstance, removeInstance } from "../state/mutators"
-import { type DACPHandlerContext } from "./types"
+import { type DACPHandlerParams } from "./types"
 import * as eventHandlers from "./events/handlers"
 import * as privateChannelHandlers from "./private-channels/handlers"
 import { resolveLinkedInstanceId } from "../state/selectors/wcp-handshake-routing"
@@ -20,8 +20,8 @@ import { clearPendingIntentTimeouts } from "./intents/intent-pending-timeout-reg
  * WCP4 validation runs under a temp connection id while heartbeat and instance state
  * use the validated WCP5 instanceId (see wcp-handlers startHeartbeat call).
  */
-function resolveTeardownInstanceId(context: DACPHandlerContext): string {
-  const { instanceId, getState } = context
+function resolveTeardownInstanceId(params: DACPHandlerParams): string {
+  const { instanceId, getState } = params
   const state = getState()
 
   if (state.heartbeats[instanceId] || getActiveHeartbeatInstanceIds().includes(instanceId)) {
@@ -67,10 +67,10 @@ function instanceHasTeardownWork(state: AgentState, instanceId: string): boolean
  * helper. Kept in a leaf module so callers do not import the DACP router `index.ts`,
  * avoiding circular module graphs.
  */
-export function cleanupInstanceDacpState(context: DACPHandlerContext): void {
+export function cleanupInstanceDacpState(params: DACPHandlerParams): void {
   const resolvedContext = {
-    ...context,
-    instanceId: resolveTeardownInstanceId(context),
+    ...params,
+    instanceId: resolveTeardownInstanceId(params),
   }
   const { instanceId, getState, setState, logger } = resolvedContext
 
@@ -155,10 +155,10 @@ export function cleanupInstanceDacpState(context: DACPHandlerContext): void {
 /**
  * Unified instance teardown when available; DACP-only state cleanup for headless ingest tests.
  */
-export function teardownInstance(context: DACPHandlerContext, instanceId: string): void {
-  if (context.disconnectInstance) {
-    context.disconnectInstance(instanceId)
+export function teardownInstance(params: DACPHandlerParams, instanceId: string): void {
+  if (params.disconnectInstance) {
+    params.disconnectInstance(instanceId)
     return
   }
-  cleanupInstanceDacpState({ ...context, instanceId })
+  cleanupInstanceDacpState({ ...params, instanceId })
 }

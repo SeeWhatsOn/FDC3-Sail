@@ -1,5 +1,5 @@
 import { createDACPEvent } from "../../dacp/dacp-message-creators"
-import { type DACPHandlerContext } from "../types"
+import { type DACPHandlerParams } from "../types"
 import type { BrowserTypes } from "@finos/fdc3"
 import { getHeartbeatState } from "../../state/selectors"
 import {
@@ -18,16 +18,16 @@ export { stopHeartbeat } from "./runtime"
  * Start heartbeat for an instance
  * Called when an instance connects
  */
-export function startHeartbeat(instanceId: string, context: DACPHandlerContext): void {
-  const { responses, getState, setState, logger } = context
-  const heartbeatIntervalMs = context.heartbeatIntervalMs
-  const heartbeatTimeoutMs = context.heartbeatTimeoutMs
+export function startHeartbeat(instanceId: string, params: DACPHandlerParams): void {
+  const { responses, getState, setState, logger } = params
+  const heartbeatIntervalMs = params.heartbeatIntervalMs
+  const heartbeatTimeoutMs = params.heartbeatTimeoutMs
 
   // Stop any existing heartbeat
   stopHeartbeat(instanceId, setState)
 
-  if (context.instanceId !== instanceId) {
-    setState(state => linkHandshakeRoutingId(state, context.instanceId, instanceId))
+  if (params.instanceId !== instanceId) {
+    setState(state => linkHandshakeRoutingId(state, params.instanceId, instanceId))
   }
 
   // Initialize heartbeat state
@@ -55,8 +55,8 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
   const onTimeout = () => {
     logger.warn("Instance failed heartbeat check, removing", { instanceId })
     // WCP4 validation runs under a temp connection context; heartbeat is keyed by the real
-    // instanceId, which `teardownInstance` stamps onto the context for us.
-    teardownInstance(context, instanceId)
+    // instanceId, which `teardownInstance` stamps onto params for us.
+    teardownInstance(params, instanceId)
   }
 
   // Send an initial heartbeat immediately for short test intervals.
@@ -106,9 +106,9 @@ export function startHeartbeat(instanceId: string, context: DACPHandlerContext):
  */
 export function handleHeartbeatAcknowledgmentRequest(
   _message: BrowserTypes.HeartbeatAcknowledgementRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { instanceId, setState, logger } = context
+  const { instanceId, setState, logger } = params
 
   try {
     // Record acknowledgment (message is pre-validated by router)

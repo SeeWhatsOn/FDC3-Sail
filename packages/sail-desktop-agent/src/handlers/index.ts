@@ -5,7 +5,7 @@ import { DACPProcessingError, DACPTimeoutError } from "../dacp/dacp-errors"
 import type { DACPRequestRef } from "../dacp/dacp-message-creators"
 import { applyInboundValidationPolicy } from "../dacp/validate-dacp-message"
 import type { Logger, LogPayloadDetail } from "../logging/logger"
-import { type DACPHandlerContext } from "./types"
+import { type DACPHandlerParams } from "./types"
 import { sendDACPErrorResponse } from "./utils/dacp-response-utils"
 import { resolveDacpHandlerInstanceId } from "./utils/resolve-context-listener-instance-id"
 
@@ -25,7 +25,7 @@ import * as heartbeatHandlers from "./heartbeat/handlers"
  * the wire said (`meta.source.instanceId`), which can be a MessagePort/temp routing id rather than
  * the registered instance. Not only during the handshake: a `temp-` link is cleared by target, never
  * by key, so it survives for the whole lifetime of the linked instance. Resolving here — and only
- * here — makes `context.instanceId` authoritative for every handler reached **through this router**,
+ * here — makes `params.instanceId` authoritative for every handler reached **through this router**,
  * which is every inbound app message, so those handlers never choose between raw and resolved.
  *
  * Three entry points deliberately bypass it, which is why this is not done in
@@ -38,13 +38,13 @@ import * as heartbeatHandlers from "./heartbeat/handlers"
  */
 export async function routeDACPMessage(
   message: unknown,
-  inboundContext: DACPHandlerContext,
+  inboundContext: DACPHandlerParams,
 ): Promise<void> {
-  const context: DACPHandlerContext = {
+  const params: DACPHandlerParams = {
     ...inboundContext,
     instanceId: resolveDacpHandlerInstanceId(inboundContext),
   }
-  const { logger, validation, logPayloadDetail } = context
+  const { logger, validation, logPayloadDetail } = params
   const resolvedLogPayloadDetail = logPayloadDetail ?? "metadata"
   try {
     logIncomingDacpMessage(message, logger, resolvedLogPayloadDetail)
@@ -76,8 +76,8 @@ export async function routeDACPMessage(
           message,
           errorType: BridgingError.MalformedMessage,
           errorMessage: "Invalid message structure",
-          instanceId: context.instanceId,
-          responses: context.responses,
+          instanceId: params.instanceId,
+          responses: params.responses,
         })
       }
       return
@@ -100,7 +100,7 @@ export async function routeDACPMessage(
       return
     }
     await withDACPTimeout(
-      Promise.resolve(handler(message, context)),
+      Promise.resolve(handler(message, params)),
       timeout,
       `DACP ${resolvedMessageType} handling`,
     )
@@ -125,8 +125,8 @@ export async function routeDACPMessage(
           message,
           errorType: BridgingError.ResponseTimedOut,
           errorMessage: "Request timed out",
-          instanceId: context.instanceId,
-          responses: context.responses,
+          instanceId: params.instanceId,
+          responses: params.responses,
         })
       }
     } else if (canSendErrorResponse(message)) {
@@ -134,8 +134,8 @@ export async function routeDACPMessage(
         message,
         errorType: BridgingError.MalformedMessage,
         errorMessage: "Message processing failed",
-        instanceId: context.instanceId,
-        responses: context.responses,
+        instanceId: params.instanceId,
+        responses: params.responses,
       })
     }
   }
@@ -172,14 +172,14 @@ type RoutableMessageType = RoutableRequestMessage["type"]
 /** Handler for one specific message type, narrowed to that type's own request shape. */
 type HandlerFor<K extends RoutableMessageType> = (
   message: Extract<RoutableRequestMessage, { type: K }>,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ) => void | Promise<void>
 
 /**
  * Erased handler shape used once a handler has been looked up by a runtime (not statically known)
  * message type. `HANDLER_MAP` itself stays precisely typed per key via `HandlerFor`.
  */
-type RoutedHandler = (message: unknown, context: DACPHandlerContext) => void | Promise<void>
+type RoutedHandler = (message: unknown, params: DACPHandlerParams) => void | Promise<void>
 
 /**
  * Handler registry - maps message types to handler functions.

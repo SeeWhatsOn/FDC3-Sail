@@ -45,7 +45,7 @@ function contextForVersion(fdc3Version: string) {
 
   const transport = new MockTransport()
   const { context } = createDACPTestContext({ instanceId: senderId, initialState: state })
-  const handlerContext = {
+  const params = {
     ...withResponseDispatcher(context, transport),
     implementationMetadata: {
       ...context.implementationMetadata,
@@ -53,7 +53,7 @@ function contextForVersion(fdc3Version: string) {
     },
   }
 
-  return { handlerContext, transport, senderId }
+  return { params, transport, senderId }
 }
 
 function broadcastEventMetadata(transport: MockTransport): Record<string, unknown> | undefined {
@@ -78,7 +78,7 @@ function broadcastEventMetadata(transport: MockTransport): Record<string, unknow
  */
 describe("handleBroadcastRequest payload.metadata version gate", () => {
   it("ignores app-provided payload.metadata at FDC3 2.2 -- base ContextMetadata still forwarded", () => {
-    const { handlerContext, transport, senderId } = contextForVersion("2.2")
+    const { params, transport, senderId } = contextForVersion("2.2")
 
     const message = {
       type: "broadcastRequest",
@@ -90,7 +90,7 @@ describe("handleBroadcastRequest payload.metadata version gate", () => {
       },
     } as BroadcastRequest
 
-    handleBroadcastRequest(message, handlerContext)
+    handleBroadcastRequest(message, params)
 
     const metadata = broadcastEventMetadata(transport)
     expect(metadata).toBeDefined()
@@ -99,7 +99,7 @@ describe("handleBroadcastRequest payload.metadata version gate", () => {
   })
 
   it("honors app-provided payload.metadata at FDC3 3.0", () => {
-    const { handlerContext, transport, senderId } = contextForVersion("3.0")
+    const { params, transport, senderId } = contextForVersion("3.0")
 
     const message = {
       type: "broadcastRequest",
@@ -111,7 +111,7 @@ describe("handleBroadcastRequest payload.metadata version gate", () => {
       },
     } as BroadcastRequest
 
-    handleBroadcastRequest(message, handlerContext)
+    handleBroadcastRequest(message, params)
 
     const metadata = broadcastEventMetadata(transport)
     expect(metadata?.traceId).toBe("trace-3.0")
@@ -126,7 +126,7 @@ describe("handleBroadcastRequest payload.metadata version gate", () => {
  */
 describe("handleBroadcastRequest missing channelId", () => {
   it("rejects a broadcastRequest without channelId instead of falling back to the current channel", () => {
-    const { handlerContext, transport, senderId } = contextForVersion("2.2")
+    const { params, transport, senderId } = contextForVersion("2.2")
 
     const message = {
       type: "broadcastRequest",
@@ -136,7 +136,7 @@ describe("handleBroadcastRequest missing channelId", () => {
       },
     } as BroadcastRequest
 
-    handleBroadcastRequest(message, handlerContext)
+    handleBroadcastRequest(message, params)
 
     const broadcastEvent = transport.sentMessages.find(
       (m): m is { type: string } =>

@@ -1,7 +1,7 @@
 /**
  * Characterization tests for pending-intent delivery and settlement.
  *
- * Written *before* `DACPHandlerContext.pendingIntentPromises` was collapsed into `AgentState`,
+ * Written *before* `DACPHandlerParams.pendingIntentPromises` was collapsed into `AgentState`,
  * then updated with the collapse. `delivered` and `requestType` used to live on a `Map` entry
  * mutated through a **captured reference** while `setState` **replaced** the state tree, so the
  * two stores could disagree; both now live on `state.intents.pending[requestId]` and cannot.
@@ -28,7 +28,7 @@ import {
   updateInstanceState,
 } from "../../../state/mutators"
 import { AppInstanceState, type AgentState } from "../../../state/types"
-import type { DACPHandlerContext } from "../../types"
+import type { DACPHandlerParams } from "../../types"
 import {
   createDACPTestContext,
   createDacpRequestMeta,
@@ -84,7 +84,7 @@ function setupScenario(
     openContextListenerTimeoutMs?: number
     pendingIntentTimeoutMs?: number
   } = {},
-): { context: DACPHandlerContext; transport: MockTransport; getState: () => AgentState } {
+): { context: DACPHandlerParams; transport: MockTransport; getState: () => AgentState } {
   let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
   state = connectInstance(state, {
     instanceId: RAISER_ID,
@@ -128,7 +128,7 @@ function setupScenario(
     instanceId: RAISER_ID,
     initialState: state,
   })
-  const context: DACPHandlerContext = {
+  const context: DACPHandlerParams = {
     ...withResponseDispatcher(baseContext, transport),
     openContextListenerTimeoutMs: options.openContextListenerTimeoutMs ?? 2000,
     pendingIntentTimeoutMs: options.pendingIntentTimeoutMs ?? 2000,

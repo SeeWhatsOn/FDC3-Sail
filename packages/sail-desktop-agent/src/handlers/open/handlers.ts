@@ -1,7 +1,7 @@
 import type { SailDesktopAgentMetadata } from "../../agent/default-config"
 import { isFdc3VersionAtLeast } from "../../agent/fdc3-version"
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
-import { type DACPHandlerContext } from "../types"
+import { type DACPHandlerParams } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { OpenError, ResolveError } from "@finos/fdc3"
@@ -24,9 +24,9 @@ import { teardownInstance } from "../instance-teardown"
  */
 export function handleGetInfoRequest(
   message: BrowserTypes.GetInfoRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, implementationMetadata, logger, getState } = context
+  const { responses, instanceId, implementationMetadata, logger, getState } = params
 
   try {
     const callerInstance = getInstance(getState(), instanceId)
@@ -88,9 +88,9 @@ export function handleGetInfoRequest(
  */
 export async function handleOpenRequest(
   message: BrowserTypes.OpenRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): Promise<void> {
-  const { responses, instanceId, appLauncher, logger, getState } = context
+  const { responses, instanceId, appLauncher, logger, getState } = params
 
   try {
     const payload = message.payload
@@ -149,8 +149,8 @@ export async function handleOpenRequest(
 
     // Pre-register host-assigned instanceId so findInstances and open-with-context
     // can route to the launcher id before WCP4 validation completes.
-    if (!getInstance(context.getState(), launchedInstanceId)) {
-      context.setState(state =>
+    if (!getInstance(params.getState(), launchedInstanceId)) {
+      params.setState(state =>
         connectInstance(state, {
           instanceId: launchedInstanceId,
           appId: appMetadata.appId,
@@ -166,7 +166,7 @@ export async function handleOpenRequest(
     }
 
     if (launchContext) {
-      registerOpenWithContext(message, appIdentifier, launchContext, context)
+      registerOpenWithContext(message, appIdentifier, launchContext, params)
       return
     }
 
@@ -196,9 +196,9 @@ export async function handleOpenRequest(
  */
 export function handleFindInstancesRequest(
   message: BrowserTypes.FindInstancesRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, logger } = context
+  const { responses, instanceId, getState, logger } = params
 
   try {
     const { app: appIdentifier } = message.payload
@@ -288,9 +288,9 @@ function convertDirectoryAppToAppMetadata(
  */
 export function handleGetAppMetadataRequest(
   message: BrowserTypes.GetAppMetadataRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, logger, implementationMetadata } = context
+  const { responses, instanceId, getState, logger, implementationMetadata } = params
   const provider = implementationMetadata.provider
   const includeDesktopAgent = isDesktopAgentBridgingEnabled(implementationMetadata)
 
@@ -401,7 +401,7 @@ export type CloseRequestMessage = {
  */
 export async function handleCloseRequest(
   message: CloseRequestMessage,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): Promise<void> {
   const {
     responses,
@@ -410,7 +410,7 @@ export async function handleCloseRequest(
     getState,
     implementationMetadata,
     instanceId: targetInstanceId,
-  } = context
+  } = params
 
   // FDC3 3.0 behavior: closeRequest is only supported when the agent advertises 3.0.
   if (!isFdc3VersionAtLeast(implementationMetadata.fdc3Version, "3.0")) {
@@ -438,7 +438,7 @@ export async function handleCloseRequest(
 
     await appLauncher.close(targetInstanceId)
 
-    teardownInstance(context, targetInstanceId)
+    teardownInstance(params, targetInstanceId)
   } catch (error) {
     logger.error("DACP: closeRequest failed", error)
     sendDACPErrorResponse({

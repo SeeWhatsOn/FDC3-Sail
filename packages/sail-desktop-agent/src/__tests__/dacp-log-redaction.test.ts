@@ -13,7 +13,7 @@ import { AppInstanceState } from "../state/types"
 import { createInitialState } from "../state/initial-state"
 import { DEFAULT_FDC3_USER_CHANNELS } from "../agent/default-user-channels"
 import { resolveDesktopAgentConfig } from "../agent/default-config"
-import type { DACPHandlerContext } from "../handlers/types"
+import type { DACPHandlerParams } from "../handlers/types"
 import { handleRaiseIntentRequest } from "../handlers/intents/intent-raise-intent"
 import { routeDACPMessage } from "../handlers"
 import { MockTransport } from "./utils/mock-transport"
@@ -27,7 +27,7 @@ type LoggingAwareOptions = {
   logPayloadDetail?: LogPayloadDetail
 }
 
-type LoggingAwareHandlerContext = DACPHandlerContext & LoggingAwareOptions
+type LoggingAwareHandlerContext = DACPHandlerParams & LoggingAwareOptions
 
 const SENSITIVE_CONTEXT = {
   type: "fdc3.instrument",

@@ -10,7 +10,7 @@ import {
   createDACPSuccessResponse,
   createDACPErrorResponse,
 } from "../../dacp/dacp-message-creators"
-import { type DACPHandlerContext } from "../types"
+import { type DACPHandlerParams } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ResultError, ResolveError } from "@finos/fdc3"
@@ -36,9 +36,9 @@ function isHandlerRejection(intentResult: unknown): boolean {
 function grantPrivateChannelToIntentSource(
   intentResult: unknown,
   sourceInstanceId: string,
-  setState: DACPHandlerContext["setState"],
-  getState: DACPHandlerContext["getState"],
-  logger: DACPHandlerContext["logger"],
+  setState: DACPHandlerParams["setState"],
+  getState: DACPHandlerParams["getState"],
+  logger: DACPHandlerParams["logger"],
 ): void {
   if (typeof intentResult !== "object" || intentResult === null || !("channel" in intentResult)) {
     return
@@ -60,9 +60,9 @@ function grantPrivateChannelToIntentSource(
 
 export function handleIntentResultRequest(
   message: BrowserTypes.IntentResultRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const payload = message.payload
