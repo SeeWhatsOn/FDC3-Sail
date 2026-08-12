@@ -118,17 +118,20 @@ Bug 2 is the one that argues hardest for this slice: resolving once at the entry
 - **Verify:** `npx tsc --noEmit && npx vp test run && npx cucumber-js`
 - **Likely files:** `handlers/index.ts`, `agent/sail-desktop-agent.ts`, `handlers/broadcast/handlers.ts`, `handlers/events/handlers.ts`, `handlers/open/handlers.ts`, `handlers/intents/intent-listener-handlers.ts`, `handlers/intents/intent-result-handlers.ts`, `handlers/cleanup.ts`, `handlers/heartbeat/handlers.ts`
 
-### 2. Rename `DACPHandlerContext` → `DacpHandlerDeps`, `context` → `deps`
+### 2. Rename `DACPHandlerContext` → `DACPHandlerParams`, `context` → `params`
 
-- **Goal:** end the name collision. `context` becomes free to mean an FDC3 `Context` everywhere.
+- **Goal:** end the name collision. `context` becomes free to mean an FDC3 `Context` everywhere. Name chosen by the user over `deps` (hard to grep — plain substring search hits `dependencies`) and over `agentApi` (collides with FDC3's `DesktopAgent`, and "API" overclaims an internal plumbing bundle). `Params` is deliberately generic because the thing genuinely is a grab-bag; a precise-sounding name would overclaim.
+- **Scope, measured:** 108 occurrences of `DACPHandlerContext` across 27 files.
 - **Acceptance:**
-  - Type renamed; parameter renamed at all 68 non-test signatures plus tests.
-  - `handlerContext` (18 uses in `broadcast/handlers.ts`) is gone — slice 1 removed its reason to exist.
-  - The five defensive aliases collapse back to `context`: `broadcastContext`, `validatedContext`, `launchContext`, `storedContext`, `contextToDeliver`.
+  - Type renamed; the parameter renamed to `params` at every signature and body, tests included.
+  - `handlerContext` is gone — 3 helper signatures in `broadcast/handlers.ts` (`:358`, `:482`, `:521`) plus 3 test files. Slice 1 removed its reason to exist.
+  - `broadcastContext` (`broadcast/handlers.ts:46`) collapses back to `context`. It is a destructuring rename of the FDC3 context off the payload, forced only because `context` was taken by the handler parameter — see the sibling call at `:126`.
   - No exported alias left behind for the old name.
-  - Zero behaviour change: same test counts as slice 1's run.
-- **Verify:** `npx tsc --noEmit && npx vp test run && npx cucumber-js`, then `npx vp test run` from the worktree root.
-- **Likely files:** all 29 files matching `DACPHandlerContext`, plus `handlers/__tests__/test-context.ts` (`createDACPTestContext`).
+  - Zero behaviour change: same test counts as slice 4′'s run.
+- **Explicitly NOT in scope — the earlier "five defensive aliases" criterion was wrong.** `validatedContext`, `launchContext`, `storedContext` and `contextToDeliver` are all genuine FDC3 `Context` values with descriptive names, not workarounds for the collision. `channels/handlers.ts:342` and `broadcast/handlers.ts:494` each hold a `storedContext` *and* a `contextToDeliver` in the same scope. Collapsing either to `context` would be a regression, not a cleanup. Leave all four alone.
+- **Verify:** `npx tsc --noEmit && npx vp lint . && npx vp test run && npx cucumber-js` — sequentially.
+- **Likely files:** all 27 files matching `DACPHandlerContext`, plus `handlers/__tests__/test-context.ts` (`createDACPTestContext`).
+- **Model:** sonnet. This one genuinely is mechanical.
 
 ### 3. Extract a required `DacpHandlerConfig`
 
