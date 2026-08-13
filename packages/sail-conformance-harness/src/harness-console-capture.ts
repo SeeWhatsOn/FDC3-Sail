@@ -64,7 +64,9 @@ export function installHarnessConsoleCapture(): void {
   }
 
   for (const level of ["log", "info", "warn", "error", "debug"] as const) {
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- cross-runtime console
     const original = console[level]?.bind(console)
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- cross-runtime console
     if (!original) {
       continue
     }

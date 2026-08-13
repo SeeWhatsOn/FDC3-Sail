@@ -473,7 +473,7 @@ export class SailDesktopAgent<
       ...(options?.context !== undefined ? { context: options.context } : {}),
     }
 
-    const launched = await this.appLauncher.launch(payload, catalogApps[0])
+    const launched = await this.appLauncher.launch(payload, catalogApps[0]!)
     if (launched.instanceId) {
       this.registerPendingHostInstance({
         appId: launched.appId,

@@ -801,7 +801,7 @@ describe("open-with-context (first-connect WCP4)", () => {
       expect(broadcastCollector.messages.length).toBeGreaterThanOrEqual(1)
     })
 
-    const broadcastEvent = broadcastCollector.messages[0]
+    const broadcastEvent = broadcastCollector.messages[0]!
 
     expect(broadcastEvent.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
     expect(openResponse.payload.error).toBeUndefined()

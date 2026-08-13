@@ -8,6 +8,7 @@ import type { FDC3AppPanel } from "../panel-templates/FDC3IframePanel"
  * Renders an icon before the default tab content when available.
  */
 export const FDC3Tab = (props: IDockviewPanelHeaderProps) => {
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- localStorage-persisted state: props.params is restored from Dockview's persisted layout JSON on reload, whose actual shape can predate the current FDC3AppPanel type
   const panelData = (props.params as { panel?: FDC3AppPanel })?.panel
   const iconUrl = panelData?.icon
   const [iconError, setIconError] = useState(false)

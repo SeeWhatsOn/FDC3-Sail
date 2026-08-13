@@ -146,6 +146,7 @@ if (isDockviewPopoutShell()) {
         meta?: { source?: { appId?: string; instanceId?: string } }
         payload?: { channelId?: string; context?: { type?: string } }
       }
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- unvalidated DACP wire cast
       if (record?.type === "broadcastRequest" && record.payload?.channelId === "app-control") {
         console.warn(
           `[SailProbe] app-control context=${record.payload.context?.type} from=${record.meta?.source?.appId}/${record.meta?.source?.instanceId}`,

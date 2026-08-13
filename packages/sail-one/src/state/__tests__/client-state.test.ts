@@ -96,6 +96,24 @@ describe("PlatformClientState", () => {
     const state = await loadedState()
     expect(state.getUserSessionID()).toBe("user-fixed")
     expect(state.getActiveTab().id).toBe("Saved")
-    expect(state.getDirectories()[0].url).toBe("https://local.example/v2/apps")
+    expect(state.getDirectories()[0]!.url).toBe("https://local.example/v2/apps")
+  })
+
+  it("getActiveTab does not throw once every tab has been removed", async () => {
+    const state = await loadedState()
+    for (const tab of state.getTabs().slice()) {
+      await state.removeTab(tab.id)
+    }
+
+    expect(() => state.getActiveTab()).not.toThrow()
+  })
+
+  it("removeTab keeps at least one tab when removing the last remaining one", async () => {
+    const state = await loadedState()
+    for (const tab of state.getTabs().slice()) {
+      await state.removeTab(tab.id)
+    }
+
+    expect(state.getTabs().length).toBeGreaterThan(0)
   })
 })

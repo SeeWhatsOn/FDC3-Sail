@@ -118,5 +118,5 @@ function findSolePendingHostInstanceId(
     return undefined
   }
 
-  return pendingHostInstances[0].instanceId
+  return pendingHostInstances[0]!.instanceId
 }

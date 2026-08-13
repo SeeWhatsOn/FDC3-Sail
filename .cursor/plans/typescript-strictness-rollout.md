@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: TypeScript strictness rollout
 
-Status: planning
-Current slice: 1 (not started)
+Status: reviewing
+Current slice: 6 — enable on `sail-one` and `sail-finance` (verified; reviewer pending)
 
 > **Read this whole Context section before touching anything.** The two settings this plan
 > rolls out produce ~346 findings, and **21 of them are the tools being wrong**. Obeying those
@@ -263,6 +263,21 @@ and would rewrite the whole package.
     "no overlap" is **unclassified** — the investigation sampled this package rather than
     auditing it. Classify each into A/B/C/D before acting, and add any new bucket D to the
     plan rather than silently fixing it.
+- **SPLIT INTO 4a / 4b (user decision, 2026-08-12).** Slice 4 is the only slice where an agent
+  would have to *produce* a classification rather than *apply* one, and a wrong call there
+  deletes a load-bearing guard with the whole suite still green. So the judgement is not
+  delegated:
+
+  | | Scope | Who decides |
+  |---|---|---|
+  | **4a** | Enable both settings. Apply the pre-classified work: the 29 `state/mutators` ceremony sites, the 4 bucket B suppressions, the 1 bucket C deletion. Plus any *pure indexing ceremony* in the tail — `noUncheckedIndexedAccess` TS2532/TS18048 where a length check, literal or preceding assignment proves the element exists. | coder |
+  | **4b** | Every remaining `no-unnecessary-condition` finding whose message is **"always truthy" / "always falsy" / "no overlap"** — the plan's own stated hiding place for a dead guard. The coder **enumerates these and changes nothing.** Buckets are assigned by the main agent and the user. | main + user |
+
+  The split line is the plan's own: indexing ceremony is mechanical and provably
+  behaviour-neutral; a constant-condition finding is where a real guard hides.
+  **The repo is not green until 4b lands** — that is expected, and slice 4 is not complete
+  until both halves are done.
+
 - **Verify:** `npx tsc --noEmit -p packages/sail-desktop-agent` then `npx vp lint .` then
   `cd packages/sail-desktop-agent && npx vp test run` then `npx cucumber-js`
 - **Likely files:** `packages/sail-desktop-agent/tsconfig.json`, `vite.config.ts`, plus
@@ -359,9 +374,12 @@ Resolve against the agent types available in the executing session and record wh
   slices 1–3, 6–7.
 - **explorer:** not needed — the investigation is complete and its findings are in Context.
 
-**Model guidance.** Slices 1 and 2 are real bug fixes with subtle reachability reasoning —
-use **opus**. Slices 3–7 are mechanical once each finding is classified — **sonnet** is
-sufficient, except slice 4, where the unclassified tail needs judgement; use opus there.
+**Model guidance.** Original guidance was opus for slices 1, 2 and 4 (subtle reachability
+reasoning; slice 4's tail is unclassified). **Overridden by the user on 2026-08-12: sonnet 5
+for every subagent, all slices.** Mitigation for slice 4 — do not classify a borderline
+finding down to bucket A/C on judgement; stop and report it instead.
+
+**Cadence.** Pause after every slice for user go-ahead. No commits — the user commits manually.
 
 **Do not let one agent take two roles.** A prior delivery on this branch produced two
 false-positive test suites — tests that passed for the wrong reason — because a reviewer
@@ -390,12 +408,33 @@ inherited the coder's context.
 
 ## Slice Checkpoints
 
-- [ ] 1. `sail-finance` provider guards: not started (failures: 0)
-- [ ] 2. `sail-one` array indexing: not started (failures: 0)
-- [ ] 3. Enable on `sail-platform`: not started (failures: 0)
-- [ ] 4. Enable on `sail-desktop-agent`: not started (failures: 0)
-- [ ] 5. Enable on `sail-conformance-harness`: not started (failures: 0)
-- [ ] 6. Enable on `sail-one` + `sail-finance`: not started (failures: 0)
+- [x] 1. `sail-finance` provider guards: **reviewed** (failures: 1) — coded, tested and
+      reviewed by three separate contexts. All five guards confirmed dead before the fix and
+      live after it.
+- [x] 2. `sail-one` array indexing: **reviewed** (failures: 1) — coded, tested and reviewed by
+      three separate contexts. All three bugs confirmed real by direct reading first.
+- [x] 3. Enable on `sail-platform`: **reviewed** (failures: 0) — coded and reviewed by two
+      separate contexts; no tester, since the plan's Test Plan specifies no new tests for
+      slices 3–7. Override proved live by probe, not assumed.
+- [x] 4. Enable on `sail-desktop-agent`: **reviewed** (failures: 1) — 4a coded + security-audited
+      + main-agent verified; 4b coded (enumerate-only), classified by main + user against the
+      FDC3 spec, then reviewed by `agent-skills:code-reviewer`. The one failure is 4b's upheld
+      Important finding (the `intent-launch-helpers.ts:91` log/logic divergence), fixed by
+      suppressing site #2 instead of deleting it. State re-confirmed on resume (2026-08-12):
+      `npx tsc --noEmit -p packages/sail-desktop-agent` -> exit **0**; `npx vp lint .` -> exit 1
+      with **zero** `no-unnecessary-condition` findings, output identical to the recorded
+      pre-existing set.
+- [x] 5. Enable on `sail-conformance-harness`: **reviewed** (failures: 0) — coded, security-
+      audited and reviewed by three separate contexts. Clean verify on the first attempt and no
+      Required finding from either reviewer. Zero escalations: the plan's classification of this
+      package was complete. Both reviewers independently re-derived the three bucket C deletions
+      from the type declarations rather than trusting the plan's table — which is how two wrong
+      boundary citations in that table were found.
+- [ ] 6. Enable on `sail-one` + `sail-finance`: **verified, review pending** (failures: 0) —
+      config + indexing ceremony landed by an earlier session that stopped before recording
+      anything; the 11-finding constant-condition tail was classified by main + user and coded
+      on resume (2026-08-13). Tester wrote the `getAllIntentNames` reproduction and re-proved it
+      fails with the bug reverted. `agent-skills:code-reviewer` not yet run.
 - [ ] 7. Promote to root, rewrite AGENTS.md line 145: not started (failures: 0)
 
 ---
@@ -411,9 +450,569 @@ Baseline captured before any slice, on branch `refactor/dacp-handler-deps` with 
 - `npx vp lint .` -> exit 0, silent
 - `npx tsc --noEmit -p packages/sail-desktop-agent` -> exit 0, silent
 
+### Correction — the `vp lint` baseline above is WRONG (found during slice 1, 2026-08-12)
+
+`npx vp lint .` actually exits **1**, not 0, on an untouched tree. Two pre-existing **errors**:
+
+| Finding | Cause |
+|---|---|
+| `packages/sail-finance/vite.config.ts:3:25` TS2307 `Cannot find module '@tailwindcss/vite'` | `@tailwindcss/vite` is declared in `packages/sail-finance/package.json` dependencies but **is not installed** — verified absent from the worktree's `node_modules` *and* the main checkout's. Not a worktree artifact. |
+| `packages/sail-finance/vite.config.ts:8:3` TS2578 unused `@ts-expect-error` | Downstream of the same missing module. |
+
+Plus ~25 pre-existing **warnings** across `sail-one`, `website/scripts`,
+`sail-finance/src/utils/dockview-popout.ts`, `sail-conformance-harness` tests and
+`sail-one/src/appd/appd.tsx`.
+
+**Consequence for slices 3–7:** the "`npx vp lint .` must be silent" acceptance gate is
+**not achievable as written**. Substitute gate: *no new findings attributable to the slice*,
+compared against this recorded pre-existing set. Do not let an agent "fix" the missing
+dependency as part of a strictness slice — see Parked Follow-ups.
+
+### Slice 1
+
+- `cd packages/sail-finance && npx vp test run` -> exit 0, **4 files / 27 tests passing**
+  (22 pre-existing + 5 new reproductions). Before the fix: 22 passed / 5 failed, the 5
+  failures being exactly the outside-provider reproductions.
+- `npx tsc --noEmit -p packages/sail-finance` -> attempt 1 exit **2** (TS2769 in the new
+  test file); sent back to the tester. Attempt 2 -> exit **0**, silent.
+- `npx vp lint .` -> attempt 1 exit **1**; the only slice-attributable finding was the same
+  TS2769. Attempt 2 -> exit 1 with **zero** findings in any slice file; the remaining output
+  matches the pre-existing set above.
+- `npx vp test run` (repo root) -> exit 0, **78 files / 523 tests passing**
+  (baseline 76 / 513; +2 files and +10 tests are this slice's reproductions).
+
+Slice 1 failure count: **1** (the TS2769, fixed by the tester on attempt 2).
+
+### Slice 2
+
+All three suspected bugs **verified real by direct reading** before any fix — none was a
+classifier false positive. The empty-`tabs` crash is reachable through the public `removeTab()`
+API by draining the three default tabs, not only via a contrived fixture.
+
+Decision on the plan's open choice: **the floor went into `removeTab()`, not `getActiveTab()`.**
+The tester's two assertions — `getActiveTab()` must not throw, and `getTabs().length > 0` after
+removing the last tab — can only both hold that way. It is also the root-cause fix, since the
+"cannot close the final tab" rule otherwise lives only in the UI alert dialog.
+
+`generateStartState` needed `export` added to be testable at all. Extracting it to its own
+module would have avoided the resulting lint warning, but the plan's Architecture line forbids
+new modules, so the warning is accepted instead — see Known Limitations.
+
+- `npx tsc --noEmit -p packages/sail-one` -> exit **0**, silent.
+- `cd packages/sail-one && npx vp test run` -> **13/13 passing** (10 pre-existing + 3 new).
+- `npx vp lint .` -> attempt 1 exit 1 with **two** slice-attributable findings: a
+  `no-unnecessary-type-assertion` **error** in the tester's new `resolver.test.ts:19`
+  (sent back to the tester), and the accepted `only-export-components` warning at
+  `resolver.tsx:153`.
+
+Attempt 2, after the tester cleared its lint error:
+
+- `cd packages/sail-one && npx vp test run` -> exit **0**, **3 files / 13 tests passing**.
+- `npx tsc --noEmit -p packages/sail-one` -> exit **0**, silent.
+- `npx vp lint .` -> the `resolver.test.ts` error is gone. The only `resolver` finding left is
+  the accepted `only-export-components` warning.
+- `npx vp test run` (repo root) -> exit 1, **1 failed / 522 passed**. The failure is
+  `sail-desktop-agent/src/app-connection/__tests__/wcp-host-logger-threading.test.ts` —
+  the **known pre-existing flake** this plan documents under Risks. Re-run in isolation:
+  **passes, 2/2**. Not a regression, and unrelated to `sail-one`.
+
+The tester re-proved its `generateStartState` reproduction against real behaviour: with the
+guard reverted but `export` kept, the test fails
+`AssertionError: expected undefined not to be undefined` at `resolver.test.ts:32`. So the test
+catches the bug, not merely the missing export.
+
+Slice 2 failure count: **1**.
+
+### Slice 3
+
+Prediction was exact: **19 findings predicted, 19 hit**, all bucket A ceremony, all in one
+file — `packages/sail-platform/src/workspace/__tests__/workspace-store.test.ts`
+(17 × TS2532, 2 × TS18048), all fixture indexing such as `tabs[0]`, `panels[0]`, `saved[0]`
+where a preceding `store.create(...)` / `store.addPanel(...)` provably populates the array but
+the compiler cannot carry that across the call boundary. Resolved uniformly with non-null
+assertions. **No production file needed any change**, and nothing was refused.
+
+- `npx tsc --noEmit -p packages/sail-platform` -> exit **0**, silent.
+- `npx tsc --noEmit -p packages/sail-desktop-agent` -> exit **0**, silent (confirms the
+  tsconfig flag did not leak to other packages).
+- `npx vp lint .` -> exit 1, **zero** `sail-platform` findings and no new findings anywhere;
+  output matches the pre-existing set. The absence of ~100+ findings elsewhere is itself
+  evidence the lint override did not leak repo-wide.
+- `npx vp test run` -> exit **0**, **78 files / 523 tests passing**.
+
+Slice 3 failure count: **0**.
+
+### Slice 4a
+
+144 findings on enable (113 `tsc` + 31 lint). Disposition: 29 `state/mutators` ceremony,
+84 indexing ceremony, 4 bucket B site-groups suppressed with boundary comments (9 lint
+findings), 1 bucket C deleted, **21 lint findings escalated to 4b**. All 113 `tsc` errors
+resolved.
+
+- `npx tsc --noEmit -p packages/sail-desktop-agent` -> exit **0**, silent.
+- `npx vp lint .` -> exit 1; the 21 escalated findings are the only `sail-desktop-agent` output.
+- `cd packages/sail-desktop-agent && npx vp test run` -> exit **0**, 58 files / 385 tests.
+- `cd packages/sail-desktop-agent && npx cucumber-js` -> exit **0**, 154 scenarios / 1460 steps.
+- `npx tsc --noEmit` on `sail-conformance-harness`, `sail-finance`, `sail-one` -> exit **0**
+  on all three. **The flag did not leak**, despite the harness importing desktop-agent source.
+- Probe confirmed the override live in `src` and suppressed in both `__tests__` and `test/`.
+
+`test/` was added to the exclusion list alongside `__tests__/**` and `*.test.{ts,tsx}`, since it
+holds Cucumber step-definitions and support fixtures — matching the existing `max-lines`
+precedent at `vite.config.ts:364`.
+
+**The escalation criterion in the plan was too narrow.** It named only "always truthy" /
+"always falsy" / "no overlap". Every finding matching those strings was already covered by the
+pre-named bucket B and C sites — **zero unnamed ones existed**. The real tail carries two
+different oxlint messages: *"Unnecessary optional chain on a non-nullish value"* and
+*"Unnecessary comparison between literal values"*. The coder escalated them anyway under the
+"when in doubt, escalate" rule rather than the literal message filter. That was the right call
+and the criterion is hereby widened: **escalate on any `no-unnecessary-condition` message,
+not on the three strings.**
+
+**The coder's escalation report covered only 20 of the 21 findings.** It omitted
+`src/handlers/events/handlers.ts:43` — caught by cross-checking its report against the raw lint
+output. That site is textbook bucket B (see 4b table). A report that enumerates is not
+self-verifying; count it against the tool output.
+
+### Slice 4b — the five `AppInstanceState` tautologies, and what the FDC3 spec says
+
+`AppInstanceState` (`src/state/types.ts:28-31`) has exactly two members, `PENDING` and
+`CONNECTED`. Five sites test "is this instance usable?" by enumerating both, so the linter is
+correct that each is a tautology **today**:
+
+| # | Site | Condition | If deleted |
+|---|---|---|---|
+| 1 | `intent-delivery-helpers.ts:77` | `!target \|\| (state !== PENDING && state !== CONNECTED)` | collapses to `if (!targetInstance)` |
+| 2 | `intent-launch-helpers.ts:91` | `isReady` inside a `logger.debug` payload | **log only, no behaviour** |
+| 3 | `intent-launch-helpers.ts:106` | same expression, feeds `allInstances.find(...)` | not-ready instance selected as launch target |
+| 4 | `intent-launch-helpers.ts:134` | `launcher && (=== CONNECTED \|\| === PENDING)` | collapses to `if (launcherInstance)` |
+| 5 | `intent-raise-shared.ts:104` | `.filter(=== CONNECTED \|\| === PENDING)` | filter disappears entirely |
+
+**Decision: suppress all five.** The initial call was "delete #2, suppress the rest" — one line
+of dead log formatting is not worth a suppression, four silent-acceptance paths are. **That was
+revised during review.** Deleting #2 left the log payload at
+`intent-launch-helpers.ts:91` spelled differently from the selection predicate 15 lines below at
+`:106`:
+
+```ts
+isReady: state === CONNECTED || instanceId === launcherInstanceId          // the log
+const isReady = state === CONNECTED || (state === PENDING && instanceId === launcherInstanceId)  // the logic
+```
+
+Equivalent today; **not equivalent once `CLOSED` ships** — the log would report a closed,
+launcher-matched instance as `isReady: true` while the `find` correctly rejects it. A misleading
+log at exactly the moment someone is debugging instance readiness. Two independent reads (main
+agent and `agent-skills:code-reviewer`) reached this separately. #2 is therefore suppressed too,
+with a comment stating that its job is to stay identical to the predicate below it. All five
+sites now move together when `CLOSED` lands.
+
+**The security auditor approved deleting all five, on reasoning that is wrong.** It argued "a
+new enum member falls through to the not-ready branch — the code fails closed." That describes
+the code *with* the check intact. After deletion there is no branch left to fall to, and sites
+1, 3, 4 and 5 fail **open**. Its conclusion on #2 happens to be right; its stated reason is not
+load-bearing anywhere. Recorded because the same argument will be offered again.
+
+**The spec check (2026-08-12) — the third enum member is not hypothetical.** Neither FDC3 2.2
+(`v2.2`) nor the 3.0 draft (`main`) defines an instance-state enum; `AppIdentifier { appId,
+instanceId }` is the whole public surface, so `AppInstanceState` carries no direct conformance
+obligation. But `api/specs/browserResidentDesktopAgents.md` (`v2.2`), under **"Disconnects"**,
+does:
+
+> "DAs are responsible for tracking when app windows close or navigate, which is necessary to
+> provide accurate responses to the `findIntent`, `findIntentsByContext` & `findInstances` API
+> calls."
+>
+> "Desktop Agents SHOULD retain instance details for applications that have closed as they may
+> appear to close during navigation events."
+
+`removeInstance` (`src/state/mutators/instance.ts:62-68`) does `delete draft.instances[id]`.
+Sail **cannot** retain a closed instance, because no state means "closed". Liveness is
+therefore modelled twice — by presence in the map (real) and by the enum (unable to express
+absence) — and the five checks are guarding the half that cannot currently fire. A retained
+`CLOSED` state is what the spec asks for, and the moment it exists these four checks become
+load-bearing. That is the reason the suppression comments must cite, **not** "a future enum
+member".
+
+Two spec points that constrain the follow-ups below:
+
+- `ResolveError.TargetInstanceUnavailable` is defined as "not available, for example because it
+  has been closed". Sail throws it from `validateRequestedTargetAvailability`
+  (`intent-raise-shared.ts:74-79`) when `getInstance` returns `undefined` — correct, and correct
+  *because* of deletion. So the fix is not "stop deleting"; it is "add a retained `CLOSED` state
+  and filter on it in the selectors".
+- The spec never gates intent delivery on connection state. It gates on listener registration:
+  `ResolveError.IntentDeliveryFailed` is "…because it has not added an intent handler within a
+  timeout", and `api/spec.md` requires that "calls to `fdc3.raiseIntent` should not return an
+  `IntentResolution` until the intent handler has been added and the intent delivered to the
+  target app". Sail already has that gate — `isIntentListenerReady`
+  (`intent-delivery-helpers.ts:34`). The `PENDING || CONNECTED` test beside it at `:77` is a
+  second, weaker test of the same question on an axis the spec does not use.
+
+**Slice 4b verification** (all four run by the main agent directly, not taken on the coder's word):
+
+- `npx tsc --noEmit -p packages/sail-desktop-agent` -> exit **0**, silent.
+- `npx vp lint .` -> **zero** `no-unnecessary-condition` findings in `sail-desktop-agent`. The
+  only remaining output is the known pre-existing `packages/sail-finance/vite.config.ts` pair
+  (TS2307, TS2578) plus one `no-unsafe-call` warning cascading from the same missing module.
+- `cd packages/sail-desktop-agent && npx vp test run` -> exit **0**, 58 files / 385 tests.
+- `cd packages/sail-desktop-agent && npx cucumber-js` -> exit **0**, 154 scenarios / 1460 steps.
+
+**Suppression count, attributed** — the diff carries 24 `oxlint-disable-next-line
+typescript/no-unnecessary-condition` comments in total: **16 from slice 4b** (12 bucket B + 4
+enum; #2 made it 17 after the revision above) and **8 from slice 4a**, plus 4a's one bucket C
+deletion at `errors/fdc3-errors.ts:72`. Counted per-file off `git diff`, not off any agent's
+report.
+
+**`oxlint-disable-next-line` suppresses the literal next line only.** The coder's first pass
+wrote multi-line `//` rationale blocks above each site, which left the flagged line unsuppressed
+whenever the rationale ran past one line, and missed entirely where an expression spans several
+lines and the flagged sub-line is not the statement's first. Every suppression is therefore a
+**single** `//` line placed immediately above the exact flagged sub-line. Slices 5 and 6 must
+follow the same shape.
+
+### Slice 5
+
+22 findings on enable (13 `tsc` + 9 lint) against a predicted ~24 — close, and **zero
+escalations**: every lint finding matched a pre-named bucket B or C site, so the plan's
+classification of this package was complete. Disposition: 13 indexing ceremony (4 × TS2532 in
+`conformance-app-directory.test.ts`, 8 × TS18048 in `intent-resolution.ts`, 1 × TS2345 in
+`harness-finos-teardown.test.ts`), 5 bucket B suppressed, 4 bucket C deleted.
+
+No `test/` entry was added to the lint exclusion — unlike `sail-desktop-agent`, the harness has
+no top-level `test/` directory. Its tests live in `src/**/__tests__/` and `src/*.test.ts`, both
+already covered.
+
+**The plan's bucket C table paired the wrong boundaries with two sites.** It listed
+`harness-browsing-context-close.ts:53,133` together under `AppConnectionMetadata.source: Window`.
+Direct reading found `:53` and `harness-bootstrap.ts:177` are the `source` checks, while `:133`
+is the `sendToAppInstance` check. All three still verified as required, non-optional members
+before deletion. Corrected here so slice 7 does not inherit the mis-pairing.
+
+**`src/__tests__/harness-open-with-context.harness.ts:54` never surfaced.** The guard
+(`mockApp.details &&`) is still in the code, but the file sits under `__tests__/` and the test
+exclusion catches it. Expected, and the right outcome — fixtures are authored data, not
+untrusted input.
+
+Probe (mandatory on every config slice, per slice 3's finding that a silent override is
+indistinguishable from a working one):
+
+| Probe | Expected | Observed |
+|---|---|---|
+| `if (instanceId !== undefined)` on a non-nullable `string` in `src/app-launcher.ts` | rule fires | `error typescript(no-unnecessary-condition)` |
+| the same code in `src/app-launcher.test.ts` | rule suppressed | no finding |
+
+Both reverted; `grep -rn "__probe" packages/sail-conformance-harness/` is empty.
+
+**All four verify commands run by the main agent directly, not taken on the coder's word:**
+
+- `npx tsc --noEmit -p packages/sail-conformance-harness` -> exit **0**, silent.
+- `npx tsc --noEmit -p packages/sail-desktop-agent` -> exit **0**, silent (**the flag did not
+  leak**, despite the harness importing desktop-agent source — this is the check that matters
+  most here, since 52 of the harness's original 65 `tsc` errors were desktop-agent source pulled
+  in through its imports).
+- `npx vp lint .` -> exit 1, output **byte-identical** to the recorded pre-existing set; zero
+  `no-unnecessary-condition` findings anywhere in the repo.
+- `npx vp test run` -> exit **0**, 78 files / 523 tests.
+
+### Slice 6
+
+**Resumed onto a half-finished slice, and the plan file did not say so (2026-08-13).** An
+earlier session had already landed both tsconfig flags, both `vite.config.ts` override pairs,
+and all the indexing ceremony in `sail-one` and `sail-finance` — `tsc` was clean on all five
+packages — then stopped without writing a single line into this plan, which still read "not
+started". **The tree, not the plan, was the true state.** Check `git status` against the plan's
+`Current slice` on every resume; a clean `tsc` on a package the plan calls untouched is the tell.
+
+What remained was an 11-finding constant-condition tail, none of it recorded. Classified by main
++ user against the source (slice 4b's rule: this class is not delegated):
+
+| Site | Finding | Bucket | Action |
+|---|---|---|---|
+| `sail-one/appd.tsx:173,184` | `if (chosen)` always truthy | **C** | Deleted. `const app = chosen` (`:111`) + the `{app ? (` JSX guard (`:160`) — TS aliased-**const** narrowing carries to `chosen`, and both are captured per-render, so the closure cannot see a stale value. |
+| `sail-one/custom-apps.tsx:98` | `?? []` after `Object.keys()` | **C** | Deleted. |
+| `sail-one/custom-apps.tsx:101` ×2 | `a.interop?.intents?.raises` inside its own guard | **A** | `?.` dropped. |
+| `sail-one/resolver.tsx:118,313` | `a?.apps` after `.filter(a => a != null)` | **A** | `?.` dropped — TS 5.5 inferred type predicates narrow the array. |
+| `sail-finance/Layout.tsx:138` | `state &&` on `api.current.toJSON()` | **B** | Suppressed — dockview third-party return type. |
+| `sail-finance/Layout.tsx:225` | `!panels` always falsy | **B** | Suppressed. See the note below. |
+| `sail-finance/RightControls.tsx:104` | `props.group?.activePanel` | **B** | Suppressed — dockview declares `group` required on `IDockviewHeaderActionsProps`. |
+| `sail-finance/main.tsx:149` | `record?.type` | **B** | Suppressed — `record` is `message as {…}`, an unvalidated DACP wire cast. |
+
+**`Layout.tsx:225` was the plan's own rule beating the main agent's derivation.** Direct reading
+said bucket C: `panels` comes from `getPanelsForTab` (`workspace-store.ts:367`), whose every
+return is `Array.from(...)` or `[]`, and the persisted-Map hazard is already suppressed upstream
+at `workspace-store.ts:144`. But this plan pre-classifies `Layout.tsx` as bucket B for
+localStorage-persisted state, and its standing rule is *do not classify a borderline finding down
+to A/C on judgement*. **User decision: suppress.** A comment line costs nothing; a wrongly
+deleted guard on persisted data costs a support ticket.
+
+**A real bug surfaced that the linter did not flag, and the user chose to fix it here.**
+`custom-apps.tsx:98,101` called `allIntents.concat(Object.keys(...))` and **discarded the return
+value** — `concat` does not mutate. So `getAllIntentNames()` had never returned a single
+app-declared intent, only the static `intentTypes`; the custom-app intent dropdown has always
+been missing every intent the app directory actually declares. Fixed to `allIntents.push(...)`,
+which also dissolved findings 3–5 above. `getAllIntentNames` gained an `export` to be testable —
+same `only-export-components` trade the plan already accepted at `resolver.tsx:153`.
+
+This is the **first bucket D outside slices 1–2**, and it was found by reading around a
+bucket A/C site rather than by either tool. The plan predicted "no new bug should surface here";
+that prediction was wrong, though not in a way that invalidates the classification — the linter
+was right about the `?.` and `??`, and the discarded return value was simply a different defect
+sitting on the same two lines.
+
+Probe (mandatory per slice 3; the earlier session ran none). Both packages, both directions:
+
+| Package | Probe | Expected | Observed |
+|---|---|---|---|
+| `sail-finance` | `s !== undefined` on a `string` in `src/main.tsx` | fires | `error typescript(no-unnecessary-condition)` |
+| `sail-finance` | same code in `src/__tests__/contexts/theme-provider.test.tsx` | suppressed | no finding |
+| `sail-one` | same code in `src/icon/app-icon.ts` | fires | `app-icon.ts:18 error typescript(no-unnecessary-condition)` |
+| `sail-one` | same code in `src/config/__tests__/custom-apps.test.ts` | suppressed | no finding |
+
+All four reverted; `grep -rn "__probe" packages/` is empty and no `.bak` file remains.
+
+**All verification run by the main agent directly, not taken on any subagent's word:**
+
+- `npx tsc --noEmit -p packages/{sail-one,sail-finance,sail-platform,sail-desktop-agent,sail-conformance-harness}`
+  -> exit **0** on all five. The flag did not leak.
+- `npx vp lint .` -> exit 1, with **zero** `no-unnecessary-condition` findings repo-wide
+  (`grep -c` = 0). The only remaining *errors* are the two documented pre-existing
+  `packages/sail-finance/vite.config.ts` ones (TS2307, TS2578).
+- `npx vp test run` -> exit **0**, 78 files / 523 tests.
+- `cd packages/sail-one && npx vp test run` -> exit **0**, **4 files / 14 tests** (was 3 / 13;
+  +1 file and +1 test is the `getAllIntentNames` reproduction). Run separately because
+  `sail-one` is absent from the root `projects` array — see below.
+
+Tester re-proved the reproduction against real behaviour: with `push` reverted to `concat`,
+`custom-apps.test.ts:78` fails with
+`AssertionError: expected [ 'CreateInteraction', …(17) ] to include 'CustomListenIntent'`.
+So the test catches the bug, not merely the new `export`.
+
+Slice 6 failure count: **0**.
+
+### `sail-one` IS NOT IN THE ROOT TEST RUN — found during slice 2
+
+Root `vitest.config.ts` lists four projects: `sail-desktop-agent`, `sail-platform`,
+`sail-finance`, `sail-conformance-harness`. **`packages/sail-one/vitest.config.ts` is absent.**
+
+So `npx vp test run` at the repo root has never executed a single `sail-one` test — not
+this plan's new ones, and not the pre-existing `client-state.test.ts` / `sail-host.test.ts`.
+That is why the repo-level count stayed at 78 files / 523 tests across slice 2 while the
+focused run went from 10 tests to 13.
+
+**Consequences:**
+
+- Slice 2's stated verify command (`npx vp test run`) does **not** exercise slice 2's tests.
+  The real gate is `cd packages/sail-one && npx vp test run`. Same for slice 6.
+- The repo-wide baseline of "76 files / 513 tests" in this plan excludes `sail-one` entirely.
+- Whether this is deliberate or an oversight is unresolved — see Parked Follow-ups. Do not
+  "fix" it inside a strictness slice; adding a project to the root run could surface unrelated
+  failures and would contaminate the slice's diff.
+
 ---
 
 ## Review Notes
+
+### Slice 1 — `agent-skills:code-reviewer`, verdict APPROVE
+
+- **Required:** none.
+- **Follow-up:** `use-sail-desktop-agent-hooks.test.tsx:19-32` casts its `fakeAgent` fixture
+  through `as unknown as SailDesktopAgent`. Fine for a reproduction test; worth a shared
+  fixture helper only if it gets reused.
+- **Ignore for MVP:** none.
+
+Reviewer independently confirmed: the four `if (!context)` guards and `useTheme`'s
+`context === undefined` guard are all reachable from the type-value change alone with the hook
+file untouched; no direct reader of either context exists outside the guarded hooks, so no
+consumer silently receives `undefined`; the deleted `initialState` const had no other
+references; and each test asserts the literal thrown message rather than "throws something" —
+which was the plan's stated false-positive risk.
+
+### Slice 2 — `agent-skills:code-reviewer`, no Required findings
+
+- **Required:** none.
+- **Follow-up:**
+  - `resolver.test.ts:32` asserts `.not.toBeUndefined()`. The correct value here is
+    specifically `null`; any string would also pass. Tighten to `.toBeNull()` and also assert
+    `chosenApp` is `null`, since the acceptance calls out the two staying consistent.
+  - `client-state.test.ts:102` is named "getActiveTab does not throw once every tab has been
+    removed", which is now inaccurate — the `removeTab()` floor means one tab always survives,
+    so `getActiveTab()`'s `if (!out)` branch is never reached by that test.
+- **Ignore for MVP:** `client-state.ts:152` aliases the module-level `DEFAULT_TABS` rather than
+  cloning it, so `addTab`'s `push` would mutate the shared default. Pre-existing, untouched by
+  this diff, no test exercises `addTab`. Noted only because it sits beside changed code.
+
+Reviewer independently confirmed: dropping the `tabs.length > 0` clause is correct because the
+new guard already establishes it; the only `removeTab` caller (`config/tabs.tsx:78-96`) already
+checks `getTabs().length == 1` and alerts first, and the `Promise<void>` signature never gave
+callers a success signal, so the silent no-op regresses nothing; `chosenIntent` cannot be
+`undefined` on any path and `chosenApp` is forced to `null` alongside it; and `ResolverPanel`
+genuinely leaves the user a way out (`resolver.tsx:333` disables Go, `:342-347` always renders
+Cancel).
+
+### THE STAGING SHAPE — slices 4–6 copy this verbatim
+
+Two entries in root `vite.config.ts`'s `lint.overrides` array: turn the rule on for the
+package, then off again for its tests. Later entries win for the same rule, which is the same
+mechanism the existing `max-lines` pair at `vite.config.ts:347` / `:360` already relies on.
+
+```ts
+{
+  files: ["packages/sail-platform/**/*.{ts,tsx}"],
+  rules: {
+    "typescript/no-unnecessary-condition": "error",
+  },
+},
+{
+  files: [
+    "packages/sail-platform/**/__tests__/**/*.{ts,tsx}",
+    "packages/sail-platform/**/*.test.{ts,tsx}",
+  ],
+  rules: {
+    "typescript/no-unnecessary-condition": "off",
+  },
+},
+```
+
+Plus `"noUncheckedIndexedAccess": true` in that package's `tsconfig.json` `compilerOptions`.
+
+**On the extension set:** these entries use `*.{ts,tsx}` while the neighbouring `max-lines`
+precedent at `vite.config.ts:347` uses bare `*.ts`. That difference is deliberate, not a typo.
+`sail-platform/src` contains no `.tsx` at all, so it makes no difference there — but slices 4–6
+copy this shape into `sail-one` and `sail-finance`, which are full of `.tsx`. Keep `{ts,tsx}`.
+
+**This shape was proved live, not assumed.** All 19 of `sail-platform`'s findings landed in a
+test file, so the lint override caught nothing on its own — a typo'd glob would have looked
+identical to a working one. Verified by probe instead:
+
+| Probe | Expected | Observed |
+|---|---|---|
+| `if (s !== undefined)` on a `string` param, in `src/workspace/store.ts` | rule fires | `store.ts:311 error typescript(no-unnecessary-condition)` |
+| the same code in `src/workspace/__tests__/workspace-store.test.ts` | rule suppressed | no finding |
+
+Both probes were reverted; `grep -rn "__probe" packages/sail-platform/` is empty.
+
+**Do the same probe on every remaining config slice.** A silent lint override is
+indistinguishable from a working one when the package has no production-code findings.
+
+Note also: a `typeof s === "string"` probe did **not** trip the rule. It only flags conditions
+whose *types* have no overlap or are constant — use a nullish/`undefined` comparison to test it.
+
+### Prediction for slice 6, from slice 2's review
+
+`removeTab()`'s floor now makes `tabs` provably non-empty at runtime — constructor default,
+`load()`, `addTab` only appends, `removeTab` floors. **TypeScript cannot see that invariant.**
+So when `noUncheckedIndexedAccess` lands on `sail-one` in slice 6,
+`client-state.ts:215,219` (`this.tabs[0].id`, `return this.tabs[0]`) will still error, and
+`getActiveTab()`'s `if (!out)` fallback may be flagged. That is **bucket A ceremony** — the
+guard is upheld by an invariant the compiler cannot prove. Resolve it with a non-null assertion
+or a destructure, and do not "fix" it by changing `removeTab`.
+
+### Slice 3 — `agent-skills:code-reviewer`, verdict APPROVE, no Required findings
+
+- **Required:** none.
+- **Follow-up:** the new override uses `*.{ts,tsx}` where the neighbouring `max-lines`
+  precedent uses bare `*.ts` — recorded above under "On the extension set" so slices 4–6 do not
+  read it as a typo.
+- **Ignore for MVP:** `workspace-store.test.ts` repeats `active(store).layout.tabs[0]!` at 8+
+  sites; a destructure would drop some `!`s but each access is a single flat property read, so
+  it does not materially improve clarity. The plan allows either form.
+
+Reviewer traced all 19 assertions against `store.ts` mutation semantics rather than sampling:
+`create()` always seeds `tabs[0]`; `addTab()` and `addPanel()` append rather than prepend or
+reorder; `renameTab`/`removePanel`/`movePanel` use `.map()` and never `.filter()` on the tabs
+array, so indices stay stable. Two sites (`workspace-store.test.ts:52`, `:222`) are additionally
+preceded by a runtime `toHaveLength(1)` on the same array. **No assertion masks a path where the
+array could legitimately be empty.** Confirmed no production file was touched, and no other
+`lint.rules`/`overrides` entry references `no-unnecessary-condition`, so there is no conflicting
+default.
+
+### Slice 4a — no dedicated reviewer pass was ever run
+
+Slice 4a went coder -> security-auditor -> main-agent verification, skipping
+`agent-skills:code-reviewer`. The gap was closed incidentally: the slice 4b reviewer scoped
+itself to the whole cumulative diff, read all 8 of 4a's suppressions plus the
+`errors/fdc3-errors.ts:72` deletion, and reported each "follows the same sound reasoning pattern
+as its classified siblings, and none look wrong". Recorded so nobody re-opens it — but the
+process lapse is real, and slices 5–7 must not repeat it.
+
+### Slice 4b — `agent-skills:code-reviewer`, verdict REQUEST CHANGES (one finding upheld)
+
+- **Required — NOT UPHELD.** It counted 24 suppressions against the 20-site brief it was given
+  and flagged 9 as unattested. Those 9 are slice 4a's, not 4b's; verified by per-file count off
+  `git diff` (see the 4a/4b attribution above). A reviewer scoped to a cumulative worktree diff
+  will keep making this mistake — brief slices 5–7 with the attribution up front.
+- **Important — UPHELD, fixed.** The `intent-launch-helpers.ts:91` log/logic divergence. Site #2
+  is now suppressed rather than deleted; see the slice 4b decision above.
+- **Suggestion — partly right, fix applied by hand.** It found broken indentation at
+  `intent-raise-intent-for-context.ts:165-167` (2 spaces where the block is 4) — real, and left
+  over from slice 4a's `intentCandidates[0]!` edit. Its proposed remedy, `vp fmt`, is **banned**
+  on this repo and would rewrite 190 files. Corrected manually; all four verify commands re-run
+  green afterwards.
+- **Praised, worth keeping:** the bucket B comments name the concrete boundary (MessagePort,
+  DACP wire message, App Directory JSON) rather than "might be null", which is what makes them
+  auditable later. Both bucket A drops were independently confirmed safe against the state types
+  — `AppInstance.metadata` and `AppInstanceMetadata` are required fields, not wire data.
+
+### Slice 5 — `agent-skills:security-auditor`, verdict: all three deletions safe, no Required
+
+Briefed with the slice-4b lesson (reason about the code *after* the deletion, not with the check
+intact). It did, and its evidence is a real trace rather than an assertion:
+
+| Deletion | Why it is safe |
+|---|---|
+| `harness-browsing-context-close.ts:53` — `&& connection.source` | `AppConnectionMetadata.source: Window` (`wcp-types.ts:182`) is required, and its **only** construction site, `handleWCP1Hello` (`wcp1-3-handshake.ts:36-84`), returns early on `if (!event.source) return` before building the metadata object. `updateConnectionMetadata` never touches `.source`; `getConnections()` returns raw map values untransformed. |
+| `harness-browsing-context-close.ts:133` — `if (!appConnection?.sendToAppInstance) return` | `SailDesktopAgent.appConnection` is `readonly`, assigned in the constructor (`sail-desktop-agent.ts:152`); every call site types `desktopAgent: SailDesktopAgent` with no generic, so `TEdge` defaults to `BrowserAppConnection`, whose `sendToAppInstance` (`browser-app-connection.ts:144`) is a plain prototype method, not a conditionally-attached property. Both halves were compile-time guaranteed. |
+| `harness-bootstrap.ts:177` — `if (metadata.source)` | Same `source` fact. `popupWatcher.remapPopupByWindow` also declares `source: Window` non-optional (`popup-launcher.ts:27`), so the guard was not protecting the callee either. |
+
+On the instance-conflation worry: `other.source === connection.source` is reference equality on
+real `Window` objects, each captured from a distinct `event.source` per handshake, so two apps'
+windows are never `===`. The only way it could wrongly group instances is two `undefined`
+sources (`undefined === undefined`), which the handshake's early return already prevents.
+**The deleted guard was never what prevented that failure mode.**
+
+- **Required:** none.
+- **Follow-up:** none.
+- **Ignore for MVP — but worth recording:** `harness-browsing-context-close.ts:36` is filed as
+  bucket B, yet it is **not a trust boundary** — it is a TypeScript *narrowing gap* (the compiler
+  does not invalidate `.closed` across the `.close()` call that mutates it). The suppression
+  comment says exactly that rather than mislabelling it as untrusted input, so the outcome is
+  right. The taxonomy is what is imprecise: bucket B currently conflates "the value crosses a
+  trust boundary" with "the compiler cannot model this mutation". Both mean *suppress, never
+  delete*, so nothing in slices 1–6 turns on it — but slice 7's `AGENTS.md` rewrite should not
+  claim bucket B is only about trust boundaries.
+
+### Slice 5 — `agent-skills:code-reviewer`, verdict APPROVE, no Required findings
+
+- **Required:** none.
+- **Follow-up:** the plan named `src/__tests__/harness-open-with-context.harness.ts:54` as a
+  bucket B site needing a suppression comment, and the diff has none — because the file is inside
+  `**/__tests__/**` where the rule is off, so the finding never fires. A stronger outcome than a
+  per-line suppression. Recorded in the slice 5 Verification Notes above so nobody hunts for a
+  comment that was never needed.
+- **Ignore for MVP:** none.
+
+**The plan carried a second wrong boundary citation, and the coder caught it unprompted.** The
+bucket C table cites `AgentAppConnection.sendToAppInstance` — **that interface has no such
+member**, only a nested `connectionRegistry.sendToAppInstance(message)` with a different arity.
+The real type is `BrowserAppConnection.sendToAppInstance(instanceId, message)`
+(`browser-app-connection.ts:144`), reached because the function's parameter is a bare
+`desktopAgent: SailDesktopAgent`, so `TEdge` defaults to `BrowserAppConnection`. The coder
+re-derived it from the source instead of suppressing under a name that did not match the actual
+type. **That is precisely the check this plan's headline risk exists to force**, and it is the
+second boundary mis-citation found in slice 5 alone — treat the plan's remaining tables as
+leads, not as facts.
+
+Reviewer independently confirmed, running all four verify commands itself rather than taking
+them from the brief: all 5 suppressions are single `//` lines immediately above the exact flagged
+sub-expression (including the two consecutive ones in `harness-console-capture.ts`, which are
+independent findings and each need their own); the `vite.config.ts` override pair uses the
+`error`-then-`off` shape with `{ts,tsx}` and sits ahead of the generic `**/*.{jsx,tsx}`
+catch-all; and all 13 non-null assertions are floored by a preceding `.length` check, a
+single-element fixture, or a `toHaveBeenCalledWith` assertion — **none masks a path where the
+value could legitimately be absent**.
+
+### Slices 6–7
 
 - Required:
 - Follow-up:
@@ -423,12 +1022,50 @@ Baseline captured before any slice, on branch `refactor/dacp-handler-deps` with 
 
 ## Parked Follow-ups
 
+- **No retained `CLOSED` instance state — a spec SHOULD that Sail does not meet.**
+  `browserResidentDesktopAgents.md` ("Disconnects") requires DAs to track close/navigate for
+  accurate `findInstances` / `findIntent` / `findIntentsByContext`, and says instance details
+  SHOULD be retained after close because navigation looks like a close. `removeInstance`
+  (`src/state/mutators/instance.ts:62-68`) deletes the key instead, so a navigating app
+  disappears from `findInstances` and reappears under a new `instanceId`. Fix is a third
+  `AppInstanceState` member plus selector filtering — **not** dropping the delete, since
+  `TargetInstanceUnavailable` currently depends on `getInstance` returning `undefined`. This is
+  the change that makes the four slice-4b suppressions load-bearing. Sizeable; needs its own
+  plan.
+- **The readiness predicate is inlined eight times and never named.** Two distinct concepts,
+  four spellings, six files: "alive" as `state !== PENDING && state !== CONNECTED`
+  (`intent-delivery-helpers.ts:79`), as `=== CONNECTED || (=== PENDING && id === launcherId)`
+  (`intent-launch-helpers.ts:92, 107`), and as `=== CONNECTED || === PENDING`
+  (`intent-launch-helpers.ts:136`, `intent-raise-shared.ts:106`); "ready now" as `=== CONNECTED`
+  alone (`state/selectors/instance.ts:24`, `intent-helpers.ts:59`, `intent-raise-shared.ts:110`,
+  `intent-resolver-helpers.ts:137`). Nothing at a call site says which is intended. Extracting
+  `isInstanceReceivable` / `isInstanceConnected` into `state/selectors/instance.ts` collapses
+  the tautology to one function — one suppression instead of four, and the `CLOSED` work above
+  becomes a one-line edit in a named place. Behaviour-preserving, but it is a refactor of intent
+  routing; doing it inside a lint-enablement slice would make the diff unreviewable.
+- **`intent-delivery-helpers.ts:77` gates delivery on the wrong axis.** The spec ties delivery
+  to listener registration (`IntentDeliveryFailed` = "has not added an intent handler within a
+  timeout"), not to connection state. Sail already has `isIntentListenerReady` at `:34`; the
+  `PENDING || CONNECTED` test at `:77` duplicates the question more weakly. Related live gap:
+  `wcp-host-instance-adoption.ts:66, 102, 113` hunts for lingering `PENDING` instances to adopt
+  and `wcp-multi-pending-adoption.integration.test.ts` has a constant named `STALE_PENDING_ID`,
+  so a half-finished WCP handshake **does** sit in the map indefinitely. `intent-raise-shared.ts`
+  prefers `CONNECTED` over it (`:109-112`); `intent-delivery-helpers.ts:77` does not, and will
+  deliver a pending intent to an instance that never completed WCP5. Exists today, independent
+  of this plan.
 - **`conformance-app-directory.ts:78` casts imported JSON with `as DirectoryApp[]` and never
   validates it.** This is the root cause behind three separate bucket B findings in the
   harness. Worth a schema check at import, but it is a validation task, not a strictness task.
 - **The transport-logging flake** — `wcp-host-logger-threading.test.ts`, reproduced twice under
   parallel load, both times with inflated `environment` time. Self-inflicted by running Vitest
   alongside another heavy command.
+- **`sail-one` is missing from root `vitest.config.ts`'s `projects` array**, so `npx vp test run`
+  never runs its tests. Either add it (and deal with whatever that surfaces) or record that
+  `sail-one` is deliberately focused-run-only. Out of scope for a strictness slice.
+- **`@tailwindcss/vite` is declared but not installed**, so `packages/sail-finance/vite.config.ts`
+  has two standing lint errors on an otherwise clean tree. Either install it or drop it from
+  `package.json`. Out of scope here — it is a dependency-hygiene task, not a strictness task,
+  and fixing it inside a strictness slice would muddy that slice's diff.
 - **`website/`** was never measured. Decide separately whether it gets the same treatment.
 - **Other type-aware rules** — `no-unnecessary-condition` was the only one evaluated. Others in
   oxlint's non-`correctness` categories may be worth the same treatment, or may not.
@@ -440,3 +1077,12 @@ Baseline captured before any slice, on branch `refactor/dacp-handler-deps` with 
 - The bucket A/B/C/D split for `sail-desktop-agent` outside `state/mutators` is a sample, not
   a complete audit. Slice 4 completes it.
 - Seven of the nine bucket D findings rest on a classifier's report rather than direct reading.
+  **Update:** all three `sail-one` findings (slice 2) and all five `sail-finance` findings
+  (slice 1) were subsequently confirmed real by direct reading. Eight of the nine are now
+  verified; none was a false positive.
+- **Accepted lint warning:** `packages/sail-one/src/resolver/resolver.tsx:153`
+  `react(only-export-components)`. `generateStartState` had to be exported to be testable, and
+  exporting a non-component from a component file trips the fast-refresh rule. Resolving it
+  properly means extracting a module, which this plan's Architecture line forbids. Four
+  equivalent warnings already stand elsewhere in the repo (`index.tsx`,
+  `channel-selector.tsx` x3).

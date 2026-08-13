@@ -50,7 +50,7 @@ export const updateIntentListenerActivity = (state: AgentState, listenerId: stri
   if (!state.intents.listeners[listenerId]) return state
 
   return produce(state, draft => {
-    draft.intents.listeners[listenerId].lastActivity = new Date()
+    draft.intents.listeners[listenerId]!.lastActivity = new Date()
   })
 }
 
@@ -62,8 +62,8 @@ export const setIntentListenerActive = (
   if (!state.intents.listeners[listenerId]) return state
 
   return produce(state, draft => {
-    draft.intents.listeners[listenerId].active = active
-    draft.intents.listeners[listenerId].lastActivity = new Date()
+    draft.intents.listeners[listenerId]!.active = active
+    draft.intents.listeners[listenerId]!.lastActivity = new Date()
   })
 }
 
@@ -88,8 +88,8 @@ export const updatePendingIntentTarget = (
   if (!state.intents.pending[requestId]) return state
 
   return produce(state, draft => {
-    draft.intents.pending[requestId].targetInstanceId = targetInstanceId
-    draft.intents.pending[requestId].targetAppId = targetAppId
+    draft.intents.pending[requestId]!.targetInstanceId = targetInstanceId
+    draft.intents.pending[requestId]!.targetAppId = targetAppId
   })
 }
 
@@ -97,7 +97,7 @@ export const markPendingIntentDelivered = (state: AgentState, requestId: string)
   if (!state.intents.pending[requestId]) return state
 
   return produce(state, draft => {
-    draft.intents.pending[requestId].delivered = true
+    draft.intents.pending[requestId]!.delivered = true
   })
 }
 

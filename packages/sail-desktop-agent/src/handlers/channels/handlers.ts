@@ -216,6 +216,7 @@ export function handleGetCurrentContextRequest(
     const payload = message.payload
 
     const instance = getInstance(getState(), instanceId)
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- `payload.channelId` is parsed from an inbound DACP getCurrentContextRequest message; the schema type is an assumption about a well-behaved peer, not a guarantee.
     const channelId = payload.channelId ?? instance?.currentUserChannel
 
     if (!channelId) {

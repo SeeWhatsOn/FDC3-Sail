@@ -44,13 +44,13 @@ function captureAppMessagePort(connectionAttemptUuid: string, identityUrl: strin
     [BrowserTypes.WebConnectionProtocol3Handshake, string, MessagePort[]]
   >
   expect(calls.length).toBeGreaterThan(0)
-  const [handshakeMessage, targetOrigin, ports] = calls[0]
+  const [handshakeMessage, targetOrigin, ports] = calls[0]!
   expect(handshakeMessage.type).toBe("WCP3Handshake")
   expect(handshakeMessage.meta.connectionAttemptUuid).toBe(connectionAttemptUuid)
   expect(targetOrigin).toBe(TEST_ORIGIN)
   expect(ports).toEqual(expect.arrayContaining([expect.any(MessagePort)]))
   postMessageSpy.mockRestore()
-  const appPort = ports[0]
+  const appPort = ports[0]!
   appPort.start()
   return appPort
 }

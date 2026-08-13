@@ -46,8 +46,8 @@ export const updateInstanceState = (
   if (!state.instances[instanceId]) return state
 
   return produce(state, draft => {
-    draft.instances[instanceId].state = instanceState
-    draft.instances[instanceId].lastActivity = new Date()
+    draft.instances[instanceId]!.state = instanceState
+    draft.instances[instanceId]!.lastActivity = new Date()
   })
 }
 
@@ -55,7 +55,7 @@ export const updateInstanceActivity = (state: AgentState, instanceId: string): A
   if (!state.instances[instanceId]) return state
 
   return produce(state, draft => {
-    draft.instances[instanceId].lastActivity = new Date()
+    draft.instances[instanceId]!.lastActivity = new Date()
   })
 }
 
@@ -75,8 +75,8 @@ export const joinUserChannel = (
   if (!state.instances[instanceId]) return state
 
   return produce(state, draft => {
-    draft.instances[instanceId].currentUserChannel = channelId
-    draft.instances[instanceId].lastActivity = new Date()
+    draft.instances[instanceId]!.currentUserChannel = channelId
+    draft.instances[instanceId]!.lastActivity = new Date()
   })
 }
 
@@ -90,7 +90,7 @@ export const addContextListener = (
   if (!state.instances[instanceId]) return state
 
   return produce(state, draft => {
-    const instance = draft.instances[instanceId]
+    const instance = draft.instances[instanceId]!
     const entry =
       channelId != null && channelId !== "" ? { contextType, channelId } : { contextType }
     instance.contextListeners[listenerId] = entry
@@ -106,7 +106,7 @@ export const removeContextListener = (
   if (!state.instances[instanceId]) return state
 
   return produce(state, draft => {
-    const instance = draft.instances[instanceId]
+    const instance = draft.instances[instanceId]!
     delete instance.contextListeners[listenerId]
     instance.lastActivity = new Date()
   })
@@ -120,7 +120,7 @@ export const addPrivateChannel = (
   if (!state.instances[instanceId]) return state
 
   return produce(state, draft => {
-    const instance = draft.instances[instanceId]
+    const instance = draft.instances[instanceId]!
     if (!instance.privateChannels.includes(channelId)) {
       instance.privateChannels.push(channelId)
     }
@@ -136,7 +136,7 @@ export const removePrivateChannel = (
   if (!state.instances[instanceId]) return state
 
   return produce(state, draft => {
-    const instance = draft.instances[instanceId]
+    const instance = draft.instances[instanceId]!
     instance.privateChannels = instance.privateChannels.filter(pc => pc !== channelId)
     instance.lastActivity = new Date()
   })

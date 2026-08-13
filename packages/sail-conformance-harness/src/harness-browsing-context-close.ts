@@ -33,6 +33,7 @@ export function tryCloseBrowsingContext(
     console.warn(`${HARNESS_LOG_PREFIX} window.close() threw for ${instanceId}`, error)
   }
 
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- TypeScript narrows windowRef.closed to false above and never invalidates that across windowRef.close(), which is precisely what mutates it; the linter's own autofix breaks same-origin close detection here
   if (windowRef.closed) {
     return true
   }
@@ -50,7 +51,7 @@ export function collectHarnessCloseInstanceIds(
   const ids = new Set<string>([instanceId])
 
   for (const connection of desktopAgent.apps.getConnections()) {
-    if (connection.instanceId === instanceId && connection.source) {
+    if (connection.instanceId === instanceId) {
       for (const other of desktopAgent.apps.getConnections()) {
         if (other.source === connection.source) {
           ids.add(other.instanceId)
@@ -129,10 +130,6 @@ export function deliverFinOsCloseWindowBroadcast(options: {
     context = FINOS_CLOSE_WINDOW_CONTEXT,
   } = options
   const appConnection = desktopAgent.appConnection
-
-  if (!appConnection?.sendToAppInstance) {
-    return
-  }
 
   appConnection.sendToAppInstance(targetInstanceId, {
     type: "broadcastEvent",

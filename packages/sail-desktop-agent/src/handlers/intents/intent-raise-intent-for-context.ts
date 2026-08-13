@@ -162,7 +162,9 @@ export async function handleRaiseIntentForContextRequest(
       validatedContext.type,
     )
 
-    let selectedIntent = intentCandidates[0]
+    // selectIntentCandidatesForContext's three return paths are all non-empty (two are
+    // guarded by `.length > 0`, the third throws on empty), so `[0]` is always defined.
+    let selectedIntent = intentCandidates[0]!
     let targetInstanceId: string | undefined
     let targetInstanceIsLaunched = false
     let resolverSelectedAppId: string | undefined
@@ -191,7 +193,7 @@ export async function handleRaiseIntentForContextRequest(
         const requestId = message.meta.requestUuid
         const resolution = await params.requestIntentResolution({
           requestId,
-          intent: choices[0].intent.name,
+          intent: choices[0]!.intent.name,
           context: validatedContext,
           handlers: choices.map(choice => choice.handler),
           choices,
@@ -251,11 +253,11 @@ export async function handleRaiseIntentForContextRequest(
         targetInstanceId = resolvedTarget.targetInstanceId
         targetInstanceIsLaunched = resolvedTarget.targetInstanceIsLaunched
       } else if (handlers.runningListeners.length > 0) {
-        targetInstanceId = handlers.runningListeners[0].instanceId
+        targetInstanceId = handlers.runningListeners[0]!.instanceId
       } else if (handlers.availableApps.length > 0) {
         targetInstanceIsLaunched = true
         targetInstanceId = await launchAppAndWaitForInstance(
-          handlers.availableApps[0].appId,
+          handlers.availableApps[0]!.appId,
           params,
           validatedContext,
         )

@@ -77,6 +77,7 @@ export function attemptIntentDelivery(
   if (
     !targetInstance ||
     (targetInstance.state !== AppInstanceState.PENDING &&
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- `AppInstanceState` only has PENDING/CONNECTED today (browserResidentDesktopAgents.md v2.2 "Disconnects": Sail's `removeInstance` deletes closed instances rather than retaining a CLOSED state). This guards pending-intent delivery; when a retained CLOSED state ships, it becomes load bearing — deleting it now fails OPEN and delivers the intent to a not-ready instance.
       targetInstance.state !== AppInstanceState.CONNECTED)
   ) {
     logger.warn("DACP: Target instance not ready for pending intent delivery", {

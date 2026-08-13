@@ -31,7 +31,7 @@ export async function launchAppAndWaitForInstance(
   if (apps.length === 0) {
     throw new Error(`App not found in directory: ${appId}`)
   }
-  const appMetadata = apps[0]
+  const appMetadata = apps[0]!
 
   logger.info("DACP: Launching app for intent", {
     appId,
@@ -90,6 +90,7 @@ export async function launchAppAndWaitForInstance(
           isRecent: instance.createdAt.getTime() >= launchTimestamp,
           isReady:
             instance.state === AppInstanceState.CONNECTED ||
+            // oxlint-disable-next-line typescript/no-unnecessary-condition -- kept identical to the selection predicate below so the log cannot drift from the logic it reports. `AppInstanceState` only has PENDING/CONNECTED today (browserResidentDesktopAgents.md v2.2 "Disconnects": Sail's `removeInstance` deletes closed instances rather than retaining a CLOSED state); simplifying this would make the log report a closed launcher-matched instance as ready while the predicate correctly rejects it.
             (instance.state === AppInstanceState.PENDING &&
               instance.instanceId === launcherInstanceId),
           matchesLauncher: instance.instanceId === launcherInstanceId,
@@ -105,6 +106,7 @@ export async function launchAppAndWaitForInstance(
       const isRecent = instance.createdAt.getTime() >= launchTimestamp
       const isReady =
         instance.state === AppInstanceState.CONNECTED ||
+        // oxlint-disable-next-line typescript/no-unnecessary-condition -- `AppInstanceState` only has PENDING/CONNECTED today (browserResidentDesktopAgents.md v2.2 "Disconnects": Sail's `removeInstance` deletes closed instances rather than retaining a CLOSED state). This guards launch-target selection; when a retained CLOSED state ships, it becomes load bearing — deleting it now fails OPEN and selects a not-ready instance as a launch target.
         (instance.state === AppInstanceState.PENDING && instance.instanceId === launcherInstanceId)
 
       if (isNew && isRecent && !isReady) {
@@ -134,6 +136,7 @@ export async function launchAppAndWaitForInstance(
     if (
       launcherInstance &&
       (launcherInstance.state === AppInstanceState.CONNECTED ||
+        // oxlint-disable-next-line typescript/no-unnecessary-condition -- `AppInstanceState` only has PENDING/CONNECTED today (browserResidentDesktopAgents.md v2.2 "Disconnects": Sail's `removeInstance` deletes closed instances rather than retaining a CLOSED state). This guards the launcher-fallback path; when a retained CLOSED state ships, it becomes load bearing — deleting it now fails OPEN and treats a closed launcher instance as ready.
         launcherInstance.state === AppInstanceState.PENDING)
     ) {
       logger.info("DACP: Launcher instance registered and ready", {

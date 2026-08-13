@@ -230,7 +230,7 @@ describe("Option A instance lifecycle (WCP path)", () => {
     >
     postMessageSpy.mockRestore()
 
-    const appPort = calls[0][2][0]
+    const appPort = calls[0]![2][0]!
     appPort.start()
 
     const wcp4Failed = waitForPortMessage<{ type: string; payload?: { message?: string } }>(

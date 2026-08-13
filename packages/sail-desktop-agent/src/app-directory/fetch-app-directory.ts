@@ -9,6 +9,7 @@ export function parseDirectoryData(data: DirectoryApp[] | DirectoryData): Direct
   if (Array.isArray(data)) {
     return data
   }
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- data is unvalidated JSON from a remote app-directory URL; the type is an assumption, not a guarantee.
   if (data.applications && Array.isArray(data.applications)) {
     return data.applications
   }
@@ -18,6 +19,7 @@ export function parseDirectoryData(data: DirectoryApp[] | DirectoryData): Direct
 }
 
 export function validateApplication(app: DirectoryApp, source?: string): void {
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- app is unvalidated JSON from a remote app-directory URL; the DirectoryApp type is an assumption about what should arrive, not a fact about what does.
   if (!app.appId || !app.title || !app.type || !app.details) {
     const sourceInfo = source ? ` in ${source}` : ""
     throw new Error(

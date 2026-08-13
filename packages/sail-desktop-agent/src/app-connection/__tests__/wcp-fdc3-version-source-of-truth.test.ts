@@ -57,7 +57,7 @@ async function handshakeVersions(): Promise<{ wcp3: string; wcp5: string }> {
   postMessageSpy.mockRestore()
   expect(handshake.type).toBe("WCP3Handshake")
 
-  const appPort = ports[0]
+  const appPort = ports[0]!
   appPort.start()
   const wcp5 = new Promise<BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse>(
     resolve => {

@@ -181,6 +181,7 @@ export function handlePrivateChannelAddContextListenerRequest(
         addPrivateChannelLifecycleCatchAllListener(state, channelId, listenerId, instanceId),
       )
     } else {
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- `listenerType` is parsed from an inbound DACP message payload; the schema type (no `undefined` member here) is an assumption about a well-behaved peer, not a guarantee.
       const resolvedListenerType = listenerType ?? "addContextListener"
 
       if (resolvedListenerType === "addContextListener") {
@@ -191,6 +192,7 @@ export function handlePrivateChannelAddContextListenerRequest(
         setState(state =>
           addPrivateChannelDisconnectListener(state, channelId, listenerId, instanceId),
         )
+        // oxlint-disable-next-line typescript/no-unnecessary-condition -- `resolvedListenerType` is derived from an inbound DACP message payload; deleting this check as "always true" removes the final `else { throw ChannelCreationFailedError }` as unreachable, so a garbage `listenerType` from a misbehaving peer would be SILENTLY treated as "unsubscribe" instead of raising an error.
       } else if (resolvedListenerType === "unsubscribe") {
         setState(state =>
           addPrivateChannelUnsubscribeListener(state, channelId, listenerId, instanceId),
@@ -203,6 +205,7 @@ export function handlePrivateChannelAddContextListenerRequest(
     }
 
     const resolvedListenerType =
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- `listenerType` is parsed from an inbound DACP message payload; the schema type is an assumption about a well-behaved peer, not a guarantee.
       listenerType === null ? "lifecycleCatchAll" : (listenerType ?? "addContextListener")
 
     logger.info("DACP: Private channel event listener added", {

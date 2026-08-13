@@ -65,7 +65,7 @@ export const createAppDirectoryStore = (agent: SailDesktopAgent) =>
         set(state => {
           const appIndex = state.apps.findIndex((app: DirectoryApp) => app.appId === appId)
           if (appIndex >= 0) {
-            state.apps[appIndex] = { ...state.apps[appIndex], ...updates }
+            state.apps[appIndex] = { ...state.apps[appIndex]!, ...updates }
             state.lastUpdated = new Date()
           }
         }),

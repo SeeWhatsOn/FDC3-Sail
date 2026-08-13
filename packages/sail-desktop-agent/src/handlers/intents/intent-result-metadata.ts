@@ -77,6 +77,7 @@ export function buildIntentResultWirePayload(
   const daTraceId = crypto.randomUUID()
   const baseMetadata = buildDaResultMetadata(targetAppId, targetInstanceId, timestamp, daTraceId)
 
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- intentResult is null on the FDC3 wire even though the declared type is non-nullable; see the passing NoResultReturned Cucumber scenario at test/features/intents/intent-result.feature:61.
   if (typeof intentResult !== "object" || intentResult === null) {
     return { wireIntentResult: {}, resultMetadata: baseMetadata, isContextWithMetadata: false }
   }

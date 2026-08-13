@@ -88,17 +88,17 @@ function getAllContextTypes(): string[] {
   return unique.sort()
 }
 
-function getAllIntentNames(): string[] {
+export function getAllIntentNames(): string[] {
   const allIntents = intentTypes.map(i => i.title)
 
   getServerState()
     .getKnownApps()
     .forEach(a => {
       if (a.interop?.intents?.listensFor) {
-        allIntents.concat(Object.keys(a.interop.intents.listensFor) ?? [])
+        allIntents.push(...Object.keys(a.interop.intents.listensFor))
       }
       if (a.interop?.intents?.raises) {
-        allIntents.concat(Object.keys(a.interop?.intents?.raises) ?? [])
+        allIntents.push(...Object.keys(a.interop.intents.raises))
       }
     })
 
@@ -146,6 +146,7 @@ function createInitialState(): EditableState[] {
       return {
         id: a.appId,
         type: a.type === "native" ? "native" : "web",
+        // oxlint-disable-next-line typescript/no-unnecessary-condition -- localStorage-persisted state: getCustomApps() reads back custom-apps saved to localStorage, whose shape can predate the current WebAppDetails type
         url: (a.details as WebAppDetails)?.url ?? "",
         title: a.title,
         description: a.description ?? "",
@@ -295,8 +296,8 @@ const InteropList = ({
             intents: [
               ...app.intents,
               {
-                name: intentTypes[0].title,
-                contexts: [CONTEXT_TYPES[0]],
+                name: intentTypes[0]!.title,
+                contexts: [CONTEXT_TYPES[0]!],
               },
             ],
           })

@@ -94,6 +94,7 @@ export function handleIntentResultRequest(
 
     setState(state => resolvePendingIntent(state, originalRequestId))
 
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- intentResult is null on the FDC3 wire even though BrowserTypes.IntentResult types it non-nullable; see the passing NoResultReturned Cucumber scenario at test/features/intents/intent-result.feature:61.
     if (intentResult !== null && !isHandlerRejection(intentResult)) {
       grantPrivateChannelToIntentSource(intentResult, sourceInstanceId, setState, getState, logger)
     }
@@ -115,6 +116,7 @@ export function handleIntentResultRequest(
       meta: { requestUuid: originalRequestId },
     }
 
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- intentResult is null on the FDC3 wire even though BrowserTypes.IntentResult types it non-nullable; see the passing NoResultReturned Cucumber scenario at test/features/intents/intent-result.feature:61.
     if (intentResult === null) {
       const resultErrorResponse = createDACPErrorResponse(
         raiseIntentRequestLike,

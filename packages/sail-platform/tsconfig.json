@@ -3,6 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
+    "noUncheckedIndexedAccess": true,
     "paths": {
       "@finos/sail-desktop-agent": ["../sail-desktop-agent/dist/index.d.mts"]
     }

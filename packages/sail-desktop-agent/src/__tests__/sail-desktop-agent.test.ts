@@ -91,7 +91,7 @@ describe("SailDesktopAgent", () => {
 
     const unsubscribe = agent.intentResolver.onRequest(request => {
       requests.push(request)
-      agent.intentResolver.select(request.requestId, request.handlers[0])
+      agent.intentResolver.select(request.requestId, request.handlers[0]!)
     })
 
     const response = await agent.appConnection.requestIntentResolution(
@@ -128,7 +128,7 @@ describe("SailDesktopAgent", () => {
   it("changeAppChannel resolves on a redundant join to the same channel", async () => {
     const agent = new SailDesktopAgent()
     const instanceId = "redundant-join-instance"
-    const channel = agent.channels.getUserChannels()[0]
+    const channel = agent.channels.getUserChannels()[0]!
     expect(channel).toBeDefined()
     seedConnectedInstance(agent, instanceId, "redundant-app")
 

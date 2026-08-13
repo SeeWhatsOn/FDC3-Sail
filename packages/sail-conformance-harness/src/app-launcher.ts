@@ -65,6 +65,7 @@ export function createHarnessAppLauncher(
         url,
         title: metadata.title ?? metadata.name ?? request.app.appId,
         launchMode: resolveHarnessLaunchMode(metadata),
+        // oxlint-disable-next-line typescript/no-unnecessary-condition -- FDC3 wire payload
         openWithContext: request.context !== undefined && request.context !== null,
       })
 

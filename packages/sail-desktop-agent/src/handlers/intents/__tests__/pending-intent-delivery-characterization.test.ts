@@ -193,8 +193,8 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
 
     const settlement = messagesOfType(transport, "raiseIntentResultResponse")
     expect(settlement).toHaveLength(1)
-    expect(settlement[0].payload?.error).toBe(ResultError.ApiTimeout)
-    expect(settlement[0].meta?.destination?.instanceId).toBe(RAISER_ID)
+    expect(settlement[0]!.payload?.error).toBe(ResultError.ApiTimeout)
+    expect(settlement[0]!.meta?.destination?.instanceId).toBe(RAISER_ID)
     expect(getState().intents.pending[requestUuid]).toBeUndefined()
 
     // The delivery timeout is still armed: settling the pending intent did not cancel it.
@@ -237,9 +237,9 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
 
     const failures = messagesOfType(transport, "raiseIntentResponse")
     expect(failures).toHaveLength(1)
-    expect(failures[0].payload?.error).toBe(ResolveError.IntentDeliveryFailed)
-    expect(failures[0].meta?.requestUuid).toBe(requestUuid)
-    expect(failures[0].meta?.destination?.instanceId).toBe(RAISER_ID)
+    expect(failures[0]!.payload?.error).toBe(ResolveError.IntentDeliveryFailed)
+    expect(failures[0]!.meta?.requestUuid).toBe(requestUuid)
+    expect(failures[0]!.meta?.destination?.instanceId).toBe(RAISER_ID)
     expect(getState().intents.pending[requestUuid]).toBeUndefined()
     expect(messagesOfType(transport, "intentEvent")).toHaveLength(0)
 
@@ -276,8 +276,8 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
     // delivery-timeout callback maps it through `getResponseTypeForRequest`.
     const failures = messagesOfType(transport, "raiseIntentForContextResponse")
     expect(failures).toHaveLength(1)
-    expect(failures[0].payload?.error).toBe(ResolveError.IntentDeliveryFailed)
-    expect(failures[0].meta?.destination?.instanceId).toBe(RAISER_ID)
+    expect(failures[0]!.payload?.error).toBe(ResolveError.IntentDeliveryFailed)
+    expect(failures[0]!.meta?.destination?.instanceId).toBe(RAISER_ID)
     expect(messagesOfType(transport, "raiseIntentResponse")).toHaveLength(0)
     expect(getState().intents.pending[requestUuid]).toBeUndefined()
   })
@@ -299,7 +299,7 @@ describe("attemptIntentDelivery: the delivered flag", () => {
 
     const intentEvents = messagesOfType(transport, "intentEvent")
     expect(intentEvents).toHaveLength(1)
-    expect(intentEvents[0].meta?.destination?.instanceId).toBe(TARGET_ID)
+    expect(intentEvents[0]!.meta?.destination?.instanceId).toBe(TARGET_ID)
     expect(messagesOfType(transport, "raiseIntentResponse")).toHaveLength(1)
     // Delivery does not resolve the pending intent — it stays until an intentResultRequest.
     expect(getState().intents.pending[requestUuid]).toBeDefined()
@@ -423,7 +423,7 @@ describe("deliverPendingIntentsForListener", () => {
 
     expect(messagesOfType(transport, "intentEvent")).toHaveLength(1)
     expect(messagesOfType(transport, "raiseIntentResponse")).toHaveLength(1)
-    expect(messagesOfType(transport, "raiseIntentResponse")[0].payload?.error).toBeUndefined()
+    expect(messagesOfType(transport, "raiseIntentResponse")[0]!.payload?.error).toBeUndefined()
     expect(getState().intents.pending[requestUuid]).toBeDefined()
 
     const messageCountAfterDelivery = transport.sentMessages.length
@@ -456,9 +456,9 @@ describe("cleanupInstanceDacpState: pending-intent settlement on disconnect", ()
 
     const settlement = messagesOfType(transport, "raiseIntentResultResponse")
     expect(settlement).toHaveLength(1)
-    expect(settlement[0].payload?.error).toBe(ResultError.ApiTimeout)
-    expect(settlement[0].meta?.requestUuid).toBe(requestUuid)
-    expect(settlement[0].meta?.destination?.instanceId).toBe(RAISER_ID)
+    expect(settlement[0]!.payload?.error).toBe(ResultError.ApiTimeout)
+    expect(settlement[0]!.meta?.requestUuid).toBe(requestUuid)
+    expect(settlement[0]!.meta?.destination?.instanceId).toBe(RAISER_ID)
     expect(getState().intents.pending[requestUuid]).toBeUndefined()
   })
 

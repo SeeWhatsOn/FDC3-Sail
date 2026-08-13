@@ -44,7 +44,7 @@ export async function establishTempConnection(
   await new Promise(resolve => setTimeout(resolve, 50))
   const connections = connector.getConnections()
   expect(connections).toHaveLength(1)
-  return connections[0].instanceId
+  return connections[0]!.instanceId
 }
 
 /** Return port1 transferred to the app during WCP3Handshake. */
@@ -56,11 +56,11 @@ export function captureAppMessagePort(connectionAttemptUuid = "test-uuid"): Mess
     [BrowserTypes.WebConnectionProtocol3Handshake, string, MessagePort[]]
   >
   expect(calls.length).toBeGreaterThan(0)
-  const ports = calls[0][2]
+  const ports = calls[0]![2]
   expect(ports).toEqual(expect.arrayContaining([expect.any(MessagePort)]))
 
   postMessageSpy.mockRestore()
-  const appPort = ports[0]
+  const appPort = ports[0]!
   appPort.start()
   return appPort
 }

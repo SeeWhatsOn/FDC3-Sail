@@ -175,11 +175,11 @@ export async function handleRaiseIntentRequest(
         return
       }
     } else if (handlers.runningListeners.length > 0) {
-      targetInstanceId = handlers.runningListeners[0].instanceId
+      targetInstanceId = handlers.runningListeners[0]!.instanceId
     } else if (handlers.availableApps.length > 0) {
       targetInstanceIsLaunched = true
       targetInstanceId = await launchAppAndWaitForInstance(
-        handlers.availableApps[0].appId,
+        handlers.availableApps[0]!.appId,
         params,
         validatedContext,
       )
@@ -218,6 +218,7 @@ export async function handleRaiseIntentRequest(
     cleanupPendingIntentRequest(requestId)
 
     const payload = message.payload
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- `payload` is parsed from an inbound DACP raiseIntentRequest message; the schema type is an assumption about a well-behaved peer, not a guarantee, especially here in the error-handling path.
     const contextPayload = payload?.context as Record<string, unknown> | undefined
 
     logger.error("DACP: Raise intent request failed", {

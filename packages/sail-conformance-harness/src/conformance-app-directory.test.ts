@@ -73,17 +73,17 @@ describe("loadConformanceApplications", () => {
       CONFORMANCE_LOCAL_ORIGIN,
     )
 
-    expect(rewritten[0].details).toMatchObject({
+    expect(rewritten[0]!.details).toMatchObject({
       url: `${CONFORMANCE_LOCAL_ORIGIN}/apps/intent-a/index.html`,
     })
-    expect(rewritten[0].icons?.[0]?.src).toBe(`${CONFORMANCE_LOCAL_ORIGIN}/finos-icon-256.png`)
+    expect(rewritten[0]!.icons?.[0]?.src).toBe(`${CONFORMANCE_LOCAL_ORIGIN}/finos-icon-256.png`)
   })
 
   it("does not mutate the fixture when loading hosted profile", () => {
     const first = loadConformanceApplications({ profile: "hosted" })
-    first.applications[0].title = "mutated"
+    first.applications[0]!.title = "mutated"
 
     const second = loadConformanceApplications({ profile: "hosted" })
-    expect(second.applications[0].title).not.toBe("mutated")
+    expect(second.applications[0]!.title).not.toBe("mutated")
   })
 })

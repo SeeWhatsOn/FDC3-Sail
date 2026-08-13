@@ -184,7 +184,7 @@ describe("DA-owned browser app connection (collapsed architecture)", () => {
     const calls = postMessageSpy.mock.calls as unknown as Array<
       [BrowserTypes.WebConnectionProtocol3Handshake, string, MessagePort[]]
     >
-    const appPort = calls[0][2][0]
+    const appPort = calls[0]![2][0]!
     appPort.start()
     postMessageSpy.mockRestore()
 

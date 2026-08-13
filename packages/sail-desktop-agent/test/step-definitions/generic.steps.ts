@@ -304,7 +304,7 @@ Then(
 
     // Simple comparison - could be enhanced
     for (let i = 0; i < expected.length; i++) {
-      const expectedRow = expected[i]
+      const expectedRow = expected[i]!
       const actualRow = valueArray[i]
       if (!isRecord(actualRow)) {
         throw new Error(

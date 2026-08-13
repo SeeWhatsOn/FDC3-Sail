@@ -52,13 +52,13 @@ function captureAppPortAfterWcp1(connectionAttemptUuid: string, identityUrl: str
   const calls = postMessageSpy.mock.calls as unknown as Array<[unknown, string, MessagePort[]]>
   expect(calls.length).toBeGreaterThan(0)
 
-  const [, targetOrigin, ports] = calls[0]
+  const [, targetOrigin, ports] = calls[0]!
   expect(targetOrigin).toBe(TEST_ORIGIN)
   expect(ports).toEqual(expect.arrayContaining([expect.any(MessagePort)]))
 
   postMessageSpy.mockRestore()
 
-  const appPort = ports[0]
+  const appPort = ports[0]!
   appPort.start()
   return appPort
 }

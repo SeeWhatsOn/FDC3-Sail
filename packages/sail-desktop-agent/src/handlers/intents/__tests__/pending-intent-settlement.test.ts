@@ -153,7 +153,7 @@ function expectTerminalRaiseIntentResultResponse(
   const resultResponses = findMessagesOfType(transport, "raiseIntentResultResponse")
   expect(resultResponses).toHaveLength(1)
 
-  const terminalResponse = resultResponses[0]
+  const terminalResponse = resultResponses[0]!
   expect(terminalResponse.meta?.requestUuid).toBe(requestUuid)
   expect(terminalResponse.meta?.destination?.instanceId).toBe(RAISER_ID)
   expect(terminalResponse.payload?.error).toBeDefined()

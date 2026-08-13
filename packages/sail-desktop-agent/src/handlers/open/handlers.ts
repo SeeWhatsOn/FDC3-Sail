@@ -38,7 +38,7 @@ export function handleGetInfoRequest(
       const directoryApps = retrieveAppsById(getState().appDirectory, callerInstance.appId)
       if (directoryApps.length > 0) {
         appMetadata = convertDirectoryAppToAppMetadata(
-          directoryApps[0],
+          directoryApps[0]!,
           provider,
           instanceId,
           includeDesktopAgent,
@@ -46,7 +46,7 @@ export function handleGetInfoRequest(
       } else {
         appMetadata = {
           appId: callerInstance.appId,
-          name: callerInstance.metadata?.name ?? callerInstance.appId,
+          name: callerInstance.metadata.name ?? callerInstance.appId,
           instanceId,
           ...(includeDesktopAgent ? { desktopAgent: provider } : {}),
         }
@@ -120,7 +120,7 @@ export async function handleOpenRequest(
     if (apps.length === 0) {
       throw new AppNotFoundError(`App not found in directory: ${appId}`)
     }
-    const appMetadata = apps[0]
+    const appMetadata = apps[0]!
 
     logger.info("DACP: Launching app", {
       appId,
@@ -353,7 +353,7 @@ export function handleGetAppMetadataRequest(
     const directoryApps = retrieveAppsById(getState().appDirectory, appId)
     if (directoryApps.length > 0) {
       const appMetadata = convertDirectoryAppToAppMetadata(
-        directoryApps[0],
+        directoryApps[0]!,
         provider,
         undefined,
         includeDesktopAgent,

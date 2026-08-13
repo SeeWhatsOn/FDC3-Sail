@@ -50,6 +50,7 @@ export async function routeDACPMessage(
     logger.info("DACP: Routing message", extractDACPMessageLogMetadata(message))
 
     // Extract message type for routing
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- `message` is the `unknown` parameter at the front door of ALL DACP message routing; the cast is an assumption about a well-formed inbound message, not a guarantee.
     const messageType = (message as { type?: string })?.type
 
     // Messages reaching this DACP edge may already have been raw-validated and enriched by

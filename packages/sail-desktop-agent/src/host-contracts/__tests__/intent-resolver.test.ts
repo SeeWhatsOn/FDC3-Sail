@@ -31,7 +31,7 @@ describe("createHostIntentResolver", () => {
     expect(listener).toHaveBeenCalledWith(request)
     expect(resolver.getPendingRequests()).toEqual([request])
 
-    resolver.select(request.requestId, request.handlers[0])
+    resolver.select(request.requestId, request.handlers[0]!)
 
     await expect(resolution).resolves.toEqual({
       selectedHandler: request.handlers[0],

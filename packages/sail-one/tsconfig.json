@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.root.json",
   "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
     "lib": ["ESNext", "DOM"],
     "jsx": "react-jsx",
     "plugins": [

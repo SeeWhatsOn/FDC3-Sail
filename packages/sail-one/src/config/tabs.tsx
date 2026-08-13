@@ -56,7 +56,7 @@ function newTabTitle(): string {
 }
 
 function newBackgroundColour(): string {
-  return BACKGROUND_COLOURS[getClientState().getTabs().length % BACKGROUND_COLOURS.length]
+  return BACKGROUND_COLOURS[getClientState().getTabs().length % BACKGROUND_COLOURS.length]!
 }
 
 function updateBackground(id: string, background: string) {

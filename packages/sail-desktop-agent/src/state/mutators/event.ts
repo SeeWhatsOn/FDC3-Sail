@@ -14,8 +14,8 @@ export const addEventListener = (state: AgentState, listener: AgentEventListener
     if (!draft.events.byEventType[listener.eventType]) {
       draft.events.byEventType[listener.eventType] = []
     }
-    if (!draft.events.byEventType[listener.eventType].includes(listener.listenerId)) {
-      draft.events.byEventType[listener.eventType].push(listener.listenerId)
+    if (!draft.events.byEventType[listener.eventType]!.includes(listener.listenerId)) {
+      draft.events.byEventType[listener.eventType]!.push(listener.listenerId)
     }
   })
 }
@@ -30,7 +30,7 @@ export const removeEventListener = (state: AgentState, listenerId: string): Agen
     if (typeListeners) {
       draft.events.byEventType[listener.eventType] = typeListeners.filter(id => id !== listenerId)
       // Clean up empty arrays
-      if (draft.events.byEventType[listener.eventType].length === 0) {
+      if (draft.events.byEventType[listener.eventType]!.length === 0) {
         delete draft.events.byEventType[listener.eventType]
       }
     }
@@ -59,7 +59,7 @@ export const removeEventListenersForInstance = (
           draft.events.byEventType[listener.eventType] = typeListeners.filter(
             id => id !== listenerId,
           )
-          if (draft.events.byEventType[listener.eventType].length === 0) {
+          if (draft.events.byEventType[listener.eventType]!.length === 0) {
             delete draft.events.byEventType[listener.eventType]
           }
         }

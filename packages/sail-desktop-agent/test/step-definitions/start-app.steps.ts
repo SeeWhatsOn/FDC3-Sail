@@ -42,10 +42,10 @@ async function sendWcp4ValidateForInstance(
   const apps = retrieveAppsById(world.getState().appDirectory, instance.appId)
   const appUrl =
     apps.length > 0 &&
-    apps[0].details &&
-    typeof apps[0].details === "object" &&
-    "url" in apps[0].details
-      ? apps[0].details.url
+    apps[0]!.details &&
+    typeof apps[0]!.details === "object" &&
+    "url" in apps[0]!.details
+      ? apps[0]!.details.url
       : `https://example.com/${instance.appId}`
 
   const message = {
@@ -213,10 +213,10 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
     ? (() => {
         const apps = retrieveAppsById(this.getState().appDirectory, instance.appId)
         return apps.length > 0 &&
-          apps[0].details &&
-          typeof apps[0].details === "object" &&
-          "url" in apps[0].details
-          ? apps[0].details.url
+          apps[0]!.details &&
+          typeof apps[0]!.details === "object" &&
+          "url" in apps[0]!.details
+          ? apps[0]!.details.url
           : `https://example.com/${instance.appId}`
       })()
     : `https://example.com/unknown-app/${uuid}`

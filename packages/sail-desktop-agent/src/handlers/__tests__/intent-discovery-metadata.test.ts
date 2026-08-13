@@ -105,8 +105,8 @@ describe("intent discovery metadata from app directory", () => {
         )
 
         expect(appIntents).toHaveLength(1)
-        expect(appIntents[0].intent.name).toBe(INTENT_APP_A_INTENT_NAME)
-        expect(appIntents[0].intent.displayName).toBe(INTENT_APP_A_DISPLAY_NAME)
+        expect(appIntents[0]!.intent.name).toBe(INTENT_APP_A_INTENT_NAME)
+        expect(appIntents[0]!.intent.displayName).toBe(INTENT_APP_A_DISPLAY_NAME)
       },
     )
   })
@@ -167,7 +167,7 @@ describe("state-owned app directory intent discovery contract", () => {
     )
 
     expect(appIntents).toHaveLength(1)
-    const apps = appIntents[0].apps
+    const apps = appIntents[0]!.apps
     expect(apps).toHaveLength(3)
 
     const launchableOnly = apps.find(app => app.appId === "LaunchOnlyApp")
@@ -237,6 +237,6 @@ describe("state-owned app directory intent discovery contract", () => {
 
     const intents = retrieveIntents(stateSlice, TEST_CONTEXT_X, INTENT_APP_A_INTENT_NAME, undefined)
     expect(intents).toHaveLength(1)
-    expect(intents[0].appId).toBe("IntentAppAId")
+    expect(intents[0]!.appId).toBe("IntentAppAId")
   })
 })

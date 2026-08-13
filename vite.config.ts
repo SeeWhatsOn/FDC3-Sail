@@ -372,6 +372,82 @@ export default defineConfig({
         },
       },
       {
+        files: ["packages/sail-platform/**/*.{ts,tsx}"],
+        rules: {
+          "typescript/no-unnecessary-condition": "error",
+        },
+      },
+      {
+        files: [
+          "packages/sail-platform/**/__tests__/**/*.{ts,tsx}",
+          "packages/sail-platform/**/*.test.{ts,tsx}",
+        ],
+        rules: {
+          "typescript/no-unnecessary-condition": "off",
+        },
+      },
+      {
+        files: ["packages/sail-desktop-agent/**/*.{ts,tsx}"],
+        rules: {
+          "typescript/no-unnecessary-condition": "error",
+        },
+      },
+      {
+        files: [
+          "packages/sail-desktop-agent/**/__tests__/**/*.{ts,tsx}",
+          "packages/sail-desktop-agent/**/*.test.{ts,tsx}",
+          "packages/sail-desktop-agent/test/**/*.{ts,tsx}",
+        ],
+        rules: {
+          "typescript/no-unnecessary-condition": "off",
+        },
+      },
+      {
+        files: ["packages/sail-one/**/*.{ts,tsx}"],
+        rules: {
+          "typescript/no-unnecessary-condition": "error",
+        },
+      },
+      {
+        files: [
+          "packages/sail-one/**/__tests__/**/*.{ts,tsx}",
+          "packages/sail-one/**/*.test.{ts,tsx}",
+        ],
+        rules: {
+          "typescript/no-unnecessary-condition": "off",
+        },
+      },
+      {
+        files: ["packages/sail-finance/**/*.{ts,tsx}"],
+        rules: {
+          "typescript/no-unnecessary-condition": "error",
+        },
+      },
+      {
+        files: [
+          "packages/sail-finance/**/__tests__/**/*.{ts,tsx}",
+          "packages/sail-finance/**/*.test.{ts,tsx}",
+        ],
+        rules: {
+          "typescript/no-unnecessary-condition": "off",
+        },
+      },
+      {
+        files: ["packages/sail-conformance-harness/**/*.{ts,tsx}"],
+        rules: {
+          "typescript/no-unnecessary-condition": "error",
+        },
+      },
+      {
+        files: [
+          "packages/sail-conformance-harness/**/__tests__/**/*.{ts,tsx}",
+          "packages/sail-conformance-harness/**/*.test.{ts,tsx}",
+        ],
+        rules: {
+          "typescript/no-unnecessary-condition": "off",
+        },
+      },
+      {
         files: ["**/*.{jsx,tsx}"],
         rules: {
           "react/display-name": "error",

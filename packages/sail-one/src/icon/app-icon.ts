@@ -7,7 +7,7 @@ export function getIcon(a: DirectoryApp | AppMetadata | undefined): string {
   if (a) {
     const icons = a.icons ?? []
     if (icons.length > 0) {
-      return icons[0].src
+      return icons[0]!.src
     }
   }
 

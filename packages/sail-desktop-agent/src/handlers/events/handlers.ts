@@ -40,6 +40,7 @@ export function handleAddEventListenerRequest(
     // Only the schema's closed union is accepted: "USER_CHANNEL_CHANGED" | null
     const validEventTypes = ["USER_CHANNEL_CHANGED"]
     let normalizedEventType: string
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- `eventType` is parsed from an inbound DACP addEventListenerRequest message; the schema type is an assumption about a well-behaved peer, not a guarantee.
     if (eventType === null || eventType === undefined) {
       normalizedEventType = ALL_DA_EVENT_TYPES
     } else if (validEventTypes.includes(eventType)) {

@@ -109,6 +109,9 @@ export function retrieveAppsByUrl(catalog: AppDirectoryState, url: string): Dire
   }
 
   return retrieveAllApps(catalog).filter(
-    app => app.type === "web" && (app.details as WebAppDetails)?.url === url,
+    app =>
+      app.type === "web" &&
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- `app.details` comes from a fetched App Directory JSON response; the `WebAppDetails` cast is an assumption about a well-behaved directory, not a guarantee that `url` is present.
+      (app.details as WebAppDetails)?.url === url,
   )
 }

@@ -279,6 +279,7 @@ export function handleContextListenerUnsubscribe(
     logger.info("DACP: Unsubscribing context listener", {
       listenerUUID,
       instanceId,
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- `message` is an inbound DACP wire message; its declared `meta.requestUuid` is an assumption about a well-behaved peer, not a guarantee.
       requestUuid: message.meta?.requestUuid,
     })
 
@@ -300,7 +301,7 @@ export function handleContextListenerUnsubscribe(
         )
       }
 
-      const privateListener = privateChannelWithListener.contextListeners[listenerUUID]
+      const privateListener = privateChannelWithListener.contextListeners[listenerUUID]!
       if (privateListener.instanceId !== instanceId) {
         throw new ListenerNotFoundChannelError(
           `Context listener ${listenerUUID} not found for instance ${instanceId}`,
@@ -326,6 +327,7 @@ export function handleContextListenerUnsubscribe(
     logger.debug("DACP: Context listener unsubscribed successfully", {
       listenerUUID,
       instanceId,
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- `message` is an inbound DACP wire message; its declared `meta.requestUuid` is an assumption about a well-behaved peer, not a guarantee.
       requestUuid: message.meta?.requestUuid,
     })
   } catch (error) {
@@ -439,8 +441,8 @@ function notifyContextListeners(
       logger.debug("DACP: Broadcast event message structure", {
         type: broadcastEventWithRouting.type,
         hasPayload: !!broadcastPayload,
-        hasContext: !!broadcastPayload?.context,
-        contextType: broadcastPayload?.context?.type,
+        hasContext: !!broadcastPayload.context,
+        contextType: broadcastPayload.context.type,
       })
 
       logger.debug("Broadcast event sent to listener", {

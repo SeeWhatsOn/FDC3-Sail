@@ -121,7 +121,7 @@ When(
       meta,
       payload: {
         channelId: handleResolve(channelId, this) as string,
-        context: contextMap[contextType],
+        context: contextMap[contextType]!,
       },
       type: "broadcastRequest",
     }
