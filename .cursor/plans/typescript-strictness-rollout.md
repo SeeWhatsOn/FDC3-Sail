@@ -815,6 +815,25 @@ Tester proved the second reproduction the same way: with `push` reverted to `con
 Slice 6 failure count: **1** — the second bucket D bug (`getAllContextTypes`), found by the
 reviewer, not by either tool and not by the session that fixed its twin.
 
+**Re-verified on the committed tree (`98716f08c`, 2026-08-13 16:46).** Necessary because that
+commit swept in an unrelated hand refactor of
+`packages/sail-desktop-agent/src/handlers/index.ts` — hoisting the `getHandlerForMessageType`
+closure out of `routeDACPMessage` to a module-level `getHandlerFor`, renaming the `K` generic to
+`MessageType`, swapping `Object.prototype.hasOwnProperty.call` for `Object.hasOwn`, and returning
+`undefined` instead of `null`. That belongs to the DACP handler-deps work, not to this slice, and
+it landed *after* the verification above. It is behaviour-preserving (the caller tests `if
+(!handler)`), but it means the committed tree was not the tree that had been verified. Re-run
+results: `tsc` exit **0** on all five packages; `vp lint .` exit 1 with `no-unnecessary-condition`
+count **0** and only the two parked `sail-finance/vite.config.ts` errors; `sail-one` suite exit
+**0**, 4 files / 16 tests. The root suite **flaked on the first attempt** — exit 1, 72 files / 498
+tests with 6 setup-time errors and zero assertion failures, the same load-related flake this plan
+documents — and passed clean on an immediate re-run: exit **0**, 78 files / 523 tests.
+
+**Lesson: a commit is not a checkpoint unless the tree it contains is the tree that was verified.**
+Two commits in this delivery (`c0ea8a542` via a `vp check --fix` pre-commit hook, `98716f08c` via
+an unrelated refactor) differed from what had been checked. Diff the commit against the verified
+state, or re-verify, before marking anything done.
+
 ### `sail-one` IS NOT IN THE ROOT TEST RUN — found during slice 2
 
 Root `vitest.config.ts` lists four projects: `sail-desktop-agent`, `sail-platform`,
