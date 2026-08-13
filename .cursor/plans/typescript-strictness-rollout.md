@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: TypeScript strictness rollout
 
-Status: reviewing
-Current slice: 7 — promote to root and delete the scaffolding (not started; slice 6 reviewed and closed)
+Status: done
+Current slice: none — all 7 slices coded, verified and reviewed
 
 > **Read this whole Context section before touching anything.** The two settings this plan
 > rolls out produce ~346 findings, and **21 of them are the tools being wrong**. Obeying those
@@ -444,7 +444,13 @@ inherited the coder's context.
       `Layout.tsx:82` suppression. The one failure is the second bucket D bug. Both fixed/recorded,
       then re-verified end to end. Two reproduction tests exist and were each proved to fail with
       their bug reverted.
-- [ ] 7. Promote to root, rewrite AGENTS.md line 145: not started (failures: 0)
+- [x] 7. Promote to root, rewrite AGENTS.md line 145: **reviewed** (failures: 0) — coded and
+      reviewed by two separate contexts; no tester, per the Test Plan's "no new tests for slices
+      3–7". Clean verify on the first attempt, no Required finding. Both settings now have one
+      owner: `tsconfig.root.json` and root `vite.config.ts` `lint.rules`. Ten `lint.overrides`
+      entries collapsed to one test-file exclusion. `AGENTS.md:145` rewritten and a second bullet
+      added covering the A/B/C/D taxonomy, the bucket B widening, and the suppression shape with
+      its multi-line-span exception.
 
 ---
 
@@ -834,6 +840,46 @@ Two commits in this delivery (`c0ea8a542` via a `vp check --fix` pre-commit hook
 an unrelated refactor) differed from what had been checked. Diff the commit against the verified
 state, or re-verify, before marking anything done.
 
+### Slice 7
+
+Promotion to the root, and deletion of the per-package scaffolding slices 3–6 built.
+
+**The risk this slice was watched for, and what it actually was.** The worry going in was that
+`tsconfig.root.json` is shared, so promoting `noUncheckedIndexedAccess` into it could newly cover
+files no package tsconfig reaches. Checked before touching anything: root `tsconfig.json` carries
+`"files": []` and only project references, so it compiles nothing itself, and `website/tsconfig.json`
+extends `@docusaurus/tsconfig` rather than ours. **The compiler-flag half added zero new surface.**
+The *lint* half was the real exposure — `lint.rules` is global, so the rule reached `website/**`
+and root-level config files for the first time. It found nothing, but that was not knowable in
+advance and the coder was briefed to stop and report rather than silence anything it hit.
+
+**What moved:**
+
+| Setting | From | To |
+|---|---|---|
+| `noUncheckedIndexedAccess: true` | 5 × `packages/*/tsconfig.json` | `tsconfig.root.json`, beside `strict` |
+| `typescript/no-unnecessary-condition: "error"` | 5 × `lint.overrides` error entries | root `vite.config.ts` `lint.rules` |
+| test-file exemption | 5 × `lint.overrides` off entries | 1 repo-wide off entry, with a comment |
+
+**Probe, run because five green `tsc` runs cannot distinguish "flag applies" from "flag silently
+dropped".** An artificial unnecessary condition in `packages/sail-one/src/config/config.tsx` fired
+(`config.tsx:11:5 error typescript(no-unnecessary-condition)`); the same code in
+`packages/sail-one/src/config/__tests__/custom-apps.test.ts` was silent. Both reverted;
+`grep -rn "__probe" packages/ website/` empty, no `.bak` files. The reviewer independently ran its
+own `TS2322` probe on the compiler flag and got the same answer.
+
+**All verification run by the main agent directly:**
+
+- `npx tsc --noEmit -p packages/{sail-one,sail-finance,sail-platform,sail-desktop-agent,sail-conformance-harness}`
+  -> exit **0** on all five.
+- `npx vp lint .` -> exit 1, `no-unnecessary-condition` count **0**, only the two parked
+  `packages/sail-finance/vite.config.ts` errors (TS2307, TS2578).
+- `npx vp test run` -> exit **0**, 78 files / 523 tests.
+- `cd packages/sail-one && npx vp test run` -> exit **0**, 4 files / 16 tests.
+- `cd packages/sail-desktop-agent && npx cucumber-js` -> exit **0**, 154 scenarios / 1460 steps.
+
+Slice 7 failure count: **0**.
+
 ### `sail-one` IS NOT IN THE ROOT TEST RUN — found during slice 2
 
 Root `vitest.config.ts` lists four projects: `sail-desktop-agent`, `sail-platform`,
@@ -1113,11 +1159,30 @@ cumulative artifacts against a single-slice brief.
   and all remaining bucket B suppressions, each a single `-next-line` above the exact sub-line
   with a concrete boundary named.
 
-### Slice 7
+### Slice 7 — `agent-skills:code-reviewer`, verdict APPROVE, no Required findings
 
-- Required:
-- Follow-up:
-- Ignore for MVP:
+The reviewer did not take the config move on trust. It confirmed all five package tsconfigs
+extend `tsconfig.root.json` with no local `noUncheckedIndexedAccess` override, JSON-parsed all six
+touched tsconfigs, then ran its own probe (an `arr[0]` assigned to a non-optional `string` in
+`sail-one`) and watched it fire `TS2322` *after* the move. That is the right instinct: a silently
+dropped flag still typechecks clean, so five green `tsc` runs prove nothing on their own. It also
+grepped the tree to confirm the `AGENTS.md` claim that `Layout.tsx:82` is the only
+`oxlint-disable-line` instance. Probe removed, `git status` clean.
+
+- **Required:** none.
+
+- **Follow-up (applied).** The collapsed test-file override widens the old
+  `packages/sail-desktop-agent/**/test/**/*.{ts,tsx}` to `**/test/**/*.{ts,tsx}`. It matches the
+  same files today — `packages/sail-desktop-agent/test` is the only `test/` directory outside
+  `node_modules` — but a future package adding a `test/` directory would silently lose the rule
+  there, with nothing in the diff to flag it. Fixed by adding a comment on the override recording
+  that the repo-wide glob is deliberate, not an accident of collapsing five entries into one.
+
+- **Ignore for MVP:** the lint rule now reaches `website/**` and root-level config files for the
+  first time (verified zero new findings, but a monitoring point if `website/` code changes); and
+  the four explicitly out-of-scope pre-existing items — the two `sail-finance/vite.config.ts`
+  errors, `sail-one` missing from root `vitest.config.ts`, the missing `sail-ui` project
+  reference, and `resolver.test.ts:32`.
 
 ---
 

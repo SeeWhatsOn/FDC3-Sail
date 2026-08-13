@@ -2,8 +2,7 @@
   "extends": "../../tsconfig.root.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "noEmit": true,
-    "noUncheckedIndexedAccess": true
+    "noEmit": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "vitest.config.ts"]
