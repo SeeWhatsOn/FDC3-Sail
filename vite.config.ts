@@ -32,7 +32,6 @@ export default defineConfig({
       "**/yarn.lock",
       "**/pnpm-lock.yaml",
       "**/assets/",
-      "packages/sail-ui/src/index.css",
       ".cursor/**",
     ],
     rules: {
@@ -441,9 +440,7 @@ export default defineConfig({
       },
       {
         files: [
-          "packages/sail-ui/src/*.css",
           "packages/sail-finance/src/*.css",
-          "**/packages/sail-ui/src/*.css",
           "**/packages/sail-finance/src/*.css",
         ],
         rules: {},

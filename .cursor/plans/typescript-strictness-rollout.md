@@ -1224,14 +1224,38 @@ grepped the tree to confirm the `AGENTS.md` claim that `Layout.tsx:82` is the on
   harness. Worth a schema check at import, but it is a validation task, not a strictness task.
 - **The transport-logging flake** — `wcp-host-logger-threading.test.ts`, reproduced twice under
   parallel load, both times with inflated `environment` time. Self-inflicted by running Vitest
-  alongside another heavy command.
-- **`sail-one` is missing from root `vitest.config.ts`'s `projects` array**, so `npx vp test run`
-  never runs its tests. Either add it (and deal with whatever that surfaces) or record that
-  `sail-one` is deliberately focused-run-only. Out of scope for a strictness slice.
-- **`@tailwindcss/vite` is declared but not installed**, so `packages/sail-finance/vite.config.ts`
-  has two standing lint errors on an otherwise clean tree. Either install it or drop it from
-  `package.json`. Out of scope here — it is a dependency-hygiene task, not a strictness task,
-  and fixing it inside a strictness slice would muddy that slice's diff.
+  alongside another heavy command. **Update 2026-08-14:** adding `sail-one` to the root run raises
+  suite load, which may nudge its hit rate up. Not caused by that change — the root cause is the
+  test's own `setTimeout(0)`-then-assert-immediately pattern (`AGENTS.md:62`), and
+  `.cursor/plans/sail-da-test-suite-realignment.md:309` records 2/11 failures on full-suite runs
+  versus 0/3 isolated. Flagged so a future flaky CI run is not misattributed to `sail-one`.
+- ~~**`sail-one` is missing from root `vitest.config.ts`'s `projects` array**~~ — **DONE**, hygiene
+  batch 2026-08-14. Added; root run went 78 files / 523 tests -> **82 / 539**, exit 0, nothing
+  hidden. Its tests had never run outside a focused invocation, across this entire rollout.
+- **`@tailwindcss/vite` — NOT a repo defect. Re-diagnosed 2026-08-14: this is an environment
+  artifact.** The earlier note said "declared but not installed" and framed the fix as install-or-
+  drop. Wrong framing: `@tailwindcss/vite` *and* `tailwindcss` are both declared in
+  `packages/sail-finance/package.json` **and** present in `package-lock.json`. They are simply
+  absent from the installed `node_modules`. Note this worktree's own `node_modules` is empty —
+  every tool resolves up to the parent repo's install (1128 packages), and that install is the one
+  missing them. Consequences: the two standing `packages/sail-finance/vite.config.ts` lint errors
+  (TS2307, TS2578) are not fixable by editing code, and **sail-finance cannot currently build or
+  run its dev server**. `npm install` at the repo root is the fix; it is the user's to run, since
+  it mutates a shared install. Do not "fix" this by dropping the dependency — `index.css` does
+  `@import "tailwindcss"`.
+- ~~**`resolver.test.ts:32` asserts `.not.toBeUndefined()`**~~ — **DONE**, hygiene batch
+  2026-08-14. Raised by slice 2's review and re-raised by slice 6's. Now `.toBeNull()`. The
+  reviewer traced `generateStartState` (`resolver.tsx:153-177`) rather than trusting the comment:
+  the test's single `ViewChart` app already carries an `instanceId`, so `relevantApps(a, true, …)`
+  filters it out, `uniqueNewAppIntents` is empty, and `intent = uniqueNewAppIntents[0] ?? null` is
+  `null`. The old assertion passed for `null` **and** for any string — it tested nothing.
+- ~~**Stale `packages/sail-ui` references**~~ — **DONE**, hygiene batch 2026-08-14. The package was
+  renamed to `sail-theme` in `ceb13eae0`; six references outlived it — a project reference in root
+  `tsconfig.json` (the standing `TS6053`), an `include` glob and an obsolete `_comment` TODO in
+  `packages/sail-finance/tsconfig.json`, an `ignorePatterns` entry and two `lint.overrides` globs
+  in root `vite.config.ts`, and a CSS comment. **Deleted, not retargeted:** `sail-theme` is
+  CSS-only — no `src/`, no `tsconfig.json`, and its `exports` map lists only `.css`, `assets`,
+  `fonts`. Root `tsc` now exits 0 with no output.
 - **`website/`** was never measured. Decide separately whether it gets the same treatment.
 - **Other type-aware rules** — `no-unnecessary-condition` was the only one evaluated. Others in
   oxlint's non-`correctness` categories may be worth the same treatment, or may not.

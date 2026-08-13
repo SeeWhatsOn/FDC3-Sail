@@ -29,6 +29,6 @@ describe("generateStartState", () => {
     // from an empty array. An `undefined` chosenIntent here means the
     // Resolver popup renders with no selectable option and no way for the
     // user to complete it.
-    expect(state.chosenIntent).not.toBeUndefined()
+    expect(state.chosenIntent).toBeNull()
   })
 })
