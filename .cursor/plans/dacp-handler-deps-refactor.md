@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: DACP handler deps refactor
 
-Status: implementing
-**All slices complete.** Slice 1 `dc2db03c1`, slice 4′ `b3f1f3c79`, slice 2 `a9a43d64a` + `948d38e88`, slice 3 `ba99fc25f`. Slice 4 was cut. Gates held at 385 vitest / 154 cucumber scenarios / 1460 steps / clean lint + tsc through every one. Remaining work is in **Parked Follow-ups** — none of it blocking.
+Status: done
+**All slices complete and reviewed.** Slice 1 `dc2db03c1`, slice 4′ `b3f1f3c79`, slice 2 `a9a43d64a` + `948d38e88`, slice 3 `ba99fc25f`. Slice 4 was cut. Gates held at 385 vitest / 154 cucumber scenarios / 1460 steps / clean lint + tsc through every one, and again on the end-of-delivery run recorded below. Remaining work is in **Parked Follow-ups** — none of it blocking.
 
 > ### Decisions taken 2026-08-12, after two independent discovery agents
 >
@@ -269,9 +269,19 @@ The last two are **load-bearing for access control**. Slice 1 must preserve thos
   - reviewer (`agent-skills:code-reviewer`) — approve after one comment fix; Required resolved ✔
   - security reviewer (`agent-skills:security-auditor`) — safe to land; Required (tautological test) resolved ✔
   - Three separate contexts throughout; no agent reused across roles. Main agent took the step-10 exemption **once**, for the one-condition `cleanup.ts` fix committed separately as `20515fdbf`.
-- [ ] 2 Rename to DacpHandlerDeps: not started (failures: 0)
-- [ ] 3 Required DacpHandlerConfig: not started (failures: 0)
-- [ ] 4 deps-last argument order: not started (failures: 0)
+- [x] 4′ Collapse `pendingIntentPromises`: **verified | reviewed | done** (failures: 0) — `6ae44e5b2` (characterization tests) then `b3f1f3c79`
+  - tester (`agent-skills:test-engineer`) — characterization tests written **before** the change, from the slice's Acceptance, not from the diff ✔
+  - coder (`general-purpose`) — 18 files, −99 net; keyed the timeout registry the plan had wrongly assumed was already keyed ✔
+  - reviewer (`agent-skills:code-reviewer`) — reviewed retrospectively in the closing session, see Review Notes ✔
+- [x] 2 Rename `DACPHandlerContext` → `DACPHandlerParams`: **verified | reviewed | done** (failures: 0) — `a9a43d64a` (src) + `948d38e88` (tests)
+  - Took two passes, not two failures: the first pass was complete and green at the `src` boundary, and `948d38e88` extended the same rename into the test factory. Recorded as one slice, 0 failures.
+  - reviewer (`agent-skills:code-reviewer`) — reviewed retrospectively in the closing session ✔
+- [x] 3 Required config fields on `DACPHandlerParams`: **verified | reviewed | done** (failures: 0) — `ba99fc25f`
+  - Landed as two `?` removals, not the planned `DacpHandlerConfig` extraction. Net −3 lines across 7 files.
+  - reviewer (`agent-skills:code-reviewer`) — reviewed retrospectively in the closing session ✔
+- [~] 4 deps-last argument order: **CUT** by decision on 2026-08-12 — pure aesthetics, ~20 signatures, no behaviour change. Replaced by slice 4′. The one item worth keeping (`schedulePendingIntentDelivery`'s two adjacent positional booleans) is parked below.
+
+**Gate honesty note.** Slices 2, 3 and 4′ were implemented and verified but **not reviewed at the time** — the Review Notes held slice 1 only. That gate was closed retrospectively in the closing session with a single fresh `agent-skills:code-reviewer` context over all five commits. Retrospective is weaker than per-slice review: a reviewer seeing three landed slices at once cannot send one back cheaply. It returned zero Required, so nothing was owed, but the sequencing was wrong and is recorded rather than smoothed over.
 
 ## Verification Notes
 
@@ -305,6 +315,17 @@ The last two are **load-bearing for access control**. Slice 1 must preserve thos
 | `npx vp test run src/handlers` | package | exit 0 — **26 files / 140 tests** (from 24/121: +2 files, +19 tests) |
 | `npx vp test run` | package | exit 0 — **57 files / 373 tests** |
 | `npx cucumber-js` | package | exit 0 — **154 scenarios / 1460 steps** |
+
+**End-of-delivery run — the single `Full` + `Typecheck/lint` pass the skill requires once, after the last slice.** Run by the main agent at branch tip `c0ea8a542`, from `packages/sail-desktop-agent/`, sequentially per the flake note:
+
+| Command | Result |
+|---|---|
+| `npx tsc --noEmit` | exit 0 |
+| `npx vp lint .` | exit 0 |
+| `npx vp test run` | exit 0 — **58 files / 385 tests** |
+| `npx cucumber-js` | exit 0 — **154 scenarios / 1460 steps** |
+
+Identical to the counts each slice recorded, so nothing regressed across the four landed slices. Note the tip commit `c0ea8a542` and the working-tree changes under `packages/sail-one/` belong to a **different delivery** (`typescript-strictness-rollout.md`) sharing this branch; they are outside this plan's diff and were excluded from review.
 
 Intermediate states worth keeping, because they are the behavioural delta:
 
@@ -345,6 +366,21 @@ Also confirmed: `handleCloseRequest` is behaviourally identical (one app still c
 - **Ignore for MVP:** `handlerContext` at `broadcast/handlers.ts:358, 482, 521` is **not** a half-state — those helpers take `context: Context` (FDC3) as a sibling parameter, so the name is doing real work. Slice 2 retires it.
 - **Ignore for MVP:** coverage for the other handler families that newly resolve. The reviewer hand-checked `open/handlers.ts`: every `context.instanceId` read there is the **caller**, never the target — targets come from `payload.app.instanceId`, so no launch or close can be redirected.
 
+### Slices 2, 3 and 4′ — code review (`agent-skills:code-reviewer`, model `sonnet`)
+
+**Verdict: approve. Zero Required.** One fresh context over all five commits (`a9a43d64a`, `948d38e88`, `ba99fc25f`, `6ae44e5b2`, `b3f1f3c79`), briefed from the plan and given the four exit statuses observed by the main agent. It re-checked the acceptance bullets literally rather than accepting the outcome sections' account of them.
+
+**Model note:** the plan's model policy (line ~215) said the `pendingIntentPromises` collapse "stays on **opus** throughout". This review ran on **`sonnet`** by explicit user instruction in the closing session. The override is recorded rather than the policy quietly edited.
+
+- **Required:** none.
+- **Confirmed by independent check, not taken on trust:**
+  - Slice 2 is a complete sweep — zero remaining `DACPHandlerContext`, `handlerContext` or stray `broadcastContext` in `src/`, AGENTS.md included, and the two-pass fix caught the `createDACPTestContext` / `createHandlerContext` / `resolvedContext` names a shallower rename would have left behind.
+  - Slice 4′'s captured-reference risk is genuinely resolved at both write sites: `markPendingIntentDelivered` (`state/mutators/intent.ts`) mutates through Immer's `produce` on the current tree instead of a stale captured object, and the reordered `requestType` read in `intent-delivery-helpers.ts` is guard-safe.
+  - The four Map-constructing tests were **converted** to state/registry assertions, not deleted — closing the same tautological `expect(resolve).toHaveBeenCalled()` family the slice 1 security auditor caught, where the callback was the test's own `vi.fn()`.
+  - The two flipped characterization tests assert real deltas (one delivery instead of two; timeout armed instead of not), not tautologies.
+  - Nothing from Out of scope leaked in: no id branding, no `DacpRequestScope`, no resolver behaviour change, no `createHandlerContext` perf work. Cut slice 4 stayed cut.
+- **Follow-up:** `intents/intent-pending-timeout-registry.ts:30-38` — `registerPendingIntentTimeout` overwrites an existing handle for the same `(requestId, kind)` **without clearing it first**, so a double-register would leak a timer. The reviewer verified it is **not reachable today**: `attachPendingIntentTimeout` registers `"raise"` exactly once and `queueIntentDelivery` registers `"delivery"` exactly once per `requestId`. Latent-safety hardening, not a live bug.
+
 ### Latent bug found, not fixed here
 
 `agent.channels.changeAppChannel(handshakeRoutingId, …)` on the host controller path: `joinUserChannel` no-ops on the unregistered id, the handler still returns a **success** `joinUserChannelResponse`, no `channelChanged` fires, and the caller's promise dies on `channelChangeTimeoutMs` instead of erroring. **Pre-existing and outside slice 1** — recorded here so it is not lost.
@@ -381,6 +417,10 @@ D1 said "resolve at *each* entry point with *that entry point's* resolver". Slic
 - **`getHandlerForMessageType` is a per-message closure, contradicting its own rationale.** `handlers/index.ts:186` still says the registry is "Module-level so the map is not reallocated on every DACP message", but `d334d5aa0` moved the lookup function to `:91`, inside `routeDACPMessage`, so it is re-created on every inbound message. **Not a perf issue** — one arrow-function allocation per message is negligible next to `createHandlerContext`'s 18 fields and 5 closures, which is itself parked as not-a-perf-problem. It is a *documentation inconsistency*: the code and the stated reason disagree. Fix by moving the function back to module scope (3 lines, no behaviour change) rather than by weakening the comment. **Deferred by user decision — not a now issue.**
 - **A flaky unit test exists but is unidentified.** One run of `npx vp test run` at `1d0b4d5c7` failed 1 of 373; two immediately following runs passed clean on the same commit. That run reported `environment 288.67s` against a normal ~31s, and it was launched concurrently with `npx tsc --noEmit`, so resource contention is the likely cause. **Working rule: a single failure does not count until it reproduces on an otherwise-quiet machine.** Do not run Vitest in parallel with other heavy commands.
 
+- **`registerPendingIntentTimeout` can silently overwrite a live handle.** `intents/intent-pending-timeout-registry.ts:30-38` stores by `(requestId, kind)` without clearing an existing entry first. Unreachable today — each kind is registered exactly once per request — so this is a guard against a future third call site, ~2 lines. Raised by the slices 2/3/4′ review.
+- **`schedulePendingIntentDelivery`'s two adjacent positional booleans** are a transposition hazard. This is the one item that survived cutting slice 4, and it is a one-file fix independent of the deps-last ordering that was cut.
+- **The real defect is lifetime, not width.** Four long-lived timers capture a request-scoped `DACPHandlerParams`; `startHeartbeat` holds one in a `setInterval` for the instance's whole life, so its captured `instanceId` stays the WCP4 `temp-…` id forever. This is the structural problem this delivery did **not** address — it deliberately fixed width and naming instead. Highest-value next piece of work in this area.
+- **Two security hardening items from the slice 1 audit remain open:** validate `connectionAttemptUuid` is UUID-shaped and reject one colliding with a live link (~3 lines, closes question B outright — highest-value hardening item), and add `clearHandshakeRoutingId(state, routingId)` so links can be cleared by key rather than only by value.
 - `createHandlerContext` allocates 18 fields, 5 closures and a fresh dispatcher per inbound message when only `instanceId` varies. Not a performance problem at DACP message rates — parked deliberately, not forgotten.
 - `DACPHandlerContext` vs neighbouring `DacpResponseDispatcher` / `DacpOutboundMessage` casing drift is fixed incidentally by slice 2; no separate sweep planned for other `DACP*` identifiers.
 - Root `tsconfig.json` references a non-existent `packages/sail-ui` (`TS6053`). Pre-existing, unrelated, not fixed here.
