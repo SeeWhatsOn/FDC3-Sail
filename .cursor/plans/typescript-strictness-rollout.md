@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: TypeScript strictness rollout
 
 Status: reviewing
-Current slice: 6 — enable on `sail-one` and `sail-finance` (verified; reviewer pending)
+Current slice: 7 — promote to root and delete the scaffolding (not started; slice 6 reviewed and closed)
 
 > **Read this whole Context section before touching anything.** The two settings this plan
 > rolls out produce ~346 findings, and **21 of them are the tools being wrong**. Obeying those
@@ -338,6 +338,11 @@ and would rewrite the whole package.
     defect with no `??` in it). Replace with the real rule: **a config value is defaulted
     exactly once, at the boundary where user input enters (`default-config.ts`); every
     downstream type is required.** Note that the type system now enforces it.
+  - The same rewrite must also state, per slice 5's and slice 6's reviews, that (a) **bucket B is
+    not only about trust boundaries** — it equally covers "the compiler cannot model this
+    mutation"; and (b) the suppression shape is a single `//` line immediately above the exact
+    flagged sub-line, **except where the diagnostic's span crosses lines**, where only the
+    trailing same-line `oxlint-disable-line` suppresses it (`Layout.tsx:82` is the one instance).
   - Full repo green.
 - **Verify:** `npx tsc --noEmit -p packages/sail-desktop-agent` (and each other package) then
   `npx vp lint .` then `npx vp test run` then `cd packages/sail-desktop-agent && npx cucumber-js`
@@ -430,11 +435,15 @@ inherited the coder's context.
       package was complete. Both reviewers independently re-derived the three bucket C deletions
       from the type declarations rather than trusting the plan's table — which is how two wrong
       boundary citations in that table were found.
-- [ ] 6. Enable on `sail-one` + `sail-finance`: **verified, review pending** (failures: 0) —
-      config + indexing ceremony landed by an earlier session that stopped before recording
-      anything; the 11-finding constant-condition tail was classified by main + user and coded
-      on resume (2026-08-13). Tester wrote the `getAllIntentNames` reproduction and re-proved it
-      fails with the bug reverted. `agent-skills:code-reviewer` not yet run.
+- [x] 6. Enable on `sail-one` + `sail-finance`: **reviewed** (failures: 1) — config + indexing
+      ceremony landed by an earlier session that stopped before recording anything; the
+      11-finding constant-condition tail was classified by main + user and coded on resume
+      (2026-08-13). `agent-skills:code-reviewer` returned two Required findings, both upheld
+      after the main agent re-read the source: a **second** `concat`-discards-result bucket D bug
+      in `getAllContextTypes` (six sites, same file as the first), and an undocumented
+      `Layout.tsx:82` suppression. The one failure is the second bucket D bug. Both fixed/recorded,
+      then re-verified end to end. Two reproduction tests exist and were each proved to fail with
+      their bug reverted.
 - [ ] 7. Promote to root, rewrite AGENTS.md line 145: not started (failures: 0)
 
 ---
@@ -788,7 +797,23 @@ Tester re-proved the reproduction against real behaviour: with `push` reverted t
 `AssertionError: expected [ 'CreateInteraction', …(17) ] to include 'CustomListenIntent'`.
 So the test catches the bug, not merely the new `export`.
 
-Slice 6 failure count: **0**.
+**Post-review re-verification (2026-08-13, after the two Required findings were resolved).** Same
+commands, all run by the main agent:
+
+- `npx tsc --noEmit -p packages/{sail-one,sail-finance,sail-platform,sail-desktop-agent,sail-conformance-harness}`
+  -> exit **0** on all five.
+- `npx vp lint .` -> exit 1, `grep -c "no-unnecessary-condition"` = **0**. Only the two parked
+  `packages/sail-finance/vite.config.ts` errors (TS2307, TS2578) remain.
+- `npx vp test run` -> exit **0**, 78 files / 523 tests.
+- `cd packages/sail-one && npx vp test run` -> exit **0**, **4 files / 16 tests** (was 4 / 14;
+  +2 are the `getAllContextTypes` reproduction cases).
+
+Tester proved the second reproduction the same way: with `push` reverted to `concat` at
+`custom-apps.tsx:71`, `custom-apps.test.ts:159` fails with
+`AssertionError: expected [ 'custom.appListen', …(27) ] to include 'custom.appBroadcast'`.
+
+Slice 6 failure count: **1** — the second bucket D bug (`getAllContextTypes`), found by the
+reviewer, not by either tool and not by the session that fixed its twin.
 
 ### `sail-one` IS NOT IN THE ROOT TEST RUN — found during slice 2
 
@@ -1012,7 +1037,64 @@ catch-all; and all 13 non-null assertions are floored by a preceding `.length` c
 single-element fixture, or a `toHaveBeenCalledWith` assertion — **none masks a path where the
 value could legitimately be absent**.
 
-### Slices 6–7
+### Slice 6 — `agent-skills:code-reviewer`, verdict REQUEST CHANGES (two Required, both upheld)
+
+The reviewer was briefed up front that commit `c0ea8a542` carries slices **1–6**, and that slice 6
+is only `packages/sail-one` + `packages/sail-finance` plus their two `vite.config.ts` override
+pairs. That attribution note worked: unlike slice 4b's reviewer, this one did not miscount
+cumulative artifacts against a single-slice brief.
+
+- **Required 1 — a SECOND bucket D bug, in the same file, missed by the same session.**
+  `custom-apps.tsx` `getAllContextTypes()` (line 60) discarded the return value of
+  `allContexts.concat(...)` **six** times — `:66`, `:67`, `:71`, `:72`, `:77`, `:82`. Identical
+  defect to the `getAllIntentNames()` bug fixed 25 lines below it in this same slice. The
+  function had never returned a single app-declared context type, only the static
+  `CONTEXT_TYPES` seed; it feeds the context-type picker at `custom-apps.tsx:219`. Confirmed by
+  main agent reading the source before dispatching any fix.
+  **Fixed** — all six converted to `allContexts.push(...X)`, matching the sibling fix. The four
+  `?? []` fallbacks were **kept**: `userChannels.listensFor`, `userChannels.broadcasts`,
+  `appChannels[].broadcasts` and `appChannels[].listensFor` are all declared optional on
+  `DirectoryApp` (`packages/sail-desktop-agent/src/app-directory/types.ts:148-163`), so the
+  fallbacks are not unnecessary conditions. `v.contexts` (`IntentDefinition.contexts: string[]`)
+  and `raises[*]` (`Record<string, string[]>`) are required, and never had a fallback.
+  `getAllContextTypes` was widened to `export` for testability — same accepted
+  `only-export-components` trade as `getAllIntentNames` and `resolver.tsx:153`.
+  **Lesson: when a bug shape is found, grep the whole file for the shape before moving on.** The
+  first `concat` bug was found by reading around an unrelated bucket A/C site; its twin sat 25
+  lines above and was still missed, because the search stopped at the first hit.
+
+- **Required 2 — an undocumented suppression at `Layout.tsx:82`.** A third `no-unnecessary-condition`
+  suppression (`typeof savedLayoutState !== "object"`) was landed by the earlier session with no
+  entry in the slice 6 findings table and no main+user classification, which the slice 4b rule
+  requires for every constant-condition finding. The reviewer isolated the flagged sub-line with
+  a throwaway probe and confirmed the rationale holds — the content is right, only the paper
+  trail was missing. **Recorded here; that closes it.**
+
+- **Follow-up (accepted as a documented outlier, not fixed).** `Layout.tsx:82` is the only
+  `oxlint-disable-line` (inline, same-line) suppression in the repo; the other 49 all use
+  `oxlint-disable-next-line` on the line above, which is the shape this plan mandates. A coder
+  attempted the conversion and **could not make it suppress**: `vp lint --format json` shows this
+  diagnostic carries **two labels** — one on the `typeof ...` line, one on the `savedLayoutState
+  === null` line below it. The `-next-line` directive was tried above every line in the chain,
+  individually and in combination; all failed identically. Only the same-line form works.
+  So: `oxlint-disable-next-line` cannot suppress a diagnostic whose span crosses lines. The
+  file was reverted to its committed text. **The mandated shape now reads: a single `//` line
+  immediately above the exact flagged sub-line, EXCEPT where the diagnostic spans multiple lines,
+  in which case the trailing same-line `oxlint-disable-line` is the only form that works.**
+
+- **Follow-up (deferred, pre-existing).** `resolver.test.ts:32` —
+  `expect(state.chosenIntent).not.toBeUndefined()` should be `.toBeNull()`; any string passes
+  today. Raised by slice 2's review, still open. Not introduced by slice 6. Parked.
+
+- **Ignore for MVP:** the 17-vs-15 suppression count drift against the plan's estimate; and the
+  reviewer's own independent re-derivations, which all agreed with the slice's classifications —
+  `appd.tsx:173,184` bucket C (the `{app ? (` JSX guard at `:160` wraps both `onClick` handlers,
+  so `chosen` is non-null in those closures at runtime, not just to the type checker);
+  `resolver.tsx:118,313` bucket A (TS 5.9.3 does infer the predicate from `.filter(a => a != null)`);
+  and all remaining bucket B suppressions, each a single `-next-line` above the exact sub-line
+  with a concrete boundary named.
+
+### Slice 7
 
 - Required:
 - Follow-up:

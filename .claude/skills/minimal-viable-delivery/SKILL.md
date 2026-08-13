@@ -205,6 +205,10 @@ First, bind the verify command. This skill is repo-agnostic, so the plan carries
 - Write them into the plan as literal, runnable strings — `pnpm test path/to/file.test.ts`, not "run the tests".
 - If nothing runnable exists, say so in the plan and name the manual check instead. Do not leave verification undefined.
 
+**A slice's `Verify:` is the Focused command, scoped to that slice's files.** Full suite and typecheck/lint are a **single end-of-delivery run**, not a per-slice gate. Repeating them on every slice costs minutes per loop and tells you nothing the focused run did not — the slice is not shipping on its own.
+
+Bind a slice to Full or typecheck/lint only when that slice can plausibly break something outside its own files: a shared type or interface change, a dependency or config edit, a rename crossing modules, or a delete. Say in the slice why.
+
 Then use this format:
 
 ```markdown
@@ -223,9 +227,9 @@ Current slice: <number or title>
 
 ## Verify Commands
 
-- Full: <literal command, or "none — manual check only">
-- Focused: <literal command for a single file or suite>
-- Typecheck/lint: <literal command, or "none">
+- Full: <literal command, or "none — manual check only"> — end of delivery only
+- Focused: <literal command for a single file or suite> — this is what slices use
+- Typecheck/lint: <literal command, or "none"> — end of delivery only
 
 ## Simplicity Bias
 
@@ -308,7 +312,7 @@ When the user approves the plan, the main agent runs one slice as an orchestrati
 1. **Set up rollback first.** Work on a branch by default; commit per passing slice when the user has asked for commits. "Reversible" with neither a branch nor a commit is a claim, not a rollback.
 2. **Dispatch the coder subagent** with one slice only, under the plan's stated Simplicity Bias policy — the repo's own minimality skill if it named one, otherwise the defaults in step 3. Brief it per step 10.
 3. **Dispatch the tester subagent** for the tests the risk plan justified. Brief it from the slice's Goal and Acceptance. It writes tests only; it does not fix implementation code.
-4. **Run that slice's `Verify:` command yourself** and record it with its exit status under Verification Notes. A slice with no recorded exit status is unverified. Do not accept a subagent's claim that tests pass — the exit status you observed is the artifact.
+4. **Run that slice's `Verify:` command yourself** — that one command, not the full suite on top of it — and record it with its exit status under Verification Notes. A slice with no recorded exit status is unverified. Do not accept a subagent's claim that tests pass — the exit status you observed is the artifact.
 5. **On failure, send the failure back to the coder**, not to whoever is convenient. Increment the slice counter per the loop rule.
 6. Note useful follow-up improvements without building them unless the user asks.
 
@@ -374,6 +378,8 @@ Stop on success when the MVP outcome is met. Do not continue into hardening, pol
 
 After a clean slice, check the diff for unrelated changes, give the user a concise checkpoint summary, and park follow-ups instead of silently folding them into scope. If the user asked for commits, create an atomic commit only after the slice verifies cleanly.
 
+**Once, when the last slice is done:** run the plan's `Full` and `Typecheck/lint` commands and record both exit statuses under Verification Notes. This is the run that catches what the focused per-slice commands could not see. A failure here is a slice failure attributed to whichever slice caused it — fix, re-verify focused, then re-run Full.
+
 ## MVP Quality Floor
 
 Minimal viable does not permit known data loss, security holes, race conditions, broken error handling at trust boundaries, inaccessible critical user paths, or behavior that contradicts the approved plan. If one of these appears, fix it in the current slice or return to the user with the tradeoff.
@@ -390,6 +396,7 @@ Patterns to catch mid-flight, when you have stopped re-reading the steps above:
 - Reviewing your own slice because "the diff is small and I already know what it does" — that is exactly the reasoning the fresh context exists to defeat.
 - Handing the tester the diff and asking it to "write tests for this". It then tests what was built, not what the plan asked for.
 - Reporting a slice verified on a subagent's word instead of an exit status you observed.
+- Running the full suite, typecheck, or lint after every slice. That is the end-of-delivery run, and paying it per slice buys nothing the focused command did not already prove.
 - Skipping tests for brittle logic, concurrency, storage, security, or cross-boundary behavior.
 - Letting "minimal" justify known correctness, security, data integrity, or accessibility failures.
 - Accepting "scalable", "robust", or "clean" as goals without asking what they mean for this task.
@@ -406,6 +413,7 @@ Before calling the delivery done, confirm:
 - [ ] Implemented slices meet the approved plan.
 - [ ] Every non-trivial slice was coded, tested, and reviewed by three separate contexts — or took the step 10 exemption and said so.
 - [ ] Every slice has a recorded verify command and exit status, or a documented limitation explaining why not.
+- [ ] The `Full` and `Typecheck/lint` commands were run once at the end, with both exit statuses recorded.
 - [ ] Review findings are resolved, deferred with reason, or returned to the user.
 - [ ] Follow-up improvements were not silently folded into MVP scope.
 - [ ] The final diff contains no unrelated changes.

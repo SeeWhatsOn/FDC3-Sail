@@ -87,14 +87,7 @@ export async function routeDACPMessage(
     const resolvedMessageType = messageType ?? "unknown"
     const timeout = getTimeoutForMessageType(resolvedMessageType)
 
-    // Runtime type string → HANDLER_MAP; erase to RoutedHandler (untyped message at the wire).
-    const getHandlerForMessageType = (messageType: string): RoutedHandler | null => {
-      if (!Object.prototype.hasOwnProperty.call(HANDLER_MAP, messageType)) {
-        return null
-      }
-      return HANDLER_MAP[messageType as RoutableMessageType] as RoutedHandler
-    }
-    const handler = getHandlerForMessageType(resolvedMessageType)
+    const handler = getHandlerFor(resolvedMessageType)
     if (!handler) {
       logger.warn(`No handler found for DACP message type: ${resolvedMessageType}`)
       return
@@ -170,8 +163,8 @@ type RoutableRequestMessage = BrowserTypes.AppRequestMessage | ExtensionRequestM
 type RoutableMessageType = RoutableRequestMessage["type"]
 
 /** Handler for one specific message type, narrowed to that type's own request shape. */
-type HandlerFor<K extends RoutableMessageType> = (
-  message: Extract<RoutableRequestMessage, { type: K }>,
+type HandlerFor<MessageType extends RoutableMessageType> = (
+  message: Extract<RoutableRequestMessage, { type: MessageType }>,
   params: DACPHandlerParams,
 ) => void | Promise<void>
 
@@ -185,12 +178,12 @@ type RoutedHandler = (message: unknown, params: DACPHandlerParams) => void | Pro
  * Handler registry - maps message types to handler functions.
  * Module-level so the map is not reallocated on every DACP message.
  *
- * Typed as `{ [K in RoutableMessageType]: HandlerFor<K> }`: every member of
+ * Typed as `{ [MessageType in RoutableMessageType]: HandlerFor<MessageType> }`: every member of
  * `RoutableMessageType` must have an entry (a required handler removed from this object is a
  * compile error), and every key must be a member of `RoutableMessageType` (a typo'd or invented
  * key is a compile error too).
  */
-const HANDLER_MAP: { [K in RoutableMessageType]: HandlerFor<K> } = {
+const HANDLER_MAP: { [MessageType in RoutableMessageType]: HandlerFor<MessageType> } = {
   // Context handlers
   broadcastRequest: contextHandlers.handleBroadcastRequest,
   addContextListenerRequest: contextHandlers.handleAddContextListener,
@@ -234,6 +227,14 @@ const HANDLER_MAP: { [K in RoutableMessageType]: HandlerFor<K> } = {
 
   // Heartbeat handlers
   heartbeatAcknowledgementRequest: heartbeatHandlers.handleHeartbeatAcknowledgmentRequest,
+}
+
+/** Look up {@link HANDLER_MAP} by runtime `type`; result is {@link RoutedHandler} (wire key is not a literal). */
+function getHandlerFor(messageType: string): RoutedHandler | undefined {
+  if (!Object.hasOwn(HANDLER_MAP, messageType)) {
+    return undefined
+  }
+  return HANDLER_MAP[messageType as RoutableMessageType] as RoutedHandler
 }
 
 // ---------------------------------------------------------------------------

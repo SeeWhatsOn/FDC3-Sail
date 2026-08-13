@@ -57,29 +57,29 @@ const intentTypes: Array<{ title: string; value: string }> = [
   { title: "ViewResearch", value: "ViewResearch" },
 ]
 
-function getAllContextTypes(): string[] {
+export function getAllContextTypes(): string[] {
   const allContexts = [...CONTEXT_TYPES]
   getServerState()
     .getKnownApps()
     .forEach(a => {
       if (a.interop?.userChannels) {
-        allContexts.concat(a.interop.userChannels.listensFor ?? [])
-        allContexts.concat(a.interop.userChannels.broadcasts ?? [])
+        allContexts.push(...(a.interop.userChannels.listensFor ?? []))
+        allContexts.push(...(a.interop.userChannels.broadcasts ?? []))
       }
       if (a.interop?.appChannels) {
         a.interop.appChannels.forEach(ac => {
-          allContexts.concat(ac.broadcasts ?? [])
-          allContexts.concat(ac.listensFor ?? [])
+          allContexts.push(...(ac.broadcasts ?? []))
+          allContexts.push(...(ac.listensFor ?? []))
         })
       }
       if (a.interop?.intents?.listensFor) {
         Object.values(a.interop.intents.listensFor).forEach(v => {
-          allContexts.concat(v.contexts)
+          allContexts.push(...v.contexts)
         })
       }
       if (a.interop?.intents?.raises) {
         Object.values(a.interop.intents.raises).forEach(v => {
-          allContexts.concat(v)
+          allContexts.push(...v)
         })
       }
     })
