@@ -13,8 +13,8 @@ their orphaned findings were carried across, one backlog file was created, and e
 re-checked against the tree by reading the cited source — not by trusting the plans' own status
 lines. Several did not survive that check; the corrections are recorded in place.
 
-Three CI failures were found during that pass and fixed the same day — see
-[`open-items.md` §0](open-items.md).
+**CI was red in five separate ways.** All are fixed and the whole chain is verified green from a
+clean `dist` — see [`open-items.md` §0](open-items.md) for what each was and why it hid.
 
 ---
 
@@ -50,7 +50,7 @@ Three CI failures were found during that pass and fixed the same day — see
 
 | Plan | State | What it is for |
 |---|---|---|
-| [`draft-pr-readiness.md`](draft-pr-readiness.md) | standing review artifact — **~23 of 32 rows still live** | "Could this be opened as a draft PR to `finos/FDC3-Sail`" — oversight across 32 areas. Nothing here is committed work. Re-verified 2026-08-14: 5 of 7 blockers still block (7 and 11 resolved, 9 substantially reduced), and rows 15/19/28 have updated evidence. |
+| [`draft-pr-readiness.md`](draft-pr-readiness.md) | standing review artifact — **~23 of 32 rows still live** | "Could this be opened as a draft PR to `finos/FDC3-Sail`" — oversight across 32 areas. Nothing here is committed work. Re-verified 2026-08-14: **only 3 of 7 blockers remain** (0, 3, 29 — all release hygiene, no code). Items 7, 9, 10 and 11 are resolved; rows 15/19/28 have updated evidence. |
 | [`sail-desktop-agent-feature-decisions.md`](sail-desktop-agent-feature-decisions.md) | open register, 1 item | `ChannelControl` — keep or delete. Still zero call sites; it has already produced one wrong public doc. |
 | [`sail-platform-extensibility.md`](sail-platform-extensibility.md) | decision record | Holds the **negative** decisions — what we deliberately will not build — so they are not quietly re-litigated. §2 still matches the code. |
 

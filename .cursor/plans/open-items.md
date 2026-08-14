@@ -25,7 +25,7 @@ in the archived plan.
 
 ---
 
-## 0. CI failures — all three FIXED 2026-08-14 (`d49abb8d`)
+## 0. CI failures — all FIXED 2026-08-14 (`d49abb8d`, `8d6c2b1b`, `4421a39d`)
 
 Found during the plans prune, tracked here, and fixed the same day. Kept as a record because two of
 them had been silently red for weeks and the reasons are worth not re-learning.
@@ -81,23 +81,47 @@ documented failure exactly (`fdc3-3.0 (153) != default (154)`, exit 1).
 `packages/sail-desktop-agent/scripts/`, still the only per-package `scripts/` dir in the repo. Revisit
 if a second one appears.
 
-### Verified green
+### 0d. Two WCP integration tests failed ~60% of runs — FIXED
 
-From a clean `dist`, in CI order: `format`, `build`, `lint`, `lint:boundaries`, `typecheck`,
-`docs:build`, `test:cucumber` all exit 0. Vitest: 540 passed / 1 skipped.
+`wcp-multi-pending-adoption.integration.test.ts` and
+`wcp-desktop-agent.integration.test.ts` each timed out on a MessagePort wait. Measured before the
+fix: **3 of 5** combined runs failed; the first file alone failed **8 of 10**.
 
-### Still open — one real Vitest flake
+**This was first mis-called as a contention flake.** It reproduces on an idle machine, which is this
+repo's own bar (§1) for a failure that counts. Both turned out to be **test-harness lost-wakeup
+races**, not product defects — a raw `addEventListener` alongside the code under test showed the
+message arriving on the port on time and in order; the waiter simply was not listening yet.
 
-`app-connection/__tests__/wcp-multi-pending-adoption.integration.test.ts` — *"persists hostIdentifier
-re-resolved at WCP4 when window.name was empty at WCP1"* failed once with `Timed out waiting for
-MessagePort message` (5s budget, `wcp-edge-test-helpers.ts:333`) when run immediately after a full
-build/lint/typecheck/docs/cucumber chain. It then passed **3/3 in isolation and 2/2 on full-suite
-re-runs**.
+- `waitForPortMessage` swapped `appPort.onmessage` and restored a `priorHandler`, so it only
+  listened from the moment it was called. Anything arriving first went to the installed handler —
+  usually `connectWcpApp`'s WCP5 resolver, which resolved unconditionally and was never cleared, and
+  re-resolving a settled promise is a silent no-op. Replaced with a **per-port inbox** attached at
+  `captureAppMessagePort`, so arrival order no longer matters.
+- `broadcastCollector.stop()` ran *before* the `vi.waitFor` that asserted on its contents, removing
+  the listener while the event was still in flight. Moved after.
 
-That matches the repo's existing working rule (§1): *a single failure does not count until it
-reproduces on an otherwise-quiet machine*. Recorded because it is a **second, distinct** flake from
-the transport-logging one in §2 — this one is timing-sensitive on a MessagePort wait, and a 5s budget
-under CI contention is thin.
+Verified 5/5 in order and 5/5 under `--sequence.shuffle`, where the same commands failed 3/5 before.
+
+### 0e. CI's Build step omitted `sail-one`, and `sail-one` could not build — FIXED
+
+`packages/sail-one/html/` never existed, so `vp build` died on
+`globSync("html/**/*.html")` with "You must supply options.input". The cause was `.gitignore`: a bare
+`html/` rule, which git matches **at every depth**, so the directory was never committable. The
+layout was already declared — `vite.config.ts` sets `mainHtmlPath = "/html/index.html"` and rewrites
+`/` to it, and the README names `html/ui/channel-selector.html` by path.
+
+Removed the over-broad rule, added the three entries, and changed CI's Build step to `npm run build`
+rather than a hand-maintained package list that had drifted and omitted `sail-one` — the falsely-green
+step behind `draft-pr-readiness.md` item 9.
+
+### The one skipped test is deliberate — leave it
+
+`intent-delivery-pending-target.test.ts` asserts the behaviour we **want** for defect-register #3 and
+currently fails. It is skipped rather than inverted, because inverting it would bless the
+over-permissive `PENDING || CONNECTED` check at `intent-delivery-helpers.ts:77-88` as intended.
+`app-connection/__tests__/pending-instance-dacp-gate.test.ts` (passing) guards the ordering that
+makes the defect unreachable over the wire. **Un-skip it when slice B fixes #3** — or sooner, if that
+guard ever goes red.
 
 ---
 

@@ -14,23 +14,24 @@
 > | Row | Change |
 > |---|---|
 > | **11** Demo app directory | **NOW MOOT — downgrade from `BLOCKER` to resolved.** The evidence it cites is gone: `packages/sail-finance/fixtures/default-app-directory.json` no longer exists. `sail-finance/src/main.tsx:19,125` points non-toolbox runs at the real `https://directory.fdc3.finos.org/v2/apps` and toolbox runs at the harness's own `conformance-appd.json` (all publishers `FINOS`). Open Decision #5 reads as answered and implemented. |
-> | **9** CI green | **Was understated; the three failures found are now FIXED (`d49abb8d`).** The 08-07 note "lint and typecheck now exit 0" had been measured against a stale local `dist`; on a clean clone they failed, because CI ran Typecheck before Build while the two library packages publish types from gitignored `dist`. `docs:build` and the Cucumber step were red outright. All three are fixed and re-verified from a clean `dist` — see `.cursor/plans/open-items.md` §0. **What still blocks item 9:** CI's Build step still omits `sail-one`, so that package is never built in CI, which is the falsely-green defect this row was originally about. |
+> | **9** CI green | **RESOLVED.** The 08-07 note "lint and typecheck now exit 0" had been measured against a stale local `dist`; on a clean clone they failed, because CI ran Typecheck before Build while the two library packages publish types from gitignored `dist`. `docs:build` and the Cucumber step were red outright, two WCP tests failed ~60% of runs, and the Build step omitted `sail-one` — the falsely-green defect this row was originally about. All fixed and re-verified from a clean `dist`: see `.cursor/plans/open-items.md` §0. |
+> | **10** Clean-clone build | **RESOLVED.** `packages/sail-one/html/` was uncommittable because of a bare `html/` rule in `.gitignore` that git matches at every depth. Rule removed, the three entries added, `npm run build -w @finos/sail-one` succeeds. |
 > | **15** `sail-platform` API shape | **Consumer story is backwards.** `sail-one/src/state/client-state.ts:2-6` imports the **storage** half (`createLocalStorage`, `SailStorage`), not `createWorkspaceStore`. The workspace half — `createWorkspaceStore`, `Workspace`, `Layout` — has **zero** consumers outside the package. `sail-finance/src/stores/workspace-store.ts:205` defines its own same-named function; that is a naming collision, not an import. The "two parallel systems" framing survives; the consumer attribution does not. |
 > | **19** Test state (`FIXED`) | **No longer accurate.** Vitest is 539/541, with `wcp-multi-pending-adoption.integration.test.ts` failing on two consecutive full-suite runs but passing in isolation — timing-sensitive, not conclusively a regression. And "Cucumber unchanged: 154/154" cannot be re-established: the command that would prove it now fails before any scenario runs (§0). |
 > | **28** tsconfig references | **Partly fixed.** The dangling `./packages/sail-ui` reference is gone from both root and `sail-finance` tsconfigs. What still stands is the *omission* of `sail-conformance-harness` — and now `sail-one` — from root references. |
 >
-> Blockers **0, 3, 10, 29** were each re-checked against the tree and are **unchanged**: still 22
-> commits behind upstream; `LICENSE:189` still en-dash `2022–2026 FINOS` against `NOTICE:2`'s
-> `2022 - 2022 Nick Kolba`; `packages/sail-one/html/` still absent so `build -w @finos/sail-one` still
-> fails on `options.input`. **29 got worse**, as the register predicted it would: 290 commits since
+> Blockers **0, 3, 29** were re-checked against the tree and are **unchanged**: still 22 commits
+> behind upstream; `LICENSE:189` still en-dash `2022–2026 FINOS` against `NOTICE:2`'s
+> `2022 - 2022 Nick Kolba`. **29 got worse**, as the register predicted it would: 290 commits since
 > fork (was 252), author split `SeeWhatsOn` ×206 / `Chris Watson` ×75, and the `Claude-Session:`
 > trailer is now in **19** commits, not 9.
 >
 > **Blocker 7 is RESOLVED** — both root working docs were deleted the same day, with their orphaned
 > findings carried into `open-items.md` §8.
 >
-> **Net: 5 of the 7 claimed blockers still block.** Items 7 and 11 are resolved; item 9 is
-> substantially reduced (three CI failures fixed; only the `sail-one` build omission remains).
+> **Net: 3 of the 7 claimed blockers still block — 0, 3 and 29.** Items 7, 9, 10 and 11 are all
+> resolved. The three that remain are branch staleness, licence/attribution, and commit metadata:
+> **all of them are release hygiene, none are code.**
 
 Standing oversight of what is good, bad, and unknown in the v3 work, measured against
 "could this be opened as a draft PR to `finos/FDC3-Sail`". A **review artifact, not a
@@ -52,7 +53,8 @@ Summary table's Status column is updated in place for items whose verdict change
 banner note above) **· 1 downgraded from `BLOCKER`** (15, most of what it described no longer
 exists) **· 25 unchanged** (still `BLOCKER`/`NEEDS WORK`/`DECISION`/`GOOD`/`WITHDRAWN` as before,
 evidence refreshed for the ones actually re-run). **7 `BLOCKER`s remain: 0, 3, 7, 9, 10, 11, 29** —
-down from 8 (16 fixed; 15 downgraded to `NEEDS WORK`).
+down from 8 (16 fixed; 15 downgraded to `NEEDS WORK`). *(Superseded by the 2026-08-14 pass in the
+banner above: 7, 9, 10 and 11 are now resolved, leaving 0, 3 and 29.)*
 
 ## How to read this
 
@@ -107,9 +109,9 @@ Consequences:
 | 6 | README badges | `NEEDS WORK` | Yes | Minutes |
 | 7 | Working docs at repo root | ~~`BLOCKER`~~ **RESOLVED 2026-08-14** | — | Done |
 | 8 | ~~Security tooling removed~~ | mostly `WITHDRAWN` | No | Minutes |
-| 9 | **CI green on the fork** | `BLOCKER` (narrowed 08-07) | Yes | Hours |
-| 10 | **Clean-clone build** | `BLOCKER` (narrowed 08-07) | Yes | Hours |
-| 11 | Demo app directory | `BLOCKER` | Yes | Hours–day |
+| 9 | **CI green on the fork** | ~~`BLOCKER`~~ **RESOLVED 2026-08-14** | — | Done |
+| 10 | **Clean-clone build** | ~~`BLOCKER`~~ **RESOLVED 2026-08-14** | — | Done |
+| 11 | Demo app directory | ~~`BLOCKER`~~ **RESOLVED 2026-08-14** | — | Done |
 | 12 | Package metadata and versions | `NEEDS WORK` | No | Hours |
 | 13 | Release and publishing rights | `DECISION` | No | Conversation |
 | 14 | API shape — `sail-desktop-agent` | `FIXED` (08-07) | No | — |
@@ -155,9 +157,9 @@ mean untouched, it means re-confirmed.
 | 6 | unchanged — `NEEDS WORK` | `README.md:20,23,24,25` still 4 badges pinned to `?branch=v3-pre` |
 | 7 | **RESOLVED 2026-08-14** | Both files deleted. Their still-live findings were re-verified in source and carried into `.cursor/plans/open-items.md` §8; the superseded majority was dropped. Repo root is now `AGENTS.md`, `CONTRIBUTING.md`, `MAINTAINERS.md`, `README.md`, `SECURITY.md`. |
 | 8 | unchanged — mostly `WITHDRAWN` | Same file-presence matrix; no local pre-commit hook still the real gap |
-| 9 | **narrowed — `BLOCKER`** | `npm run lint` and `npm run typecheck` now exit 0 (item 10's tsconfig fix cascaded). Vitest now 462/462 (was 449/450). `ci.yml`'s Build step still lists exactly `sail-desktop-agent`, `sail-platform`, `sail-finance`, `sail-conformance-harness` — **still omits `sail-one`** — so the falsely-green Build step is still the live defect, not the failing lint/typecheck/test that used to co-occur with it |
-| 10 | **narrowed — `BLOCKER`** | `packages/sail-finance/tsconfig.json` now has `"types": ["node", "vitest/globals"]` — that half is fixed. `packages/sail-one/html/` still does not exist; `npm run build -w @finos/sail-one` still fails: `[INVALID_OPTION] You must supply options.input` from `vite.config.ts:68`'s `globSync("html/**/*.html", ...)` returning `[]`. Build genuinely still fails |
-| 11 | unchanged — `BLOCKER` | Not re-walked in full this pass; `sail-one`'s build failure (item 10) is a new, separate reason the demo-app-directory decision still can't be closed out |
+| 9 | **RESOLVED 2026-08-14** | Superseded by the third pass. The Build step now runs `npm run build`, which covers all five packages including `sail-one`, so the falsely-green step is gone. Ordering, `docs:build`, the cucumber guard and two ~60%-failure WCP tests were all fixed alongside. Whole chain verified green from a clean `dist`. |
+| 10 | **RESOLVED 2026-08-14** | The `html/` directory was uncommittable — a bare `html/` rule in `.gitignore`, which git matches at every depth. Rule removed, the three entries added (the layout was already declared in `vite.config.ts` and the README), `npm run build -w @finos/sail-one` succeeds. |
+| 11 | **RESOLVED 2026-08-14** | The fixture it cites (`packages/sail-finance/fixtures/default-app-directory.json`) no longer exists; both shells point at the real FINOS directory or the harness catalog. Item 10's build failure, cited here as a second reason, is also fixed. |
 | 12 | unchanged — `NEEDS WORK` | `sail-desktop-agent/package.json` `exports["."]` still orders `import, types, default`; `sail-platform/package.json` still correctly orders `types` first — still inconsistent. Root `package.json` still has no `license` field. `.changeset/config.json`'s ignore list now also omits `sail-one` (private, unpublished) alongside `sail-theme` |
 | 13 | unchanged — `DECISION` | `npm view @finos/sail-desktop-agent` / `@finos/sail-platform` both still 404 |
 | 14 | **FIXED** | `attachAppConnection` — zero matches anywhere in `packages/sail-desktop-agent/src` (only in docs/plans, now flagged separately in the website-docs-blueprint carry-forward). `.connector` renamed to `.appConnection`, documented as intentionally public with rationale (`index.ts:59-70`); the `sail-finance` banning test (`connection-store.test.ts:201`) updated to match the new name. The phantom `DACPValidationError` class is gone — `dacp-errors.ts` now only has `DACPTimeoutError`/`DACPProcessingError`, both actually constructed and used. README now points to a dedicated integrator guide instead of a bare 4-line sample |
