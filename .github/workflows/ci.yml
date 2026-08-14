@@ -39,11 +39,7 @@ jobs:
       # TS2307 until these are built. Measured: without `dist`, `npm run lint` reports 140
       # errors and `npm run typecheck` exits 2; with it, both are clean.
       - name: Build
-        run: |
-          npm run build -w @finos/sail-desktop-agent \
-            -w @finos/sail-platform \
-            -w @finos/sail-finance \
-            -w @finos/sail-conformance-harness
+        run: npm run build
 
       - name: ESLint
         run: npm run lint

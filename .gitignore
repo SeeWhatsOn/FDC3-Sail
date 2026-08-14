@@ -15,7 +15,8 @@ FDC3-Sail.pem
 *.tsbuildinfo
 packages/sail-desktop-agent/cucumber-report.html
 packages/sail-desktop-agent/html/
-html/
+# NOTE: do not use a bare `html/` here. Git matches it at every depth, which
+# silently made `packages/sail-one/html/` (its MPA entry points) uncommittable.
 packages/sail-desktop-agent/test-results.xml
 packages/sail-desktop-agent/reports/**/*
 
