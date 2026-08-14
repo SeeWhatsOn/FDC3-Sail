@@ -1,6 +1,5 @@
 import type { AppIdentifier, Context } from "@finos/fdc3"
-import { ResolveError, ResultError } from "@finos/fdc3"
-import { createDACPErrorResponse } from "../../dacp/dacp-message-creators"
+import { ResolveError } from "@finos/fdc3"
 import { addPendingIntent, resolvePendingIntent } from "../../state/mutators"
 import {
   getInstance,
@@ -16,10 +15,13 @@ import {
   TargetAppUnavailableError,
   TargetInstanceUnavailableError,
 } from "../../errors/fdc3-errors"
-import { attemptIntentDelivery, queueIntentDelivery } from "./intent-delivery-helpers"
+import {
+  attemptIntentDelivery,
+  queueIntentDelivery,
+  sendTerminalPendingIntentResponse,
+} from "./intent-delivery-helpers"
 import { retrieveAppsById } from "../../app-directory/app-directory-queries"
 import type { DACPHandlerParams } from "../types"
-import { sendDACPResponse } from "../utils/dacp-response-utils"
 import {
   clearPendingIntentTimeouts,
   registerPendingIntentTimeout,
@@ -161,17 +163,15 @@ export function attachPendingIntentTimeout(params: DACPHandlerParams, requestId:
       return
     }
     params.setState(state => resolvePendingIntent(state, requestId))
-    // Terminal raiseIntentResultResponse so IntentResolution.getResult() settles.
-    const response = createDACPErrorResponse(
-      { type: "raiseIntentRequest", meta: { requestUuid: requestId } },
-      ResultError.ApiTimeout,
-      "raiseIntentResultResponse",
+    // Terminal response so the raiser settles. Which stage that is depends on whether the
+    // intent was ever delivered — `pendingIntentTimeoutMs` can be configured below
+    // `openContextListenerTimeoutMs`, in which case this fires on an undelivered intent whose
+    // raiser is still awaiting `raiseIntentResponse`.
+    sendTerminalPendingIntentResponse(
+      params,
+      pendingIntent,
+      "Intent abandoned before a result was returned",
     )
-    sendDACPResponse({
-      response,
-      instanceId: pendingIntent.sourceInstanceId,
-      responses: params.responses,
-    })
   }, params.pendingIntentTimeoutMs)
   registerPendingIntentTimeout(requestId, "raise", timeoutHandle)
 }

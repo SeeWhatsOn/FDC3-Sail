@@ -88,13 +88,11 @@ export function handleBroadcastRequest(
       throw new NoChannelFoundError(`Channel ${channelId} does not exist`)
     }
 
-    if (userChannel && instance.currentUserChannel !== channelId && !channelId) {
-      // No-op for DesktopAgent.broadcast when not joined to a user channel.
-      const response = createDACPSuccessResponse(message, "broadcastResponse")
-      sendDACPResponse({ response, instanceId, responses })
-      return
-    }
-
+    // There is deliberately no "not joined to this user channel" short-circuit here. The client
+    // resolves the channel and puts it on the wire, so the agent cannot tell
+    // `DesktopAgent.broadcast()` from `Channel.broadcast()` — and the latter is specified to
+    // reach the named channel whether or not the app has joined it. `DesktopAgentProxy.broadcast`
+    // already returns early when the app is unjoined, so the unjoined case never arrives.
     logger.info("DACP: Processing broadcast request", {
       channelId,
       contextType: context.type,

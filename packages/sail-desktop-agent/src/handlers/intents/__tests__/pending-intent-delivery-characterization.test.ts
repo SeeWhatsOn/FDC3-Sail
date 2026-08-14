@@ -187,13 +187,17 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
     expect(getState().intents.pending[requestUuid]).toBeDefined()
 
     // t=1000 — pendingIntentTimeoutMs elapses first. `attachPendingIntentTimeout` resolves the
-    // pending intent out of state and settles the raiser with a terminal
-    // raiseIntentResultResponse. It does NOT clear the delivery timeout.
+    // pending intent out of state and settles the raiser. It does NOT clear the delivery timeout.
+    //
+    // The intent was never delivered, so the raiser is still awaiting the *raise* stage: it has
+    // no `IntentResolution` yet and a `raiseIntentResultResponse` would settle nothing. This
+    // file previously characterized that older, wrong behaviour (`raiseIntentResultResponse` /
+    // `ResultError.ApiTimeout`), which left `fdc3.raiseIntent()` hanging.
     await vi.advanceTimersByTimeAsync(1000)
 
-    const settlement = messagesOfType(transport, "raiseIntentResultResponse")
+    const settlement = messagesOfType(transport, "raiseIntentResponse")
     expect(settlement).toHaveLength(1)
-    expect(settlement[0]!.payload?.error).toBe(ResultError.ApiTimeout)
+    expect(settlement[0]!.payload?.error).toBe(ResolveError.IntentDeliveryFailed)
     expect(settlement[0]!.meta?.destination?.instanceId).toBe(RAISER_ID)
     expect(getState().intents.pending[requestUuid]).toBeUndefined()
 
@@ -211,8 +215,8 @@ describe("queueIntentDelivery: delivery timeout ordering against pending-intent 
     // the first statement inside it, so a zero count here means the body executed.
     expect(getActivePendingIntentTimeoutCount()).toBe(0)
     expect(transport.sentMessages).toHaveLength(messageCountAfterSettlement)
-    expect(messagesOfType(transport, "raiseIntentResponse")).toHaveLength(0)
-    expect(messagesOfType(transport, "raiseIntentResultResponse")).toHaveLength(1)
+    expect(messagesOfType(transport, "raiseIntentResponse")).toHaveLength(1)
+    expect(messagesOfType(transport, "raiseIntentResultResponse")).toHaveLength(0)
     expect(messagesOfType(transport, "intentEvent")).toHaveLength(0)
     // The settled request must stay settled: the late `delivered` write must not resurrect a
     // pending entry under the same requestId.
@@ -497,7 +501,12 @@ describe("cleanupInstanceDacpState: pending-intent settlement on disconnect", ()
     // `cleanupInstanceDacpState` clears both timeouts for the request, so no pending-intent timer
     // survives the teardown.
     expect(getActivePendingIntentTimeoutCount()).toBe(0)
-    expect(messagesOfType(transport, "raiseIntentResultResponse")).toHaveLength(1)
+    // Undelivered at teardown, so the terminal response is the raise stage — clearing the
+    // delivery timeout above removed the only other thing that could have answered it.
+    const teardownSettlement = messagesOfType(transport, "raiseIntentResponse")
+    expect(teardownSettlement).toHaveLength(1)
+    expect(teardownSettlement[0]!.payload?.error).toBe(ResolveError.IntentDeliveryFailed)
+    expect(messagesOfType(transport, "raiseIntentResultResponse")).toHaveLength(0)
     expect(getState().intents.pending[requestUuid]).toBeUndefined()
 
     const messageCountAfterTeardown = transport.sentMessages.length
@@ -505,6 +514,6 @@ describe("cleanupInstanceDacpState: pending-intent settlement on disconnect", ()
     await vi.advanceTimersByTimeAsync(60_000)
 
     expect(transport.sentMessages).toHaveLength(messageCountAfterTeardown)
-    expect(messagesOfType(transport, "raiseIntentResponse")).toHaveLength(0)
+    expect(messagesOfType(transport, "raiseIntentResultResponse")).toHaveLength(0)
   })
 })

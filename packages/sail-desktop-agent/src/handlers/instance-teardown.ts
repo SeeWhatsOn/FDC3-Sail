@@ -1,5 +1,3 @@
-import { ResultError } from "@finos/fdc3"
-import { createDACPErrorResponse } from "../dacp/dacp-message-creators"
 import { resolvePendingIntent, removeListenersForInstance, removeInstance } from "../state/mutators"
 import { type DACPHandlerParams } from "./types"
 import * as eventHandlers from "./events/handlers"
@@ -11,10 +9,10 @@ import {
   clearPendingOpenWithContextForInstance,
   clearPendingOpenWithContextForSourceInstance,
 } from "./utils/open-with-context"
-import { sendDACPResponse } from "./utils/dacp-response-utils"
 import { pruneInstanceIdentity } from "../app-connection/wcp/instance-identity-registry"
 import type { AgentState } from "../state/types"
 import { clearPendingIntentTimeouts } from "./intents/intent-pending-timeout-registry"
+import { sendTerminalPendingIntentResponse } from "./intents/intent-delivery-helpers"
 
 /**
  * WCP4 validation runs under a temp connection id while heartbeat and instance state
@@ -94,16 +92,15 @@ export function cleanupInstanceDacpState(params: DACPHandlerParams): void {
     // instance there is nobody left to settle and this would post to a closed instance.
     if (pending.sourceInstanceId !== instanceId) {
       try {
-        const response = createDACPErrorResponse(
-          { type: "raiseIntentRequest", meta: { requestUuid: pending.requestId } },
-          ResultError.ApiTimeout,
-          "raiseIntentResultResponse",
+        // Stage matters: `clearPendingIntentTimeouts` above has just cancelled the delivery
+        // timer, so if the intent was never delivered this is the only thing left that can
+        // settle the raiser — and what it is waiting on is `raiseIntentResponse`, not the
+        // result. `sendTerminalPendingIntentResponse` picks the stage off `pending.delivered`.
+        sendTerminalPendingIntentResponse(
+          resolvedParams,
+          pending,
+          "Target instance disconnected before the intent completed",
         )
-        sendDACPResponse({
-          response,
-          instanceId: pending.sourceInstanceId,
-          responses: resolvedParams.responses,
-        })
       } catch (error) {
         logger.warn("Failed to send pending-intent timeout response on disconnect", {
           requestId: pending.requestId,

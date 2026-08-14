@@ -1,4 +1,4 @@
-import { ResolveError } from "@finos/fdc3"
+import { ResolveError, ResultError } from "@finos/fdc3"
 import {
   createDACPErrorResponse,
   createDACPSuccessResponse,
@@ -17,7 +17,7 @@ import {
   updatePendingIntentTarget,
 } from "../../state/mutators"
 import type { DACPHandlerParams } from "../types"
-import type { IntentRequestType } from "../../state/types"
+import type { IntentRequestType, PendingIntent } from "../../state/types"
 import {
   extractAppProvidedIntentContextMetadata,
   mergeIntentEventContextMetadata,
@@ -34,6 +34,47 @@ function getResponseTypeForRequest(requestType: IntentRequestType): IntentRespon
   return requestType === "raiseIntentForContextRequest"
     ? "raiseIntentForContextResponse"
     : "raiseIntentResponse"
+}
+
+/**
+ * Sends the terminal response for a pending intent that will never be delivered.
+ *
+ * Which response settles the raiser depends on how far the intent got, and `delivered` is the
+ * discriminator:
+ *
+ * - **Before delivery** the raiser is still awaiting the raise-stage response
+ *   (`raiseIntentResponse` / `raiseIntentForContextResponse`). There is no `IntentResolution`
+ *   yet, so a `raiseIntentResultResponse` settles nothing and `raiseIntent()` hangs. The spec's
+ *   error for this is `ResolveError.IntentDeliveryFailed`.
+ * - **After delivery** the raise stage has already been answered, and only
+ *   `IntentResolution.getResult()` is outstanding — so the result stage is the terminal one.
+ *
+ * Callers are responsible for clearing timers and resolving the pending entry from state; this
+ * only puts the right message on the wire.
+ */
+export function sendTerminalPendingIntentResponse(
+  params: DACPHandlerParams,
+  pendingIntent: PendingIntent,
+  errorMessage: string,
+): void {
+  const { requestId, sourceInstanceId } = pendingIntent
+  const requestType = pendingIntent.requestType ?? "raiseIntentRequest"
+
+  const response = pendingIntent.delivered
+    ? createDACPErrorResponse(
+        { type: requestType, meta: { requestUuid: requestId } },
+        ResultError.ApiTimeout,
+        "raiseIntentResultResponse",
+        errorMessage,
+      )
+    : createDACPErrorResponse(
+        { type: requestType, meta: { requestUuid: requestId } },
+        ResolveError.IntentDeliveryFailed,
+        getResponseTypeForRequest(requestType),
+        errorMessage,
+      )
+
+  sendDACPResponse({ response, instanceId: sourceInstanceId, responses: params.responses })
 }
 
 export function isIntentListenerReady(
@@ -162,19 +203,11 @@ export function queueIntentDelivery(
       return
     }
 
-    const requestType = pendingIntent.requestType ?? "raiseIntentRequest"
-    const response = createDACPErrorResponse(
-      { type: requestType, meta: { requestUuid: requestId } },
-      ResolveError.IntentDeliveryFailed,
-      getResponseTypeForRequest(requestType),
+    sendTerminalPendingIntentResponse(
+      params,
+      pendingIntent,
       "Intent listener not registered within timeout",
     )
-
-    sendDACPResponse({
-      response,
-      instanceId: pendingIntent.sourceInstanceId,
-      responses: params.responses,
-    })
     params.setState(state => resolvePendingIntent(state, requestId))
   }, params.openContextListenerTimeoutMs)
   registerPendingIntentTimeout(requestId, "delivery", timeoutHandle)
