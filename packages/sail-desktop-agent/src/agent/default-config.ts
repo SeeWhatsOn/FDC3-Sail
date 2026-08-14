@@ -9,7 +9,7 @@ import type { BrowserTypes } from "@finos/fdc3"
 import pkg from "../../package.json"
 import { DACP_TIMEOUTS } from "../dacp/dacp-constants"
 import type { SailDesktopAgentConfig, SailDesktopAgentOptions } from "./sail-desktop-agent-types"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "./default-user-channels"
 import type { AgentAppConnection } from "../app-connection/types"
 
 export type { ValidationMode } from "../dacp/validate-dacp-message"
@@ -38,6 +38,7 @@ export const DEFAULT_SAIL_DESKTOP_AGENT_CONFIG = {
   logPayloadDetail: "metadata" as const,
   validation: "warn" as const,
   openContextListenerTimeoutMs: DACP_TIMEOUTS.MINIMUM_APP_LAUNCH,
+  pendingIntentTimeoutMs: 90_000,
   heartbeatEnabled: true,
   heartbeatIntervalMs: 30_000,
   heartbeatTimeoutMs: 60_000,
@@ -49,6 +50,7 @@ export const DEFAULT_SAIL_DESKTOP_AGENT_CONFIG = {
   | "logPayloadDetail"
   | "validation"
   | "openContextListenerTimeoutMs"
+  | "pendingIntentTimeoutMs"
   | "heartbeatEnabled"
   | "heartbeatIntervalMs"
   | "heartbeatTimeoutMs"
@@ -96,6 +98,8 @@ export function resolveDesktopAgentConfig(
     openContextListenerTimeoutMs:
       rest.openContextListenerTimeoutMs ??
       DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.openContextListenerTimeoutMs,
+    pendingIntentTimeoutMs:
+      rest.pendingIntentTimeoutMs ?? DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.pendingIntentTimeoutMs,
     heartbeatEnabled: rest.heartbeatEnabled ?? DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.heartbeatEnabled,
     heartbeatIntervalMs:
       rest.heartbeatIntervalMs ?? DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.heartbeatIntervalMs,

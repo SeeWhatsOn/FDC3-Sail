@@ -11,6 +11,6 @@ export interface SailDesktopAgentContextValue {
   useIntentResolverStore: ReturnType<typeof createIntentResolverStore>
 }
 
-export const SailDesktopAgentContext = createContext<SailDesktopAgentContextValue>(
-  {} as SailDesktopAgentContextValue,
+export const SailDesktopAgentContext = createContext<SailDesktopAgentContextValue | undefined>(
+  undefined,
 )

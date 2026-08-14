@@ -1,5 +1,5 @@
 import { resolveLinkedInstanceId } from "../../state/selectors/wcp-handshake-routing"
-import type { DACPHandlerContext } from "../types"
+import type { DACPHandlerParams } from "../types"
 import { getInstance } from "../../state/selectors"
 
 /**
@@ -17,8 +17,8 @@ import { getInstance } from "../../state/selectors"
  * that strip. Host-assigned ids belong in the WCP4 payload, where WCP4 adoption
  * already handles them (`wcp-host-instance-adoption.ts`).
  */
-export function resolveDacpHandlerInstanceId(context: DACPHandlerContext): string {
-  const { instanceId, getState } = context
+export function resolveDacpHandlerInstanceId(params: DACPHandlerParams): string {
+  const { instanceId, getState } = params
   const state = getState()
 
   // Prefer the MessagePort-routed instance when it is already registered. Pending

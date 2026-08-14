@@ -57,29 +57,29 @@ const intentTypes: Array<{ title: string; value: string }> = [
   { title: "ViewResearch", value: "ViewResearch" },
 ]
 
-function getAllContextTypes(): string[] {
+export function getAllContextTypes(): string[] {
   const allContexts = [...CONTEXT_TYPES]
   getServerState()
     .getKnownApps()
     .forEach(a => {
       if (a.interop?.userChannels) {
-        allContexts.concat(a.interop.userChannels.listensFor ?? [])
-        allContexts.concat(a.interop.userChannels.broadcasts ?? [])
+        allContexts.push(...(a.interop.userChannels.listensFor ?? []))
+        allContexts.push(...(a.interop.userChannels.broadcasts ?? []))
       }
       if (a.interop?.appChannels) {
         a.interop.appChannels.forEach(ac => {
-          allContexts.concat(ac.broadcasts ?? [])
-          allContexts.concat(ac.listensFor ?? [])
+          allContexts.push(...(ac.broadcasts ?? []))
+          allContexts.push(...(ac.listensFor ?? []))
         })
       }
       if (a.interop?.intents?.listensFor) {
         Object.values(a.interop.intents.listensFor).forEach(v => {
-          allContexts.concat(v.contexts)
+          allContexts.push(...v.contexts)
         })
       }
       if (a.interop?.intents?.raises) {
         Object.values(a.interop.intents.raises).forEach(v => {
-          allContexts.concat(v)
+          allContexts.push(...v)
         })
       }
     })
@@ -88,17 +88,17 @@ function getAllContextTypes(): string[] {
   return unique.sort()
 }
 
-function getAllIntentNames(): string[] {
+export function getAllIntentNames(): string[] {
   const allIntents = intentTypes.map(i => i.title)
 
   getServerState()
     .getKnownApps()
     .forEach(a => {
       if (a.interop?.intents?.listensFor) {
-        allIntents.concat(Object.keys(a.interop.intents.listensFor) ?? [])
+        allIntents.push(...Object.keys(a.interop.intents.listensFor))
       }
       if (a.interop?.intents?.raises) {
-        allIntents.concat(Object.keys(a.interop?.intents?.raises) ?? [])
+        allIntents.push(...Object.keys(a.interop.intents.raises))
       }
     })
 
@@ -146,6 +146,7 @@ function createInitialState(): EditableState[] {
       return {
         id: a.appId,
         type: a.type === "native" ? "native" : "web",
+        // oxlint-disable-next-line typescript/no-unnecessary-condition -- localStorage-persisted state: getCustomApps() reads back custom-apps saved to localStorage, whose shape can predate the current WebAppDetails type
         url: (a.details as WebAppDetails)?.url ?? "",
         title: a.title,
         description: a.description ?? "",
@@ -295,8 +296,8 @@ const InteropList = ({
             intents: [
               ...app.intents,
               {
-                name: intentTypes[0].title,
-                contexts: [CONTEXT_TYPES[0]],
+                name: intentTypes[0]!.title,
+                contexts: [CONTEXT_TYPES[0]!],
               },
             ],
           })

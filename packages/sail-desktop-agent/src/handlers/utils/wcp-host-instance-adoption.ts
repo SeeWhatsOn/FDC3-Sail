@@ -1,4 +1,4 @@
-import type { DACPHandlerContext } from "../types"
+import type { DACPHandlerParams } from "../types"
 import { getInstance } from "../../state/selectors"
 import { migratePendingOpenWithContextTarget, removeInstance } from "../../state/mutators"
 import { AppInstanceState } from "../../state/types"
@@ -54,11 +54,11 @@ export function tryAdoptHostPreRegisteredInstance(params: {
 }
 
 export function reconcileOrphanPendingHostInstances(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   appId: string,
   validatedInstanceId: string,
 ): void {
-  const orphanInstanceIds = Object.values(context.getState().instances)
+  const orphanInstanceIds = Object.values(params.getState().instances)
     .filter(
       instance =>
         instance.appId === appId &&
@@ -71,7 +71,7 @@ export function reconcileOrphanPendingHostInstances(
     return
   }
 
-  context.setState(state => {
+  params.setState(state => {
     let nextState = state
     for (const orphanInstanceId of orphanInstanceIds) {
       nextState = migratePendingOpenWithContextTarget(
@@ -118,5 +118,5 @@ function findSolePendingHostInstanceId(
     return undefined
   }
 
-  return pendingHostInstances[0].instanceId
+  return pendingHostInstances[0]!.instanceId
 }

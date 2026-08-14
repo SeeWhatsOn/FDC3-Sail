@@ -2,7 +2,7 @@ import { Before, DataTable, Given, Then, When } from "@cucumber/cucumber"
 import { CustomWorld } from "../world/index.ts"
 import type { Context, AppIdentifier } from "@finos/fdc3"
 import type { BrowserTypes } from "@finos/fdc3"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../src/default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../src/agent/default-user-channels.ts"
 import { handleResolve } from "../support/testing-utils"
 
 /** FINOS conformance BDD uses short user-channel ids (e.g. app-channels.feature "one"). */
@@ -304,7 +304,7 @@ Then(
 
     // Simple comparison - could be enhanced
     for (let i = 0; i < expected.length; i++) {
-      const expectedRow = expected[i]
+      const expectedRow = expected[i]!
       const actualRow = valueArray[i]
       if (!isRecord(actualRow)) {
         throw new Error(

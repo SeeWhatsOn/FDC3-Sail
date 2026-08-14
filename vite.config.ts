@@ -32,11 +32,11 @@ export default defineConfig({
       "**/yarn.lock",
       "**/pnpm-lock.yaml",
       "**/assets/",
-      "packages/sail-ui/src/index.css",
       ".cursor/**",
     ],
     rules: {
       "vite-plus/prefer-vite-plus-imports": "error",
+      "typescript/no-unnecessary-condition": "error",
     },
     overrides: [
       {
@@ -372,6 +372,16 @@ export default defineConfig({
         },
       },
       {
+        // Test fixtures deliberately construct states the types say are impossible, so
+        // no-unnecessary-condition is off for tests everywhere. Deliberately repo-wide: this
+        // replaces five per-package entries, and `test/` (today only sail-desktop-agent's
+        // cucumber steps) is generalised on purpose, not scoped to that one package.
+        files: ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "**/test/**/*.{ts,tsx}"],
+        rules: {
+          "typescript/no-unnecessary-condition": "off",
+        },
+      },
+      {
         files: ["**/*.{jsx,tsx}"],
         rules: {
           "react/display-name": "error",
@@ -425,12 +435,7 @@ export default defineConfig({
         jsPlugins: [],
       },
       {
-        files: [
-          "packages/sail-ui/src/*.css",
-          "packages/sail-finance/src/*.css",
-          "**/packages/sail-ui/src/*.css",
-          "**/packages/sail-finance/src/*.css",
-        ],
+        files: ["packages/sail-finance/src/*.css", "**/packages/sail-finance/src/*.css"],
         rules: {},
         jsPlugins: [],
       },

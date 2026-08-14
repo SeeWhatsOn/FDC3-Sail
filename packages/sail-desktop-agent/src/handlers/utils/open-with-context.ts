@@ -2,7 +2,7 @@ import type { BrowserTypes, Context } from "@finos/fdc3"
 import { OpenError } from "@finos/fdc3"
 import { createDACPEvent, createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
 import { sendDACPResponse, sendDACPErrorResponse } from "./dacp-response-utils"
-import type { DACPHandlerContext } from "../types"
+import type { DACPHandlerParams } from "../types"
 import { getInstance } from "../../state/selectors"
 import type { AgentState, PendingOpenWithContext } from "../../state/types"
 import {
@@ -33,17 +33,17 @@ export function registerOpenWithContext(
   message: BrowserTypes.OpenRequest,
   appIdentifier: BrowserTypes.AppIdentifier,
   launchContext: Context,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { instanceId: sourceInstanceId, openContextListenerTimeoutMs } = context
+  const { instanceId: sourceInstanceId, openContextListenerTimeoutMs } = params
   const targetInstanceId = appIdentifier.instanceId
   if (!targetInstanceId) {
     throw new Error("App identifier missing instanceId for open-with-context")
   }
 
   // Fast path: if the app already has a matching listener, deliver immediately.
-  if (hasMatchingContextListener(targetInstanceId, launchContext.type, context)) {
-    deliverOpenWithContext(message, appIdentifier, launchContext, context, sourceInstanceId)
+  if (hasMatchingContextListener(targetInstanceId, launchContext.type, params)) {
+    deliverOpenWithContext(message, appIdentifier, launchContext, params, sourceInstanceId)
     return
   }
 
@@ -51,7 +51,7 @@ export function registerOpenWithContext(
   // The timeout triggers an AppTimeout error to the caller.
   const requestUuid = message.meta.requestUuid
   const timeoutHandle = setTimeout(() => {
-    context.setState((state: AgentState) =>
+    params.setState((state: AgentState) =>
       removePendingOpenWithContextByRequest(state, targetInstanceId, requestUuid),
     )
     pendingOpenWithContextTimeouts.delete(requestUuid)
@@ -60,7 +60,7 @@ export function registerOpenWithContext(
       errorType: OpenError.AppTimeout,
       errorMessage: "Timed out waiting for context listener",
       instanceId: sourceInstanceId,
-      responses: context.responses,
+      responses: params.responses,
     })
   }, openContextListenerTimeoutMs)
 
@@ -72,7 +72,7 @@ export function registerOpenWithContext(
   }
 
   // Track the pending request in state; the timeout map is keyed by requestUuid.
-  context.setState((state: AgentState) =>
+  params.setState((state: AgentState) =>
     addPendingOpenWithContext(state, targetInstanceId, pendingEntry),
   )
   pendingOpenWithContextTimeouts.set(requestUuid, timeoutHandle)
@@ -81,10 +81,10 @@ export function registerOpenWithContext(
 export function notifyContextListenerAdded(
   instanceId: string,
   contextType: string,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
   // Called when an instance adds a context listener; resolve any pending opens.
-  const state: AgentState = context.getState()
+  const state: AgentState = params.getState()
   const pendingList = state.open.pendingWithContext[instanceId]
   if (!pendingList || pendingList.length === 0) {
     return
@@ -96,7 +96,7 @@ export function notifyContextListenerAdded(
     return
   }
 
-  context.setState((state: AgentState) =>
+  params.setState((state: AgentState) =>
     setPendingOpenWithContextForInstance(state, instanceId, remaining),
   )
 
@@ -106,7 +106,7 @@ export function notifyContextListenerAdded(
       pending.message,
       pending.appIdentifier,
       pending.launchContext,
-      context,
+      params,
       pending.sourceInstanceId,
     )
   })
@@ -142,13 +142,13 @@ function clearPendingTimeout(requestUuid: string): void {
 
 /**
  * Clears all open-with-context pending entries and module timeouts when the
- * target instance disconnects (invoked from cleanupDACPHandlers).
+ * target instance disconnects (invoked from cleanupInstanceDacpState).
  */
 export function clearPendingOpenWithContextForInstance(
   targetInstanceId: string,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const pendingList = context.getState().open.pendingWithContext[targetInstanceId]
+  const pendingList = params.getState().open.pendingWithContext[targetInstanceId]
   if (!pendingList || pendingList.length === 0) {
     return
   }
@@ -160,10 +160,10 @@ export function clearPendingOpenWithContextForInstance(
       errorType: OpenError.AppTimeout,
       errorMessage: "Timed out waiting for context listener",
       instanceId: pending.sourceInstanceId,
-      responses: context.responses,
+      responses: params.responses,
     })
   })
-  context.setState(state => setPendingOpenWithContextForInstance(state, targetInstanceId, []))
+  params.setState(state => setPendingOpenWithContextForInstance(state, targetInstanceId, []))
 }
 
 /**
@@ -173,9 +173,9 @@ export function clearPendingOpenWithContextForInstance(
  */
 export function clearPendingOpenWithContextForSourceInstance(
   sourceInstanceId: string,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const pendingByInstance = context.getState().open.pendingWithContext
+  const pendingByInstance = params.getState().open.pendingWithContext
   const bucketsToUpdate: Array<{ targetInstanceId: string; remaining: PendingOpenWithContext[] }> =
     []
 
@@ -192,7 +192,7 @@ export function clearPendingOpenWithContextForSourceInstance(
         errorType: OpenError.AppTimeout,
         errorMessage: "Timed out waiting for context listener",
         instanceId: sourceInstanceId,
-        responses: context.responses,
+        responses: params.responses,
       })
     })
     bucketsToUpdate.push({
@@ -205,7 +205,7 @@ export function clearPendingOpenWithContextForSourceInstance(
     return
   }
 
-  context.setState(state => {
+  params.setState(state => {
     let nextState = state
     for (const { targetInstanceId, remaining } of bucketsToUpdate) {
       nextState = setPendingOpenWithContextForInstance(nextState, targetInstanceId, remaining)
@@ -217,9 +217,9 @@ export function clearPendingOpenWithContextForSourceInstance(
 function hasMatchingContextListener(
   targetInstanceId: string,
   contextType: string,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): boolean {
-  const instance = getInstance(context.getState(), targetInstanceId)
+  const instance = getInstance(params.getState(), targetInstanceId)
   if (!instance) {
     return false
   }
@@ -235,12 +235,12 @@ function deliverOpenWithContext(
   message: BrowserTypes.OpenRequest,
   appIdentifier: BrowserTypes.AppIdentifier,
   launchContext: Context,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   sourceInstanceId: string,
 ): void {
   // "Open with context" is modeled as a broadcast to the target instance,
   // then the original openRequest is completed with openResponse.
-  const callerInstance = getInstance(context.getState(), sourceInstanceId)
+  const callerInstance = getInstance(params.getState(), sourceInstanceId)
   const broadcastEvent = createDACPEvent("broadcastEvent", {
     channelId: null,
     context: launchContext,
@@ -258,7 +258,7 @@ function deliverOpenWithContext(
     },
   }
 
-  context.responses.sendOutbound(broadcastEventWithRouting)
+  params.responses.sendOutbound(broadcastEventWithRouting)
 
   const response = createDACPSuccessResponse(message, "openResponse", {
     appIdentifier,
@@ -267,6 +267,6 @@ function deliverOpenWithContext(
   sendDACPResponse({
     response,
     instanceId: sourceInstanceId,
-    responses: context.responses,
+    responses: params.responses,
   })
 }

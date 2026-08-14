@@ -1,8 +1,12 @@
 import type { Context } from "@finos/fdc3"
 import { retrieveAppsById } from "../../app-directory/app-directory-queries"
-import type { DACPHandlerContext } from "../types"
-import { getInstance, getInstancesByAppId } from "../../state/selectors"
-import { AppInstanceState } from "../../state/types"
+import type { DACPHandlerParams } from "../types"
+import {
+  getInstance,
+  getInstancesByAppId,
+  isLaunchTargetReady,
+  isInstanceReceivable,
+} from "../../state/selectors"
 
 /**
  * Launch an app and wait for it to be registered.
@@ -18,10 +22,10 @@ import { AppInstanceState } from "../../state/types"
  */
 export async function launchAppAndWaitForInstance(
   appId: string,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   validatedContext: unknown,
 ): Promise<string> {
-  const { appLauncher, getState, logger } = context
+  const { appLauncher, getState, logger } = params
 
   if (!appLauncher) {
     throw new Error("App launching not available - no AppLauncher configured")
@@ -31,7 +35,7 @@ export async function launchAppAndWaitForInstance(
   if (apps.length === 0) {
     throw new Error(`App not found in directory: ${appId}`)
   }
-  const appMetadata = apps[0]
+  const appMetadata = apps[0]!
 
   logger.info("DACP: Launching app for intent", {
     appId,
@@ -69,7 +73,7 @@ export async function launchAppAndWaitForInstance(
   const startTime = Date.now()
 
   while (Date.now() - startTime < maxWaitTime) {
-    const currentState = context.getState()
+    const currentState = params.getState()
     const allInstances = getInstancesByAppId(currentState, appId)
     const elapsed = Date.now() - startTime
 
@@ -88,10 +92,7 @@ export async function launchAppAndWaitForInstance(
           createdAt: instance.createdAt.getTime(),
           isNew: !existingInstanceIds.has(instance.instanceId),
           isRecent: instance.createdAt.getTime() >= launchTimestamp,
-          isReady:
-            instance.state === AppInstanceState.CONNECTED ||
-            (instance.state === AppInstanceState.PENDING &&
-              instance.instanceId === launcherInstanceId),
+          isReady: isLaunchTargetReady(instance, launcherInstanceId),
           matchesLauncher: instance.instanceId === launcherInstanceId,
         })),
         launcherInstanceId,
@@ -103,9 +104,7 @@ export async function launchAppAndWaitForInstance(
     const newInstance = allInstances.find(instance => {
       const isNew = !existingInstanceIds.has(instance.instanceId)
       const isRecent = instance.createdAt.getTime() >= launchTimestamp
-      const isReady =
-        instance.state === AppInstanceState.CONNECTED ||
-        (instance.state === AppInstanceState.PENDING && instance.instanceId === launcherInstanceId)
+      const isReady = isLaunchTargetReady(instance, launcherInstanceId)
 
       if (isNew && isRecent && !isReady) {
         logger.debug("DACP: Found new instance but not ready yet", {
@@ -131,11 +130,7 @@ export async function launchAppAndWaitForInstance(
     }
 
     const launcherInstance = getInstance(currentState, launcherInstanceId)
-    if (
-      launcherInstance &&
-      (launcherInstance.state === AppInstanceState.CONNECTED ||
-        launcherInstance.state === AppInstanceState.PENDING)
-    ) {
+    if (launcherInstance && isInstanceReceivable(launcherInstance)) {
       logger.info("DACP: Launcher instance registered and ready", {
         appId,
         instanceId: launcherInstanceId,
@@ -147,7 +142,7 @@ export async function launchAppAndWaitForInstance(
     await new Promise(resolve => setTimeout(resolve, checkInterval))
   }
 
-  const finalState = context.getState()
+  const finalState = params.getState()
   const finalInstances = getInstancesByAppId(finalState, appId)
   logger.error("DACP: Timeout waiting for new instance", {
     appId,

@@ -12,7 +12,7 @@ import {
   flushAsyncDelivery,
 } from "../../app-connection/__tests__/wcp-edge-test-helpers"
 import { PORTFOLIO_APP } from "../../app-connection/__tests__/wcp-desktop-agent.integration.fixtures"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../default-user-channels"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { AppInstanceState } from "../../state/types"
@@ -175,6 +175,51 @@ describe("WCP inbound schema validation (strict)", () => {
           instance.appId === "portfolioApp" && instance.state === AppInstanceState.CONNECTED,
       ),
     ).toBe(false)
+  })
+
+  it("accepts a schema-valid DACP request under strict after browser enrichment", async () => {
+    // Regression test: BrowserAppConnection.enrichMessageWithSource stamps meta.messageOrigin
+    // (schema-illegal on DACP, additionalProperties: false) onto messages *after* they were
+    // already validated raw. If routeDACPMessage re-validates the enriched message, this
+    // request would be wrongly rejected under strict — dropping every DACP request from every
+    // fully-connected app.
+    const agent = createStrictBrowserAgent()
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "550e8400-e29b-41d4-a716-446655440004",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const response = new Promise<{ type?: string; payload?: { error?: string } }>(resolve => {
+      connected.appPort.onmessage = event =>
+        resolve(event.data as { type?: string; payload?: { error?: string } })
+    })
+
+    connected.appPort.postMessage({
+      type: "addContextListenerRequest",
+      meta: {
+        requestUuid: "regression-add-context-listener",
+        timestamp: new Date(),
+      },
+      payload: {
+        channelId: null,
+        contextType: null,
+      },
+    })
+    await flushAsyncDelivery()
+
+    const resolved = await Promise.race([
+      response,
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Timed out waiting for addContextListenerResponse")),
+          5000,
+        ),
+      ),
+    ])
+
+    expect(resolved.type).toBe("addContextListenerResponse")
+    expect(resolved.payload?.error).toBeUndefined()
   })
 
   it("rejects schema-invalid WCP6 under strict on the browser MessagePort path", async () => {

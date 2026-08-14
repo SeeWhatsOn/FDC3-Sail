@@ -772,7 +772,7 @@
           "listensFor": {
             "lTestingIntent": {
               "displayName": "L Testing Intent",
-              "contexts": ["testContextX"]
+              "contexts": ["testContextL"]
             }
           }
         }

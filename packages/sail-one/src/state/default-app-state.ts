@@ -82,6 +82,7 @@ export class DefaultAppState implements AppState {
     const forceNewWindow =
       (typeof sailManifest === "string" ? {} : sailManifest).forceNewWindow ?? false
     const hosting: AppHosting =
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- FDC3 App Directory JSON: hostManifests.sail is Record<string, unknown>, the `as`-free `?? false` erases the type's optionality but the source JSON can still omit forceNewWindow
       (forceNewWindow ? AppHosting.Tab : undefined) ?? destination ?? AppHosting.Frame
     const instanceTitle = this.createTitle(detail)
     const channel = hosting === AppHosting.Tab ? null : getClientState().getActiveTab().id

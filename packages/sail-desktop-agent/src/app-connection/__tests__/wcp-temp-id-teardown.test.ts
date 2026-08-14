@@ -39,11 +39,10 @@ import { createTestAgent, PORTFOLIO_APP } from "./wcp-desktop-agent.integration.
 function createWCP6Goodbye(): BrowserTypes.WebConnectionProtocol6Goodbye {
   return {
     type: "WCP6Goodbye",
-    payload: undefined,
     meta: {
       timestamp: new Date(),
     },
-  } as unknown as BrowserTypes.WebConnectionProtocol6Goodbye
+  }
 }
 
 describe("WCP6Goodbye arriving on a temp handshake id", () => {

@@ -197,7 +197,7 @@ describe("installHarnessInboundAppMessageObserver", () => {
     expect(observer).toHaveBeenCalledWith(message)
     expect(agentHandler).toHaveBeenCalledWith(message)
     expect(observer.mock.invocationCallOrder[0]).toBeLessThan(
-      agentHandler.mock.invocationCallOrder[0],
+      agentHandler.mock.invocationCallOrder[0]!,
     )
   })
 })

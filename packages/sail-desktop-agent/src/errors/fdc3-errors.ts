@@ -69,7 +69,7 @@ export class IntentDeliveryFailedError extends FDC3ResolveError {
  */
 export class UserCancelledError extends FDC3ResolveError {
   constructor(message: string) {
-    super(ResolveError.UserCancelled || "UserCancelledResolution", message)
+    super(ResolveError.UserCancelled, message)
   }
 }
 
@@ -170,11 +170,12 @@ export class ChannelCreationFailedError extends FDC3ChannelError {
 
 /**
  * DACP/desktop-agent: context listener id is unknown or not owned by this instance.
- * Payload error string is the DACP wire value for this condition (`ListenerNotFound`).
+ * Wire value is `ChannelError.InvalidArguments` — the listener id passed to the API call is
+ * not a valid argument, and `ResponsePayloadError` has no dedicated "listener not found" member.
  */
 export class ListenerNotFoundChannelError extends FDC3ChannelError {
   constructor(message: string) {
-    super("ListenerNotFound" as ChannelError, message)
+    super(ChannelError.InvalidArguments, message)
   }
 }
 

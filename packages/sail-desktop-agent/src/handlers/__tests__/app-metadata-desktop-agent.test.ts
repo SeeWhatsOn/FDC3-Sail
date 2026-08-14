@@ -4,16 +4,12 @@ import type { DirectoryApp } from "../../app-directory/types"
 import { retrieveAppsById } from "../../app-directory/app-directory-queries"
 import { expectAppDirectoryOnState } from "../../app-directory/__tests__/app-directory-test-fixtures"
 import { addApplications } from "../../state/mutators/app-directory"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { createInitialState } from "../../state/initial-state"
 import { AppInstanceState, type AgentState } from "../../state/types"
 import { handleFindInstancesRequest, handleGetAppMetadataRequest } from "../open/handlers"
-import {
-  createDACPTestContext,
-  createDacpRequestMeta,
-  withResponseDispatcher,
-} from "./test-context"
+import { createDACPTestParams, createDacpRequestMeta, withResponseDispatcher } from "./test-params"
 
 const chartApp: DirectoryApp = {
   appId: "chartApp",
@@ -42,7 +38,7 @@ describe("app directory vs runtime instance separation", () => {
   it("findInstances returns empty when app is in directory but not connected", () => {
     const state = withCatalogApps(createConnectedCallerState(), [chartApp])
     const transport = new MockTransport()
-    const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
+    const { params } = createDACPTestParams({ instanceId: "a1", initialState: state })
 
     handleFindInstancesRequest(
       {
@@ -55,7 +51,7 @@ describe("app directory vs runtime instance separation", () => {
           app: { appId: "chartApp" },
         },
       },
-      withResponseDispatcher(context, transport),
+      withResponseDispatcher(params, transport),
     )
 
     const response = transport.getLastMessage() as {
@@ -69,7 +65,7 @@ describe("app directory vs runtime instance separation", () => {
   it("getAppMetadata directory lookup reads from the same appDirectory slice as agent state", () => {
     const state = withCatalogApps(createConnectedCallerState(), [chartApp])
     const transport = new MockTransport()
-    const { context, getState } = createDACPTestContext({ instanceId: "a1", initialState: state })
+    const { params, getState } = createDACPTestParams({ instanceId: "a1", initialState: state })
 
     handleGetAppMetadataRequest(
       {
@@ -82,7 +78,7 @@ describe("app directory vs runtime instance separation", () => {
           app: { appId: "chartApp" },
         },
       },
-      withResponseDispatcher(context, transport),
+      withResponseDispatcher(params, transport),
     )
 
     const response = transport.getLastMessage() as {
@@ -110,7 +106,7 @@ describe("app directory vs runtime instance separation", () => {
     state = withCatalogApps(state, [chartApp])
 
     const transport = new MockTransport()
-    const { context, getState } = createDACPTestContext({ instanceId: "a1", initialState: state })
+    const { params, getState } = createDACPTestParams({ instanceId: "a1", initialState: state })
 
     handleFindInstancesRequest(
       {
@@ -123,7 +119,7 @@ describe("app directory vs runtime instance separation", () => {
           app: { appId: "chartApp" },
         },
       },
-      withResponseDispatcher(context, transport),
+      withResponseDispatcher(params, transport),
     )
 
     const findResponse = transport.getLastMessage() as {

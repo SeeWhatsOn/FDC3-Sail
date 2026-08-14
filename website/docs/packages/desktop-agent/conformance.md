@@ -23,29 +23,20 @@ For how `@finos/sail-desktop-agent` fits into the rest of the stack, see the
 
 ## Generated tag inventory
 
-<!-- GENERATED:CONFORMANCE-INVENTORY:START -->
+{/* GENERATED:CONFORMANCE-INVENTORY:START */}
 
 _This section is generated from `packages/sail-desktop-agent/test/features/` — do not hand-edit between the markers. Regenerate with `npm run conformance:inventory --workspace=@finos/sail-docs` (see `website/scripts/generate-conformance-inventory.mjs`)._
 
-**17 feature files** under `test/features/` today: **11** carry `@fdc3_2.2` (the 2.2 pack, 136 scenarios), and **6** more are `@fdc3_3.0`-only (18 scenarios) — the 3.0 profile runs both, **154** scenarios total. `@fdc3_2.0` is a scenario-level tag inside the 2.2 files marking scenarios also valid under FDC3 2.0 (**116** scenarios across **10** files).
+**17 feature files** under `test/features/` today: **2** carry `@fdc3_2.2` (the 2.2 pack, 12 scenarios), and **8** more are `@fdc3_3.0`-only (11 scenarios) — the 3.0 profile runs both, **23** scenarios total. `@fdc3_2.0` is a scenario-level tag inside the 2.2 files marking scenarios also valid under FDC3 2.0 (**119** scenarios across **10** files).
 
 #### `@fdc3_2.2` feature files
 
 | Feature file | `@fdc3_2.2` scenarios | of which `@fdc3_2.0` |
 | --- | --- | --- |
-| `test/features/apps/apps.feature` | 17 | 16 |
-| `test/features/apps/disconnect-cleanup.feature` | 3 | 3 |
-| `test/features/channels/app-channels.feature` | 16 | 16 |
-| `test/features/channels/private-channel.feature` | 13 | 11 |
-| `test/features/channels/user-channels.feature` | 20 | 19 |
-| `test/features/context/broadcast.feature` | 7 | 4 |
+| `test/features/channels/private-channel.feature` | 4 | 9 |
 | `test/features/context/event-listeners.feature` | 8 | — |
-| `test/features/intents/find-intent.feature` | 20 | 18 |
-| `test/features/intents/intent-result.feature` | 6 | 6 |
-| `test/features/intents/raise-intent-with-context.feature` | 10 | 9 |
-| `test/features/intents/raise-intent.feature` | 16 | 14 |
 
-**Total: 136 scenarios across 11 files.**
+**Total: 12 scenarios across 2 files.**
 
 #### `@fdc3_3.0`-only feature files (no `@fdc3_2.2` tag)
 
@@ -57,19 +48,21 @@ _This section is generated from `packages/sail-desktop-agent/test/features/` —
 | `test/features/intents/intent-listener-conflict.feature` | 7 |
 | `test/features/intents/intent-metadata-performance.feature` | 2 |
 | `test/features/intents/intent-result-metadata.feature` | 3 |
+| `test/features/intents/intent-result.feature` | 4 |
+| `test/features/intents/raise-intent.feature` | 1 |
 
-**Total: 18 scenarios across 6 files.**
+**Total: 11 scenarios across 8 files.**
 
 #### Run by profile (`packages/sail-desktop-agent/cucumber.yml`)
 
 ```bash
 cd packages/sail-desktop-agent
-npx cucumber-js --profile fdc3-2.2   # 136 scenarios
-npx cucumber-js --profile fdc3-3.0   # 154 scenarios
-npx cucumber-js --profile fdc3-2.0   # 116 scenarios
+npx cucumber-js --profile fdc3-2.2   # 12 scenarios
+npx cucumber-js --profile fdc3-3.0   # 23 scenarios
+npx cucumber-js --profile fdc3-2.0   # 119 scenarios
 ```
 
-<!-- GENERATED:CONFORMANCE-INVENTORY:END -->
+{/* GENERATED:CONFORMANCE-INVENTORY:END */}
 
 ## What the FDC3-version tags mean
 

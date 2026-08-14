@@ -1,5 +1,22 @@
 # sail-desktop-agent — collapse `DesktopAgent` / `SailDesktopAgent` into one class
 
+> **ARCHIVED 2026-08-14.** Moved to `.cursor/plans/archive/`. All slices landed (1, 2.0-2.6).
+>
+> **The "(uncommitted)" in its old status line was stale.** The work was committed on 2026-08-04 as
+> `4b64c6be`, which `git merge-base --is-ancestor` confirms is an ancestor of `a6c6b62`.
+> Re-verified: `src/agent/desktop-agent.ts` no longer exists, `SailDesktopAgent` is a single class at
+> `src/agent/sail-desktop-agent.ts:75`, and the separate `connector` field is gone (slice 2.6).
+>
+> **No open items to carry.** Its one "open decision" — whether `@internal` is decorative — is
+> resolved: `tsconfig.json:5` sets `"stripInternal": true`. The `validateOrigin?` hook and
+> `createSailBrowserDesktopAgent` inertness were explicit hand-offs to other plans, not leftovers;
+> the WCP4 origin allowlist it discusses is parked at
+> `.cursor/plans/parked-wcp4-origin-allowlist.md`. Its trailing "Review Notes" section is an unfilled
+> template.
+>
+> **Stale throughout:** references to `sail-platform` describe APIs deleted in the 2026-08-04 cull.
+> The "two entry points" this collapse had to keep working are now one — `new SailDesktopAgent({...})`.
+
 > **Note (2026-08-04 `sail-platform` cull).** This plan's own work is done and stands. Its references
 > to `sail-platform` are stale: `SailPlatform` and `createSailBrowserDesktopAgent` are deleted, so the
 > "two entry points" this collapse had to keep working are now one — `new SailDesktopAgent({...})`.

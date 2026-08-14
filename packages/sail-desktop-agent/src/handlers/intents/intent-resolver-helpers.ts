@@ -8,12 +8,13 @@ import type { AppIdentifier, AppMetadata } from "@finos/fdc3"
 import type { DirectoryApp } from "../../app-directory/types"
 import type { AgentState, AppDirectoryState } from "../../state/types"
 import { retrieveAllApps, retrieveAppsById } from "../../app-directory/app-directory-queries"
-import { AppInstanceState, type AppInstance } from "../../state/types"
+import type { AppInstance } from "../../state/types"
 import type { IntentHandlerOption, IntentResolutionChoice } from "../intent-resolution-callback"
 import {
   getActiveListenersForIntent,
   getInstance,
   getInstancesByAppId,
+  isInstanceConnected,
 } from "../../state/selectors"
 import {
   isContextTypeCompatible,
@@ -133,9 +134,7 @@ export function createResolverAppIntent(
   // Include running apps that declare the intent in AppD even when they have not yet
   // registered an intent listener for this intent name.
   directoryMatches.forEach(app => {
-    const connectedInstances = getInstancesByAppId(state, app.appId).filter(
-      instance => instance.state === AppInstanceState.CONNECTED,
-    )
+    const connectedInstances = getInstancesByAppId(state, app.appId).filter(isInstanceConnected)
 
     connectedInstances.forEach(instance => {
       apps.push(appToMetadata(app, app.appId, intentName, instance))

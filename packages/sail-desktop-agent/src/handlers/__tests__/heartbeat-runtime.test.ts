@@ -8,11 +8,11 @@ import {
 } from "../heartbeat/runtime"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { AppInstanceState } from "../../state/types"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { createInitialState } from "../../state/initial-state"
 import type { AgentState } from "../../state/types"
-import { createDACPTestContext } from "./test-context"
-import { withResponseDispatcher } from "./test-context"
+import { createDACPTestParams } from "./test-params"
+import { withResponseDispatcher } from "./test-params"
 import { MockTransport } from "../../__tests__/utils/mock-transport"
 
 afterEach(() => {
@@ -74,7 +74,7 @@ describe("startHeartbeat disconnect alignment", () => {
     vi.useRealTimers()
   })
 
-  it("keys heartbeat timers by the instanceId passed to startHeartbeat, not the handler context id", () => {
+  it("keys heartbeat timers by the instanceId passed to startHeartbeat, not the handler params id", () => {
     const tempInstanceId = "temp-connection-uuid"
     const validatedInstanceId = "validated-instance-from-wcp5"
     let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
@@ -85,11 +85,11 @@ describe("startHeartbeat disconnect alignment", () => {
     })
     state = updateInstanceState(state, validatedInstanceId, AppInstanceState.CONNECTED)
 
-    const { context, getState } = createDACPTestContext({
+    const { params, getState } = createDACPTestParams({
       instanceId: tempInstanceId,
       initialState: state,
     })
-    const heartbeatContext = withResponseDispatcher(context, new MockTransport())
+    const heartbeatContext = withResponseDispatcher(params, new MockTransport())
 
     startHeartbeat(validatedInstanceId, heartbeatContext)
 

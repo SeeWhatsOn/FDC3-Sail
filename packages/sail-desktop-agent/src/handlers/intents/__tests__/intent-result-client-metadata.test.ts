@@ -3,16 +3,15 @@ import type { BrowserTypes } from "@finos/fdc3"
 
 import { MockTransport } from "../../../__tests__/utils/mock-transport"
 import { createInMemoryTransportPair } from "../../../../test/support/in-memory-transport"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../../agent/default-user-channels"
 import { createInitialState } from "../../../state/initial-state"
 import { addPendingIntent, connectInstance, updateInstanceState } from "../../../state/mutators"
 import { AppInstanceState } from "../../../state/types"
 import {
-  createDACPTestContext,
+  createDACPTestParams,
   createDacpRequestMeta,
   withResponseDispatcher,
-} from "../../__tests__/test-context"
-import type { PendingIntentPromiseEntry } from "../../types"
+} from "../../__tests__/test-params"
 import { handleIntentResultRequest } from "../intent-result-handlers"
 import type { IntentResultContextMetadata } from "../intent-result-metadata"
 
@@ -22,7 +21,7 @@ type RaiseIntentResultResponse = BrowserTypes.AgentResponseMessage & {
     intentResult?: BrowserTypes.IntentResult & {
       metadata?: IntentResultContextMetadata
     }
-    metadata?: IntentResultContextMetadata
+    resultMetadata?: IntentResultContextMetadata
     error?: string
   }
   meta: BrowserTypes.AgentResponseMessageMeta & {
@@ -40,14 +39,6 @@ const BASE = {
 } as const
 
 function setupPendingIntentContext() {
-  const pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
-  const resolve = vi.fn()
-  pendingIntentPromises.set(BASE.requestId, {
-    resolve,
-    reject: vi.fn(),
-    requestType: "raiseIntentRequest",
-  })
-
   let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
   state = connectInstance(state, {
     instanceId: BASE.sourceInstanceId,
@@ -68,19 +59,19 @@ function setupPendingIntentContext() {
     sourceInstanceId: BASE.sourceInstanceId,
     targetInstanceId: BASE.targetInstanceId,
     targetAppId: BASE.targetAppId,
+    requestType: "raiseIntentRequest",
   })
 
-  const { context } = createDACPTestContext({
+  const { params, getState } = createDACPTestParams({
     instanceId: BASE.handlerInstanceId,
-    pendingIntentPromises,
     initialState: state,
   })
 
   const transport = new MockTransport()
   return {
-    context: withResponseDispatcher(context, transport),
+    params: withResponseDispatcher(params, transport),
     transport,
-    resolve,
+    getState,
   }
 }
 
@@ -123,7 +114,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
   ])(
     "$toolboxScenario exposes non-empty intentResult.metadata for client getResultMetadata()",
     ({ intentResult }) => {
-      const { context, transport, resolve } = setupPendingIntentContext()
+      const { params, transport, getState } = setupPendingIntentContext()
 
       handleIntentResultRequest(
         {
@@ -138,7 +129,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
             intentResult,
           },
         },
-        context,
+        params,
       )
 
       const response = findRaiseIntentResultResponse(transport)
@@ -160,8 +151,8 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
       }
       expect(traceId.length).toBeGreaterThan(0)
 
-      expect(resolve).toHaveBeenCalledOnce()
-      expect(resolve.mock.calls[0]?.[0]).not.toHaveProperty("metadata")
+      // The result settles the request: the pending intent leaves state.
+      expect(getState().intents.pending[BASE.requestId]).toBeUndefined()
     },
   )
 
@@ -169,7 +160,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
     const contextPayload = { type: "testContextY", id: { value: "1" } }
     const appSignature = "conformance-signature"
     const appCustom = { conformanceKey: "value" }
-    const { context, transport, resolve } = setupPendingIntentContext()
+    const { params, transport, getState } = setupPendingIntentContext()
 
     handleIntentResultRequest(
       {
@@ -191,13 +182,13 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
           } as unknown as BrowserTypes.IntentResult,
         },
       },
-      context,
+      params,
     )
 
     const response = findRaiseIntentResultResponse(transport)
     expect(response).toBeDefined()
     expect(response?.payload.intentResult).toEqual({ context: contextPayload })
-    expect(resolve).toHaveBeenCalledWith({ context: contextPayload })
+    expect(getState().intents.pending[BASE.requestId]).toBeUndefined()
 
     const clientMetadata = readClientGetResultMetadata(response!)
     expect(clientMetadata?.signature).toBe(appSignature)
@@ -213,7 +204,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
   })
 
   it("raiseIntentResultResponse clones through InMemoryTransport without circular metadata refs", async () => {
-    const { context, resolve } = setupPendingIntentContext()
+    const { params, getState } = setupPendingIntentContext()
     const [daTransport, peerTransport] = createInMemoryTransportPair()
     const received: unknown[] = []
     peerTransport.onMessage(message => {
@@ -233,7 +224,7 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
           intentResult: { context: { type: "testContextY", id: { value: "1" } } },
         },
       },
-      withResponseDispatcher(context, daTransport),
+      withResponseDispatcher(params, daTransport),
     )
 
     await vi.waitFor(() => {
@@ -248,10 +239,10 @@ describe("IntentResolution.getResultMetadata() client metadata path", () => {
         (message as { type: string }).type === "raiseIntentResultResponse",
     )
     expect(response).toBeDefined()
-    expect(response!.payload.metadata).toBeDefined()
+    expect(response!.payload.resultMetadata).toBeDefined()
     expect(response!.payload.intentResult?.metadata).toBeDefined()
-    expect(response!.payload.metadata).not.toBe(response!.payload.intentResult?.metadata)
+    expect(response!.payload.resultMetadata).not.toBe(response!.payload.intentResult?.metadata)
     expect(readClientGetResultMetadata(response!)?.traceId).toEqual(expect.any(String))
-    expect(resolve).toHaveBeenCalledOnce()
+    expect(getState().intents.pending[BASE.requestId]).toBeUndefined()
   })
 })

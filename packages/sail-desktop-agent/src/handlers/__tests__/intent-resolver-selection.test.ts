@@ -5,15 +5,15 @@ import { connectInstance, updateInstanceState } from "../../state/mutators/insta
 import { addApp } from "../../state/mutators/app-directory"
 import { registerIntentListener } from "../../state/mutators/intent"
 import { createInitialState } from "../../state/initial-state"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { AppInstanceState } from "../../state/types"
 import type {
   IntentResolutionRequest,
   IntentResolutionResponse,
 } from "../intent-resolution-callback"
 import type { DirectoryApp } from "../../app-directory/types"
-import { createDACPTestContext, createDacpRequestMeta } from "./test-context"
-import { withResponseDispatcher } from "./test-context"
+import { createDACPTestParams, createDacpRequestMeta } from "./test-params"
+import { withResponseDispatcher } from "./test-params"
 import { handleRaiseIntentRequest } from "../intents/intent-raise-intent"
 import { handleRaiseIntentForContextRequest } from "../intents/intent-raise-intent-for-context"
 
@@ -54,10 +54,10 @@ function createRaiseIntentRequest(
 }
 
 function seedCatalogApp(
-  context: ReturnType<typeof createDACPTestContext>["context"],
+  params: ReturnType<typeof createDACPTestParams>["params"],
   app: DirectoryApp,
 ): void {
-  context.setState(state => addApp(state, app))
+  params.setState(state => addApp(state, app))
 }
 
 describe("intent resolver selection delivery", () => {
@@ -74,9 +74,9 @@ describe("intent resolver selection delivery", () => {
     })
 
     const transport = new MockTransport()
-    const { context } = createDACPTestContext({ instanceId: "source-1", initialState: state })
-    Object.assign(context, withResponseDispatcher(context, transport))
-    seedCatalogApp(context, {
+    const { params } = createDACPTestParams({ instanceId: "source-1", initialState: state })
+    Object.assign(params, withResponseDispatcher(params, transport))
+    seedCatalogApp(params, {
       appId: "chart-app",
       title: "Chart App",
       type: "web",
@@ -90,7 +90,7 @@ describe("intent resolver selection delivery", () => {
         },
       },
     })
-    seedCatalogApp(context, {
+    seedCatalogApp(params, {
       appId: "portfolio-app",
       title: "Portfolio App",
       type: "web",
@@ -106,7 +106,7 @@ describe("intent resolver selection delivery", () => {
     })
 
     let resolverRequest: IntentResolutionRequest | undefined
-    context.requestIntentResolution = vi.fn(
+    params.requestIntentResolution = vi.fn(
       (request: IntentResolutionRequest): Promise<IntentResolutionResponse> => {
         resolverRequest = request
         return Promise.resolve({
@@ -117,7 +117,7 @@ describe("intent resolver selection delivery", () => {
       },
     )
 
-    await handleRaiseIntentRequest(createRaiseIntentRequest("raise-selected"), context)
+    await handleRaiseIntentRequest(createRaiseIntentRequest("raise-selected"), params)
 
     expect(resolverRequest?.choices).toBeDefined()
     const choices = resolverRequest!.choices!
@@ -175,9 +175,9 @@ describe("intent resolver selection delivery", () => {
     })
 
     const transport = new MockTransport()
-    const { context } = createDACPTestContext({ instanceId: "source-1", initialState: state })
-    Object.assign(context, withResponseDispatcher(context, transport))
-    seedCatalogApp(context, {
+    const { params } = createDACPTestParams({ instanceId: "source-1", initialState: state })
+    Object.assign(params, withResponseDispatcher(params, transport))
+    seedCatalogApp(params, {
       appId: "chart-app",
       title: "Chart App",
       type: "web",
@@ -190,14 +190,14 @@ describe("intent resolver selection delivery", () => {
         },
       },
     })
-    context.requestIntentResolution = vi.fn()
+    params.requestIntentResolution = vi.fn()
 
     await handleRaiseIntentRequest(
       createRaiseIntentRequest("raise-targeted", { appId: "chart-app", instanceId: "chart-1" }),
-      context,
+      params,
     )
 
-    expect(context.requestIntentResolution).not.toHaveBeenCalled()
+    expect(params.requestIntentResolution).not.toHaveBeenCalled()
     const sentMessages = transport.sentMessages as SentMessage[]
     expect(sentMessages.find(message => message.type === "intentEvent")).toMatchObject({
       type: "intentEvent",
@@ -218,9 +218,9 @@ describe("intent resolver selection delivery", () => {
     })
 
     const transport = new MockTransport()
-    const { context } = createDACPTestContext({ instanceId: "source-1", initialState: state })
-    Object.assign(context, withResponseDispatcher(context, transport))
-    seedCatalogApp(context, {
+    const { params } = createDACPTestParams({ instanceId: "source-1", initialState: state })
+    Object.assign(params, withResponseDispatcher(params, transport))
+    seedCatalogApp(params, {
       appId: "chart-app",
       title: "Chart App",
       type: "web",
@@ -233,7 +233,7 @@ describe("intent resolver selection delivery", () => {
         },
       },
     })
-    seedCatalogApp(context, {
+    seedCatalogApp(params, {
       appId: "portfolio-app",
       title: "Portfolio App",
       type: "web",
@@ -246,7 +246,7 @@ describe("intent resolver selection delivery", () => {
         },
       },
     })
-    context.requestIntentResolution = vi.fn(
+    params.requestIntentResolution = vi.fn(
       (request: IntentResolutionRequest): Promise<IntentResolutionResponse> =>
         Promise.resolve({
           requestId: request.requestId,
@@ -255,7 +255,7 @@ describe("intent resolver selection delivery", () => {
         }),
     )
 
-    await handleRaiseIntentRequest(createRaiseIntentRequest("raise-invalid-selection"), context)
+    await handleRaiseIntentRequest(createRaiseIntentRequest("raise-invalid-selection"), params)
 
     expect((transport.sentMessages as SentMessage[])[0]).toMatchObject({
       type: "raiseIntentResponse",
@@ -284,9 +284,9 @@ describe("intent resolver selection delivery", () => {
     })
 
     const transport = new MockTransport()
-    const { context } = createDACPTestContext({ instanceId: "source-1", initialState: state })
-    Object.assign(context, withResponseDispatcher(context, transport))
-    seedCatalogApp(context, {
+    const { params } = createDACPTestParams({ instanceId: "source-1", initialState: state })
+    Object.assign(params, withResponseDispatcher(params, transport))
+    seedCatalogApp(params, {
       appId: "portfolio-app",
       title: "Portfolio App",
       type: "web",
@@ -299,7 +299,7 @@ describe("intent resolver selection delivery", () => {
         },
       },
     })
-    seedCatalogApp(context, {
+    seedCatalogApp(params, {
       appId: "chart-app",
       title: "Chart App",
       type: "web",
@@ -314,7 +314,7 @@ describe("intent resolver selection delivery", () => {
     })
 
     let resolverRequest: IntentResolutionRequest | undefined
-    context.requestIntentResolution = vi.fn(
+    params.requestIntentResolution = vi.fn(
       (request: IntentResolutionRequest): Promise<IntentResolutionResponse> => {
         resolverRequest = request
         return Promise.resolve({
@@ -334,7 +334,7 @@ describe("intent resolver selection delivery", () => {
         }),
         payload: { context: { type: "fdc3.portfolio", id: { portfolioId: "P1" } } },
       },
-      context,
+      params,
     )
 
     expect(resolverRequest?.choices?.map(choice => choice.intent.name)).toEqual(

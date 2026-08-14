@@ -20,8 +20,30 @@ export const instanceContextListenerMatchesBroadcast = (
   broadcastContextType: string,
 ): boolean => listener.contextType === broadcastContextType || listener.contextType === "*"
 
+/** WCP5 complete: the instance can be sent DACP messages right now. */
+export const isInstanceConnected = (instance: AppInstance): boolean =>
+  instance.state === AppInstanceState.CONNECTED
+
+/**
+ * Not gone: CONNECTED, or PENDING mid-handshake.
+ *
+ * `AppInstanceState` only has PENDING/CONNECTED today (browserResidentDesktopAgents.md v2.2
+ * "Disconnects": Sail's `removeInstance` deletes closed instances rather than retaining a
+ * CLOSED state), which makes this check a tautology right now. A retained CLOSED state is
+ * planned; once it ships this becomes load bearing. Deleting it now fails OPEN — an instance
+ * that has actually gone away would still read as receivable.
+ */
+export const isInstanceReceivable = (instance: AppInstance): boolean =>
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- see doc comment above: AppInstanceState only has PENDING/CONNECTED today, so this is a tautology until the planned CLOSED state ships; deleting it now fails OPEN.
+  instance.state === AppInstanceState.CONNECTED || instance.state === AppInstanceState.PENDING
+
+/** Valid target for a launch this agent initiated: connected, or the launcher itself mid-handshake. */
+export const isLaunchTargetReady = (instance: AppInstance, launcherInstanceId: string): boolean =>
+  isInstanceConnected(instance) ||
+  (instance.state === AppInstanceState.PENDING && instance.instanceId === launcherInstanceId)
+
 export const getConnectedInstances = (state: AgentState): AppInstance[] =>
-  Object.values(state.instances).filter(i => i.state === AppInstanceState.CONNECTED)
+  Object.values(state.instances).filter(isInstanceConnected)
 
 export const getInstancesByState = (
   state: AgentState,

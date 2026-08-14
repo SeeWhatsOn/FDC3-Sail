@@ -1,5 +1,21 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent defect fixes
 
+> **ARCHIVED 2026-08-14.** Moved to `.cursor/plans/archive/`. Done — all four slices verified and
+> reviewed. Each fix re-verified against `a6c6b62`: `meta.hostInstanceId` is stripped
+> (`browser-app-connection.ts:219`), `AppConnectionOptions.fdc3Version` is gone in favour of
+> `WCPHandshakeContext.fdc3Version`, the three off-schema payloads are trimmed
+> (`channels/handlers.ts:398`, `private-channels/handlers.ts:476`, `heartbeat/handlers.ts:38`), and
+> `raiseIntent` now rejects an undefined context the same way `raiseIntentForContext` does
+> (`intent-raise-intent.ts:41-52`).
+>
+> **No open items to carry.** Its "out of scope" and "Parked Follow-ups" lists restate the park list
+> of its own source document, which is still live: see
+> `.cursor/plans/sail-desktop-agent-audit-2026-08.md` §10. Every one of those items was re-verified
+> as still present in the tree and still parked.
+>
+> Note its slice 3 self-correction: `channelChangedEvent` first shipped with both fields, which is
+> invalid per the schema's `anyOf`, then was fixed. Current code matches the corrected version.
+
 Status: **done** — all four slices verified + reviewed
 Current slice: none. Slices 1–4 complete.
 Review/fix loops: 1 on slice 1 (review + fix, both clean). Slice 2 failures: 0. Slice 3 failures: 0. Slice 4 failures: 0
@@ -280,6 +296,14 @@ So the test guards the end-to-end property, not the destructure. It would catch 
 **Full verification after the fix pass:** `npx tsc --noEmit` clean · `npx vitest run` **330 passed / 50 files** (one fewer than before — 2 branch tests deleted, 1 added) · `npx cucumber-js` **154 scenarios / 1461 steps passed** · `npx vp lint .` clean.
 
 ## Parked Follow-ups
+
+**New register opened 2026-08-11 — `.cursor/plans/sail-da-defect-register-2026-08-11.md`.** A
+dual-agent read-only review (Sonnet 5 + Grok 4.5, identical brief) found 9 unfixed defects, all
+ratified against source. Two are directly relevant here: **slice 1's identity/ownership fix closed
+the class only for the five `resolveDacpHandlerInstanceId` callers — `handlers/events/handlers.ts:107-115`
+and `handlers/intents/intent-listener-handlers.ts:130-135` have the same hole and were never swept.**
+Three of the nine are second instances of classes this plan or `sail-desktop-agent-review-remediation.md`
+already closed once elsewhere.
 
 **New, found during slice 3 (2026-08-06) — `channelChangedEvent` fan-out has no subject.** `notifyChannelChanged` (`handlers/channels/handlers.ts:367-412`) notifies every instance with a `channelChanged` or catch-all listener, and the schema-legal payload (`{currentChannelId?, newChannelId?}`) carries no app identity — so a receiver cannot tell whether the event describes its own channel change or another app's. `event-listeners.feature:50-59` and `:62-71` pin the current fan-out. Likely fix: notify only the instance whose channel changed, and rewrite those 2 scenarios. Parked by user decision rather than folded into slice 3, because it is a behaviour change and slice 3's Constraint forbids one. Also revisit the two doc comments that describe the fan-out as intended: `handlers/types.ts:141` and `agent/sail-desktop-agent-controllers.ts:164`.
 

@@ -33,6 +33,7 @@ export function extractConformance1Url(apps: DirectoryApp[]): string {
   const conformance1 = apps.find(app => app.appId === "Conformance1")
   const url =
     conformance1?.type === "web" &&
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- unvalidated conformance-appd.json fixture
     conformance1.details &&
     "url" in conformance1.details &&
     typeof conformance1.details.url === "string"
@@ -174,9 +175,7 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
       if (metadata.hostIdentifier && metadata.hostIdentifier !== metadata.instanceId) {
         openWithContextCleanup.cancelOrphanPopupCleanup(metadata.hostIdentifier)
       }
-      if (metadata.source) {
-        popupWatcher.remapPopupByWindow(metadata.source, metadata.instanceId)
-      }
+      popupWatcher.remapPopupByWindow(metadata.source, metadata.instanceId)
       console.log(
         `[ConformanceHarness] WCP connected: ${metadata.appId} (${metadata.instanceId}) hostIdentifier=${metadata.hostIdentifier ?? "n/a"}`,
       )

@@ -1,17 +1,16 @@
-import { describe, expect, it, vi } from "vite-plus/test"
+import { describe, expect, it } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 
 import { MockTransport } from "../../../__tests__/utils/mock-transport"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../../agent/default-user-channels"
 import { createInitialState } from "../../../state/initial-state"
 import { addPendingIntent, connectInstance, updateInstanceState } from "../../../state/mutators"
 import { AppInstanceState } from "../../../state/types"
 import {
-  createDACPTestContext,
+  createDACPTestParams,
   createDacpRequestMeta,
   withResponseDispatcher,
-} from "../../__tests__/test-context"
-import type { PendingIntentPromiseEntry } from "../../types"
+} from "../../__tests__/test-params"
 import { handleIntentResultRequest } from "../intent-result-handlers"
 import type { IntentResultContextMetadata } from "../intent-result-metadata"
 
@@ -19,7 +18,7 @@ type RaiseIntentResultResponse = BrowserTypes.AgentResponseMessage & {
   type: "raiseIntentResultResponse"
   payload: {
     intentResult?: BrowserTypes.IntentResult
-    metadata?: IntentResultContextMetadata
+    resultMetadata?: IntentResultContextMetadata
     error?: string
   }
   meta: BrowserTypes.AgentResponseMessageMeta & {
@@ -37,14 +36,6 @@ const BASE = {
 } as const
 
 function setupPendingIntentContext() {
-  const pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
-  const resolve = vi.fn()
-  pendingIntentPromises.set(BASE.requestId, {
-    resolve,
-    reject: vi.fn(),
-    requestType: "raiseIntentRequest",
-  })
-
   let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
   state = connectInstance(state, {
     instanceId: BASE.sourceInstanceId,
@@ -65,19 +56,19 @@ function setupPendingIntentContext() {
     sourceInstanceId: BASE.sourceInstanceId,
     targetInstanceId: BASE.targetInstanceId,
     targetAppId: BASE.targetAppId,
+    requestType: "raiseIntentRequest",
   })
 
-  const { context } = createDACPTestContext({
+  const { params, getState } = createDACPTestParams({
     instanceId: BASE.handlerInstanceId,
-    pendingIntentPromises,
     initialState: state,
   })
 
   const transport = new MockTransport()
   return {
-    context: withResponseDispatcher(context, transport),
+    params: withResponseDispatcher(params, transport),
     transport,
-    resolve,
+    getState,
   }
 }
 
@@ -108,7 +99,7 @@ describe("handleIntentResultRequest", () => {
       intentResult: {},
     },
   ])("sends raiseIntentResultResponse with DA metadata for $name", ({ intentResult }) => {
-    const { context, transport, resolve } = setupPendingIntentContext()
+    const { params, transport, getState } = setupPendingIntentContext()
 
     handleIntentResultRequest(
       {
@@ -123,14 +114,14 @@ describe("handleIntentResultRequest", () => {
           intentResult,
         },
       },
-      context,
+      params,
     )
 
     const response = findRaiseIntentResultResponse(transport)
     expect(response).toBeDefined()
     expect(response?.meta.destination?.instanceId).toBe(BASE.sourceInstanceId)
 
-    const metadata = response!.payload.metadata
+    const metadata = response!.payload.resultMetadata
     expect(metadata).toBeDefined()
     expect(metadata!.source).toEqual({
       appId: BASE.targetAppId,
@@ -140,6 +131,7 @@ describe("handleIntentResultRequest", () => {
     expect(Number.isNaN(Date.parse(metadata!.timestamp))).toBe(false)
     expect(metadata!.traceId).toEqual(expect.any(String))
     expect(metadata!.traceId.length).toBeGreaterThan(0)
-    expect(resolve).toHaveBeenCalledOnce()
+    // The result settles the request: the pending intent leaves state.
+    expect(getState().intents.pending[BASE.requestId]).toBeUndefined()
   })
 })

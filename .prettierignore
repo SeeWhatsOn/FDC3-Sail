@@ -11,3 +11,4 @@ pnpm-lock.yaml
 *.tsbuildinfo
 **/cucumber-report.html
 **/test-results.xml
+.cursor/plans/archive/*.html

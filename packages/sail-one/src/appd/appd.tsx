@@ -170,10 +170,8 @@ export function AppDPanel({ closeAction }: AppPanelProps) {
                           disabled={!canOpenWeb}
                           icon={<PanelTop aria-hidden strokeWidth={2} />}
                           onClick={() => {
-                            if (chosen) {
-                              void getAppState().open(chosen, AppHosting.Frame)
-                              closeAction()
-                            }
+                            void getAppState().open(chosen, AppHosting.Frame)
+                            closeAction()
                           }}
                         />
                         <PopupHeaderButton
@@ -181,10 +179,8 @@ export function AppDPanel({ closeAction }: AppPanelProps) {
                           disabled={!canOpenWeb}
                           icon={<ExternalLink aria-hidden strokeWidth={2} />}
                           onClick={() => {
-                            if (chosen) {
-                              void getAppState().open(chosen, AppHosting.Tab)
-                              closeAction()
-                            }
+                            void getAppState().open(chosen, AppHosting.Tab)
+                            closeAction()
                           }}
                         />
                       </div>
@@ -262,7 +258,9 @@ export function AppDPanel({ closeAction }: AppPanelProps) {
 
 function onlyRelevantApps(d: DirectoryApp): boolean {
   const sail = d.hostManifests?.sail as { [key: string]: boolean }
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- FDC3 App Directory JSON: the `as` cast erases hostManifests.sail's optionality, but the source JSON can omit it
   const show = sail ? sail.searchable != false : true
   const url = (d.details as WebAppDetails).url
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- FDC3 App Directory JSON: the `as WebAppDetails` cast erases url's optionality, but a "web" entry's JSON can still omit it
   return show && ((d.type == "web" && url != null) || d.type == "native")
 }

@@ -138,7 +138,7 @@ function TabGrid({
     }
 
     const setResizing = (resizing: boolean) => {
-      container.classList.toggle(styles.resizing, resizing)
+      container.classList.toggle(styles.resizing!, resizing)
     }
 
     grid.on("dragstart", () => {

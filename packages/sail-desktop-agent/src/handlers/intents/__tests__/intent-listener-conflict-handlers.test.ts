@@ -2,15 +2,15 @@ import { describe, expect, it } from "vite-plus/test"
 import { ResolveError } from "@finos/fdc3"
 
 import { MockTransport } from "../../../__tests__/utils/mock-transport"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../../agent/default-user-channels"
 import { createInitialState } from "../../../state/initial-state"
 import { connectInstance, updateInstanceState } from "../../../state/mutators"
 import { AppInstanceState } from "../../../state/types"
 import {
-  createDACPTestContext,
+  createDACPTestParams,
   createDacpRequestMeta,
   withResponseDispatcher,
-} from "../../__tests__/test-context"
+} from "../../__tests__/test-params"
 import { handleAddIntentListener } from "../intent-listener-handlers"
 
 describe("handleAddIntentListener intent conflict (FDC3 3.0)", () => {
@@ -25,11 +25,11 @@ describe("handleAddIntentListener intent conflict (FDC3 3.0)", () => {
     state = updateInstanceState(state, instanceId, AppInstanceState.CONNECTED)
 
     const transport = new MockTransport()
-    const { context } = createDACPTestContext({ instanceId, initialState: state })
-    const handlerContext = {
-      ...withResponseDispatcher(context, transport),
+    const { params: baseParams } = createDACPTestParams({ instanceId, initialState: state })
+    const params = {
+      ...withResponseDispatcher(baseParams, transport),
       implementationMetadata: {
-        ...context.implementationMetadata,
+        ...baseParams.implementationMetadata,
         fdc3Version: "3.0",
       },
     }
@@ -40,8 +40,8 @@ describe("handleAddIntentListener intent conflict (FDC3 3.0)", () => {
       payload: { intent: "aTestingIntent1" },
     }
 
-    handleAddIntentListener(request, handlerContext)
-    handleAddIntentListener(request, handlerContext)
+    handleAddIntentListener(request, params)
+    handleAddIntentListener(request, params)
 
     const responses = transport.sentMessages
       .filter(

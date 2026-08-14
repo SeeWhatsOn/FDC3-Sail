@@ -200,6 +200,7 @@ export class BrowserAppConnection extends AppConnectionEventEmitter {
     instanceId: string,
   ): AppRequestMessage | WebConnectionProtocolMessage {
     const currentMeta =
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- message crosses the MessagePort trust boundary; app-authored `meta` is stripped and re-stamped here (the anti-spoof path AGENTS.md documents), so the declared type is an assumption, not a guarantee.
       "meta" in message && message.meta && typeof message.meta === "object"
         ? message.meta
         : undefined

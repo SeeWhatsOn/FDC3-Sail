@@ -42,10 +42,10 @@ async function sendWcp4ValidateForInstance(
   const apps = retrieveAppsById(world.getState().appDirectory, instance.appId)
   const appUrl =
     apps.length > 0 &&
-    apps[0].details &&
-    typeof apps[0].details === "object" &&
-    "url" in apps[0].details
-      ? apps[0].details.url
+    apps[0]!.details &&
+    typeof apps[0]!.details === "object" &&
+    "url" in apps[0]!.details
+      ? apps[0]!.details.url
       : `https://example.com/${instance.appId}`
 
   const message = {
@@ -54,10 +54,7 @@ async function sendWcp4ValidateForInstance(
       // Fixed id — do not consume the Cucumber deterministic uuid counter used by listener steps.
       connectionAttemptUuid: `wcp-attempt-${uuid}`,
       timestamp: new Date(),
-      messageOrigin: new URL(appUrl).origin,
-      // Required for bind-host WCP4 adoption of launcher-pre-registered instance ids (e.g. uuid-0).
-      wcpSourceWindow: { hostPanel: uuid },
-    } as unknown as WebConnectionProtocol4ValidateAppIdentity["meta"],
+    },
     payload: {
       instanceId: uuid,
       instanceUuid: uuid,
@@ -66,7 +63,11 @@ async function sendWcp4ValidateForInstance(
     },
   } as unknown as WebConnectionProtocol4ValidateAppIdentity
 
-  await world.mockTransport.receiveMessage(message)
+  // Required for bind-host WCP4 adoption of launcher-pre-registered instance ids (e.g. uuid-0).
+  await world.mockTransport.receiveMessage(message, {
+    sourceWindow: { hostPanel: uuid },
+    messageOrigin: new URL(appUrl).origin,
+  })
 
   const validatedId = world.mockTransport.lastWcp5ValidatedInstanceId
   if (validatedId) {
@@ -212,10 +213,10 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
     ? (() => {
         const apps = retrieveAppsById(this.getState().appDirectory, instance.appId)
         return apps.length > 0 &&
-          apps[0].details &&
-          typeof apps[0].details === "object" &&
-          "url" in apps[0].details
-          ? apps[0].details.url
+          apps[0]!.details &&
+          typeof apps[0]!.details === "object" &&
+          "url" in apps[0]!.details
+          ? apps[0]!.details.url
           : `https://example.com/${instance.appId}`
       })()
     : `https://example.com/unknown-app/${uuid}`
@@ -225,9 +226,7 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
     meta: {
       connectionAttemptUuid: this.createUUID(),
       timestamp: new Date(),
-      messageOrigin: new URL(appUrl).origin,
-      wcpSourceWindow: { hostPanel: uuid },
-    } as unknown as WebConnectionProtocol4ValidateAppIdentity["meta"],
+    },
     payload: {
       instanceId: uuid,
       instanceUuid: uuid,
@@ -236,7 +235,10 @@ When("{string} revalidates", async function (this: CustomWorld, uuid: string) {
     },
   }
 
-  await this.mockTransport.receiveMessage(message)
+  await this.mockTransport.receiveMessage(message, {
+    sourceWindow: { hostPanel: uuid },
+    messageOrigin: new URL(appUrl).origin,
+  })
 })
 
 Then("running apps will be", function (this: CustomWorld, dataTable: DataTable) {

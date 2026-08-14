@@ -23,8 +23,8 @@ export const acknowledgeHeartbeat = (state: AgentState, instanceId: string): Age
   if (!state.heartbeats[instanceId]) return state
 
   return produce(state, draft => {
-    draft.heartbeats[instanceId].lastAcknowledgmentReceived = Date.now()
-    draft.heartbeats[instanceId].missedHeartbeats = 0
+    draft.heartbeats[instanceId]!.lastAcknowledgmentReceived = Date.now()
+    draft.heartbeats[instanceId]!.missedHeartbeats = 0
   })
 }
 
@@ -32,8 +32,8 @@ export const updateHeartbeatSent = (state: AgentState, instanceId: string): Agen
   if (!state.heartbeats[instanceId]) return state
 
   return produce(state, draft => {
-    draft.heartbeats[instanceId].lastHeartbeatSent = Date.now()
-    draft.heartbeats[instanceId].missedHeartbeats += 1
+    draft.heartbeats[instanceId]!.lastHeartbeatSent = Date.now()
+    draft.heartbeats[instanceId]!.missedHeartbeats += 1
   })
 }
 

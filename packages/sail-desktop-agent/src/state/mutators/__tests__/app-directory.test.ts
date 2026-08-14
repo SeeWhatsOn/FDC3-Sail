@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vite-plus/test"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../../agent/default-user-channels"
 import { createInitialState } from "../../initial-state"
 import type { AgentState } from "../../types"
 import type { DirectoryApp, DirectoryData } from "../../../app-directory/types"

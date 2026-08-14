@@ -6,17 +6,13 @@
 import { describe, expect, it } from "vite-plus/test"
 import { MockTransport } from "../../__tests__/utils/mock-transport"
 import type { DirectoryApp } from "../../app-directory/types"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { addApplications } from "../../state/mutators/app-directory"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { createInitialState } from "../../state/initial-state"
 import { AppInstanceState } from "../../state/types"
 import { handleGetAppMetadataRequest } from "../open/handlers"
-import {
-  createDACPTestContext,
-  createDacpRequestMeta,
-  withResponseDispatcher,
-} from "./test-context"
+import { createDACPTestParams, createDacpRequestMeta, withResponseDispatcher } from "./test-params"
 
 const TEST_PROVIDER = "test-provider"
 
@@ -45,12 +41,12 @@ describe("DACP handlers without context.appDirectory", () => {
     state = addApplications(state, [chartApp])
 
     const transport = new MockTransport()
-    const { context, getState } = createDACPTestContext({
+    const { params, getState } = createDACPTestParams({
       instanceId: "a1",
       initialState: state,
     })
 
-    expect("appDirectory" in context).toBe(false)
+    expect("appDirectory" in params).toBe(false)
 
     handleGetAppMetadataRequest(
       {
@@ -64,9 +60,9 @@ describe("DACP handlers without context.appDirectory", () => {
         },
       },
       {
-        ...withResponseDispatcher(context, transport),
+        ...withResponseDispatcher(params, transport),
         implementationMetadata: {
-          ...context.implementationMetadata,
+          ...params.implementationMetadata,
           provider: TEST_PROVIDER,
         },
       },
@@ -82,8 +78,8 @@ describe("DACP handlers without context.appDirectory", () => {
     expect(getState().appDirectory.apps).toContainEqual(chartApp)
   })
 
-  it("createDACPTestContext does not attach appDirectory on handler context", () => {
-    const { context } = createDACPTestContext({ instanceId: "test-instance" })
-    expect(context).not.toHaveProperty("appDirectory")
+  it("createDACPTestParams does not attach appDirectory on handler params", () => {
+    const { params } = createDACPTestParams({ instanceId: "test-instance" })
+    expect(params).not.toHaveProperty("appDirectory")
   })
 })

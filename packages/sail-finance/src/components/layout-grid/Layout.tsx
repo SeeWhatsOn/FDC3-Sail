@@ -79,7 +79,7 @@ const Layout = (props: DockviewSailProps) => {
     // Empty layouts like {}, null, or objects without proper structure should be skipped
     if (
       !savedLayoutState ||
-      typeof savedLayoutState !== "object" ||
+      typeof savedLayoutState !== "object" || // oxlint-disable-line typescript/no-unnecessary-condition -- localStorage-persisted state: savedLayoutState is read back from the workspace store's persisted layout, whose actual shape can predate the current type
       savedLayoutState === null ||
       // Check if it has at least some structure (not just empty object)
       Object.keys(savedLayoutState).length === 0
@@ -135,6 +135,7 @@ const Layout = (props: DockviewSailProps) => {
         try {
           const state = api.current.toJSON()
           // Only save if there are actually panels, avoid saving empty layouts
+          // oxlint-disable-next-line typescript/no-unnecessary-condition -- dockview third-party return type
           if (state && api.current.panels.length > 0) {
             setDockviewLayout(activeWorkspaceId, state)
           } else {
@@ -222,6 +223,7 @@ const Layout = (props: DockviewSailProps) => {
 
   // Sync with store panels when they change
   useEffect(() => {
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- localStorage-persisted state; panels derives from JSON-parsed workspace data
     if (!api.current || !panels || !activeTabId || !activeWorkspaceId) return
 
     const currentPanelIds = Array.from(mountedPanels.keys())

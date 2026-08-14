@@ -1,4 +1,3 @@
-@fdc3_2.2 @fdc3_3.0
 Feature: Relaying Broadcast messages
 
   Background:
@@ -24,6 +23,7 @@ Feature: Relaying Broadcast messages
       | broadcastEvent             | App2     | a2            | fdc3.channel.1        | fdc3.instrument          | AAPL                          |
       | broadcastResponse          | App1     | a1            | {null}                | {null}                   | {null}                        |
 
+  @fdc3_2.0
   Scenario: Broadcast Event Includes OriginatingApp Metadata
     When "appId: App2, instanceId: a2" adds a context listener on "fdc3.channel.1" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "fdc3.channel.1" [fdc3.broadcast]
@@ -51,6 +51,7 @@ Feature: Relaying Broadcast messages
       | msg.matches_type          | to.appId | to.instanceId | msg.payload.context.id.ticker | msg.payload.context.type |
       | getCurrentContextResponse | App1     | a1            | AAPL                          | fdc3.instrument          |
 
+  @fdc3_2.0
   Scenario: Broadcast Is A No-Op When Not Joined To A User Channel
     When "appId: App2, instanceId: a2" adds a context listener on "fdc3.channel.1" with type "fdc3.instrument" [fdc3.addContextListener]
     And "appId: App1, instanceId: a1" broadcasts "fdc3.instrument" on "{null}" [fdc3.broadcast]
@@ -60,6 +61,7 @@ Feature: Relaying Broadcast messages
       | broadcastResponse          | a1            |
     And messaging will have 2 posts
 
+  @fdc3_2.0
   Scenario: Broadcast With Malformed Context Returns MalformedContext Error
     When "appId: App1, instanceId: a1" broadcasts "fdc3.malformed" on "fdc3.channel.1" [fdc3.broadcast]
     Then messaging will have outgoing posts

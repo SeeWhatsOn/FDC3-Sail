@@ -16,7 +16,7 @@ function selectHighestContrast(bgColorCSS: string, ...candidates: string[]) {
   let bestCandidate = candidates[0],
     highestContrast = contrasts[0]
   for (let i = 1; i < contrasts.length; i++) {
-    if (contrasts[i] > highestContrast) {
+    if (contrasts[i]! > highestContrast!) {
       bestCandidate = candidates[i]
       highestContrast = contrasts[i]
     }
@@ -115,12 +115,12 @@ function firstApp(
     .filter(a => a.intent.name === intent)
     .map(a => relevantApps(a, newApps, currentChannel))
     .filter(a => a != null)
-    .flatMap(a => a?.apps)
+    .flatMap(a => a.apps)
 
   if (relevant.length == 0) {
     return null
   } else {
-    return relevant[0]
+    return relevant[0]!
   }
 }
 
@@ -150,28 +150,30 @@ function generateUniqueNewAppIntents(
     .sort()
 }
 
-function generateStartState(
+export function generateStartState(
   appIntents: AugmentedAppIntent[],
   currentChannel: string | null,
 ): State {
   const uniqueExistingAppIntents = generateUniqueExistingAppIntents(appIntents, currentChannel)
   const uniqueNewAppIntents = generateUniqueNewAppIntents(appIntents, currentChannel)
 
-  const startState: State =
-    uniqueExistingAppIntents.length > 0
-      ? {
-          newApps: false,
-          chosenApp: firstApp(appIntents, uniqueExistingAppIntents[0], false, currentChannel),
-          chosenIntent: uniqueExistingAppIntents[0],
-          channelId: currentChannel,
-        }
-      : {
-          newApps: true,
-          chosenApp: firstApp(appIntents, uniqueNewAppIntents[0], true, currentChannel),
-          chosenIntent: uniqueNewAppIntents[0],
-          channelId: currentChannel,
-        }
-  return startState
+  if (uniqueExistingAppIntents.length > 0) {
+    const intent = uniqueExistingAppIntents[0]!
+    return {
+      newApps: false,
+      chosenApp: firstApp(appIntents, intent, false, currentChannel),
+      chosenIntent: intent,
+      channelId: currentChannel,
+    }
+  }
+
+  const intent = uniqueNewAppIntents[0] ?? null
+  return {
+    newApps: true,
+    chosenApp: intent ? firstApp(appIntents, intent, true, currentChannel) : null,
+    chosenIntent: intent,
+    channelId: currentChannel,
+  }
 }
 
 export const ResolverPanel = ({
@@ -308,7 +310,7 @@ export const ResolverPanel = ({
                 .filter(a => a.intent.name === state.chosenIntent)
                 .map(ai => relevantApps(ai, state.newApps, state.channelId))
                 .filter(a => a != null)
-                .flatMap(a => a?.apps)
+                .flatMap(a => a.apps)
                 .map(i => (
                   <LineItemComponent
                     key={i.appId + i.instanceId}

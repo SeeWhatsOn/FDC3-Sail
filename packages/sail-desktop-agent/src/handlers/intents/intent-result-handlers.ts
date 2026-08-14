@@ -10,7 +10,7 @@ import {
   createDACPSuccessResponse,
   createDACPErrorResponse,
 } from "../../dacp/dacp-message-creators"
-import { type DACPHandlerContext } from "../types"
+import { type DACPHandlerParams } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ResultError, ResolveError } from "@finos/fdc3"
@@ -21,8 +21,7 @@ import {
   attachIntentResultClientMetadata,
   cloneIntentResultContextMetadata,
 } from "./intent-result-metadata"
-import { clearPendingIntentTimeoutHandle } from "./intent-pending-timeout-registry"
-import { resolveDacpHandlerInstanceId } from "../utils/resolve-context-listener-instance-id"
+import { clearPendingIntentTimeouts } from "./intent-pending-timeout-registry"
 
 function isHandlerRejection(intentResult: unknown): boolean {
   return (
@@ -37,9 +36,9 @@ function isHandlerRejection(intentResult: unknown): boolean {
 function grantPrivateChannelToIntentSource(
   intentResult: unknown,
   sourceInstanceId: string,
-  setState: DACPHandlerContext["setState"],
-  getState: DACPHandlerContext["getState"],
-  logger: DACPHandlerContext["logger"],
+  setState: DACPHandlerParams["setState"],
+  getState: DACPHandlerParams["getState"],
+  logger: DACPHandlerParams["logger"],
 ): void {
   if (typeof intentResult !== "object" || intentResult === null || !("channel" in intentResult)) {
     return
@@ -61,9 +60,9 @@ function grantPrivateChannelToIntentSource(
 
 export function handleIntentResultRequest(
   message: BrowserTypes.IntentResultRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const payload = message.payload
@@ -81,10 +80,9 @@ export function handleIntentResultRequest(
       throw new Error(`No pending intent found for request: ${originalRequestId}`)
     }
 
-    const resolvedInstanceId = resolveDacpHandlerInstanceId(context)
-    if (pendingIntent.targetInstanceId !== resolvedInstanceId) {
+    if (pendingIntent.targetInstanceId !== instanceId) {
       throw new Error(
-        `Intent result from wrong instance. Expected ${pendingIntent.targetInstanceId}, got ${resolvedInstanceId}`,
+        `Intent result from wrong instance. Expected ${pendingIntent.targetInstanceId}, got ${instanceId}`,
       )
     }
 
@@ -92,34 +90,11 @@ export function handleIntentResultRequest(
     const sourceInstanceId = pendingIntent.sourceInstanceId
     const resultTimestamp = new Date().toISOString()
 
-    const promiseData = context.pendingIntentPromises.get(originalRequestId)
-    let wireIntentResult: BrowserTypes.IntentResult = intentResult
-    let resultMetadata:
-      | ReturnType<typeof buildIntentResultWirePayload>["resultMetadata"]
-      | undefined = undefined
-    let isContextWithMetadata = false
-
-    if (promiseData) {
-      clearPendingIntentTimeoutHandle(promiseData.timeoutHandle)
-
-      if (intentResult !== null && !isHandlerRejection(intentResult)) {
-        const normalized = buildIntentResultWirePayload(
-          intentResult,
-          pendingIntent.targetAppId,
-          pendingIntent.targetInstanceId,
-          resultTimestamp,
-        )
-        wireIntentResult = normalized.wireIntentResult
-        resultMetadata = normalized.resultMetadata
-        isContextWithMetadata = normalized.isContextWithMetadata
-      }
-
-      promiseData.resolve(wireIntentResult)
-      context.pendingIntentPromises.delete(originalRequestId)
-    }
+    clearPendingIntentTimeouts(originalRequestId)
 
     setState(state => resolvePendingIntent(state, originalRequestId))
 
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- intentResult is null on the FDC3 wire even though BrowserTypes.IntentResult types it non-nullable; see the passing NoResultReturned Cucumber scenario at test/features/intents/intent-result.feature:61.
     if (intentResult !== null && !isHandlerRejection(intentResult)) {
       grantPrivateChannelToIntentSource(intentResult, sourceInstanceId, setState, getState, logger)
     }
@@ -141,6 +116,7 @@ export function handleIntentResultRequest(
       meta: { requestUuid: originalRequestId },
     }
 
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- intentResult is null on the FDC3 wire even though BrowserTypes.IntentResult types it non-nullable; see the passing NoResultReturned Cucumber scenario at test/features/intents/intent-result.feature:61.
     if (intentResult === null) {
       const resultErrorResponse = createDACPErrorResponse(
         raiseIntentRequestLike,
@@ -164,26 +140,20 @@ export function handleIntentResultRequest(
         responses,
       })
     } else {
-      let metadata = resultMetadata
-      let contextWithMetadataFlag = isContextWithMetadata
-      if (!metadata) {
-        const built = buildIntentResultWirePayload(
+      const { wireIntentResult, resultMetadata, isContextWithMetadata } =
+        buildIntentResultWirePayload(
           intentResult,
           pendingIntent.targetAppId,
           pendingIntent.targetInstanceId,
           resultTimestamp,
         )
-        metadata = built.resultMetadata
-        contextWithMetadataFlag = built.isContextWithMetadata
-      }
-
-      const payloadMetadata = metadata
+      const payloadMetadata = resultMetadata
       const clientMetadata = cloneIntentResultContextMetadata(payloadMetadata)
 
       const intentResultForClient = attachIntentResultClientMetadata(
         wireIntentResult,
         clientMetadata,
-        contextWithMetadataFlag,
+        isContextWithMetadata,
       )
 
       const resultResponse = createDACPSuccessResponse(
@@ -191,7 +161,7 @@ export function handleIntentResultRequest(
         "raiseIntentResultResponse",
         {
           intentResult: intentResultForClient,
-          metadata: payloadMetadata,
+          resultMetadata: payloadMetadata,
         },
       )
       sendDACPResponse({

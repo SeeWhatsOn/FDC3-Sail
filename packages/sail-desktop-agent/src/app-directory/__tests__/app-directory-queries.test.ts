@@ -101,13 +101,13 @@ describe("app-directory-queries", () => {
       })
     })
 
-    it("includes appId on each intent", () => {
+    it("tags each intent with the appId of the app that declares it", () => {
       const intents = retrieveIntents(catalog, undefined, undefined, undefined)
-      intents.forEach(intent => {
-        expect(intent.appId).toBeDefined()
-        expect(intent.intentName).toBeDefined()
-        expect(intent.contexts).toBeDefined()
-      })
+      expect(intents.map(({ appId, intentName }) => ({ appId, intentName }))).toEqual([
+        { appId: "app-1", intentName: "ViewContact" },
+        { appId: "app-2", intentName: "ViewChart" },
+        { appId: "app-3", intentName: "ViewContact" },
+      ])
     })
   })
 })

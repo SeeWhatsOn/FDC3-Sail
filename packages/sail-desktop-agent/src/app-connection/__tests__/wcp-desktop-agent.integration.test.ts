@@ -9,6 +9,7 @@
 
 import { describe, it, expect, afterEach, beforeEach, vi } from "vite-plus/test"
 import { OpenError, type BrowserTypes, type Context } from "@finos/fdc3"
+import { isValidWebConnectionProtocol6Goodbye } from "@finos/fdc3-schema/dist/generated/api/BrowserTypes"
 import type { AppLauncher } from "../../host-contracts/app-launcher"
 import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import type {
@@ -794,13 +795,17 @@ describe("open-with-context (first-connect WCP4)", () => {
 
     const openResponse = await openResponsePromise
 
-    broadcastCollector.stop()
-
+    // Stop only after the assertion. `openResponsePromise` settles on a different port, so it
+    // says nothing about whether the broadcast has landed on this one; stopping first removed
+    // the listener while the event was still in flight, leaving `vi.waitFor` polling an array
+    // that could never change.
     await vi.waitFor(() => {
       expect(broadcastCollector.messages.length).toBeGreaterThanOrEqual(1)
     })
 
-    const broadcastEvent = broadcastCollector.messages[0]
+    broadcastCollector.stop()
+
+    const broadcastEvent = broadcastCollector.messages[0]!
 
     expect(broadcastEvent.payload.context?.type).toBe(OPEN_WITH_CONTEXT_LAUNCH.type)
     expect(openResponse.payload.error).toBeUndefined()
@@ -1452,6 +1457,32 @@ describe("browser apps controller (WCP integration)", () => {
     expect(agent.getState().instances[connected.validatedInstanceId]).toBeUndefined()
     expect(disconnectedIds).toContain(connected.validatedInstanceId)
     expect(apps.getConnection(connected.validatedInstanceId)).toBeUndefined()
+  })
+
+  it("sends a schema-valid WCP6Goodbye (no own payload key) when disconnect is called", async () => {
+    const agent = createTestAgent({
+      heartbeatEnabled: false,
+      disconnectGracePeriod: 0,
+    })
+    activeAgents.push(agent)
+    const apps = requireAppsController(agent)
+
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "apps-disconnect-goodbye-shape-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    const goodbyePromise = waitForPortMessage<BrowserTypes.WebConnectionProtocol6Goodbye>(
+      connected.appPort,
+      data => (data as { type?: string }).type === "WCP6Goodbye",
+    )
+
+    apps.disconnect(connected.validatedInstanceId)
+
+    const goodbye = await goodbyePromise
+    expect(isValidWebConnectionProtocol6Goodbye(goodbye)).toBe(true)
+    expect("payload" in goodbye).toBe(false)
   })
 
   it("notifies onHandshakeFailure when WCP handshake fails", () => {

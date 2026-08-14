@@ -21,8 +21,8 @@ const AppCard = ({ app, onAppClick }: AppCardProps) => {
   const [imageError, setImageError] = useState(false)
 
   const getAppIconUrl = (app: DirectoryApp): string | null => {
-    if (app.icons && app.icons.length > 0 && app.icons[0].src) {
-      return app.icons[0].src
+    if (app.icons && app.icons.length > 0 && app.icons[0]!.src) {
+      return app.icons[0]!.src
     }
     return null
   }
@@ -31,6 +31,7 @@ const AppCard = ({ app, onAppClick }: AppCardProps) => {
   const showFallback = !iconUrl || imageError
 
   const getAppUrl = (app: DirectoryApp) => {
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- FDC3 App Directory JSON: DirectoryApp.details is typed required, but a directory entry's JSON can still omit it
     if (app.type === "web" && app.details) {
       return (app.details as WebAppDetails).url
     }
@@ -124,6 +125,7 @@ export function AppDirectory({ panelProps }: AppDirectoryProps) {
   const handleAppClick = (app: DirectoryApp) => {
     console.log("App clicked:", app)
 
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- FDC3 App Directory JSON: DirectoryApp.details is typed required, but a directory entry's JSON can still omit it
     if (app.type !== "web" || !app.details) {
       console.warn("App is not a web app or has no details:", app)
       return

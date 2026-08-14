@@ -39,7 +39,7 @@ function ensureAppInstance(world: CustomWorld, appStr: string): string {
         candidate => candidate.state === AppInstanceState.CONNECTED,
       )
       if (existingInstances.length === 1) {
-        instanceId = existingInstances[0].instanceId
+        instanceId = existingInstances[0]!.instanceId
         if (!world.props.instances) {
           world.props.instances = {}
         }
@@ -98,12 +98,12 @@ function convertDataTableToListensFor(cw: CustomWorld, dt: DataTable): ListensFo
   const out: ListensFor = {}
   hashes.forEach(h => {
     const explicitDisplayName = h["Display Name"]?.trim()
-    out[h["Intent Name"]] = {
+    out[h["Intent Name"]!] = {
       displayName: explicitDisplayName
         ? (handleResolve(explicitDisplayName, cw) as string)
-        : decamelize(h["Intent Name"], " "),
-      contexts: [handleResolve(h["Context Type"], cw) as string],
-      resultType: handleResolve(h["Result Type"], cw) ?? undefined,
+        : decamelize(h["Intent Name"]!, " "),
+      contexts: [handleResolve(h["Context Type"]!, cw) as string],
+      resultType: handleResolve(h["Result Type"]!, cw) ?? undefined,
     }
   })
 
@@ -310,7 +310,7 @@ function raise(
     payload: {
       intent: handleResolve(intentName, cw),
       context: contextMap[contextType],
-      app: dest ? destMeta!.source : null,
+      ...(dest ? { app: destMeta!.source } : {}),
     },
   } as RaiseIntentRequest
   return message
@@ -330,7 +330,7 @@ function raiseWithContext(
     },
     payload: {
       context: contextMap[contextType],
-      app: dest ? destMeta!.source : null,
+      ...(dest ? { app: destMeta!.source } : {}),
     },
   } as RaiseIntentForContextRequest
   return message

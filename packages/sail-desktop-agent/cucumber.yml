@@ -55,7 +55,9 @@ failing:
     - tsx/cjs
   tags: "@failing"
 
-# FDC3 version filters (scenarios inherit feature-level tags; multi-tag supported)
+# FDC3 version filters (cumulative: each version includes all prior versions'
+# scenarios, since FDC3 itself is cumulative). Every scenario carries exactly one
+# scenario-level @fdc3_X.Y tag for the version that introduced its behaviour.
 fdc3-2.0:
   format:
     - "@cucumber/pretty-formatter"
@@ -69,6 +71,19 @@ fdc3-2.0:
     - tsx/cjs
   tags: "@fdc3_2.0 and not @failing"
 
+fdc3-2.1:
+  format:
+    - "@cucumber/pretty-formatter"
+  paths:
+    - test/features
+  require:
+    - test/step-definitions/*.steps.ts
+    - test/support/*.ts
+    - test/world/index.ts
+  requireModule:
+    - tsx/cjs
+  tags: "(@fdc3_2.0 or @fdc3_2.1) and not @failing"
+
 fdc3-2.2:
   format:
     - "@cucumber/pretty-formatter"
@@ -80,7 +95,7 @@ fdc3-2.2:
     - test/world/index.ts
   requireModule:
     - tsx/cjs
-  tags: "@fdc3_2.2 and not @failing"
+  tags: "(@fdc3_2.0 or @fdc3_2.1 or @fdc3_2.2) and not @failing"
 
 fdc3-3.0:
   format:
@@ -93,7 +108,7 @@ fdc3-3.0:
     - test/world/index.ts
   requireModule:
     - tsx/cjs
-  tags: "@fdc3_3.0 and not @failing"
+  tags: "(@fdc3_2.0 or @fdc3_2.1 or @fdc3_2.2 or @fdc3_3.0) and not @failing"
 
 # Profile for running a single feature (no default paths)
 single:

@@ -16,8 +16,8 @@ export function parseFdc3Version(version: string): ParsedFdc3Version | null {
   }
 
   return {
-    major: Number.parseInt(match[1], 10),
-    minor: Number.parseInt(match[2], 10),
+    major: Number.parseInt(match[1]!, 10),
+    minor: Number.parseInt(match[2]!, 10),
   }
 }
 

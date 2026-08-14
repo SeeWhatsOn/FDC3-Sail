@@ -50,7 +50,7 @@ describe("createWorkspaceStore", () => {
       expect(workspace.name).toBe("Trading")
       expect(workspace.savedAt).toBe(0)
       expect(workspace.layout.tabs).toHaveLength(1)
-      expect(workspace.layout.activeTabId).toBe(workspace.layout.tabs[0].id)
+      expect(workspace.layout.activeTabId).toBe(workspace.layout.tabs[0]!.id)
       expect(store.getSnapshot().workspace).toEqual(workspace)
     })
 
@@ -85,12 +85,12 @@ describe("createWorkspaceStore", () => {
       store.activateTab(tab.id)
 
       const layout = active(store).layout
-      expect(layout.tabs[1].name).toBe("Reading")
+      expect(layout.tabs[1]!.name).toBe("Reading")
       expect(layout.activeTabId).toBe(tab.id)
     })
 
     it("moves the active tab when the active one is removed", () => {
-      const first = active(store).layout.tabs[0]
+      const first = active(store).layout.tabs[0]!
       const second = store.addTab("Research")
 
       store.activateTab(second.id)
@@ -100,7 +100,7 @@ describe("createWorkspaceStore", () => {
     })
 
     it("leaves the active tab alone when another is removed", () => {
-      const first = active(store).layout.tabs[0]
+      const first = active(store).layout.tabs[0]!
       const second = store.addTab("Research")
 
       store.removeTab(second.id)
@@ -122,41 +122,41 @@ describe("createWorkspaceStore", () => {
     })
 
     it("adds a panel to a tab, minting an id", () => {
-      const tabId = active(store).layout.tabs[0].id
+      const tabId = active(store).layout.tabs[0]!.id
       const panel = store.addPanel(tabId, chart)
 
       expect(panel.id).toMatch(/^id-/)
-      expect(active(store).layout.tabs[0].panels).toEqual([panel])
+      expect(active(store).layout.tabs[0]!.panels).toEqual([panel])
     })
 
     it("keeps a caller-supplied panel id", () => {
-      const tabId = active(store).layout.tabs[0].id
+      const tabId = active(store).layout.tabs[0]!.id
       expect(store.addPanel(tabId, { ...chart, id: "instance-7" }).id).toBe("instance-7")
     })
 
     it("removes a panel", () => {
-      const tabId = active(store).layout.tabs[0].id
+      const tabId = active(store).layout.tabs[0]!.id
       const panel = store.addPanel(tabId, chart)
 
       store.removePanel(panel.id)
 
-      expect(active(store).layout.tabs[0].panels).toEqual([])
+      expect(active(store).layout.tabs[0]!.panels).toEqual([])
     })
 
     it("moves a panel between tabs without duplicating it", () => {
-      const firstTab = active(store).layout.tabs[0].id
+      const firstTab = active(store).layout.tabs[0]!.id
       const secondTab = store.addTab("Research").id
       const panel = store.addPanel(firstTab, chart)
 
       store.movePanel(panel.id, secondTab)
 
       const tabs = active(store).layout.tabs
-      expect(tabs[0].panels).toEqual([])
-      expect(tabs[1].panels).toEqual([panel])
+      expect(tabs[0]!.panels).toEqual([])
+      expect(tabs[1]!.panels).toEqual([panel])
     })
 
     it("rejects unknown panels and tabs", () => {
-      const tabId = active(store).layout.tabs[0].id
+      const tabId = active(store).layout.tabs[0]!.id
       expect(() => store.addPanel("ghost", chart)).toThrow(/Tab "ghost" not found/)
       expect(() => store.movePanel("ghost", tabId)).toThrow(/Panel "ghost" not found/)
     })
@@ -177,12 +177,12 @@ describe("createWorkspaceStore", () => {
 
     it("sets a rect in the rects lane", () => {
       store.create("Trading")
-      const tabId = active(store).layout.tabs[0].id
+      const tabId = active(store).layout.tabs[0]!.id
       const panel = store.addPanel(tabId, chart)
 
       store.setPanelRect(panel.id, { x: 0, y: 0, width: 4, height: 3 })
 
-      expect(active(store).layout.tabs[0].panels[0].rect).toEqual({
+      expect(active(store).layout.tabs[0]!.panels[0]!.rect).toEqual({
         x: 0,
         y: 0,
         width: 4,
@@ -192,7 +192,7 @@ describe("createWorkspaceStore", () => {
 
     it("refuses a rect once a renderer owns the arrangement", () => {
       store.create("Trading")
-      const tabId = active(store).layout.tabs[0].id
+      const tabId = active(store).layout.tabs[0]!.id
       const panel = store.addPanel(tabId, chart)
       store.setRendererState({ dockview: "serialised" })
 
@@ -220,14 +220,14 @@ describe("createWorkspaceStore", () => {
 
       const { saved } = store.getSnapshot()
       expect(saved).toHaveLength(1)
-      expect(saved[0].name).toBe("Trading Desk")
+      expect(saved[0]!.name).toBe("Trading Desk")
     })
 
     it("round-trips a saved workspace through a fresh store", async () => {
       const storage = createMemoryStorage()
       const first = createStore(storage)
       first.create("Trading")
-      const tabId = active(first).layout.tabs[0].id
+      const tabId = active(first).layout.tabs[0]!.id
       first.addPanel(tabId, { appId: "chart", title: "Chart", url: "https://example.test/chart" })
       await first.save()
       const savedWorkspace = active(first)

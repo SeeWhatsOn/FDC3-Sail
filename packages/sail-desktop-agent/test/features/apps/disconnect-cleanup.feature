@@ -1,4 +1,3 @@
-@fdc3_2.2 @fdc3_3.0
 Feature: App Disconnection and Cleanup
 
   Background:

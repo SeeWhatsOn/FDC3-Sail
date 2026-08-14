@@ -7,7 +7,15 @@
 
 import type { AppMessageHandler } from "../../src/app-connection/types"
 import type { AppConnectionMetadata } from "../../src/app-connection/wcp/wcp-types"
+import { setPendingWcpSourceWindow } from "../../src/app-connection/wcp/pending-source-window"
+import { setPendingWcpMessageOrigin } from "../../src/app-connection/wcp/pending-wcp4-message-origin"
 import { MockTransport, type MessageRecord } from "./mock-transport"
+
+/** Test-only WCP4 inputs `receiveMessage` cannot legally carry on the wire message. */
+export type Wcp4TestInputs = {
+  sourceWindow?: unknown
+  messageOrigin?: string
+}
 
 export class DacpTestAppConnection {
   private appMessageHandler?: AppMessageHandler
@@ -56,9 +64,30 @@ export class DacpTestAppConnection {
     // Do not call onInstanceTeardown — that callback is WCP→agent teardown (disconnectInstance).
   }
 
-  async receiveMessage(message: unknown): Promise<void> {
+  /**
+   * @param wcp4Inputs - WCP1Hello stand-ins for WCP4ValidateAppIdentity messages. Mirrors
+   *   {@link BrowserAppConnection.enrichMessageWithSource}, which stores the real
+   *   `MessageEvent.source` and origin and hands them to WCP4 validation via the same
+   *   {@link setPendingWcpSourceWindow} / {@link setPendingWcpMessageOrigin} seams instead of
+   *   `meta` fields — neither is legal on the raw wire message (`ConnectionStepMeta` only
+   *   permits `connectionAttemptUuid`/`timestamp`).
+   */
+  async receiveMessage(message: unknown, wcp4Inputs?: Wcp4TestInputs): Promise<void> {
     if (!this.appMessageHandler) {
       throw new Error("No app message handler registered — call DesktopAgent.start() first")
+    }
+    if (wcp4Inputs && (message as { type?: string })?.type === "WCP4ValidateAppIdentity") {
+      const connectionAttemptUuid = (message as { meta?: { connectionAttemptUuid?: string } }).meta
+        ?.connectionAttemptUuid
+      if (connectionAttemptUuid) {
+        const tempInstanceId = `temp-${connectionAttemptUuid}`
+        if (wcp4Inputs.sourceWindow !== undefined) {
+          setPendingWcpSourceWindow(this, tempInstanceId, wcp4Inputs.sourceWindow)
+        }
+        if (wcp4Inputs.messageOrigin !== undefined) {
+          setPendingWcpMessageOrigin(this, tempInstanceId, wcp4Inputs.messageOrigin)
+        }
+      }
     }
     this.outbound.trackInboundMessage(message)
     await this.appMessageHandler(message)

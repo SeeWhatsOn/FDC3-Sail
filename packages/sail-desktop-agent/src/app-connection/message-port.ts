@@ -217,7 +217,9 @@ export class MessagePortTransport {
         type: msg.type,
         hasPayload: !!payload,
         channelId: payload?.channelId,
+        // oxlint-disable-next-line typescript/no-unnecessary-condition -- `payload` is parsed from raw `MessageEvent.data` off the MessagePort transport; the `Record<string, unknown>` cast is an assumption about a well-behaved peer, not a guarantee.
         contextType: (payload?.context as Record<string, unknown>)?.type,
+        // oxlint-disable-next-line typescript/no-unnecessary-condition -- same MessagePort trust boundary as above; `payload` is raw `MessageEvent.data`, not a validated message.
         contextId: (payload?.context as Record<string, unknown>)?.id,
         contextKeys: payload?.context ? Object.keys(payload.context) : undefined,
       }

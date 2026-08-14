@@ -1,5 +1,5 @@
 import type { BrowserTypes } from "@finos/fdc3"
-import { createDACPErrorResponse, type DACPRequestLike } from "../../dacp/dacp-message-creators"
+import { createDACPErrorResponse, type DACPRequestRef } from "../../dacp/dacp-message-creators"
 import type { DacpOutboundMessage, DacpResponseDispatcher } from "../types"
 
 /**
@@ -26,7 +26,7 @@ export function sendDACPResponse(options: SendDACPResponseOptions): void {
  */
 export interface SendDACPErrorResponseOptions {
   /** Original request message (must have type and meta.requestUuid) */
-  message: DACPRequestLike
+  message: DACPRequestRef
   /** FDC3 response payload error (use OpenError, ResolveError, ChannelError, ResultError, BridgingError from @finos/fdc3) */
   errorType: BrowserTypes.ResponsePayloadError
   /** Human-readable error message */

@@ -5,7 +5,6 @@
   "references": [
     { "path": "./packages/sail-desktop-agent" },
     { "path": "./packages/sail-platform" },
-    { "path": "./packages/sail-ui" },
     { "path": "./packages/sail-finance" }
   ]
 }

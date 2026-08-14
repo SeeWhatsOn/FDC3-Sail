@@ -34,14 +34,14 @@ export function selectIntentHandler(
   }
 
   if (handlers.length === 1) {
-    const handler = handlers[0]
+    const handler = handlers[0]!
     return handler.instanceId
       ? { appId: handler.appId, instanceId: handler.instanceId }
       : { appId: handler.appId }
   }
 
   const runningHandlers = handlers.filter(handler => handler.isRunning)
-  const chosen = runningHandlers.length > 0 ? runningHandlers[0] : handlers[0]
+  const chosen = runningHandlers.length > 0 ? runningHandlers[0]! : handlers[0]!
 
   return chosen.instanceId
     ? { appId: chosen.appId, instanceId: chosen.instanceId }

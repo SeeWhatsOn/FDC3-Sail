@@ -151,7 +151,7 @@ function migrateTabColors(tabs: TabDetail[]): TabDetail[] {
 export class PlatformClientState implements ClientState {
   private tabs: TabDetail[] = DEFAULT_TABS
   private panels: AppPanel[] = []
-  private activeTabId: string = DEFAULT_TABS[0].id
+  private activeTabId: string = DEFAULT_TABS[0]!.id
   private userSessionId = "user-" + crypto.randomUUID()
   private directories: Directory[] = DEFAULT_DIRECTORIES
   private callbacks: (() => void)[] = []
@@ -177,7 +177,7 @@ export class PlatformClientState implements ClientState {
     const migratedTabs = migrateTabColors(stored.tabs)
     this.tabs = migratedTabs
     this.panels = stored.panels ?? []
-    this.activeTabId = stored.activeTabId ?? migratedTabs[0].id
+    this.activeTabId = stored.activeTabId ?? migratedTabs[0]!.id
     this.userSessionId = stored.userSessionId ?? this.userSessionId
     this.directories = stored.directories ?? []
     this.customApps = stored.customApps ?? []
@@ -212,11 +212,13 @@ export class PlatformClientState implements ClientState {
   getActiveTab(): TabDetail {
     const out = this.tabs.find(t => t.id == this.activeTabId)
     if (!out) {
-      this.activeTabId = this.tabs[0].id
+      // removeTab() floors `tabs` to never go empty, but TypeScript cannot see
+      // that invariant across the class.
+      this.activeTabId = this.tabs[0]!.id
       this.saveState().catch(() => {
         console.error("Error saving state")
       })
-      return this.tabs[0]
+      return this.tabs[0]!
     }
     return out
   }
@@ -236,10 +238,15 @@ export class PlatformClientState implements ClientState {
   }
 
   async removeTab(id: string): Promise<void> {
-    this.tabs = this.tabs.filter(t => t.id != id)
+    const remaining = this.tabs.filter(t => t.id != id)
+    if (remaining.length === 0) {
+      // Never remove the last tab: nothing left to activate or render.
+      return
+    }
+    this.tabs = remaining
     this.panels = this.panels.filter(p => p.tabId != id)
-    if (this.activeTabId === id && this.tabs.length > 0) {
-      this.activeTabId = this.tabs[0].id
+    if (this.activeTabId === id) {
+      this.activeTabId = this.tabs[0]!.id
     }
     await this.saveState()
   }
@@ -265,7 +272,7 @@ export class PlatformClientState implements ClientState {
     if (idx < 0) {
       return
     }
-    this.tabs[idx] = { ...this.tabs[idx], id: nextId }
+    this.tabs[idx] = { ...this.tabs[idx]!, id: nextId }
     this.panels = this.panels.map(p => (p.tabId === oldId ? { ...p, tabId: nextId } : p))
     if (this.activeTabId === oldId) {
       this.activeTabId = nextId
@@ -277,12 +284,12 @@ export class PlatformClientState implements ClientState {
     const idx = this.tabs.findIndex(t => t.id == id)
     if (idx != -1) {
       if (delta == "up" && idx > 0) {
-        const temp = this.tabs[idx - 1]
-        this.tabs[idx - 1] = this.tabs[idx]
+        const temp = this.tabs[idx - 1]!
+        this.tabs[idx - 1] = this.tabs[idx]!
         this.tabs[idx] = temp
       } else if (delta == "down" && idx < this.tabs.length - 1) {
-        const temp = this.tabs[idx + 1]
-        this.tabs[idx + 1] = this.tabs[idx]
+        const temp = this.tabs[idx + 1]!
+        this.tabs[idx + 1] = this.tabs[idx]!
         this.tabs[idx] = temp
       }
     }
@@ -305,11 +312,11 @@ export class PlatformClientState implements ClientState {
     const [moved] = this.tabs.splice(fromIdx, 1)
     const toIdx = this.tabs.findIndex(t => t.id == toId)
     if (toIdx < 0) {
-      this.tabs.splice(fromIdx, 0, moved)
+      this.tabs.splice(fromIdx, 0, moved!)
       return
     }
     const insertIdx = place === "before" ? toIdx : toIdx + 1
-    this.tabs.splice(insertIdx, 0, moved)
+    this.tabs.splice(insertIdx, 0, moved!)
     await this.saveState()
   }
 

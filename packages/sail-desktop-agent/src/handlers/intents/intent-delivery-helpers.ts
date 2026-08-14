@@ -1,22 +1,31 @@
-import { ResolveError } from "@finos/fdc3"
+import { ResolveError, ResultError } from "@finos/fdc3"
 import {
   createDACPErrorResponse,
   createDACPSuccessResponse,
   createIntentEvent,
 } from "../../dacp/dacp-message-creators"
 import { sendDACPResponse } from "../utils/dacp-response-utils"
-import { getInstance, getListenersForInstance, getPendingIntent } from "../../state/selectors"
-import { resolvePendingIntent, updatePendingIntentTarget } from "../../state/mutators"
-import type { DACPHandlerContext, IntentRequestType } from "../types"
-import { AppInstanceState } from "../../state/types"
+import {
+  getInstance,
+  getListenersForInstance,
+  getPendingIntent,
+  isInstanceReceivable,
+} from "../../state/selectors"
+import {
+  markPendingIntentDelivered,
+  resolvePendingIntent,
+  updatePendingIntentTarget,
+} from "../../state/mutators"
+import type { DACPHandlerParams } from "../types"
+import type { IntentRequestType, PendingIntent } from "../../state/types"
 import {
   extractAppProvidedIntentContextMetadata,
   mergeIntentEventContextMetadata,
 } from "./intent-result-metadata"
 import {
-  clearPendingIntentTimeoutHandle,
-  registerPendingIntentTimeoutHandle,
-  releasePendingIntentTimeoutHandle,
+  clearPendingIntentTimeout,
+  registerPendingIntentTimeout,
+  releasePendingIntentTimeout,
 } from "./intent-pending-timeout-registry"
 
 type IntentResponseType = "raiseIntentResponse" | "raiseIntentForContextResponse"
@@ -27,36 +36,76 @@ function getResponseTypeForRequest(requestType: IntentRequestType): IntentRespon
     : "raiseIntentResponse"
 }
 
+/**
+ * Sends the terminal response for a pending intent that will never be delivered.
+ *
+ * Which response settles the raiser depends on how far the intent got, and `delivered` is the
+ * discriminator:
+ *
+ * - **Before delivery** the raiser is still awaiting the raise-stage response
+ *   (`raiseIntentResponse` / `raiseIntentForContextResponse`). There is no `IntentResolution`
+ *   yet, so a `raiseIntentResultResponse` settles nothing and `raiseIntent()` hangs. The spec's
+ *   error for this is `ResolveError.IntentDeliveryFailed`.
+ * - **After delivery** the raise stage has already been answered, and only
+ *   `IntentResolution.getResult()` is outstanding — so the result stage is the terminal one.
+ *
+ * Callers are responsible for clearing timers and resolving the pending entry from state; this
+ * only puts the right message on the wire.
+ */
+export function sendTerminalPendingIntentResponse(
+  params: DACPHandlerParams,
+  pendingIntent: PendingIntent,
+  errorMessage: string,
+): void {
+  const { requestId, sourceInstanceId } = pendingIntent
+  const requestType = pendingIntent.requestType ?? "raiseIntentRequest"
+
+  const response = pendingIntent.delivered
+    ? createDACPErrorResponse(
+        { type: requestType, meta: { requestUuid: requestId } },
+        ResultError.ApiTimeout,
+        "raiseIntentResultResponse",
+        errorMessage,
+      )
+    : createDACPErrorResponse(
+        { type: requestType, meta: { requestUuid: requestId } },
+        ResolveError.IntentDeliveryFailed,
+        getResponseTypeForRequest(requestType),
+        errorMessage,
+      )
+
+  sendDACPResponse({ response, instanceId: sourceInstanceId, responses: params.responses })
+}
+
 export function isIntentListenerReady(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   instanceId: string,
   intentName: string,
 ): boolean {
-  const listeners = getListenersForInstance(context.getState(), instanceId).filter(
+  const listeners = getListenersForInstance(params.getState(), instanceId).filter(
     listener => listener.intentName === intentName && listener.active,
   )
   return listeners.length > 0
 }
 
 export function attemptIntentDelivery(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   requestId: string,
   requireListener: boolean,
 ): boolean {
-  const { getState, responses, logger } = context
+  const { getState, responses, logger } = params
   const pendingIntent = getPendingIntent(getState(), requestId)
   if (!pendingIntent) {
     return true
   }
 
-  const deliveryEntry = context.pendingIntentPromises.get(requestId)
-  if (deliveryEntry?.delivered) {
+  if (pendingIntent.delivered) {
     return true
   }
 
   if (
     requireListener &&
-    !isIntentListenerReady(context, pendingIntent.targetInstanceId, pendingIntent.intentName)
+    !isIntentListenerReady(params, pendingIntent.targetInstanceId, pendingIntent.intentName)
   ) {
     return false
   }
@@ -71,11 +120,7 @@ export function attemptIntentDelivery(
   }
 
   const targetInstance = getInstance(getState(), pendingIntent.targetInstanceId)
-  if (
-    !targetInstance ||
-    (targetInstance.state !== AppInstanceState.PENDING &&
-      targetInstance.state !== AppInstanceState.CONNECTED)
-  ) {
+  if (!targetInstance || !isInstanceReceivable(targetInstance)) {
     logger.warn("DACP: Target instance not ready for pending intent delivery", {
       requestId,
       targetInstanceId: pendingIntent.targetInstanceId,
@@ -111,7 +156,7 @@ export function attemptIntentDelivery(
     },
   })
 
-  const requestType = deliveryEntry?.requestType ?? "raiseIntentRequest"
+  const requestType = pendingIntent.requestType ?? "raiseIntentRequest"
   const response = createDACPSuccessResponse(
     { type: requestType, meta: { requestUuid: requestId } },
     getResponseTypeForRequest(requestType),
@@ -128,90 +173,74 @@ export function attemptIntentDelivery(
 
   sendDACPResponse({ response, instanceId: pendingIntent.sourceInstanceId, responses })
 
-  if (deliveryEntry?.deliveryTimeoutHandle) {
-    clearPendingIntentTimeoutHandle(deliveryEntry.deliveryTimeoutHandle)
-  }
-  if (deliveryEntry) {
-    deliveryEntry.delivered = true
-  }
+  clearPendingIntentTimeout(requestId, "delivery")
+  params.setState(state => markPendingIntentDelivered(state, requestId))
 
   return true
 }
 
 export function queueIntentDelivery(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   requestId: string,
   requireListener: boolean,
 ): void {
-  const deliveryEntry = context.pendingIntentPromises.get(requestId)
-  if (!deliveryEntry) {
+  if (!getPendingIntent(params.getState(), requestId)) {
     return
   }
 
-  const delivered = attemptIntentDelivery(context, requestId, requireListener)
+  const delivered = attemptIntentDelivery(params, requestId, requireListener)
   if (delivered) {
     return
   }
 
   const timeoutHandle = setTimeout(() => {
-    releasePendingIntentTimeoutHandle(timeoutHandle)
-    if (deliveryEntry.delivered) {
+    releasePendingIntentTimeout(requestId, "delivery")
+
+    // `requestType` now comes off the state entry, so the lookup must come first. Safe: the
+    // response was only ever sent inside the `if (pendingIntent)` guard anyway.
+    const pendingIntent = getPendingIntent(params.getState(), requestId)
+    if (!pendingIntent || pendingIntent.delivered) {
       return
     }
-    const requestType = deliveryEntry.requestType ?? "raiseIntentRequest"
-    const response = createDACPErrorResponse(
-      { type: requestType, meta: { requestUuid: requestId } },
-      ResolveError.IntentDeliveryFailed,
-      getResponseTypeForRequest(requestType),
+
+    sendTerminalPendingIntentResponse(
+      params,
+      pendingIntent,
       "Intent listener not registered within timeout",
     )
-
-    const pendingIntent = getPendingIntent(context.getState(), requestId)
-    if (pendingIntent) {
-      sendDACPResponse({
-        response,
-        instanceId: pendingIntent.sourceInstanceId,
-        responses: context.responses,
-      })
-      context.setState(state => resolvePendingIntent(state, requestId))
-    }
-
-    deliveryEntry.delivered = true
-  }, context.openContextListenerTimeoutMs)
-  registerPendingIntentTimeoutHandle(timeoutHandle)
-
-  deliveryEntry.deliveryTimeoutHandle = timeoutHandle
+    params.setState(state => resolvePendingIntent(state, requestId))
+  }, params.openContextListenerTimeoutMs)
+  registerPendingIntentTimeout(requestId, "delivery", timeoutHandle)
 }
 
 export function deliverPendingIntentsForListener(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   intentName: string,
 ): void {
-  const listenerInstance = getInstance(context.getState(), context.instanceId)
+  const listenerInstance = getInstance(params.getState(), params.instanceId)
   if (!listenerInstance) {
     return
   }
 
-  const pendingIntents = Object.values(context.getState().intents.pending).filter(
+  const pendingIntents = Object.values(params.getState().intents.pending).filter(
     pending => pending.targetAppId === listenerInstance.appId && pending.intentName === intentName,
   )
 
   pendingIntents.forEach(pending => {
-    const deliveryEntry = context.pendingIntentPromises.get(pending.requestId)
-    if (deliveryEntry?.delivered) {
+    if (pending.delivered) {
       return
     }
 
-    if (pending.targetInstanceId !== context.instanceId) {
-      context.setState(state =>
+    if (pending.targetInstanceId !== params.instanceId) {
+      params.setState(state =>
         updatePendingIntentTarget(
           state,
           pending.requestId,
-          context.instanceId,
+          params.instanceId,
           listenerInstance.appId,
         ),
       )
     }
-    attemptIntentDelivery(context, pending.requestId, true)
+    attemptIntentDelivery(params, pending.requestId, true)
   })
 }

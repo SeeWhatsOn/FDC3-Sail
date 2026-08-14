@@ -1,5 +1,5 @@
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
-import { type DACPHandlerContext } from "../types"
+import { type DACPHandlerParams } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ChannelError } from "@finos/fdc3"
@@ -20,16 +20,16 @@ export const ALL_DA_EVENT_TYPES = "all"
  */
 export function handleAddEventListenerRequest(
   message: BrowserTypes.AddEventListenerRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const instance = getInstance(getState(), instanceId)
 
     if (!instance) {
       throw new FDC3ChannelError(
-        "ListenerError" as ChannelError,
+        ChannelError.InvalidArguments,
         `Instance ${instanceId} not found for adding event listener`,
       )
     }
@@ -37,16 +37,18 @@ export function handleAddEventListenerRequest(
     const { type: eventType } = message.payload
 
     // FDC3 2.2: null/undefined type means subscribe to all DA-level events
-    const validEventTypes = ["channelChanged", "USER_CHANNEL_CHANGED", "userChannelChanged"]
+    // Only the schema's closed union is accepted: "USER_CHANNEL_CHANGED" | null
+    const validEventTypes = ["USER_CHANNEL_CHANGED"]
     let normalizedEventType: string
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- `eventType` is parsed from an inbound DACP addEventListenerRequest message; the schema type is an assumption about a well-behaved peer, not a guarantee.
     if (eventType === null || eventType === undefined) {
       normalizedEventType = ALL_DA_EVENT_TYPES
     } else if (validEventTypes.includes(eventType)) {
-      // Normalize all variants to "channelChanged" so listeners receive the same events
+      // Internal listener-map key (not a wire value)
       normalizedEventType = "channelChanged"
     } else {
       throw new FDC3ChannelError(
-        "ListenerError" as ChannelError,
+        ChannelError.InvalidArguments,
         `Unsupported event type: ${eventType}`,
       )
     }
@@ -77,7 +79,7 @@ export function handleAddEventListenerRequest(
     logger.error("DACP: Add event listener failed", error)
 
     const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ("ListenerError" as ChannelError)
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.InvalidArguments
     const errorMessage = error instanceof Error ? error.message : "Failed to add event listener"
 
     sendDACPErrorResponse({
@@ -95,18 +97,18 @@ export function handleAddEventListenerRequest(
  */
 export function handleEventListenerUnsubscribeRequest(
   message: BrowserTypes.EventListenerUnsubscribeRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const { listenerUUID } = message.payload
 
     // Check if listener exists before removing
     const listener = getState().events.listeners[listenerUUID]
-    if (!listener) {
+    if (!listener || listener.instanceId !== instanceId) {
       throw new FDC3ChannelError(
-        "ListenerError" as ChannelError,
+        ChannelError.InvalidArguments,
         `Event listener ${listenerUUID} not found`,
       )
     }
@@ -122,7 +124,7 @@ export function handleEventListenerUnsubscribeRequest(
     logger.error("DACP: Event listener unsubscribe failed", error)
 
     const errorType =
-      error instanceof FDC3ChannelError ? error.errorType : ("ListenerError" as ChannelError)
+      error instanceof FDC3ChannelError ? error.errorType : ChannelError.InvalidArguments
     const errorMessage =
       error instanceof Error ? error.message : "Failed to unsubscribe event listener"
 

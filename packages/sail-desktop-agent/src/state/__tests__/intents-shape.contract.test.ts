@@ -3,7 +3,7 @@
  * Intent resolution history is not part of agent state.
  */
 import { describe, expect, it } from "vite-plus/test"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { createInitialState } from "../initial-state"
 import { addPendingIntent, registerIntentListener, resolvePendingIntent } from "../mutators/intent"
 import * as intentMutators from "../mutators/intent"

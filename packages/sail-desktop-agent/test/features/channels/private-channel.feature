@@ -1,4 +1,3 @@
-@fdc3_2.2 @fdc3_3.0
 Feature: Relaying Private Channel Broadcast messages
 
   Background:
@@ -32,7 +31,7 @@ Feature: Relaying Private Channel Broadcast messages
       | broadcastEvent             | {channel1Id}          | AAPL                          | fdc3.instrument          | App2     | a2            |
       | broadcastResponse          | {null}                | {null}                        | {null}                   | App1     | a1            |
 
-  @fdc3_2.0
+  @fdc3_2.2
   Scenario: Null lifecycle listener receives addContextListener unsubscribe and disconnect events
     Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds a catch-all private channel event listener on "{channel1Id}" [PrivateChannel.addEventListener]
@@ -48,6 +47,7 @@ Feature: Relaying Private Channel Broadcast messages
       | privateChannelOnDisconnectEvent         | App2     | a2            | {channel1Id}                 | {null}                  |
       | privateChannelDisconnectResponse        | App1     | a1            | {null}                       | {null}                  |
 
+  @fdc3_2.2
   Scenario: Event Listener created for addContextListener and unsubscribe
     Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds an "addContextListener" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
@@ -66,7 +66,7 @@ Feature: Relaying Private Channel Broadcast messages
       | privateChannelOnUnsubscribeEvent   | {channel1Id}                 | fdc3.instrument         | App2     | a2            |
       | contextListenerUnsubscribeResponse | {null}                       | {null}                  | App1     | a1            |
 
-  @fdc3_2.0
+  @fdc3_2.2
   Scenario: Disconnecting from a channel sends unsubscribe and disconnect messages
     Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds an "disconnect" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
@@ -79,6 +79,7 @@ Feature: Relaying Private Channel Broadcast messages
       | privateChannelOnDisconnectEvent  | {channel1Id}                 | {null}                  | App2     | a2            |
       | privateChannelDisconnectResponse | {null}                       | {null}                  | App1     | a1            |
 
+  @fdc3_2.2
   Scenario: addContextListener Event Listener add and removed, shouldn't fire when addContextListener called.
     Given "appId: App2, instanceId: a2" is granted access to private channel "{channel1Id}"
     When "appId: App2, instanceId: a2" adds an "addContextListener" event listener on "{channel1Id}" [PrivateChannel.addEventListener]
@@ -127,7 +128,7 @@ Feature: Relaying Private Channel Broadcast messages
     Then messaging will have outgoing posts
       | msg.type                           | to.appId | to.instanceId | msg.payload.error |
       | contextListenerUnsubscribeResponse | App2     | a2            | {null}            |
-      | contextListenerUnsubscribeResponse | App2     | a2            | ListenerNotFound  |
+      | contextListenerUnsubscribeResponse | App2     | a2            | InvalidArguments  |
 
   @fdc3_2.0
   Scenario: Can't unsubscribe an someone else's listener
@@ -137,4 +138,4 @@ Feature: Relaying Private Channel Broadcast messages
     Then messaging will have outgoing posts
       | msg.type                           | to.appId | to.instanceId | msg.payload.error |
       | addContextListenerResponse         | App2     | a2            | {null}            |
-      | contextListenerUnsubscribeResponse | App1     | a1            | ListenerNotFound  |
+      | contextListenerUnsubscribeResponse | App1     | a1            | InvalidArguments  |

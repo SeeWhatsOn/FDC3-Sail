@@ -1,5 +1,4 @@
 {
-  "_comment": "TODO: Fix sail-ui type checking - currently disabled due to rootDir/declaration issues",
   "extends": "../../tsconfig.root.json",
   "compilerOptions": {
     "rootDir": "../..",
@@ -13,6 +12,6 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "../../packages/sail-ui/src/**/*", "tests/**/*", "playwright.config.ts"],
+  "include": ["src/**/*", "tests/**/*", "playwright.config.ts"],
   "exclude": ["node_modules", "dist", "vitest.config.ts"]
 }

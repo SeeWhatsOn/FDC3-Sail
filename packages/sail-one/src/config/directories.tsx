@@ -13,7 +13,7 @@ function updateDirectory(currentUrl: string, patch: Partial<Directory>): void {
   if (i < 0) {
     return
   }
-  directories[i] = { ...directories[i], ...patch }
+  directories[i] = { ...directories[i]!, ...patch }
   updateDirectories(directories)
 }
 

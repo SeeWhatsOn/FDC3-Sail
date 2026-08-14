@@ -14,12 +14,7 @@ type ThemeProviderState = {
   setTheme: (theme: Theme) => void
 }
 
-const initialState: ThemeProviderState = {
-  theme: "system",
-  setTheme: () => null,
-}
-
-const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
+const ThemeProviderContext = createContext<ThemeProviderState | undefined>(undefined)
 
 export function ThemeProvider({
   children,
@@ -28,6 +23,7 @@ export function ThemeProvider({
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- localStorage-persisted state: the `as Theme` cast erases the null localStorage.getItem() returns when nothing has been saved yet
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
   )
 

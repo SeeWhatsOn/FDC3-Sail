@@ -31,7 +31,7 @@
     "test:cucumber:apps": "npm run test:cucumber:apps -w @finos/sail-desktop-agent",
     "format": "vp fmt --check .",
     "format:fix": "vp fmt .",
-    "validate": "npm run format && npm run lint && npm run lint:boundaries && npm run typecheck && npm run build && npm run docs:conformance-inventory:check && npm run docs:build && npm test -- --run && npm run test:cucumber",
+    "validate": "npm run format && npm run build && npm run lint && npm run lint:boundaries && npm run typecheck && npm run docs:conformance-inventory:check && npm run docs:build && npm test -- --run && npm run test:cucumber",
     "changeset": "changeset",
     "changeset:version": "changeset version",
     "release:publish": "npm run build -w @finos/sail-desktop-agent -w @finos/sail-platform && changeset publish",

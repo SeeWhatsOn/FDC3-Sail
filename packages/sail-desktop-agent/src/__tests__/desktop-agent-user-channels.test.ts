@@ -6,7 +6,7 @@ import { connectInstance, updateInstanceState } from "../state/mutators"
 import { getAllUserChannels } from "../state/selectors"
 import type { AgentState } from "../state/types"
 import { AppInstanceState } from "../state/types"
-import { createDacpRequestMeta } from "../handlers/__tests__/test-context"
+import { createDacpRequestMeta } from "../handlers/__tests__/test-params"
 import { createDesktopAgentWithTestConnection } from "../../test/support/desktop-agent-test-harness"
 
 const CONFIGURED_USER_CHANNELS: BrowserTypes.Channel[] = [

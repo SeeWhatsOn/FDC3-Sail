@@ -1,5 +1,20 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent Review Remediation
 
+> **ARCHIVED 2026-08-14.** Moved to `.cursor/plans/archive/`. Complete — slices 0-11 all landed.
+> Re-verified against `a6c6b62`: slice 11's dead code is gone (`bridgeTransports`,
+> `handleDesktopAgentMessage`, `deliverAgentMessage`, `intentResolverUI`,
+> `BrowserIntentResolverController` — none present in `src/`) and slice 1's typed `channelChanged`
+> emitter is in place.
+>
+> **Open items carried forward to `.cursor/plans/open-items.md` §4** — the slice 5a handshake-timeout
+> coverage gap (still flagged in code as `KNOWN COVERAGE GAP`), the slice 5b two-window identity
+> fight, the WCP log-wording nit, and the missing private-channel round-trip test. One item is
+> **already resolved** and is not carried: slice 6's app-authorable `meta.hostInstanceId` was fixed
+> incidentally by `678d0729`.
+>
+> **Its slice 9 decision still binds:** module-global timer maps stay (one DA per tab). Do not
+> reintroduce WeakMap owner-keying — that was tried and reverted as YAGNI.
+
 Status: done
 Current slice: complete (slices 0–11)
 Review/fix loops: 0
@@ -723,7 +738,7 @@ Review prompt for subagents:
 
 ```text
 Review this change against the Minimal Viable Delivery Plan at
-.cursor/plans/sail-desktop-agent-review-remediation.md, slice <N>.
+.cursor/plans/archive/sail-desktop-agent-review-remediation.md, slice <N>.
 Prioritize correctness, simplicity, YAGNI, readable flow, and risk-based testing.
 Return findings only as: Required, Follow-up, Ignore for MVP.
 Flag Required only for issues that prevent the slice from meeting its acceptance

@@ -121,7 +121,7 @@ When(
       meta,
       payload: {
         channelId: handleResolve(channelId, this) as string,
-        context: contextMap[contextType],
+        context: contextMap[contextType]!,
       },
       type: "broadcastRequest",
     }
@@ -164,7 +164,9 @@ When(
     ensureAppInstance(this, app)
     const meta = createMeta(this, app)
 
-    // `BroadcastRequestPayload` types `channelId` as required; DACP omits it for DesktopAgent.broadcast (current user channel).
+    // `BroadcastRequestPayload` requires `channelId` on the wire (2.2 and 3.0 schema). This
+    // simulates a malformed message missing it, to prove the DA rejects it instead of silently
+    // falling back to the sender's current user channel.
     const message = {
       meta,
       payload: {

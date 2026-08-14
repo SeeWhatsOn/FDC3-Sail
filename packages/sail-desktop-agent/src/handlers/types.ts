@@ -7,29 +7,6 @@ import type { ValidationMode } from "../dacp/validate-dacp-message"
 import type { IntentResolutionCallback } from "./intent-resolution-callback"
 
 // ============================================================================
-// MESSAGE TYPES
-// ============================================================================
-
-/**
- * Entry for tracking pending intent promise state.
- * Stored per-agent to prevent cross-agent interference.
- */
-export type IntentRequestType = "raiseIntentRequest" | "raiseIntentForContextRequest"
-
-/**
- * Entry for tracking pending intent promise state.
- * Stored per-agent to prevent cross-agent interference.
- */
-export interface PendingIntentPromiseEntry {
-  resolve: (result: unknown) => void
-  reject: (error: Error) => void
-  timeoutHandle?: ReturnType<typeof setTimeout>
-  deliveryTimeoutHandle?: ReturnType<typeof setTimeout>
-  delivered?: boolean
-  requestType?: IntentRequestType
-}
-
-// ============================================================================
 // DACP RESPONSE DISPATCHER
 // ============================================================================
 
@@ -61,13 +38,13 @@ export interface DacpResponseDispatcher {
 }
 
 // ============================================================================
-// DACP HANDLER CONTEXT
+// DACP HANDLER PARAMS
 // ============================================================================
 
 /**
- * Context passed to all DACP message handlers.
+ * Params passed to all DACP message handlers.
  */
-export interface DACPHandlerContext {
+export interface DACPHandlerParams {
   /** DACP response and event delivery for connected app instances */
   responses: DacpResponseDispatcher
 
@@ -91,24 +68,27 @@ export interface DACPHandlerContext {
 
   /**
    * How inbound messages failing FDC3 schema validation are treated.
-   * Defaults to `'warn'` when omitted (e.g. isolated handler tests).
+   * Resolved once by `resolveDesktopAgentConfig`; never absent here.
    */
-  validation?: ValidationMode
+  validation: ValidationMode
 
   /** Logger instance */
   logger: Logger
 
   /**
    * How much message/context detail structured logs include.
-   * Defaults to `'metadata'` when omitted (e.g. isolated handler tests).
+   * Resolved once by `resolveDesktopAgentConfig`; never absent here.
    */
-  logPayloadDetail?: LogPayloadDetail
+  logPayloadDetail: LogPayloadDetail
 
   /** Implementation metadata for the desktop agent */
   implementationMetadata: SailDesktopAgentMetadata
 
   /** Timeout (ms) to wait for a context listener after open-with-context */
   openContextListenerTimeoutMs: number
+
+  /** Timeout (ms) to keep a raised intent pending before giving up on a result */
+  pendingIntentTimeoutMs: number
 
   /**
    * When `true`, send DACP heartbeat events for connected instances (Desktop Agent policy).
@@ -122,13 +102,6 @@ export interface DACPHandlerContext {
 
   /** Heartbeat timeout (ms) before considering an app unresponsive */
   heartbeatTimeoutMs: number
-
-  /**
-   * Per-agent storage for pending intent promises.
-   * This Map is scoped to this agent instance to prevent cross-agent state bleed.
-   * Key: requestId, Value: promise handlers and timeout state
-   */
-  pendingIntentPromises: Map<string, PendingIntentPromiseEntry>
 
   /**
    * Unified instance teardown (FDC3 state + connection registry).

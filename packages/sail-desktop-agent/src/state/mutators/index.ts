@@ -26,6 +26,7 @@ export {
   setIntentListenerActive,
   addPendingIntent,
   updatePendingIntentTarget,
+  markPendingIntentDelivered,
   resolvePendingIntent,
 } from "./intent"
 

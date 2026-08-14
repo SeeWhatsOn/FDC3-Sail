@@ -47,7 +47,7 @@ async function expectWCP3Handshake(connectionAttemptUuid: string): Promise<void>
   >
   expect(calls.length).toBeGreaterThan(0)
 
-  const [handshakeMessage, targetOrigin, ports] = calls[0]
+  const [handshakeMessage, targetOrigin, ports] = calls[0]!
   expect(handshakeMessage.type).toBe("WCP3Handshake")
   expect(handshakeMessage.meta.connectionAttemptUuid).toBe(connectionAttemptUuid)
   expect(targetOrigin).toBe("https://example.com")

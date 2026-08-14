@@ -124,6 +124,7 @@ const mapStorage = {
       }
 
       // Deserialize workspaces
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- localStorage-persisted state: parsed comes from JSON.parse(localStorage.getItem(name)) cast with `as`, which erases the possibility of a stale/malformed schema
       if (parsed.state.workspaces) {
         for (const [workspaceId, workspace] of parsed.state.workspaces) {
           const deserializedWorkspace = {
@@ -135,10 +136,12 @@ const mapStorage = {
           }
 
           // Deserialize tabs
+          // oxlint-disable-next-line typescript/no-unnecessary-condition -- localStorage-persisted state: workspace comes from the same cast JSON.parse() result, whose actual persisted shape can predate the current Grid type
           if (workspace.layout.tabs) {
             for (const [tabId, tab] of workspace.layout.tabs) {
               deserializedWorkspace.layout.tabs.set(tabId, {
                 ...tab,
+                // oxlint-disable-next-line typescript/no-unnecessary-condition -- localStorage-persisted state: tab.panels is JSON-parsed data, not a real Map, and may be absent in an older persisted schema
                 panels: new Map(tab.panels || []),
               })
             }

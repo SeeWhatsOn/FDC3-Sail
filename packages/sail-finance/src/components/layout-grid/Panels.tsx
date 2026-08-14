@@ -18,6 +18,7 @@ export const Panels = {
     )
   },
   fdc3: (props: IDockviewPanelProps) => {
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- localStorage-persisted state: props.params is restored from Dockview's persisted layout JSON on reload, whose actual shape can predate the current FDC3AppPanel type
     const panelData = (props.params as { panel?: FDC3AppPanel })?.panel
 
     if (!panelData) {

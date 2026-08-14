@@ -19,6 +19,7 @@ export function getDirectoryIntentsForContext(
 
   return Object.entries(listensFor)
     .filter(([, intentDef]) => {
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- intentDef comes from app-directory JSON; the type is an assumption about what should arrive, not a fact about what does.
       if (!intentDef || typeof intentDef !== "object" || !("contexts" in intentDef)) {
         return false
       }

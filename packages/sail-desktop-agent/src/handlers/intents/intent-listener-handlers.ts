@@ -5,7 +5,7 @@
  */
 
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
-import { type DACPHandlerContext } from "../types"
+import { type DACPHandlerParams } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
@@ -41,9 +41,9 @@ function normalizeIntentListenerContextTypes(
 
 export function handleAddIntentListener(
   message: BrowserTypes.AddIntentListenerRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger, implementationMetadata } = context
+  const { responses, instanceId, getState, setState, logger, implementationMetadata } = params
 
   try {
     const payload = message.payload as AddIntentListenerPayload
@@ -55,9 +55,18 @@ export function handleAddIntentListener(
       )
     }
 
-    const contextTypes = normalizeIntentListenerContextTypes(payload.contextType)
+    // FDC3 3.0 addIntentListenerWithContext: `payload.contextType` must not be read at all at
+    // 2.2 — the 2.2 JSON Schema has `additionalProperties: false`, so a 3.0 field on the wire
+    // would otherwise be silently honoured even though the message fails schema validation.
+    const supportsIntentListenerContext = isFdc3VersionAtLeast(
+      implementationMetadata.fdc3Version,
+      "3.0",
+    )
+    const contextTypes = supportsIntentListenerContext
+      ? normalizeIntentListenerContextTypes(payload.contextType)
+      : []
 
-    if (isFdc3VersionAtLeast(implementationMetadata.fdc3Version, "3.0")) {
+    if (supportsIntentListenerContext) {
       const conflict = findConflictingIntentListener(
         getListenersForInstance(getState(), instanceId),
         payload.intent,
@@ -89,7 +98,7 @@ export function handleAddIntentListener(
 
     sendDACPResponse({ response, instanceId, responses })
 
-    deliverPendingIntentsForListener(context, payload.intent)
+    deliverPendingIntentsForListener(params, payload.intent)
   } catch (error) {
     logger.error("DACP: Add intent listener failed", error)
 
@@ -109,9 +118,9 @@ export function handleAddIntentListener(
 
 export function handleIntentListenerUnsubscribe(
   message: BrowserTypes.IntentListenerUnsubscribeRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, setState, logger } = context
+  const { responses, instanceId, getState, setState, logger } = params
 
   try {
     const { listenerUUID } = message.payload
@@ -119,7 +128,7 @@ export function handleIntentListenerUnsubscribe(
     // Check if listener exists before removing
     const state = getState()
     const listener = state.intents.listeners[listenerUUID]
-    if (!listener) {
+    if (!listener || listener.instanceId !== instanceId) {
       throw new TargetInstanceUnavailableError(`Intent listener ${listenerUUID} not found`)
     }
 

@@ -1,5 +1,19 @@
 # sail-desktop-agent — surface reduction & architecture realignment
 
+> **ARCHIVED 2026-08-14.** Moved to `.cursor/plans/archive/`. Implemented — all three phases landed.
+> Re-verified against `a6c6b62`: `src/interfaces/transport.ts` is deleted (the whole `src/interfaces`
+> directory is gone), the `/browser` export is out of `package.json`, and `validation` defaults to
+> `"warn"` in `agent/default-config.ts:39`.
+>
+> **No open items to carry.** Its one follow-up — "38 of 458 Cucumber messages fail schema
+> validation" — is closed: the example it cited (`broadcastRequest` with `channelId: null`) was fixed
+> as Out-of-plan fix #5 of the test-suite realignment, which ruled it a product bug and made
+> `channelId` required; the broader triage was finished by that plan's slice 5. Recorded for
+> completeness in `.cursor/plans/open-items.md` §5.
+>
+> **Its Principle 1 is still the standing rule:** ship it whole — `SailDesktopAgent` is the product,
+> one construction path, one import.
+
 > **Note (2026-08-07 dead-path sweep).** This plan's own work is done and stands. Some file:line
 > citations below describe the **pre-fix** state at the time this plan was written and are
 > historical by design (e.g. `sail-platform/src/sail-platform.ts`, `sail-platform/src/index.ts`
@@ -7,7 +21,7 @@
 > citation). Two of those paths have since gone missing for reasons *outside* this plan's own
 > scope: `sail-platform/src/sail-platform.ts` no longer exists (deleted whole in the 2026-08-04
 > `sail-platform` cull, not by this plan), and `agent/desktop-agent.ts` no longer exists (merged
-> into `sail-desktop-agent.ts` by `.cursor/plans/sail-desktop-agent-class-collapse.md`). `packages/
+> into `sail-desktop-agent.ts` by `.cursor/plans/archive/sail-desktop-agent-class-collapse.md`). `packages/
 > sail-ui` (line 139, 172) was already the plan's own target for deletion (the package is
 > `sail-theme`) — it is still a dangling reference today, but in `tsconfig.json` project references,
 > not the docs this plan fixed; tracked live in `.cursor/plans/draft-pr-readiness.md` item 28.

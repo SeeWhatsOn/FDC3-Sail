@@ -1,12 +1,11 @@
 import type { BrowserTypes } from "@finos/fdc3"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
-import { DEFAULT_SAIL_DESKTOP_AGENT_METADATA } from "../../agent/default-config"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
+import {
+  DEFAULT_SAIL_DESKTOP_AGENT_CONFIG,
+  DEFAULT_SAIL_DESKTOP_AGENT_METADATA,
+} from "../../agent/default-config"
 import { consoleLogger } from "../../logging/logger"
-import type {
-  DACPHandlerContext,
-  DacpResponseDispatcher,
-  PendingIntentPromiseEntry,
-} from "../types"
+import type { DACPHandlerParams, DacpResponseDispatcher } from "../types"
 import { createInitialState } from "../../state/initial-state"
 import type { AgentState, StateSetter } from "../../state/types"
 import type { Transport } from "../../../test/support/transport"
@@ -17,12 +16,8 @@ export { createDacpResponseDispatcher } from "../../../test/support/transport"
 /** Shared agent state for contexts created with the same initialState reference (multi-connection tests). */
 const sharedStateByInitialSnapshot = new WeakMap<AgentState, AgentState>()
 
-export function createDACPTestContext(options: {
-  instanceId: string
-  pendingIntentPromises?: Map<string, PendingIntentPromiseEntry>
-  initialState?: AgentState
-}): {
-  context: DACPHandlerContext
+export function createDACPTestParams(options: { instanceId: string; initialState?: AgentState }): {
+  params: DACPHandlerParams
   getState: () => AgentState
 } {
   const initialSnapshot = options.initialState
@@ -44,35 +39,37 @@ export function createDACPTestContext(options: {
   }
 
   const edgeTransport = new InMemoryTransport()
-  const context: DACPHandlerContext = {
+  const params: DACPHandlerParams = {
     responses: createDacpResponseDispatcher(edgeTransport),
     instanceId: options.instanceId,
     getState: readState,
     setState,
     logger: consoleLogger,
+    // Taken from the real defaults, not re-stated, so there stays exactly one owner.
+    validation: DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.validation,
+    logPayloadDetail: DEFAULT_SAIL_DESKTOP_AGENT_CONFIG.logPayloadDetail,
     implementationMetadata: {
       ...DEFAULT_SAIL_DESKTOP_AGENT_METADATA,
       provider: "test",
       providerVersion: "0.0.0",
     },
     openContextListenerTimeoutMs: 2000,
+    pendingIntentTimeoutMs: 2000,
     heartbeatEnabled: true,
     heartbeatIntervalMs: 500,
     heartbeatTimeoutMs: 2000,
-    pendingIntentPromises:
-      options.pendingIntentPromises ?? new Map<string, PendingIntentPromiseEntry>(),
   }
 
-  return { context, getState: readState }
+  return { params, getState: readState }
 }
 
-/** Wire a delivery recorder into handler context for isolated DACP tests. */
+/** Wire a delivery recorder into handler params for isolated DACP tests. */
 export function withResponseDispatcher(
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
   delivery: DacpResponseDispatcher | Transport,
-): DACPHandlerContext {
+): DACPHandlerParams {
   const responses = "sendToInstance" in delivery ? delivery : createDacpResponseDispatcher(delivery)
-  return { ...context, responses }
+  return { ...params, responses }
 }
 
 export function createDacpRequestMeta(

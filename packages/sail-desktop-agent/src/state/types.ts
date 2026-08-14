@@ -135,10 +135,13 @@ export interface IntentListener {
   metadata?: Record<string, unknown>
 }
 
+/** Which DACP request raised the intent; decides the response message type. */
+export type IntentRequestType = "raiseIntentRequest" | "raiseIntentForContextRequest"
+
 /**
  * Pending intent - tracks intents waiting for results
- * Note: Promise functions are NOT stored in state (not serializable).
- * They are managed separately in the intent handlers.
+ * Note: timeout handles are NOT stored in state (not serializable).
+ * They are managed in `handlers/intents/intent-pending-timeout-registry.ts`.
  */
 export interface PendingIntent {
   /** Original request ID */
@@ -161,6 +164,12 @@ export interface PendingIntent {
 
   /** When the intent was raised */
   raisedAt: Date
+
+  /** Which request raised it, so the response type matches */
+  requestType?: IntentRequestType
+
+  /** Set once the intentEvent reached the target; sole double-delivery guard */
+  delivered?: boolean
 }
 
 // ============================================================================
@@ -252,7 +261,7 @@ export interface PrivateChannelContextListener extends PrivateChannelListener {
  *
  * Named `AgentEventListener`, not `EventListener`, so it never shadows the DOM global of
  * that name. `eventType` stays a plain `string` rather than `FDC3EventTypes`: handlers
- * normalize the spec's variants to `"channelChanged"` and use an `"all"` sentinel for
+ * normalize `"USER_CHANNEL_CHANGED"` to `"channelChanged"` and use an `"all"` sentinel for
  * `addEventListener(null)` — see `ALL_DA_EVENT_TYPES`.
  */
 export interface AgentEventListener {

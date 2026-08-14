@@ -8,7 +8,8 @@ import type { AppIdentifier, BrowserTypes } from "@finos/fdc3"
 
 type DACPResponseType = BrowserTypes.ResponseMessageType
 
-export interface DACPRequestLike {
+/** Minimal request fields needed to build a correlated DACP response. */
+export interface DACPRequestRef {
   type: string
   meta: {
     requestUuid: string
@@ -73,7 +74,7 @@ export function mergeBroadcastAppMetadata(
  * OpenError, ResolveError, ChannelError, ResultError, BridgingError from @finos/fdc3).
  */
 export function createDACPErrorResponse(
-  originalRequest: DACPRequestLike,
+  originalRequest: DACPRequestRef,
   errorType: BrowserTypes.ResponsePayloadError,
   responseType: DACPResponseType,
   errorMessage?: string,
@@ -101,7 +102,7 @@ export function createDACPErrorResponse(
  * Accepts any object with meta.requestUuid (typically a DACPMessage).
  */
 export function createDACPSuccessResponse(
-  originalRequest: DACPRequestLike,
+  originalRequest: DACPRequestRef,
   responseType: DACPResponseType,
   payload: Record<string, unknown> = {},
 ): BrowserTypes.AgentResponseMessage {

@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 
 import { createCapturingLogger } from "../../__tests__/utils/capturing-logger"
 import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 
 describe("app directory host logger", () => {
   afterEach(() => {

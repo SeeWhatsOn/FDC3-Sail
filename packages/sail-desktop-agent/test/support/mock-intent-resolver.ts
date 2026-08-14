@@ -86,8 +86,8 @@ export class MockIntentResolver {
         return Promise.resolve({
           requestId: request.requestId,
           selectedHandler: {
-            instanceId: request.handlers[0].instanceId,
-            appId: request.handlers[0].appId,
+            instanceId: request.handlers[0]!.instanceId,
+            appId: request.handlers[0]!.appId,
           },
         })
       }
@@ -106,8 +106,8 @@ export class MockIntentResolver {
       return Promise.resolve({
         requestId: request.requestId,
         selectedHandler: {
-          instanceId: request.handlers[0].instanceId,
-          appId: request.handlers[0].appId,
+          instanceId: request.handlers[0]!.instanceId,
+          appId: request.handlers[0]!.appId,
         },
       })
     }

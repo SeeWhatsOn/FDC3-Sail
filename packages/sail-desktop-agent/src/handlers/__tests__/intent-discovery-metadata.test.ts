@@ -6,16 +6,12 @@ import { retrieveIntents } from "../../app-directory/app-directory-queries"
 import { expectAppDirectoryOnState } from "../../app-directory/__tests__/app-directory-test-fixtures"
 import { addApplications } from "../../state/mutators/app-directory"
 import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { registerIntentListener } from "../../state/mutators/intent"
 import { createInitialState } from "../../state/initial-state"
 import { AppInstanceState, type AgentState } from "../../state/types"
-import {
-  createDACPTestContext,
-  createDacpRequestMeta,
-  withResponseDispatcher,
-} from "./test-context"
+import { createDACPTestParams, createDacpRequestMeta, withResponseDispatcher } from "./test-params"
 import { createAppIntents, findIntentsByContext } from "../intents/intent-helpers"
 import { handleFindIntentRequest } from "../intents/intent-discovery-handlers"
 
@@ -109,8 +105,8 @@ describe("intent discovery metadata from app directory", () => {
         )
 
         expect(appIntents).toHaveLength(1)
-        expect(appIntents[0].intent.name).toBe(INTENT_APP_A_INTENT_NAME)
-        expect(appIntents[0].intent.displayName).toBe(INTENT_APP_A_DISPLAY_NAME)
+        expect(appIntents[0]!.intent.name).toBe(INTENT_APP_A_INTENT_NAME)
+        expect(appIntents[0]!.intent.displayName).toBe(INTENT_APP_A_DISPLAY_NAME)
       },
     )
   })
@@ -171,7 +167,7 @@ describe("state-owned app directory intent discovery contract", () => {
     )
 
     expect(appIntents).toHaveLength(1)
-    const apps = appIntents[0].apps
+    const apps = appIntents[0]!.apps
     expect(apps).toHaveLength(3)
 
     const launchableOnly = apps.find(app => app.appId === "LaunchOnlyApp")
@@ -203,8 +199,8 @@ describe("state-owned app directory intent discovery contract", () => {
     state = withCatalogApps(state, agent.getState().appDirectory.apps)
 
     const transport = new MockTransport()
-    const { context } = createDACPTestContext({ instanceId: "a1", initialState: state })
-    const stateSlice = expectAppDirectoryOnState(context.getState())
+    const { params } = createDACPTestParams({ instanceId: "a1", initialState: state })
+    const stateSlice = expectAppDirectoryOnState(params.getState())
 
     handleFindIntentRequest(
       {
@@ -215,7 +211,7 @@ describe("state-owned app directory intent discovery contract", () => {
           context: { type: TEST_CONTEXT_X },
         },
       },
-      withResponseDispatcher(context, transport),
+      withResponseDispatcher(params, transport),
     )
 
     const response = getFindIntentResponse(transport)
@@ -241,6 +237,6 @@ describe("state-owned app directory intent discovery contract", () => {
 
     const intents = retrieveIntents(stateSlice, TEST_CONTEXT_X, INTENT_APP_A_INTENT_NAME, undefined)
     expect(intents).toHaveLength(1)
-    expect(intents[0].appId).toBe("IntentAppAId")
+    expect(intents[0]!.appId).toBe("IntentAppAId")
   })
 })

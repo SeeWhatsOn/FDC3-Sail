@@ -9,10 +9,10 @@
 
 import type { AppLauncher } from "../host-contracts/app-launcher"
 import { routeDACPMessage } from "../handlers"
-import { cleanupDACPHandlers } from "../handlers/cleanup"
+import { cleanupInstanceDacpState } from "../handlers/instance-teardown"
 import { handleWcp4ValidateAppIdentity } from "../app-connection/wcp/wcp-identity-validation"
 import { createDacpResponseDispatcherFromDelivery } from "../handlers/utils/dacp-response-utils"
-import type { DACPHandlerContext, PendingIntentPromiseEntry } from "../handlers/types"
+import type { DACPHandlerParams } from "../handlers/types"
 import { applyInboundValidationPolicy, type ValidationMode } from "../dacp/validate-dacp-message"
 import type { IntentResolutionCallback } from "../handlers/intent-resolution-callback"
 import type { DirectoryApp } from "../app-directory/types"
@@ -84,10 +84,10 @@ export class SailDesktopAgent<
   private isStarted: boolean = false
   private implementationMetadata: SailDesktopAgentMetadata
   private openContextListenerTimeoutMs: number
+  private pendingIntentTimeoutMs: number
   private heartbeatEnabled: boolean
   private heartbeatIntervalMs: number
   private heartbeatTimeoutMs: number
-  private pendingIntentPromises = new Map<string, PendingIntentPromiseEntry>()
   /**
    * Inbound DACP/WCP routing edge. Defaults to a fresh {@link BrowserAppConnection}
    * (constructor is inert — no `window`, no listeners); tests may inject via the
@@ -126,6 +126,7 @@ export class SailDesktopAgent<
 
     this.implementationMetadata = config.desktopAgentMetadata
     this.openContextListenerTimeoutMs = config.openContextListenerTimeoutMs
+    this.pendingIntentTimeoutMs = config.pendingIntentTimeoutMs
     this.heartbeatEnabled = config.heartbeatEnabled
     this.heartbeatIntervalMs = config.heartbeatIntervalMs
     this.heartbeatTimeoutMs = config.heartbeatTimeoutMs
@@ -235,7 +236,7 @@ export class SailDesktopAgent<
           changeAppChannel(
             {
               getState: () => this.state,
-              createHandlerContext: id => this.createHandlerContext(id),
+              createHandlerParams: id => this.createHandlerParams(id),
               getUserChannels: () => this.getUserChannels(),
               appConnection: this.appConnection,
               channelChangeTimeoutMs: this.channelChangeTimeoutMs,
@@ -323,7 +324,7 @@ export class SailDesktopAgent<
       return
     }
 
-    await routeDACPMessage(message, this.createHandlerContext(instanceId))
+    await routeDACPMessage(message, this.createHandlerParams(instanceId))
   }
 
   private extractInstanceId(message: unknown): string | null {
@@ -368,7 +369,7 @@ export class SailDesktopAgent<
         }
         handleWcp4ValidateAppIdentity(
           message,
-          this.createHandlerContext(`temp-${connectionAttemptUuid}`),
+          this.createHandlerParams(`temp-${connectionAttemptUuid}`),
         )
         return
       }
@@ -378,7 +379,7 @@ export class SailDesktopAgent<
           this.logger.warn("[WCP] Missing instanceId, cannot route message", { messageType })
           return
         }
-        cleanupDACPHandlers(this.createHandlerContext(instanceId))
+        cleanupInstanceDacpState(this.createHandlerParams(instanceId))
         return
       }
       default:
@@ -389,12 +390,12 @@ export class SailDesktopAgent<
   private handleDisconnect(): void {
     const allInstances = Object.values(this.state.instances)
     for (const instance of allInstances) {
-      const context = this.createHandlerContext(instance.instanceId)
-      cleanupDACPHandlers(context)
+      const params = this.createHandlerParams(instance.instanceId)
+      cleanupInstanceDacpState(params)
     }
   }
 
-  private createHandlerContext(instanceId: string): DACPHandlerContext {
+  private createHandlerParams(instanceId: string): DACPHandlerParams {
     const conn = this.appConnection
     const responses = createDacpResponseDispatcherFromDelivery(conn, message =>
       conn.connectionRegistry.sendToAppInstance(message),
@@ -412,10 +413,10 @@ export class SailDesktopAgent<
       logPayloadDetail: this.logPayloadDetail,
       implementationMetadata: this.implementationMetadata,
       openContextListenerTimeoutMs: this.openContextListenerTimeoutMs,
+      pendingIntentTimeoutMs: this.pendingIntentTimeoutMs,
       heartbeatEnabled: this.heartbeatEnabled,
       heartbeatIntervalMs: this.heartbeatIntervalMs,
       heartbeatTimeoutMs: this.heartbeatTimeoutMs,
-      pendingIntentPromises: this.pendingIntentPromises,
       disconnectInstance: instanceId => this.disconnectInstance(instanceId),
       notifyChannelMembershipChanged: conn.notifyChannelMembershipChanged?.bind(conn),
     }
@@ -472,7 +473,7 @@ export class SailDesktopAgent<
       ...(options?.context !== undefined ? { context: options.context } : {}),
     }
 
-    const launched = await this.appLauncher.launch(payload, catalogApps[0])
+    const launched = await this.appLauncher.launch(payload, catalogApps[0]!)
     if (launched.instanceId) {
       this.registerPendingHostInstance({
         appId: launched.appId,
@@ -513,7 +514,7 @@ export class SailDesktopAgent<
   }
 
   disconnectInstance(instanceId: string): void {
-    cleanupDACPHandlers(this.createHandlerContext(instanceId))
+    cleanupInstanceDacpState(this.createHandlerParams(instanceId))
     this.appConnection.pruneAppConnection(instanceId)
   }
 

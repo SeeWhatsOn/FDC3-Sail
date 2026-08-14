@@ -101,6 +101,7 @@ export const RightControls = (props: IDockviewHeaderActionsProps) => {
   )
 
   const syncActivePanelId = useCallback(() => {
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- dockview declares group required on IDockviewHeaderActionsProps; the ?? fallback is load-bearing if it is ever absent
     const panel = props.group?.activePanel ?? props.activePanel
     setActivePanelId(panel ? extractFdc3PanelId(panel.params) : undefined)
   }, [props.activePanel, props.group])

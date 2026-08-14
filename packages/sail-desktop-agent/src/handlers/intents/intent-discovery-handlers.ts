@@ -5,7 +5,7 @@
  */
 
 import { createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
-import { type DACPHandlerContext } from "../types"
+import { type DACPHandlerParams } from "../types"
 import { sendDACPResponse, sendDACPErrorResponse } from "../utils/dacp-response-utils"
 import type { BrowserTypes } from "@finos/fdc3"
 import { ResolveError } from "@finos/fdc3"
@@ -14,9 +14,9 @@ import { isValidContext } from "../utils/context-validation"
 
 export function handleFindIntentRequest(
   message: BrowserTypes.FindIntentRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, logger } = context
+  const { responses, instanceId, getState, logger } = params
 
   try {
     const payload = message.payload
@@ -65,9 +65,9 @@ export function handleFindIntentRequest(
 
 export function handleFindIntentsByContextRequest(
   message: BrowserTypes.FindIntentsByContextRequest,
-  context: DACPHandlerContext,
+  params: DACPHandlerParams,
 ): void {
-  const { responses, instanceId, getState, logger } = context
+  const { responses, instanceId, getState, logger } = params
 
   try {
     const payload = message.payload

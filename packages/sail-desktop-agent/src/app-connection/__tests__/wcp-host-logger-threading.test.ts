@@ -14,7 +14,7 @@ import {
 } from "../../__tests__/utils/capturing-logger"
 import type { CapturingLogger } from "../../__tests__/utils/capturing-logger"
 import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
 import type { LogPayloadDetail } from "../../logging/logger"
 import {
@@ -52,13 +52,13 @@ function captureAppPortAfterWcp1(connectionAttemptUuid: string, identityUrl: str
   const calls = postMessageSpy.mock.calls as unknown as Array<[unknown, string, MessagePort[]]>
   expect(calls.length).toBeGreaterThan(0)
 
-  const [, targetOrigin, ports] = calls[0]
+  const [, targetOrigin, ports] = calls[0]!
   expect(targetOrigin).toBe(TEST_ORIGIN)
   expect(ports).toEqual(expect.arrayContaining([expect.any(MessagePort)]))
 
   postMessageSpy.mockRestore()
 
-  const appPort = ports[0]
+  const appPort = ports[0]!
   appPort.start()
   return appPort
 }

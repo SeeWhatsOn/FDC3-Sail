@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 
 import { SailDesktopAgent } from "../../agent/sail-desktop-agent"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { PORTFOLIO_APP } from "./wcp-desktop-agent.integration.fixtures"
 import {
   createMessageEvent,
@@ -57,7 +57,7 @@ async function handshakeVersions(): Promise<{ wcp3: string; wcp5: string }> {
   postMessageSpy.mockRestore()
   expect(handshake.type).toBe("WCP3Handshake")
 
-  const appPort = ports[0]
+  const appPort = ports[0]!
   appPort.start()
   const wcp5 = new Promise<BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse>(
     resolve => {

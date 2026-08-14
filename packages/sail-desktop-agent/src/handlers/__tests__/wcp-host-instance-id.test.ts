@@ -3,8 +3,11 @@ import type { AppLauncher } from "../../host-contracts/app-launcher"
 import type { BrowserTypes, Context } from "@finos/fdc3"
 import { OpenError } from "@finos/fdc3"
 import { createDesktopAgentWithTestConnection } from "../../../test/support/desktop-agent-test-harness"
-import type { DacpTestAppConnection } from "../../../test/support/dacp-test-app-connection"
-import { DEFAULT_FDC3_USER_CHANNELS } from "../../default-user-channels"
+import type {
+  DacpTestAppConnection,
+  Wcp4TestInputs,
+} from "../../../test/support/dacp-test-app-connection"
+import { DEFAULT_FDC3_USER_CHANNELS } from "../../agent/default-user-channels"
 import { connectInstance, updateInstanceState } from "../../state/mutators"
 import { AppInstanceState } from "../../state/types"
 import { createInitialState } from "../../state/initial-state"
@@ -71,8 +74,8 @@ function createWcp4FirstConnectMessage(
   connectionAttemptUuid: string,
   hostInstanceId?: string,
   hostInstanceUuid?: string,
-) {
-  return {
+): [BrowserTypes.WebConnectionProtocol4ValidateAppIdentity, Wcp4TestInputs] {
+  const message = {
     type: "WCP4ValidateAppIdentity",
     payload: {
       identityUrl: APP_URL,
@@ -83,10 +86,10 @@ function createWcp4FirstConnectMessage(
     meta: {
       connectionAttemptUuid,
       timestamp: new Date().toISOString(),
-      messageOrigin: new URL(APP_URL).origin,
-      wcpSourceWindow: hostInstanceId ? { hostPanel: hostInstanceId } : { hostPanel: "anonymous" },
     },
   } as unknown as BrowserTypes.WebConnectionProtocol4ValidateAppIdentity
+  const sourceWindow = hostInstanceId ? { hostPanel: hostInstanceId } : { hostPanel: "anonymous" }
+  return [message, { sourceWindow, messageOrigin: new URL(APP_URL).origin }]
 }
 
 function createOpenRequestMessage(context?: Context): BrowserTypes.OpenRequest {
@@ -217,7 +220,7 @@ describe("host-assigned instanceId at WCP4", () => {
     })
 
     await connection.receiveMessage(
-      createWcp4FirstConnectMessage("wcp4-host-bind", HOST_INSTANCE_ID, "host-instance-uuid"),
+      ...createWcp4FirstConnectMessage("wcp4-host-bind", HOST_INSTANCE_ID, "host-instance-uuid"),
     )
 
     expect(getWcp5InstanceId(connection)).toBe(HOST_INSTANCE_ID)
@@ -245,7 +248,7 @@ describe("host-assigned instanceId at WCP4", () => {
     })
 
     await connection.receiveMessage(
-      createWcp4FirstConnectMessage("wcp4-host-first-connect", HOST_INSTANCE_ID),
+      ...createWcp4FirstConnectMessage("wcp4-host-first-connect", HOST_INSTANCE_ID),
     )
 
     const wcp5 = connection.sentMessages.find(
@@ -258,7 +261,12 @@ describe("host-assigned instanceId at WCP4", () => {
   })
 
   it("delivers open-with-context when target adopts host instanceId at WCP4", async () => {
-    vi.useFakeTimers()
+    // Scoped to timers only: faking `Date` breaks the vendor FDC3 schema validator's
+    // `typ === Date` reference-identity check (it captures the real `Date` ctor at module
+    // load, so a faked global Date can never match), spuriously WARNing on every WCP4/DACP
+    // message validated while fake timers are active. This test only needs setTimeout control
+    // for vi.advanceTimersByTime below, not a frozen Date.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] })
     const { agent, connection } = createAgentWithSourceInstance({
       openContextListenerTimeoutMs: 2000,
     })
@@ -269,7 +277,7 @@ describe("host-assigned instanceId at WCP4", () => {
     expect(agent.getState().open.pendingWithContext[HOST_INSTANCE_ID]?.length).toBe(1)
 
     await connection.receiveMessage(
-      createWcp4FirstConnectMessage("wcp4-open-with-context", HOST_INSTANCE_ID),
+      ...createWcp4FirstConnectMessage("wcp4-open-with-context", HOST_INSTANCE_ID),
     )
     expect(getWcp5InstanceId(connection)).toBe(HOST_INSTANCE_ID)
 
@@ -306,7 +314,7 @@ describe("host-assigned instanceId at WCP4", () => {
 
     await connection.receiveMessage(createOpenRequestMessage())
 
-    await connection.receiveMessage(createWcp4FirstConnectMessage("wcp4-cross-origin-no-name"))
+    await connection.receiveMessage(...createWcp4FirstConnectMessage("wcp4-cross-origin-no-name"))
 
     expect(getWcp5InstanceId(connection)).toBe(HOST_INSTANCE_ID)
     expect(
@@ -317,7 +325,10 @@ describe("host-assigned instanceId at WCP4", () => {
   })
 
   it("delivers open-with-context for a specific context type when WCP4 omits instanceId", async () => {
-    vi.useFakeTimers()
+    // See the sibling "delivers open-with-context when target adopts host instanceId at WCP4"
+    // test above: scoped to timers only, not Date — a faked Date breaks the vendor FDC3 schema
+    // validator's `typ === Date` reference check and spuriously WARNs on every WCP4/DACP message.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] })
     const { agent, connection } = createAgentWithSourceInstance({
       openContextListenerTimeoutMs: 2000,
     })
@@ -325,7 +336,9 @@ describe("host-assigned instanceId at WCP4", () => {
     await connection.receiveMessage(createOpenRequestMessage(LAUNCH_CONTEXT))
     expect(agent.getState().open.pendingWithContext[HOST_INSTANCE_ID]?.length).toBe(1)
 
-    await connection.receiveMessage(createWcp4FirstConnectMessage("wcp4-specific-context-no-name"))
+    await connection.receiveMessage(
+      ...createWcp4FirstConnectMessage("wcp4-specific-context-no-name"),
+    )
     expect(getWcp5InstanceId(connection)).toBe(HOST_INSTANCE_ID)
 
     connection.outbound.clear()

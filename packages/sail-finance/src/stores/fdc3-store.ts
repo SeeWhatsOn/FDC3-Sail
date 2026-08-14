@@ -28,6 +28,7 @@ export const createFDC3Store = () =>
       // Actions using Immer for clean immutable updates
       registerWindow: (panelId: string, window: Window) =>
         set(state => {
+          // oxlint-disable-next-line typescript/no-unnecessary-condition -- nullable Window argument: window is typed required, but a caller can still pass null/undefined at runtime (see fdc3-store.test.ts:119-145)
           if (!panelId || !window) {
             console.warn("FDC3Store: Invalid panelId or window for registration")
             return
