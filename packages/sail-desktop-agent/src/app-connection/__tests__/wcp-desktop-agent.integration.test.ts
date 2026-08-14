@@ -795,11 +795,15 @@ describe("open-with-context (first-connect WCP4)", () => {
 
     const openResponse = await openResponsePromise
 
-    broadcastCollector.stop()
-
+    // Stop only after the assertion. `openResponsePromise` settles on a different port, so it
+    // says nothing about whether the broadcast has landed on this one; stopping first removed
+    // the listener while the event was still in flight, leaving `vi.waitFor` polling an array
+    // that could never change.
     await vi.waitFor(() => {
       expect(broadcastCollector.messages.length).toBeGreaterThanOrEqual(1)
     })
+
+    broadcastCollector.stop()
 
     const broadcastEvent = broadcastCollector.messages[0]!
 

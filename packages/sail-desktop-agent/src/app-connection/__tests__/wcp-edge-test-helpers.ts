@@ -93,8 +93,14 @@ function captureAppMessagePort(
 
   const appPort = ports[0]!
   appPort.start()
+  // Buffer from the moment the port is live, so nothing that arrives before a waiter attaches
+  // can be lost.
+  trackPortMessages(appPort)
   return appPort
 }
+
+const isWcp5Response = (data: unknown): boolean =>
+  (data as { type?: string } | null)?.type === "WCP5ValidateAppIdentityResponse"
 
 export async function connectWcpApp(
   agent: SailDesktopAgent,
@@ -130,11 +136,10 @@ export async function connectWcpApp(
   expect(browserAppConnection.getConnection(tempInstanceId)).toBeDefined()
 
   const wcp5Response =
-    new Promise<BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse>(resolve => {
-      appPort.onmessage = event => {
-        resolve(event.data as BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse)
-      }
-    })
+    waitForPortMessage<BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse>(
+      appPort,
+      isWcp5Response,
+    )
 
   const wcp4Message: BrowserTypes.WebConnectionProtocol4ValidateAppIdentity = {
     type: "WCP4ValidateAppIdentity",
@@ -241,22 +246,11 @@ export function beginWcpAppFirstConnect(
   })
   expect(browserAppConnection.getConnection(tempInstanceId)).toBeDefined()
 
-  let resolveWcp5:
-    | ((value: BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse) => void)
-    | undefined
   const wcp5Response =
-    new Promise<BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse>(resolve => {
-      resolveWcp5 = resolve
-    })
-
-  appPort.onmessage = event => {
-    const data = event.data as { type?: string }
-    if (data.type === "WCP5ValidateAppIdentityResponse") {
-      resolveWcp5?.(
-        event.data as BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse,
-      )
-    }
-  }
+    waitForPortMessage<BrowserTypes.WebConnectionProtocol5ValidateAppIdentitySuccessResponse>(
+      appPort,
+      isWcp5Response,
+    )
 
   const wcp4Message: BrowserTypes.WebConnectionProtocol4ValidateAppIdentity = {
     type: "WCP4ValidateAppIdentity",
@@ -321,26 +315,85 @@ export async function postDacpOnPort(
   await flushAsyncDelivery()
 }
 
+type PortWaiter = {
+  predicate: (data: unknown) => boolean
+  settle: (event: MessageEvent) => void
+}
+
+type PortInbox = {
+  /** Messages that arrived with no waiter interested in them yet. */
+  pending: MessageEvent[]
+  waiters: PortWaiter[]
+}
+
+const portInboxes = new WeakMap<MessagePort, PortInbox>()
+
+/**
+ * Buffers everything a port receives, from the moment it is captured.
+ *
+ * The helpers used to wait by swapping `appPort.onmessage` and restoring a `priorHandler`.
+ * That loses messages: a waiter only listens from the instant it is called, so a reply that
+ * arrives first is delivered to whatever handler happens to be installed — in practice the
+ * already-resolved WCP5 resolver, whose `resolve()` is a silent no-op. The message is then gone
+ * and the waiter times out. Buffering makes arrival order irrelevant: a waiter either finds its
+ * message already queued or is woken when it lands.
+ */
+function inboxFor(appPort: MessagePort): PortInbox {
+  const existing = portInboxes.get(appPort)
+  if (existing) return existing
+
+  const inbox: PortInbox = { pending: [], waiters: [] }
+  portInboxes.set(appPort, inbox)
+
+  appPort.addEventListener("message", event => {
+    const index = inbox.waiters.findIndex(waiter => waiter.predicate(event.data))
+    if (index === -1) {
+      inbox.pending.push(event)
+      return
+    }
+    const [waiter] = inbox.waiters.splice(index, 1)
+    waiter?.settle(event)
+  })
+
+  return inbox
+}
+
+/**
+ * Starts buffering a captured port. Safe to call more than once per port.
+ */
+export function trackPortMessages(appPort: MessagePort): void {
+  inboxFor(appPort)
+}
+
 export function waitForPortMessage<T>(
   appPort: MessagePort,
   predicate: (data: unknown) => boolean,
   timeoutMs = 5000,
 ): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const priorHandler = appPort.onmessage
+  const inbox = inboxFor(appPort)
+
+  // Consume a matching message that already arrived, so sequential waits for different
+  // messages each get their own rather than both matching the first one seen.
+  const buffered = inbox.pending.findIndex(event => predicate(event.data))
+  if (buffered !== -1) {
+    const [event] = inbox.pending.splice(buffered, 1)
+    return Promise.resolve(event!.data as T)
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    const waiter: PortWaiter = {
+      predicate,
+      settle: event => {
+        clearTimeout(timer)
+        resolve(event.data as T)
+      },
+    }
     const timer = setTimeout(() => {
-      appPort.onmessage = priorHandler
+      const index = inbox.waiters.indexOf(waiter)
+      if (index !== -1) inbox.waiters.splice(index, 1)
       reject(new Error("Timed out waiting for MessagePort message"))
     }, timeoutMs)
-    appPort.onmessage = event => {
-      if (predicate(event.data)) {
-        clearTimeout(timer)
-        appPort.onmessage = priorHandler
-        resolve(event.data as T)
-        return
-      }
-      priorHandler?.call(appPort, event)
-    }
+    inbox.waiters.push(waiter)
   })
 }
 
