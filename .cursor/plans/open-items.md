@@ -25,9 +25,41 @@ archived plan.
 
 ---
 
-## 0. Broken now — `npm run validate` and `npm run test:cucumber` fail
+## 0. Broken now — CI is red in three separate places
 
-**This is not a follow-up. It is a live break, and it is in no plan's tracking.**
+**These are not follow-ups. They are live breaks, and no plan was tracking any of them.**
+All three were reproduced on 2026-08-14. Fix these before anything else here.
+
+### 0a. `docs:build` fails — an HTML comment in an MDX file
+
+`website/docs/packages/desktop-agent/conformance.md:26` contains
+`<!-- GENERATED:CONFORMANCE-INVENTORY:START -->`. HTML comments are invalid in MDX:
+
+> Unexpected character `!` (U+0021) before name, expected a character that can start a name …
+> (note: to create a comment in MDX, use `{/* text */}`)
+
+`npm run docs:build` dies there, which takes out `.github/workflows/ci.yml:53` and `npm run validate`.
+It also means `onBrokenLinks: "throw"` never gets to run, so the docs link-checking everyone assumes
+is on is in fact not running at all.
+
+**Fix in the generator, not the file** — `website/scripts/generate-conformance-inventory.mjs` emits
+those markers, and the file says "do not hand-edit between the markers".
+
+### 0b. Typecheck runs before Build, so a clean clone cannot typecheck
+
+`.github/workflows/ci.yml` runs Prettier → ESLint → boundaries → **Typecheck (`:43`)** → **Build
+(`:46`)**. But `@finos/sail-desktop-agent` and `@finos/sail-platform` publish their types from
+`dist` (`"types": "./dist/index.d.mts"`), and `dist` is gitignored (`.gitignore:3`). On a runner with
+no prior build there is no `dist`, so every consumer package — `sail-finance`,
+`sail-conformance-harness`, `sail-one` — fails typecheck with `TS2307: Cannot find module
+'@finos/sail-desktop-agent'`.
+
+Building those two packages first makes lint and typecheck pass clean. **The fix is step ordering
+(build before typecheck), or project references that resolve to source.** This is why the register in
+`draft-pr-readiness.md` item 9 recorded "typecheck now exits 0" — that check ran against a stale
+local `dist`, not a clean tree.
+
+### 0c. `test:cucumber` points at a script that was never committed
 
 `packages/sail-desktop-agent/package.json:27` wires
 `"test:cucumber:tags": "node scripts/check-fdc3-tag-coverage.mjs"`, and that script **has never
@@ -40,6 +72,8 @@ The failure propagates all the way up:
 - `packages/sail-desktop-agent` → `test:cucumber` (`:26`) and `validate` (`:34`) both invoke it
 - root `test:cucumber` (`package.json:27`) delegates to the package script
 - root `validate` (`package.json:34`) runs root `test:cucumber`
+- **CI's Cucumber step** (`.github/workflows/ci.yml:59`) runs
+  `npm run test:cucumber -w @finos/sail-desktop-agent` — so this step is red on every run
 
 Reproduced 2026-08-14: `npm run test:cucumber:tags -w @finos/sail-desktop-agent` exits non-zero with
 `MODULE_NOT_FOUND`.

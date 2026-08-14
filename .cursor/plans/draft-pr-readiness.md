@@ -6,6 +6,28 @@
 > with the requirement preserved in `.cursor/plans/parked-wcp4-origin-allowlist.md` as an acceptance
 > criterion for any reimplementation.
 
+> ### Third re-verification — 2026-08-14 against `a6c6b62`
+>
+> **The register earns its size: ~23 of 32 rows are still live.** Not a candidate for reduction or
+> archiving. Five rows need updating:
+>
+> | Row | Change |
+> |---|---|
+> | **11** Demo app directory | **NOW MOOT — downgrade from `BLOCKER` to resolved.** The evidence it cites is gone: `packages/sail-finance/fixtures/default-app-directory.json` no longer exists. `sail-finance/src/main.tsx:19,125` points non-toolbox runs at the real `https://directory.fdc3.finos.org/v2/apps` and toolbox runs at the harness's own `conformance-appd.json` (all publishers `FINOS`). Open Decision #5 reads as answered and implemented. |
+> | **9** CI green | **Still blocking, and the evidence here is *understated*.** The 08-07 note "lint and typecheck now exit 0" was measured against a stale local `dist`. On a genuinely clean clone they fail, because CI runs Typecheck (`ci.yml:43`) *before* Build (`:46`) while `sail-desktop-agent`/`sail-platform` publish types from gitignored `dist` — consumers hit `TS2307`. Two further steps are red outright: `docs:build` (invalid HTML comment in MDX) and the Cucumber step (missing script). All three are written up in `.cursor/plans/open-items.md` §0. |
+> | **15** `sail-platform` API shape | **Consumer story is backwards.** `sail-one/src/state/client-state.ts:2-6` imports the **storage** half (`createLocalStorage`, `SailStorage`), not `createWorkspaceStore`. The workspace half — `createWorkspaceStore`, `Workspace`, `Layout` — has **zero** consumers outside the package. `sail-finance/src/stores/workspace-store.ts:205` defines its own same-named function; that is a naming collision, not an import. The "two parallel systems" framing survives; the consumer attribution does not. |
+> | **19** Test state (`FIXED`) | **No longer accurate.** Vitest is 539/541, with `wcp-multi-pending-adoption.integration.test.ts` failing on two consecutive full-suite runs but passing in isolation — timing-sensitive, not conclusively a regression. And "Cucumber unchanged: 154/154" cannot be re-established: the command that would prove it now fails before any scenario runs (§0). |
+> | **28** tsconfig references | **Partly fixed.** The dangling `./packages/sail-ui` reference is gone from both root and `sail-finance` tsconfigs. What still stands is the *omission* of `sail-conformance-harness` — and now `sail-one` — from root references. |
+>
+> Blockers **0, 3, 7, 10, 29** were each re-checked against the tree and are **unchanged**: still 22
+> commits behind upstream; `LICENSE:189` still en-dash `2022–2026 FINOS` against `NOTICE:2`'s
+> `2022 - 2022 Nick Kolba`; both working docs still tracked at repo root; `packages/sail-one/html/`
+> still absent so `build -w @finos/sail-one` still fails on `options.input`. **29 got worse**, as the
+> register predicted it would: 290 commits since fork (was 252), author split `SeeWhatsOn` ×206 /
+> `Chris Watson` ×75, and the `Claude-Session:` trailer is now in **19** commits, not 9.
+>
+> **Net: 6 of 7 claimed blockers still block; item 11 is resolved.**
+
 Standing oversight of what is good, bad, and unknown in the v3 work, measured against
 "could this be opened as a draft PR to `finos/FDC3-Sail`". A **review artifact, not a
 work order** — nothing here is committed work, and some of it may never be done.

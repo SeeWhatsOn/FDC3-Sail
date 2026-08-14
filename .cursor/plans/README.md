@@ -18,7 +18,7 @@ recorded in place.
 
 | If you want to… | Read |
 |---|---|
-| **Fix something that is broken right now** | [`open-items.md` §0](open-items.md) — `npm run validate` and `npm run test:cucumber` both fail today |
+| **Fix something that is broken right now** | [`open-items.md` §0](open-items.md) — **CI is red in three places**: the docs build, a typecheck-before-build ordering bug, and a cucumber script that was never committed |
 | Pick up the highest-value DA work | [`sail-da-defect-register-2026-08-11.md`](sail-da-defect-register-2026-08-11.md) — 8 open defects, slice B is next |
 | Know what a closed plan left behind | [`open-items.md`](open-items.md) |
 | Know why something is the way it is | `archive/` — the reasoning is kept even when the plan is closed |
@@ -34,7 +34,7 @@ recorded in place.
 | [`open-items.md`](open-items.md) | **live backlog** | Everything carried out of the nine archived plans, plus one live break. Start with §0. |
 | [`sail-da-defect-register-2026-08-11.md`](sail-da-defect-register-2026-08-11.md) | **live — 8 of 10 open** | #1 and #2 are fixed (`8a62fd386`). Slice B — #3, #5, #6, intent-routing correctness. #3 already has a written, skipped Prove-It test: unskip it and make it pass. |
 | [`sail-desktop-agent-audit-2026-08.md`](sail-desktop-agent-audit-2026-08.md) | **live — analysis holds, some addresses dead** | The whole §10 park list is still present in the tree. See Revision 3 before using any `file:line` from §5.1, §5.6, §6.1, §6.2 or §7. |
-| [`website-docs-blueprint.md`](website-docs-blueprint.md) | **live — slices 0–5 done, 6 open** | Only the *snippet-compilation* half of slice 6 is missing; link-checking already runs via `onBrokenLinks: "throw"` + `docs:build` in CI. Four named doc defects are still present. |
+| [`website-docs-blueprint.md`](website-docs-blueprint.md) | **live — slices 0–5 done, 6 open** | Unbreak `docs:build` first (see `open-items.md` §0a) — until then `onBrokenLinks: "throw"` never runs, so docs link-checking is not actually happening. Then add snippet compilation. Four named doc defects are still present. |
 
 ### Designed but unstarted
 
@@ -46,7 +46,7 @@ recorded in place.
 
 | Plan | State | What it is for |
 |---|---|---|
-| [`draft-pr-readiness.md`](draft-pr-readiness.md) | standing review artifact | "Could this be opened as a draft PR to `finos/FDC3-Sail`" — oversight across ~32 areas. Nothing here is committed work. |
+| [`draft-pr-readiness.md`](draft-pr-readiness.md) | standing review artifact — **~23 of 32 rows still live** | "Could this be opened as a draft PR to `finos/FDC3-Sail`" — oversight across 32 areas. Nothing here is committed work. Re-verified 2026-08-14: 6 of 7 blockers still block, item 11 is now resolved, and rows 9/15/19/28 have updated evidence. |
 | [`sail-desktop-agent-feature-decisions.md`](sail-desktop-agent-feature-decisions.md) | open register, 1 item | `ChannelControl` — keep or delete. Still zero call sites; it has already produced one wrong public doc. |
 | [`sail-platform-extensibility.md`](sail-platform-extensibility.md) | decision record | Holds the **negative** decisions — what we deliberately will not build — so they are not quietly re-litigated. §2 still matches the code. |
 

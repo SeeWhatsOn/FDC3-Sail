@@ -13,14 +13,24 @@
 > `SailPlatform`, `createSailBrowserDesktopAgent`, `SailAppLauncher`, `SailPlatformClient`,
 > `SailBrowserDesktopAgentConfig`), so slices 0–5's truth-pass held.
 >
-> **Slice 6 is half-satisfied already, by infrastructure that predates this plan.** Internal
-> link-checking effectively runs today: `website/docusaurus.config.ts:22` sets
-> `onBrokenLinks: "throw"`, and `npm run docs:build` is in both CI (`.github/workflows/ci.yml:53`)
-> and `npm run validate` (`package.json:34`). So a broken internal link already fails the build.
-> **What is genuinely missing is only the snippet half** — nothing anywhere compiles the code blocks
-> in the docs (zero hits for "snippet" across the repo). Re-scope slice 6 to snippet compilation
-> alone, and note that the dead anchor in defect 2 below survives `onBrokenLinks` because Docusaurus
-> checks links, not `#anchor` fragments — `onBrokenAnchors` is a separate setting and is not enabled.
+> **Slice 6 is half-designed already — but the half that exists is not running.**
+> `website/docusaurus.config.ts:22` sets `onBrokenLinks: "throw"`, and `npm run docs:build` is wired
+> into both CI (`.github/workflows/ci.yml:53`) and `npm run validate` (`package.json:34`), so a broken
+> internal link *would* fail the build.
+>
+> **It cannot, because `npm run docs:build` fails outright today.** Reproduced 2026-08-14:
+> `packages/desktop-agent/conformance.md:26` uses an HTML comment
+> (`<!-- GENERATED:CONFORMANCE-INVENTORY:START -->`) which is invalid in MDX —
+> *"Unexpected character `!` (U+0021) before name … to create a comment in MDX, use `{/* text */}`"*.
+> The build dies at that file, so no link is ever checked and the CI docs step is red. **Fix the
+> comment markers first; the generator at `website/scripts/generate-conformance-inventory.mjs`
+> emits them, so fix it there, not by hand-editing between the markers.** Tracked in
+> `.cursor/plans/open-items.md` §0.
+>
+> So slice 6's real remaining scope is: (a) unbreak `docs:build`, then (b) add snippet compilation,
+> which genuinely does not exist anywhere (zero hits for "snippet" across the repo). Note also that
+> the dead anchor in defect 2 below would survive `onBrokenLinks` regardless — Docusaurus checks
+> links, not `#anchor` fragments, and `onBrokenAnchors` is a separate setting that is not enabled.
 
 Status: **near-complete.** Slices 0–5 are done (see Slice Checkpoints). Only **slice 6** (snippet +
 link guardrails in CI) remains open. Slice 0's maintainer source-check is separately tracked as
