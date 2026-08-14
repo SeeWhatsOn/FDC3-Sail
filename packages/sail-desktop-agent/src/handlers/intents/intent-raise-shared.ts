@@ -2,8 +2,14 @@ import type { AppIdentifier, Context } from "@finos/fdc3"
 import { ResolveError, ResultError } from "@finos/fdc3"
 import { createDACPErrorResponse } from "../../dacp/dacp-message-creators"
 import { addPendingIntent, resolvePendingIntent } from "../../state/mutators"
-import { getInstance, getInstancesByAppId, getPendingIntent } from "../../state/selectors"
-import { AppInstanceState, type PendingIntent } from "../../state/types"
+import {
+  getInstance,
+  getInstancesByAppId,
+  getPendingIntent,
+  isInstanceConnected,
+  isInstanceReceivable,
+} from "../../state/selectors"
+import type { PendingIntent } from "../../state/types"
 import {
   FDC3ResolveError,
   NoAppsFoundError,
@@ -102,14 +108,10 @@ export async function resolveAppTargetInstance(
   }
 
   const runningInstances = getInstancesByAppId(params.getState(), appId).filter(
-    instance =>
-      // oxlint-disable-next-line typescript/no-unnecessary-condition -- `AppInstanceState` only has PENDING/CONNECTED today (browserResidentDesktopAgents.md v2.2 "Disconnects": Sail's `removeInstance` deletes closed instances rather than retaining a CLOSED state). This guards raise-intent target selection; when a retained CLOSED state ships, it becomes load bearing — deleting it now fails OPEN and raises the intent against a closed instance.
-      instance.state === AppInstanceState.CONNECTED || instance.state === AppInstanceState.PENDING,
+    isInstanceReceivable,
   )
   if (runningInstances.length > 0) {
-    const connectedInstances = runningInstances.filter(
-      instance => instance.state === AppInstanceState.CONNECTED,
-    )
+    const connectedInstances = runningInstances.filter(isInstanceConnected)
     const candidates = connectedInstances.length > 0 ? connectedInstances : runningInstances
     const targetInstance = candidates.reduce((latest, instance) =>
       instance.lastActivity.getTime() > latest.lastActivity.getTime() ? instance : latest,

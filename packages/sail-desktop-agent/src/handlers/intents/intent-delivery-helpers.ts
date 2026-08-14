@@ -5,14 +5,19 @@ import {
   createIntentEvent,
 } from "../../dacp/dacp-message-creators"
 import { sendDACPResponse } from "../utils/dacp-response-utils"
-import { getInstance, getListenersForInstance, getPendingIntent } from "../../state/selectors"
+import {
+  getInstance,
+  getListenersForInstance,
+  getPendingIntent,
+  isInstanceReceivable,
+} from "../../state/selectors"
 import {
   markPendingIntentDelivered,
   resolvePendingIntent,
   updatePendingIntentTarget,
 } from "../../state/mutators"
 import type { DACPHandlerParams } from "../types"
-import { AppInstanceState, type IntentRequestType } from "../../state/types"
+import type { IntentRequestType } from "../../state/types"
 import {
   extractAppProvidedIntentContextMetadata,
   mergeIntentEventContextMetadata,
@@ -74,12 +79,7 @@ export function attemptIntentDelivery(
   }
 
   const targetInstance = getInstance(getState(), pendingIntent.targetInstanceId)
-  if (
-    !targetInstance ||
-    (targetInstance.state !== AppInstanceState.PENDING &&
-      // oxlint-disable-next-line typescript/no-unnecessary-condition -- `AppInstanceState` only has PENDING/CONNECTED today (browserResidentDesktopAgents.md v2.2 "Disconnects": Sail's `removeInstance` deletes closed instances rather than retaining a CLOSED state). This guards pending-intent delivery; when a retained CLOSED state ships, it becomes load bearing — deleting it now fails OPEN and delivers the intent to a not-ready instance.
-      targetInstance.state !== AppInstanceState.CONNECTED)
-  ) {
+  if (!targetInstance || !isInstanceReceivable(targetInstance)) {
     logger.warn("DACP: Target instance not ready for pending intent delivery", {
       requestId,
       targetInstanceId: pendingIntent.targetInstanceId,

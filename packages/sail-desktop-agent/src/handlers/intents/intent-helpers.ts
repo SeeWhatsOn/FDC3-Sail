@@ -8,8 +8,11 @@
 import type { AppIdentifier, AppMetadata, Context, IntentMetadata } from "@finos/fdc3"
 import type { AgentState, IntentListener, AppDirectoryState } from "../../state/types"
 import type { DACPHandlerParams } from "../types"
-import { getInstance, getActiveListenersForIntent } from "../../state/selectors"
-import { AppInstanceState } from "../../state/types"
+import {
+  getInstance,
+  getActiveListenersForIntent,
+  isInstanceConnected,
+} from "../../state/selectors"
 import {
   retrieveAllApps,
   retrieveAppsById,
@@ -56,7 +59,7 @@ export function shouldWaitForIntentListenerBeforeDelivery(
   }
   if (explicitTargetInstanceId) {
     const instance = getInstance(params.getState(), targetInstanceId)
-    if (instance?.state === AppInstanceState.CONNECTED) {
+    if (instance && isInstanceConnected(instance)) {
       return false
     }
   }
