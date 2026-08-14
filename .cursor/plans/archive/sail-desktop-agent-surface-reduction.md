@@ -14,6 +14,18 @@
 > **Its Principle 1 is still the standing rule:** ship it whole — `SailDesktopAgent` is the product,
 > one construction path, one import.
 
+> **Note (2026-08-07 dead-path sweep).** This plan's own work is done and stands. Some file:line
+> citations below describe the **pre-fix** state at the time this plan was written and are
+> historical by design (e.g. `sail-platform/src/sail-platform.ts`, `sail-platform/src/index.ts`
+> line ranges, `packages/sail-desktop-agent/src/agent/desktop-agent.ts` in the composition.md
+> citation). Two of those paths have since gone missing for reasons *outside* this plan's own
+> scope: `sail-platform/src/sail-platform.ts` no longer exists (deleted whole in the 2026-08-04
+> `sail-platform` cull, not by this plan), and `agent/desktop-agent.ts` no longer exists (merged
+> into `sail-desktop-agent.ts` by `.cursor/plans/archive/sail-desktop-agent-class-collapse.md`). `packages/
+> sail-ui` (line 139, 172) was already the plan's own target for deletion (the package is
+> `sail-theme`) — it is still a dangling reference today, but in `tsconfig.json` project references,
+> not the docs this plan fixed; tracked live in `.cursor/plans/draft-pr-readiness.md` item 28.
+
 **Status:** implemented — all three phases landed. See "Outcome" at the end.
 **Branch base:** `wip/v3-local`
 **Version context:** `3.0.0-pre.1.0` — pre-release, no backward-compatibility obligation.

@@ -97,7 +97,7 @@ The agent already has this seam twice over. This plan uses it rather than buildi
 | Already exists | Where |
 |---|---|
 | A typed event map with 5 members | `app-connection/app-connection-events.ts` |
-| An emitter with `on`/`off`/`emit` and per-handler `try/catch` | `wcp/app-connection-event-emitter.ts` |
+| An emitter with `on`/`off`/`emit` and per-handler `try/catch` | `app-connection/wcp/app-connection-event-emitter.ts` |
 | Public host subscription in controller shape | `agent/sail-desktop-agent.ts` — `apps.onConnect`, `channels.onAppChannelChange` |
 | **A typed semantic event emitted from a DACP handler** | `DACPHandlerContext.notifyChannelMembershipChanged`, injected at `agent/sail-desktop-agent.ts:420`, called at `handlers/channels/handlers.ts:425` under the comment *"Typed host-chrome path"* |
 
@@ -423,12 +423,12 @@ belongs in slice 4.
 
 | Event | Site |
 |---|---|
-| `intent.delivered` | `intents/intent-delivery-helpers.ts:105-112` |
-| `intent.result` | `intents/intent-result-handlers.ts:142-172` — **corrected**; the old `:189-201` is past EOF (file is 188 lines) |
-| `intent.raised` + `intent.resolved` | `intents/intent-raise-intent.ts:155-174` — **chosen** only; the **offered** `choices` array is built at `:138`, outside this range |
-| `open.contextDelivered` | `utils/open-with-context.ts:234-272` |
-| `app.connected` | **`wcp/wcp-connection-management.ts:271`** (in `updateConnectionMetadata`) — **corrected**. It takes `AppConnectionContext`, **not** a handler params bundle, so this is **not** already in scope. Needs the same plumbing as `app.disconnected` in Slice 4 — re-scope before starting. |
-| `privateChannel.created` | `private-channels/handlers.ts:53` |
+| `intent.delivered` | `handlers/intents/intent-delivery-helpers.ts:105-112` |
+| `intent.result` | `handlers/intents/intent-result-handlers.ts:142-172` — **corrected**; the old `:189-201` is past EOF (file is 188 lines) |
+| `intent.raised` + `intent.resolved` | `handlers/intents/intent-raise-intent.ts:155-174` — **chosen** only; the **offered** `choices` array is built at `:138`, outside this range |
+| `open.contextDelivered` | `handlers/utils/open-with-context.ts:234-272` |
+| `app.connected` | **`app-connection/wcp/wcp-connection-management.ts:271`** (in `updateConnectionMetadata`) — **corrected**. It takes `AppConnectionContext`, **not** a handler params bundle, so this is **not** already in scope. Needs the same plumbing as `app.disconnected` in Slice 4 — re-scope before starting. |
+| `privateChannel.created` | `handlers/private-channels/handlers.ts:53` |
 
 **Acceptance:** each fires once per operation. With `notify` undefined these paths
 are byte-identical to today.
