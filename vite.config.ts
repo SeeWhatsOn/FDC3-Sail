@@ -33,6 +33,8 @@ export default defineConfig({
       "**/pnpm-lock.yaml",
       "**/assets/",
       ".cursor/**",
+      // Vendored FDC3 2.2 conformance toolbox build — generated upstream, not ours to fix.
+      "packages/sail-conformance-harness/2.2-conformance-tests/**",
     ],
     rules: {
       "vite-plus/prefer-vite-plus-imports": "error",

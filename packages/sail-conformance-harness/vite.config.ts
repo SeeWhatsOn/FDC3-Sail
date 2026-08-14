@@ -6,32 +6,18 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["@finos/sail-desktop-agent"],
   },
+  // Vendored FDC3 2.2 toolbox build, served at the harness origin so `/apps/...`,
+  // `/lib/...` and `/directories/...` match the URLs baked into
+  // 2.2-conformance-tests/directories/local-conformance.json.
+  //
+  // This build (unlike the hosted FINOS toolbox) carries the headless patch that
+  // makes `?suite=` run unattended — see HEADLESS.md. Serving it here also puts the
+  // toolbox same-origin with the harness, which WCP host-instance adoption needs.
+  publicDir: "2.2-conformance-tests",
   server: {
     port: 3001,
-    open: true,
-    proxy: {
-      // Local profile: conformance pages load under /apps; scripts/CSS use /lib.
-      "/apps": {
-        target: "https://fdc3.finos.org/toolbox/fdc3-conformance",
-        changeOrigin: true,
-        secure: true,
-      },
-      "/lib": {
-        target: "https://fdc3.finos.org/toolbox/fdc3-conformance",
-        changeOrigin: true,
-        secure: true,
-      },
-      "/screenshots": {
-        target: "https://fdc3.finos.org/toolbox/fdc3-conformance",
-        changeOrigin: true,
-        secure: true,
-      },
-      "/finos-icon-256.png": {
-        target: "https://fdc3.finos.org/toolbox/fdc3-conformance",
-        changeOrigin: true,
-        secure: true,
-      },
-    },
+    // Headless/CI runs have no browser to open.
+    open: !process.env.CI && !process.env.HARNESS_NO_OPEN,
     // Reload when @finos/sail-desktop-agent dist changes (package resolves to dist/, not src/)
     watch: {
       ignored: [

@@ -14,7 +14,7 @@ import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../../sail-
 
 import { loadConformanceApplications } from "../conformance-app-directory"
 import { createHarnessAppLauncher } from "../app-launcher"
-import { extractConformance1Url } from "../harness-bootstrap"
+import { extractAppUrl } from "../harness-bootstrap"
 import {
   createHarnessInstanceCleanup,
   type HarnessInstanceCleanup,
@@ -200,7 +200,7 @@ export function createHarnessOpenWithContextBootstrap(): {
 } {
   const { applications: conformanceApps } = loadConformanceApplications({ profile: "hosted" })
   const conformance1InstanceId = crypto.randomUUID()
-  const conformance1Url = extractConformance1Url(conformanceApps)
+  const conformance1Url = extractAppUrl(conformanceApps)
   const mockAppUrl = extractMockAppUrl(conformanceApps)
 
   const launchedPanels: HarnessPanel[] = [
@@ -320,7 +320,7 @@ async function runHarnessOpenWithContextFromBootstrap(bootstrap: {
   const { agent, connection, sourceInstanceId, launchedPanels } = bootstrap
 
   const { applications: conformanceApps } = loadConformanceApplications({ profile: "hosted" })
-  const conformance1Url = extractConformance1Url(conformanceApps)
+  const conformance1Url = extractAppUrl(conformanceApps)
   const mockAppUrl = extractMockAppUrl(conformanceApps)
 
   const sourceValidatedId = await completeWcp4Handshake(connection, {

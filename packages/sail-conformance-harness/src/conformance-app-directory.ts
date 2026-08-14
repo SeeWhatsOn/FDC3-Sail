@@ -1,6 +1,7 @@
 import type { DirectoryApp } from "@finos/sail-desktop-agent"
 
 import conformanceAppDirectory from "../conformance-appd.json"
+import localConformanceAppDirectory from "../2.2-conformance-tests/directories/local-conformance.json"
 
 export type ConformanceToolboxProfile = "hosted" | "local"
 
@@ -75,25 +76,28 @@ export function loadConformanceApplications(options?: {
   localOrigin?: string
 }): LoadedConformanceApplications {
   const config = resolveConformanceToolboxProfile(options?.profile)
-  const rawApps = conformanceAppDirectory.applications as DirectoryApp[]
 
   if (config.profile === "hosted") {
     return {
       ...config,
-      applications: structuredClone(rawApps),
+      applications: structuredClone(conformanceAppDirectory.applications as DirectoryApp[]),
     }
   }
 
+  // The local profile serves the vendored 2.2 toolbox build, which ships its own
+  // directory already rebased to CONFORMANCE_LOCAL_ORIGIN. It differs from the
+  // hosted fixture in two ways that matter: it adds `Conformance1Headless`, and it
+  // drops `IntentAppLId` (that path 404s in this build — see HEADLESS.md §2).
+  const localApps = structuredClone(localConformanceAppDirectory.applications as DirectoryApp[])
   const localOrigin = options?.localOrigin ?? CONFORMANCE_LOCAL_ORIGIN
 
   return {
     profile: config.profile,
     origin: localOrigin,
     fdc3Version: config.fdc3Version,
-    applications: rewriteConformanceAppDirectoryOrigin(
-      structuredClone(rawApps),
-      CONFORMANCE_HOSTED_ORIGIN,
-      localOrigin,
-    ),
+    applications:
+      localOrigin === CONFORMANCE_LOCAL_ORIGIN
+        ? localApps
+        : rewriteConformanceAppDirectoryOrigin(localApps, CONFORMANCE_LOCAL_ORIGIN, localOrigin),
   }
 }

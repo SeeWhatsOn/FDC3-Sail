@@ -1,6 +1,8 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "categories": { "correctness": "off" },
+  // Vendored FDC3 2.2 conformance toolbox build — generated upstream, not ours to fix.
+  "ignorePatterns": ["packages/sail-conformance-harness/2.2-conformance-tests/**"],
   "overrides": [
     // ENGINE — sail-desktop-agent must not import the layers that compose it.
     // Dependencies flow one way: engine -> platform -> shell.
