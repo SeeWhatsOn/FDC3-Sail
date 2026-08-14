@@ -376,11 +376,7 @@ export default defineConfig({
         // no-unnecessary-condition is off for tests everywhere. Deliberately repo-wide: this
         // replaces five per-package entries, and `test/` (today only sail-desktop-agent's
         // cucumber steps) is generalised on purpose, not scoped to that one package.
-        files: [
-          "**/__tests__/**/*.{ts,tsx}",
-          "**/*.test.{ts,tsx}",
-          "**/test/**/*.{ts,tsx}",
-        ],
+        files: ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "**/test/**/*.{ts,tsx}"],
         rules: {
           "typescript/no-unnecessary-condition": "off",
         },
@@ -439,10 +435,7 @@ export default defineConfig({
         jsPlugins: [],
       },
       {
-        files: [
-          "packages/sail-finance/src/*.css",
-          "**/packages/sail-finance/src/*.css",
-        ],
+        files: ["packages/sail-finance/src/*.css", "**/packages/sail-finance/src/*.css"],
         rules: {},
         jsPlugins: [],
       },

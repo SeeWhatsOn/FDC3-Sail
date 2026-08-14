@@ -31,13 +31,10 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(SCRIPT_DIR, "..", "..")
 const FEATURES_DIR = join(REPO_ROOT, "packages/sail-desktop-agent/test/features")
 const CUCUMBER_YML = join(REPO_ROOT, "packages/sail-desktop-agent/cucumber.yml")
-const CONFORMANCE_DOC = join(
-  REPO_ROOT,
-  "website/docs/packages/desktop-agent/conformance.md",
-)
+const CONFORMANCE_DOC = join(REPO_ROOT, "website/docs/packages/desktop-agent/conformance.md")
 
-const START_MARKER = "<!-- GENERATED:CONFORMANCE-INVENTORY:START -->"
-const END_MARKER = "<!-- GENERATED:CONFORMANCE-INVENTORY:END -->"
+const START_MARKER = "{/* GENERATED:CONFORMANCE-INVENTORY:START */}"
+const END_MARKER = "{/* GENERATED:CONFORMANCE-INVENTORY:END */}"
 
 const FDC3_TAGS = ["@fdc3_2.0", "@fdc3_2.2", "@fdc3_3.0"]
 
@@ -117,27 +114,25 @@ function isActive(scenario) {
 }
 
 function countByTag(scenarios, tag) {
-  return scenarios.filter((s) => isActive(s) && s.tags.includes(tag)).length
+  return scenarios.filter(s => isActive(s) && s.tags.includes(tag)).length
 }
 
 function buildInventory() {
   const files = findFeatureFiles(FEATURES_DIR).map(parseFeatureFile)
 
-  const perFile = files.map((f) => ({
+  const perFile = files.map(f => ({
     relPath: f.relPath,
     total: f.scenarios.filter(isActive).length,
-    counts: Object.fromEntries(FDC3_TAGS.map((t) => [t, countByTag(f.scenarios, t)])),
+    counts: Object.fromEntries(FDC3_TAGS.map(t => [t, countByTag(f.scenarios, t)])),
   }))
 
   const totals = Object.fromEntries(
-    FDC3_TAGS.map((t) => [t, perFile.reduce((sum, f) => sum + f.counts[t], 0)]),
+    FDC3_TAGS.map(t => [t, perFile.reduce((sum, f) => sum + f.counts[t], 0)]),
   )
 
-  const filesWith22 = perFile.filter((f) => f.counts["@fdc3_2.2"] > 0)
-  const filesOnly30 = perFile.filter(
-    (f) => f.counts["@fdc3_3.0"] > 0 && f.counts["@fdc3_2.2"] === 0,
-  )
-  const filesWith20 = perFile.filter((f) => f.counts["@fdc3_2.0"] > 0)
+  const filesWith22 = perFile.filter(f => f.counts["@fdc3_2.2"] > 0)
+  const filesOnly30 = perFile.filter(f => f.counts["@fdc3_3.0"] > 0 && f.counts["@fdc3_2.2"] === 0)
+  const filesWith20 = perFile.filter(f => f.counts["@fdc3_2.0"] > 0)
 
   // Sanity check against cucumber.yml — fail loudly if the profile names this
   // generator assumes have been renamed or removed.
@@ -157,18 +152,18 @@ function buildInventory() {
 function mdTable(rows, headers) {
   const headerRow = `| ${headers.join(" | ")} |`
   const sepRow = `| ${headers.map(() => "---").join(" | ")} |`
-  const bodyRows = rows.map((r) => `| ${r.join(" | ")} |`)
+  const bodyRows = rows.map(r => `| ${r.join(" | ")} |`)
   return [headerRow, sepRow, ...bodyRows].join("\n")
 }
 
 function renderSection(inv) {
-  const rows22 = inv.filesWith22.map((f) => [
+  const rows22 = inv.filesWith22.map(f => [
     `\`${f.relPath}\``,
     String(f.counts["@fdc3_2.2"]),
     f.counts["@fdc3_2.0"] > 0 ? String(f.counts["@fdc3_2.0"]) : "—",
   ])
 
-  const rows30 = inv.filesOnly30.map((f) => [`\`${f.relPath}\``, String(f.counts["@fdc3_3.0"])])
+  const rows30 = inv.filesOnly30.map(f => [`\`${f.relPath}\``, String(f.counts["@fdc3_3.0"])])
 
   const lines = []
   lines.push(
