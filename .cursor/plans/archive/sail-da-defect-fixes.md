@@ -1,5 +1,21 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent defect fixes
 
+> **ARCHIVED 2026-08-14.** Moved to `.cursor/plans/archive/`. Done — all four slices verified and
+> reviewed. Each fix re-verified against `a6c6b62`: `meta.hostInstanceId` is stripped
+> (`browser-app-connection.ts:219`), `AppConnectionOptions.fdc3Version` is gone in favour of
+> `WCPHandshakeContext.fdc3Version`, the three off-schema payloads are trimmed
+> (`channels/handlers.ts:398`, `private-channels/handlers.ts:476`, `heartbeat/handlers.ts:38`), and
+> `raiseIntent` now rejects an undefined context the same way `raiseIntentForContext` does
+> (`intent-raise-intent.ts:41-52`).
+>
+> **No open items to carry.** Its "out of scope" and "Parked Follow-ups" lists restate the park list
+> of its own source document, which is still live: see
+> `.cursor/plans/sail-desktop-agent-audit-2026-08.md` §10. Every one of those items was re-verified
+> as still present in the tree and still parked.
+>
+> Note its slice 3 self-correction: `channelChangedEvent` first shipped with both fields, which is
+> invalid per the schema's `anyOf`, then was fixed. Current code matches the corrected version.
+
 Status: **done** — all four slices verified + reviewed
 Current slice: none. Slices 1–4 complete.
 Review/fix loops: 1 on slice 1 (review + fix, both clean). Slice 2 failures: 0. Slice 3 failures: 0. Slice 4 failures: 0

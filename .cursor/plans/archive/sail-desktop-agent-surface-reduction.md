@@ -1,5 +1,19 @@
 # sail-desktop-agent — surface reduction & architecture realignment
 
+> **ARCHIVED 2026-08-14.** Moved to `.cursor/plans/archive/`. Implemented — all three phases landed.
+> Re-verified against `a6c6b62`: `src/interfaces/transport.ts` is deleted (the whole `src/interfaces`
+> directory is gone), the `/browser` export is out of `package.json`, and `validation` defaults to
+> `"warn"` in `agent/default-config.ts:39`.
+>
+> **No open items to carry.** Its one follow-up — "38 of 458 Cucumber messages fail schema
+> validation" — is closed: the example it cited (`broadcastRequest` with `channelId: null`) was fixed
+> as Out-of-plan fix #5 of the test-suite realignment, which ruled it a product bug and made
+> `channelId` required; the broader triage was finished by that plan's slice 5. Recorded for
+> completeness in `.cursor/plans/open-items.md` §5.
+>
+> **Its Principle 1 is still the standing rule:** ship it whole — `SailDesktopAgent` is the product,
+> one construction path, one import.
+
 **Status:** implemented — all three phases landed. See "Outcome" at the end.
 **Branch base:** `wip/v3-local`
 **Version context:** `3.0.0-pre.1.0` — pre-release, no backward-compatibility obligation.

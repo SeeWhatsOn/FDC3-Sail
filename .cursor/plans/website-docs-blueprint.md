@@ -7,6 +7,21 @@
 > rather than a page about the (parked) WCP4 origin allowlist. The blueprint's *method* — status
 > markers, standalone package framing, one source of truth per claim — is unchanged and still applies.
 
+> **Re-verified 2026-08-14 against `a6c6b62` — everything this plan claims is accurate.** Slice 6 is
+> genuinely untouched and all four "Open doc defects" below are still present, verbatim, at the cited
+> lines. `website/docs/**` is confirmed **clean of every deleted `sail-platform` API** (zero hits for
+> `SailPlatform`, `createSailBrowserDesktopAgent`, `SailAppLauncher`, `SailPlatformClient`,
+> `SailBrowserDesktopAgentConfig`), so slices 0–5's truth-pass held.
+>
+> **Slice 6 is half-satisfied already, by infrastructure that predates this plan.** Internal
+> link-checking effectively runs today: `website/docusaurus.config.ts:22` sets
+> `onBrokenLinks: "throw"`, and `npm run docs:build` is in both CI (`.github/workflows/ci.yml:53`)
+> and `npm run validate` (`package.json:34`). So a broken internal link already fails the build.
+> **What is genuinely missing is only the snippet half** — nothing anywhere compiles the code blocks
+> in the docs (zero hits for "snippet" across the repo). Re-scope slice 6 to snippet compilation
+> alone, and note that the dead anchor in defect 2 below survives `onBrokenLinks` because Docusaurus
+> checks links, not `#anchor` fragments — `onBrokenAnchors` is a separate setting and is not enabled.
+
 Status: **near-complete.** Slices 0–5 are done (see Slice Checkpoints). Only **slice 6** (snippet +
 link guardrails in CI) remains open. Slice 0's maintainer source-check is separately tracked as
 non-blocking in the Verification Notes for slice 0; it has not stopped slices 1–5 from landing.
@@ -45,7 +60,7 @@ the package sections of Slice 2.
 Source reviews feeding this plan:
 - `ARCHITECTURE-REMEDIATION-PLAN.md` (2026-07-30) — docs audit, 40+ defects across 13 `website/docs/` pages
 - `FDC3-SAIL-REVIEW.md` (2026-07-28, `4dddd88f7`) — BLOCK-B/C/D and D-1…D-10; partly drifted, see Risks
-- `.cursor/plans/sail-desktop-agent-review-remediation.md` — in flight, slices 0–6 landed. **Do not interleave.**
+- `.cursor/plans/archive/sail-desktop-agent-review-remediation.md` — in flight, slices 0–6 landed. **Do not interleave.**
 
 ---
 
@@ -120,7 +135,7 @@ consumable.
 |---|---|---|---|
 | `@finos/sail-desktop-agent` | A standalone FDC3 Desktop Agent you can drop into your own host | npm | Substantially implemented. **Not published** — see register §C |
 | `@finos/sail-platform` | The business-readiness layer: **workspaces, layouts, telemetry, auth, entitlements, persistent storage, and connectors** | npm | `SailPlatform` + `SailAppLauncher` + `SailPlatformClient` persistence now have a **real consumer** — `sail-one` (below). Telemetry, auth, entitlements, connectors: **not started**. Observability is the planned home for telemetry — the collected-but-unwired middleware pipeline is **superseded by the observability seam** (`.cursor/plans/agent-observability-seam.md`, `planned`) |
-| `sail-one` | **Example UI** for the platform — **domain-neutral**, for general use. Tab-and-grid canvas with channel wiring | deploy + customise | **Landed 2026-07-31** (`06476be62`). Real shell built on `SailPlatform`; `private`/`v0.0.0`, not published. Interim gaps: structural channel/directory edits restart the agent, `embeddable-ui/` carried but unwired. Port brief: `.cursor/plans/sail-one-port.md` (its "no code written" status is now stale) |
+| `sail-one` | **Example UI** for the platform — **domain-neutral**, for general use. Tab-and-grid canvas with channel wiring | deploy + customise | **Landed 2026-07-31** (`06476be62`). Real shell built on `SailPlatform`; `private`/`v0.0.0`, not published. Interim gaps: structural channel/directory edits restart the agent, `embeddable-ui/` carried but unwired. Port brief: `.cursor/plans/archive/sail-one-port.md` (its "no code written" status is now stale) |
 | `sail-finance` | **Example UI** for the platform — **finance-specific**. Workspace-and-panel dashboard | deploy + customise | Shipping. **Not** "the reference host" — corrected 2026-08-03; both shells are examples, neither is canonical |
 
 Two things follow that the docs must get right:
@@ -258,7 +273,7 @@ the sidebar; it becomes canonical and `CONTRIBUTING.md` points to it. This conso
   recorded. Only then does prose reach `website/docs/`.
 - **Verify:** maintainer confirms the two-entry-point description matches `sail-one` and `sail-finance`
   source. No build step.
-- **Likely files:** new `.cursor/plans/sail-platform-design.md` (now a description, not a green-field
+- **Likely files:** new `.cursor/plans/archive/sail-platform-design.md` (now a description, not a green-field
   design), then `website/docs/architecture/overview.md`
 
 ### 1. Truth pass — delete every false statement
@@ -332,7 +347,7 @@ the sidebar; it becomes canonical and `CONTRIBUTING.md` points to it. This conso
   package is, what it does, why it needs to be what it is, how to use it. No page justifies a package by
   naming its consumers, and no API is marked down for lacking one. Where a worked example helps, put it in
   an appendix section clearly labelled as a reference implementation.
-  `.cursor/plans/sail-platform-design.md` is the model to follow for `packages/platform/overview.md`.
+  `.cursor/plans/archive/sail-platform-design.md` is the model to follow for `packages/platform/overview.md`.
 - **Goal:** each package page describes what that package actually owns and links to the spine for
   layering. Rewrite `packages/sail-finance/overview.md` (every substantive claim is currently wrong)
   and `packages/platform/overview.md` (blocked on slice 0). Patch `composition.md` and
@@ -528,7 +543,7 @@ Docs, so "tests" means mechanical checks. Risk-based, not exhaustive.
 
 ## Open doc defects (carried from the defect register)
 
-**Added 2026-08-07**, closing out `.cursor/plans/website-docs-defect-register.md` (now
+**Added 2026-08-07**, closing out `.cursor/plans/archive/website-docs-defect-register.md` (now
 `.cursor/plans/archive/website-docs-defect-register.md`). Of ~50 rows in that register, all but
 one were resolved by the slices below — either the API was deleted in the 2026-08-04
 `sail-platform` cull, or the page was already rewritten. The rows below are what survives, plus
@@ -564,7 +579,7 @@ material for whoever picks up slice 6, or a quick standalone truth-pass commit b
   A5/A6/A7 three-layer framing, A12 SailPlatform-as-the-answer. **Open for slice 2:** add a `planned`/
   superseded caveat to `platform/overview.md`'s `MiddlewarePipeline` bullet. Committed as `ffdd94f5b`.
 
-- **Slice 0 (2026-08-03):** `.cursor/plans/sail-platform-design.md` drafted (`063553212`), then rewritten
+- **Slice 0 (2026-08-03):** `.cursor/plans/archive/sail-platform-design.md` drafted (`063553212`), then rewritten
   as a **standalone package description** on maintainer direction (`457a0896c`) — see the framing rule in
   this plan's header. Two substantive corrections came out of that rewrite: `workspaces`/`layouts`/
   `sailConfig` flip `planned` → `implemented` (they delegate to a working `LocalStorageBackend`), and the

@@ -1,7 +1,30 @@
 # Defect register: sail-desktop-agent, dual-agent review 2026-08-11
 
-Status: **findings ratified, no fixes started**
-Current slice: none. Nothing here has been implemented.
+Status: **live — 8 of 10 findings still open.** This is the DA's real defect backlog.
+Current slice: none. **#1 and #2 are fixed** (commit `8a62fd386`, follow-up `20515fdbf`); #3–#10 remain.
+
+> ### Re-verified 2026-08-14 against `a6c6b62`
+>
+> Every finding was re-read against the current source, not against this register's own claims.
+> **2 fixed, 8 still present, 0 unverifiable.** Line citations still match except where noted below.
+>
+> | # | Verdict | Note |
+> |---|---|---|
+> | 1 | **FIXED** | `intent-raise-shared.ts:156-177` sends terminal `ResultError.ApiTimeout`; disconnect path at `instance-teardown.ts:84-121`. **Citation update:** `handlers/cleanup.ts` was renamed to `handlers/instance-teardown.ts` (`d334d5aa`) — the file in this finding's header no longer exists under the old name. |
+> | 2 | **FIXED** | `events/handlers.ts:109` and `intent-listener-handlers.ts:131` both now guard `listener.instanceId !== instanceId`. |
+> | 3 | still present | Reconfirmed this session by `d132524`, which added a deliberately-skipped Prove-It test (`intent-delivery-pending-target.test.ts`) plus `pending-instance-dacp-gate.test.ts` pinning why it is currently unreachable over the wire. No production fix. |
+> | 4 | still present | Lines unchanged. Chain re-traced: `sail-desktop-agent.ts:517` → `browser-app-connection.ts:302` → `disconnectApp` (`:171-183`), bypassing the only site that cancels (`:133-137`). Gap is live. |
+> | 5 | still present | `cleanupPendingIntentRequest` (`:179-181`) still clears timeouts only, never `resolvePendingIntent`. |
+> | 6 | still present | `createResolverAppIntent` (`intent-resolver-helpers.ts:94-142`) still takes no `source`; only `findIntentHandlers` (`intent-helpers.ts:169-174`) filters by it. |
+> | 7 | still present | `sail-desktop-agent.ts:292-299` — `stop()` still only stops the connection. |
+> | 8 | still present, still unproven | Unchanged, and the register's own "hypothesis not defect" framing still applies. Do not promote it without a reproduction. |
+> | 9 | still present | Lines `:55`, `:84-86`, `:108-117` **exactly** unchanged. |
+> | 10 | still present | `state/mutators/channel.ts:11` unchanged. Low value, as originally noted. |
+>
+> **Related, tracked elsewhere:** the two `connectionAttemptUuid` hardening items in
+> `.cursor/plans/archive/dacp-handler-deps-refactor.md`'s Parked Follow-ups share #9's root cause
+> (unvalidated / reusable `connectionAttemptUuid`) but a different symptom. Same bug class, not a
+> duplicate — carried into `.cursor/plans/open-items.md`. Fix them together.
 
 ## Provenance
 
@@ -34,10 +57,14 @@ call sites. **No ownership gate exists anywhere on that path.** The finding surv
 
 ## Findings
 
-### 1. Pending intents never settle on the wire — `getResult()` hangs forever
+### 1. ~~Pending intents never settle on the wire — `getResult()` hangs forever~~ — **FIXED**
+
+> **FIXED** by `8a62fd386` (+ follow-up `20515fdbf`, which stopped the terminal response firing
+> toward the instance that is itself disconnecting). Verified 2026-08-14. Kept for the mechanism.
+> `handlers/cleanup.ts` is now `handlers/instance-teardown.ts`.
 
 - **Severity:** critical. **Found by both agents**, independently ranked top-two by each.
-- **Where:** `handlers/intents/intent-raise-shared.ts:121-131`, `:163-177`; `handlers/cleanup.ts:85-96`
+- **Where:** `handlers/intents/intent-raise-shared.ts:121-131`, `:163-177`; `handlers/cleanup.ts:85-96` *(now `handlers/instance-teardown.ts`)*
 - **Mechanism:** `registerPendingIntentPromise` stores `resolve: () => {}` / `reject: () => {}` and
   nothing ever overwrites them — `pendingIntentPromises.set(...)` has exactly one production call
   site. The timeout at `:163-177` deletes the map entry and calls `resolvePendingIntent` on state but
@@ -51,7 +78,11 @@ call sites. **No ownership gate exists anywhere on that path.** The finding surv
   timeout and the disconnect path, and `intent-delivery-helpers.ts:156-180` sends
   `ResolveError.IntentDeliveryFailed`. This is the one path that notifies nobody.
 
-### 2. Cross-instance unsubscribe — one app can silently kill another's listeners
+### 2. ~~Cross-instance unsubscribe — one app can silently kill another's listeners~~ — **FIXED**
+
+> **FIXED** by `8a62fd386`. Verified 2026-08-14: `events/handlers.ts:109` and
+> `intent-listener-handlers.ts:131` both now reject a `listenerUUID` owned by another instance.
+> Kept for the mechanism.
 
 - **Severity:** critical. Found by Grok only.
 - **Where:** `handlers/events/handlers.ts:107-115`; `handlers/intents/intent-listener-handlers.ts:130-135`
@@ -187,13 +218,15 @@ documented; nobody had looked inside it manually until now.
 
 ## Recommended slicing
 
-Not started. Suggested order when this is picked up:
+**Slice A is done.** Slices B and C are the remaining work, in this order:
 
-1. **Slice A — #1 and #2.** Both fully verified, both small. #1 is an FDC3 conformance failure; #2 is
-   a two-line ownership check per file in a class already fixed elsewhere, so the shape of the fix is
-   settled. Needs a Prove-It test each: a hanging `getResult()` that starts passing, and an
-   attacker-instance unsubscribe that starts failing.
-2. **Slice B — #3, #5, #6.** Intent-routing correctness. One coherent area.
+1. ~~**Slice A — #1 and #2.**~~ **DONE** — `8a62fd386`, plan was
+   `.cursor/plans/archive/mvd-sail-da-slice-a.md`. Both Prove-It tests exist and are committed:
+   `handlers/intents/__tests__/pending-intent-settlement.test.ts`,
+   `handlers/__tests__/cross-instance-unsubscribe.test.ts`.
+2. **Slice B — #3, #5, #6.** Intent-routing correctness. One coherent area. **Start here.** #3
+   already has a written, skipped Prove-It test (`intent-delivery-pending-target.test.ts`) — unskip
+   it and make it pass.
 3. **Slice C — #4, #7, #9.** WCP and agent lifecycle. Needs real integration tests first; BDD cannot
    see any of it.
 4. **#8** — do not schedule until an interleaving is demonstrated.

@@ -1,5 +1,17 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent defect slice A (#1, #2)
 
+> **ARCHIVED 2026-08-14.** Moved to `.cursor/plans/archive/`. Delivered.
+>
+> **The "Uncommitted" in its old status line was stale.** Both fixes and both Prove-It tests landed
+> in `8a62fd386` ("Closes findings #1 and #2 from the 2026-08-11 defect register"), with follow-up
+> `20515fdbf` stopping the terminal response firing toward the instance that is itself disconnecting.
+> Verified present and committed: `handlers/intents/__tests__/pending-intent-settlement.test.ts` and
+> `handlers/__tests__/cross-instance-unsubscribe.test.ts`.
+>
+> **No open items to carry.** Findings #1 and #2 are struck through as fixed in the live register,
+> `.cursor/plans/sail-da-defect-register-2026-08-11.md`, which remains the home for #3-#10 — the
+> eight that are still open. Slice B (#3, #5, #6) is the next work there.
+
 Status: done
 Current slice: 1 — Slice A (#1 + #2) — complete, verified, reviewed clean. Uncommitted.
 

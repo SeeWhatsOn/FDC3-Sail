@@ -1,5 +1,18 @@
 # Minimal Viable Delivery Plan: DACP handler deps refactor
 
+> **ARCHIVED 2026-08-14.** Moved to `.cursor/plans/archive/`. All slices complete and reviewed
+> (slice 1 `dc2db03c1`, slice 4' `b3f1f3c79`, slice 2 `a9a43d64a` + `948d38e88`, slice 3 `ba99fc25f`;
+> slice 4 cut). Re-verified against `a6c6b62`: the `DACPHandlerContext` -> `DACPHandlerParams` rename
+> is complete with zero stragglers in `src/`, `validation` / `logPayloadDetail` are required in
+> `handlers/types.ts:73,82`, and `pendingIntentPromises` is gone from production code.
+>
+> **Open items carried forward to `.cursor/plans/open-items.md` §1** — nothing dropped. Three of this
+> plan's Parked Follow-ups did **not** survive re-verification and are corrected there, not here:
+> the `startHeartbeat` "captured `temp-` id forever" claim (the identity half does not reproduce; a
+> regression test already pins the correct behaviour), the `getHandlerForMessageType` per-message
+> closure (resolved incidentally by `98716f08`), and the `sail-ui` / `@tailwindcss/vite` limitations
+> (both resolved). Read `open-items.md` for the current state; read below only for the reasoning.
+
 Status: done
 **All slices complete and reviewed.** Slice 1 `dc2db03c1`, slice 4′ `b3f1f3c79`, slice 2 `a9a43d64a` + `948d38e88`, slice 3 `ba99fc25f`. Slice 4 was cut. Gates held at 385 vitest / 154 cucumber scenarios / 1460 steps / clean lint + tsc through every one, and again on the end-of-delivery run recorded below. Remaining work is in **Parked Follow-ups** — none of it blocking.
 
@@ -237,7 +250,7 @@ The `pendingIntentPromises` collapse stays on **opus** throughout: it is not mec
 
 ### D3 outcome
 
-The uncommitted work turned out to be a **finished, verified MVD slice** (`.cursor/plans/mvd-sail-da-slice-a.md`, `Status: done`) closing register findings #1 and #2 — pending intents never settling, and cross-instance unsubscribe. It is now:
+The uncommitted work turned out to be a **finished, verified MVD slice** (`.cursor/plans/archive/mvd-sail-da-slice-a.md`, `Status: done`) closing register findings #1 and #2 — pending intents never settling, and cross-instance unsubscribe. It is now:
 
 - `8a62fd386` fix(desktop-agent): settle pending intents and reject cross-instance unsubscribes
 - `31ea68def` docs(agents): correct default-user-channels path and note single AgentState owner

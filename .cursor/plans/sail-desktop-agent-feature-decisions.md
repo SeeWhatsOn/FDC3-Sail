@@ -1,8 +1,19 @@
 # sail-desktop-agent — feature decisions to explore
 
 **Status:** open register — items are questions, not agreed work.
-**Branch base:** `wip/v3-local`
+**Branch base:** re-verified 2026-08-14 against `a6c6b62` (was `wip/v3-local`, now 38 commits behind).
 **Version context:** `3.0.0-pre.1.0` — pre-release, no backward-compatibility obligation.
+
+> **Re-verified 2026-08-14.** §1 is unchanged and still genuinely open: `channel-control.ts` exists,
+> is still re-exported at `host-contracts/index.ts:27`, and `selectChannel` still has **zero call
+> sites monorepo-wide**. All cited call sites for the imperative path still match. One line drifted:
+> `intentResolverNeeded` / `requestIntentResolution` are at `sail-desktop-agent.ts:191`, not `:187`.
+>
+> **New evidence for the "delete it" side:** the docs already describe a constructor option that does
+> not exist. `website/docs/architecture/overview.md:169` documents `channelSelector?: ChannelControl`,
+> but `SailDesktopAgentOptions` has no such field (zero grep hits). So the seam is not merely unused —
+> it has already produced one wrong public doc. Whichever way §1 is decided, that doc line is wrong
+> today and should be fixed.
 
 ## What this is
 

@@ -1,5 +1,18 @@
 # Minimal Viable Delivery Plan: TypeScript strictness rollout
 
+> **ARCHIVED 2026-08-14.** Moved to `.cursor/plans/archive/`. All 7 slices coded, verified and
+> reviewed. Re-verified against `a6c6b62`: `noUncheckedIndexedAccess` is live at
+> `tsconfig.root.json:19` and the per-package overrides are gone.
+>
+> **Open items carried forward to `.cursor/plans/open-items.md` §2** — the retained-`CLOSED`-state
+> spec gap (needs its own plan), the `intent-delivery-helpers.ts:77` product decision, the
+> unvalidated app-directory JSON cast, the transport-logging flake, `website/` never being measured,
+> and the unevaluated type-aware rules. The items this plan's own table marks **done** were
+> independently confirmed done and are not carried.
+>
+> **Do not redo the bucket classification below.** ~346 findings were triaged and **21 of them are
+> the tools being wrong**; obeying those deletes real input validation with the suite still green.
+
 Status: done
 Current slice: none — all 7 slices coded, verified and reviewed
 
@@ -13,7 +26,7 @@ Current slice: none — all 7 slices coded, verified and reviewed
 
 ## Context — how we got here
 
-A separate refactor (`.cursor/plans/dacp-handler-deps-refactor.md`, slice 3) removed three
+A separate refactor (`.cursor/plans/archive/dacp-handler-deps-refactor.md`, slice 3) removed three
 `logPayloadDetail ?? "metadata"` fallbacks from DACP handlers. `AGENTS.md` line 145 already
 banned handler-level `??` fallbacks, and the code had been violating its own documented rule.
 That raised the question: **should this be enforced by tooling rather than by prose in
@@ -1309,7 +1322,7 @@ open. Items are listed in their original order, not by status.
   alongside another heavy command. **Update 2026-08-14:** adding `sail-one` to the root run raises
   suite load, which may nudge its hit rate up. Not caused by that change — the root cause is the
   test's own `setTimeout(0)`-then-assert-immediately pattern (`AGENTS.md:62`), and
-  `.cursor/plans/sail-da-test-suite-realignment.md:309` records 2/11 failures on full-suite runs
+  `.cursor/plans/archive/sail-da-test-suite-realignment.md:309` records 2/11 failures on full-suite runs
   versus 0/3 isolated. Flagged so a future flaky CI run is not misattributed to `sail-one`.
 - ~~**`sail-one` is missing from root `vitest.config.ts`'s `projects` array**~~ — **DONE**, hygiene
   batch 2026-08-14. Added; root run went 78 files / 523 tests -> **82 / 539**, exit 0, nothing

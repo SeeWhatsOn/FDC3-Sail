@@ -82,7 +82,7 @@ Checked against FDC3 2.2 (`finos/FDC3` @ `v2.2`) and the installed `@finos/fdc3-
 Composition (D2) is the stated preference. Before committing, resolve:
 
 1. **What does middleware wrap?** The agent deliberately exposes no transport seam — `AgentAppConnection` is `@internal` and `index.ts` states *"There is no transport abstraction to configure."* Middleware over DACP messages means either reopening that seam or intercepting at the handler-context level. These are materially different designs.
-2. **Is there a real second consumer?** `.cursor/plans/sail-one-port.md` describes a second shell. Middleware built for one consumer is speculative generality; see `.cursor/plans/sail-platform-extensibility.md`, which already landed on *"build nothing yet, fix defects"*.
+2. **Is there a real second consumer?** `.cursor/plans/archive/sail-one-port.md` describes a second shell. Middleware built for one consumer is speculative generality; see `.cursor/plans/sail-platform-extensibility.md`, which already landed on *"build nothing yet, fix defects"*.
 3. **Does `sail-finance` adopting `SailPlatform` require anything the platform doesn't yet do?** Today finance needs a launcher and an agent. That is `SailAppLauncher` + `createSailBrowserDesktopAgent` — which is what it already uses.
 
 **Acceptance:** an ADR stating the relationship, plus either a migration slice for `sail-finance` or a documented decision that the factory *is* the supported entry point and `SailPlatform` is withdrawn.
@@ -379,7 +379,7 @@ Ordered by dependency, not by value.
 
 ## 6. Relationship to the in-flight slice plan
 
-`.cursor/plans/sail-desktop-agent-review-remediation.md` is **execution-ready and nearly complete**.
+`.cursor/plans/archive/sail-desktop-agent-review-remediation.md` is **execution-ready and nearly complete**.
 Its own header says *"Do not re-litigate the findings."* This document does not supersede it and does
 not renumber it.
 
@@ -457,6 +457,6 @@ structural review only. That recommendation still stands and is unaffected by an
 ## 7. Cross-references
 
 - Diagrams: [architecture review artifact](https://claude.ai/code/artifact/cfb9c66d-a3d7-400d-8cec-0b2ea2b4f6d5)
-- Prior decisions: `.cursor/plans/sail-platform-extensibility.md` (landed on *"build nothing yet, fix defects"*), `.cursor/plans/sail-desktop-agent-surface-reduction.md`, `.cursor/plans/sail-one-port.md`
-- In-flight: `.cursor/plans/sail-desktop-agent-review-remediation.md`
+- Prior decisions: `.cursor/plans/sail-platform-extensibility.md` (landed on *"build nothing yet, fix defects"*), `.cursor/plans/archive/sail-desktop-agent-surface-reduction.md`, `.cursor/plans/archive/sail-one-port.md`
+- In-flight: `.cursor/plans/archive/sail-desktop-agent-review-remediation.md`
 - Existing audit: `FDC3-SAIL-REVIEW.md`

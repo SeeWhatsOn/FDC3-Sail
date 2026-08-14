@@ -10,6 +10,34 @@
 
 **This document exists to be verified.** Every claim below carries a `file:line` and, where the claim is "nothing calls this", the search that produced it.
 
+> ### Revision 3 — re-verified 2026-08-14 against `a6c6b62`
+>
+> **The analysis holds; some of the addresses do not.** Every park-list item was re-checked against
+> the current tree and **all of them still exist unchanged**. Two counts were re-counted for real:
+>
+> - **28 catch-blocks — confirmed exactly 28** (27 near-identical handler-level, plus the
+>   dispatcher-level one at `handlers/index.ts:100`).
+> - **"14 hand-rolled destinations" — actually 13** in `src/handlers/` today, or 15 if the two sites
+>   in `app-connection/wcp/wcp-identity-validation.ts:277,389` are counted. The canonical helper
+>   (`dacp-response-utils.ts:67`) is not part of either count. Substance unchanged: still un-deduped.
+>
+> **Four citations are now dead** because of refactors that landed after 2026-08-05. Anyone working
+> from §5.1, §5.6, §6.1, §6.2 or §7 will hit missing files or exports:
+>
+> | Audit says | Current tree |
+> |---|---|
+> | `handlers/cleanup.ts` | **renamed** → `handlers/instance-teardown.ts` (`d334d5aa`) |
+> | `cleanupDACPHandlers` | **renamed** → `cleanupInstanceDacpState` |
+> | `resolveCleanupInstanceId` / `instanceHasCleanupWork` | **renamed** → `resolveTeardownInstanceId` / `instanceHasTeardownWork` |
+> | `DACPHandlerContext` (§5.6) | **renamed** → `DACPHandlerParams` (`a9a43d64`) |
+> | `pendingIntentPromises` (§6.1, §7) | **gone** — collapsed into `PendingIntent` state fields plus a keyed timeout registry (`b3f1f3c7`). The "per-agent Map side channel" description is no longer accurate. |
+>
+> **One finding needs re-derivation, not repair.** §6.2 says `handleDisconnect()` "prunes only the
+> first store". It now loops **all** instances through `cleanupInstanceDacpState` and also prunes the
+> instance-identity WeakMap (`sail-desktop-agent.ts:390-396`); only `AppConnectionRegistry.connections`
+> is untouched by that path. The three-store asymmetry may still be real but the stated mechanism is
+> not — **re-verify before acting on it.**
+
 > **Revision 2 — 2026-08-05.** An independent reviewer checked the cited claims. **Five findings were overstated or wrong and have been corrected in place**, each marked **CORRECTED**: §8 (`initialState` — Pass B was wrong, and Pass A cited the wrong test file), §4 (the handler-test claim was too broad), §4/§6.3 (`ListenerNotFound` conflated with `ListenerError`, wrong line refs), §3 (`setOnAgentDisconnect` does have a production caller), §5.7 (`recentlyDisconnected` is read). §6.3 WCP2 and §5.3 `logger` were reframed; §6.3 `intentEventUuid` was downgraded. The high-severity items in §9 all survived verification, with narrowed blast radius. **Do not restore the original wording from the artifact version of this audit.**
 
 **Baseline:** 13,255 non-test LOC. `npx tsc --noEmit` on the package exits clean, so every "impossible per the types" claim is one the compiler already accepts.
@@ -422,7 +450,7 @@ Only the **constructor** option is in scope for removal. `createDACPTestContext`
    - The exposed surface is the handlers that call `resolveDacpHandlerInstanceId` — broadcast, context listener, unsubscribe, intentResult, close — **not every DACP call**.
    - **Re-verified: nothing in production writes the field.** `grep -rn "hostInstanceId" packages/*/src` outside `sail-desktop-agent/src` returns **0 hits**, and the `hostInstanceId` in `handlers/utils/wcp-host-instance-adoption.ts:44` is a *local variable* built from `reconnectInstanceId` / `hostIdentifier` / sole-pending lookup — a name collision, not a read of `meta.hostInstanceId`. Stripping the meta field does not break host instance adoption.
 
-   **One coupling to handle in the same change:** `AGENTS.md:163` states DACP handlers resolve identity "via registered `hostInstanceId`, registered MessagePort `instanceId`, or `wcpHandshakeRouting`". The documented intent is a *registered* value; reading it from app-supplied meta is the actual defect. Update that sentence and the related tests in the same commit, or the next reviewer will read the strip as a regression. Already parked as Slice 6 in `.cursor/plans/sail-desktop-agent-review-remediation.md`; should be promoted.
+   **One coupling to handle in the same change:** `AGENTS.md:163` states DACP handlers resolve identity "via registered `hostInstanceId`, registered MessagePort `instanceId`, or `wcpHandshakeRouting`". The documented intent is a *registered* value; reading it from app-supplied meta is the actual defect. Update that sentence and the related tests in the same commit, or the next reviewer will read the strip as a regression. Already parked as Slice 6 in `.cursor/plans/archive/sail-desktop-agent-review-remediation.md`; should be promoted.
 2. **Two sources of truth for `fdc3Version`.** WCP3 advertises `AppConnectionOptions.fdc3Version` (`wcp1-3-handshake.ts:90`, default `"2.2"` at `browser-app-connection.ts:95`); WCP5 and `getInfo` advertise `implementationMetadata.fdc3Version` (`wcp-identity-validation.ts:233`). Nothing syncs them — the harness sets it twice (`sail-conformance-harness/src/harness-bootstrap.ts:162,168`). A host that sets only `implementationMetadata` silently handshakes as 2.2 while claiming 3.0, and `closeRequest` gating (`handlers/open/handlers.ts:411`) reads the other one.
 3. **Four off-schema wire payloads + one invented error code.** See §6.3. They work today only because clients still read deprecated fields and ignore extras — and the BDD suite asserts the wrong values, so it will not catch the regression when a client tightens.
 4. **One type name, two shapes.** `IntentResolutionChoice` — see §5.6. Nothing is broken today, but the import looks right and the compiler agrees.

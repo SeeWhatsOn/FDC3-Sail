@@ -1,5 +1,19 @@
 # Minimal Viable Delivery Plan: sail-desktop-agent test-suite realignment
 
+> **ARCHIVED 2026-08-14.** Moved to `.cursor/plans/archive/`. All six slices done. Slice 5 landed
+> with its central conclusion **reversed** — `warn` stays the default, because `strict` makes Sail
+> *less* FDC3-conformant (the schema gate pre-empts handlers that produce the spec's own specific
+> errors). That reversal is load-bearing: do not quietly re-flip it.
+>
+> **This plan left a live break behind, found only on re-verification.** Slice 6 wired
+> `test:cucumber:tags` to `scripts/check-fdc3-tag-coverage.mjs` (`bc7280ca`) and **never committed
+> the script**, so `npm run test:cucumber` and `npm run validate` fail at both package and repo root.
+> It hid because every verify command here calls `npx cucumber-js` directly, bypassing the npm
+> script. Tracked as **`.cursor/plans/open-items.md` §0**.
+>
+> **Remaining "Open after slice 6" items carried forward to `open-items.md` §3.** One correction:
+> `raise-intent.feature:45-49` was retagged `@fdc3_3.0`, so only the "or delete" half is still open.
+
 Status: **all six slices done.** Slice 5 landed with its central conclusion **reversed** — see below.
 Current slice: none. Remaining work is listed under "Open after slice 6".
 
@@ -26,7 +40,7 @@ Read before starting any slice. These hold decisions this plan must not silently
 
 | File | What it holds | Effect here |
 |---|---|---|
-| `.cursor/plans/sail-da-defect-fixes.md` | **Status: done.** Four wire defects fixed 2026-08-05/06 | Its slice 3 decided `ListenerError` / `ListenerNotFound` were deliberate carve-outs — "no code change at the 5 sites", BDD "unchanged" |
+| `.cursor/plans/archive/sail-da-defect-fixes.md` | **Status: done.** Four wire defects fixed 2026-08-05/06 | Its slice 3 decided `ListenerError` / `ListenerNotFound` were deliberate carve-outs — "no code change at the 5 sites", BDD "unchanged" |
 | `AGENTS.md:63` | The carve-out record | Rationale: "FDC3 defines no error code for a failed event-listener registration" |
 | `.cursor/plans/sail-desktop-agent-audit-2026-08.md` | 2026-08-05 evidence register | §10: correctness before cleanup |
 | `.cursor/plans/parked-wcp4-origin-allowlist.md` | Parked deployment origin policy | **Unrelated** — that is admission policy; slice 5 here is the test harness |

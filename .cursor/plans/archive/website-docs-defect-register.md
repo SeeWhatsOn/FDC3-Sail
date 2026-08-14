@@ -75,7 +75,7 @@ each claim checked against `packages/`. Overlaps independently confirmed against
 > (`local-storage-backend.ts:72-130`). Rows below that reason "X is undocumented/unproven **because**
 > nothing consumes it" must be re-read as "X is undocumented" only. The real caveats on platform storage
 > are `unknown`-typed payloads (`sail-platform.ts:139-160`) and `storage: "remote"` throwing
-> (`sail-platform-client.ts:78`) — both now recorded in `.cursor/plans/sail-platform-design.md` §4/§7.
+> (`sail-platform-client.ts:78`) — both now recorded in `.cursor/plans/archive/sail-platform-design.md` §4/§7.
 
 `SailPlatform` had **zero consumers** outside its own two tests when this register was written.
 Verify: `grep -rn "SailPlatform" packages/ --include=*.ts --include=*.tsx -l | grep -v sail-platform/`

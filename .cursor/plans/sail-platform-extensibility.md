@@ -114,8 +114,8 @@ FDC3 already delegates its host-decisions through three contracts the agent call
 behind them — **`AppLauncher`, `IntentResolver`, `ChannelControl`** (`host-contracts/`). These are *also*
 the three points a host wants to gate; that is not luck. Entitlement composes into them — e.g. it hides
 inside the platform's `IntentResolver`/candidate computation. **Precondition:** the candidate computation
-is currently *forked* — `findIntentHandlers` (raiseIntent, `intent-helpers.ts:121`) and `createAppIntents`
-(findIntent/raiseIntentForContext, `intent-helpers.ts:221`) are duplicated with divergent filtering. A
+is currently *forked* — `findIntentHandlers` (raiseIntent, `intent-helpers.ts:130`) and `createAppIntents`
+(findIntent/raiseIntentForContext, `intent-helpers.ts:229`) are duplicated with divergent filtering. A
 filter added to one and not the other resurrects a discovery-says-yes / raise-says-no lie. **Unify them
 onto one `resolveCandidates(...)` primitive first**, then inject the filter there. (This is pure FDC3
 hygiene, independently justified — see §8, it may already be a live bug.)
@@ -248,8 +248,8 @@ one of these, "compose, don't extend" is discipline cosplaying as commitment.
 | Host contracts (the three seams) | `sail-desktop-agent/src/host-contracts/{app-launcher,intent-resolver,channel-control}.ts` |
 | Swappable connection edge | `sail-desktop-agent/src/app-connection/types.ts` (`AgentAppConnection`) |
 | WCP4 admission (directory gate) | `sail-desktop-agent/src/app-connection/wcp/wcp-identity-validation.ts:115` |
-| Forked candidate computation | `sail-desktop-agent/src/handlers/intents/intent-helpers.ts:121` & `:221` |
-| Composition point | `sail-platform/src/sail-platform.ts` (`SailPlatform` — now composes over the boot factory; the `Promise<unknown>` storage APIs were deleted 2026-08-03) |
+| Forked candidate computation | `sail-desktop-agent/src/handlers/intents/intent-helpers.ts:130` & `:229` |
+| Composition point | ~~`sail-platform/src/sail-platform.ts`~~ — **file deleted in the 2026-08-04 cull; there is no composition point today.** Hosts construct `SailDesktopAgent` directly (`sail-one/src/state/sail-host.ts:129`, `sail-finance/src/main.tsx:131`). `sail-platform/src` now holds only `workspace/` and `storage/`. |
 | ~~Dead pipeline~~ | ~~`sail-platform/src/middleware/middleware.ts`~~ — deleted 2026-08-03 |
 | Boot factory (owns Sail's agent defaults; both entry points route through it) | `sail-platform/src/sail-browser-desktop-agent.ts` |
 | Config persistence (standalone, generic) | `sail-platform/src/client/sail-platform-client.ts` |

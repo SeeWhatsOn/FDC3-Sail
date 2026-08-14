@@ -35,7 +35,7 @@ Review/fix loops: 0
   - `sail-desktop-agent` = pure engine + host contracts (`AppLauncher`, controllers)
 - **Naming:** Prefer **`SailPlatform`** (already exists), not a new top-level `Sail` / `FDC3Sail` class.
 - **Standalone DA:** Experts still use `new SailDesktopAgent({ appLauncher })` or `createSailBrowserDesktopAgent` + controllers — do not remove those paths.
-- **Prior A work (done):** `SailAppLauncher.close` / `onCloseApp`; sail-web Layout always disconnects — commit `1c2e75a68`. Plan: `.cursor/plans/reusable-browser-host-kit.md`.
+- **Prior A work (done):** `SailAppLauncher.close` / `onCloseApp`; sail-web Layout always disconnects — commit `1c2e75a68`. Plan: `.cursor/plans/archive/reusable-browser-host-kit.md`.
 
 ## Simplicity Bias
 
@@ -150,7 +150,7 @@ platform.start()
 
 ## Handoff notes for implementing agent
 
-1. Read this plan + `.cursor/plans/reusable-browser-host-kit.md` (A/B context).
+1. Read this plan + `.cursor/plans/archive/reusable-browser-host-kit.md` (A/B context).
 2. Follow `.cursor/rules/minimal-implementation.mdc` — no unrequested abstractions.
 3. Do **not** put FINOS/toolbox orchestration in `sail-desktop-agent`.
 4. Implement slice 1 → Vitest → pause for human if API choice is ambiguous → slice 2 docs.

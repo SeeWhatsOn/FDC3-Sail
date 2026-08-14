@@ -1,5 +1,20 @@
 # Plan: FDC3 host (A) then toolbox profile (B)
 
+> **ARCHIVED 2026-08-14.** Moved to `.cursor/plans/archive/`. Slice A is done and committed; slice B
+> was never started and is parked with no trigger.
+>
+> **Archived because slice A is now better documented on the public website than it ever was here** —
+> `website/docs/getting-started.md:76-98,133`,
+> `website/docs/packages/desktop-agent/overview.md:22,61-71`, and
+> `website/docs/packages/desktop-agent/integrator-guide.md:191-234,308-363` all cover constructing
+> `SailDesktopAgent`, implementing `AppLauncher`, the `iframe.name` = `instanceId` rule, and
+> disconnect-on-close. Read those, not this file.
+>
+> **Slice B is carried forward to `.cursor/plans/open-items.md` §6**, along with two facts recorded
+> nowhere else (`packages/sail-platform/src/browser-host/` was deleted; the conformance harness's
+> `sail-platform` dependency was removed). Slice B's content is genuinely undocumented elsewhere —
+> its only other existence is working code in `packages/sail-conformance-harness/`.
+
 > **Note (2026-08-04 `sail-platform` cull).** `createSailBrowserDesktopAgent` and `SailAppLauncher`
 > are deleted. Hosts call `new SailDesktopAgent({...})` and implement `AppLauncher` directly — the
 > `launch` + iframe `name` = instanceId rule below is unchanged, it just lives in the host's own
