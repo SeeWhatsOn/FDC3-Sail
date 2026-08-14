@@ -1188,6 +1188,23 @@ grepped the tree to confirm the `AGENTS.md` claim that `Layout.tsx:82` is the on
 
 ## Parked Follow-ups
 
+Status as of 2026-08-14. Struck-through entries are done and kept for the reasoning; the rest are
+open. Items are listed in their original order, not by status.
+
+| Item | State |
+|---|---|
+| Retained `CLOSED` instance state | **open** — needs its own plan; cheaper now that the predicates are named |
+| Readiness predicate inlined 9× | **done** — `8894d29fc` |
+| `intent-delivery-helpers.ts:77` delivery gate | **investigated, open as a product decision** — `d13252494`, no production change |
+| `conformance-app-directory.ts:78` unvalidated JSON | **open** |
+| Transport-logging flake | **open** — known cause, no fix attempted |
+| `sail-one` absent from root test run | **done** — `87b68517b` |
+| `@tailwindcss/vite` | **open, not a code fix** — needs `npm install` |
+| `resolver.test.ts:32` weak assertion | **done** — `87b68517b` |
+| Stale `packages/sail-ui` references | **done** — `87b68517b` |
+| `website/` never measured | **open** |
+| Other type-aware rules | **open** |
+
 - **No retained `CLOSED` instance state — a spec SHOULD that Sail does not meet.**
   `browserResidentDesktopAgents.md` ("Disconnects") requires DAs to track close/navigate for
   accurate `findInstances` / `findIntent` / `findIntentsByContext`, and says instance details
@@ -1195,9 +1212,17 @@ grepped the tree to confirm the `AGENTS.md` claim that `Layout.tsx:82` is the on
   (`src/state/mutators/instance.ts:62-68`) deletes the key instead, so a navigating app
   disappears from `findInstances` and reappears under a new `instanceId`. Fix is a third
   `AppInstanceState` member plus selector filtering — **not** dropping the delete, since
-  `TargetInstanceUnavailable` currently depends on `getInstance` returning `undefined`. This is
-  the change that makes the four slice-4b suppressions load-bearing. Sizeable; needs its own
-  plan.
+  `TargetInstanceUnavailable` currently depends on `getInstance` returning `undefined`. Sizeable;
+  needs its own plan.
+
+  **Cheaper than it was, as of 2026-08-14.** The predicate-extraction item below has landed, so
+  the tautology this would make load-bearing now lives in **one** place —
+  `isInstanceReceivable` in `state/selectors/instance.ts` — rather than four call-site copies.
+  Adding `CLOSED` is a one-line edit there plus its suppression removal, not a sweep across
+  `handlers/intents/`. Two things to handle when it ships: `isLaunchTargetReady` needs the same
+  treatment (its `PENDING && is-the-launcher` clause must not accept a closed launcher), and the
+  `intent-delivery-helpers.ts:77-88` gate must exclude `CLOSED` — see the item below, where that
+  same gate is already recorded as over-permissive about `PENDING`.
 - ~~**The readiness predicate is inlined eight times and never named.**~~ — **DONE** 2026-08-14.
   It was **nine** sites and **three** concepts, not eight and two: the two
   `intent-launch-helpers.ts` sites (`:92` log payload, `:108` real predicate) carry an extra
@@ -1207,19 +1232,18 @@ grepped the tree to confirm the `AGENTS.md` claim that `Layout.tsx:82` is the on
   — each of the four had named its own caller in the rationale, so the merged comment had to be
   generalised. `intent-delivery-helpers.ts:79-81` was negated; De Morgan gives
   `!isInstanceReceivable(...)` with the leading `!targetInstance ||` untouched. Behaviour-
-  preserving: tsc 0, zero `no-unnecessary-condition`, suite green, cucumber 154/1460. Original
-  entry follows, for the reasoning that motivated it.
-- **The readiness predicate is inlined eight times and never named.** Two distinct concepts,
-  four spellings, six files: "alive" as `state !== PENDING && state !== CONNECTED`
+  preserving: tsc 0, zero `no-unnecessary-condition`, suite green, cucumber 154/1460.
+
+  The original entry, for the reasoning that motivated it: *"Two distinct concepts, four
+  spellings, six files: 'alive' as `state !== PENDING && state !== CONNECTED`
   (`intent-delivery-helpers.ts:79`), as `=== CONNECTED || (=== PENDING && id === launcherId)`
   (`intent-launch-helpers.ts:92, 107`), and as `=== CONNECTED || === PENDING`
-  (`intent-launch-helpers.ts:136`, `intent-raise-shared.ts:106`); "ready now" as `=== CONNECTED`
+  (`intent-launch-helpers.ts:136`, `intent-raise-shared.ts:106`); 'ready now' as `=== CONNECTED`
   alone (`state/selectors/instance.ts:24`, `intent-helpers.ts:59`, `intent-raise-shared.ts:110`,
-  `intent-resolver-helpers.ts:137`). Nothing at a call site says which is intended. Extracting
-  `isInstanceReceivable` / `isInstanceConnected` into `state/selectors/instance.ts` collapses
+  `intent-resolver-helpers.ts:137`). Nothing at a call site says which is intended. … collapses
   the tautology to one function — one suppression instead of four, and the `CLOSED` work above
   becomes a one-line edit in a named place. Behaviour-preserving, but it is a refactor of intent
-  routing; doing it inside a lint-enablement slice would make the diff unreviewable.
+  routing; doing it inside a lint-enablement slice would make the diff unreviewable."*
 - **`intent-delivery-helpers.ts:77` gates delivery on the wrong axis.** The spec ties delivery
   to listener registration (`IntentDeliveryFailed` = "has not added an intent handler within a
   timeout"), not to connection state. Sail already has `isIntentListenerReady` at `:34`; the
@@ -1314,9 +1338,19 @@ grepped the tree to confirm the `AGENTS.md` claim that `Layout.tsx:82` is the on
   in root `vite.config.ts`, and a CSS comment. **Deleted, not retargeted:** `sail-theme` is
   CSS-only — no `src/`, no `tsconfig.json`, and its `exports` map lists only `.css`, `assets`,
   `fonts`. Root `tsc` now exits 0 with no output.
-- **`website/`** was never measured. Decide separately whether it gets the same treatment.
+- **`website/`** was never measured. Decide separately whether it gets the same treatment. Note
+  it is **not** covered by the root promotion: `website/tsconfig.json` extends
+  `@docusaurus/tsconfig`, not `tsconfig.root.json`, so `noUncheckedIndexedAccess` does not reach
+  it. The *lint* rule does reach it (slice 7 moved it to global `lint.rules`) and found zero
+  findings — so the lint half is already live there and clean; only the compiler flag is
+  unmeasured. Method: add the flag to `website/tsconfig.json`, run `tsc`, count, revert.
 - **Other type-aware rules** — `no-unnecessary-condition` was the only one evaluated. Others in
-  oxlint's non-`correctness` categories may be worth the same treatment, or may not.
+  oxlint's non-`correctness` categories may be worth the same treatment, or may not. Use the same
+  measure-first method this rollout used, and it is the method that mattered: enabling the rule
+  **without** `noUncheckedIndexedAccess` gave 130 findings on `sail-desktop-agent` versus 31 with
+  it — 99 would have been false positives. For any candidate rule, measure the raw count first,
+  hand-classify a sample into the A/B/C/D buckets, and only then decide whether a rollout is
+  worth it. A rule whose findings are mostly bucket B is not worth enabling.
 
 ---
 
