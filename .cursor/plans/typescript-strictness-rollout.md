@@ -1198,6 +1198,17 @@ grepped the tree to confirm the `AGENTS.md` claim that `Layout.tsx:82` is the on
   `TargetInstanceUnavailable` currently depends on `getInstance` returning `undefined`. This is
   the change that makes the four slice-4b suppressions load-bearing. Sizeable; needs its own
   plan.
+- ~~**The readiness predicate is inlined eight times and never named.**~~ — **DONE** 2026-08-14.
+  It was **nine** sites and **three** concepts, not eight and two: the two
+  `intent-launch-helpers.ts` sites (`:92` log payload, `:108` real predicate) carry an extra
+  `instance.instanceId === launcherInstanceId` clause the plain receivable sites do not. Extracted
+  to `state/selectors/instance.ts` as `isInstanceConnected`, `isInstanceReceivable` and
+  `isLaunchTargetReady`. Four call-site suppressions collapsed into one on `isInstanceReceivable`
+  — each of the four had named its own caller in the rationale, so the merged comment had to be
+  generalised. `intent-delivery-helpers.ts:79-81` was negated; De Morgan gives
+  `!isInstanceReceivable(...)` with the leading `!targetInstance ||` untouched. Behaviour-
+  preserving: tsc 0, zero `no-unnecessary-condition`, suite green, cucumber 154/1460. Original
+  entry follows, for the reasoning that motivated it.
 - **The readiness predicate is inlined eight times and never named.** Two distinct concepts,
   four spellings, six files: "alive" as `state !== PENDING && state !== CONNECTED`
   (`intent-delivery-helpers.ts:79`), as `=== CONNECTED || (=== PENDING && id === launcherId)`
@@ -1219,6 +1230,53 @@ grepped the tree to confirm the `AGENTS.md` claim that `Layout.tsx:82` is the on
   prefers `CONNECTED` over it (`:109-112`); `intent-delivery-helpers.ts:77` does not, and will
   deliver a pending intent to an instance that never completed WCP5. Exists today, independent
   of this plan.
+
+  **INVESTIGATED 2026-08-14. Verdict: a real internal defect, but unreachable over the wire.
+  No production change made.** Three passes, each correcting the one before:
+
+  1. **The claim as written is wrong.** Every route to `attemptIntentDelivery(…, false)` is
+     already guarded — `shouldWaitForIntentListenerBeforeDelivery` (`intent-helpers.ts:47-64`)
+     returns `false` only when the target is `CONNECTED` under an explicit `instanceId`, or when
+     a listener is already registered. There is no "delivers with no listener" path.
+  2. **A different, real defect sits next to it.** `deliverPendingIntentsForListener`
+     (`intent-delivery-helpers.ts:192-211`) matches pending intents on **`appId` alone** and
+     reassigns `targetInstanceId` to whichever instance just registered a listener. So an intent
+     correctly routed to a `CONNECTED` instance by `resolveAppTargetInstance`'s
+     CONNECTED-over-PENDING preference gets **hijacked** to a `PENDING` instance of the same app
+     that registers first — and `:77-88` waves it through, because it accepts `PENDING`.
+     `handleAddIntentListener` never checks instance state (`intent-listener-handlers.ts:50-56`).
+     Reproduced; the test is `intent-delivery-pending-target.test.ts`.
+  3. **But it cannot be triggered from outside.** `transportToInstanceId` is remapped from the
+     temp id to the real one in exactly one place — the WCP5-success interception
+     (`wcp-connection-management.ts:261`, driven from `app-connection-registry.ts:104`) — and
+     `wcp-identity-validation.ts:264` flips the instance to `CONNECTED` synchronously *before*
+     the WCP5 response is sent at `:281`. No live port is ever routable under an instanceId that
+     is still `PENDING`. A wire-level test confirmed it: a message from an unvalidated port
+     naming a `PENDING` instance as `meta.source.instanceId` is re-stamped with the port's real
+     temp binding (`browser-app-connection.ts:216-229`) and rejected.
+
+  **The protection is emergent, not designed.** Nothing on the inbound path checks instance state
+  — not `wcp-message-routing.ts:50`, not `resolveDacpHandlerInstanceId`, not the `HANDLER_MAP`
+  dispatch, not the handler. It holds only because of that one ordering. Reorder those two lines,
+  or add any second way to bind a port to a real instanceId, and the defect becomes live.
+
+  **What guards it now:** `src/app-connection/__tests__/pending-instance-dacp-gate.test.ts`
+  (passing) pins the ordering. `intent-delivery-pending-target.test.ts` is committed **skipped**,
+  asserting the behaviour we want and failing if un-skipped — deliberately not inverted into a
+  characterization test, since that would bless the over-permissive `:77-88` check as intended.
+  Un-skip it if the gate test ever goes red.
+
+  **What the FDC3 spec says: nothing.** Research against 2.2 and the 3.0 draft found it silent on
+  all four questions — no rule for selecting among instances of one app under `raiseIntent({appId})`
+  (`spec.md` § Resolvers only addresses ambiguity *between apps*), no concept of a pre-handshake
+  instance state anywhere in the DA API, nothing on re-targeting a queued intent, and
+  `IntentDeliveryFailed`'s "**for example** because it has not added an intent handler within a
+  timeout" (`Errors.md`) leaves its trigger set open rather than making listener registration the
+  sole criterion. The one relevant constraint is architectural: `addIntentListener` is a DACP
+  message, and `webConnectionProtocol.md` says messages "sent via the `MessagePort` prior to
+  successful validation … should be ignored" — so in the reference model this scenario cannot
+  arise at all. Sail matches that outcome, by accident rather than by a check. **Choosing what
+  *should* happen here is a Sail product decision, not a conformance one.**
 - **`conformance-app-directory.ts:78` casts imported JSON with `as DirectoryApp[]` and never
   validates it.** This is the root cause behind three separate bucket B findings in the
   harness. Worth a schema check at import, but it is a validation task, not a strictness task.
