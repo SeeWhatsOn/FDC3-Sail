@@ -43,4 +43,7 @@ then the event stream covers the observable half, and this stays parked.
 
 - `.cursor/plans/website-docs-blueprint.md` — slice 0 design session that surfaced this
 - `.cursor/plans/sail-platform-extensibility.md` — earlier decision: "build nothing yet, fix defects"
-- `ARCHITECTURE-REMEDIATION-PLAN.md` W7 — the WCP state machine work, adjacent to any DACP-path change
+- ~~`ARCHITECTURE-REMEDIATION-PLAN.md` W7~~ — that document was deleted 2026-08-14. Its W7 WCP
+  state-machine work was **not** carried forward (superseded; the identity-store question is reframed
+  in `.cursor/plans/sail-desktop-agent-audit-2026-08.md` §10). Its findings that had no other home
+  are in `.cursor/plans/open-items.md` §8.

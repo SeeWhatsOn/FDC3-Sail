@@ -13,24 +13,23 @@
 > `SailPlatform`, `createSailBrowserDesktopAgent`, `SailAppLauncher`, `SailPlatformClient`,
 > `SailBrowserDesktopAgentConfig`), so slices 0–5's truth-pass held.
 >
-> **Slice 6 is half-designed already — but the half that exists is not running.**
-> `website/docusaurus.config.ts:22` sets `onBrokenLinks: "throw"`, and `npm run docs:build` is wired
-> into both CI (`.github/workflows/ci.yml:53`) and `npm run validate` (`package.json:34`), so a broken
-> internal link *would* fail the build.
+> **Half of slice 6 turned out to be already built but not running — now fixed (`d49abb8d`).**
+> `website/docusaurus.config.ts:22` sets `onBrokenLinks: "throw"` and `npm run docs:build` is wired
+> into both CI (`.github/workflows/ci.yml`) and `npm run validate`, so broken internal links *should*
+> have been failing the build. They were not: `docs:build` **died on every run** because
+> `packages/desktop-agent/conformance.md` used HTML comments as its generated-section markers, which
+> are invalid in MDX. No page was built, so no link was ever checked. The markers are now
+> `{/* … */}`, fixed in `website/scripts/generate-conformance-inventory.mjs` and the file it writes.
+> The generated section was also stale and has been regenerated.
 >
-> **It cannot, because `npm run docs:build` fails outright today.** Reproduced 2026-08-14:
-> `packages/desktop-agent/conformance.md:26` uses an HTML comment
-> (`<!-- GENERATED:CONFORMANCE-INVENTORY:START -->`) which is invalid in MDX —
-> *"Unexpected character `!` (U+0021) before name … to create a comment in MDX, use `{/* text */}`"*.
-> The build dies at that file, so no link is ever checked and the CI docs step is red. **Fix the
-> comment markers first; the generator at `website/scripts/generate-conformance-inventory.mjs`
-> emits them, so fix it there, not by hand-editing between the markers.** Tracked in
-> `.cursor/plans/open-items.md` §0.
+> **Slice 6's remaining scope is therefore just snippet compilation** — nothing in the repo compiles
+> the code blocks in the docs (zero hits for "snippet").
 >
-> So slice 6's real remaining scope is: (a) unbreak `docs:build`, then (b) add snippet compilation,
-> which genuinely does not exist anywhere (zero hits for "snippet" across the repo). Note also that
-> the dead anchor in defect 2 below would survive `onBrokenLinks` regardless — Docusaurus checks
-> links, not `#anchor` fragments, and `onBrokenAnchors` is a separate setting that is not enabled.
+> **Newly visible now that the build runs:** Docusaurus reports the defect-2 dead anchor below as a
+> real broken anchor, from both `intro.md` and `architecture/deployment-targets.md`. It only *warns*
+> because `onBrokenAnchors` is unset and defaults to `warn` — Docusaurus checks links and anchors
+> under separate settings. **Consider setting `onBrokenAnchors: "throw"` once the four doc defects
+> below are fixed**, which would give slice 6 its link guardrail for one line of config.
 
 Status: **near-complete.** Slices 0–5 are done (see Slice Checkpoints). Only **slice 6** (snippet +
 link guardrails in CI) remains open. Slice 0's maintainer source-check is separately tracked as
@@ -67,7 +66,8 @@ implementations* in an appendix. Consequence already applied: `workspaces`/`layo
 `unknown`-typed payloads and `storage: "remote"` throwing. This rule binds Slice 3 (per-package pages) and
 the package sections of Slice 2.
 
-Source reviews feeding this plan:
+Source reviews feeding this plan (**both deleted 2026-08-14** — the docs work they drove is done;
+their surviving non-docs findings are in `.cursor/plans/open-items.md` §8):
 - `ARCHITECTURE-REMEDIATION-PLAN.md` (2026-07-30) — docs audit, 40+ defects across 13 `website/docs/` pages
 - `FDC3-SAIL-REVIEW.md` (2026-07-28, `4dddd88f7`) — BLOCK-B/C/D and D-1…D-10; partly drifted, see Risks
 - `.cursor/plans/archive/sail-desktop-agent-review-remediation.md` — in flight, slices 0–6 landed. **Do not interleave.**

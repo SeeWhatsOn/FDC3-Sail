@@ -1,6 +1,5 @@
 /**
- * Prove-it test for the parked follow-up in
- * `.cursor/plans/typescript-strictness-rollout.md` ("Parked Follow-ups"):
+ * Prove-it test for a known, deliberately-unfixed gap in pending-intent delivery.
  *
  * `intent-delivery-helpers.ts:77-88` accepts either `AppInstanceState.PENDING` or `CONNECTED`
  * as a valid delivery target. `intent-raise-shared.ts:109-113` (`resolveAppTargetInstance`)

@@ -1,8 +1,8 @@
 # Open items carried out of closed plans
 
-**What this is.** A single home for work that was still open inside plans that have since been
-**archived**. Without this file, archiving those plans would have silently dropped the items — which
-`.cursor/plans/archive/README.md` forbids.
+**What this is.** A single home for work that was still open inside plans and review documents that
+have since been **archived or deleted**. Without this file, removing those would have silently
+dropped the items — which `.cursor/plans/archive/README.md` forbids.
 
 **What this is *not*.** It is not a copy of every open item in the repo. Work that lives in a plan
 that is still **live** stays there and is only pointed at from here. One home per item; nothing below
@@ -19,70 +19,85 @@ Where the live work lives:
 | Observability seam | `agent-observability-seam.md` |
 | Draft-PR blockers | `draft-pr-readiness.md` |
 
-Every `file:line` below was re-verified against `a6c6b62` on 2026-08-14. Where an archived plan's
-claim did not survive that check, the correction is stated inline; the original wording stays in the
-archived plan.
+Every `file:line` below was re-verified against `a6c6b62`/`d49abb8d` on 2026-08-14. Where an archived
+plan's claim did not survive that check, the correction is stated inline; the original wording stays
+in the archived plan.
 
 ---
 
-## 0. Broken now — CI is red in three separate places
+## 0. CI failures — all three FIXED 2026-08-14 (`d49abb8d`)
 
-**These are not follow-ups. They are live breaks, and no plan was tracking any of them.**
-All three were reproduced on 2026-08-14. Fix these before anything else here.
+Found during the plans prune, tracked here, and fixed the same day. Kept as a record because two of
+them had been silently red for weeks and the reasons are worth not re-learning.
 
-### 0a. `docs:build` fails — an HTML comment in an MDX file
+### 0a. `docs:build` failed on every run — FIXED
 
-`website/docs/packages/desktop-agent/conformance.md:26` contains
-`<!-- GENERATED:CONFORMANCE-INVENTORY:START -->`. HTML comments are invalid in MDX:
+`website/docs/packages/desktop-agent/conformance.md` used HTML comments as the generated-section
+markers. HTML comments are invalid in MDX:
 
-> Unexpected character `!` (U+0021) before name, expected a character that can start a name …
-> (note: to create a comment in MDX, use `{/* text */}`)
+> Unexpected character `!` (U+0021) before name … (note: to create a comment in MDX, use `{/* text */}`)
 
-`npm run docs:build` dies there, which takes out `.github/workflows/ci.yml:53` and `npm run validate`.
-It also means `onBrokenLinks: "throw"` never gets to run, so the docs link-checking everyone assumes
-is on is in fact not running at all.
+Docusaurus died at that file, so **no page was built and `onBrokenLinks: "throw"` never ran** — the
+docs link-checking the config implies was not happening at all. Fixed by changing both markers to
+`{/* … */}` in `website/scripts/generate-conformance-inventory.mjs` and the file it writes.
 
-**Fix in the generator, not the file** — `website/scripts/generate-conformance-inventory.mjs` emits
-those markers, and the file says "do not hand-edit between the markers".
+It also surfaced that the generated section itself was **stale** — real tag counts had drifted
+(12/11/119 against a documented 10/13/121), so `docs:conformance-inventory:check` was failing too.
+Regenerated.
 
-### 0b. Typecheck runs before Build, so a clean clone cannot typecheck
+**Still open, now visible:** with the build running, Docusaurus reports two genuine broken anchors —
+`intro.md` and `architecture/deployment-targets.md` both link to
+`./architecture/overview#two-entry-points`, and no such heading exists. This is defect 2 of the four
+in `website-docs-blueprint.md`. It only *warns* because `onBrokenAnchors` is unset (defaults to
+`warn`); consider setting it to `throw` once the four doc defects are fixed.
 
-`.github/workflows/ci.yml` runs Prettier → ESLint → boundaries → **Typecheck (`:43`)** → **Build
-(`:46`)**. But `@finos/sail-desktop-agent` and `@finos/sail-platform` publish their types from
-`dist` (`"types": "./dist/index.d.mts"`), and `dist` is gitignored (`.gitignore:3`). On a runner with
-no prior build there is no `dist`, so every consumer package — `sail-finance`,
-`sail-conformance-harness`, `sail-one` — fails typecheck with `TS2307: Cannot find module
-'@finos/sail-desktop-agent'`.
+### 0b. Typecheck and ESLint ran before Build — FIXED
 
-Building those two packages first makes lint and typecheck pass clean. **The fix is step ordering
-(build before typecheck), or project references that resolve to source.** This is why the register in
-`draft-pr-readiness.md` item 9 recorded "typecheck now exits 0" — that check ran against a stale
-local `dist`, not a clean tree.
+`sail-desktop-agent` and `sail-platform` publish types from `dist` (`"types": "./dist/index.d.mts"`)
+and `dist` is gitignored, so on a clean runner every consumer failed `TS2307`. Measured with `dist`
+removed: `npm run lint` reported **140 errors** and exited 1; `npm run typecheck` exited 2. With
+`dist` present, both clean.
 
-### 0c. `test:cucumber` points at a script that was never committed
+Fixed by moving Build ahead of ESLint in `.github/workflows/ci.yml`, and ahead of `lint` in the root
+`validate` script, which had the same ordering. Prettier stays first — it is syntactic and cheap.
 
-`packages/sail-desktop-agent/package.json:27` wires
-`"test:cucumber:tags": "node scripts/check-fdc3-tag-coverage.mjs"`, and that script **has never
-existed in git** (`git log --all -- '**/check-fdc3-tag-coverage.mjs'` is empty; there is no
-`packages/sail-desktop-agent/scripts/` directory at all). It was added by slice 6 of the test-suite
-realignment (`bc7280ca`) and the file was never committed.
+This is also why `draft-pr-readiness.md` item 9 recorded "typecheck now exits 0": that check ran
+against a stale local `dist`, not a clean tree.
 
-The failure propagates all the way up:
+### 0c. `test:cucumber` pointed at a script that was never committed — FIXED
 
-- `packages/sail-desktop-agent` → `test:cucumber` (`:26`) and `validate` (`:34`) both invoke it
-- root `test:cucumber` (`package.json:27`) delegates to the package script
-- root `validate` (`package.json:34`) runs root `test:cucumber`
-- **CI's Cucumber step** (`.github/workflows/ci.yml:59`) runs
-  `npm run test:cucumber -w @finos/sail-desktop-agent` — so this step is red on every run
+Slice 6 of the test-suite realignment wired `test:cucumber:tags` to
+`scripts/check-fdc3-tag-coverage.mjs` (`bc7280ca`) and never committed the file, so the package and
+root `test:cucumber`, the root `validate`, and **CI's Cucumber step** all failed with
+`MODULE_NOT_FOUND`. It hid because every plan's verify command calls `npx cucumber-js` directly,
+bypassing the npm script.
 
-Reproduced 2026-08-14: `npm run test:cucumber:tags -w @finos/sail-desktop-agent` exits non-zero with
-`MODULE_NOT_FOUND`.
+Restored the guard as slice 6 specified: an untagged scenario matches no version profile and silently
+never runs, so it asserts the cumulative `fdc3-3.0` profile selects the same scenario count as
+`default`. Verified both ways — passes at 154/154, and stripping one tag reproduces slice 6's
+documented failure exactly (`fdc3-3.0 (153) != default (154)`, exit 1).
 
-It went unnoticed because every plan's verify command calls **`npx cucumber-js` directly**, which
-bypasses the npm script entirely. That is also the workaround until it is fixed.
+**The convention question slice 6 left open is now settled by default:** the guard lives at
+`packages/sail-desktop-agent/scripts/`, still the only per-package `scripts/` dir in the repo. Revisit
+if a second one appears.
 
-**Decide:** write the tag-coverage checker slice 6 intended, or drop `test:cucumber:tags` from both
-scripts. Do not leave it as-is.
+### Verified green
+
+From a clean `dist`, in CI order: `format`, `build`, `lint`, `lint:boundaries`, `typecheck`,
+`docs:build`, `test:cucumber` all exit 0. Vitest: 540 passed / 1 skipped.
+
+### Still open — one real Vitest flake
+
+`app-connection/__tests__/wcp-multi-pending-adoption.integration.test.ts` — *"persists hostIdentifier
+re-resolved at WCP4 when window.name was empty at WCP1"* failed once with `Timed out waiting for
+MessagePort message` (5s budget, `wcp-edge-test-helpers.ts:333`) when run immediately after a full
+build/lint/typecheck/docs/cucumber chain. It then passed **3/3 in isolation and 2/2 on full-suite
+re-runs**.
+
+That matches the repo's existing working rule (§1): *a single failure does not count until it
+reproduces on an otherwise-quiet machine*. Recorded because it is a **second, distinct** flake from
+the transport-logging one in §2 — this one is timing-sensitive on a MessagePort wait, and a 5s budget
+under CI contention is thin.
 
 ---
 
@@ -271,3 +286,93 @@ scripts. Do not leave it as-is.
 
 Nothing open. Both were verified fully landed and committed, and both carried a stale
 "uncommitted" note that was false at archive time — corrected in their ARCHIVED headers.
+
+---
+
+## 8. From the two deleted root review documents
+
+`ARCHITECTURE-REMEDIATION-PLAN.md` (2026-07-30) and `FDC3-SAIL-REVIEW.md` (2026-07-28) were deleted
+on 2026-08-14. Both had been overtaken: they were written before the `sail-platform` cull and before
+`sail-one` existed, so their central framing — "should `sail-finance` consume `SailPlatform`?", and a
+scorecard of a `sail-platform` surface that no longer exists — no longer parses. Most of their live
+findings already had better-maintained homes (`draft-pr-readiness.md`, the audit, the defect
+register, `sail-platform-extensibility.md`).
+
+`draft-pr-readiness.md` item 7 independently listed both files as working docs that should not ship
+to `finos/FDC3-Sail`, which is a second reason to remove rather than keep them.
+
+**These are the findings that existed nowhere else.** Each was re-read in source on 2026-08-14
+before being carried across.
+
+### Security
+
+- **FDC3 app iframes render with no `sandbox` attribute.** The highest-value orphan, and the one
+  finding here with real security weight. Confirmed by grep: **zero** `sandbox` hits across
+  `packages/sail-finance/src` and `packages/sail-one/src`.
+  - `sail-finance/src/components/layout-grid/panel-templates/FDC3IframePanel.tsx:66-79`
+  - `sail-one/src/grid/grid.tsx:274-285` — **`sail-one` did not exist when the review was written**,
+    so the gap was copied into a second shell without ever being recorded.
+
+  Any app in the directory runs with full same-origin-parent privileges. Needs a decision on the
+  right `sandbox` token set, since FDC3 apps legitimately need scripts and same-origin messaging —
+  this is not a one-word fix, which is presumably why it stalled.
+
+- **WCP5 outbound remap trusts an app-supplied `instanceId` with no format guard.**
+  `app-connection/app-connection-registry.ts:103` —
+  `if (actualInstanceId && appId && destinationId !== actualInstanceId)` takes `actualInstanceId`
+  straight from `message.payload.instanceId` and rewrites the connection's metadata and routing.
+  Nothing rejects a `temp-`-prefixed or otherwise malformed value. Related in spirit to the
+  `connectionAttemptUuid` hardening in §1 and to defect-register #9 — same "trust an id off the
+  wire" class. Worth fixing in the same pass.
+
+### Correctness and hygiene
+
+- **Handshake-failure events are asymmetric.** The WCP4 *timeout* path emits `handshakeFailed`
+  (`app-connection/wcp/wcp1-3-handshake.ts:115`), but the WCP5 *rejection* path
+  (`app-connection/wcp/wcp-identity-validation.ts:370-393`) sends the failure response and returns
+  without emitting anything. A host watching `handshakeFailed` sees timeouts but is blind to
+  rejections. Small and well-specified — the best candidate here to just do.
+
+- **`closeRequest` has no inbound validator.** It is absent from `INBOUND_VALIDATORS`
+  (`dacp/validate-dacp-message.ts:61-93`) while its sibling request types are covered. *(The other
+  half of this finding — the ownership check — is genuinely fixed; `handleCloseRequest` uses only
+  the port-derived `params.instanceId`, and `resolve-context-listener-instance-id.ts:11-18` records
+  that the `meta.hostInstanceId` tier was removed.)*
+
+- **Listener ids reuse `requestUuid` instead of a fresh uuid.** Two sites:
+  `handlers/broadcast/handlers.ts:210` and `handlers/events/handlers.ts:56`, both
+  `const listenerId = message.meta.requestUuid`. Hygiene rather than a live bug — it conflates "the
+  request that created this listener" with "this listener".
+
+- **Timeouts are not consolidated onto one config.** `dacp/dacp-constants.ts:15-17` hardcodes
+  10000 / 100000 / 15000, while `handshakeTimeout`, `disconnectGracePeriod` and
+  `intentResolutionTimeout` live in a separate optional bag (`app-connection/wcp/wcp-types.ts:119,126,132`)
+  rather than in `DesktopAgentConfig`. The WCP3 handshake payload still advertises only three fields
+  (`wcp1-3-handshake.ts:95-99`), so an app cannot discover the timeouts it is being held to. Only one
+  of these (`channelChangeTimeoutMs`) is noted anywhere else, in the audit.
+
+- **immer usage is not uniform.** `state/mutators/app-directory.ts` and
+  `state/mutators/wcp-handshake-routing.ts` do not use `produce`; `setAutoFreeze` is never called
+  (zero hits in `src`); and `app-connection/wcp/wcp-connection-management.ts:232` mutates
+  `AppConnectionMetadata` in place (`metadata.instanceId = actualInstanceId`). Distinct from the
+  audit's immer finding, which is about a redundant double-guard in `private-channel.ts`.
+
+- **Two byte-identical Playwright specs.** `packages/sail-finance/tests/e2e/example.spec.ts` and
+  `packages/sail-finance/tests/example.spec.ts` — same md5 (`c0a86308…`). Delete one.
+
+### Repo hygiene
+
+- **`SECURITY.md` is boilerplate and routes reports to a public GitHub issue.** It also still claims
+  support for version `0.0.1`. Both wrong for a project about to be offered upstream.
+- **`AGENTS.md` still names `v3-pre` as the integration branch** (`AGENTS.md:73`, hedged again at
+  `:110`), which has not been true for some time.
+
+### Deliberately not carried
+
+The rest of both documents was **superseded, not merely duplicated**, and was dropped:
+their `SailPlatform` composition analysis (D1–D3, W1, W2 — reversed and documented in
+`sail-platform-extensibility.md`), the docs rebuild (W13 — done, tracked in `website-docs-blueprint.md`),
+`ChannelControl` (W3 — `sail-desktop-agent-feature-decisions.md` §1), the identity-store and
+`recentlyDisconnected` items (W7–W9 — reframed in the audit §5.7/§10), BLOCK-B/BLOCK-C/NEW-2/NEW-3/
+C-3/C-6 and the `debug: true` default (all verified **fixed**), and both scorecards (numbers now
+wrong: 6 packages not 5, 60 Vitest files not 42, 154 scenarios not 152).
