@@ -58,13 +58,18 @@ export function reconcileOrphanPendingHostInstances(
   appId: string,
   validatedInstanceId: string,
 ): void {
-  const orphanInstanceIds = Object.values(params.getState().instances)
-    .filter(
-      instance =>
-        instance.appId === appId &&
-        instance.instanceId !== validatedInstanceId &&
-        instance.state === AppInstanceState.PENDING,
-    )
+  // Registrations are stored in launch order, so only those registered *before* the one that
+  // just connected are orphans: their browsing context was overtaken by a later launch's.
+  // A registration made *after* it is a concurrent launch whose context has not connected yet —
+  // reaping that would delete an instanceId its `open()` caller already holds.
+  const instances = Object.values(params.getState().instances)
+  const validatedIndex = instances.findIndex(
+    instance => instance.instanceId === validatedInstanceId,
+  )
+
+  const orphanInstanceIds = instances
+    .slice(0, validatedIndex === -1 ? instances.length : validatedIndex)
+    .filter(instance => instance.appId === appId && instance.state === AppInstanceState.PENDING)
     .map(instance => instance.instanceId)
 
   if (orphanInstanceIds.length === 0) {

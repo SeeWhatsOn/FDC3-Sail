@@ -26,7 +26,9 @@ All run from the repo root. `@finos/sail-desktop-agent` must be built before the
 
 - Full: `npm test -- --run` — end of delivery only
 - Focused (harness units): `npm test -w @finos/sail-conformance-harness`
-- Focused (agent units, no cucumber): `npx vp test run -w @finos/sail-desktop-agent`
+- Focused (agent units + BDD): `npm test -w @finos/sail-desktop-agent`
+  (NOT `npx vp test run -w <pkg>` — `vp` reads `-w` as **watch mode** and the package name as a
+  filename filter, so it finds no tests and hangs in DEV mode.)
 - Focused (agent BDD): `npm run test:cucumber -w @finos/sail-desktop-agent`
 - Typecheck/lint: `npm run typecheck && npx vp lint .` — end of delivery only
 - Runtime proof (the success bar):
@@ -256,8 +258,17 @@ fresh agent per role per slice — never reused across roles.
 
 ## Slice Checkpoints
 
+- [x] Slice 1: **verified** (failures: 0) — reproduction by tester, fix by coder, both verify
+  commands run by main agent at exit 0. Review pending.
+
 ## Verification Notes
 
+- `npm run build -w @finos/sail-desktop-agent && npm test -w @finos/sail-conformance-harness`
+  -> **exit 0** (slice 1, after fix: 72 passed / 15 files). Observed by main agent.
+- `npm test -w @finos/sail-desktop-agent` -> **exit 0** (slice 1, after fix: 390 unit tests +
+  154 BDD scenarios / 1460 steps). Observed by main agent. The three named guards
+  (`wcp-temp-id-teardown`, `wcp-reconnect-clobber`, `instance-teardown`) and
+  `wcp-multi-pending-adoption.integration.test.ts` all still pass.
 - `npm test -w @finos/sail-conformance-harness` -> **exit 1** (slice 1, reproduction stage:
   3 failed / 69 passed). Observed by main agent, not reported by the subagent. A deliberately
   failing repro is not a slice failure — the slice is not claimed complete.
