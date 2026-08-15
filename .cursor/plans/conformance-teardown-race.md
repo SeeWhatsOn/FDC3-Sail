@@ -258,10 +258,29 @@ fresh agent per role per slice — never reused across roles.
 
 ## Slice Checkpoints
 
-- [x] Slice 1: **verified** (failures: 0) — reproduction by tester, fix by coder, both verify
+- [x] Slice 1: **verified, reviewed, PASSED** (failures: 0). Runtime effect below.
+- [ ] Slice 2: **triggered** — its conditional fired. Slice 1 verified clean but the runtime bar
+      still fails on the delivery symptom.
+- [x] Slice 1 detail (failures: 0) — reproduction by tester, fix by coder, both verify
   commands run by main agent at exit 0. Review pending.
 
 ## Verification Notes
+
+### Runtime effect of slice 1 (clean run, nothing else touching the repo)
+
+| Test | before (3 runs) | after slice 1 |
+|---|---|---|
+| `getAppMetadata (AppInstanceMetadata)` | FAIL, FAIL, pass | **PASS** |
+| `appChannels (ACFilteredContext3)` | pass, FAIL, pass | **PASS** |
+| `getAppMetadata "after all" hook` | FAIL, FAIL, FAIL | **still FAIL** |
+
+Score 83 passed / 1 failed (297s), from 81-83 with three different failures. The identity defect is
+fixed: the `unknown-md2-id` symptom is gone and the round-trip holds.
+
+The residual is the *teardown handshake only* — `App didn't return close context within 1 sec` — and
+it is still the deterministic one (now 4/4 across all runs). It is NOT the R1 mirror case, which
+would show as an identity failure; identity now passes. This is delivery, which is exactly slice 2's
+trigger condition.
 
 - `npm run build -w @finos/sail-desktop-agent && npm test -w @finos/sail-conformance-harness`
   -> **exit 0** (slice 1, after fix: 72 passed / 15 files). Observed by main agent.
