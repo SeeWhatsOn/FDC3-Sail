@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: Conformance mock-app teardown race
 
-Status: planning
-Current slice: 1 — awaiting user approval of the plan
+Status: implementing
+Current slice: 1 — approved 2026-08-14; tester dispatched
 
 ## Intent
 
@@ -115,7 +115,25 @@ asserts a WCP6-armed `pendingDisconnects` timer is cancelled when teardown arriv
 So Sail's only obligations are **delivery latency** and **not dropping the last broadcast from a page
 that is about to unload**. This is not a "close" bug at all.
 
-Two upstream fragilities that Sail cannot fix, recorded so we do not chase them:
+### CORRECTION (user, 2026-08-14): treat everything as Sail-side
+
+The user reports having previously achieved a **100% pass rate** with this toolbox. That refutes the
+"unfixable upstream" framing below and removes the Known-Limitation escape hatch.
+
+It specifically kills the `count`=1 argument: if 100% was reachable, then waiting for **one**
+`windowClosed` is sufficient — `waitForContext` resolves on the first matching reply and the second
+is a harmless stray. So a failing hook means **neither** mock replied inside 1000 ms, which is a
+delivery-latency problem on Sail's side, not an upstream oversight.
+
+The same logic applies to ACFilteredContext2: if the agent delivers promptly, the ChannelsApp
+registers its `closeWindow` listener in time. Both items below are therefore **in scope to fix**, and
+the success bar (empty the baseline) is treated as reachable.
+
+Committed history has no 100% export — `results/` tops out at v6 (53/26), and v3-v5 are worse. The
+100% run therefore came from a different setup (different branch, shell, or toolbox profile).
+**Finding that setup is the highest-value shortcut available** and is an open question with the user.
+
+Retained below for reference only — these are upstream *fragilities*, not upstream *blockers*:
 
 - `fdc3.getAppMetadata.ts:10-12` — the suite `after()` calls `closeMockAppWindow(title)` with the
   default `count` of **1**, but the test opens **two** `MetadataAppId` instances (`:34`, `:36`).
