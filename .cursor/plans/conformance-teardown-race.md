@@ -258,6 +258,41 @@ fresh agent per role per slice — never reused across roles.
 
 ## Verification Notes
 
+- `npm test -w @finos/sail-conformance-harness` -> **exit 1** (slice 1, reproduction stage:
+  3 failed / 69 passed). Observed by main agent, not reported by the subagent. A deliberately
+  failing repro is not a slice failure — the slice is not claimed complete.
+
+### Slice 1 root cause — FOUND, and it refutes the plan's own lead
+
+The `pruneStalePendingHostInstances` lead recorded in Scoping findings is **refuted**. The tester
+instrumented the launch and observed `disconnectInstance` is never called during it; the harness
+guard `popupWatcher.hasPopup()` correctly skips instance 1.
+
+The removal is **agent-side**, in
+`packages/sail-desktop-agent/src/handlers/utils/wcp-host-instance-adoption.ts`:
+`reconcileOrphanPendingHostInstances`, called unconditionally from `wcp-identity-validation.ts` on
+every non-reconnect validation, removes **every** PENDING instance of the same appId other than the
+one just validated. When two instances of one appId launch concurrently, instance 2 is still PENDING
+(its browsing context has not loaded yet) at the moment instance 1's WCP4 validates — so instance 2's
+registration is deleted. Instance 2's own WCP4 then finds nothing to adopt, falls through to
+`createAppInstance`, and mints a fresh id that no caller ever received.
+
+One defect explains all three criteria:
+- (b) direct: the id `open()` returned is no longer the id the instance ends up with.
+- (a) knock-on: `handleGetAppMetadataRequest` takes its no-running-instance branch
+  (`open/handlers.ts:352-368`) and returns metadata with `instanceId` omitted -> `unknown-md2-id`.
+- (c) knock-on: both broadcast paths address instances by id, so the caller's id is unreachable.
+
+**Why this reconciles with the user's 100% interactive run:** the defect is timing-dependent, not
+unconditional. It fires only when instance 2 is still PENDING as instance 1 validates. Interactive
+timing (human-paced, different popup focus behaviour) can let instance 1 finish WCP4 before instance
+2 is opened at all, in which case nothing is over-pruned.
+
+**Constraint flagged by the tester:** adoption has two routes — WCP1 `window.name` host-identifier,
+and the WCP4 claimed-`instanceId` route. Only the claimed-id route is exercised by these tests
+(`DacpTestAppConnection.getConnection()` returns `undefined`, so `hostIdentifier` cannot resolve
+headlessly). A fix must be correct for **both**.
+
 ## Review Notes
 
 - Required:
