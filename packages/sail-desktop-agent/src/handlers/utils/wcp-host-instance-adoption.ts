@@ -58,10 +58,20 @@ export function reconcileOrphanPendingHostInstances(
   appId: string,
   validatedInstanceId: string,
 ): void {
-  // Registrations are stored in launch order, so only those registered *before* the one that
-  // just connected are orphans: their browsing context was overtaken by a later launch's.
-  // A registration made *after* it is a concurrent launch whose context has not connected yet —
-  // reaping that would delete an instanceId its `open()` caller already holds.
+  // Reap only PENDING registrations made *before* the one that just connected. A registration
+  // made *after* it is a concurrent launch whose context has not connected yet, and reaping that
+  // would delete an instanceId its `open()` caller already holds.
+  //
+  // This is a heuristic, not an implication. `openResponse` is returned before WCP4 (see
+  // `handleOpenRequest`), so nothing serialises which of two concurrent launches connects first.
+  // When the *later* launch validates first, the earlier PENDING row is reaped even though it was
+  // never abandoned, and its own WCP4 then mints an id no caller holds — the same defect mirrored.
+  //
+  // That is deliberate: a later launch reaching WCP4 first is the only abandoned-launch signal the
+  // agent has. Only the host knows whether a browsing context is still alive (the harness uses
+  // `popupWatcher.hasPopup()`), and plumbing liveness in would be a new host contract. Registration
+  // order also assumes non-integer-like instanceIds, since integer-like keys sort ahead of all
+  // string keys regardless of insertion order.
   const instances = Object.values(params.getState().instances)
   const validatedIndex = instances.findIndex(
     instance => instance.instanceId === validatedInstanceId,

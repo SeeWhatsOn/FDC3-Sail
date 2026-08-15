@@ -306,13 +306,64 @@ headlessly). A fix must be correct for **both**.
 
 ## Review Notes
 
-- Required:
-- Follow-up:
-- Ignore for MVP:
+Slice 1, reviewed by a fresh reviewer agent at `3885e01`.
+
+- **Required:** R1 — the code comment asserted the order rule as an implication when it is a
+  heuristic, and its failure direction was recorded nowhere. **Applied**: comment reworded to name
+  the residual and why it is deliberate; Known Limitations populated. Taken by the main agent under
+  the step-10 single-obvious-edit exemption (comment text only, no logic change), re-verified below.
+- **Follow-up:** F1-F4, parked below. None folded into the slice.
+- **Ignore for MVP:** I1 slice-then-filter over the whole map (same result, same cost); I2 fixture
+  duplication with `harness-open-with-context.harness.ts` (follows the directory's convention);
+  I3 fixture imports agent `src` not `dist` (matches the sibling fixture, deliberate).
+
+Reviewer independently re-ran both verify commands at exit 0 and confirmed the diff is exactly three
+files with no reformat, no unrelated edit, and no timeout touched. It also confirmed the three
+reproduction tests assert real state/wire output rather than mock calls, and that the untested
+`window.name` adoption route is safe because reconcile is downstream of adoption and sees only the
+resolved id.
 
 ## Parked Follow-ups
 
+From the slice 1 review. None were folded into the slice.
+
+- **F1** — the order rule silently inverts for integer-like instanceIds, which are reachable today
+  via `open({ instanceId: "7" })` (`app-launcher.ts:53`, `sail-finance/src/main.tsx:40`) and the
+  host-injectable `createId` (`sail-platform/src/workspace/store.ts:102`). Two-sided: such a row
+  sorts to index 0 so it is reaped by any sibling validation, and when it is the validated row
+  nothing is ever reaped (orphan leak). Now named in the code comment; no guard added.
+- **F2** — `validatedIndex === -1` currently falls back to reaping every PENDING row of the appId,
+  the more damaging direction. `Math.max(validatedIndex, 0)` is shorter and fails safe. Left alone
+  because the branch is unreachable at the single call site; take it if that ever changes.
+- **F3** — no direct unit test on `reconcileOrphanPendingHostInstances` in the agent package. ~20
+  lines over three orderings would pin the documented behaviour, including the R1 direction.
+- **F4** — criterion (b) is only covered transitively. One
+  `expect(second.wcp5InstanceId).toBe(second.openedInstanceId)` would assert it directly. Also
+  `expect(first.openedInstanceId).not.toBe(second.openedInstanceId)` is trivially true for two
+  `randomUUID`s and carries no signal.
+
 ## Known Limitations
+
+**Concurrent same-appId launches are only repaired in one direction.** (Reviewer R1, slice 1.)
+
+`reconcileOrphanPendingHostInstances` discriminates orphan from concurrent launch by registration
+order. That repairs the direction the conformance suite actually hits — a *later* launch being
+reaped, i.e. the `unknown-md2-id` symptom. It does **not** repair the mirror: if the later launch's
+browsing context completes WCP4 *first*, the earlier PENDING row is reaped even though it was never
+abandoned, and its own WCP4 mints an id no caller holds.
+
+Nothing serialises which of two concurrent launches connects first — `handleOpenRequest` returns
+`openResponse` before WCP4 (`handlers/open/handlers.ts:173-177`).
+
+This is not fixable by tightening the rule: `wcp-multi-pending-adoption.integration.test.ts:178-179`
+*requires* the earlier row be reaped in exactly that "later row validates first" shape. A later
+launch reaching WCP4 first is the only abandoned-launch signal the agent has. Only the host knows
+whether a browsing context is still alive — the harness already has that signal in
+`popupWatcher.hasPopup()` (`harness-stale-instance-prune.ts`) — so a full fix means plumbing
+liveness into the agent as a new host contract, well beyond this slice.
+
+**If the 3-consecutive-clean-run bar fails on the same symptom, this is the reason — do not
+re-derive it.**
 
 ## Evidence carried in from the headless conformance work
 
