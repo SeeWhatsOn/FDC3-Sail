@@ -141,6 +141,77 @@ describe("WCP6Goodbye arriving on a temp handshake id", () => {
 })
 
 /**
+ * Defect register #4 (major): a WCP6Goodbye arms a grace-period timer keyed by the (validated)
+ * instance id. If the instance is later torn down through `SailDesktopAgent.disconnectInstance`
+ * -> `BrowserAppConnection.pruneAppConnection` -> the low-level `disconnectApp` -- the real path
+ * this defect was found on -- that armed timer is not cancelled. When it eventually fires it
+ * calls `onInstanceTeardown` again for the same id, which is wired back to
+ * `SailDesktopAgent.disconnectInstance` (see `bindEdgeCallbacks`), producing a second, spurious
+ * teardown for whatever now lives under that id.
+ *
+ * `wcp-reconnect-clobber.test.ts` covers the same defect at the connection-management unit level
+ * (inspecting `pendingDisconnects` directly, and the full relaunch-inside-the-grace-window
+ * reproduction). This test drives it through the actual public entry point instead.
+ *
+ * @vitest-environment jsdom
+ */
+describe("Grace timer armed by WCP6Goodbye survives a direct disconnectInstance() teardown (defect #4)", () => {
+  const activeAgents: SailDesktopAgent[] = []
+
+  afterEach(() => {
+    clearAllHeartbeatTimersForTesting()
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+  })
+
+  it("does not fire a second teardown after disconnectInstance tears the app down while its grace timer is still armed", async () => {
+    const agent = createTestAgent({ disconnectGracePeriod: 40 })
+    activeAgents.push(agent)
+    const connector = agent.appConnection
+
+    const disconnectedInstanceIds: string[] = []
+    connector.on("appDisconnected", instanceId => {
+      disconnectedInstanceIds.push(instanceId)
+    })
+
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "disconnect-instance-grace-armed-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    // WCP6Goodbye arms the grace timer for the validated instance.
+    connected.appPort.postMessage(createWCP6Goodbye())
+    await flushAsyncDelivery()
+
+    // Something other than the timer tears the instance down directly — the real-world path
+    // this defect was found on.
+    agent.disconnectInstance(connected.validatedInstanceId)
+    await flushAsyncDelivery()
+
+    expect(connector.getConnection(connected.validatedInstanceId)).toBeUndefined()
+    // Exactly one appDisconnected for the explicit disconnectInstance() call above. A second
+    // entry here means the WCP6-armed timer was left running and fired later.
+    expect(disconnectedInstanceIds.filter(id => id === connected.validatedInstanceId)).toHaveLength(
+      1,
+    )
+
+    // Advance comfortably past the original grace period (real timer — MessagePort delivery
+    // needs real task turns, matching the rest of this file).
+    await new Promise(resolve => setTimeout(resolve, 150))
+    await flushAsyncDelivery()
+
+    // Proof this fails for the real reason: the stale timer fired and called
+    // onInstanceTeardown -> disconnectInstance a second time for the same id, producing a
+    // second appDisconnected event that never should have happened.
+    expect(disconnectedInstanceIds.filter(id => id === connected.validatedInstanceId)).toHaveLength(
+      1,
+    )
+  })
+})
+
+/**
  * A WCP5 failure response is always addressed to the temp handshake id: `sendFailureResponse`
  * falls back to `temp-{uuid}` because `getInboundInstanceId()` returns null on the browser edge.
  * If that temp id was already remapped to a validated instanceId by an earlier successful
