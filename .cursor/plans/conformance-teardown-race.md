@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: Conformance mock-app teardown race
 
 Status: implementing
-Current slice: 2 — full loop (tester -> coder -> reviewer), tester dispatched
+Current slice: 3 — full loop (tester -> coder -> reviewer), tester dispatched
 
 ## Intent
 
@@ -213,7 +213,37 @@ if slice 1 does not move the runtime bar.
      `src/harness-browsing-context-close.ts`. Final location decided by the diagnosis.
    - Barred: raising, padding, or adding any timeout.
 
-3. **(Conditional) Cancel the WCP6 grace timer on `disconnectApp`**
+3. **`open()` must not resolve before the launched app has connected** — APPROVED, in progress
+   - Supersedes the old slice 3 (WCP6 grace timer), which is renumbered 4 and stays parked.
+   - Why: confirmed by instrumented run. `handleOpenRequest` sends `openResponse` immediately for a
+     plain open (`handlers/open/handlers.ts:172-177`), so the toolbox tears an app down 38-60 ms
+     before it has registered its `closeWindow` listener.
+   - **Blast radius is one branch.** The waiting machinery already exists and is already used on the
+     other two launch paths:
+     | Path | Waits today? |
+     |---|---|
+     | `open()` **with** context | yes — `registerOpenWithContext`, 15 s `openContextListenerTimeoutMs` |
+     | `raiseIntent` launching an app | yes — `intent-launch-helpers.ts:73-75`, 15 s poll loop |
+     | `open()` **without** context | **no — responds immediately** |
+     Channel/listener/broadcast calls are unaffected: they run on an already-connected app and
+     already respond only after the work is done (confirmed in the diagnostic log).
+   - Goal: a plain `open()` resolves only once the launched app has connected, so the caller can
+     immediately interact with it.
+   - Acceptance (contract, not mechanism):
+     a. `openResponse` for a plain `open()` is not sent until the launched instance has connected.
+     b. Immediately after `open()` resolves, the app can receive a broadcast on an app channel it
+        subscribed to during its own startup. (This is the conformance-relevant contract.)
+     c. If the app never connects, `open()` rejects with an FDC3 `AppTimeout` error rather than
+        hanging forever.
+   - Verify: `npm test -w @finos/sail-conformance-harness` and `npm test -w @finos/sail-desktop-agent`
+     (bound to BOTH because this changes core `open()` timing that the BDD suite exercises).
+   - Likely files: `sail-desktop-agent/src/handlers/open/handlers.ts`, and whatever it reuses from
+     `handlers/utils/open-with-context.ts`.
+   - Barred: raising or padding any timeout; introducing a new waiting mechanism when one exists.
+   - Risk to watch: `open()` currently returns fast. Anything depending on that speed gets slower.
+     The 390 unit tests and 154 BDD scenarios are the canary.
+
+4. **(Parked) Cancel the WCP6 grace timer on `disconnectApp`**
    - Trigger: only if the runtime bar still fails after slices 1-2, or review rules it in.
    - Goal: close hazard 3 / register defect #4 — `disconnectApp` leaves a live 2000 ms
      `pendingDisconnects` timer that can fire `onInstanceTeardown` on a relaunched same-id instance.
