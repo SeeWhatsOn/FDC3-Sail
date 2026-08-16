@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: Conformance mock-app teardown race
 
-Status: implementing
-Current slice: 3 — full loop (tester -> coder -> reviewer), tester dispatched
+Status: done
+Current slice: none — delivery complete, success bar met
 
 ## Intent
 
@@ -23,6 +23,9 @@ Confirmed by the user 2026-08-14.
 
 All run from the repo root. `@finos/sail-desktop-agent` must be built before the harness resolves it
 (`npm run build -w @finos/sail-desktop-agent`) — the harness imports its `dist`, not its `src`.
+For the **full** suite also build `@finos/sail-platform`, or `sail-one`'s three test files fail to
+collect with `Failed to resolve import "@finos/sail-platform"` — which reads as 3 failed suites and
+0 failed tests.
 
 - Full: `npm test -- --run` — end of delivery only
 - Focused (harness units): `npm test -w @finos/sail-conformance-harness`
@@ -304,6 +307,36 @@ fresh agent per role per slice — never reused across roles.
       still fails on the delivery symptom.
 - [x] Slice 1 detail (failures: 0) — reproduction by tester, fix by coder, both verify
   commands run by main agent at exit 0. Review pending.
+
+## OUTCOME — success bar met
+
+Three consecutive clean headless runs on 2026-08-16, each verified by the main agent from its own
+artifact and confirmed distinct by `startedAt`:
+
+| Run | started (UTC) | result | duration |
+|---|---|---|---|
+| 1 | 16:26:21 | **83 passed / 0 failed of 83** | 301s |
+| 2 | 16:32:03 | **83 passed / 0 failed of 83** | 300s |
+| 3 | 16:37:28 | **83 passed / 0 failed of 83** | 301s |
+
+Zero non-passing entries in any run; 21 suites covered. The baseline diff reported 0 regressions and
+2 fixed, with the `after all` hook no longer occurring at all. `results/conformance-baseline-2.2.json`
+is now **empty**, as the Intent required.
+
+Journey: 81-83/84 with three wandering failures -> 83/84 after slice 1 -> **83/83 clean** after
+slice 3. This matches the 100% the user had previously achieved interactively; the gap was always
+`open()` answering before the app existed.
+
+### End-of-delivery run (once, per the loop)
+
+- `npm test -- --run` -> **exit 0**, 553 passed / 1 skipped. First attempt exited 1 with 3 failed
+  *suites* and 0 failed *tests* — collection errors, not assertions: `sail-one` could not resolve
+  `@finos/sail-platform` because its `dist` was unbuilt. `npm run build -w @finos/sail-platform`
+  clears it. Same class as the harness needing the agent built; worth adding to the plan's command
+  preamble, which named only `sail-desktop-agent`.
+- `npm run typecheck` (both packages) -> **exit 0**.
+- `npx vp fmt --check .` -> the only offender is `.claude/settings.local.json`, which is gitignored
+  (`/root/.config/git/ignore`) and not a repo file. No tracked file is misformatted.
 
 ## Verification Notes
 

@@ -1,8 +1,4 @@
 {
-  "note": "Headless FDC3 2.2 baseline: `npm run test:conformance` (suite=All) against @finos/sail-desktop-agent via the vendored toolbox build. Two reference runs scored 83/84 and 81/84 in ~300s. The three titles below are the union of failures observed across those runs, NOT a stable per-run failure set: two of them share one root cause — 'App didn't return close context within 1 sec', a mock-app teardown race that lands on a different test each run — and the getAppMetadata instanceId mismatch ('unknown-md2-id') appears to be its knock-on. They are baselined so CI is not red at random; fixing the teardown race should let all three come out, at which point the spec reports them as fixed and this file should be trimmed. Refresh from artifacts/conformance.json.",
-  "failing": [
-    "fdc3.getAppMetadata \"after all\" hook for \"(AppInstanceMetadata) App instance metadata is valid\"",
-    "fdc3.getAppMetadata (AppInstanceMetadata) App instance metadata is valid",
-    "fdc3.appChannels (ACFilteredContext3) Should not receive context when retrieving two different app channels before app B broadcasts the listened type to the first channel that was retrieved"
-  ]
+  "note": "Headless FDC3 2.2 baseline: `npm run test:conformance -w @finos/sail-conformance-harness` (suite=All) against @finos/sail-desktop-agent via the vendored toolbox build. EMPTY — three consecutive runs on 2026-08-16 scored 83/83 with zero failures in ~300s each (16:26:21, 16:32:03, 16:37:28 UTC). The three titles previously listed here were real Sail defects, not toolbox flakiness: concurrent same-appId launches losing an instance registration, and a plain fdc3.open() resolving before the launched app had connected. Both are fixed. Keep this list empty — any entry added here is suppressing a real regression, so fix the defect instead. Refresh from artifacts/conformance.json only if a genuinely unfixable failure is agreed with a human.",
+  "failing": []
 }
