@@ -3,7 +3,7 @@ import { OpenError } from "@finos/fdc3"
 import { createDACPEvent, createDACPSuccessResponse } from "../../dacp/dacp-message-creators"
 import { sendDACPResponse, sendDACPErrorResponse } from "./dacp-response-utils"
 import type { DACPHandlerParams } from "../types"
-import { getInstance } from "../../state/selectors"
+import { getInstance, isInstanceConnected } from "../../state/selectors"
 import type { AgentState, PendingOpenWithContext } from "../../state/types"
 import {
   addPendingOpenWithContext,
@@ -29,10 +29,17 @@ export function clearAllPendingOpenWithContextTimeoutsForTesting(): void {
   pendingOpenWithContextTimeouts.clear()
 }
 
+/**
+ * Holds an `openRequest` until its target can be used, then completes it.
+ *
+ * With a launch context that means the target has a matching context listener; without one
+ * (a plain `open()`) it means the target has connected — `handleOpenRequest` pre-registers the
+ * launcher id as PENDING before the app is really there, so only WCP5 says it has arrived.
+ */
 export function registerOpenWithContext(
   message: BrowserTypes.OpenRequest,
   appIdentifier: BrowserTypes.AppIdentifier,
-  launchContext: Context,
+  launchContext: Context | undefined,
   params: DACPHandlerParams,
 ): void {
   const { instanceId: sourceInstanceId, openContextListenerTimeoutMs } = params
@@ -41,13 +48,17 @@ export function registerOpenWithContext(
     throw new Error("App identifier missing instanceId for open-with-context")
   }
 
-  // Fast path: if the app already has a matching listener, deliver immediately.
-  if (hasMatchingContextListener(targetInstanceId, launchContext.type, params)) {
+  // Fast path: if the app is already usable, deliver immediately.
+  const targetInstance = getInstance(params.getState(), targetInstanceId)
+  const targetIsReady = launchContext
+    ? hasMatchingContextListener(targetInstanceId, launchContext.type, params)
+    : targetInstance !== undefined && isInstanceConnected(targetInstance)
+  if (targetIsReady) {
     deliverOpenWithContext(message, appIdentifier, launchContext, params, sourceInstanceId)
     return
   }
 
-  // Otherwise, store the request and time out if no listener appears.
+  // Otherwise, store the request and time out if the app never becomes usable.
   // The timeout triggers an AppTimeout error to the caller.
   const requestUuid = message.meta.requestUuid
   const timeoutHandle = setTimeout(() => {
@@ -58,7 +69,9 @@ export function registerOpenWithContext(
     sendDACPErrorResponse({
       message,
       errorType: OpenError.AppTimeout,
-      errorMessage: "Timed out waiting for context listener",
+      errorMessage: launchContext
+        ? "Timed out waiting for context listener"
+        : "Timed out waiting for app to connect",
       instanceId: sourceInstanceId,
       responses: params.responses,
     })
@@ -83,21 +96,48 @@ export function notifyContextListenerAdded(
   contextType: string,
   params: DACPHandlerParams,
 ): void {
-  // Called when an instance adds a context listener; resolve any pending opens.
+  // Called when an instance adds a context listener; resolve any pending opens that carry a
+  // launch context. A listener for "*" matches any pending context type.
+  resolvePendingOpens(
+    instanceId,
+    params,
+    pending =>
+      pending.launchContext !== undefined &&
+      (contextType === "*" || pending.launchContext.type === contextType),
+  )
+}
+
+/**
+ * Called when an instance completes WCP5; resolves plain `open()` requests waiting on it.
+ * Pending opens that carry a launch context keep waiting for their listener.
+ */
+export function notifyInstanceConnected(instanceId: string, params: DACPHandlerParams): void {
+  resolvePendingOpens(instanceId, params, pending => pending.launchContext === undefined)
+}
+
+/** Complete every pending open on `instanceId` that `matches`; the rest keep waiting. */
+function resolvePendingOpens(
+  instanceId: string,
+  params: DACPHandlerParams,
+  matches: (pending: PendingOpenWithContext) => boolean,
+): void {
   const state: AgentState = params.getState()
   const pendingList = state.open.pendingWithContext[instanceId]
   if (!pendingList || pendingList.length === 0) {
     return
   }
 
-  // A listener for "*" matches any pending context type.
-  const { matched, remaining } = partitionPending(pendingList, contextType)
+  const matched = pendingList.filter(matches)
   if (matched.length === 0) {
     return
   }
 
   params.setState((state: AgentState) =>
-    setPendingOpenWithContextForInstance(state, instanceId, remaining),
+    setPendingOpenWithContextForInstance(
+      state,
+      instanceId,
+      pendingList.filter(pending => !matches(pending)),
+    ),
   )
 
   matched.forEach(pending => {
@@ -110,25 +150,6 @@ export function notifyContextListenerAdded(
       pending.sourceInstanceId,
     )
   })
-}
-
-function partitionPending(
-  pendingList: PendingOpenWithContext[],
-  contextType: string,
-): { matched: PendingOpenWithContext[]; remaining: PendingOpenWithContext[] } {
-  const matched: PendingOpenWithContext[] = []
-  const remaining: PendingOpenWithContext[] = []
-
-  pendingList.forEach(pending => {
-    const matches = contextType === "*" || pending.launchContext.type === contextType
-    if (matches) {
-      matched.push(pending)
-    } else {
-      remaining.push(pending)
-    }
-  })
-
-  return { matched, remaining }
 }
 
 function clearPendingTimeout(requestUuid: string): void {
@@ -234,31 +255,34 @@ function hasMatchingContextListener(
 function deliverOpenWithContext(
   message: BrowserTypes.OpenRequest,
   appIdentifier: BrowserTypes.AppIdentifier,
-  launchContext: Context,
+  launchContext: Context | undefined,
   params: DACPHandlerParams,
   sourceInstanceId: string,
 ): void {
   // "Open with context" is modeled as a broadcast to the target instance,
-  // then the original openRequest is completed with openResponse.
-  const callerInstance = getInstance(params.getState(), sourceInstanceId)
-  const broadcastEvent = createDACPEvent("broadcastEvent", {
-    channelId: null,
-    context: launchContext,
-    originatingApp: {
-      appId: callerInstance?.appId ?? "unknown",
-      instanceId: sourceInstanceId,
-    },
-  })
+  // then the original openRequest is completed with openResponse. A plain open has
+  // nothing to broadcast and only needs the openResponse.
+  if (launchContext) {
+    const callerInstance = getInstance(params.getState(), sourceInstanceId)
+    const broadcastEvent = createDACPEvent("broadcastEvent", {
+      channelId: null,
+      context: launchContext,
+      originatingApp: {
+        appId: callerInstance?.appId ?? "unknown",
+        instanceId: sourceInstanceId,
+      },
+    })
 
-  const broadcastEventWithRouting = {
-    ...broadcastEvent,
-    meta: {
-      ...broadcastEvent.meta,
-      destination: { instanceId: appIdentifier.instanceId },
-    },
+    const broadcastEventWithRouting = {
+      ...broadcastEvent,
+      meta: {
+        ...broadcastEvent.meta,
+        destination: { instanceId: appIdentifier.instanceId },
+      },
+    }
+
+    params.responses.sendOutbound(broadcastEventWithRouting)
   }
-
-  params.responses.sendOutbound(broadcastEventWithRouting)
 
   const response = createDACPSuccessResponse(message, "openResponse", {
     appIdentifier,
