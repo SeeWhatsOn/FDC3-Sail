@@ -214,7 +214,8 @@ per the user's instruction. A fresh agent per role per slice — never reused ac
 - [x] Slice 6 (S3-F5): **verified, reviewed, PASSED** (failures: 0). Commit `84c1024`.
 - [x] Slice 7 (parked slice 4 / register #4): **verified, reviewed, PASSED** (failures: 0). Commits
       `0d59ce0` (fix) + `59d4cdb` (tests).
-- [ ] Slice 8 (F1-ordering, F2, F3): not started (failures: 0)
+- [x] Slice 8 (F1-ordering, F2, F3): **verified, reviewed, PASSED** (failures: **1** — the first
+      attempt sorted by `createdAt` and was sent back; see Review Notes). Commit `8a52db1`.
 - [ ] Slice 9 (S3-F2, F4): not started (failures: 0)
 
 ## Verification Notes
@@ -324,8 +325,54 @@ tester's masking finding raised, and the answer **corrects the defect register**
 
 Register entry #4 is now marked FIXED and carries this correction.
 
+### Slice 8 (F1-ordering, F2, F3), fresh reviewer at `8a52db1`
+
+**Slice failure 1 of 3 — the first attempt was rejected before review.** It sorted by the existing
+`AppInstance.createdAt`, which looks correct and passed the full 407-test suite. It is inert: `createdAt`
+is `new Date()` at millisecond resolution, back-to-back registrations tie **1000/1000** in this
+container, and `Array.prototype.sort` is stable — so a tie falls straight back to the input array's
+order, which is the `Object.values()` key order being escaped. Concurrent same-appId launches are
+*exactly* the tying case, so the fix would have done nothing where it was needed. The tester saw it
+independently as a **flaky** failure (~2 runs in 3), which is worse than a consistent one: it could
+plausibly have passed CI and surfaced later as an unreproducible "two `open()` calls returned the
+same instanceId". Second attempt used an explicit monotonic sequence.
+
+- **Required:** none.
+- **Follow-up:** the two new `describe` titles carried plan labels ("criterion a"/"criterion b"),
+  against `AGENTS.md`'s rule that plan slice/finding labels must not outlive the plan in code.
+  **Applied** by the main agent under the step-10 single-obvious-edit exemption — two `describe`
+  strings, no logic change — re-verified at 11/11.
+- **Ignore for MVP:** none.
+
+Verified against the code rather than the commit message:
+
+- **No creation path bypasses `connectInstance`,** so `registrationSequence` is never `undefined` and
+  the `undefined - number = NaN` hazard cannot arise. It is the only site that writes a new
+  `AppInstance`; every other mutator reads, updates or deletes an existing row, and no hand-written
+  `AppInstance` literal exists anywhere in `src/` or `test/`.
+- **Keeping the field required is correct.** `AppInstance` is *not* public API — `index.ts` exports
+  the hand-mapped `DesktopAgentAppInstance` DTO instead, and no consumer package imports
+  `AppInstance` or constructs/persists one. Making it optional would reopen the `NaN` hazard for no
+  benefit.
+- **The counter cannot restart.** `this.state` is assigned once in the constructor; `stop()` does not
+  touch it, and there is no other `createInitialState` call site on the instance.
+- **The asymmetry is preserved** — only the ordering *source* changed, not the reap logic.
+- One theoretical seam, currently unreached: `createStateWithOverrides`/`deepMerge` would let a caller
+  seed `instances` without a matching `nextInstanceSequence`, colliding with later-connected rows. No
+  call site or test uses it. Parked below.
+
 ## Parked Follow-ups
 
+- **New, from the slice 8 review.** `createStateWithOverrides`/`deepMerge` (`state/initial-state.ts:53-84`)
+  would let a caller seed `state.instances` with rows whose `registrationSequence` values do not match
+  a correspondingly advanced `nextInstanceSequence`, colliding with instances connected afterwards and
+  making the orphan ordering incoherent again. Unreached today — no call site in `sail-one`,
+  `sail-finance` or any test passes `initialState.instances` — so it is not worth guarding now. If
+  that seam is ever exercised, seed the counter alongside the rows.
+- From the slice 7 review: `disconnectAppByInstanceId`'s inline `pendingDisconnects` cancel
+  (`wcp-connection-management.ts:133-137`) is now redundant, since every path out of that function
+  reaches the self-cancelling `disconnectApp`. Left in place deliberately — acceptance (d) required
+  that function's behaviour unchanged, and it is a harmless second safety net.
 - Carried from the parent plan, closed without code change: **S3-F4** (double predicate evaluation,
   no behavioural difference) and **F1-mirror** (needs host liveness in the agent; barred by the
   purity constraint). Both reasoned in Scoping decisions.

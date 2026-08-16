@@ -165,7 +165,7 @@ describe("reconcileOrphanPendingHostInstances", () => {
     })
   })
 
-  describe("not-found validatedInstanceId (criterion b: fail safe, not fail open)", () => {
+  describe("not-found validatedInstanceId: fails safe, not open", () => {
     it("reaps nothing when the validated instanceId is absent from state.instances", () => {
       const earlierId = "not-found-a"
       const laterId = "not-found-b"
@@ -180,7 +180,7 @@ describe("reconcileOrphanPendingHostInstances", () => {
     })
   })
 
-  describe("integer-like instanceId ordering (criterion a)", () => {
+  describe("integer-like instanceId ordering", () => {
     it("reaps the integer-like row when it is genuinely the earlier registration", () => {
       const integerId = "7"
       const uuidId = "33333333-3333-3333-3333-333333333333"
