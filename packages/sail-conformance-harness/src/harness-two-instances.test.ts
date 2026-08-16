@@ -45,7 +45,18 @@ describe("two instances of one forceNewWindow appId", () => {
 
     try {
       const [first, second] = fixture.launched
+
+      // Weak but harmless: two crypto.randomUUID()-backed ids are all but guaranteed distinct
+      // regardless of correctness, so this alone can't catch a mixed-up registration. Kept
+      // because it documents the intended invariant; the assertions below are what actually
+      // guard it.
       expect(first.openedInstanceId).not.toBe(second.openedInstanceId)
+
+      // The real contract: the id open() handed back to the caller must be the same id the
+      // instance itself validated as over WCP4/WCP5. If one launch's pending registration were
+      // reaped and its pending open migrated onto the other instance, these would diverge.
+      expect(first.wcp5InstanceId).toBe(first.openedInstanceId)
+      expect(second.wcp5InstanceId).toBe(second.openedInstanceId)
 
       const registeredIds = fixture.agent.apps
         .getInstances()
