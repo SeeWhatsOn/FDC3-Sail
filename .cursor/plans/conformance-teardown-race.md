@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: Conformance mock-app teardown race
 
 Status: implementing
-Current slice: 1 — approved 2026-08-14; tester dispatched
+Current slice: 2 — full loop (tester -> coder -> reviewer), tester dispatched
 
 ## Intent
 
@@ -193,14 +193,25 @@ if slice 1 does not move the runtime bar.
    - Likely files: `src/harness-stale-instance-prune.ts`, `src/harness-bootstrap.ts`,
      `sail-desktop-agent/src/handlers/open/handlers.ts`. Final location decided by the diagnosis.
 
-2. **(Conditional) Do not drop the last broadcast from an unloading page**
-   - Trigger: only if slice 1 verifies clean but the runtime bar still fails on the delivery symptom.
-   - Goal: an observed `windowClosed` is delivered to its subscribers before the harness tears the
-     instance down.
-   - Acceptance: teardown of a FINOS mock does not begin until the broadcast that announced it has
-     been dispatched to subscribers; no raising of any timeout to achieve this.
+2. **Do not drop the last broadcast from an unloading page** — TRIGGERED, in progress
+   - Trigger fired: slice 1 verified clean, runtime bar still fails on the delivery symptom alone.
+   - Scope note: slice 1's criterion (c) already proved the **outbound** leg (`closeWindow` reaches
+     both live instances). Slice 2 is the **return** leg — the mock's `windowClosed` reply getting
+     back to the test-side subscriber before the mock's own `window.close()` lands 1-5 ms later.
+   - Goal: a `windowClosed` broadcast from a mock reaches every other subscriber on `app-control`
+     even though the mock destroys its browsing context immediately afterwards, and even though the
+     harness observes that same broadcast and starts tearing the instance down.
+   - Acceptance (contract, not mechanism):
+     a. A `windowClosed` broadcast from instance X on `app-control` is delivered to a subscriber on
+        another instance, when X's browsing context closes immediately after broadcasting.
+     b. The harness observing `windowClosed` and disconnecting X does not prevent (a).
+     c. With **two** live instances of one appId both replying to a single `closeWindow`, at least
+        the first reply reaches the subscriber. (The toolbox waits for `count`=1, so one is enough —
+        this is the exact shape of the failing `getAppMetadata` after-hook.)
    - Verify: `npm test -w @finos/sail-conformance-harness`
-   - Likely files: `src/harness-finos-teardown.ts`, `src/harness-instance-lifecycle.ts`.
+   - Likely files: `src/harness-finos-teardown.ts`, `src/harness-instance-lifecycle.ts`,
+     `src/harness-browsing-context-close.ts`. Final location decided by the diagnosis.
+   - Barred: raising, padding, or adding any timeout.
 
 3. **(Conditional) Cancel the WCP6 grace timer on `disconnectApp`**
    - Trigger: only if the runtime bar still fails after slices 1-2, or review rules it in.
