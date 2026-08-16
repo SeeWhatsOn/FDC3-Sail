@@ -71,7 +71,24 @@ test("FDC3 2.2 conformance suite runs headlessly", async ({ page }) => {
 
   writeFileSync(join(ARTIFACTS, "conformance.json"), `${JSON.stringify(outcome, null, 2)}\n`)
 
-  // #mocha is a long scrolling list; a viewport screenshot only captures the tail.
+  // #mocha is a long scrolling list inside a fixed-height iframe. Screenshotting the element
+  // alone yields an image the full height of the list but with only the slice that fits the
+  // iframe's viewport actually painted — the rest comes out blank. Grow the iframe to its
+  // content height first so every row renders. Same-origin, because the toolbox is served from
+  // the harness origin (see `publicDir` in vite.config.ts).
+  await page
+    .evaluate(() => {
+      const iframe = document.querySelector<HTMLIFrameElement>(
+        'iframe[src*="/apps/app/index.html"]',
+      )
+      const height = iframe?.contentDocument?.documentElement.scrollHeight
+      if (iframe && height) {
+        iframe.style.height = `${height}px`
+      }
+      return height ?? 0
+    })
+    .catch(() => 0)
+
   const frame = page.frameLocator('iframe[src*="/apps/app/index.html"]')
   await frame
     .locator("#mocha")
