@@ -210,7 +210,7 @@ per the user's instruction. A fresh agent per role per slice — never reused ac
 
 ## Slice Checkpoints
 
-- [ ] Slice 5 (S3-F1): not started (failures: 0)
+- [x] Slice 5 (S3-F1): **verified, reviewed, PASSED** (failures: 0). Commit `2419c4d`.
 - [ ] Slice 6 (S3-F5): not started (failures: 0)
 - [ ] Slice 7 (parked slice 4 / register #4): not started (failures: 0)
 - [ ] Slice 8 (F1-ordering, F2, F3): not started (failures: 0)
@@ -222,11 +222,37 @@ per the user's instruction. A fresh agent per role per slice — never reused ac
 - `npm test -w @finos/sail-desktop-agent` -> exit 0 (pre-change baseline)
 - `npm test -w @finos/sail-conformance-harness` -> exit 0 (pre-change baseline)
 
+**Slice 5.** Reproduction proved first: with the two source hunks reverted,
+`npx vp test run src/handlers/__tests__/instance-teardown.test.ts` -> **exit 1**, 2 failed / 22
+passed — exactly the two plain-open cases, failing with `expected 'Timed out waiting for context
+listener' to be 'Timed out waiting for app to connect'`, both with-context cases still green. The
+tester had run only *after* the coder's fix landed, so its own tests passed on first execution and it
+could argue non-vacuity only from reading the diff; this run is the missing artifact.
+- `npm test -w @finos/sail-desktop-agent` -> **exit 0** (394 passed / 1 skipped; 154 scenarios,
+  1460 steps). Diff 2 files, +104/-2.
+
 ## Review Notes
 
-- Required:
-- Follow-up:
-- Ignore for MVP:
+### Slice 5 (S3-F1), fresh reviewer at `2419c4d`
+
+- **Required:** none.
+- **Follow-up:** the new `it.each` block repeats setup boilerplate already present in the two
+  pre-existing disconnect tests above it in `instance-teardown.test.ts`; a shared fixture builder
+  would cut ~40 lines. Polish only — the duplication matches the file's existing style.
+- **Ignore for MVP:** extracting a `pendingTimeoutMessage(pending)` helper for the three occurrences
+  of the ternary. Correctly declined under `minimal-implementation`, which keeps a function for reuse
+  rather than line-count hygiene.
+
+Two things the reviewer established that the slice had only assumed:
+
+- **The discriminator is provably sound, not merely plausible.** `PendingOpenWithContext.launchContext`
+  is `launchContext?: Context` (`state/types.ts:302`), `Context` always carries a required
+  `type: string`, and `handleOpenRequest` (`open/handlers.ts:107`) rejects anything failing
+  `isValidContext` before it reaches `registerOpenWithContext`. So a genuine with-context open can
+  never present `{}`, `null`, or any other falsy context, and the ternary cannot misreport in the
+  other direction. This was the slice's one real correctness risk.
+- **No fourth site was missed.** A package-wide grep for `"Timed out waiting for"` found exactly the
+  three production sites — the one pre-existing ternary and the two this slice converted.
 
 ## Parked Follow-ups
 
