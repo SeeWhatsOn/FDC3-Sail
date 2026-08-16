@@ -165,16 +165,10 @@ export async function handleOpenRequest(
       )
     }
 
-    if (launchContext) {
-      registerOpenWithContext(message, appIdentifier, launchContext, params)
-      return
-    }
-
-    const response = createDACPSuccessResponse(message, "openResponse", {
-      appIdentifier,
-    })
-
-    sendDACPResponse({ response, instanceId, responses })
+    // A plain open must wait for the launched app too: callers treat the resolved promise as
+    // "the app is there now" and talk to it on the next line. Same pending registry as
+    // open-with-context — with no context it completes on WCP5 instead of on a context listener.
+    registerOpenWithContext(message, appIdentifier, launchContext, params)
   } catch (error) {
     logger.error("DACP: openRequest failed", error)
 
