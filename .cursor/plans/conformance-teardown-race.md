@@ -612,3 +612,54 @@ so the gate is not red at random. That baseline is the thing this delivery shoul
 Hypothesis (unverified): a race between the mock app's `fdc3.close()` and the harness closing the
 browsing context, with the `getAppMetadata` instanceId mismatch as a knock-on from an instance that
 was not torn down before the next test ran.
+
+---
+
+## Footnote: reading the mocha results screenshot
+
+Two things in `artifacts/conformance.png` mislead on first look. Both are cosmetic; neither indicates
+a problem.
+
+### Red and yellow duration badges are speed, not failure
+
+Mocha classifies every passing test against a `slow` threshold and colours the duration badge:
+
+| Colour | Rule | Mocha class | This suite |
+|---|---|---|---|
+| no badge | under 37 ms | `.fast` (`display: none`) | 25 tests |
+| yellow `#c09853` | 37-75 ms | `.medium` | 6 tests |
+| red `#b94a48` | over 75 ms | `.slow` | 52 tests |
+
+The threshold is mocha's default **75 ms** (`this._slow = 75` in the bundle; `mocha.setup('bdd')` is
+called with no options, and only one suite overrides it with `.slow(500)`). Verified against the run
+payload — every badge matches the rule.
+
+**A wall of red on a fully green run is expected here.** 75 ms is a unit-test heuristic being applied
+to browser integration tests that launch real windows and wait on cross-window handshakes. Several
+are slow by design — `RaiseIntentContextResult61secs` takes 61.8 s because it is *supposed* to.
+Failure is indicated only by the per-line green tick / red cross and by `failures: 0` in the stats
+badge.
+
+Both the threshold and the colours (CSS variables, with light and dark variants) are configurable in
+mocha — but every one of them lives inside `2.2-conformance-tests/`, the vendored FINOS build we do
+not modify. Overriding them from the harness is now technically possible since the toolbox is
+same-origin, but it would make our screenshot diverge from what a real FINOS run shows, which is the
+property that makes the result credible. Left alone deliberately.
+
+### The image height is not evidence the capture is complete
+
+`conformance.png` was, until fixed, the full height of the results list with only ~28% of it painted:
+2157 blank rows at the top, content in the final 847, showing the last 21 of 83 tests. The size
+looked right, which is exactly why it went unnoticed.
+
+`#mocha` lives in a fixed-height iframe. An element screenshot sizes the image to the element, but
+the browser paints only what fits the iframe viewport, and scrolls to the element's end first — hence
+a blank top and a tail-only strip. The spec now grows the iframe to its content `scrollHeight` before
+capturing (`e2e/conformance.spec.ts`).
+
+**General lesson from this delivery: the JSON payload is the authoritative record, not the picture.**
+Three separate artifacts gave a confident wrong answer during this work — a stale `conformance.json`
+mistaken for a fresh run (twice), a run contaminated by a concurrent rebuild, and this screenshot.
+Each was caught by checking the underlying data rather than the surface. Anything wired into CI
+should assert on `conformance.json`.
+
