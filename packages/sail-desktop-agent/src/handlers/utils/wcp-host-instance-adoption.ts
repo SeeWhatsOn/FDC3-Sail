@@ -92,7 +92,7 @@ export function reconcileOrphanPendingHostInstances(
   // different instance: the caller is answered with `validatedInstanceId`, an id its own launch
   // never produced, so two `open()` calls can resolve to one instanceId. That still beats the
   // pre-migration outcome of handing back an id whose browsing context is gone — see the
-  // Known Limitations note in .cursor/plans/conformance-teardown-race.md.
+  // Known Limitations note in .cursor/plans/conformance-open-timing.md.
   params.setState(state => {
     let nextState = state
     for (const orphanInstanceId of orphanInstanceIds) {

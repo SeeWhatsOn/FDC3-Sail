@@ -1,4 +1,9 @@
-# Minimal Viable Delivery Plan: Conformance mock-app teardown race
+# Minimal Viable Delivery Plan: FDC3 conformance — open() timing and instance identity
+
+> **Renamed.** This started as `conformance-teardown-race.md`, after the symptom. The teardown
+> hypothesis was **refuted** during scoping — see Scoping findings. The two real defects were a
+> concurrent same-appId launch losing an instance registration, and a plain `fdc3.open()` resolving
+> before the launched app had connected. Failing teardown was a downstream effect of the second.
 
 Status: done
 Current slice: none — delivery complete, success bar met
@@ -16,8 +21,10 @@ Confirmed by the user 2026-08-14.
 - Constraint: the conformance toolbox is vendored upstream code — the fix lands in Sail, never in
   `packages/sail-conformance-harness/2.2-conformance-tests/`. Fix goes **wherever the root cause
   actually is** (agent or harness), decided by diagnosis rather than assumed.
-- Out of scope: CI wiring, sail-one/sail-finance headless rollout, the other entries in the DA defect
-  register.
+- Out of scope **as originally scoped**: CI wiring, sail-one/sail-finance headless rollout, the other
+  entries in the DA defect register.
+  - **CI wiring was subsequently requested by the user and delivered** after the success bar was met
+    — see "Follow-on work delivered" below. The other two remain out of scope and unstarted.
 
 ## Verify Commands
 
@@ -337,6 +344,24 @@ slice 3. This matches the 100% the user had previously achieved interactively; t
 - `npm run typecheck` (both packages) -> **exit 0**.
 - `npx vp fmt --check .` -> the only offender is `.claude/settings.local.json`, which is gitignored
   (`/root/.config/git/ignore`) and not a repo file. No tracked file is misformatted.
+
+## Follow-on work delivered (after the success bar)
+
+Requested by the user once the delivery closed; outside the original scope, recorded here so the file
+matches the branch.
+
+**Nightly conformance CI** — `.github/workflows/conformance.yml` (`adeea92`). Nightly 03:00 UTC plus
+`workflow_dispatch`; Chromium only, matching the single Playwright project; 30-minute job ceiling
+against the config's 15-minute test timeout. Gates on regressions vs the (now empty)
+`results/conformance-baseline-2.2.json`, so all 83 tests must pass. Builds the desktop agent
+explicitly so a build failure reads as a build failure rather than a webServer timeout. Artifacts
+upload with `if: always()`. Pre-flighted with `CI=true` — which flips `forbidOnly`, the browser
+auto-open and `reuseExistingServer` — at exit 0, 83 passed / 0 failed, all four artifacts produced.
+
+**Caveat:** scheduled workflows only fire from the default branch, so nightly runs do not start until
+this branch merges to `main`. `workflow_dispatch` works from the Actions tab before then.
+
+**Screenshot capture fix** — `e2e/conformance.spec.ts`. See the footnote at the end of this file.
 
 ## Verification Notes
 

@@ -48,7 +48,7 @@ jobs:
       # currently empty — every one of the 83 tests must pass. The spec asserts on the
       # conformance.json payload, not on the screenshot: during development a stale JSON, a
       # contaminated run and a plausible-looking-but-mostly-blank PNG each gave a confident
-      # wrong answer. See the footnote in .cursor/plans/conformance-teardown-race.md.
+      # wrong answer. See the footnote in .cursor/plans/conformance-open-timing.md.
       - name: Run FDC3 2.2 conformance suite
         run: npm run test:conformance -w @finos/sail-conformance-harness
 
