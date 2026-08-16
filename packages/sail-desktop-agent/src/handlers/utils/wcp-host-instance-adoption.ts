@@ -86,6 +86,13 @@ export function reconcileOrphanPendingHostInstances(
     return
   }
 
+  // Migrating a reaped row's pending open means the two open flavours land differently. For an
+  // open *with* context the context has to be delivered somewhere and the validated instance is
+  // the only live candidate, so re-targeting is right. For a *plain* open it substitutes a
+  // different instance: the caller is answered with `validatedInstanceId`, an id its own launch
+  // never produced, so two `open()` calls can resolve to one instanceId. That still beats the
+  // pre-migration outcome of handing back an id whose browsing context is gone — see the
+  // Known Limitations note in .cursor/plans/conformance-teardown-race.md.
   params.setState(state => {
     let nextState = state
     for (const orphanInstanceId of orphanInstanceIds) {

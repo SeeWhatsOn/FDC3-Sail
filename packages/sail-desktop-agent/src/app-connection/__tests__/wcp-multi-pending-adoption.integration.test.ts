@@ -31,10 +31,12 @@ const OPEN_WITH_CONTEXT_LAUNCH: Context = {
 /**
  * A response answers a request only when it echoes that request's `requestUuid`.
  *
- * Both tests below leave a plain `open()` outstanding on purpose (its launched app never
- * connects, so it only ever produces a late `AppTimeout`). An untargeted
- * `type === "openResponse"` predicate would happily consume that stray response as if it were
- * the answer to the open-with-context request these tests are actually about.
+ * Both tests below leave a plain `open()` outstanding on purpose: its launched app
+ * (`STALE_PENDING_ID`) never connects, so its pending open is still open when appB validates.
+ * Reaping that orphan row migrates the pending open onto the validated instance, which then
+ * answers it with `NEW_PENDING_ID` — an instanceId L1 never launched. Either way the response
+ * belongs to L1's request, and an untargeted `type === "openResponse"` predicate would happily
+ * consume it as if it were the answer to the open-with-context request these tests are about.
  */
 function isOpenResponseFor(data: unknown, request: BrowserTypes.OpenRequest): boolean {
   const message = data as { type?: string; meta?: { requestUuid?: string } }
@@ -212,8 +214,10 @@ describe("multi-pending hostIdentifier adoption", () => {
 
     // L1: a plain open whose launched app (STALE_PENDING_ID) is deliberately never connected —
     // it exists only to leave a stale PENDING row behind. A plain open now resolves on connect,
-    // so this one never succeeds; wait on the PENDING row it creates, not on its response. That
-    // wait also pins the launch order, which the removed response await used to guarantee.
+    // so this one cannot be answered by its own launch; wait on the PENDING row it creates, not
+    // on its response. That wait also pins the launch order, which the removed response await
+    // used to guarantee. (Reaping the orphan later migrates this pending open onto appB and
+    // answers it with NEW_PENDING_ID — see the isOpenResponseFor doc block.)
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(appA.validatedInstanceId, appA.appId, CHART_APP.appId),

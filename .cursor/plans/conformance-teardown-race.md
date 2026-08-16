@@ -442,6 +442,38 @@ This reconciles every observation:
 the spec-correct behaviour, and it is a product change in `sail-desktop-agent`, so it needs the user's
 call before implementing — it changes the timing contract of every `open()` in the system.
 
+### Slice 3 review (fresh reviewer at `b4d020c`)
+
+- **Required:** R1 — `wcp-multi-pending-adoption.integration.test.ts:34-37` and `:213-216` asserted
+  the opposite of the code's actual behaviour, claiming the outstanding plain open "only ever
+  produces a late `AppTimeout`". It does not: reaping the orphan row migrates that pending open onto
+  the validated instance, which answers it **successfully with an id L1 never launched**. **Applied**
+  — both comments corrected, and the migration site now documents that a plain open can be answered
+  with a substituted instanceId. No logic change was requested or made. Taken by the main agent under
+  the step-10 single-obvious-edit exemption (comment text only), re-verified below.
+- **Follow-up:** F1-F5, parked below.
+- **Ignore for MVP:** I1 fixture helper duplication (matches the directory convention, same as slice
+  1's I2); I2 one redundant `getInstance` lookup on the with-context path; I3 `registerOpenWithContext`
+  / `open.pendingWithContext` now also hold context-free opens but renaming touches mutators,
+  selectors, types and several tests for zero behaviour change.
+
+**Correction to the coder's report, caught by the reviewer.** The coder described the
+`open-with-context.ts` change as "a net deletion". It is **+72/-48** on that file (+55/-31 ignoring
+whitespace), and **+85/-59, net +26** across the four implementation files. The mechanism claim held
+up — `resolvePendingOpens` is a faithful generalisation of the deleted `partitionPending`, same state
+read, same write, same clear-and-deliver loop, only the predicate injected — but the size claim was
+wrong and had been relayed to the user before being checked.
+
+**Verified no side effect on the working with-context path.** The reviewer walked all five touch
+points and confirmed the existing branch is behaviourally identical, with `apps.feature:76-86`
+(broadcastEvent before openResponse) and `:88-96` (AppTimeout without a listener) as untouched
+pre-existing regression guards, both green.
+
+**Blast radius confirmed narrower than feared.** `sail-one` and `sail-finance` launch via
+`SailDesktopAgent.openApp` (`agent/sail-desktop-agent.ts:457-483`), which calls the launcher directly
+and never enters `handleOpenRequest`. `sail-platform` has no open path. No shell or harness source
+calls `fdc3.open()` over DACP — the only producers are the conformance mock apps.
+
 ## Review Notes
 
 Slice 1, reviewed by a fresh reviewer agent at `3885e01`.
@@ -462,6 +494,21 @@ reproduction tests assert real state/wire output rather than mock calls, and tha
 resolved id.
 
 ## Parked Follow-ups
+
+From the slice 3 review:
+
+- **S3-F1** — `open-with-context.ts:182` and `:214` still hardcode "Timed out waiting for context
+  listener", now sent to plain opens when either side disconnects. `registerOpenWithContext:72-74`
+  already distinguishes the two messages; these two sites did not get the same treatment.
+- **S3-F2** — no test in `@finos/sail-desktop-agent` pins the new contract. `apps.feature:67-73`
+  passes under both orderings, so a regression in `notifyInstanceConnected` would be caught only by
+  the harness package.
+- **S3-F3** — applied above, in Known Limitations.
+- **S3-F4** — `resolvePendingOpens` evaluates its predicate twice per entry where `partitionPending`
+  did one pass. No behavioural difference; lists are tiny.
+- **S3-F5** — `notifyInstanceConnected` sits inside the WCP4 `try` after `sendOutbound(WCP5)`, so a
+  throw while delivering `openResponse` would fire `sendFailureResponse` for a handshake that already
+  succeeded. Narrow; the with-context path has the same shape.
 
 From the slice 1 review. None were folded into the slice.
 
@@ -502,6 +549,18 @@ liveness into the agent as a new host contract, well beyond this slice.
 
 **If the 3-consecutive-clean-run bar fails on the same symptom, this is the reason — do not
 re-derive it.**
+
+**Updated after slice 3 (reviewer F3).** The symptom of the mirror case has changed. It is no longer
+"its own WCP4 mints an id no caller holds". Now that a plain `open()` waits, the reaped row's pending
+open is *migrated* onto the validated instance, so the caller either:
+
+- receives the **other instance's** id — two `open()` calls resolving to one instanceId — when the
+  orphan row sorts before the validated one; or
+- waits the full 15 s for `AppTimeout` when it sorts after (reachable via the integer-like-id case
+  recorded as F1 below).
+
+Documented at the migration site in `wcp-host-instance-adoption.ts`. Still better than the pre-slice
+outcome, where the caller was handed an id whose browsing context was already gone.
 
 ## Evidence carried in from the headless conformance work
 
