@@ -334,6 +334,41 @@ and the WCP4 claimed-`instanceId` route. Only the claimed-id route is exercised 
 (`DacpTestAppConnection.getConnection()` returns `undefined`, so `hostIdentifier` cannot resolve
 headlessly). A fix must be correct for **both**.
 
+### Slice 2 reproduction did NOT reproduce — premise refuted
+
+All three slice 2 criteria **pass unmodified** (`harness-window-closed-return.test.ts`, 75 tests
+exit 0, verified by main agent). The tester mutation-checked them — swapping the expected `testId`
+for `"MUTANT"` fails all three — so they bite; the deliveries are real.
+
+Mechanism observed: **reply delivery is synchronous with the mock's `broadcastRequest`**, so neither
+the self-close nor the harness teardown can get in front of it. `SailDesktopAgent.start()` registers
+`message => { void this.handleMessage(message) }` (`agent/sail-desktop-agent.ts:282`); `handleMessage`
+has no `await` before `routeDACPMessage`, which runs the handler synchronously inside
+`Promise.resolve(handler(...))` before its first `await`. So
+`handleBroadcastRequest -> notifyContextListeners -> sendOutbound` all complete inside the inbound
+call. The harness observer only schedules `setTimeout(disconnect, 0)` — a macrotask, which cannot
+preempt a synchronous fan-out. The mock's `setTimeout(window.close, 5)` is likewise a macrotask, and
+the popup watcher polls at 100 ms.
+
+Criterion (c) is stronger than required: **both** replies land, not just the first.
+
+**Conclusion: the DACP layer is sound and slice 2's premise is wrong.** The residual cannot be
+explained by anything this contract covers. It must live in something the jsdom fixture abstracts
+away — most plausibly the real browser wire (a closing popup's `MessagePort` / `BrowserAppConnection`
+teardown, or `onAppDisconnected` on a path the fixture has no analogue for), or the mock never
+receiving/answering `closeWindow` at all in the real after-hook. Next investigation should target the
+`BrowserAppConnection` edge, not channel routing — and needs Playwright-level instrumentation,
+since jsdom cannot model a destroyed browsing context's port.
+
+### Defect introduced by slice 1 and missed — typecheck
+
+`src/__tests__/harness-two-instances.harness.ts` carried an unused `BrowserTypes` import, breaking
+`npm run typecheck -w @finos/sail-conformance-harness` (TS6133, exit 2). **It was committed and
+pushed in `ee98774` and survived slice 1's review.** Cause: the plan binds typecheck as an
+end-of-delivery command only, and neither the coder, the reviewer, nor I ran it per-slice. Removed;
+typecheck now exit 0. The plan's per-slice guidance is arguably wrong for a slice that adds new
+files — noted as a process lesson rather than re-litigated here.
+
 ## Review Notes
 
 Slice 1, reviewed by a fresh reviewer agent at `3885e01`.

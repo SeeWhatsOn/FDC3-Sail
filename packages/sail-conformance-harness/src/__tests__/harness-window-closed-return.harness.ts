@@ -1,22 +1,34 @@
 /**
- * Headless fixture: two instances of one `forceNewWindow` appId.
+ * Headless fixture: the FINOS `app-control` RETURN leg.
  *
- * Mirrors `createHarnessBootstrap()`'s `mountLaunchedPanel` wiring (stale-pending prune →
- * host pre-register → popup) against a real `SailDesktopAgent` over `DacpTestAppConnection`,
- * with jsdom popup stubs instead of real browsing contexts.
+ * Same wiring as {@link ../__tests__/harness-two-instances.harness.ts} (real `SailDesktopAgent`
+ * over `DacpTestAppConnection`, jsdom popup stubs, FINOS open/WCP4 ordering) **plus** the
+ * `createHarnessFinOsTeardownObserver` that `createHarnessBootstrap()` installs on the app
+ * connection before `agent.start()`.
  *
- * Reproduces the FINOS `fdc3.getAppMetadata` suite shape: Conformance1 opens `MetadataAppId`
- * twice before either popup completes WCP4, then queries and tears both down.
+ * The toolbox contract this models (`packages/sail-conformance-harness/2.2-conformance-tests`):
+ *
+ * 1. Conformance1 `getOrCreateChannel('app-control')` → `addContextListener('windowClosed')`,
+ *    and arms a hard-coded 1000ms timer before that listener even resolves.
+ * 2. Conformance1 broadcasts `{ type: 'closeWindow', testId }` on `app-control`.
+ * 3. The mock replies `await appControlChannel.broadcast({ type: 'windowClosed', testId })`
+ *    and then `setTimeout(() => window.close(), 5)` — it destroys its own browsing context
+ *    1-5ms later. The desktop agent is never asked to close anything.
+ * 4. Conformance1 must receive that `windowClosed` inside the 1000ms budget.
  */
 import { expect, vi } from "vite-plus/test"
-import type { SailDesktopAgent } from "../../../sail-desktop-agent/src/agent/sail-desktop-agent"
-import { createDesktopAgentWithTestConnection } from "../../../sail-desktop-agent/test/support/desktop-agent-test-harness"
-import type { DacpTestAppConnection } from "../../../sail-desktop-agent/test/support/dacp-test-app-connection"
+
+import { SailDesktopAgent } from "../../../sail-desktop-agent/src/agent/sail-desktop-agent"
+import { DacpTestAppConnection } from "../../../sail-desktop-agent/test/support/dacp-test-app-connection"
 
 import { loadConformanceApplications } from "../conformance-app-directory"
 import { createHarnessAppLauncher } from "../app-launcher"
 import { extractAppUrl } from "../harness-bootstrap"
 import { HARNESS_FINOS_APP_CONTROL_CHANNEL } from "../harness-browsing-context-close"
+import {
+  createHarnessFinOsTeardownObserver,
+  installHarnessInboundAppMessageObserver,
+} from "../harness-finos-teardown"
 import {
   createHarnessInstanceCleanup,
   type HarnessInstanceCleanup,
@@ -28,25 +40,32 @@ import type { HarnessPanel } from "../types"
 const CONFORMANCE1_APP_ID = "Conformance1"
 
 /** FINOS mock app the `fdc3.getAppMetadata` suite opens twice (`forceNewWindow: true`). */
-export const TWO_INSTANCE_APP_ID = "MetadataAppId"
+export const RETURN_LEG_APP_ID = "MetadataAppId"
 
-/** One launched mock app: the id `open()` handed the caller, and the id WCP5 gave the app. */
-export type LaunchedMockInstance = {
+/** Longest wait the FINOS toolbox gives the mock's reply before failing the after-hook. */
+export const FINOS_CLOSE_CONTEXT_BUDGET_MS = 1000
+
+/** jsdom stand-in for a mock app's browsing context. */
+type PopupStub = Window & { closed: boolean }
+
+export type ReturnLegMock = {
   /** `openResponse.appIdentifier.instanceId` — the id the FDC3 caller holds. */
   openedInstanceId: string
   /** `WCP5ValidateAppIdentityResponse.payload.instanceId` — the id the app holds. */
   wcp5InstanceId: string
 }
 
-export type HarnessTwoInstanceFixture = {
+export type HarnessReturnLegFixture = {
   agent: SailDesktopAgent<DacpTestAppConnection>
   connection: DacpTestAppConnection
   conformance1InstanceId: string
-  launched: [LaunchedMockInstance, LaunchedMockInstance]
+  mocks: [ReturnLegMock, ReturnLegMock]
+  /** `setTimeout(() => window.close(), 5)` in the mock — the context just goes away. */
+  destroyBrowsingContext: (instanceId: string) => void
   cleanup: () => void
 }
 
-function createPopupStub(name: string): Window {
+function createPopupStub(name: string): PopupStub {
   const popup = {
     name,
     closed: false,
@@ -55,7 +74,7 @@ function createPopupStub(name: string): Window {
       popup.closed = true
     },
   }
-  return popup as unknown as Window
+  return popup as unknown as PopupStub
 }
 
 function readLastWcp5InstanceId(connection: DacpTestAppConnection): string {
@@ -105,7 +124,7 @@ async function openMockApp(
       source: { appId: CONFORMANCE1_APP_ID, instanceId: conformance1InstanceId },
     },
     payload: {
-      app: { appId: TWO_INSTANCE_APP_ID, desktopAgent: "n/a" },
+      app: { appId: RETURN_LEG_APP_ID, desktopAgent: "n/a" },
     },
   })
 
@@ -119,18 +138,22 @@ async function openMockApp(
 }
 
 /**
- * Launch two instances of {@link TWO_INSTANCE_APP_ID}, both opened before either
- * browsing context completes WCP4 (the FINOS `getAppMetadata` suite's ordering).
+ * Launch two instances of {@link RETURN_LEG_APP_ID} (the `fdc3.getAppMetadata` after-hook
+ * shape) behind a desktop agent that carries the harness FINOS teardown observer.
  */
-export async function runHarnessTwoInstanceLaunch(): Promise<HarnessTwoInstanceFixture> {
+export async function runHarnessReturnLegLaunch(): Promise<HarnessReturnLegFixture> {
   const { applications } = loadConformanceApplications({ profile: "hosted" })
   const conformance1Url = extractAppUrl(applications)
-  const mockAppUrl = extractAppUrl(applications, TWO_INSTANCE_APP_ID)
+  const mockAppUrl = extractAppUrl(applications, RETURN_LEG_APP_ID)
   const conformance1InstanceId = crypto.randomUUID()
 
-  const openSpy = vi
-    .spyOn(window, "open")
-    .mockImplementation((_url, name) => createPopupStub(typeof name === "string" ? name : ""))
+  const popupsByName = new Map<string, PopupStub>()
+  const openSpy = vi.spyOn(window, "open").mockImplementation((_url, name) => {
+    const popupName = typeof name === "string" ? name : ""
+    const popup = createPopupStub(popupName)
+    popupsByName.set(popupName, popup)
+    return popup
+  })
 
   const panels: HarnessPanel[] = []
   let agentRef: SailDesktopAgent<DacpTestAppConnection> | null = null
@@ -173,12 +196,34 @@ export async function runHarnessTwoInstanceLaunch(): Promise<HarnessTwoInstanceF
     panels.push(panel)
   })
 
-  const { agent, connection } = createDesktopAgentWithTestConnection({
+  const finOsTeardownObserver = createHarnessFinOsTeardownObserver({
+    instanceCleanup,
+    getDesktopAgent: () => agentRef as never,
+  })
+
+  // createHarnessBootstrap() installs the observer before start(); the agent registers its
+  // own handler inside start(), so wrapping afterwards would never see inbound messages.
+  const connection = new DacpTestAppConnection()
+
+  // `DacpTestAppConnection` has no `sendToAppInstance(instanceId, message)` — the harness's
+  // `relayFinOsCloseWindowToMockApps` calls it. Mirror `BrowserAppConnection.sendToAppInstance`
+  // exactly (browser-app-connection.ts:144): delegate to the connection registry.
+  Object.assign(connection, {
+    sendToAppInstance(_instanceId: string, message: unknown) {
+      connection.connectionRegistry.sendToAppInstance(message)
+    },
+  })
+
+  installHarnessInboundAppMessageObserver(connection, finOsTeardownObserver)
+
+  const agent = new SailDesktopAgent<DacpTestAppConnection>({
     apps: applications,
     appLauncher,
     heartbeatEnabled: false,
+    appConnection: connection,
   })
   agentRef = agent
+  agent.start()
 
   Object.assign(
     instanceCleanup,
@@ -214,10 +259,15 @@ export async function runHarnessTwoInstanceLaunch(): Promise<HarnessTwoInstanceF
     agent,
     connection,
     conformance1InstanceId,
-    launched: [
+    mocks: [
       { openedInstanceId: openedInstanceId1, wcp5InstanceId: wcp5InstanceId1 },
       { openedInstanceId: openedInstanceId2, wcp5InstanceId: wcp5InstanceId2 },
     ],
+    destroyBrowsingContext: instanceId => {
+      const popup = popupsByName.get(instanceId)
+      expect(popup, `no browsing context stub registered for ${instanceId}`).toBeDefined()
+      popup!.close()
+    },
     cleanup: () => {
       agent.stop()
       popupWatcher.stop()
@@ -226,64 +276,41 @@ export async function runHarnessTwoInstanceLaunch(): Promise<HarnessTwoInstanceF
   }
 }
 
-/** `fdc3.getAppMetadata({ appId, instanceId })` from Conformance1. */
-export async function getAppMetadataInstanceId(
-  fixture: HarnessTwoInstanceFixture,
-  identifier: { appId: string; instanceId: string },
-): Promise<string | undefined> {
-  const { connection, conformance1InstanceId } = fixture
-
-  await connection.receiveMessage({
-    type: "getAppMetadataRequest",
-    meta: {
-      requestUuid: crypto.randomUUID(),
-      timestamp: new Date(),
-      source: { appId: CONFORMANCE1_APP_ID, instanceId: conformance1InstanceId },
-    },
-    payload: { app: { ...identifier, desktopAgent: "n/a" } },
-  })
-
-  const response = connection.getMessagesByType("getAppMetadataResponse").at(-1)?.msg as
-    | { payload?: { error?: string; appMetadata?: { instanceId?: string } } }
-    | undefined
-
-  expect(response?.payload?.error).toBeUndefined()
-  return response?.payload?.appMetadata?.instanceId
-}
-
-/**
- * FINOS `closeMockAppWindow`: Conformance1 broadcasts `closeWindow` on the `app-control`
- * app channel that both mocks listen on. Returns the instanceIds the agent delivered to.
- */
-export async function broadcastCloseWindowOnAppControl(
-  fixture: HarnessTwoInstanceFixture,
-  listenerInstanceIds: string[],
-): Promise<string[]> {
-  const { connection, conformance1InstanceId } = fixture
+/** `getOrCreateChannel('app-control')` + `addContextListener(type)` from one instance. */
+export async function subscribeToAppControl(
+  fixture: HarnessReturnLegFixture,
+  subscriber: { appId: string; instanceId: string },
+  contextType: string,
+): Promise<void> {
+  const { connection } = fixture
 
   await connection.receiveMessage({
     type: "getOrCreateChannelRequest",
     meta: {
       requestUuid: crypto.randomUUID(),
       timestamp: new Date(),
-      source: { appId: CONFORMANCE1_APP_ID, instanceId: conformance1InstanceId },
+      source: subscriber,
     },
     payload: { channelId: HARNESS_FINOS_APP_CONTROL_CHANNEL },
   })
 
-  for (const instanceId of listenerInstanceIds) {
-    await connection.receiveMessage({
-      type: "addContextListenerRequest",
-      meta: {
-        requestUuid: crypto.randomUUID(),
-        timestamp: new Date(),
-        source: { appId: TWO_INSTANCE_APP_ID, instanceId },
-      },
-      payload: { channelId: HARNESS_FINOS_APP_CONTROL_CHANNEL, contextType: "closeWindow" },
-    })
-  }
+  await connection.receiveMessage({
+    type: "addContextListenerRequest",
+    meta: {
+      requestUuid: crypto.randomUUID(),
+      timestamp: new Date(),
+      source: subscriber,
+    },
+    payload: { channelId: HARNESS_FINOS_APP_CONTROL_CHANNEL, contextType },
+  })
+}
 
-  connection.clear()
+/** FINOS `closeMockAppWindow`: Conformance1 broadcasts `closeWindow` on `app-control`. */
+export async function broadcastCloseWindow(
+  fixture: HarnessReturnLegFixture,
+  testId: string,
+): Promise<void> {
+  const { connection, conformance1InstanceId } = fixture
 
   await connection.receiveMessage({
     type: "broadcastRequest",
@@ -294,18 +321,62 @@ export async function broadcastCloseWindowOnAppControl(
     },
     payload: {
       channelId: HARNESS_FINOS_APP_CONTROL_CHANNEL,
-      context: { type: "closeWindow", testId: "(AppInstanceMetadata) two MetadataAppId instances" },
+      context: { type: "closeWindow", testId },
+    },
+  })
+}
+
+/**
+ * The mock's reply: `await appControlChannel.broadcast({ type: 'windowClosed', testId })`
+ * followed by `setTimeout(() => window.close(), 5)`. The browsing context is destroyed
+ * straight after the broadcast, before any timer the harness scheduled has run.
+ */
+export async function replyWindowClosedThenSelfClose(
+  fixture: HarnessReturnLegFixture,
+  mock: ReturnLegMock,
+  testId: string,
+): Promise<void> {
+  const { connection } = fixture
+
+  await connection.receiveMessage({
+    type: "broadcastRequest",
+    meta: {
+      requestUuid: crypto.randomUUID(),
+      timestamp: new Date(),
+      source: { appId: RETURN_LEG_APP_ID, instanceId: mock.wcp5InstanceId },
+    },
+    payload: {
+      channelId: HARNESS_FINOS_APP_CONTROL_CHANNEL,
+      context: { type: "windowClosed", testId },
     },
   })
 
-  return connection
+  fixture.destroyBrowsingContext(mock.openedInstanceId)
+}
+
+/** `testId`s of every `windowClosed` broadcastEvent the agent routed to Conformance1. */
+export function windowClosedTestIdsDeliveredToConformance1(
+  fixture: HarnessReturnLegFixture,
+): string[] {
+  return fixture.connection
     .getMessagesByType("broadcastEvent")
     .map(record => record.msg)
     .filter(
       message =>
+        message.meta?.destination?.instanceId === fixture.conformance1InstanceId &&
         (message.payload as { context?: { type?: string } } | undefined)?.context?.type ===
-        "closeWindow",
+          "windowClosed",
     )
-    .map(message => message.meta?.destination?.instanceId)
-    .filter((instanceId): instanceId is string => typeof instanceId === "string")
+    .map(
+      message =>
+        (message.payload as { context?: { testId?: string } } | undefined)?.context?.testId ?? "",
+    )
+}
+
+/**
+ * Let the FINOS budget elapse in simulated time: the harness's deferred disconnect and the
+ * 100ms popup-close poll both land well inside it.
+ */
+export async function elapseFinOsCloseContextBudget(): Promise<void> {
+  await vi.advanceTimersByTimeAsync(FINOS_CLOSE_CONTEXT_BUDGET_MS)
 }
