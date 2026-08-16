@@ -211,7 +211,7 @@ per the user's instruction. A fresh agent per role per slice — never reused ac
 ## Slice Checkpoints
 
 - [x] Slice 5 (S3-F1): **verified, reviewed, PASSED** (failures: 0). Commit `2419c4d`.
-- [ ] Slice 6 (S3-F5): not started (failures: 0)
+- [x] Slice 6 (S3-F5): **verified, reviewed, PASSED** (failures: 0). Commit `84c1024`.
 - [ ] Slice 7 (parked slice 4 / register #4): not started (failures: 0)
 - [ ] Slice 8 (F1-ordering, F2, F3): not started (failures: 0)
 - [ ] Slice 9 (S3-F2, F4): not started (failures: 0)
@@ -230,6 +230,21 @@ tester had run only *after* the coder's fix landed, so its own tests passed on f
 could argue non-vacuity only from reading the diff; this run is the missing artifact.
 - `npm test -w @finos/sail-desktop-agent` -> **exit 0** (394 passed / 1 skipped; 154 scenarios,
   1460 steps). Diff 2 files, +104/-2.
+
+**Slice 6.** Reproduction proved first: with the source hunk reverted,
+`npx vp test run src/app-connection/__tests__/wcp-temp-id-teardown.test.ts` -> **exit 1**, 1 failed /
+5 passed, and stderr caught the defect in the act —
+`[AppConnectionRegistry] Cannot send to temp-post-success-throw-uuid ... { messageType:
+'WCP5ValidateAppIdentityFailedResponse' }`, i.e. a failure response genuinely being emitted for a
+handshake that had already succeeded. The criterion (c) over-correction guard passed pre-fix, as
+intended.
+- `npm test -w @finos/sail-desktop-agent` -> **exit 0** (396 passed / 1 skipped; 154 scenarios,
+  1460 steps). Diff 2 files, +155/-11.
+
+**Slice 7 (fix only, tests pending).** `npm test -w @finos/sail-desktop-agent` -> **exit 0** (396
+passed / 1 skipped). This proves the +5/-0 change regresses nothing; it does **not** prove it fixes
+the defect. Committed as `0d59ce0` to keep the branch clean, with the slice left unticked until its
+test exists and has been watched to fail without the fix.
 
 ## Review Notes
 
@@ -253,6 +268,32 @@ Two things the reviewer established that the slice had only assumed:
   other direction. This was the slice's one real correctness risk.
 - **No fourth site was missed.** A package-wide grep for `"Timed out waiting for"` found exactly the
   three production sites — the one pre-existing ternary and the two this slice converted.
+
+### Slice 6 (S3-F5), fresh reviewer at `84c1024`
+
+- **Required:** none.
+- **Follow-up:** none for the source change.
+- **Ignore for MVP:** a comment spelling out *why* a `linkHandshakeRoutingId` failure is safe to
+  swallow. The existing comment already states the invariant; a threat-model aside for an unreachable
+  branch is over-explaining.
+
+The slice widened beyond the parked item, and the reviewer settled the question that raised:
+
+- **A third post-success statement existed.** The parked note named `startHeartbeat` and
+  `notifyInstanceConnected`; the routing migration `linkHandshakeRoutingId` also runs after the
+  success send and carries the same hazard. It is now protected too.
+- **"Log and continue" is right for it — the "CONNECTED but unroutable" worry does not hold.** The
+  mutator is a pure object spread over a required, always-populated state field, so it cannot
+  realistically throw; and `setState` is `this.state = callback(this.state)`, so a throw inside the
+  callback leaves state untouched rather than corrupted. If the link were somehow never written, the
+  only casualties are straggler messages still keyed by the pre-migration temp id — normal traffic
+  uses the validated instanceId the client got in the WCP5 payload. Strictly less bad than tearing
+  down a live connection, so it must **not** be special-cased into a teardown.
+- **The coder's stated rationale for the nested try was imprecise.** It claimed the block consumes
+  "many locals" computed in the outer try; in fact only `instanceId` would need pre-declaration. The
+  real cost of hoisting is that the block would have to run after the outer `catch`, which does not
+  rethrow — so it would need a `succeeded` flag to avoid also running after a genuine validation
+  failure. Nested try is still the right call; only the explanation was wrong.
 
 ## Parked Follow-ups
 
