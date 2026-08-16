@@ -179,7 +179,9 @@ export function clearPendingOpenWithContextForInstance(
     sendDACPErrorResponse({
       message: pending.message,
       errorType: OpenError.AppTimeout,
-      errorMessage: "Timed out waiting for context listener",
+      errorMessage: pending.launchContext
+        ? "Timed out waiting for context listener"
+        : "Timed out waiting for app to connect",
       instanceId: pending.sourceInstanceId,
       responses: params.responses,
     })
@@ -211,7 +213,9 @@ export function clearPendingOpenWithContextForSourceInstance(
       sendDACPErrorResponse({
         message: pending.message,
         errorType: OpenError.AppTimeout,
-        errorMessage: "Timed out waiting for context listener",
+        errorMessage: pending.launchContext
+          ? "Timed out waiting for context listener"
+          : "Timed out waiting for app to connect",
         instanceId: sourceInstanceId,
         responses: params.responses,
       })
