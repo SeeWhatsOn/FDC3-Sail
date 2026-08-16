@@ -369,6 +369,49 @@ end-of-delivery command only, and neither the coder, the reviewer, nor I ran it 
 typecheck now exit 0. The plan's per-slice guidance is arguably wrong for a slice that adds new
 files — noted as a process lesson rather than re-litigated here.
 
+### ROOT CAUSE CONFIRMED by instrumented run (option A)
+
+A diagnostic Playwright run captured every console line from every page (54,994 lines). The vendored
+toolbox logs the handshake itself, so this is evidence, not inference.
+
+Timeline of the failing `(AppInstanceMetadata)` after-hook:
+
+```
+21366ms  metadata popup 1 opens (about:blank)
+21441ms  metadata popup 2 opens
+21647ms  after-hook broadcasts closeWindow
+         -> "Notifying context listeners {contextType: closeWindow,
+             totalInstancesOnChannel: 0, instanceIds: Array(0)}"
+         -> "notification complete {successful: 0, failed: 0, total: 0}"
+21685ms  metadata instance 1 registers its closeWindow listener   (38 ms late)
+21707ms  metadata instance 2 registers its closeWindow listener   (60 ms late)
+```
+
+**Nobody was subscribed to `app-control` when the `closeWindow` went out.** No recipient, so no
+`windowClosed` reply, so the toolbox's 1000 ms budget expires. At 21653 ms the metadata page is still
+mid-startup, servicing `getCurrentChannelResponse`.
+
+Corroborating fingerprint: the `(AppInstanceMetadata)` listener is never unsubscribed by
+`waitForContext`, so it logs `Wrong test id expected: (AppInstanceMetadata)... got: <test>` for every
+subsequent test from 23152 ms to the end of the run. It was alive and waiting the whole time — it
+simply never received a matching reply.
+
+**Underlying cause: `fdc3.open()` resolves before the launched app has connected.**
+`handleOpenRequest` pre-registers the instance synchronously and sends `openResponse` immediately
+(`handlers/open/handlers.ts:152-177`) without awaiting WCP4. The test therefore proceeds — assertions
+and after-hook — while the popup is still booting. The whole open->assert->teardown sequence completed
+within ~280 ms of the popups opening, faster than they could load.
+
+This reconciles every observation:
+- the user's interactive 100%: real browser, popups load well before a human-paced teardown;
+- headless failure: the suite advances faster than a popup boots;
+- slice 2's tests all passing: the delivery layer genuinely is sound — this is ordering, not delivery;
+- why it is the metadata suite: it opens two apps back-to-back then tears down immediately.
+
+**Slice 3 candidate:** `open()` must not resolve before the launched app has connected. That is also
+the spec-correct behaviour, and it is a product change in `sail-desktop-agent`, so it needs the user's
+call before implementing — it changes the timing contract of every `open()` in the system.
+
 ## Review Notes
 
 Slice 1, reviewed by a fresh reviewer agent at `3885e01`.
