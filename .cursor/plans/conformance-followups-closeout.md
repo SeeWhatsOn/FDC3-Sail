@@ -212,7 +212,8 @@ per the user's instruction. A fresh agent per role per slice — never reused ac
 
 - [x] Slice 5 (S3-F1): **verified, reviewed, PASSED** (failures: 0). Commit `2419c4d`.
 - [x] Slice 6 (S3-F5): **verified, reviewed, PASSED** (failures: 0). Commit `84c1024`.
-- [ ] Slice 7 (parked slice 4 / register #4): not started (failures: 0)
+- [x] Slice 7 (parked slice 4 / register #4): **verified, reviewed, PASSED** (failures: 0). Commits
+      `0d59ce0` (fix) + `59d4cdb` (tests).
 - [ ] Slice 8 (F1-ordering, F2, F3): not started (failures: 0)
 - [ ] Slice 9 (S3-F2, F4): not started (failures: 0)
 
@@ -294,6 +295,34 @@ The slice widened beyond the parked item, and the reviewer settled the question 
   real cost of hoisting is that the block would have to run after the outer `catch`, which does not
   rethrow — so it would need a `succeeded` flag to avoid also running after a genuine validation
   failure. Nested try is still the right call; only the explanation was wrong.
+
+### Slice 7 (parked slice 4 / register #4), fresh reviewer at `59d4cdb`
+
+- **Required:** none.
+- **Follow-up:** (a) a separate pass could drop `disconnectAppByInstanceId`'s now-redundant inline
+  cancel (`wcp-connection-management.ts:133-137`); left in place because acceptance (d) requires that
+  function's behaviour unchanged, and it costs nothing as a second safety net. (b) the register's
+  trigger description needed correcting — **applied**, see below.
+- **Ignore for MVP:** none.
+
+The reviewer confirmed the id-matching argument (temp handshake ids and validated uuids occupy
+non-overlapping formats, so `resolveInstanceId` returns a validated id unchanged and the cancel lands
+on the key WCP6 armed) and the re-entrancy ordering. It also answered the reachability question the
+tester's masking finding raised, and the answer **corrects the defect register**:
+
+- The chain register #4 cites — `disconnectInstance` -> `pruneAppConnection` -> `disconnectApp` —
+  does leave the timer armed, but cannot produce the same-id collision by itself.
+  `disconnectInstance` always pairs the prune with `cleanupInstanceDacpState`, which deletes
+  `state.instances[X]`, and `canReuseExistingIdentity` requires that record — so WCP4 mints a fresh
+  id instead of reusing X, and the stale timer has no new session to hit.
+- The reachable trigger is `SailDesktopAgentApps.disconnect()`'s fallback
+  (`sail-desktop-agent-controllers.ts:287-295`), used whenever the bound `AgentAppConnection` lacks
+  the **optional** `disconnectAppByInstanceId` — the minimal headless edge this package exists to
+  support. It prunes *without* `cleanupInstanceDacpState`, so the instance record survives, a
+  reconnect can legitimately reuse X, and a handshake slower than the remaining grace window loses
+  the race. Severity "major" stands; only the mechanism was mis-attributed.
+
+Register entry #4 is now marked FIXED and carries this correction.
 
 ## Parked Follow-ups
 
