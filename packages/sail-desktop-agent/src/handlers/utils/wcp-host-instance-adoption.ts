@@ -69,16 +69,32 @@ export function reconcileOrphanPendingHostInstances(
   //
   // That is deliberate: a later launch reaching WCP4 first is the only abandoned-launch signal the
   // agent has. Only the host knows whether a browsing context is still alive (the harness uses
-  // `popupWatcher.hasPopup()`), and plumbing liveness in would be a new host contract. Registration
-  // order also assumes non-integer-like instanceIds, since integer-like keys sort ahead of all
-  // string keys regardless of insertion order.
-  const instances = Object.values(params.getState().instances)
+  // `popupWatcher.hasPopup()`), and plumbing liveness in would be a new host contract.
+  //
+  // Registration order is derived explicitly from `registrationSequence` — a monotonic counter
+  // assigned once per instance at `connectInstance` — not from `Object.values()` key order or from
+  // `createdAt`. Two reasons neither of those suffices:
+  //   - `Object.values()` enumerates integer-like keys first, in ascending numeric order, ahead of
+  //     every string key, regardless of insertion order. An instance with an integer-like id
+  //     (reachable via `open({ instanceId: "7" })` or a host-injectable `createId`) would otherwise
+  //     always sort to index 0 no matter when it was actually registered.
+  //   - `createdAt` is `new Date()`, millisecond resolution. Concurrent same-appId launches — the
+  //     exact case this function exists to arbitrate — are pre-registered back-to-back and routinely
+  //     land in the same millisecond, at which point a `createdAt` sort falls back to the original
+  //     (unstable, key-order-dependent) array order via `Array.prototype.sort`'s stability guarantee.
+  const instances = Object.values(params.getState().instances).sort(
+    (a, b) => a.registrationSequence - b.registrationSequence,
+  )
   const validatedIndex = instances.findIndex(
     instance => instance.instanceId === validatedInstanceId,
   )
 
+  // If the validated instance is somehow not in state, fail safe and reap nothing rather than
+  // treating a `-1` index as "reap everything" (`Math.max` clamps the slice to empty). Unreachable
+  // from the single call site today — all three id-producing branches upstream guarantee the
+  // instance is in state first — so this is defensive only.
   const orphanInstanceIds = instances
-    .slice(0, validatedIndex === -1 ? instances.length : validatedIndex)
+    .slice(0, Math.max(validatedIndex, 0))
     .filter(instance => instance.appId === appId && instance.state === AppInstanceState.PENDING)
     .map(instance => instance.instanceId)
 
