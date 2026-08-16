@@ -28,6 +28,19 @@ const OPEN_WITH_CONTEXT_LAUNCH: Context = {
   id: { value: "conformance-open-context" },
 }
 
+/**
+ * A response answers a request only when it echoes that request's `requestUuid`.
+ *
+ * Both tests below leave a plain `open()` outstanding on purpose (its launched app never
+ * connects, so it only ever produces a late `AppTimeout`). An untargeted
+ * `type === "openResponse"` predicate would happily consume that stray response as if it were
+ * the answer to the open-with-context request these tests are actually about.
+ */
+function isOpenResponseFor(data: unknown, request: BrowserTypes.OpenRequest): boolean {
+  const message = data as { type?: string; meta?: { requestUuid?: string } }
+  return message.type === "openResponse" && message.meta?.requestUuid === request.meta.requestUuid
+}
+
 function cleanupWcpIntegrationTestHarness(activeAgents: SailDesktopAgent[]): void {
   clearAllPendingOpenWithContextTimeoutsForTesting()
   clearAllHeartbeatTimersForTesting()
@@ -94,35 +107,34 @@ describe("multi-pending hostIdentifier adoption", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
+    // L1: a plain open whose launched app (STALE_PENDING_ID) is deliberately never connected —
+    // it exists only to leave a stale PENDING row behind. A plain open now resolves on connect,
+    // so this one never succeeds; wait on the PENDING row it creates, not on its response.
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(appA.validatedInstanceId, appA.appId, CHART_APP.appId),
-    )
-
-    await waitForPortMessage<BrowserTypes.OpenResponse>(
-      appA.appPort,
-      data => (data as { type?: string }).type === "openResponse",
     )
 
     await vi.waitFor(() => {
       expect(agent.getState().instances[STALE_PENDING_ID]?.state).toBe(AppInstanceState.PENDING)
     })
 
+    // L2: the open this test is about. Its response is matched by requestUuid so L1's eventual
+    // AppTimeout on the same port can never be read as L2's answer.
+    const contextOpenRequest = createOpenRequestMessage(
+      appA.validatedInstanceId,
+      appA.appId,
+      CHART_APP.appId,
+      OPEN_WITH_CONTEXT_LAUNCH,
+    )
+
     const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
       appA.appPort,
-      data => (data as { type?: string }).type === "openResponse",
+      data => isOpenResponseFor(data, contextOpenRequest),
       portMessageWaitMs,
     )
 
-    await postDacpOnPort(
-      appA.appPort,
-      createOpenRequestMessage(
-        appA.validatedInstanceId,
-        appA.appId,
-        CHART_APP.appId,
-        OPEN_WITH_CONTEXT_LAUNCH,
-      ),
-    )
+    await postDacpOnPort(appA.appPort, contextOpenRequest)
 
     await vi.waitFor(() => {
       expect(agent.getState().instances[STALE_PENDING_ID]?.state).toBe(AppInstanceState.PENDING)
@@ -198,31 +210,35 @@ describe("multi-pending hostIdentifier adoption", () => {
       identityUrl: PORTFOLIO_APP.details.url,
     })
 
+    // L1: a plain open whose launched app (STALE_PENDING_ID) is deliberately never connected —
+    // it exists only to leave a stale PENDING row behind. A plain open now resolves on connect,
+    // so this one never succeeds; wait on the PENDING row it creates, not on its response. That
+    // wait also pins the launch order, which the removed response await used to guarantee.
     await postDacpOnPort(
       appA.appPort,
       createOpenRequestMessage(appA.validatedInstanceId, appA.appId, CHART_APP.appId),
     )
 
-    await waitForPortMessage<BrowserTypes.OpenResponse>(
-      appA.appPort,
-      data => (data as { type?: string }).type === "openResponse",
+    await vi.waitFor(() => {
+      expect(agent.getState().instances[STALE_PENDING_ID]?.state).toBe(AppInstanceState.PENDING)
+    })
+
+    // L2: the open this test is about. Its response is matched by requestUuid so L1's eventual
+    // AppTimeout on the same port can never be read as L2's answer.
+    const contextOpenRequest = createOpenRequestMessage(
+      appA.validatedInstanceId,
+      appA.appId,
+      CHART_APP.appId,
+      OPEN_WITH_CONTEXT_LAUNCH,
     )
 
     const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
       appA.appPort,
-      data => (data as { type?: string }).type === "openResponse",
+      data => isOpenResponseFor(data, contextOpenRequest),
       portMessageWaitMs,
     )
 
-    await postDacpOnPort(
-      appA.appPort,
-      createOpenRequestMessage(
-        appA.validatedInstanceId,
-        appA.appId,
-        CHART_APP.appId,
-        OPEN_WITH_CONTEXT_LAUNCH,
-      ),
-    )
+    await postDacpOnPort(appA.appPort, contextOpenRequest)
 
     await vi.waitFor(() => {
       expect(agent.getState().instances[STALE_PENDING_ID]?.state).toBe(AppInstanceState.PENDING)

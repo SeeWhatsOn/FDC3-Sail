@@ -65,10 +65,11 @@ export async function runHarnessOpenAndWcpHandshake(
 
   transport.clear()
 
+  const openRequestUuid = crypto.randomUUID()
   await connection.receiveMessage({
     type: "openRequest",
     meta: {
-      requestUuid: crypto.randomUUID(),
+      requestUuid: openRequestUuid,
       timestamp: new Date(),
       source: {
         appId: "Conformance1",
@@ -83,28 +84,42 @@ export async function runHarnessOpenAndWcpHandshake(
     },
   })
 
-  const openResponse = transport.allMessages
-    .map(record => record.msg)
-    .find(message => message.type === "openResponse") as
-    | {
-        type: "openResponse"
-        payload?: { appIdentifier?: { instanceId?: string } }
-      }
-    | undefined
-  expect(openResponse?.type).toBe("openResponse")
-  const launcherInstanceId = openResponse?.payload?.appIdentifier?.instanceId
-  expect(launcherInstanceId).toBeDefined()
+  // A plain `fdc3.open()` resolves only once the launched app has connected, so the launcher has
+  // mounted the browsing context but the caller has no answer yet.
+  expect(
+    transport.allMessages
+      .map(record => record.msg)
+      .filter(message => message.type === "openResponse"),
+    "plain open() must not answer before the launched app has completed WCP4",
+  ).toEqual([])
 
   const launchedPanel = panels.find(panel => panel.appId === appId)
   expect(launchedPanel).toBeDefined()
   const iframeName = launchedPanel!.instanceId
-  expect(iframeName).toBe(launcherInstanceId)
 
   const wcp5InstanceId = await completeWcp4Handshake(connection, {
     connectionAttemptUuid: "launched-app-connect",
     appUrl,
-    claimedInstanceId: launcherInstanceId!,
+    claimedInstanceId: iframeName,
   })
+
+  // Now the open can be answered — correlated to its own request so it can never be confused
+  // with another caller's response.
+  const openResponse = transport.allMessages
+    .map(record => record.msg)
+    .find(
+      message => message.type === "openResponse" && message.meta?.requestUuid === openRequestUuid,
+    ) as
+    | {
+        type: "openResponse"
+        payload?: { error?: string; appIdentifier?: { instanceId?: string } }
+      }
+    | undefined
+  expect(openResponse, `no openResponse for openRequest ${openRequestUuid}`).toBeDefined()
+  expect(openResponse?.payload?.error).toBeUndefined()
+  const launcherInstanceId = openResponse?.payload?.appIdentifier?.instanceId
+  expect(launcherInstanceId).toBeDefined()
+  expect(iframeName).toBe(launcherInstanceId)
 
   transport.clear()
 

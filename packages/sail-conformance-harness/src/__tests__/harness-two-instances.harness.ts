@@ -92,15 +92,22 @@ async function completeWcp4Handshake(
   return readLastWcp5InstanceId(connection)
 }
 
-/** Conformance1 `fdc3.open({ appId })` — returns the instanceId the caller is handed. */
-async function openMockApp(
+/**
+ * Conformance1 `fdc3.open({ appId })` — delivers the request and returns its `requestUuid`.
+ *
+ * A plain open does NOT answer here: it resolves only once the launched browsing context has
+ * connected, so the caller's instanceId is read later via {@link readOpenedInstanceId}.
+ */
+async function deliverOpenRequest(
   connection: DacpTestAppConnection,
   conformance1InstanceId: string,
 ): Promise<string> {
+  const requestUuid = crypto.randomUUID()
+
   await connection.receiveMessage({
     type: "openRequest",
     meta: {
-      requestUuid: crypto.randomUUID(),
+      requestUuid,
       timestamp: new Date(),
       source: { appId: CONFORMANCE1_APP_ID, instanceId: conformance1InstanceId },
     },
@@ -109,13 +116,47 @@ async function openMockApp(
     },
   })
 
-  const openResponse = connection.getMessagesByType("openResponse").at(-1)?.msg as
-    | { payload?: { error?: string; appIdentifier?: { instanceId?: string } } }
-    | undefined
+  return requestUuid
+}
 
-  expect(openResponse?.payload?.error).toBeUndefined()
-  expect(openResponse?.payload?.appIdentifier?.instanceId).toBeDefined()
+/** No plain `open()` may be answered while its launched browsing context is still booting. */
+function expectNoOpenResponseYet(connection: DacpTestAppConnection): void {
+  expect(
+    connection.getMessagesByType("openResponse").map(record => record.msg),
+    "plain open() must not answer before the launched app has completed WCP4",
+  ).toEqual([])
+}
+
+/**
+ * The instanceId `fdc3.open()` hands the caller, matched to its own request by `requestUuid`
+ * so two in-flight opens can never read each other's response.
+ */
+function readOpenedInstanceId(connection: DacpTestAppConnection, requestUuid: string): string {
+  const openResponse = connection
+    .getMessagesByType("openResponse")
+    .map(
+      record =>
+        record.msg as {
+          meta?: { requestUuid?: string }
+          payload?: { error?: string; appIdentifier?: { instanceId?: string } }
+        },
+    )
+    .find(message => message.meta?.requestUuid === requestUuid)
+
+  expect(openResponse, `no openResponse for openRequest ${requestUuid}`).toBeDefined()
+  expect(openResponse!.payload?.error).toBeUndefined()
+  expect(openResponse!.payload?.appIdentifier?.instanceId).toBeDefined()
   return openResponse!.payload!.appIdentifier!.instanceId!
+}
+
+/** The host-assigned instanceId the launcher handed each mounted panel, in launch order. */
+function readLaunchedInstanceIds(panels: HarnessPanel[]): [string, string] {
+  const launched = panels
+    .filter(panel => panel.appId === TWO_INSTANCE_APP_ID)
+    .map(panel => panel.instanceId)
+
+  expect(launched, "both openRequests must have launched a browsing context").toHaveLength(2)
+  return [launched[0]!, launched[1]!]
 }
 
 /**
@@ -195,20 +236,31 @@ export async function runHarnessTwoInstanceLaunch(): Promise<HarnessTwoInstanceF
     claimedInstanceId: conformance1InstanceId,
   })
 
-  // Both opens land before either popup connects — `fdc3.open` resolves on openResponse.
-  const openedInstanceId1 = await openMockApp(connection, conformance1InstanceId)
-  const openedInstanceId2 = await openMockApp(connection, conformance1InstanceId)
+  // Both opens are issued before either popup connects. Neither can answer yet: a plain
+  // `fdc3.open()` resolves only once its launched app has completed WCP4/WCP5, so the caller's
+  // instanceId does not exist until the handshakes below have run.
+  const openRequestUuid1 = await deliverOpenRequest(connection, conformance1InstanceId)
+  const openRequestUuid2 = await deliverOpenRequest(connection, conformance1InstanceId)
+
+  expectNoOpenResponseYet(connection)
+
+  // The browsing contexts claim the host-assigned ids the launcher mounted them with.
+  const [launchedInstanceId1, launchedInstanceId2] = readLaunchedInstanceIds(panels)
 
   const wcp5InstanceId1 = await completeWcp4Handshake(connection, {
     connectionAttemptUuid: "metadata-app-connect-1",
     appUrl: mockAppUrl,
-    claimedInstanceId: openedInstanceId1,
+    claimedInstanceId: launchedInstanceId1,
   })
   const wcp5InstanceId2 = await completeWcp4Handshake(connection, {
     connectionAttemptUuid: "metadata-app-connect-2",
     appUrl: mockAppUrl,
-    claimedInstanceId: openedInstanceId2,
+    claimedInstanceId: launchedInstanceId2,
   })
+
+  // Only now does each `open()` hand its caller an instanceId.
+  const openedInstanceId1 = readOpenedInstanceId(connection, openRequestUuid1)
+  const openedInstanceId2 = readOpenedInstanceId(connection, openRequestUuid2)
 
   return {
     agent,
