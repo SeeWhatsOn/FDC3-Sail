@@ -295,11 +295,7 @@ export interface HeartbeatState {
 export interface PendingOpenWithContext {
   message: BrowserTypes.OpenRequest
   appIdentifier: BrowserTypes.AppIdentifier
-  /**
-   * Absent for a plain `open()` (no context). Such an entry settles when the target instance
-   * connects (WCP5), not when it registers a context listener.
-   */
-  launchContext?: Context
+  launchContext: Context
   sourceInstanceId: string
 }
 

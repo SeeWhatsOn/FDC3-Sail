@@ -30,7 +30,6 @@ import {
   tryAdoptHostPreRegisteredInstance,
 } from "../../handlers/utils/wcp-host-instance-adoption"
 import { resolveAndPersistConnectionHostIdentifier } from "./wcp-host-identifier"
-import { notifyInstanceConnected } from "../../handlers/utils/open-with-context"
 
 type Wcp4ValidateAppIdentity = WebConnectionProtocol4ValidateAppIdentity
 type WCP5ValidateAppIdentityResponse = WebConnectionProtocol5ValidateAppIdentitySuccessResponse
@@ -289,9 +288,6 @@ export function handleWcp4ValidateAppIdentity(message: unknown, params: DACPHand
     if (params.heartbeatEnabled) {
       startHeartbeat(instanceId, params)
     }
-
-    // The app can now be talked to: complete any plain `fdc3.open()` that launched it.
-    notifyInstanceConnected(instanceId, params)
   } catch (error) {
     logger.error("[WCP4] Error during validation", error)
     sendFailureResponse(
