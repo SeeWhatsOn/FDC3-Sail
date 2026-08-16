@@ -22,12 +22,19 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, afterEach } from "vite-plus/test"
+import { describe, it, expect, afterEach, vi } from "vite-plus/test"
 import type { BrowserTypes } from "@finos/fdc3"
 import type { SailDesktopAgent } from "../../agent/sail-desktop-agent"
 import { AppInstanceState } from "../../state/types"
 import { clearAllHeartbeatTimersForTesting } from "../../handlers/heartbeat/runtime"
-import { beginWcpAppFirstConnect, connectWcpApp, flushAsyncDelivery } from "./wcp-edge-test-helpers"
+import * as openWithContext from "../../handlers/utils/open-with-context"
+import { clearAllPendingOpenWithContextTimeoutsForTesting } from "../../handlers/utils/open-with-context"
+import {
+  beginWcpAppFirstConnect,
+  connectWcpApp,
+  flushAsyncDelivery,
+  waitForPortMessage,
+} from "./wcp-edge-test-helpers"
 import { createTestAgent, PORTFOLIO_APP } from "./wcp-desktop-agent.integration.fixtures"
 
 /**
@@ -240,6 +247,132 @@ describe("WCP5 failure addressed to an already-remapped temp id", () => {
     )
     await flushAsyncDelivery()
 
+    expect(connector.getConnection(session.tempInstanceId)).toBeUndefined()
+  })
+})
+
+/**
+ * Slice 6: a step that runs *after* `handleWcp4ValidateAppIdentity` has already put the WCP5
+ * success response on the wire (starting the heartbeat, notifying pending `fdc3.open()` callers)
+ * must not produce a second, contradictory WCP5 failure response for the same
+ * `connectionAttemptUuid`. The throw must still be logged, not silently swallowed.
+ *
+ * How the throw is induced: every avenue that runs a *real* post-success step through a
+ * transport that "throws on send" was tried first and ruled out, because
+ * `AppConnectionRegistry.sendOnPort` already wraps `appTransport.send()` in its own try/catch
+ * (logging and swallowing) — so a throwing MessagePort transport never reaches
+ * `handleWcp4ValidateAppIdentity`'s own catch:
+ *   - A crafted pending plain-open (registerOpenWithContext → notifyInstanceConnected →
+ *     deliverOpenWithContext → sendDACPResponse) still ends at `sendOnPort`, guarded.
+ *   - `startHeartbeat`'s synchronous first `sendHeartbeat()` (heartbeatIntervalMs <= 1000) also
+ *     ends at `sendOnPort`, guarded.
+ * Neither state mutator on that path (`linkHandshakeRoutingId`, the heartbeat/open reducers)
+ * throws for any reachable legitimate state either.
+ *
+ * So this reproduces the throw at the one remaining honest boundary: `notifyInstanceConnected`
+ * is a real module export `handleWcp4ValidateAppIdentity` calls by name as the *last* post-success
+ * step, after the heartbeat start. Spying on that export (Vitest/Vite ESM live bindings — verified
+ * the spy is observed by the handler's own import) throws from genuinely after the WCP5 success
+ * send: `connectWcpApp`'s own wait for the WCP5 success message on the port proves the ordering,
+ * since the helper would time out if the success were never sent.
+ */
+describe("WCP4 post-success throw does not produce a second WCP5 failure (slice 6)", () => {
+  const activeAgents: SailDesktopAgent[] = []
+
+  afterEach(() => {
+    clearAllPendingOpenWithContextTimeoutsForTesting()
+    clearAllHeartbeatTimersForTesting()
+    for (const agent of activeAgents.splice(0)) {
+      agent.stop()
+    }
+    vi.restoreAllMocks()
+  })
+
+  it("keeps the WCP5 success, logs the error, and does not disconnect the temp handshake id when a post-success step throws", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+    const postSuccessError = new Error("boom-post-success-slice6")
+    vi.spyOn(openWithContext, "notifyInstanceConnected").mockImplementation(() => {
+      throw postSuccessError
+    })
+
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const connector = agent.appConnection
+
+    const disconnectedInstanceIds: string[] = []
+    connector.on("appDisconnected", instanceId => {
+      disconnectedInstanceIds.push(instanceId)
+    })
+
+    // connectWcpApp itself waits for (and type-asserts) the WCP5 *success* message on the app's
+    // port before returning — if the mocked throw happened before that send, this call would
+    // time out instead of resolving, so reaching the assertions below is itself proof the throw
+    // landed after the success response was already on the wire.
+    const connected = await connectWcpApp(agent, {
+      connectionAttemptUuid: "post-success-throw-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    // No second, contradictory WCP5 failure was ever attempted for this connectionAttemptUuid:
+    // the only way one reaches the wire/registry is `sendFailureResponse` disconnecting the temp
+    // handshake id (WCP5 failures are always addressed to `temp-{connectionAttemptUuid}`, see the
+    // "WCP5 failure addressed to an already-remapped temp id" block above) — so an absent
+    // `appDisconnected(tempInstanceId)` is the real, production-observable signature of "no
+    // failure response was emitted", not a mock call count.
+    expect(disconnectedInstanceIds).not.toContain(connected.tempInstanceId)
+
+    // The successful handshake's connection and FDC3 state must be untouched by the later throw.
+    expect(connector.getConnection(connected.validatedInstanceId)).toBeDefined()
+    expect(agent.getState().instances[connected.validatedInstanceId]?.state).toBe(
+      AppInstanceState.CONNECTED,
+    )
+
+    // The throw is logged, not silently swallowed.
+    expect(
+      consoleErrorSpy.mock.calls.some(args =>
+        args.some(
+          arg => arg === postSuccessError || String(arg).includes("boom-post-success-slice6"),
+        ),
+      ),
+    ).toBe(true)
+  })
+
+  it("still sends the WCP5 failure response on the wire for a genuine pre-success validation failure (guard against over-correction)", async () => {
+    const agent = createTestAgent()
+    activeAgents.push(agent)
+    const connector = agent.appConnection
+
+    const connectionAttemptUuid = "pre-success-genuine-failure-uuid"
+    const identityUrl = PORTFOLIO_APP.details.url
+
+    const session = beginWcpAppFirstConnect(agent, {
+      connectionAttemptUuid,
+      appId: "portfolioApp",
+      identityUrl,
+    })
+
+    const wcp5FailurePromise =
+      waitForPortMessage<BrowserTypes.WebConnectionProtocol5ValidateAppIdentityFailedResponse>(
+        session.appPort,
+        data => (data as { type?: string }).type === "WCP5ValidateAppIdentityFailedResponse",
+      )
+
+    // Origin mismatch: fails identity validation before any WCP5 success is ever constructed —
+    // a wholly separate, earlier code path than the post-success throw above.
+    session.appPort.postMessage({
+      type: "WCP4ValidateAppIdentity",
+      meta: { connectionAttemptUuid, timestamp: new Date() },
+      payload: { identityUrl, actualUrl: "https://malicious.example.org/portfolio" },
+    })
+
+    const failure = await wcp5FailurePromise
+
+    expect(failure.type).toBe("WCP5ValidateAppIdentityFailedResponse")
+    expect(failure.payload.message).toContain("Origin mismatch")
+    expect((failure.meta as { connectionAttemptUuid?: string }).connectionAttemptUuid).toBe(
+      connectionAttemptUuid,
+    )
     expect(connector.getConnection(session.tempInstanceId)).toBeUndefined()
   })
 })
