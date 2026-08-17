@@ -948,9 +948,12 @@ describe("plain open() waits for the launched app to connect (S3-F2)", () => {
     expect(openResponse.payload.appIdentifier?.instanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
 
     // The contract: WCP5 success for the launched app was written to the wire strictly before
-    // openResponse for the app that launched it. A regression that sent openResponse
-    // immediately on launch (pre-handshake) would record ["openResponse"] here, or
-    // ["openResponse", "WCP5ValidateAppIdentityResponse"] — either way this fails.
+    // openResponse for the app that launched it.
+    //
+    // The historical bug — answering a plain open as soon as the instance is pre-registered rather
+    // than connected — is caught earlier, by the waitFor above: the open never becomes pending, so
+    // that precondition is what fails. This assertion covers the other shape, where the open still
+    // waits but the two sends are reordered relative to each other.
     expect(sentOrder()).toEqual(["WCP5ValidateAppIdentityResponse", "openResponse"])
 
     expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length ?? 0).toBe(0)

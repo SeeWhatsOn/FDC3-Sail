@@ -310,8 +310,10 @@ fresh agent per role per slice — never reused across roles.
 ## Slice Checkpoints
 
 - [x] Slice 1: **verified, reviewed, PASSED** (failures: 0). Runtime effect below.
-- [ ] Slice 2: **triggered** — its conditional fired. Slice 1 verified clean but the runtime bar
-      still fails on the delivery symptom.
+- [x] Slice 2: **closed — premise refuted, superseded by slice 3.** Its conditional fired and its
+      tests were written, but the reproduction did not reproduce: the delivery layer was sound, and
+      the real cause was `open()` answering before the app existed. See "Slice 2 reproduction did NOT
+      reproduce" below. Left unticked until 2026-08-17; that was stale bookkeeping, not open work.
 - [x] Slice 1 detail (failures: 0) — reproduction by tester, fix by coder, both verify
   commands run by main agent at exit 0. Review pending.
 
@@ -552,6 +554,14 @@ reproduction tests assert real state/wire output rather than mock calls, and tha
 resolved id.
 
 ## Parked Follow-ups
+
+> **All closed.** Worked to completion in `.cursor/plans/conformance-followups-closeout.md`
+> (2026-08-16/17). S3-F1, S3-F5, F1-ordering, F2 and parked slice 4 were fixed; S3-F2, F3 and F4
+> gained tests; **S3-F4** was closed with no change (no behavioural difference, lists are tiny) and
+> **the F1 mirror case** was closed as will-not-fix, since its only real fix would put host
+> browsing-context liveness inside the agent and break the purity constraint in `AGENTS.md:147`.
+> Defect register #4 is now marked FIXED, with its trigger corrected. The conformance bar was
+> re-run twice afterwards and still scores 83/83 with an empty baseline.
 
 From the slice 3 review:
 

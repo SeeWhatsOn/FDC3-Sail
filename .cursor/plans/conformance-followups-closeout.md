@@ -1,7 +1,7 @@
 # Minimal Viable Delivery Plan: closing the conformance open()-timing follow-ups
 
-Status: implementing
-Current slice: 5 (S3-F1)
+Status: done
+Current slice: none — all five slices verified and reviewed, every parked item closed
 
 > **Parent plan:** `.cursor/plans/conformance-open-timing.md` (Status: done, 83/83 success bar met).
 > That delivery left nine Parked Follow-ups and one parked slice. This file closes them. It is a
@@ -216,7 +216,7 @@ per the user's instruction. A fresh agent per role per slice — never reused ac
       `0d59ce0` (fix) + `59d4cdb` (tests).
 - [x] Slice 8 (F1-ordering, F2, F3): **verified, reviewed, PASSED** (failures: **1** — the first
       attempt sorted by `createdAt` and was sent back; see Review Notes). Commit `8a52db1`.
-- [ ] Slice 9 (S3-F2, F4): not started (failures: 0)
+- [x] Slice 9 (S3-F2, F4): **verified, reviewed, PASSED** (failures: 0). Commit `c874db7`.
 
 ## Verification Notes
 
@@ -247,6 +247,32 @@ intended.
 passed / 1 skipped). This proves the +5/-0 change regresses nothing; it does **not** prove it fixes
 the defect. Committed as `0d59ce0` to keep the branch clean, with the slice left unticked until its
 test exists and has been watched to fail without the fix.
+
+**Slice 7 (complete).** Reproduction proved: production file restored from `0d59ce0~1`, targeted run
+-> **exit 1**, 3 failed / 15 passed — the unit assertion, the end-to-end defect shape, and the
+full-agent `disconnectInstance` path. Both criterion (d) guards passed pre-fix.
+- `npm test -w @finos/sail-desktop-agent` -> **exit 0** (401 passed / 1 skipped).
+
+**Slice 8.** Reproduction proved: all four production files reverted, targeted run -> **exit 1**,
+2 failed / 9 passed — the integer-like ordering test and the fail-safe test. All three regression
+guards passed pre-fix. Restored -> 13 passed including `wcp-multi-pending-adoption.integration.test.ts`.
+- `npm test -w @finos/sail-desktop-agent` -> **exit 0** (407 passed / 1 skipped).
+
+**Slice 9.** Non-vacuity proved by reintroducing the historical bug myself — the plain-open fast path
+in `open-with-context.ts:53-54` reduced to `targetInstance !== undefined`, dropping the
+`isInstanceConnected` check — targeted run -> **exit 1**, 1 failed / 28 passed. File restored.
+- `npm test -w @finos/sail-desktop-agent` -> **exit 0** (408 passed / 1 skipped; 154 scenarios).
+- `npm test -w @finos/sail-conformance-harness` -> **exit 0** (78 passed / 17 files).
+
+### End-of-delivery run
+
+- `npm test -- --run` -> **exit 0**. 86 files passed / 1 skipped; **571 passed / 1 skipped**.
+- `npm run typecheck` -> **exit 0**.
+- `npx vp lint .` -> **exit 0**. 27 warnings, **none in any file this delivery touched** — all
+  pre-existing.
+- Conformance, run 1 -> **exit 0**, `83 passed, 0 failed, 0 pending of 83` in 303.0s.
+- Conformance, run 2 -> **exit 0**, `83 passed, 0 failed, 0 pending of 83` in 299.8s.
+- `results/conformance-baseline-2.2.json` unmodified and still empty. The parent plan's bar is intact.
 
 ## Review Notes
 
@@ -360,6 +386,43 @@ Verified against the code rather than the commit message:
 - One theoretical seam, currently unreached: `createStateWithOverrides`/`deepMerge` would let a caller
   seed `instances` without a matching `nextInstanceSequence`, colliding with later-connected rows. No
   call site or test uses it. Parked below.
+
+### Slice 9 (S3-F2, F4), fresh reviewer at `c874db7`
+
+- **Required:** none.
+- **Follow-up:** the comment on the final send-order assertion claimed the historical bug would be
+  caught *there*; it is actually caught one check earlier, by the `waitFor` precondition. **Applied**
+  by the main agent under the step-10 single-obvious-edit exemption (comment text only), re-verified
+  at 29/29.
+- **Ignore for MVP:** keeping the weak `first.openedInstanceId !== second.openedInstanceId`
+  assertion as documentation alongside the new ones.
+
+- **Send order, not receipt order, is the correct observable** — and not merely a workaround for the
+  flakiness the tester hit. The two messages go to two *different* `MessagePort`s, and no spec
+  guarantees ordering across independent `MessageChannel`s in any environment, real browsers
+  included. Receipt order would assert a scheduling detail that is not a contract.
+- The reviewer reproduced the historical bug itself, ran the new test 5x in isolation clean, and
+  confirmed `wcp5InstanceId` and `openedInstanceId` come from genuinely independent sources, so the
+  new harness assertion is not a tautology.
+
+## OUTCOME — every parked item closed
+
+All five slices verified and reviewed by fresh contexts, with **no Required finding outstanding**.
+Three Follow-ups were applied rather than parked (all comment/label text, all under the step-10
+exemption, each re-verified); the rest are recorded below.
+
+| Parked item | Outcome |
+|---|---|
+| S3-F1 | fixed, slice 5 (`2419c4d`) |
+| S3-F2 | test added, slice 9 (`c874db7`) |
+| S3-F4 | **closed, no change** — no behavioural difference, lists are tiny |
+| S3-F5 | fixed, slice 6 (`84c1024`) — plus a third post-success statement the item had not named |
+| F1-ordering | fixed, slice 8 (`8a52db1`) |
+| F1-mirror | **closed, will not fix** — needs host liveness in the agent; barred by the purity constraint |
+| F2 | fixed, slice 8 (`8a52db1`) |
+| F3 | test added, slice 8 (`8a52db1`) |
+| F4 | test added, slice 9 (`c874db7`) |
+| Parked slice 4 | fixed, slice 7 (`0d59ce0` + `59d4cdb`); defect register #4 marked FIXED and its trigger corrected |
 
 ## Parked Follow-ups
 
