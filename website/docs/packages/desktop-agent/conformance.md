@@ -146,15 +146,42 @@ hosted FINOS toolbox so the rewritten URLs still resolve when running locally.
 
 ## Conformance baseline status
 
-**Unmeasured against the current suite.** `@finos/sail-conformance-harness` has a committed
-FINOS toolbox export history under `results/conformance-report-v*.txt`; the newest,
-`conformance-report-v6.txt`, was committed 2026-06-23 (53 pass / 26 fail, mixed 2.2 + 3.0 rows).
-Five commits touching `test/features/` have landed since then (most recently 2026-07-29),
-including FDC3 3.0 intent-listener-conflict detection, context-metadata propagation on broadcast
-and intent events, a private-channel auto-join fix, and 3.0 `closeRequest` gating — none of which
-are reflected in that export. This page does not state a current pass rate because there isn't
-a current one to state; re-running the toolbox against today's tree is tracked separately from
-this documentation delivery.
+**83 of 83 passing, against an empty baseline.**
+
+`@finos/sail-conformance-harness` runs the FINOS toolbox in a real browser under Playwright:
+
+```bash
+npm run test:conformance -w @finos/sail-conformance-harness
+```
+
+A run takes roughly five minutes and covers 21 suites. Results are compared against
+`results/conformance-baseline-2.2.json`, which lists tests that are *allowed* to fail. **That list
+is currently empty**, so every one of the 83 tests must pass or the run fails. There is no tolerated
+failure to hide a regression behind.
+
+The three titles that used to sit in that baseline were not toolbox flakiness — they were two real
+defects in Sail: concurrent same-appId launches losing an instance registration, and a plain
+`fdc3.open()` resolving before the launched app had connected. Both are fixed, which is why the list
+is empty. Adding an entry back suppresses a real regression; fix the defect instead.
+
+### Nightly CI
+
+`.github/workflows/conformance.yml` runs the suite nightly at **03:00 UTC**, and on demand via
+**`workflow_dispatch`** from the Actions tab. It gates on regressions against the baseline and
+uploads its artifacts either way.
+
+:::note
+GitHub only fires scheduled workflows from a repository's **default branch**. On any other branch
+the nightly run does not start until the branch merges — use `workflow_dispatch` in the meantime.
+:::
+
+### Older toolbox exports
+
+`results/conformance-report-v*.txt` holds a history of point-in-time FINOS toolbox exports, the
+newest being `conformance-report-v6.txt` (2026-06-23, 53 pass / 26 fail across mixed 2.2 and 3.0
+rows). Those are hand-captured snapshots from before the scripted suite existed and predate several
+rounds of feature work; they are kept for history and are **not** the current signal. The scripted
+run above is.
 
 ## Related
 

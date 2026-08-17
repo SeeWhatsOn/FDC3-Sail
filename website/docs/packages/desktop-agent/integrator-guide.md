@@ -571,6 +571,27 @@ sequenceDiagram
 
 **Debugging rule:** follow **one instanceId** from launcher → iframe `name` → WCP4 payload → WCP5 validated → `meta.destination.instanceId`. A break anywhere in that chain produces toolbox `AppTimeout`.
 
+### When `open()` settles
+
+`fdc3.open()` resolves only once the launched app has completed the handshake above. When it
+resolves, the app is connected and can be interacted with immediately — you can broadcast to a
+channel it subscribed to during its own startup and it will receive it.
+
+| | Waits for the app to connect? |
+|---|---|
+| `open()` without context | **yes** |
+| `open()` with context | yes — also waits for a matching context listener |
+| `raiseIntent` launching an app | yes |
+
+If the app never connects, `open()` rejects with FDC3 `AppTimeout` after 15 s rather than hanging.
+
+:::caution Timing change
+`open()` without a context used to resolve as soon as the instance was registered, before the app
+had loaded. It now waits. Callers that relied on it returning immediately will see it take as long as
+the app takes to boot — that is the point of the change, since the previous behaviour handed back an
+instanceId for an app that could not yet be talked to.
+:::
+
 ## Where WCP lives
 
 | Phase | Owner | Location |
@@ -752,6 +773,35 @@ flowchart TB
     L1 --> I1 --> T1 --> W4 --> C1 --> R1
   end
 ```
+
+### Known limitation — two launches of one appId at the same time
+
+When two instances of the **same** `appId` are launching concurrently, the agent has to decide
+whether a still-pending registration is a genuine second launch or the leftover of a launch that was
+abandoned. Its only signal is order: a pending registration older than the one that just connected is
+treated as abandoned and discarded.
+
+That is correct when a launch really was abandoned. It is wrong in one case:
+
+```text
+launch A starts ──┐
+launch B starts ──┤
+                  └─► B finishes its handshake FIRST
+                      → A is discarded, even though A was never abandoned
+```
+
+If that happens, the caller waiting on A either receives **B's instanceId**, or waits the full 15 s
+and gets `AppTimeout`.
+
+| | |
+|---|---|
+| **When** | Two instances of one appId launching at once, and the *second* connects first |
+| **Symptom** | Two `open()` calls resolve to the same instanceId, or one times out |
+| **Workaround** | None host-side today. Staggering same-appId launches avoids the overlap |
+
+Only the host knows whether a browsing context is still alive, and the agent deliberately does not
+depend on host or browser specifics, so it cannot currently tell the two cases apart. Ordering is the
+best signal available to it.
 
 ## Testing model
 
