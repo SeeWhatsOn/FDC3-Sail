@@ -30,6 +30,7 @@ import {
   tryAdoptHostPreRegisteredInstance,
 } from "../../handlers/utils/wcp-host-instance-adoption"
 import { resolveAndPersistConnectionHostIdentifier } from "./wcp-host-identifier"
+import { notifyInstanceConnected } from "../../handlers/utils/open-with-context"
 
 type Wcp4ValidateAppIdentity = WebConnectionProtocol4ValidateAppIdentity
 type WCP5ValidateAppIdentityResponse = WebConnectionProtocol5ValidateAppIdentitySuccessResponse
@@ -280,13 +281,27 @@ export function handleWcp4ValidateAppIdentity(message: unknown, params: DACPHand
 
     responses.sendOutbound(responseWithRouting)
 
-    if (sourceInstanceId !== instanceId) {
-      params.setState(state => linkHandshakeRoutingId(state, sourceInstanceId, instanceId))
-    }
+    // The WCP5 success response is already on the wire and the instance is CONNECTED.
+    // A failure past this point must not trigger a contradictory WCP5 failure response
+    // for the same connectionAttemptUuid, so it's caught and logged locally instead of
+    // falling through to the outer catch.
+    try {
+      if (sourceInstanceId !== instanceId) {
+        params.setState(state => linkHandshakeRoutingId(state, sourceInstanceId, instanceId))
+      }
 
-    // Heartbeat liveness is optional; WCP6 still removes the instance when heartbeat is off.
-    if (params.heartbeatEnabled) {
-      startHeartbeat(instanceId, params)
+      // Heartbeat liveness is optional; WCP6 still removes the instance when heartbeat is off.
+      if (params.heartbeatEnabled) {
+        startHeartbeat(instanceId, params)
+      }
+
+      // The app can now be talked to: complete any plain `fdc3.open()` that launched it.
+      notifyInstanceConnected(instanceId, params)
+    } catch (postConnectError) {
+      logger.error(
+        "[WCP4] Post-connect step failed after WCP5 success response was already sent",
+        postConnectError,
+      )
     }
   } catch (error) {
     logger.error("[WCP4] Error during validation", error)

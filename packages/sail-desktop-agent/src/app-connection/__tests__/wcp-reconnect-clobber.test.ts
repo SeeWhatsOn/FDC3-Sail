@@ -20,6 +20,8 @@ import { AppConnectionRegistry } from "../app-connection-registry"
 import { consoleLogger } from "../../logging/logger"
 import {
   disconnectApp,
+  disconnectAppByInstanceId,
+  handleWCP6Goodbye,
   updateConnectionMetadata,
   type AppConnectionContext,
 } from "../wcp/wcp-connection-management"
@@ -410,5 +412,193 @@ describe("WCP reconnect clobber", () => {
       true,
     )
     expect(context.connectionRegistry.transportToInstanceId.has(oldTransport)).toBe(false)
+  })
+
+  /**
+   * Defect register #4 (major): WCP6Goodbye arms a grace-period timer in
+   * `context.pendingDisconnects`. `disconnectAppByInstanceId` and `updateConnectionMetadata`
+   * already know to cancel a leftover timer for the id they are about to touch (see the two
+   * "guard" tests below) -- but `disconnectApp` itself, the low-level function
+   * `pruneAppConnection`/`disconnectHandshakeApp`/`handleWCP6Goodbye`'s own fallback all call,
+   * does not. Any teardown that goes through plain `disconnectApp` (e.g.
+   * `SailDesktopAgent.disconnectInstance` -> `pruneAppConnection` -> `disconnectApp`, see
+   * `wcp-temp-id-teardown.test.ts`) leaves that timer running.
+   */
+  it("does not clear the armed grace timer when disconnectApp tears the instance down directly (defect #4)", () => {
+    vi.useFakeTimers()
+    const tornDown: string[] = []
+    const context = createUnitConnectionContext({
+      onInstanceTeardown: instanceId => tornDown.push(instanceId),
+    })
+    const instanceId = "defect-4-disconnect-app-direct"
+
+    const channel = new MessageChannel()
+    const transport = new MessagePortTransport(channel.port2)
+    seedConnection(context, {
+      instanceId,
+      connectionAttemptUuid: "defect-4-uuid",
+      port: channel.port2,
+      transport,
+    })
+
+    // Step 1: WCP6Goodbye arms the grace timer.
+    handleWCP6Goodbye(context, instanceId)
+    expect(context.pendingDisconnects.has(instanceId)).toBe(true)
+
+    // Step 2: something tears the instance down through disconnectApp directly, without
+    // going through either of the two paths that already know to cancel a pending timer.
+    disconnectApp(context, instanceId)
+
+    // (a) Disconnecting the instance must clear the armed entry.
+    expect(context.pendingDisconnects.has(instanceId)).toBe(false)
+
+    // (b) Advancing time past disconnectGracePeriod afterwards must fire no onInstanceTeardown.
+    vi.advanceTimersByTime(context.options.disconnectGracePeriod + 10)
+    expect(tornDown).not.toContain(instanceId)
+  })
+
+  /**
+   * The end-to-end shape of defect #4: arm the timer, tear down through a path that leaves it
+   * armed, relaunch the same instance id inside the grace window, advance past the grace
+   * period, and confirm the relaunched session survives.
+   *
+   * This deliberately reproduces the relaunch at the connection-management level rather than by
+   * driving a second `connectWcpApp` through the full WCP1-5 handshake: a standard handshake
+   * reconnect always finishes in `updateConnectionMetadata`, which *already* cancels any
+   * leftover `pendingDisconnects` entry for the id it is about to install (see the
+   * "updateConnectionMetadata" guard test below) -- so it would mask this exact bug in
+   * `disconnectApp` regardless of whether the fix lands. Seeding the relaunched connection
+   * directly, the way `wcp-reconnect-clobber.test.ts`'s other unit tests already model a
+   * reconnect displacing a prior session, isolates the bug: nothing here cancels the stale
+   * timer except a fixed `disconnectApp`.
+   */
+  it("does not tear down a relaunched session when a teardown path left its grace timer armed (defect #4 end-to-end)", () => {
+    vi.useFakeTimers()
+    const tornDown: string[] = []
+    const context = createUnitConnectionContext({
+      disconnectGracePeriod: 50,
+      onInstanceTeardown: instanceId => {
+        tornDown.push(instanceId)
+        disconnectApp(context, instanceId)
+      },
+    })
+    const relaunchedId = "defect-4-relaunch-id"
+
+    // First session under relaunchedId.
+    const oldChannel = new MessageChannel()
+    const oldTransport = new MessagePortTransport(oldChannel.port2)
+    seedConnection(context, {
+      instanceId: relaunchedId,
+      connectionAttemptUuid: "defect-4-first-session-uuid",
+      port: oldChannel.port2,
+      transport: oldTransport,
+    })
+
+    // Step 1: app sends WCP6Goodbye -> grace timer armed for relaunchedId.
+    handleWCP6Goodbye(context, relaunchedId)
+    expect(context.pendingDisconnects.has(relaunchedId)).toBe(true)
+
+    // Step 2: something tears the instance down through a path that (currently) does not
+    // cancel the armed timer -- disconnectApp itself.
+    disconnectApp(context, relaunchedId)
+    expect(context.connectionRegistry.connections.get(relaunchedId)).toBeUndefined()
+
+    // Step 3: the same instance id relaunches/reconnects inside the grace window -- a brand
+    // new session gets installed under the same id.
+    const newChannel = new MessageChannel()
+    const newTransport = new MessagePortTransport(newChannel.port2)
+    const newMetadata = seedConnection(context, {
+      instanceId: relaunchedId,
+      connectionAttemptUuid: "defect-4-relaunch-session-uuid",
+      port: newChannel.port2,
+      transport: newTransport,
+    })
+
+    // Step 4: advance past the original grace period.
+    vi.advanceTimersByTime(60)
+
+    // The stale timer must not have fired and torn down the relaunched session.
+    expect(tornDown).not.toContain(relaunchedId)
+    expect(context.connectionRegistry.connections.get(relaunchedId)).toBe(newMetadata)
+  })
+
+  /**
+   * Guard: disconnectAppByInstanceId already cancels an armed grace timer for the id it
+   * disconnects. The defect #4 fix must not change this.
+   */
+  it("guard: disconnectAppByInstanceId already clears the armed grace timer", () => {
+    vi.useFakeTimers()
+    const tornDown: string[] = []
+    const context = createUnitConnectionContext({
+      onInstanceTeardown: instanceId => tornDown.push(instanceId),
+    })
+    const instanceId = "guard-disconnect-by-instance-id"
+
+    const channel = new MessageChannel()
+    const transport = new MessagePortTransport(channel.port2)
+    seedConnection(context, {
+      instanceId,
+      connectionAttemptUuid: "guard-disconnect-by-id-uuid",
+      port: channel.port2,
+      transport,
+    })
+
+    handleWCP6Goodbye(context, instanceId)
+    expect(context.pendingDisconnects.has(instanceId)).toBe(true)
+
+    // disconnectAppByInstanceId always calls onInstanceTeardown itself as part of completing
+    // *this* disconnect -- that legitimate call is expected. What must not happen is a second,
+    // later call produced by a stale timer the resolveInstanceId call above failed to cancel.
+    disconnectAppByInstanceId(context, instanceId)
+    expect(context.pendingDisconnects.has(instanceId)).toBe(false)
+    expect(tornDown).toEqual([instanceId])
+
+    vi.advanceTimersByTime(context.options.disconnectGracePeriod + 10)
+    expect(tornDown).toEqual([instanceId])
+  })
+
+  /**
+   * Guard: updateConnectionMetadata already cancels an armed grace timer for the validated id
+   * it is about to install a reconnecting handshake onto. The defect #4 fix must not change
+   * this -- it is exactly the behaviour that masks the bug for a standard WCP reconnect (see
+   * the end-to-end test above).
+   */
+  it("guard: updateConnectionMetadata already clears an armed grace timer for the reused validated id", () => {
+    vi.useFakeTimers()
+    const tornDown: string[] = []
+    const context = createUnitConnectionContext({
+      onInstanceTeardown: instanceId => tornDown.push(instanceId),
+    })
+    const validatedId = "guard-update-metadata-validated-id"
+
+    const oldChannel = new MessageChannel()
+    const oldTransport = new MessagePortTransport(oldChannel.port2)
+    seedConnection(context, {
+      instanceId: validatedId,
+      connectionAttemptUuid: "guard-update-metadata-old-uuid",
+      port: oldChannel.port2,
+      transport: oldTransport,
+    })
+
+    // Arms the grace timer directly under the validated id (models a goodbye that already
+    // resolved through handshake routing to the validated id).
+    handleWCP6Goodbye(context, validatedId)
+    expect(context.pendingDisconnects.has(validatedId)).toBe(true)
+
+    const newChannel = new MessageChannel()
+    const newTransport = new MessagePortTransport(newChannel.port2)
+    const tempId = "temp-guard-update-metadata-uuid"
+    seedConnection(context, {
+      instanceId: tempId,
+      connectionAttemptUuid: "guard-update-metadata-new-uuid",
+      port: newChannel.port2,
+      transport: newTransport,
+    })
+
+    updateConnectionMetadata(context, tempId, validatedId, "portfolioApp")
+    expect(context.pendingDisconnects.has(validatedId)).toBe(false)
+
+    vi.advanceTimersByTime(context.options.disconnectGracePeriod + 10)
+    expect(tornDown).not.toContain(validatedId)
   })
 })

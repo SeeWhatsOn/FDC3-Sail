@@ -80,6 +80,13 @@ export interface AppInstance {
   /** Instance creation timestamp */
   createdAt: Date
 
+  /**
+   * Monotonic per-agent registration order, assigned from `AgentState.nextInstanceSequence` at
+   * `connectInstance`. `createdAt` alone cannot totally order two instances registered in the same
+   * millisecond — routine for concurrent same-appId launches — so this is the true tiebreaker.
+   */
+  registrationSequence: number
+
   /** Last activity timestamp for heartbeat tracking */
   lastActivity: Date
 
@@ -295,7 +302,11 @@ export interface HeartbeatState {
 export interface PendingOpenWithContext {
   message: BrowserTypes.OpenRequest
   appIdentifier: BrowserTypes.AppIdentifier
-  launchContext: Context
+  /**
+   * Absent for a plain `open()` (no context). Such an entry settles when the target instance
+   * connects (WCP5), not when it registers a context listener.
+   */
+  launchContext?: Context
   sourceInstanceId: string
 }
 
@@ -324,6 +335,13 @@ export interface WcpHandshakeRoutingState {
 export interface AgentState {
   /** All app instances keyed by instanceId */
   instances: Record<string, AppInstance>
+
+  /**
+   * Next value to hand out as an `AppInstance.registrationSequence`. Per-agent (lives on state, not
+   * a module-level variable) so it moves atomically with the instances it orders and stays isolated
+   * across multiple agents in one process.
+   */
+  nextInstanceSequence: number
 
   /** Intent-related state */
   intents: {

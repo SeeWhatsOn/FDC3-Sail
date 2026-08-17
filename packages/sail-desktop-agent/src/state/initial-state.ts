@@ -16,6 +16,7 @@ export function createInitialState(userChannels: BrowserTypes.Channel[]): AgentS
 
   return {
     instances: {},
+    nextInstanceSequence: 0,
     intents: {
       listeners: {},
       pending: {},

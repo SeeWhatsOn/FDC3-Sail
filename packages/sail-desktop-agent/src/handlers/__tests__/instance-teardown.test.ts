@@ -350,6 +350,104 @@ describe("cleanupInstanceDacpState", () => {
     })
     expect(openResponses).toHaveLength(0)
   })
+
+  describe("errorMessage contract: plain open vs open-with-context, target vs source disconnect", () => {
+    // A pending plain open() (no launch context) times out with a different human-readable
+    // message than a pending open-with-context: "waiting for app to connect" (plain) vs
+    // "waiting for context listener" (with-context). Both must report that distinction on
+    // *both* disconnect paths (target instance going away, source instance going away), while
+    // errorType stays OpenError.AppTimeout on all four paths.
+    const withContextLaunch: Context = { type: "fdc3.instrument", id: { ticker: "AAPL" } }
+
+    it.each([
+      {
+        label: "plain open cleared by TARGET disconnect",
+        launchContext: undefined,
+        disconnectSide: "target" as const,
+        expectedMessage: "Timed out waiting for app to connect",
+      },
+      {
+        label: "open-with-context cleared by TARGET disconnect",
+        launchContext: withContextLaunch,
+        disconnectSide: "target" as const,
+        expectedMessage: "Timed out waiting for context listener",
+      },
+      {
+        label: "plain open cleared by SOURCE disconnect",
+        launchContext: undefined,
+        disconnectSide: "source" as const,
+        expectedMessage: "Timed out waiting for app to connect",
+      },
+      {
+        label: "open-with-context cleared by SOURCE disconnect",
+        launchContext: withContextLaunch,
+        disconnectSide: "source" as const,
+        expectedMessage: "Timed out waiting for context listener",
+      },
+    ])("$label reports errorType AppTimeout and errorMessage $expectedMessage", data => {
+      const { launchContext, disconnectSide, expectedMessage } = data
+      let state = createInitialState(DEFAULT_FDC3_USER_CHANNELS)
+      state = connectInstance(state, {
+        instanceId: "a1",
+        appId: "launcherApp",
+        metadata: { name: "launcherApp" },
+      })
+      state = connectInstance(state, {
+        instanceId: "uuid-0",
+        appId: "chartApp",
+        metadata: { name: "chartApp" },
+      })
+      state = updateInstanceState(state, "a1", AppInstanceState.CONNECTED)
+      // Plain open's fast path treats an already-CONNECTED target as immediately usable, so it
+      // must stay PENDING here to actually go through the pending/timeout path this test pins.
+      // With-context readiness instead hinges on a matching context listener, so CONNECTED is
+      // fine (and matches the existing target/source-disconnect tests above).
+      if (launchContext) {
+        state = updateInstanceState(state, "uuid-0", AppInstanceState.CONNECTED)
+      }
+
+      const transport = new MockTransport()
+      const { params, getState } = createDACPTestParams({
+        instanceId: "a1",
+        initialState: state,
+      })
+      const contextWithTransport = withResponseDispatcher(params, transport)
+
+      const requestUuid = `open-req-${disconnectSide}-${launchContext ? "context" : "plain"}`
+      const message = {
+        type: "openRequest",
+        meta: {
+          requestUuid,
+          timestamp: new Date(),
+        },
+        payload: {
+          app: { appId: "chartApp", instanceId: "uuid-0" },
+          ...(launchContext ? { context: launchContext } : {}),
+        },
+      } as BrowserTypes.OpenRequest
+
+      registerOpenWithContext(
+        message,
+        { appId: "chartApp", instanceId: "uuid-0" },
+        launchContext,
+        contextWithTransport,
+      )
+
+      expect(getState().open.pendingWithContext["uuid-0"]?.length).toBe(1)
+
+      const disconnectingInstanceId = disconnectSide === "target" ? "uuid-0" : "a1"
+      cleanupInstanceDacpState({ ...contextWithTransport, instanceId: disconnectingInstanceId })
+
+      const openErrorResponse = transport.sentMessages.find(sent => {
+        const typed = sent as { type?: string; meta?: { requestUuid?: string } }
+        return typed.type === "openResponse" && typed.meta?.requestUuid === requestUuid
+      }) as { payload?: { error?: string; message?: string } } | undefined
+
+      expect(openErrorResponse).toBeDefined()
+      expect(openErrorResponse?.payload?.error).toBe(OpenError.AppTimeout)
+      expect(openErrorResponse?.payload?.message).toBe(expectedMessage)
+    })
+  })
 })
 
 describe("heartbeat cleanup on disconnect", () => {

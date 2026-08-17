@@ -23,12 +23,14 @@ export const connectInstance = (
 
   return produce(state, draft => {
     const now = new Date()
+    const registrationSequence = draft.nextInstanceSequence++
     draft.instances[params.instanceId] = {
       instanceId: params.instanceId,
       appId: params.appId,
       metadata: params.metadata,
       state: AppInstanceState.PENDING,
       createdAt: now,
+      registrationSequence,
       lastActivity: now,
       currentUserChannel: null,
       contextListeners: {},

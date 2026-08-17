@@ -169,6 +169,11 @@ export function disconnectAppByInstanceId(context: AppConnectionContext, instanc
  * This is the internal method that performs the actual cleanup
  */
 export function disconnectApp(context: AppConnectionContext, instanceId: string): void {
+  // Cancel any armed WCP6 grace timer for this id so a stale timeout cannot fire
+  // onInstanceTeardown/disconnectApp against a session relaunched on the same
+  // instanceId inside the grace window (see disconnectInstance -> pruneAppConnection).
+  cancelPendingDisconnect(context, instanceId)
+
   const appTransport = context.connectionRegistry.messagePortTransports.get(instanceId)
   if (appTransport) {
     // Unregister before disconnect() so onDisconnect does not re-enter disconnectApp

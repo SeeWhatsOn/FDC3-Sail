@@ -29,19 +29,28 @@ export const HARNESS_FDC3_TARGET_VERSION = resolveConformanceToolboxProfile().fd
 
 export const HARNESS_DEBUG = true
 
-export function extractConformance1Url(apps: DirectoryApp[]): string {
-  const conformance1 = apps.find(app => app.appId === "Conformance1")
+/** Default app the harness mounts when no `?appId=` is given. */
+export const DEFAULT_HARNESS_APP_ID = "Conformance1"
+
+export function extractAppUrl(
+  apps: DirectoryApp[],
+  appId: string = DEFAULT_HARNESS_APP_ID,
+): string {
+  const app = apps.find(entry => entry.appId === appId)
   const url =
-    conformance1?.type === "web" &&
-    // oxlint-disable-next-line typescript/no-unnecessary-condition -- unvalidated conformance-appd.json fixture
-    conformance1.details &&
-    "url" in conformance1.details &&
-    typeof conformance1.details.url === "string"
-      ? conformance1.details.url
+    app?.type === "web" &&
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- unvalidated conformance directory fixture
+    app.details &&
+    "url" in app.details &&
+    typeof app.details.url === "string"
+      ? app.details.url
       : undefined
 
   if (!url) {
-    throw new Error("Conformance1 app with web details.url not found in conformance-appd.json")
+    const known = apps.map(entry => entry.appId).join(", ")
+    throw new Error(
+      `App "${appId}" with web details.url not found in the conformance app directory. Known appIds: ${known}`,
+    )
   }
 
   return url
@@ -61,7 +70,11 @@ export type HarnessBootstrap = {
  * Bootstrap FDC3 desktop agent before React renders so WCP1Hello is handled
  * as soon as the Conformance1 iframe loads.
  */
-export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBootstrap {
+export function createHarnessBootstrap(options?: {
+  debug?: boolean
+  /** App to mount on startup. Use `Conformance1Headless` for an unattended run (HEADLESS.md). */
+  appId?: string
+}): HarnessBootstrap {
   const debug = options?.debug ?? HARNESS_DEBUG
   const {
     applications: conformanceApps,
@@ -69,13 +82,14 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
     profile,
     origin,
   } = loadConformanceApplications()
+  const appId = options?.appId ?? DEFAULT_HARNESS_APP_ID
   const conformance1InstanceId = crypto.randomUUID()
-  const conformance1Url = extractConformance1Url(conformanceApps)
+  const conformance1Url = extractAppUrl(conformanceApps, appId)
 
   const initialPanels: HarnessPanel[] = [
     {
       instanceId: conformance1InstanceId,
-      appId: "Conformance1",
+      appId,
       url: conformance1Url,
       title: "FDC3 Conformance Framework",
       launchMode: "iframe",
@@ -207,7 +221,7 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
   }
 
   desktopAgent.registerPendingHostInstance({
-    appId: "Conformance1",
+    appId,
     instanceId: conformance1InstanceId,
   })
 
@@ -232,7 +246,7 @@ export function createHarnessBootstrap(options?: { debug?: boolean }): HarnessBo
 export function getConformance1PanelState(
   bootstrap: HarnessBootstrap,
 ): { instanceId: string; state: "pending" | "connected" } | undefined {
-  const panel = bootstrap.initialPanels.find(entry => entry.appId === "Conformance1")
+  const panel = bootstrap.initialPanels[0]
   if (!panel) {
     return undefined
   }

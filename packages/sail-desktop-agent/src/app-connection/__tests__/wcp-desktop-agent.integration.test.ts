@@ -873,6 +873,93 @@ describe("open-with-context (first-connect WCP4)", () => {
   })
 })
 
+describe("plain open() waits for the launched app to connect (S3-F2)", () => {
+  const activeAgents: SailDesktopAgent[] = []
+
+  afterEach(() => {
+    cleanupWcpIntegrationTestHarness(activeAgents)
+  })
+
+  it("does not emit openResponse until the launched instance's WCP5 success is already on the wire", async () => {
+    const agent = createTestAgent({
+      appLauncher: createHostInstanceAppLauncher(),
+      openContextListenerTimeoutMs: 5000,
+    })
+    activeAgents.push(agent)
+
+    const appA = await connectWcpApp(agent, {
+      connectionAttemptUuid: "plain-open-source-uuid",
+      appId: "portfolioApp",
+      identityUrl: PORTFOLIO_APP.details.url,
+    })
+
+    // Real wire ordering, not mock call counts: record the order in which these two message
+    // *types* are actually written to the wire (the call order of `MessagePort#postMessage`
+    // across every port in the test, production and test-side alike). Receipt order on two
+    // independent `MessageChannel`s is not guaranteed to mirror send order under jsdom's task
+    // scheduling — confirmed empirically: an earlier version of this test used a pair of
+    // `addEventListener` observers (one per port) to record arrival order instead, and it
+    // intermittently observed openResponse arrive before WCP5ValidateAppIdentityResponse even
+    // though the production call order (below) is correct. The send-order spy is the reliable
+    // signal for "X was on the wire before Y".
+    const postMessageSpy = vi.spyOn(MessagePort.prototype, "postMessage")
+    const sentOrder = (): string[] =>
+      postMessageSpy.mock.calls
+        .map(call => (call[0] as { type?: string } | undefined)?.type)
+        .filter(
+          (type): type is string =>
+            type === "WCP5ValidateAppIdentityResponse" || type === "openResponse",
+        )
+
+    const openResponsePromise = waitForPortMessage<BrowserTypes.OpenResponse>(
+      appA.appPort,
+      data => (data as { type?: string }).type === "openResponse",
+    )
+
+    // Plain open: no launch context, so the pending open can only resolve on WCP5 —
+    // there is no context listener for it to instead race against.
+    await postDacpOnPort(
+      appA.appPort,
+      createOpenRequestMessage(appA.validatedInstanceId, appA.appId, CHART_APP.appId),
+    )
+
+    await vi.waitFor(() => {
+      expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length).toBe(1)
+      expect(agent.getState().instances[HOST_LAUNCHER_INSTANCE_ID]?.appId).toBe(CHART_APP.appId)
+      expect(agent.getState().instances[HOST_LAUNCHER_INSTANCE_ID]?.state).toBe(
+        AppInstanceState.PENDING,
+      )
+    })
+
+    // openResponse must still be unsent: the launched instance hasn't connected yet.
+    expect(sentOrder()).toEqual([])
+
+    const appB = await connectWcpAppFirstConnect(agent, {
+      connectionAttemptUuid: "plain-open-target-uuid",
+      appId: "chartApp",
+      identityUrl: CHART_APP.details.url,
+    })
+
+    const openResponse = await openResponsePromise
+
+    expect(appB.validatedInstanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+    expect(openResponse.type).toBe("openResponse")
+    expect(openResponse.payload.error).toBeUndefined()
+    expect(openResponse.payload.appIdentifier?.instanceId).toBe(HOST_LAUNCHER_INSTANCE_ID)
+
+    // The contract: WCP5 success for the launched app was written to the wire strictly before
+    // openResponse for the app that launched it.
+    //
+    // The historical bug — answering a plain open as soon as the instance is pre-registered rather
+    // than connected — is caught earlier, by the waitFor above: the open never becomes pending, so
+    // that precondition is what fails. This assertion covers the other shape, where the open still
+    // waits but the two sends are reordered relative to each other.
+    expect(sentOrder()).toEqual(["WCP5ValidateAppIdentityResponse", "openResponse"])
+
+    expect(agent.getState().open.pendingWithContext[HOST_LAUNCHER_INSTANCE_ID]?.length ?? 0).toBe(0)
+  })
+})
+
 describe("WCP edge contract", () => {
   const activeAgents: SailDesktopAgent[] = []
 

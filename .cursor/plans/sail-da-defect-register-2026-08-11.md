@@ -1,7 +1,8 @@
 # Defect register: sail-desktop-agent, dual-agent review 2026-08-11
 
-Status: **live — 8 of 10 findings still open.** This is the DA's real defect backlog.
-Current slice: none. **#1 and #2 are fixed** (commit `8a62fd386`, follow-up `20515fdbf`); #3–#10 remain.
+Status: **live — 7 of 10 findings still open.** This is the DA's real defect backlog.
+Current slice: none. **#1 and #2 are fixed** (commit `8a62fd386`, follow-up `20515fdbf`); **#4 is fixed**
+(commits `0d59ce0` / `59d4cdb`); #3 and #5–#10 remain.
 
 > ### Re-verified 2026-08-14 against `a6c6b62`
 >
@@ -110,7 +111,27 @@ call sites. **No ownership gate exists anywhere on that path.** The finding surv
   source go to B. Same race when the DA launches a new instance and an older same-app instance
   registers during launch.
 
-### 4. WCP6 grace timer survives `disconnectInstance` / `pruneAppConnection`
+### 4. ~~WCP6 grace timer survives `disconnectInstance` / `pruneAppConnection`~~ — **FIXED**
+
+Fixed by `0d59ce0` (a `cancelPendingDisconnect` call at the top of `disconnectApp`, covering
+`pruneAppConnection` and `disconnectHandshakeApp` transitively) and pinned by `59d4cdb`. Reverting
+those five lines fails three tests, including an end-to-end reproduction of the relaunch race.
+
+> **Correction to the trigger recorded below (review of the fix, 2026-08-16).** The chain this entry
+> cites — `disconnectInstance` -> `pruneAppConnection` -> `disconnectApp` — really does leave the
+> timer armed, but it is **structurally unable to produce the same-id collision on its own**:
+> `disconnectInstance` always pairs `pruneAppConnection` with `cleanupInstanceDacpState`, which
+> removes `state.instances[X]`, and `canReuseExistingIdentity` requires that record to exist. Without
+> it WCP4 mints a fresh random instanceId rather than reusing X, so the stale timer has no new
+> session to hit.
+>
+> The concretely reachable trigger is instead `SailDesktopAgentApps.disconnect()`'s fallback
+> (`agent/sail-desktop-agent-controllers.ts:287-295`), taken whenever the bound `AgentAppConnection`
+> does not implement the **optional** `disconnectAppByInstanceId` (`app-connection/types.ts:59-61`) —
+> i.e. exactly the minimal headless edge the package is built to support. That fallback calls
+> `pruneAppConnection` **without** `cleanupInstanceDacpState`, so the instance record and its WCP
+> identity survive, a reconnect can legitimately reuse X, and a handshake slower than the remaining
+> grace window loses the race. Severity "major" stands; the mechanism was mis-attributed.
 
 - **Severity:** major. Found by Grok only.
 - **Where:** `app-connection/wcp/wcp-connection-management.ts:171-183` (`disconnectApp`); the cancel
