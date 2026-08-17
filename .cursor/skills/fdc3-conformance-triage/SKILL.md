@@ -13,9 +13,9 @@ Ask for or locate:
 
 | Input | Typical path |
 |-------|----------------|
-| Conformance export | `packages/sail-conformance-harness/results/conformance-report-v5.txt` (or latest `conformance-report-v*.txt` in that folder) |
+| Conformance export | `packages/sail-conformance-harness/artifacts/conformance.json` (from `npm run test:conformance`) |
 | App directory oracle | `conformance-appd.json` |
-| Prior review / matrix | `conformance-test-failure-review.md` |
+| Committed baseline | `packages/sail-conformance-harness/e2e/conformance-baseline-2.2.json` |
 | BDD map | `website/docs/packages/desktop-agent/conformance.md` |
 
 Parse the report header: `passes: N failures: M duration: …`

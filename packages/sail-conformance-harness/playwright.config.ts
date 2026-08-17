@@ -17,6 +17,8 @@ const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
 
 export default defineConfig({
   testDir: "./e2e",
+  // Pin to the headless suite so a leftover Playwright scaffold spec cannot fail the run.
+  testMatch: "conformance.spec.ts",
   // A full run is minutes, not seconds: TestTimeout is 20s per conformance test and
   // NoListenerTimeout is 120s. The committed baseline run takes ~6 minutes.
   timeout: 15 * 60_000,

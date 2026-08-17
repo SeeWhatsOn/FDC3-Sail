@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 
 export type ConformanceTestState = "passed" | "failed" | "pending"
 
@@ -30,14 +31,16 @@ export type ConformanceBaseline = {
   failing: string[]
 }
 
-export const BASELINE_PATH = join("results", "conformance-baseline-2.2.json")
+export const BASELINE_PATH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "conformance-baseline-2.2.json",
+)
 
-export function loadBaseline(packageRoot: string): ConformanceBaseline | undefined {
-  const path = join(packageRoot, BASELINE_PATH)
-  if (!existsSync(path)) {
+export function loadBaseline(): ConformanceBaseline | undefined {
+  if (!existsSync(BASELINE_PATH)) {
     return undefined
   }
-  return JSON.parse(readFileSync(path, "utf8")) as ConformanceBaseline
+  return JSON.parse(readFileSync(BASELINE_PATH, "utf8")) as ConformanceBaseline
 }
 
 export type BaselineDiff = {

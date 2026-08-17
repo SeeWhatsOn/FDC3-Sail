@@ -14,10 +14,7 @@ Minimal React host for the [FINOS FDC3 conformance toolbox](https://fdc3.finos.o
 | `2.2-conformance-tests/` | Vendored FDC3 2.2 toolbox build, served at the harness origin (see `publicDir` in `vite.config.ts`). Unlike the hosted FINOS toolbox it carries the headless patch — see `HEADLESS.md` |
 | `2.2-conformance-tests/directories/local-conformance.json` | App directory for the local profile: 18 apps, adds `Conformance1Headless`, drops the 404ing `IntentAppLId` |
 | `src/conformance-app-directory.ts` | Picks the hosted fixture or the vendored local directory by profile (`VITE_CONFORMANCE_TOOLBOX=local`) |
-| `results/conformance-report-v3.txt` … `v6.txt` | Committed FINOS toolbox export history |
-| `results/conformance-baseline-2.2.json` | **Current headless 2.2 baseline** — the set of test titles allowed to fail |
-| `results/conformance-test-failure-review.md` | Failure attribution matrix vs exports |
-| `results/README.md` | This folder index |
+| `e2e/conformance-baseline-2.2.json` | **Current headless 2.2 baseline** — the set of test titles allowed to fail |
 
 ## Run
 
@@ -68,7 +65,7 @@ npm run test:conformance -w @finos/sail-conformance-harness
 
 A full run is ~5 minutes and writes to `artifacts/`: `conformance.json` (the raw result payload), `conformance.png` (full-height `#mocha` list), `conformance-junit.xml`, and `conformance-diff.json`.
 
-The suite is gated on **regressions against `results/conformance-baseline-2.2.json`**, not on zero failures — the baseline records which titles are currently allowed to fail. When a run fixes one, the spec says so and you refresh the baseline from `artifacts/conformance.json`.
+The suite is gated on **regressions against `e2e/conformance-baseline-2.2.json`**, not on zero failures — the baseline records which titles are currently allowed to fail. When a run fixes one, the spec says so and you refresh the baseline from `artifacts/conformance.json`.
 
 On images that ship their own Chromium at a build number Playwright does not expect, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to the binary rather than re-downloading.
 

@@ -101,11 +101,11 @@ test("FDC3 2.2 conformance suite runs headlessly", async ({ page }) => {
 
   console.log(summariseResult(outcome))
 
-  const baseline = loadBaseline(PACKAGE_ROOT)
+  const baseline = loadBaseline()
   if (!baseline) {
     console.log(
       "No committed baseline found — writing artifacts/conformance.json only. " +
-        "Copy it to results/conformance-baseline-2.2.json to start gating on regressions.",
+        "Copy it to e2e/conformance-baseline-2.2.json to start gating on regressions.",
     )
     return
   }
@@ -118,7 +118,7 @@ test("FDC3 2.2 conformance suite runs headlessly", async ({ page }) => {
   if (diff.fixed.length > 0) {
     console.log(
       `${diff.fixed.length} test(s) now passing that the baseline expects to fail:\n  ${diff.fixed.join("\n  ")}\n` +
-        "Refresh results/conformance-baseline-2.2.json to lock the improvement in.",
+        "Refresh e2e/conformance-baseline-2.2.json to lock the improvement in.",
     )
   }
 

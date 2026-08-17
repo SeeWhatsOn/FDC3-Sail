@@ -155,7 +155,7 @@ npm run test:conformance -w @finos/sail-conformance-harness
 ```
 
 A run takes roughly five minutes and covers 21 suites. Results are compared against
-`results/conformance-baseline-2.2.json`, which lists tests that are *allowed* to fail. **That list
+`e2e/conformance-baseline-2.2.json`, which lists tests that are *allowed* to fail. **That list
 is currently empty**, so every one of the 83 tests must pass or the run fails. There is no tolerated
 failure to hide a regression behind.
 
@@ -174,14 +174,6 @@ uploads its artifacts either way.
 GitHub only fires scheduled workflows from a repository's **default branch**. On any other branch
 the nightly run does not start until the branch merges — use `workflow_dispatch` in the meantime.
 :::
-
-### Older toolbox exports
-
-`results/conformance-report-v*.txt` holds a history of point-in-time FINOS toolbox exports, the
-newest being `conformance-report-v6.txt` (2026-06-23, 53 pass / 26 fail across mixed 2.2 and 3.0
-rows). Those are hand-captured snapshots from before the scripted suite existed and predate several
-rounds of feature work; they are kept for history and are **not** the current signal. The scripted
-run above is.
 
 ## Related
 

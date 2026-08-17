@@ -44,7 +44,7 @@ jobs:
       - name: Build desktop agent
         run: npm run build -w @finos/sail-desktop-agent
 
-      # Fails on any regression against results/conformance-baseline-2.2.json, which is
+      # Fails on any regression against e2e/conformance-baseline-2.2.json, which is
       # currently empty — every one of the 83 tests must pass. The spec asserts on the
       # conformance.json payload, not on the screenshot: during development a stale JSON, a
       # contaminated run and a plausible-looking-but-mostly-blank PNG each gave a confident

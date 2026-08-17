@@ -63,12 +63,13 @@ mock apps resolve to. See
 [FDC3 conformance traceability — toolbox local dev](../desktop-agent/conformance#toolbox-local-dev-toolbox-local--vite_conformance_toolbox-implemented)
 for both paths side by side.
 
-## Toolbox result exports
+## Headless baseline
 
-`packages/sail-conformance-harness/results/conformance-report-v*.txt` holds committed FINOS
-toolbox exports (pass/fail, per FDC3 API method under test). These are a point-in-time signal, not
-a continuously-updated one — see [Conformance baseline status](../desktop-agent/conformance#conformance-baseline-status)
-on the traceability page for why this page does not restate a current pass rate.
+The Playwright suite (`npm run test:conformance -w @finos/sail-conformance-harness`) gates on
+`e2e/conformance-baseline-2.2.json` — currently empty, so every toolbox test must pass. Run
+output lands in gitignored `artifacts/`. See
+[Conformance baseline status](../desktop-agent/conformance#conformance-baseline-status)
+for the current score.
 
 ## Related
 
