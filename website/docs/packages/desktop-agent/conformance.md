@@ -131,9 +131,9 @@ script that passes Vite's `--mode toolbox-local`:
 - **`@finos/sail-conformance-harness`** — `npm run dev:local -w @finos/sail-conformance-harness`
   runs the harness itself against the local toolbox on port 3001. See
   [@finos/sail-conformance-harness](../conformance-harness/overview).
-- **`@finos/sail-finance`** — the root `dev:local` script runs `sail-desktop-agent`,
-  `sail-platform`, and `sail-finance`'s own `dev:local` together, which passes the same
-  `--mode toolbox-local` through to `sail-finance`'s Vite dev server.
+- **`@finos/sail-finance`** — `npm run dev:local -w @finos/sail-finance` passes the same
+  `--mode toolbox-local` through to that package's Vite dev server (`predev` builds the agent
+  and platform first).
 
 `sail-finance` always loads the same conformance app-directory fixture and merges it into its own
 app directory alongside the public FINOS app directory (`https://directory.fdc3.finos.org/v2/apps`)

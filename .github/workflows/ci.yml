@@ -33,7 +33,7 @@ jobs:
       - name: Prettier
         run: npm run format
 
-      # Must run before ESLint and Typecheck. `@finos/sail-desktop-agent` and
+      # Must run before lint and typecheck. `@finos/sail-desktop-agent` and
       # `@finos/sail-platform` publish their types from `dist` (`"types": "./dist/index.d.mts"`),
       # and `dist` is gitignored — so on a clean runner every consumer package fails with
       # TS2307 until these are built. Measured: without `dist`, `npm run lint` reports 140
@@ -41,14 +41,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: ESLint
+      - name: Lint
         run: npm run lint
-
-      - name: Package boundaries
-        run: npm run lint:boundaries
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Docs conformance inventory
+        run: npm run conformance:inventory:check -w @finos/sail-docs
 
       - name: Build docs site
         run: npm run docs:build

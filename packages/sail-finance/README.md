@@ -10,9 +10,8 @@ Browser deployment of FDC3 Sail — React host for the Desktop Agent, workspace 
 
 ```bash
 npm run dev          # from monorepo root (hosted FINOS conformance URLs)
-npm run dev:local    # from monorepo root (local toolbox profile — same-origin /apps proxy)
 npm run dev -w @finos/sail-finance
-npm run dev:local -w @finos/sail-finance
+npm run dev:local -w @finos/sail-finance   # local toolbox profile — same-origin /apps proxy
 ```
 
 Dev server: **http://localhost:3000**

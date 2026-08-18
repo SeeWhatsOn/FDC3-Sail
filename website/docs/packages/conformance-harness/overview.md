@@ -56,8 +56,8 @@ the local profile is active, and Vite proxies `/apps`, `/lib`, and a couple of s
 back to the hosted toolbox so the rewritten same-origin URLs still resolve. Same-origin loading is
 required for `window.name` / WCP4 host-instance adoption to work.
 
-`sail-finance` has an equivalent `dev:local` mode (via the root `dev:local` script) that runs the
-same origin rewrite against its own dev server instead of the harness's — it always merges this
+`sail-finance` has an equivalent `dev:local` mode (`npm run dev:local -w @finos/sail-finance`) that
+runs the same origin rewrite against its own dev server instead of the harness's — it always merges this
 fixture into its app directory, in every dev mode; `toolbox-local` only changes which origin the
 mock apps resolve to. See
 [FDC3 conformance traceability — toolbox local dev](../desktop-agent/conformance#toolbox-local-dev-toolbox-local--vite_conformance_toolbox-implemented)

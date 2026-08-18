@@ -240,8 +240,8 @@ describes its intended shape only; it will be documented properly when it lands.
 
 ## Enforced boundaries
 
-The layering above is not just prose — it is a CI gate. `lint:boundaries` (backed by
-`.oxlintrc.json`'s `no-restricted-imports` rules) fails the build if:
+The layering above is not just prose — it is a CI gate. `npm run lint` also runs
+`.oxlintrc.json`'s `no-restricted-imports` rules and fails the build if:
 
 - `@finos/sail-desktop-agent` imports the platform or any shell (the engine must not depend on what
   composes it);

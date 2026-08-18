@@ -112,8 +112,8 @@ npm test -- --run
 # Desktop Agent tests (Vitest + Cucumber)
 npm test -w @finos/sail-desktop-agent
 
-# FDC3 Compliance tests (Cucumber BDD)
-npm run test:cucumber
+# FDC3 Desktop Agent BDD (Cucumber)
+npm run test:cucumber -w @finos/sail-desktop-agent
 ```
 
 ### Building
@@ -154,7 +154,7 @@ git checkout -b fix/your-bug-fix
 
 **Code Quality Requirements:**
 
-Run `npm run validate` before commits. It runs the same gate as CI: Prettier, ESLint, package boundaries (`lint:boundaries`), TypeScript, workspace build, docs build, Vitest (`npm test -- --run`), and Cucumber (`npm run test:cucumber`).
+Run `npm run validate` before commits. It runs the same gate as CI: format, build, lint (including package-boundary import rules), typecheck, docs conformance inventory, docs build, Vitest (`npm test -- --run`), and Cucumber (`npm run test:cucumber -w @finos/sail-desktop-agent`).
 
 Individual steps when iterating:
 
