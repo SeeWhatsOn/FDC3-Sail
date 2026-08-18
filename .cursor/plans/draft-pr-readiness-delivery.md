@@ -41,8 +41,10 @@ Current slice: none — awaiting plan approval
    - Goal: branch is no longer 22 commits behind; every gate still green.
    - Acceptance: merge committed with no conflict markers anywhere; `npm run validate` exits 0;
      the old V2 trees (`packages/web`, `packages/common`, `packages/da-impl`) stay deleted;
-     `.husky/pre-commit` + `lint-staged.config.mjs` arrive **rewired to `vp fmt` / `vp lint`**,
-     not left calling `prettier`/`eslint`, which this repo does not run.
+     **`main`'s `.husky/` and `lint-staged.config.mjs` are rejected, not merged** — this repo already
+     has a working tracked pre-commit hook at `.vite-hooks/pre-commit` (`vp staged`), wired through
+     `core.hooksPath` by the `prepare` script. Taking main's would install a second hook system that
+     `core.hooksPath` guarantees never runs.
    - Verify: `npm run validate`
    - Likely files: ~64 conflicted paths; the ~15 that need judgement are `ci.yml`, `package.json`,
      `package-lock.json`, `README.md`, `LICENSE`, `CONTRIBUTING.md`, `.gitignore`,
@@ -114,10 +116,12 @@ Resolved against the agent types available this session.
 
 ## Risks
 
-- **The merge restores tooling V3 abandoned.** `main`'s `lint-staged.config.mjs` runs
-  `prettier --write` and `eslint --fix`; this repo runs `vp fmt` / `vp lint`. Accepting main's
-  version verbatim installs a pre-commit hook wired to the wrong tools. Rewire or drop it —
-  do not merge it unread.
+- **The merge drags back a competing hook system.** `main`'s `lint-staged.config.mjs` runs
+  `prettier --write` and `eslint --fix`; this repo runs `vp fmt` / `vp lint` from
+  `.vite-hooks/pre-commit`. Because `core.hooksPath` is `.vite-hooks/_`, anything landing in
+  `.husky/` is inert — so merging it adds dead files that read as the real hook. Reject both.
+  *(Corrects `open-items.md` §8, which lists "no local pre-commit hook" as an open gap. It is
+  closed — V3 replaced husky with vite-plus hooks rather than dropping hooks.)*
 - **`package-lock.json` must be regenerated, not hand-merged.** Take one side, then `npm install`.
 - **Slice 3 edits the scripts every other verify command calls.** Run it after the merge has settled,
   and re-check `.github/workflows/*.yml` in the same slice.
