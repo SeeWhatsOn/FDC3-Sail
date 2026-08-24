@@ -22,8 +22,6 @@ packages/sail-desktop-agent/reports/**/*
 
 
 
-.cursor/hooks/state/*
-.cursor/hooks/state/continual-learning.json
 
 
 packages/sail-finance/playwright-report/index.html

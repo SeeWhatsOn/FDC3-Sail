@@ -32,7 +32,6 @@ export default defineConfig({
       "**/yarn.lock",
       "**/pnpm-lock.yaml",
       "**/assets/",
-      ".cursor/**",
       // Vendored FDC3 2.2 conformance toolbox build — generated upstream, not ours to fix.
       "packages/sail-conformance-harness/2.2-conformance-tests/**",
     ],
