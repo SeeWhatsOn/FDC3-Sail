@@ -1,7 +1,8 @@
 import { DataTable, Then } from "@cucumber/cucumber"
 import { CustomWorld } from "../world"
 import expect from "expect"
-import { setupGenericSteps, matchData } from "@finos/fdc3-testing"
+import { setupGenericSteps } from "../support/setupGenericSteps"
+import { matchData } from "../support/matching"
 
 Then(
   "messaging will have outgoing posts",
