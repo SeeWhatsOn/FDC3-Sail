@@ -27,13 +27,15 @@ jobs:
           persist-credentials: false
 
       - name: Open Source Project Security Baseline Scanner
-        uses: revanite-io/osps-baseline-action@ace75cc1fb748be898275f16f59f78363405bc0a # v1.3.3
+        uses: revanite-io/osps-baseline-action@6ba0e05ce6566af82fd77bb9356ae8387027f32e # v1.5.0
         with:
           owner: ${{ github.repository_owner }}
           repo: ${{ github.event.repository.name }}
-          # The built-in token is what the OSSF reference workflow uses. A PAT with
-          # admin:org would additionally let the scanner observe branch protection
-          # and org MFA (OSPS-AC-03), which stay unresolved without one.
+          # The built-in token is what the OSSF reference workflow uses. It cannot
+          # read the admin-gated GraphQL fields (branch protection, org MFA), so
+          # OSPS-AC-03 stays unresolved without a PAT carrying admin:org. Scanner
+          # v0.28.0+ treats that denial as partial data and scans on; v0.22.0,
+          # pinned by action v1.3.3, aborted the whole scan on it.
           token: ${{ github.token }}
           catalog: "osps-baseline-2026-02"
           upload-sarif: "true"
